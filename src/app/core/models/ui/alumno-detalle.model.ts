@@ -178,3 +178,18 @@ export interface ProgresoUI {
   /** Total requerido según el plan del curso (Clase B: 12 prácticas / 8 teóricas) */
   requeridas: number;
 }
+
+/** Fila del historial de reagendamientos de una matrícula (fix-008-i). */
+export interface ReagendamientoHistorialUI {
+  id: number;
+  /** class_number de la sesión reagendada (fix-009-i) — distingue filas con la misma razón/fecha. */
+  claseNumero: number | null;
+  /** Etiqueta legible de la razón (mapeada desde RAZON_REAGENDAMIENTO_OPTIONS). */
+  razonLabel: string;
+  /** Texto libre cuando la razón es "Otro". */
+  razonOtro: string | null;
+  fechaAnterior: string | null;
+  fechaNueva: string | null;
+  /** Fecha en que se registró el reagendamiento (created_at). */
+  fechaRegistro: string;
+}

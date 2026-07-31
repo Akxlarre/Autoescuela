@@ -4,6 +4,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
+import { AuthFacade } from '@core/facades/auth.facade';
 import type {
   AlumnoDetalleUI,
   ClasePendienteReagendarUI,
@@ -15,6 +16,7 @@ import type {
   PagoUI,
   ProgresoAsistenciaProf,
   ProgresoUI,
+  ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -55,7 +57,22 @@ export interface ReagendarPenalizacionPayload {
   instructorId: number;
   /** IDs de slot (timestamptz como string) elegidos en app-schedule-grid. */
   selectedSlotIds: string[];
+  /** Razón del reagendamiento (fix-008-i) — valor de RAZON_REAGENDAMIENTO_OPTIONS. */
+  razon: string;
+  /** Texto libre cuando razon === 'otro'. */
+  razonOtro?: string | null;
 }
+
+/** Lista cerrada de razones de reagendamiento (fix-008-i) — provisional, ajustable con el cliente. */
+export const RAZON_REAGENDAMIENTO_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Médica', value: 'medica' },
+  { label: 'Laboral', value: 'laboral' },
+  { label: 'Viaje', value: 'viaje' },
+  { label: 'Problema del vehículo', value: 'vehiculo' },
+  { label: 'Ausencia del instructor', value: 'ausencia_instructor' },
+  { label: 'Clima', value: 'clima' },
+  { label: 'Otro', value: 'otro' },
+];
 
 /** Status de la BD que representa asistencia (ambos flujos escriben 'present' en inglés) */
 const STATUS_PRESENTE = 'present';
@@ -74,6 +91,7 @@ export class AdminAlumnoDetalleFacade {
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
   private readonly agendaSettings = inject(AgendaSettingsService);
+  private readonly auth = inject(AuthFacade);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
@@ -93,6 +111,7 @@ export class AdminAlumnoDetalleFacade {
    * exigir y por `reagendarClasesPenalizadas()` para saber qué persistir.
    */
   private readonly _reagendarSeleccion = signal<ClaseSeleccionadaReagendar[]>([]);
+  private readonly _historialReagendamientos = signal<ReagendamientoHistorialUI[]>([]);
   private readonly _historialPagos = signal<PagoUI[]>([]);
   private readonly _progresoPractico = signal<ProgresoUI>({
     completadas: 0,
@@ -168,6 +187,7 @@ export class AdminAlumnoDetalleFacade {
     () => this._clasesPendientesReagendar().length > 0,
   );
   readonly historialPagos = this._historialPagos.asReadonly();
+  readonly historialReagendamientos = this._historialReagendamientos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly certPdfPath = this._certPdfPath.asReadonly();
   readonly licenseInitialPath = this._licenseInitialPath.asReadonly();
@@ -1098,6 +1118,39 @@ export class AdminAlumnoDetalleFacade {
     this._slotVehicleMap.clear();
   }
 
+  /** Carga el historial de reagendamientos de la matrícula, para mostrarlo en la ficha (fix-008-i). */
+  async loadHistorialReagendamientos(enrollmentId: number): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('class_b_reschedule_history')
+      .select(
+        'id, old_scheduled_at, new_scheduled_at, reason, reason_other, created_at, class_b_sessions(class_number)',
+      )
+      .eq('enrollment_id', enrollmentId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this._historialReagendamientos.set([]);
+      return;
+    }
+
+    this._historialReagendamientos.set(
+      (data ?? []).map((r: any) => {
+        const sessionRaw = r.class_b_sessions;
+        const session = Array.isArray(sessionRaw) ? sessionRaw[0] : sessionRaw;
+        return {
+          id: r.id,
+          claseNumero: session?.class_number ?? null,
+          razonLabel:
+            RAZON_REAGENDAMIENTO_OPTIONS.find((o) => o.value === r.reason)?.label ?? r.reason,
+          razonOtro: r.reason_other ?? null,
+          fechaAnterior: r.old_scheduled_at ? this.formatClassDate(r.old_scheduled_at) : null,
+          fechaNueva: r.new_scheduled_at ? this.formatClassDate(r.new_scheduled_at) : null,
+          fechaRegistro: this.formatDate(r.created_at),
+        };
+      }),
+    );
+  }
+
   /** Carga los instructores activos con vehículo asignado de la sede del alumno. */
   async loadInstructores(): Promise<void> {
     const branchId = this._alumno()?.branchId ?? null;
@@ -1313,6 +1366,30 @@ export class AdminAlumnoDetalleFacade {
       throw new Error('La cantidad de horarios elegidos no coincide con la selección.');
     }
 
+    // fix-008-i: capturar scheduled_at/instructor_id ANTES de reciclar la fila —
+    // el UPDATE de abajo los pisa, así que es la única oportunidad de guardarlos
+    // en el historial de reagendamientos.
+    const sessionIds = seleccion.map((s) => s.sessionId);
+    const { data: prevRows, error: prevError } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id, scheduled_at, instructor_id')
+      .in('id', sessionIds);
+    if (prevError) throw prevError;
+    const prevMap = new Map<
+      number,
+      { scheduled_at: string | null; instructor_id: number | null }
+    >();
+    for (const row of (prevRows ?? []) as Array<{
+      id: number;
+      scheduled_at: string | null;
+      instructor_id: number | null;
+    }>) {
+      prevMap.set(row.id, { scheduled_at: row.scheduled_at, instructor_id: row.instructor_id });
+    }
+
+    const registeredBy = this.auth.currentUser()?.dbId ?? null;
+    const historyRows: Record<string, unknown>[] = [];
+
     for (let i = 0; i < seleccion.length; i++) {
       const session = seleccion[i];
       const slotId = orderedSlotIds[i];
@@ -1337,6 +1414,29 @@ export class AdminAlumnoDetalleFacade {
       // la inasistencia original se conserva para auditoría. La grilla principal ya
       // deriva su color de class_b_sessions.status, así que queda "limpia" (azul) sin
       // necesidad de tocar la tabla de asistencia.
+
+      const prev = prevMap.get(session.sessionId);
+      historyRows.push({
+        class_session_id: session.sessionId,
+        enrollment_id: payload.enrollmentId,
+        old_scheduled_at: prev?.scheduled_at ?? null,
+        new_scheduled_at: slotId,
+        old_instructor_id: prev?.instructor_id ?? null,
+        new_instructor_id: payload.instructorId,
+        reason: payload.razon,
+        reason_other: payload.razon === 'otro' ? (payload.razonOtro ?? null) : null,
+        registered_by: registeredBy,
+      });
+    }
+
+    if (historyRows.length > 0) {
+      const { error: historyError } = await this.supabase.client
+        .from('class_b_reschedule_history')
+        .insert(historyRows);
+      if (historyError) throw historyError;
+      // fix-009-i: refresca el historial que consume el drawer — sin esto quedaba
+      // pegado al snapshot cargado en ngOnInit, previo a cualquier reagendamiento.
+      await this.loadHistorialReagendamientos(payload.enrollmentId);
     }
 
     this._reagendarSeleccion.set([]);
