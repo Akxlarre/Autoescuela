@@ -20,6 +20,7 @@ import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 // Shared
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -29,9 +30,16 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
 // Facades & Models
 import { FlotaFacade } from '@core/facades/flota.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import {
+  isSedeDisabled,
+  isBothBranchesVisible,
+  isBothBranchesDisabled,
+} from '@core/utils/branch-scope-ui.utils';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -49,6 +57,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     ButtonModule,
     InputNumberModule,
     MessageModule,
+    ToggleSwitchModule,
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
@@ -215,6 +224,39 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 ></p-select>
               </div>
 
+              <!-- Sede -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="vf-sede"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Sede principal <span class="text-error">*</span>
+                </label>
+                <p-select
+                  inputId="vf-sede"
+                  formControlName="branch_id"
+                  [options]="branchOptions()"
+                  optionLabel="name"
+                  optionValue="id"
+                  placeholder="Seleccione sede"
+                  styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
+                  data-llm-description="select for the vehicle's main branch"
+                ></p-select>
+              </div>
+
+              @if (bothBranchesVisible()) {
+                <div class="flex items-center gap-3">
+                  <p-toggleswitch
+                    inputId="vf-both-branches"
+                    formControlName="both_branches"
+                    data-llm-description="toggle whether this vehicle operates in both branches"
+                  />
+                  <label class="text-sm text-text-secondary" for="vf-both-branches">
+                    Disponible para ambas sedes
+                  </label>
+                </div>
+              }
+
               <!-- Mensajes -->
               @if (errorMsg()) {
                 <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
@@ -255,6 +297,8 @@ export class VehicleFormDrawerComponent {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
 
   // ── Estado ────────────────────────────────────────────────────────────────
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
@@ -279,8 +323,23 @@ export class VehicleFormDrawerComponent {
     year: [new Date().getFullYear(), [Validators.required, Validators.min(1900)]],
     current_km: [0, [Validators.required, Validators.min(0)]],
     status: ['available', Validators.required],
-    branch_id: [null as number | null],
+    branch_id: [null as number | null, Validators.required],
+    both_branches: [false],
   });
+
+  readonly branchOptions = this.branchFacade.branches;
+
+  /** Secretaria nunca elige/cambia la sede — spec 0004-m, AC9 (simetría con instructores). */
+  readonly sedeDisabled = computed(() => isSedeDisabled(this.authFacade.currentUser()?.role ?? ''));
+  readonly bothBranchesVisible = computed(() =>
+    isBothBranchesVisible(
+      this.authFacade.currentUser()?.role ?? '',
+      this.isEdit() ? 'editar' : 'crear',
+    ),
+  );
+  readonly bothBranchesDisabled = computed(() =>
+    isBothBranchesDisabled(this.authFacade.currentUser()?.role ?? ''),
+  );
 
   constructor() {
     effect(() => {
@@ -298,13 +357,30 @@ export class VehicleFormDrawerComponent {
             current_km: vehicle.currentKm,
             status: vehicle.status,
             branch_id: vehicle.branchId,
+            both_branches: vehicle.bothBranches,
           });
         }
       } else {
         this.vehicleForm.reset({
           year: new Date().getFullYear(),
           status: 'available',
+          both_branches: false,
         });
+      }
+    });
+
+    // Secretaria nunca elige/cambia sede ni "Ambas" (spec 0004-m, AC9) — se usan
+    // disable()/enable() (no [disabled] en el template) porque son reactive forms.
+    effect(() => {
+      if (this.sedeDisabled()) {
+        this.vehicleForm.controls.branch_id.disable();
+      } else {
+        this.vehicleForm.controls.branch_id.enable();
+      }
+      if (this.bothBranchesDisabled()) {
+        this.vehicleForm.controls.both_branches.disable();
+      } else {
+        this.vehicleForm.controls.both_branches.enable();
       }
     });
   }

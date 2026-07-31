@@ -1,11 +1,14 @@
 # Asignación ASG-b-043 — Drawers muestran datos de todas las sedes en vez de una
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** m
+> **claimed_at:** 2026-07-30
+> **resulting_track:** fix-090-m-drawers-scope-sede
 
 ---
 

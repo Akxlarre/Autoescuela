@@ -28,6 +28,7 @@ export interface VehicleTableRow {
   instructorName: string | null;
   instructorId: number | null;
   branchId: number | null;
+  bothBranches: boolean;
   documents: VehicleDocSummary[];
   /** Suma de expenses.amount con category='combustible' del mes en curso (fix-007-i). 0 si no registra gastos. */
   combustibleMes: number;

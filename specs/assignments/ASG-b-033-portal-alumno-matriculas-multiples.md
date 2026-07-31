@@ -1,6 +1,6 @@
 # Asignación ASG-b-033 — Portal alumno no muestra matrículas múltiples
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P2

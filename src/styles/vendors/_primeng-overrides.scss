@@ -155,6 +155,85 @@
   --p-radiobutton-background: var(--bg-surface);
   --p-radiobutton-border-color: var(--border-default);
   --p-radiobutton-hover-border-color: var(--ds-brand);
+
+  /* ToggleSwitch (spec 0004-m): el default de Aura (surface.300 sobre blanco) queda
+     casi invisible en modo claro — se sobrescribe con tokens de mayor contraste.
+     Nombres reales de variable confirmados en runtime (sin prefijo "root-").
+     --bg-subtle (#e4e4e7) resultó insuficiente contra fondo blanco (~1.15:1) — se usa
+     --text-muted como track apagado, con contraste real contra blanco y contra el
+     handle blanco superpuesto. */
+  --p-toggleswitch-background: var(--text-muted);
+  --p-toggleswitch-hover-background: var(--text-secondary);
+  --p-toggleswitch-checked-background: var(--ds-brand);
+  --p-toggleswitch-checked-hover-background: var(--ds-brand);
+  --p-toggleswitch-border-color: transparent;
+  --p-toggleswitch-handle-background: var(--bg-surface);
+  --p-toggleswitch-handle-checked-background: var(--bg-surface);
+}
+
+/* ToggleSwitch — override directo de clase (sin @layer, con !important).
+   Causa raíz confirmada en devtools (no es solo contraste de color): los
+   custom properties estructurales --p-toggleswitch-width/height/handle-size/gap
+   que inyecta el preset Aura nunca llegan a .p-toggleswitch en este árbol de
+   cascada, así que el host queda con tamaño 0x0 (var() inválido → width/height
+   "auto" sin contenido en flujo) y arrastra a slider/handle (que se dimensionan
+   en % del host) a 0x0 con ellos — de ahí que fuera invisible incluso ya con
+   background forzado. Se fija tamaño y posición explícitos (valores del preset
+   Aura por defecto) para dejar de depender de esos tokens. */
+.p-toggleswitch {
+  position: relative !important;
+  display: inline-flex !important;
+  width: 2.5rem !important;
+  height: 1.5rem !important;
+  flex-shrink: 0;
+}
+
+.p-toggleswitch .p-toggleswitch-input {
+  width: 100% !important;
+  height: 100% !important;
+  /* Confirmado en devtools: este input queda con background-color: #FFFFFF
+     opaco (por la regla global `input, textarea { background-color: ... }`
+     de styles.scss) pintado encima del slider (position:absolute + z-index:1
+     pintan sobre el slider estático aunque vaya antes en el DOM). Se anula
+     directo en vez de confiar en que opacity:0 del preset Aura sea suficiente. */
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+.p-toggleswitch .p-toggleswitch-slider {
+  width: 100% !important;
+  height: 100% !important;
+  background: var(--text-muted) !important;
+  border-color: transparent !important;
+}
+
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover) .p-toggleswitch-slider {
+  background: var(--text-secondary) !important;
+}
+
+.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
+  background: var(--ds-brand) !important;
+}
+
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
+  .p-toggleswitch-slider {
+  background: var(--ds-brand) !important;
+}
+
+.p-toggleswitch .p-toggleswitch-handle {
+  width: 1rem !important;
+  height: 1rem !important;
+  inset-inline-start: 0.25rem !important;
+  margin-block-start: -0.5rem !important;
+  background: var(--bg-surface) !important;
+}
+
+.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-handle {
+  inset-inline-start: 1.25rem !important;
+}
+
+.p-toggleswitch.p-disabled .p-toggleswitch-slider {
+  background: var(--bg-subtle) !important;
 }
 
 /* Toast: diseño compacto y alineado (design system) */
@@ -1187,15 +1266,14 @@ i.pi {
     color: var(--text-primary) !important;
   }
 
-  /* p-togglebutton, p-toggleswitch */
-  .p-togglebutton,
-  .p-toggleswitch {
+  /* p-togglebutton (p-toggleswitch ya cubierto arriba, fuera de este bloque,
+     con tokens theme-aware que resuelven distinto en claro/oscuro) */
+  .p-togglebutton {
     background-color: var(--bg-elevated) !important;
     border-color: var(--border-default) !important;
   }
 
-  .p-togglebutton.p-togglebutton-checked,
-  .p-toggleswitch.p-toggleswitch-checked {
+  .p-togglebutton.p-togglebutton-checked {
     background-color: var(--ds-brand) !important;
     border-color: var(--ds-brand) !important;
   }

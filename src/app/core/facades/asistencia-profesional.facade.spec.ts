@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 
 describe('AsistenciaProfesionalFacade', () => {
   let facade: AsistenciaProfesionalFacade;
@@ -45,6 +46,7 @@ describe('AsistenciaProfesionalFacade', () => {
         { provide: ToastService, useValue: toastSpy },
         { provide: ConfirmModalService, useValue: confirmSpy },
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
       ],
     });
 
@@ -89,5 +91,59 @@ describe('AsistenciaProfesionalFacade', () => {
     facade.clearSelectedSesion();
     expect(facade.selectedSesion()).toBeNull();
     expect(facade.asistenciaAlumnos()).toEqual([]);
+  });
+});
+
+/** Builder encadenable (select/in/order/eq devuelven `this`) y thenable, para `professional_promotions`. */
+function createPromocionesQueryMock() {
+  const builder: any = {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    then: (resolve: any, reject: any) =>
+      Promise.resolve({ data: [], error: null }).then(resolve, reject),
+  };
+  return { client: { from: vi.fn().mockReturnValue(builder) }, builder };
+}
+
+// fix-090-m — AC2: scope de sede en carga de promociones para Asistencia Profesional
+describe('AsistenciaProfesionalFacade — scope de sede (fix-090)', () => {
+  it('AC2 — loadPromociones() filtra por branch_id cuando hay una sede activa', async () => {
+    const mockSupabase = createPromocionesQueryMock();
+    TestBed.configureTestingModule({
+      providers: [
+        AsistenciaProfesionalFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: ConfirmModalService, useValue: { confirm: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => 7 } },
+      ],
+    });
+    const facade = TestBed.inject(AsistenciaProfesionalFacade);
+
+    await facade.initialize();
+
+    expect(mockSupabase.builder.eq).toHaveBeenCalledWith('branch_id', 7);
+  });
+
+  it('AC2 — loadPromociones() no filtra cuando el admin ve "todas las sedes" (null)', async () => {
+    const mockSupabase = createPromocionesQueryMock();
+    TestBed.configureTestingModule({
+      providers: [
+        AsistenciaProfesionalFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: ConfirmModalService, useValue: { confirm: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    const facade = TestBed.inject(AsistenciaProfesionalFacade);
+
+    await facade.initialize();
+
+    expect(mockSupabase.builder.eq).not.toHaveBeenCalled();
   });
 });

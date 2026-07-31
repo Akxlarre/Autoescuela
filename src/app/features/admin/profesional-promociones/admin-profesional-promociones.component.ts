@@ -5,6 +5,7 @@ import {
   OnDestroy,
   AfterViewInit,
   computed,
+  effect,
   inject,
   signal,
   ElementRef,
@@ -330,9 +331,15 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      this.facade.initialize();
+    });
+  }
+
   ngOnInit(): void {
     this.branchFacade.setProfessionalOnly(true);
-    this.facade.initialize();
   }
 
   ngOnDestroy(): void {

@@ -1,6 +1,6 @@
 # Asignación ASG-b-052 — Firma del contrato no se persiste en el draft de matrícula pública
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P3

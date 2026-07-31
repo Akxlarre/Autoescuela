@@ -1098,17 +1098,18 @@ export class AdminAlumnoDetalleFacade {
     this._slotVehicleMap.clear();
   }
 
+  private static readonly INSTRUCTOR_PICKER_SELECT = `id,
+       both_branches,
+       users!inner(first_names, paternal_last_name),
+       vehicle_assignments!inner(vehicles!inner(brand, model, license_plate))`;
+
   /** Carga los instructores activos con vehículo asignado de la sede del alumno. */
   async loadInstructores(): Promise<void> {
     const branchId = this._alumno()?.branchId ?? null;
 
     let query = this.supabase.client
       .from('instructors')
-      .select(
-        `id,
-         users!inner(first_names, paternal_last_name),
-         vehicle_assignments!inner(vehicles!inner(brand, model, license_plate))`,
-      )
+      .select(AdminAlumnoDetalleFacade.INSTRUCTOR_PICKER_SELECT)
       .eq('active', true)
       .is('vehicle_assignments.end_date', null);
 
@@ -1117,9 +1118,32 @@ export class AdminAlumnoDetalleFacade {
     }
 
     const { data } = await query;
+    let rows = data ?? [];
+
+    // spec 0004-m (AC6): un instructor both_branches=true de OTRA sede también debe
+    // aparecer. PostgREST rechaza or() mezclando users.branch_id (embebido) con
+    // both_branches (raíz) — PGRST100, confirmado — por eso segunda query + merge.
+    if (branchId !== null) {
+      const { data: bothBranchesData } = await this.supabase.client
+        .from('instructors')
+        .select(AdminAlumnoDetalleFacade.INSTRUCTOR_PICKER_SELECT)
+        .eq('active', true)
+        .is('vehicle_assignments.end_date', null)
+        .eq('both_branches', true);
+
+      if (bothBranchesData) {
+        const seenIds = new Set(rows.map((r: any) => r.id));
+        for (const extra of bothBranchesData) {
+          if (!seenIds.has((extra as any).id)) {
+            rows = [...rows, extra];
+            seenIds.add((extra as any).id);
+          }
+        }
+      }
+    }
 
     this._instructores.set(
-      (data ?? []).map((row: any) => ({
+      rows.map((row: any) => ({
         id: row.id,
         name: `${row.users.first_names} ${row.users.paternal_last_name}`,
         vehicleDescription:

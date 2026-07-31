@@ -228,6 +228,22 @@
 - **Fuente:** spec `0003-m-repositorio-documentos-instructores` (reportado por el owner al
   probar el nuevo tab de Instructores, 2026-07-29).
 
+### DG-039 — `professional_promotions` tiene `branch_id`, pero no todos los Facades del dominio lo respetan
+- **Trampa:** asumir que porque `CertificacionProfesionalFacade` (mismo dominio, tabla
+  adyacente) ya filtra por sede vía `resolveBranchScope()`/`getActiveBranchId()`, el resto de
+  Facades de Clase Profesional que leen `professional_promotions` también lo hacen.
+- **Realidad:** `PromocionesFacade.fetchData()` y `AsistenciaProfesionalFacade.loadPromociones()`
+  consultaban `professional_promotions` **sin ningún filtro de sede** — ni `BranchFacade`
+  inyectado, ni `.eq('branch_id', ...)`. La RLS de la tabla (`select_professional_promotions`)
+  solo valida rol (`admin`/`secretary`/`student`), no sede, así que nada a nivel de BD detenía
+  la fuga: admin y secretaria veían/editaban promociones de todas las sedes sin importar la
+  seleccionada. Además, `PromocionesFacade.crearPromocion()` grababa `branch_id: 2` **hardcodeado**
+  ("Conductores Chillán") en cada promoción nueva, sin leer la sede activa. Ambas vistas ya
+  llamaban `branchFacade.setProfessionalOnly(true)` (fuerza `requiresSpecificBranch`, deshabilita
+  "Todas las escuelas"), así que `selectedBranchId()` nunca es `null` mientras están activas —
+  no había excusa de ambigüedad para no filtrar.
+- **Fuente:** `specs/fixes/fix-090-m-drawers-scope-sede`, `specs/assignments/ASG-b-043-drawers-informacion-de-sede.md`
+
 ---
 
 ## Convención para agregar una entrada nueva

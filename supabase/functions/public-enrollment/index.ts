@@ -363,14 +363,14 @@ async function handleLoadInstructors(supabase: any, body: any) {
     .select(
       `
       id,
-      users!inner(first_names, paternal_last_name),
+      both_branches,
+      users!inner(first_names, paternal_last_name, branch_id),
       vehicle_assignments!inner(
         vehicles!inner(brand, model, license_plate)
       )
     `,
     )
     .eq('active', true)
-    .eq('users.branch_id', branchId)
     .is('vehicle_assignments.end_date', null);
 
   if (error) {
@@ -378,7 +378,15 @@ async function handleLoadInstructors(supabase: any, body: any) {
     return errorResponse('Error loading instructors', 500);
   }
 
-  const instructors = (data ?? []).map((row: any) => {
+  // spec 0004-m: instructor de la sede pedida, o "Ambas sedes" (both_branches).
+  // PostgREST no soporta combinar una columna de recurso embebido (users.branch_id)
+  // con una columna raíz (both_branches) dentro de un mismo or=() (PGRST100) — se
+  // filtra client-side en vez de en la query.
+  const filtered = (data ?? []).filter(
+    (row: any) => row.users?.branch_id === branchId || row.both_branches,
+  );
+
+  const instructors = filtered.map((row: any) => {
     const va = row.vehicle_assignments?.[0];
     const vehicle = va?.vehicles;
     return {
