@@ -3,14 +3,19 @@
  * Tipos e interfaces para el módulo Repositorio de Documentos.
  */
 
-export type DmsTab = 'students' | 'school' | 'templates';
+export type DmsTab = 'students' | 'school' | 'templates' | 'instructors';
 export type TemplateCategory = 'clase_b' | 'clase_profesional' | 'administrativo' | 'general';
 export type TemplateCategoryFilter = 'all' | TemplateCategory;
 
 export interface StudentWithDocsRow {
   studentId: number;
+  /** Orden paterno - materno - nombre (buildStudentDisplayName), igual que Base de Alumnos */
   name: string;
   rut: string;
+  /** Formateado '#NNNN' (último enrollment) o '—' si no tiene ninguno */
+  matriculaNumber: string;
+  /** Nombre de la sede (users.branch_id → branches.name). Null si no tiene sede asignada. */
+  branchName: string | null;
   docCount: number;
 }
 
@@ -29,6 +34,28 @@ export interface DmsStudentDocRow {
   // Campos derivados en el facade
   studentName: string;
   studentRut: string;
+  typeLabel: string;
+}
+
+export interface InstructorWithDocsRow {
+  instructorId: number;
+  name: string;
+  licenseNumber: string;
+  /** Nombre de la sede (users.branch_id → branches.name). Null si no tiene sede asignada. */
+  branchName: string | null;
+  docCount: number;
+}
+
+export interface DmsInstructorDocRow {
+  id: number;
+  instructorId: number;
+  type: string;
+  fileName: string;
+  fileUrl: string | null;
+  status: string;
+  documentAt: string; // fecha ISO
+  // Campos derivados en el facade
+  instructorName: string;
   typeLabel: string;
 }
 
@@ -75,6 +102,12 @@ export interface UploadSchoolDocPayload {
   file: File;
   type: string;
   description?: string;
+}
+
+export interface UploadInstructorDocPayload {
+  file: File;
+  type: string;
+  instructorId: number;
 }
 
 export interface UploadTemplatePayload {

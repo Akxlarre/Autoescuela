@@ -44,7 +44,6 @@
 | `/app/admin/instructores` | `AdminInstructoresComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/certificacion` | `AdminCertificacionComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/documentos` | `AdminDocumentosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/documentos/alumnos/:id` | `AdminAlumnoDocsDetalleComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/usuarios` | `AdminUsuariosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/secretarias` | `AdminSecretariasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
@@ -76,7 +75,6 @@
 | `/app/secretaria/contabilidad/liquidaciones` | `SecretariaContabilidadLiquidacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/certificados` | `SecretariaCertificadosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/documentos` | `SecretariaDocumentosComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/documentos/alumnos/:id` | `AdminAlumnoDocsDetalleComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/instructores` | `SecretariaInstructoresComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/comunicaciones` | `SecretariaComunicacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/observaciones` | `SecretariaObservacionesComponent` | — | `src/app/app.routes.ts` |

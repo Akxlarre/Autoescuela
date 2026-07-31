@@ -531,7 +531,8 @@ export class InstructoresFacade {
     }
   }
 
-  async crearInstructor(payload: CrearInstructorPayload): Promise<boolean> {
+  /** Devuelve el `instructorId` recién creado (para subir sus documentos), o `null` si falló. */
+  async crearInstructor(payload: CrearInstructorPayload): Promise<number | null> {
     this._isSubmitting.set(true);
     try {
       const { data, error } = await this.supabase.client.functions.invoke('create-instructor', {
@@ -547,12 +548,12 @@ export class InstructoresFacade {
       this.toast.success('Instructor creado', 'La cuenta ha sido creada correctamente.');
       this._vehiclesLoaded = false;
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
-      return true;
+      return (data?.instructorId as number | undefined) ?? null;
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear instructor';
       this.toast.error('Error', msg);
-      return false;
+      return null;
     } finally {
       this._isSubmitting.set(false);
     }

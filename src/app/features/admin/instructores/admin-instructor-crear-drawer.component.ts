@@ -11,6 +11,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { DmsFacade } from '@core/facades/dms.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -20,6 +21,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
+import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 
 @Component({
   selector: 'app-admin-instructor-crear-drawer',
@@ -247,27 +250,10 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           </div>
 
           <!-- ── Sección: Información de Licencia ──────────────────────────────── -->
-          <h3 class="section-title">Información de Licencia</h3>
+          <!-- Sin selector de clase: instructors es exclusivamente Clase B (los relatores
+               Profesional son la tabla lecturers, aparte) — se guarda 'B' fijo al enviar. -->
+          <h3 class="section-title">Licencia Clase B</h3>
           <div class="flex flex-col gap-4 mb-6">
-            <!-- Clase de licencia -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="c-license-class">Clase de licencia *</label>
-              <p-select
-                inputId="c-license-class"
-                [options]="licenseClassOptions"
-                [(ngModel)]="licenseClassModel"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccione clase"
-                styleClass="w-full"
-                aria-required="true"
-                data-llm-description="Clase de licencia del instructor"
-              />
-              @if (licenseClassTouched() && !licenseClassValida()) {
-                <span class="field-error">Selecciona la clase de licencia.</span>
-              }
-            </div>
-
             <!-- Fecha de vencimiento -->
             <div class="flex flex-col gap-1.5">
               <app-date-input
@@ -295,6 +281,70 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 </div>
               }
             </div>
+          </div>
+
+          <!-- ── Sección: Documentos ─────────────────────────────────────────────── -->
+          <h3 class="section-title">Documentos (opcional)</h3>
+          <div class="flex flex-col gap-3 mb-6">
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label" for="c-doc-type">Tipo de documento</label>
+              <p-select
+                inputId="c-doc-type"
+                [options]="availableDocTypes()"
+                [(ngModel)]="pendingDocTypeModel"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona un tipo..."
+                styleClass="w-full"
+                data-llm-description="Tipo de documento a adjuntar para el nuevo instructor"
+              />
+            </div>
+            <input
+              #docFileInput
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              class="hidden"
+              data-llm-description="hidden file input for the instructor document to attach"
+              (change)="onDocFileSelected($event)"
+            />
+            <button
+              type="button"
+              class="btn-secondary flex items-center justify-center gap-2"
+              [disabled]="!pendingDocType()"
+              data-llm-action="adjuntar-documento-instructor"
+              (click)="docFileInput.click()"
+            >
+              <app-icon name="upload" [size]="14" />
+              Adjuntar archivo
+            </button>
+            @if (docValidationError()) {
+              <span class="field-error">{{ docValidationError() }}</span>
+            }
+
+            @if (stagedDocs().length > 0) {
+              <ul class="flex flex-col gap-2 m-0 p-0 list-none">
+                @for (doc of stagedDocs(); track doc.type) {
+                  <li
+                    class="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border-subtle"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium m-0 text-text-primary truncate">
+                        {{ doc.file.name }}
+                      </p>
+                      <p class="text-xs m-0 text-text-secondary">{{ docTypeLabel(doc.type) }}</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
+                      data-llm-action="quitar-documento-adjunto"
+                      (click)="removeStagedDoc(doc.type)"
+                    >
+                      <app-icon name="trash-2" [size]="14" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
           </div>
 
           <!-- ── Sección: Asignación ───────────────────────────────────────────── -->
@@ -369,6 +419,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 })
 export class AdminInstructorCrearDrawerComponent {
   protected readonly facade = inject(InstructoresFacade);
+  protected readonly dmsFacade = inject(DmsFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly branchFacade = inject(BranchFacade);
 
@@ -380,10 +431,14 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly email = signal('');
   protected readonly telefono = signal('');
   protected readonly sedeId = signal<number | null>(null);
-  protected readonly licenseClass = signal<string | null>(null);
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
+
+  // ── Documentos adjuntos (se suben recién al crear el instructor, cuando ya hay id) ────
+  protected readonly stagedDocs = signal<{ file: File; type: string }[]>([]);
+  protected readonly pendingDocType = signal<string | null>(null);
+  protected readonly docValidationError = signal<string | null>(null);
 
   // ── Touched ────────────────────────────────────────────────────────────────
   protected readonly nombresTouched = signal(false);
@@ -392,7 +447,6 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly rutTouched = signal(false);
   protected readonly emailTouched = signal(false);
   protected readonly telefonoTouched = signal(false);
-  protected readonly licenseClassTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly typeTouched = signal(false);
   protected readonly sedeTouched = signal(false);
@@ -411,7 +465,6 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly telefonoValido = computed(
     () => this.telefono().replace(/\D/g, '').length >= 8,
   );
-  protected readonly licenseClassValida = computed(() => this.licenseClass() !== null);
   protected readonly licenseExpiryValida = computed(() => this.licenseExpiry() !== null);
   protected readonly typeValido = computed(() => this.tipo() !== null);
 
@@ -439,21 +492,49 @@ export class AdminInstructorCrearDrawerComponent {
       this.emailValido() &&
       this.telefonoValido() &&
       this.sedeValida() &&
-      this.licenseClassValida() &&
       this.licenseExpiryValida() &&
       this.typeValido() &&
       this.licenseStatusPreview() !== 'expired',
   );
 
-  // ── Options ────────────────────────────────────────────────────────────────
-  protected readonly licenseClassOptions = [
-    { label: 'Clase B (Automóviles)', value: 'B' },
-    { label: 'Clase A2 (Taxi básico)', value: 'A2' },
-    { label: 'Clase A3 (Ambulancia)', value: 'A3' },
-    { label: 'Clase A4 (Buses)', value: 'A4' },
-    { label: 'Clase A5 (Camiones)', value: 'A5' },
-  ];
+  // ── Documentos ─────────────────────────────────────────────────────────────
+  protected readonly instructorDocTypes = INSTRUCTOR_DOC_TYPES;
+  protected readonly availableDocTypes = computed(() => {
+    const used = new Set(this.stagedDocs().map((d) => d.type));
+    return this.instructorDocTypes.filter((t) => !used.has(t.value));
+  });
 
+  protected get pendingDocTypeModel(): string | null {
+    return this.pendingDocType();
+  }
+  protected set pendingDocTypeModel(v: string | null) {
+    this.pendingDocType.set(v);
+  }
+
+  protected docTypeLabel(type: string): string {
+    return this.instructorDocTypes.find((t) => t.value === type)?.label ?? type;
+  }
+
+  protected onDocFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    const type = this.pendingDocType();
+    if (!file || !type) return;
+
+    const error = validateDocumentFile(file);
+    this.docValidationError.set(error);
+    if (error) return;
+
+    this.stagedDocs.update((docs) => [...docs, { file, type }]);
+    this.pendingDocType.set(null);
+  }
+
+  protected removeStagedDoc(type: string): void {
+    this.stagedDocs.update((docs) => docs.filter((d) => d.type !== type));
+  }
+
+  // ── Options ────────────────────────────────────────────────────────────────
   protected readonly typeOptions = [
     { label: 'Práctico', value: 'practice' },
     { label: 'Teórico', value: 'theory' },
@@ -485,14 +566,6 @@ export class AdminInstructorCrearDrawerComponent {
   }
 
   // ── p-select models ────────────────────────────────────────────────────────
-  protected get licenseClassModel(): string | null {
-    return this.licenseClass();
-  }
-  protected set licenseClassModel(v: string | null) {
-    this.licenseClass.set(v);
-    this.licenseClassTouched.set(true);
-  }
-
   protected get licenseExpiryIso(): string {
     const d = this.licenseExpiry();
     if (!d) return '';
@@ -564,7 +637,6 @@ export class AdminInstructorCrearDrawerComponent {
     this.emailTouched.set(true);
     this.telefonoTouched.set(true);
     this.sedeTouched.set(true);
-    this.licenseClassTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.typeTouched.set(true);
 
@@ -573,7 +645,7 @@ export class AdminInstructorCrearDrawerComponent {
     const expiryDate = this.licenseExpiry()!;
     const expiryStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
 
-    const ok = await this.facade.crearInstructor({
+    const instructorId = await this.facade.crearInstructor({
       firstNames: this.nombres().trim(),
       paternalLastName: this.paterno().trim(),
       maternalLastName: this.materno().trim(),
@@ -582,15 +654,33 @@ export class AdminInstructorCrearDrawerComponent {
       phone: this.telefono().trim(),
       type: this.tipo()!,
       licenseNumber: '',
-      licenseClass: this.licenseClass()!,
+      licenseClass: 'B', // instructors es exclusivamente Clase B
       licenseExpiry: expiryStr,
       vehicleId: this.vehicleId(),
       branchId: this.sedeId()!,
     });
 
-    if (ok) {
-      this.layoutDrawer.close();
-      this.facade.initialize(); // Forzamos refresh al cerrar
+    if (instructorId === null) return;
+
+    // Subir los documentos adjuntados — recién ahora existe el instructorId.
+    // Fallas individuales no bloquean el cierre del drawer (el instructor ya quedó creado);
+    // se avisan por toast para que se reintenten desde el propio drawer de documentos.
+    for (const doc of this.stagedDocs()) {
+      try {
+        await this.dmsFacade.uploadInstructorDocument({
+          file: doc.file,
+          type: doc.type,
+          instructorId,
+        });
+      } catch {
+        this.dmsFacade.showError(
+          'No se pudo subir un documento',
+          `${doc.file.name} — puedes reintentarlo desde la ficha del instructor.`,
+        );
+      }
     }
+
+    this.layoutDrawer.close();
+    this.facade.initialize(); // Forzamos refresh al cerrar
   }
 }

@@ -246,22 +246,10 @@ export const routes: Routes = [
           },
           {
             path: 'documentos',
-            children: [
-              {
-                path: '',
-                loadComponent: () =>
-                  import('./features/admin/documentos/admin-documentos.component').then(
-                    (m) => m.AdminDocumentosComponent,
-                  ),
-              },
-              {
-                path: 'alumnos/:id',
-                loadComponent: () =>
-                  import('./features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component').then(
-                    (m) => m.AdminAlumnoDocsDetalleComponent,
-                  ),
-              },
-            ],
+            loadComponent: () =>
+              import('./features/admin/documentos/admin-documentos.component').then(
+                (m) => m.AdminDocumentosComponent,
+              ),
           },
           {
             path: 'usuarios',
@@ -481,22 +469,10 @@ export const routes: Routes = [
           },
           {
             path: 'documentos',
-            children: [
-              {
-                path: '',
-                loadComponent: () =>
-                  import('./features/secretaria/documentos/secretaria-documentos.component').then(
-                    (m) => m.SecretariaDocumentosComponent,
-                  ),
-              },
-              {
-                path: 'alumnos/:id',
-                loadComponent: () =>
-                  import('./features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component').then(
-                    (m) => m.AdminAlumnoDocsDetalleComponent,
-                  ),
-              },
-            ],
+            loadComponent: () =>
+              import('./features/secretaria/documentos/secretaria-documentos.component').then(
+                (m) => m.SecretariaDocumentosComponent,
+              ),
           },
           {
             path: 'instructores',

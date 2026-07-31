@@ -203,6 +203,31 @@
 - **Realidad:** decisión de negocio confirmada explícitamente con el owner (2026-07-28): la referencia legal es `professional_promotions.start_date` de la promoción elegida en el wizard — un alumno puede matricularse **antes** de cumplir los 2 años si, para cuando arranca su promoción, ya los tendrá. Es una **advertencia no bloqueante** (la secretaría puede matricular igual bajo su criterio), no un bloqueo duro. `core/utils/license-seniority.utils.ts` (`calcLicenseSeniority`) implementa el cálculo; el wizard además muestra una estimación temprana en Step 1 contra la fecha de hoy, aclarando que se recalcula contra la promoción real en Step 2 — no reemplaza el chequeo definitivo.
 - **Fuente:** `specs/fixes/fix-089-m-licencia-b-dos-anos-profesional`, `specs/assignments/ASG-b-041-licencia-b-dos-anos-profesional.md`
 
+### DG-038 — `student_documents.type` tenía DOS vocabularios distintos para el mismo documento
+- **Trampa:** asumir que el selector de tipo del drawer de subida manual del DMS
+  (`dms-upload-drawer.component.ts`) usaba las mismas claves que el resto del sistema.
+- **Realidad:** el flujo de matrícula (online/presencial, `EnrollmentDocumentsFacade`,
+  `AdminAlumnosFacade`) escribe/lee `student_documents.type` con claves como `id_photo`,
+  `cedula_identidad`, `certificado_medico`, `hoja_vida_conductor`. El drawer de subida manual
+  del DMS (para agregar documentos *después* de la matrícula) tenía su **propio** set de claves
+  inventadas (`cedula`, `hoja_vida`, `foto_carnet`, `foto_licencia`) que nunca coincidían con
+  las anteriores. Un documento subido manualmente con esas claves quedaba "invisible" para
+  cualquier lógica que buscara el tipo real (ej. `AdminAlumnosFacade` chequea
+  `types.has('cedula_identidad')` para un badge — un archivo subido como `'cedula'` nunca lo
+  activaba) y se mostraba con la etiqueta cruda (`'id_photo'`) en vez de un label legible cuando
+  el tipo real SÍ coincidía pero faltaba en `LABELS_TIPO_ALUMNO`.
+- **Fix:** `studentDocTypes` del drawer ahora usa las claves canónicas reales. Las claves viejas
+  quedan en `LABELS_TIPO_ALUMNO` marcadas `(legacy)` solo para no mostrar crudo un tipo ya
+  guardado en BD con la clave antigua, pero ya no se ofrecen como opción nueva. **Caso especial:**
+  `v_dms_student_documents` fija `type = 'contract'` (hardcodeado en el `UNION ALL` de la vista,
+  `20260404120000_academic_alter_remove_redundant_student_id.sql`) para las filas que vienen de
+  `digital_contracts` — no de `student_documents`, y no coincide con la opción del selector
+  (`value: 'contrato'`). El filtro de "tipos ya subidos" en `dms-upload-drawer.component.ts`
+  normaliza `'contract' → 'contrato'` antes de comparar, si no un alumno con contrato digital
+  seguía viendo "Contrato" disponible para subir de nuevo.
+- **Fuente:** spec `0003-m-repositorio-documentos-instructores` (reportado por el owner al
+  probar el nuevo tab de Instructores, 2026-07-29).
+
 ---
 
 ## Convención para agregar una entrada nueva

@@ -3,14 +3,19 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
+import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import type {
   StudentWithDocsRow,
   DmsStudentDocRow,
+  InstructorWithDocsRow,
+  DmsInstructorDocRow,
   SchoolDocRow,
   TemplateCard,
   DmsKpis,
   TemplateCategory,
   UploadStudentDocPayload,
+  UploadInstructorDocPayload,
   UploadSchoolDocPayload,
   UploadTemplatePayload,
 } from '@core/models/ui/dms.model';
@@ -25,18 +30,28 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 const LABELS_TIPO_ALUMNO: Record<string, string> = {
   contrato: 'Contrato',
   contract: 'Contrato',
-  foto_licencia: 'Foto Licencia',
-  hoja_vida: 'Hoja de Vida',
-  cedula: 'Cédula',
-  certificado_antecedentes: 'Cert. Antecedentes',
-  autorizacion_notarial: 'Autorización Notarial',
-  foto_carnet: 'Foto Carnet',
-  cedula_identidad: 'Cédula Identidad',
+  id_photo: 'Foto (Carnet)',
+  cedula_identidad: 'Cédula de Identidad',
   certificado_medico: 'Certificado Médico',
+  hoja_vida_conductor: 'Hoja de Vida del Conductor',
+  autorizacion_notarial: 'Autorización Notarial',
+  certificado_antecedentes: 'Cert. Antecedentes',
   semep: 'SEMEP',
   carnet_inicial: 'Carnet Inicial (6 clases)',
   carnet_completo: 'Carnet Completo (12 clases)',
+  // Legacy — quedan solo para mostrar documentos ya subidos con estas claves antiguas
+  // (dms-upload-drawer.component.ts ya no las ofrece como opción, DG-038).
+  foto_licencia: 'Foto Licencia (legacy)',
+  hoja_vida: 'Hoja de Vida (legacy)',
+  cedula: 'Cédula (legacy)',
+  foto_carnet: 'Foto Carnet (legacy)',
 };
+
+// Única fuente de verdad del enum en @core/utils/instructor-doc-types.util.ts — reutilizado
+// también por dms-upload-drawer y admin-instructor-crear-drawer.
+const LABELS_TIPO_INSTRUCTOR: Record<string, string> = Object.fromEntries(
+  INSTRUCTOR_DOC_TYPES.map((t) => [t.value, t.label]),
+);
 
 const LABELS_TIPO_ESCUELA: Record<string, string> = {
   factura_folios: 'Factura Folios',
@@ -67,16 +82,53 @@ interface RawVDmsDoc {
   managed_by: number | null;
 }
 
+interface RawBranch {
+  name: string;
+}
+
 interface RawStudentUser {
   id: number;
   rut: string;
   first_names: string;
   paternal_last_name: string;
+  maternal_last_name: string | null;
+  branch_id: number | null;
+  branches: RawBranch | RawBranch[] | null;
+}
+
+interface RawStudentEnrollment {
+  number: string | null;
+  created_at: string;
 }
 
 interface RawStudent {
   id: number;
   users: RawStudentUser | RawStudentUser[] | null;
+  enrollments: RawStudentEnrollment[] | null;
+}
+
+interface RawInstructorUser {
+  id: number;
+  first_names: string;
+  paternal_last_name: string;
+  maternal_last_name: string | null;
+  branches: RawBranch | RawBranch[] | null;
+}
+
+interface RawInstructor {
+  id: number;
+  license_number: string | null;
+  users: RawInstructorUser | RawInstructorUser[] | null;
+}
+
+interface RawInstructorDoc {
+  id: number;
+  instructor_id: number;
+  type: string;
+  file_name: string;
+  storage_url: string;
+  status: string;
+  created_at: string;
 }
 
 interface RawSchoolDoc {
@@ -176,8 +228,17 @@ export class DmsFacade {
     }
   }
 
+  /**
+   * Cierra el drawer. Si hay historial de navegación interna (push/back —
+   * ej. venimos de una previsualización o de subir un documento dentro del
+   * drawer de lista), vuelve al nivel anterior en vez de cerrar todo.
+   */
   closeDrawer(): void {
-    this.layoutDrawer.close();
+    if (this.layoutDrawer.canGoBack()) {
+      this.layoutDrawer.back();
+    } else {
+      this.layoutDrawer.close();
+    }
   }
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
@@ -198,10 +259,29 @@ export class DmsFacade {
   private readonly _studentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _studentDocsLoading = signal(false);
 
+  // Sub-ruta: detalle de instructor
+  private readonly _instructorsWithDocs = signal<InstructorWithDocsRow[]>([]);
+  private readonly _instructorDetail = signal<{
+    name: string;
+    licenseNumber: string;
+    instructorId: number;
+  } | null>(null);
+  private readonly _instructorDocs = signal<DmsInstructorDocRow[]>([]);
+  private readonly _instructorDocsLoading = signal(false);
+
   // Estado para el Drawer dinámico
-  private readonly _currentUploadMode = signal<'student' | 'school'>('student');
+  private readonly _currentUploadMode = signal<'student' | 'school' | 'instructor'>('student');
   private readonly _preselectedStudentId = signal<number | null>(null);
+  private readonly _preselectedInstructorId = signal<number | null>(null);
   private readonly _uploadSaved = signal<boolean>(false);
+
+  // Previsualización de documento dentro del drawer (push sobre la lista)
+  private readonly _previewDoc = signal<{
+    url: string;
+    name: string;
+    type: 'pdf' | 'image' | 'unknown';
+  } | null>(null);
+  private readonly _previewDocLoading = signal(false);
 
   // ── Estado Público ───────────────────────────────────────────────────────────
 
@@ -215,9 +295,18 @@ export class DmsFacade {
   readonly studentDocs = this._studentDocs.asReadonly();
   readonly studentDocsLoading = this._studentDocsLoading.asReadonly();
 
+  readonly instructorsWithDocs = this._instructorsWithDocs.asReadonly();
+  readonly instructorDetail = this._instructorDetail.asReadonly();
+  readonly instructorDocs = this._instructorDocs.asReadonly();
+  readonly instructorDocsLoading = this._instructorDocsLoading.asReadonly();
+
   readonly currentUploadMode = this._currentUploadMode.asReadonly();
   readonly preselectedStudentId = this._preselectedStudentId.asReadonly();
+  readonly preselectedInstructorId = this._preselectedInstructorId.asReadonly();
   readonly uploadSaved = this._uploadSaved.asReadonly();
+
+  readonly previewDoc = this._previewDoc.asReadonly();
+  readonly previewDocLoading = this._previewDocLoading.asReadonly();
 
   readonly kpis = computed(
     (): DmsKpis => ({
@@ -267,22 +356,28 @@ export class DmsFacade {
   /**
    * Abre el drawer de subida de documentos integrado en el layout.
    */
-  openUpload(mode: 'student' | 'school', studentId: number | null = null): void {
+  openUpload(mode: 'student' | 'school' | 'instructor', preselectedId: number | null = null): void {
     this._currentUploadMode.set(mode);
-    this._preselectedStudentId.set(studentId);
+    this._preselectedStudentId.set(mode === 'student' ? preselectedId : null);
+    this._preselectedInstructorId.set(mode === 'instructor' ? preselectedId : null);
     this._uploadSaved.set(false);
 
     // Importación dinámica para evitar ciclos circulares si fuera necesario,
     // pero aquí usaremos el componente directamente (se cargará al abrir el drawer).
     // Nota: El componente se llamará DmsUploadDrawerComponent por ahora,
     // pero actuará como contenido puro.
+    // push(): si ya hay un drawer abierto (ej. la lista de docs de un alumno/instructor),
+    // apila el de subida encima y "Cancelar"/guardar exitoso vuelven a la lista (closeDrawer()
+    // es "smart" — back si hay historial). Si no hay nada abierto, push() actúa como open().
     import('../../features/admin/documentos/dms-upload-drawer/dms-upload-drawer.component').then(
       (m) => {
-        this.layoutDrawer.open(
-          m.DmsUploadDrawerComponent,
-          mode === 'student' ? 'Subir documento de alumno' : 'Subir documento institucional',
-          'upload',
-        );
+        const title =
+          mode === 'student'
+            ? 'Subir documento de alumno'
+            : mode === 'instructor'
+              ? 'Subir documento de instructor'
+              : 'Subir documento institucional';
+        this.layoutDrawer.push(m.DmsUploadDrawerComponent, title, 'upload');
       },
     );
   }
@@ -303,14 +398,84 @@ export class DmsFacade {
   }
 
   /**
+   * Abre el drawer con la lista de documentos de un alumno (reemplaza la antigua
+   * subruta de página completa /documentos/alumnos/:id). Usa push(): si ya hay un drawer
+   * abierto (ej. Ver/Editar Alumno), se apila encima y el back button del header regresa a
+   * él; si no hay nada abierto, push() degrada a open() (entrada directa desde DMS).
+   */
+  openStudentDocsDrawer(studentId: number, name: string): void {
+    void this.loadStudentDocuments(studentId);
+    import('../../features/admin/documentos/dms-student-docs-drawer/dms-student-docs-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.push(m.DmsStudentDocsDrawerComponent, name, 'user');
+      },
+    );
+  }
+
+  /**
+   * Abre el drawer con la lista de documentos de un instructor (spec 0003-m). Mismo push()
+   * que openStudentDocsDrawer — permite abrirlo apilado desde Ver/Editar/Crear Instructor.
+   */
+  openInstructorDocsDrawer(instructorId: number, name: string): void {
+    void this.loadInstructorDocuments(instructorId);
+    import('../../features/admin/documentos/dms-instructor-docs-drawer/dms-instructor-docs-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.push(m.DmsInstructorDocsDrawerComponent, name, 'shield-check');
+      },
+    );
+  }
+
+  /**
+   * Previsualiza un documento apilando (push) un sub-drawer sobre la lista actual.
+   * El botón "volver" del header del drawer (LayoutDrawerService.canGoBack) regresa
+   * a la lista sin cerrar todo el panel.
+   */
+  openDocPreview(path: string | null, fileName: string): void {
+    if (!path) return;
+    void this.previewDocument(path, fileName);
+    import('../../features/admin/documentos/dms-doc-preview-drawer/dms-doc-preview-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.push(m.DmsDocPreviewDrawerComponent, fileName, 'eye');
+      },
+    );
+  }
+
+  private async previewDocument(path: string, fileName: string): Promise<void> {
+    this._previewDoc.set(null);
+    this._previewDocLoading.set(true);
+    try {
+      const signedUrl = await this.getSignedDocumentUrl(path);
+      if (!signedUrl) throw new Error('No se pudo obtener URL');
+
+      const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+      let type: 'pdf' | 'image' | 'unknown' = 'unknown';
+      if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+        type = 'image';
+      } else if (ext === 'pdf') {
+        type = 'pdf';
+      }
+
+      this._previewDoc.set({ url: signedUrl, name: fileName, type });
+    } catch {
+      this.toast.error('No se pudo cargar la vista previa del documento');
+    } finally {
+      this._previewDocLoading.set(false);
+    }
+  }
+
+  /**
    * Notifica que se ha guardado un documento (llamado desde el drawer).
    */
   notifyUploadSaved(): void {
     const studentId = this._preselectedStudentId();
+    const instructorId = this._preselectedInstructorId();
     this._uploadSaved.set(true);
     void this.initialize();
     if (studentId) {
       void this.loadStudentDocuments(studentId);
+    }
+    if (instructorId) {
+      void this.loadInstructorDocuments(instructorId);
     }
   }
 
@@ -332,7 +497,7 @@ export class DmsFacade {
       if (docs.length > 0) {
         const { data: studentData } = await this.supabase.client
           .from('students')
-          .select('id, users!inner(id, rut, first_names, paternal_last_name)')
+          .select('id, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name)')
           .eq('id', studentId)
           .single();
 
@@ -344,7 +509,11 @@ export class DmsFacade {
           : null;
         if (user) {
           this._studentDetail.set({
-            name: `${user.first_names} ${user.paternal_last_name}`.trim(),
+            name: buildStudentDisplayName({
+              firstNames: user.first_names,
+              paternalLastName: user.paternal_last_name,
+              maternalLastName: user.maternal_last_name,
+            }),
             rut: user.rut,
             studentId,
           });
@@ -354,7 +523,7 @@ export class DmsFacade {
         // Sin docs: cargar solo info de alumno
         const { data: studentData } = await this.supabase.client
           .from('students')
-          .select('id, users!inner(id, rut, first_names, paternal_last_name)')
+          .select('id, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name)')
           .eq('id', studentId)
           .single();
         const rawStudent = studentData as unknown as RawStudent | null;
@@ -365,7 +534,11 @@ export class DmsFacade {
           : null;
         if (user) {
           this._studentDetail.set({
-            name: `${user.first_names} ${user.paternal_last_name}`.trim(),
+            name: buildStudentDisplayName({
+              firstNames: user.first_names,
+              paternalLastName: user.paternal_last_name,
+              maternalLastName: user.maternal_last_name,
+            }),
             rut: user.rut,
             studentId,
           });
@@ -435,6 +608,105 @@ export class DmsFacade {
     const table = source === 'student_document' ? 'student_documents' : 'digital_contracts';
     const numericId = parseInt(docId, 10);
     const { error } = await this.supabase.client.from(table).delete().eq('id', numericId);
+    if (error) throw error;
+    await this.refreshSilently();
+  }
+
+  // ── Tab 4 — Documentos del Instructor ───────────────────────────────────────
+
+  async loadInstructorDocuments(instructorId: number): Promise<void> {
+    this._instructorDocsLoading.set(true);
+    try {
+      const { data: instructorData } = await this.supabase.client
+        .from('instructors')
+        .select(
+          'id, license_number, users!inner(id, first_names, paternal_last_name, maternal_last_name)',
+        )
+        .eq('id', instructorId)
+        .single();
+
+      const rawInstructor = instructorData as unknown as RawInstructor | null;
+      const user = rawInstructor
+        ? Array.isArray(rawInstructor.users)
+          ? rawInstructor.users[0]
+          : rawInstructor.users
+        : null;
+      const instructorName = user
+        ? [user.first_names, user.paternal_last_name, user.maternal_last_name]
+            .map((p) => p?.trim() ?? '')
+            .filter(Boolean)
+            .join(' ')
+        : 'Instructor';
+
+      if (rawInstructor) {
+        this._instructorDetail.set({
+          name: instructorName,
+          licenseNumber: rawInstructor.license_number ?? '',
+          instructorId,
+        });
+      }
+
+      const { data, error } = await this.supabase.client
+        .from('instructor_documents')
+        .select('id, instructor_id, type, file_name, storage_url, status, created_at')
+        .eq('instructor_id', instructorId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const docs = (data ?? []) as unknown as RawInstructorDoc[];
+      this._instructorDocs.set(docs.map((d) => this.mapRawToInstructorDocRow(d, instructorName)));
+    } catch (err) {
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar documentos del instructor',
+      );
+    } finally {
+      this._instructorDocsLoading.set(false);
+    }
+  }
+
+  async uploadInstructorDocument(payload: UploadInstructorDocPayload): Promise<void> {
+    const ext = payload.file.name.split('.').pop() ?? 'pdf';
+    const path = `instructor-docs/${payload.instructorId}/${Date.now()}_${payload.type}.${ext}`;
+
+    const { error: uploadError } = await this.supabase.client.storage
+      .from('documents')
+      .upload(path, payload.file, { upsert: true });
+    if (uploadError) throw uploadError;
+
+    const sessionRes = await this.supabase.client.auth.getUser();
+    const authUid = sessionRes.data.user?.id;
+
+    let numericUserId: number | null = null;
+    if (authUid) {
+      const { data: userData } = await this.supabase.client
+        .from('users')
+        .select('id')
+        .eq('supabase_uid', authUid)
+        .single();
+      numericUserId = (userData as { id: number } | null)?.id ?? null;
+    }
+
+    const { error: insertError } = await this.supabase.client.from('instructor_documents').insert({
+      instructor_id: payload.instructorId,
+      type: payload.type,
+      file_name: payload.file.name,
+      storage_url: path,
+      status: 'pending',
+      uploaded_by: numericUserId,
+    });
+    if (insertError) throw insertError;
+
+    await this.refreshSilently();
+  }
+
+  async deleteInstructorDocument(docId: number): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('instructor_documents')
+      .delete()
+      .eq('id', docId);
     if (error) throw error;
     await this.refreshSilently();
   }
@@ -549,12 +821,30 @@ export class DmsFacade {
         .order('created_at', { ascending: false });
       if (branchId !== null) schoolDocsQuery = schoolDocsQuery.eq('branch_id', branchId);
 
-      let studentsQuery: any = this.supabase.client
-        .from('students')
-        .select('id, users!inner(id, rut, first_names, paternal_last_name)');
+      let studentsQuery: any = this.supabase.client.from('students').select(
+        `
+          id,
+          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
+          enrollments(number, created_at)
+        `,
+      );
       if (branchId !== null) studentsQuery = studentsQuery.eq('users.branch_id', branchId);
 
-      const [vDocsRes, schoolDocsRes, templatesRes, studentsRes] = await Promise.all([
+      let instructorsQuery: any = this.supabase.client
+        .from('instructors')
+        .select(
+          'id, license_number, users!inner(id, first_names, paternal_last_name, maternal_last_name, branches(name))',
+        );
+      if (branchId !== null) instructorsQuery = instructorsQuery.eq('users.branch_id', branchId);
+
+      const [
+        vDocsRes,
+        schoolDocsRes,
+        templatesRes,
+        studentsRes,
+        instructorsRes,
+        instructorDocsRes,
+      ] = await Promise.all([
         this.supabase.client
           .from('v_dms_student_documents')
           .select('*')
@@ -573,17 +863,40 @@ export class DmsFacade {
           .order('name', { ascending: true }),
 
         studentsQuery,
+
+        instructorsQuery,
+
+        this.supabase.client
+          .from('instructor_documents')
+          .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
       ]);
 
       // Construir mapa studentId → info
-      const studentMap = new Map<number, { name: string; rut: string }>();
+      const studentMap = new Map<
+        number,
+        { name: string; rut: string; matriculaNumber: string; branchName: string | null }
+      >();
       const rawStudents = (studentsRes.data ?? []) as unknown as RawStudent[];
       for (const s of rawStudents) {
         const user = Array.isArray(s.users) ? s.users[0] : s.users;
         if (user) {
+          const branch = Array.isArray(user.branches) ? user.branches[0] : user.branches;
+          const enrollments = s.enrollments ?? [];
+          const latestEnrollment =
+            enrollments.length > 0
+              ? [...enrollments].sort((a, b) =>
+                  (b.created_at ?? '').localeCompare(a.created_at ?? ''),
+                )[0]
+              : null;
           studentMap.set(s.id, {
-            name: `${user.first_names} ${user.paternal_last_name}`.trim(),
+            name: buildStudentDisplayName({
+              firstNames: user.first_names,
+              paternalLastName: user.paternal_last_name,
+              maternalLastName: user.maternal_last_name,
+            }),
             rut: user.rut,
+            matriculaNumber: latestEnrollment?.number ? `#${latestEnrollment.number}` : '—',
+            branchName: branch?.name ?? null,
           });
         }
       }
@@ -614,19 +927,69 @@ export class DmsFacade {
       for (const d of allVDocs) {
         studentDocCount.set(d.student_id, (studentDocCount.get(d.student_id) ?? 0) + 1);
       }
-      const studentsWithDocs: StudentWithDocsRow[] = [];
+      const studentsWithDocsUnsorted: StudentWithDocsRow[] = [];
       for (const [studentId, docCount] of studentDocCount) {
         const student = studentMap.get(studentId);
         if (student) {
-          studentsWithDocs.push({
+          studentsWithDocsUnsorted.push({
             studentId,
             name: student.name,
             rut: student.rut,
+            matriculaNumber: student.matriculaNumber,
+            branchName: student.branchName,
             docCount,
           });
         }
       }
-      studentsWithDocs.sort((a, b) => a.name.localeCompare(b.name));
+      // Orden paterno - materno - nombre, igual que Base de Alumnos.
+      const studentsWithDocs = sortByPaternalLastNameAsc(studentsWithDocsUnsorted, (s) => s.name);
+
+      // Construir mapa instructorId → info
+      const instructorMap = new Map<
+        number,
+        { name: string; licenseNumber: string; branchName: string | null }
+      >();
+      const rawInstructors = (instructorsRes.data ?? []) as unknown as RawInstructor[];
+      for (const i of rawInstructors) {
+        const user = Array.isArray(i.users) ? i.users[0] : i.users;
+        if (user) {
+          const branch = Array.isArray(user.branches) ? user.branches[0] : user.branches;
+          instructorMap.set(i.id, {
+            // Orden actual del instructor (nombre primero) + apellido materno agregado al final.
+            name: [user.first_names, user.paternal_last_name, user.maternal_last_name]
+              .map((p) => p?.trim() ?? '')
+              .filter(Boolean)
+              .join(' '),
+            licenseNumber: i.license_number ?? '',
+            branchName: branch?.name ?? null,
+          });
+        }
+      }
+
+      // Contar documentos por instructor — filtrar por sede si aplica
+      const allInstructorDocsRaw = (instructorDocsRes.data ?? []) as unknown as RawInstructorDoc[];
+      const allInstructorDocs =
+        branchId !== null
+          ? allInstructorDocsRaw.filter((d) => instructorMap.has(d.instructor_id))
+          : allInstructorDocsRaw;
+      const instructorDocCount = new Map<number, number>();
+      for (const d of allInstructorDocs) {
+        instructorDocCount.set(d.instructor_id, (instructorDocCount.get(d.instructor_id) ?? 0) + 1);
+      }
+
+      // instructorsWithDocs lista TODOS los instructores del scope (con docCount 0 incluido),
+      // a diferencia de studentsWithDocs — necesario para poder subir el primer documento.
+      const instructorsWithDocs: InstructorWithDocsRow[] = [];
+      for (const [instructorId, info] of instructorMap) {
+        instructorsWithDocs.push({
+          instructorId,
+          name: info.name,
+          licenseNumber: info.licenseNumber,
+          branchName: info.branchName,
+          docCount: instructorDocCount.get(instructorId) ?? 0,
+        });
+      }
+      instructorsWithDocs.sort((a, b) => a.name.localeCompare(b.name));
 
       // Procesar school docs
       const rawSchoolDocs = (schoolDocsRes.data ?? []) as unknown as RawSchoolDoc[];
@@ -665,6 +1028,7 @@ export class DmsFacade {
 
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);
+      this._instructorsWithDocs.set(instructorsWithDocs);
       this._schoolDocs.set(schoolDocs);
       this._templates.set(templates);
     } catch (err) {
@@ -701,6 +1065,23 @@ export class DmsFacade {
       studentName,
       studentRut: user?.rut ?? '',
       typeLabel: LABELS_TIPO_ALUMNO[d.type ?? ''] ?? d.type ?? 'Documento',
+    };
+  }
+
+  private mapRawToInstructorDocRow(
+    d: RawInstructorDoc,
+    instructorName: string,
+  ): DmsInstructorDocRow {
+    return {
+      id: d.id,
+      instructorId: d.instructor_id,
+      type: d.type,
+      fileName: d.file_name,
+      fileUrl: d.storage_url,
+      status: d.status,
+      documentAt: d.created_at,
+      instructorName,
+      typeLabel: LABELS_TIPO_INSTRUCTOR[d.type] ?? d.type,
     };
   }
 

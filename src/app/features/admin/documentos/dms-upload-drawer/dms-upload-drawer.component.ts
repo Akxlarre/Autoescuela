@@ -16,8 +16,10 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
+import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 
-type UploadMode = 'student' | 'school';
+type UploadMode = 'student' | 'school' | 'instructor';
 
 /**
  * DmsUploadDrawerComponent — Drawer para subir documentos de alumno o de la escuela.
@@ -80,15 +82,32 @@ type UploadMode = 'student' | 'school';
               </div>
             }
 
+            <!-- ── Selector instructor (modo instructor) ── -->
+            @if (facade.currentUploadMode() === 'instructor') {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-text-primary">Instructor *</label>
+                <p-select
+                  [ngModel]="selectedInstructorId()"
+                  (ngModelChange)="selectedInstructorId.set($event)"
+                  [options]="instructorOptions()"
+                  optionLabel="name"
+                  optionValue="instructorId"
+                  placeholder="Seleccionar instructor..."
+                  [filter]="true"
+                  filterPlaceholder="Buscar instructor..."
+                  styleClass="w-full"
+                  appendTo="body"
+                ></p-select>
+              </div>
+            }
+
             <!-- ── Selector tipo ── -->
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-primary">Tipo de documento *</label>
               <p-select
                 [ngModel]="selectedType()"
                 (ngModelChange)="selectedType.set($event)"
-                [options]="
-                  facade.currentUploadMode() === 'student' ? studentDocTypes : schoolDocTypes
-                "
+                [options]="currentDocTypes()"
                 placeholder="Seleccionar tipo..."
                 styleClass="w-full"
                 appendTo="body"
@@ -159,13 +178,6 @@ type UploadMode = 'student' | 'school';
                 {{ validationError() }}
               </app-alert-card>
             }
-
-            <!-- ── Banner éxito ── -->
-            @if (savedOk()) {
-              <app-alert-card title="Documento subido" severity="success">
-                El documento se subió correctamente.
-              </app-alert-card>
-            }
           </div>
         </ng-template>
       </app-drawer-content-loader>
@@ -197,33 +209,81 @@ export class DmsUploadDrawerComponent {
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
+  readonly selectedInstructorId = signal<number | null>(null);
   readonly selectedType = signal<string>('');
   readonly description = signal<string>('');
   readonly selectedFile = signal<File | null>(null);
   readonly isSubmitting = signal(false);
-  readonly savedOk = signal(false);
   readonly validationError = signal<string | null>(null);
   readonly isDragOver = signal(false);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly studentOptions = computed(() => this.facade.studentsWithDocs());
+  readonly instructorOptions = computed(() => this.facade.instructorsWithDocs());
+
+  /**
+   * Tipos ya subidos para el alumno/instructor seleccionado — solo se puede calcular cuando
+   * el seleccionado coincide con la entidad cuya lista de documentos ya está cargada en el
+   * facade (caso típico: se abrió "Subir documento" desde el propio drawer de lista de esa
+   * entidad). Si se abrió desde el selector genérico con otra entidad, no hay forma de saberlo
+   * sin una query aparte — en ese caso no se filtra nada.
+   */
+  private readonly usedStudentTypes = computed(() => {
+    const id = this.selectedStudentId();
+    if (!id || id !== this.facade.studentDetail()?.studentId) return new Set<string>();
+    // 'contract' es el type que fija v_dms_student_documents para las filas que vienen de
+    // digital_contracts (contrato firmado online/presencial) — no de student_documents. Es el
+    // mismo concepto de negocio que la opción "Contrato" del selector (value: 'contrato'), así
+    // que se normaliza acá para que el filtro los trate como el mismo tipo (DG-038).
+    return new Set(
+      this.facade.studentDocs().map((d) => (d.type === 'contract' ? 'contrato' : d.type)),
+    );
+  });
+
+  private readonly usedInstructorTypes = computed(() => {
+    const id = this.selectedInstructorId();
+    if (!id || id !== this.facade.instructorDetail()?.instructorId) return new Set<string>();
+    return new Set(this.facade.instructorDocs().map((d) => d.type));
+  });
+
+  readonly currentDocTypes = computed(() => {
+    const mode = this.facade.currentUploadMode();
+    if (mode === 'student') {
+      const used = this.usedStudentTypes();
+      return this.studentDocTypes.filter((t) => !used.has(t.value));
+    }
+    if (mode === 'instructor') {
+      const used = this.usedInstructorTypes();
+      return this.instructorDocTypes.filter((t) => !used.has(t.value));
+    }
+    return this.schoolDocTypes;
+  });
 
   readonly canSubmit = computed(() => {
     if (!this.selectedFile() || !this.selectedType()) return false;
-    if (this.facade.currentUploadMode() === 'student' && !this.selectedStudentId()) return false;
+    const mode = this.facade.currentUploadMode();
+    if (mode === 'student' && !this.selectedStudentId()) return false;
+    if (mode === 'instructor' && !this.selectedInstructorId()) return false;
     return true;
   });
 
   // ── Config selectores ─────────────────────────────────────────────────────
+  // Claves alineadas con las que usa el resto del sistema para el mismo documento
+  // (matrícula online/presencial, EnrollmentDocumentsFacade, AdminAlumnosFacade) — DG-038.
+  // Antes este drawer usaba claves propias ('cedula', 'hoja_vida', 'foto_carnet', 'foto_licencia')
+  // que no coincidían con nada más en la app: un documento subido así quedaba "invisible" para
+  // cualquier lógica que buscara el tipo real (ej. el check de cédula en la tabla de alumnos).
   readonly studentDocTypes = [
     { label: 'Contrato', value: 'contrato' },
-    { label: 'Foto Licencia', value: 'foto_licencia' },
-    { label: 'Hoja de Vida', value: 'hoja_vida' },
-    { label: 'Cédula', value: 'cedula' },
-    { label: 'Cert. Antecedentes', value: 'certificado_antecedentes' },
+    { label: 'Foto (Carnet)', value: 'id_photo' },
+    { label: 'Cédula de Identidad', value: 'cedula_identidad' },
+    { label: 'Certificado Médico', value: 'certificado_medico' },
+    { label: 'Hoja de Vida del Conductor', value: 'hoja_vida_conductor' },
     { label: 'Autorización Notarial', value: 'autorizacion_notarial' },
-    { label: 'Foto Carnet', value: 'foto_carnet' },
+    { label: 'Cert. Antecedentes', value: 'certificado_antecedentes' },
   ];
+
+  readonly instructorDocTypes = INSTRUCTOR_DOC_TYPES;
 
   readonly schoolDocTypes = [
     { label: 'Factura Folios', value: 'factura_folios' },
@@ -239,6 +299,22 @@ export class DmsUploadDrawerComponent {
     effect(() => {
       const id = this.facade.preselectedStudentId();
       if (id) this.selectedStudentId.set(id);
+    });
+
+    // Pre-seleccionar instructor si se recibe desde el facade
+    effect(() => {
+      const id = this.facade.preselectedInstructorId();
+      if (id) this.selectedInstructorId.set(id);
+    });
+
+    // Si el tipo elegido deja de estar disponible (ya se subió, o cambió la entidad
+    // seleccionada), limpiar la selección para no dejar un valor fantasma en el p-select.
+    effect(() => {
+      const types = this.currentDocTypes();
+      const selected = this.selectedType();
+      if (selected && !types.some((t) => t.value === selected)) {
+        this.selectedType.set('');
+      }
     });
   }
 
@@ -262,29 +338,27 @@ export class DmsUploadDrawerComponent {
   }
 
   private validateAndSetFile(file: File): void {
-    this.validationError.set(null);
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      this.validationError.set('Solo se permiten archivos PDF, JPG, PNG o WEBP.');
-      return;
-    }
-    const maxSize = 5 * 1024 * 1024; // 5 MB
-    if (file.size > maxSize) {
-      this.validationError.set('El archivo no puede superar los 5 MB.');
-      return;
-    }
-    this.selectedFile.set(file);
+    const error = validateDocumentFile(file);
+    this.validationError.set(error);
+    if (!error) this.selectedFile.set(file);
   }
 
   async onSubmit(): Promise<void> {
     if (!this.canSubmit()) return;
     this.isSubmitting.set(true);
     try {
-      if (this.facade.currentUploadMode() === 'student') {
+      const mode = this.facade.currentUploadMode();
+      if (mode === 'student') {
         await this.facade.uploadStudentDocument({
           file: this.selectedFile()!,
           type: this.selectedType(),
           studentId: this.selectedStudentId()!,
+        });
+      } else if (mode === 'instructor') {
+        await this.facade.uploadInstructorDocument({
+          file: this.selectedFile()!,
+          type: this.selectedType(),
+          instructorId: this.selectedInstructorId()!,
         });
       } else {
         await this.facade.uploadSchoolDocument({
@@ -293,12 +367,9 @@ export class DmsUploadDrawerComponent {
           description: this.description() || undefined,
         });
       }
-      this.savedOk.set(true);
+      this.facade.showSuccess('Documento subido', 'El documento se subió correctamente.');
       this.facade.notifyUploadSaved();
-      setTimeout(() => {
-        this.savedOk.set(false);
-        this.onClose();
-      }, 1200);
+      this.onClose();
     } catch (err) {
       this.validationError.set(
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir el archivo',
@@ -314,11 +385,11 @@ export class DmsUploadDrawerComponent {
 
   private resetForm(): void {
     this.selectedStudentId.set(null);
+    this.selectedInstructorId.set(null);
     this.selectedType.set('');
     this.description.set('');
     this.selectedFile.set(null);
     this.validationError.set(null);
-    this.savedOk.set(false);
     this.isDragOver.set(false);
   }
 

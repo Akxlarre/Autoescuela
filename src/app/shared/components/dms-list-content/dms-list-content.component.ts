@@ -28,6 +28,7 @@ import type {
   DmsTab,
   StudentWithDocsRow,
   DmsStudentDocRow,
+  InstructorWithDocsRow,
   SchoolDocRow,
   TemplateCard,
   TemplateCategoryFilter,
@@ -64,6 +65,7 @@ import type {
         <div class="bento-banner flex flex-col gap-6 p-6">
           <app-skeleton-block variant="rect" width="100%" height="120px" />
           <div class="flex gap-3">
+            <app-skeleton-block variant="rect" width="120px" height="36px" />
             <app-skeleton-block variant="rect" width="120px" height="36px" />
             <app-skeleton-block variant="rect" width="120px" height="36px" />
             <app-skeleton-block variant="rect" width="120px" height="36px" />
@@ -120,7 +122,7 @@ import type {
                 class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
               >
                 <div>
-                  <h2 class="text-base font-semibold m-0">Alumnos con documentos</h2>
+                  <h2 class="text-text-primary font-semibold m-0">Alumnos con documentos</h2>
                   <p class="text-xs text-text-secondary m-0 mt-1">
                     Contratos firmados, fotos de licencias, cédulas y más
                   </p>
@@ -194,8 +196,13 @@ import type {
                           Alumno
                         </th>
                         <th class="text-text-secondary font-semibold text-xs tracking-wider">
-                          RUT
+                          N° Mat.
                         </th>
+                        @if (showSedeColumn()) {
+                          <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                            Sede
+                          </th>
+                        }
                         <th
                           class="text-center text-text-secondary font-semibold text-xs tracking-wider"
                         >
@@ -212,8 +219,12 @@ import type {
                       <tr>
                         <td>
                           <span class="font-medium text-text-primary">{{ row.name }}</span>
+                          <p class="text-xs text-text-secondary m-0 mt-0.5">{{ row.rut }}</p>
                         </td>
-                        <td class="text-text-secondary text-sm">{{ row.rut }}</td>
+                        <td class="text-text-secondary text-sm">{{ row.matriculaNumber }}</td>
+                        @if (showSedeColumn()) {
+                          <td class="text-text-secondary text-sm">{{ row.branchName ?? '—' }}</td>
+                        }
                         <td class="text-center">
                           <app-badge variant="brand">
                             {{ row.docCount }} doc{{ row.docCount !== 1 ? 's' : '' }}
@@ -242,7 +253,7 @@ import type {
               appCardHover
             >
               <div class="px-5 py-4 border-b border-border-subtle shrink-0 bg-surface">
-                <h2 class="text-base font-semibold m-0">Últimos subidos</h2>
+                <h2 class="text-text-primary font-semibold m-0">Últimos subidos</h2>
               </div>
               @if (recentDocs().length === 0) {
                 <div class="p-6 flex-1 flex items-center justify-center">
@@ -303,6 +314,105 @@ import type {
             </div>
           }
 
+          <!-- ══ TAB: DOCUMENTOS DEL INSTRUCTOR ═══════════════════════════ -->
+          @case ('instructors') {
+            <div
+              class="bento-card p-0 overflow-hidden col-span-full flex flex-col h-125"
+              appCardHover
+            >
+              <div
+                class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
+              >
+                <div>
+                  <h2 class="text-text-primary font-semibold m-0">Instructores con documentos</h2>
+                  <p class="text-xs text-text-secondary m-0 mt-1">
+                    Antecedentes, hoja de vida, credencial SEMEP, licencia y más
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  data-llm-action="upload-instructor-document"
+                  (click)="uploadInstructorDoc.emit()"
+                >
+                  <app-icon name="upload" [size]="14" />
+                  Subir documento
+                </button>
+              </div>
+
+              @if (instructorsWithDocs().length === 0) {
+                <div class="p-6 flex-1 flex items-center justify-center">
+                  <app-empty-state
+                    message="Sin instructores"
+                    subtitle="Los instructores de esta sede aparecerán aquí."
+                    icon="shield-check"
+                  />
+                </div>
+              } @else {
+                <div class="overflow-y-auto flex-1">
+                  <p-table
+                    [value]="instructorsWithDocs()"
+                    [paginator]="instructorsWithDocs().length > 10"
+                    [rows]="10"
+                    styleClass="p-datatable-sm"
+                  >
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                          Instructor
+                        </th>
+                        <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                          N° Licencia
+                        </th>
+                        @if (showSedeColumn()) {
+                          <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                            Sede
+                          </th>
+                        }
+                        <th
+                          class="text-center text-text-secondary font-semibold text-xs tracking-wider"
+                        >
+                          Documentos
+                        </th>
+                        <th
+                          class="text-right text-text-secondary font-semibold text-xs tracking-wider"
+                        >
+                          Acciones
+                        </th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                      <tr>
+                        <td>
+                          <span class="font-medium text-text-primary">{{ row.name }}</span>
+                        </td>
+                        <td class="text-text-secondary text-sm">{{ row.licenseNumber }}</td>
+                        @if (showSedeColumn()) {
+                          <td class="text-text-secondary text-sm">{{ row.branchName ?? '—' }}</td>
+                        }
+                        <td class="text-center">
+                          <app-badge variant="brand">
+                            {{ row.docCount }} doc{{ row.docCount !== 1 ? 's' : '' }}
+                          </app-badge>
+                        </td>
+                        <td class="text-right">
+                          <button
+                            type="button"
+                            class="text-sm font-medium cursor-pointer bg-transparent border-0 transition-colors duration-150 text-brand hover:text-brand-hover"
+                            data-llm-action="view-instructor-documents"
+                            (click)="viewInstructorDocs.emit(row.instructorId)"
+                          >
+                            Ver →
+                          </button>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              }
+            </div>
+          }
+
           <!-- ══ TAB: DOCUMENTOS DE LA ESCUELA ═══════════════════════════ -->
           @case ('school') {
             <div class="bento-card p-0 overflow-hidden col-span-full flex flex-col" appCardHover>
@@ -310,7 +420,7 @@ import type {
                 class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
               >
                 <div>
-                  <h2 class="text-base font-semibold m-0">Documentos institucionales</h2>
+                  <h2 class="text-text-primary font-semibold m-0">Documentos institucionales</h2>
                   <p class="text-xs text-text-secondary m-0 mt-1">
                     Facturas de folios, resoluciones MTT, decretos y más
                   </p>
@@ -420,7 +530,7 @@ import type {
                     type="button"
                     class="px-4 py-1.5 text-sm font-semibold rounded-full transition-all duration-150 cursor-pointer border-0"
                     [class.bg-text-primary]="categoryFilter() === cat.id"
-                    [class.text-bg-surface]="categoryFilter() === cat.id"
+                    [class.text-surface]="categoryFilter() === cat.id"
                     [class.bg-subtle]="categoryFilter() !== cat.id"
                     [class.text-text-secondary]="categoryFilter() !== cat.id"
                     [class.hover:bg-border-subtle]="categoryFilter() !== cat.id"
@@ -551,16 +661,21 @@ export class DmsListContentComponent {
   readonly basePath = input.required<string>();
   readonly studentsWithDocs = input<StudentWithDocsRow[]>([]);
   readonly recentDocs = input<DmsStudentDocRow[]>([]);
+  readonly instructorsWithDocs = input<InstructorWithDocsRow[]>([]);
   readonly schoolDocs = input<SchoolDocRow[]>([]);
   readonly templates = input<TemplateCard[]>([]);
   readonly isLoading = input<boolean>(false);
   readonly isAdmin = input<boolean>(false);
+  /** Admin con selector de sede en "Todas las sedes" → muestra la columna Sede en Alumnos. */
+  readonly showSedeColumn = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly uploadStudentDoc = output<void>();
+  readonly uploadInstructorDoc = output<void>();
   readonly uploadSchoolDoc = output<void>();
   readonly uploadTemplate = output<void>();
   readonly viewStudentDocs = output<number>();
+  readonly viewInstructorDocs = output<number>();
   readonly viewDocument = output<{ url: string; fileName: string }>();
   readonly deleteStudentDoc = output<{ id: string; source: string }>();
   readonly deleteSchoolDoc = output<number>();
@@ -582,6 +697,7 @@ export class DmsListContentComponent {
   // ── Config estática ───────────────────────────────────────────────────────
   readonly tabs = [
     { id: 'students', label: 'Documentos del Alumno', icon: 'user' },
+    { id: 'instructors', label: 'Documentos de Instructores', icon: 'shield-check' },
     { id: 'school', label: 'Documentos de la Escuela', icon: 'building-2' },
     { id: 'templates', label: 'Plantillas', icon: 'folder' },
   ];
@@ -614,6 +730,9 @@ export class DmsListContentComponent {
     if (tab === 'students') {
       return [{ id: 'upload-student', label: 'Subir documento', icon: 'upload', primary: true }];
     }
+    if (tab === 'instructors') {
+      return [{ id: 'upload-instructor', label: 'Subir documento', icon: 'upload', primary: true }];
+    }
     if (tab === 'school') {
       return [{ id: 'upload-school', label: 'Subir documento', icon: 'upload', primary: true }];
     }
@@ -626,6 +745,7 @@ export class DmsListContentComponent {
 
   onHeroAction(actionId: string): void {
     if (actionId === 'upload-student') this.uploadStudentDoc.emit();
+    else if (actionId === 'upload-instructor') this.uploadInstructorDoc.emit();
     else if (actionId === 'upload-school') this.uploadSchoolDoc.emit();
     else if (actionId === 'upload-template') this.uploadTemplate.emit();
   }
