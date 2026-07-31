@@ -60,8 +60,8 @@ const SOON_DAYS = 14;
  */
 @Injectable({ providedIn: 'root' })
 export class FlotaDetalleFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
   private readonly _vehicle = signal<VehicleTableRow | null>(null);
@@ -167,6 +167,8 @@ private readonly supabase = inject(SupabaseService);
           expiryDate: d.expiry_date ?? '',
           status: 'valid' as const,
         })),
+        // fix-007-i: esta vista de detalle no muestra el gasto mensual de combustible; 0 por defecto.
+        combustibleMes: 0,
       });
 
       // Mapear mantenimientos
@@ -194,7 +196,9 @@ private readonly supabase = inject(SupabaseService);
       this._scheduledMaintenances.set(scheduled);
     } catch (err) {
       this._error.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el detalle del vehículo',
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar el detalle del vehículo',
       );
     } finally {
       this._isLoading.set(false);
@@ -283,6 +287,6 @@ private readonly supabase = inject(SupabaseService);
       circulation_permit: 'Permiso de Circulación',
       insurance: 'Seguro',
     };
-    return map[type ?? ''] ?? (type ?? 'Documento');
+    return map[type ?? ''] ?? type ?? 'Documento';
   }
 }

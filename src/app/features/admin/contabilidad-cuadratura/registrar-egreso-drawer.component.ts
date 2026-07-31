@@ -360,11 +360,12 @@ export class RegistrarEgresoDrawerComponent {
     this.saveError.set(null);
 
     try {
-      const { tipo, monto, descripcion } = this.form.getRawValue();
+      const { tipo, monto, descripcion, vehiculoId } = this.form.getRawValue();
       const datos: EgresoFormData = {
-        tipo: tipo as 'gasto' | 'anticipo',
+        tipo: tipo as 'gasto' | 'anticipo' | 'combustible',
         monto: Number(monto),
         descripcion: descripcion ?? '',
+        vehiculoId: vehiculoId ?? null,
       };
 
       const ok = await this.facade.registrarEgreso(datos);

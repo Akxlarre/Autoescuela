@@ -393,6 +393,7 @@ export class CuadraturaFacade {
           amount: datos.monto,
           description: datos.descripcion,
           category: datos.tipo === 'combustible' ? 'combustible' : null,
+          vehicle_id: datos.vehiculoId ?? null,
           branch_id: this.getActiveBranchId(),
           registered_by: user.dbId,
         });

@@ -882,6 +882,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
+| `vehicle_id` | INT | sí | — | → `vehicles.id` (fix-007-i, migración `20260730000000_add_vehicle_id_to_expenses.sql`) |
 | `category` | TEXT | sí | — | — |
 | `description` | TEXT | NO | — | — |
 | `amount` | INTEGER | NO | — | — |

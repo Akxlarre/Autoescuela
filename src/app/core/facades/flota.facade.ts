@@ -4,6 +4,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
+import { toISODate } from '@core/utils/date.utils';
 import type {
   VehicleTableRow,
   VehicleDocSummary,
@@ -156,10 +157,37 @@ export class FlotaFacade {
     const { data, error } = await query;
 
     if (error) throw error;
-    this._vehicles.set((data ?? []).map((v: any) => this.mapToTableRow(v)));
+
+    const combustibleByVehicle = await this.fetchCombustibleMesPorVehiculo(branchId);
+    this._vehicles.set((data ?? []).map((v: any) => this.mapToTableRow(v, combustibleByVehicle)));
   }
 
-  private mapToTableRow(v: any): VehicleTableRow {
+  /** Suma expenses.amount con category='combustible' del mes en curso, agrupado por vehicle_id (fix-007-i). */
+  private async fetchCombustibleMesPorVehiculo(
+    branchId: number | null,
+  ): Promise<Map<number, number>> {
+    const now = new Date();
+    const firstOfMonth = toISODate(new Date(now.getFullYear(), now.getMonth(), 1));
+
+    let query: any = this.supabase.client
+      .from('expenses')
+      .select('vehicle_id, amount')
+      .eq('category', 'combustible')
+      .not('vehicle_id', 'is', null)
+      .gte('date', firstOfMonth);
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+    const { data, error } = await query;
+
+    if (error || !data) return new Map();
+
+    const totals = new Map<number, number>();
+    for (const row of data as { vehicle_id: number; amount: number }[]) {
+      totals.set(row.vehicle_id, (totals.get(row.vehicle_id) ?? 0) + (row.amount ?? 0));
+    }
+    return totals;
+  }
+
+  private mapToTableRow(v: any, combustibleByVehicle?: Map<number, number>): VehicleTableRow {
     const activeAssignment = v.vehicle_assignments?.find((a: any) => a.end_date === null) ?? null;
     let instructorName: string | null = null;
     let instructorId: number | null = null;
@@ -191,6 +219,7 @@ export class FlotaFacade {
         expiryDate: d.expiry_date ?? '',
         status: this.resolveDocStatus(d.expiry_date, d.status),
       })),
+      combustibleMes: combustibleByVehicle?.get(v.id) ?? 0,
     };
   }
 

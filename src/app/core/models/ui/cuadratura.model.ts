@@ -37,6 +37,8 @@ export interface EgresoFormData {
   tipo: 'gasto' | 'anticipo' | 'combustible';
   monto: number;
   descripcion: string;
+  /** Vehículo asociado al egreso (ej. carga de combustible). Opcional. */
+  vehiculoId?: number | null;
 }
 
 /** Payload que emite el componente al cerrar la caja. */
