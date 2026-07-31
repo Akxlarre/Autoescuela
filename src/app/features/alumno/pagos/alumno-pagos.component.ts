@@ -4,11 +4,11 @@ import { Router } from '@angular/router';
 import { StudentPaymentFacade } from '@core/facades/student-payment.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import type { StudentPaymentHistoryItem } from '@core/models/ui/student-payment.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatCLP } from '@core/utils/date.utils';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
@@ -42,7 +42,6 @@ function toCompact(amount: number): { value: number; suffix: string } {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
@@ -55,12 +54,15 @@ function toCompact(amount: number): { value: number; suffix: string } {
     <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <app-section-hero
-        class="bento-hero"
         title="Pagos"
         [subtitle]="heroSubtitle()"
         [contextLine]="heroContextLine()"
         icon="wallet"
         [actions]="heroActions()"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="facade.isLoading()"
+        [loadingKpiCount]="3"
         (actionClick)="onHeroAction($event)"
       />
 
@@ -82,71 +84,31 @@ function toCompact(amount: number): { value: number; suffix: string } {
           <p class="text-sm text-error">{{ facade.error() }}</p>
         </div>
       } @else {
-        <!-- ── KPI Grid ── -->
+        <!-- Aviso pago presencial para alumnos Profesional -->
         @if (facade.enrollment(); as enroll) {
-          <div class="bento-banner flex flex-col gap-4">
-            <!-- Aviso pago presencial para alumnos Profesional -->
-            @if (!facade.isClassB() && enroll.pendingBalance > 0) {
-              <div class="flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
-                <app-icon
-                  name="info"
-                  [size]="18"
-                  class="text-warning shrink-0"
-                  style="margin-top: 1px"
-                />
-                <div>
-                  <p class="text-sm font-semibold text-warning">
-                    Saldo pendiente: {{ clp(enroll.pendingBalance) }}
-                  </p>
-                  <p class="text-xs mt-0.5 text-warning">
-                    El pago de matrículas de Clase Profesional se realiza directamente en
-                    secretaría. Acércate a la sucursal <strong>{{ enroll.branchName }}</strong> para
-                    regularizar tu saldo.
-                  </p>
-                </div>
+          @if (!facade.isClassB() && enroll.pendingBalance > 0) {
+            <div class="bento-banner flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
+              <app-icon
+                name="info"
+                [size]="18"
+                class="text-warning shrink-0"
+                style="margin-top: 1px"
+              />
+              <div>
+                <p class="text-sm font-semibold text-warning">
+                  Saldo pendiente: {{ clp(enroll.pendingBalance) }}
+                </p>
+                <p class="text-xs mt-0.5 text-warning">
+                  El pago de matrículas de Clase Profesional se realiza directamente en secretaría.
+                  Acércate a la sucursal <strong>{{ enroll.branchName }}</strong> para regularizar
+                  tu saldo.
+                </p>
               </div>
-            }
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <app-kpi-card-variant
-                label="Total Curso"
-                [value]="toCompact(enroll.basePrice).value"
-                [loading]="facade.isLoading()"
-                icon="graduation-cap"
-                prefix="$"
-                [suffix]="toCompact(enroll.basePrice).suffix"
-                [subValue]="clp(enroll.basePrice)"
-              />
-              <app-kpi-card-variant
-                label="Ya Pagado"
-                [value]="toCompact(enroll.totalPaid).value"
-                [loading]="facade.isLoading()"
-                icon="circle-check"
-                color="success"
-                prefix="$"
-                [suffix]="toCompact(enroll.totalPaid).suffix"
-                [subValue]="clp(enroll.totalPaid)"
-              />
-              <app-kpi-card-variant
-                label="Saldo Pendiente"
-                [value]="toCompact(enroll.pendingBalance).value"
-                [loading]="facade.isLoading()"
-                icon="clock"
-                [color]="enroll.pendingBalance > 0 ? 'warning' : 'success'"
-                [accent]="enroll.pendingBalance > 0"
-                prefix="$"
-                [suffix]="toCompact(enroll.pendingBalance).suffix"
-                [subValue]="clp(enroll.pendingBalance)"
-              />
             </div>
-          </div>
-        } @else if (facade.isLoading()) {
-          <!-- Skeleton KPIs mientras carga -->
-          <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
-            @for (i of [1, 2, 3]; track i) {
-              <app-kpi-card-variant label="" [value]="0" [loading]="true" icon="wallet" />
-            }
-          </div>
-        } @else if (!facade.status()?.hasPaymentPending && facade.status() !== null) {
+          }
+        } @else if (
+          !facade.isLoading() && !facade.status()?.hasPaymentPending && facade.status() !== null
+        ) {
           <!-- Sin deuda pendiente y sin enrollment (ya completado) -->
           <div class="bento-banner card p-6 flex items-center gap-4" appCardHover>
             <div
@@ -257,6 +219,54 @@ export class AlumnoPagosComponent implements OnInit {
       return [{ id: 'pay', label, icon: 'credit-card', primary: true }];
     }
     return [];
+  });
+
+  /**
+   * KPIs del strip del hero slim (antes: grid `sm:grid-cols-3` dentro de un
+   * `bento-banner`). Vacío mientras no hay `enrollment` (loading o matrícula
+   * al día) — esos estados se siguen resolviendo fuera del hero.
+   * Valores pre-formateados: el strip renderiza `{{ kpi.value }}` crudo y no
+   * pasa por `animateCounter`.
+   */
+  protected readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const enroll = this.facade.enrollment();
+    if (!enroll) return [];
+
+    const total = toCompact(enroll.basePrice);
+    const paid = toCompact(enroll.totalPaid);
+    const pending = toCompact(enroll.pendingBalance);
+
+    return [
+      {
+        id: 'total-curso',
+        label: 'Total Curso',
+        value: formatKpiEsCl(total.value),
+        prefix: '$',
+        suffix: total.suffix,
+        subValue: this.clp(enroll.basePrice),
+        icon: 'graduation-cap',
+      },
+      {
+        id: 'ya-pagado',
+        label: 'Ya Pagado',
+        value: formatKpiEsCl(paid.value),
+        prefix: '$',
+        suffix: paid.suffix,
+        subValue: this.clp(enroll.totalPaid),
+        icon: 'circle-check',
+        color: 'success',
+      },
+      {
+        id: 'saldo-pendiente',
+        label: 'Saldo Pendiente',
+        value: formatKpiEsCl(pending.value),
+        prefix: '$',
+        suffix: pending.suffix,
+        subValue: this.clp(enroll.pendingBalance),
+        icon: 'clock',
+        color: enroll.pendingBalance > 0 ? 'warning' : 'success',
+      },
+    ];
   });
 
   ngOnInit(): void {

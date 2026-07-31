@@ -883,7 +883,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
-| `vehicle_id` | INT | sí | — | → `vehicles.id` (fix-007-i, migración `20260730000000_add_vehicle_id_to_expenses.sql`) |
 | `category` | TEXT | sí | — | — |
 | `description` | TEXT | NO | — | — |
 | `amount` | INTEGER | NO | — | — |
@@ -2257,7 +2256,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

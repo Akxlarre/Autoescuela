@@ -49,7 +49,6 @@ import {
     <div class="bento-grid" appBentoGridLayout>
       <!-- Section Hero Premium -->
       <app-section-hero
-        class="bento-hero"
         [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
         [subtitle]="
           showFinalStep()
@@ -59,6 +58,7 @@ import {
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions()"
+        density="slim"
         (actionClick)="onHeroAction($event)"
       />
 

@@ -100,6 +100,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               [actions]="heroActions"
               backRoute="/app/instructor/alumnos"
               backLabel="Mis Alumnos"
+              density="slim"
             />
           </div>
         }

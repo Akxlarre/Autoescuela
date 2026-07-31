@@ -48,7 +48,6 @@ interface SimulatorLink {
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Pruebas Online"
         [subtitle]="
@@ -60,6 +59,7 @@ interface SimulatorLink {
         backRoute="/app/alumno/inicio"
         backLabel="Inicio"
         [actions]="[]"
+        density="slim"
       />
 
       <!-- FORMATO DEL EXAMEN (solo Clase B) -->
