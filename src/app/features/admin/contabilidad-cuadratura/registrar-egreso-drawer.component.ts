@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
+import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
@@ -85,6 +86,25 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               @if (isInvalid('tipo')) {
                 <span class="field-error">Seleccione un tipo de egreso.</span>
               }
+            </div>
+
+            <!-- Vehículo / Patente (destacado cuando el tipo es combustible) -->
+            <div
+              class="flex flex-col gap-1.5 rounded-lg"
+              [class.p-3]="isCombustible()"
+              [style.background]="isCombustible() ? 'var(--color-primary-muted)' : null"
+            >
+              <label for="egr-vehiculo" class="field-label">VEHÍCULO / PATENTE</label>
+              <p-select
+                formControlName="vehiculoId"
+                [options]="vehicleOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccionar vehículo (opcional)..."
+                styleClass="w-full"
+                [showClear]="true"
+                data-llm-description="Selector del vehículo asociado al egreso, muestra el instructor asignado"
+              />
             </div>
 
             <!-- Monto -->
@@ -249,12 +269,14 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 export class RegistrarEgresoDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   readonly tipoOptions = [
+    { label: 'Combustible', value: 'combustible' },
     { label: 'Gasto Varios', value: 'gasto' },
     { label: 'Anticipo a Instructor', value: 'anticipo' },
   ];
 
   // ── Injections ───────────────────────────────────────────────────────────────
   protected readonly facade = inject(CuadraturaFacade);
+  private readonly flotaFacade = inject(FlotaFacade);
   private readonly fb = inject(FormBuilder);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
@@ -267,20 +289,47 @@ export class RegistrarEgresoDrawerComponent {
     tipo: ['', Validators.required],
     monto: [null as number | null, [Validators.required, Validators.min(1)]],
     descripcion: ['', [Validators.required, Validators.minLength(3)]],
+    // Opcional: no se persiste todavía (vehicle_id queda reservado para ASG-b-037).
+    vehiculoId: [null as number | null],
   });
+
+  // ── Vehículos (selector "Vehículo / Patente" con instructor asignado) ────────
+  protected readonly vehicleOptions = computed(() =>
+    this.flotaFacade.vehicles().map((v) => ({
+      label: `${v.brand} ${v.model} - ${v.licensePlate} (${
+        v.instructorName ? `Asignado a: ${v.instructorName}` : 'Sin instructor asignado'
+      })`,
+      value: v.id,
+    })),
+  );
+
+  constructor() {
+    void this.flotaFacade.initialize();
+
+    // Preset de tipo (ej: "combustible" desde el atajo del dashboard) — se consume una sola vez.
+    const preset = this.facade.egresoTipoPreset();
+    if (preset) {
+      this.form.patchValue({ tipo: preset });
+      this.facade.egresoTipoPreset.set(null);
+    }
+  }
 
   // ── Computed ─────────────────────────────────────────────────────────────────
   protected readonly tipoLabel = computed(() => {
     const tipo = this.form.get('tipo')?.value;
-    return tipo === 'anticipo' ? 'Motivo del anticipo' : 'Descripción / Motivo';
+    if (tipo === 'anticipo') return 'Motivo del anticipo';
+    if (tipo === 'combustible') return 'Detalle (ej: patente, litros)';
+    return 'Descripción / Motivo';
   });
 
   protected readonly tipoPlaceholder = computed(() => {
     const tipo = this.form.get('tipo')?.value;
-    return tipo === 'anticipo'
-      ? 'Ej: Anticipo por combustible...'
-      : 'Ej: Compra insumos oficina...';
+    if (tipo === 'anticipo') return 'Ej: Anticipo por combustible...';
+    if (tipo === 'combustible') return 'Ej: Carga camioneta ABC-123...';
+    return 'Ej: Compra insumos oficina...';
   });
+
+  protected readonly isCombustible = computed(() => this.form.get('tipo')?.value === 'combustible');
 
   protected readonly fechaHoy = computed(() =>
     new Date().toLocaleDateString('es-CL', {
@@ -311,11 +360,12 @@ export class RegistrarEgresoDrawerComponent {
     this.saveError.set(null);
 
     try {
-      const { tipo, monto, descripcion } = this.form.getRawValue();
+      const { tipo, monto, descripcion, vehiculoId } = this.form.getRawValue();
       const datos: EgresoFormData = {
-        tipo: tipo as 'gasto' | 'anticipo',
+        tipo: tipo as 'gasto' | 'anticipo' | 'combustible',
         monto: Number(monto),
         descripcion: descripcion ?? '',
+        vehiculoId: vehiculoId ?? null,
       };
 
       const ok = await this.facade.registrarEgreso(datos);

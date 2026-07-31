@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
@@ -54,12 +55,15 @@ export class AdminFlotaComponent {
   protected readonly facade = inject(FlotaFacade);
   protected readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly localSearchTerm = signal('');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
   protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();

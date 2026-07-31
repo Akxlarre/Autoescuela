@@ -1,14 +1,14 @@
 # Asignación ASG-b-010 — Fix H-016: Portal Instructor corre sobre datos MOCK
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-001-i-portal-instructor-datos-mock
 
 ---
 

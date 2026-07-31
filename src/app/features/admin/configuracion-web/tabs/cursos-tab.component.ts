@@ -55,7 +55,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             Este branch no tiene cursos operacionales activos
           </p>
           <p class="text-text-muted text-xs max-w-sm">
-            Primero creá cursos en el Catálogo Operacional antes de configurar las cards de la
+            Primero crea cursos en el Catálogo Operacional antes de configurar las cards de la
             landing.
           </p>
         </div>

@@ -319,7 +319,7 @@ export function resolveListadoLabel(
                         [class.animate-spin]="action.loading"
                       />
                     }
-                    <span class="truncate">{{ action.label }}</span>
+                    <span class="truncate min-w-0">{{ action.label }}</span>
                     @if (action.menu) {
                       <app-icon
                         name="chevron-down"
@@ -339,7 +339,7 @@ export function resolveListadoLabel(
                   (click)="openInasistenciasPanel()"
                 >
                   <app-icon name="alert-triangle" [size]="14" />
-                  <span class="truncate">Inasistencias</span>
+                  <span class="truncate min-w-0">Inasistencias</span>
                 </button>
                 <button
                   type="button"
@@ -348,7 +348,7 @@ export function resolveListadoLabel(
                   (click)="openFichaTecnicaPanel()"
                 >
                   <app-icon name="file-text" [size]="14" />
-                  <span class="truncate">Ficha Técnica</span>
+                  <span class="truncate min-w-0">Ficha Técnica</span>
                 </button>
               </div>
             </div>
@@ -1406,6 +1406,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('scroll', this.repositionCardMenuListener, true);
     window.removeEventListener('resize', this.repositionCardMenuListener);
+    this.facade.destroyRealtime();
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

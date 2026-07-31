@@ -902,6 +902,8 @@ export class AdminPagosComponent implements AfterViewInit {
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();

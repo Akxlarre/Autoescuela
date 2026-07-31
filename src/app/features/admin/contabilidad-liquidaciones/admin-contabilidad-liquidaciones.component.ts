@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject } from '@angular/core';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -32,8 +32,11 @@ export class AdminContabilidadLiquidacionesComponent {
   protected readonly facade = inject(LiquidacionesFacade);
   private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();

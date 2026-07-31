@@ -1,14 +1,14 @@
 # Asignación ASG-b-021 — Fix H-006: Configuración Web usa voseo argentino
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-07-29
+> **resulting_track:** fix-002-i-voseo-configuracion-web
 
 ---
 

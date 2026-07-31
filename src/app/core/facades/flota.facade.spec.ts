@@ -112,31 +112,46 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
     const supabaseMock = {
       client: {
         channel: mockChannel(),
-        from: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              // branchId activo: la cadena termina en .or(); sin sede: en .order()
-              or: vi.fn().mockResolvedValue({
-                data: [
-                  {
-                    id: 1,
-                    license_plate: 'AA1111',
-                    brand: 'Suzuki',
-                    model: 'Swift',
-                    year: 2022,
-                    status: 'available',
-                    current_km: 0,
-                    last_maintenance: null,
-                    branch_id: 1,
-                    both_branches: true,
-                    vehicle_assignments: [],
-                    vehicle_documents: [],
-                  },
-                ],
-                error: null,
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === 'expenses') {
+            const resolved = Promise.resolve({ data: [], error: null }) as any;
+            resolved.eq = vi.fn().mockResolvedValue({ data: [], error: null });
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  not: vi.fn().mockReturnValue({
+                    gte: vi.fn().mockReturnValue(resolved),
+                  }),
+                }),
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                // branchId activo: la cadena termina en .or(); sin sede: en .order()
+                or: vi.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 1,
+                      license_plate: 'AA1111',
+                      brand: 'Suzuki',
+                      model: 'Swift',
+                      year: 2022,
+                      status: 'available',
+                      current_km: 0,
+                      last_maintenance: null,
+                      branch_id: 1,
+                      both_branches: true,
+                      vehicle_assignments: [],
+                      vehicle_documents: [],
+                    },
+                  ],
+                  error: null,
+                }),
               }),
             }),
-          }),
+          };
         }),
       },
     };
@@ -153,5 +168,95 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
     await facade.initialize();
 
     expect(facade.vehicles()[0].bothBranches).toBe(true);
+  });
+});
+
+// ─── fix-007-i: combustibleMes por vehículo ────────────────────────────────────
+
+describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
+  function buildSupabaseMock(vehicleRows: any[], expenseRows: any[]) {
+    const channelMock = { on: vi.fn(() => channelMock), subscribe: vi.fn(() => channelMock) };
+    return {
+      client: {
+        channel: vi.fn(() => channelMock),
+        removeChannel: vi.fn(),
+        from: vi.fn((table: string) => {
+          if (table === 'vehicles') {
+            return {
+              select: vi.fn(() => ({
+                order: vi.fn().mockResolvedValue({ data: vehicleRows, error: null }),
+              })),
+            };
+          }
+          if (table === 'expenses') {
+            return {
+              select: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  not: vi.fn(() => ({
+                    gte: vi.fn().mockResolvedValue({ data: expenseRows, error: null }),
+                  })),
+                })),
+              })),
+            };
+          }
+          throw new Error(`tabla inesperada: ${table}`);
+        }),
+      },
+    };
+  }
+
+  it('suma los egresos de combustible del mes por vehículo y los mergea en VehicleTableRow', async () => {
+    const vehicleRows = [
+      {
+        id: 1,
+        license_plate: 'ABC-123',
+        brand: 'Toyota',
+        model: 'Yaris',
+        year: 2022,
+        status: 'available',
+        current_km: 1000,
+        last_maintenance: null,
+        branch_id: 1,
+        vehicle_assignments: [],
+        vehicle_documents: [],
+      },
+      {
+        id: 2,
+        license_plate: 'XYZ-987',
+        brand: 'Nissan',
+        model: 'Versa',
+        year: 2021,
+        status: 'available',
+        current_km: 2000,
+        last_maintenance: null,
+        branch_id: 1,
+        vehicle_assignments: [],
+        vehicle_documents: [],
+      },
+    ];
+    const expenseRows = [
+      { vehicle_id: 1, amount: 15_000 },
+      { vehicle_id: 1, amount: 10_000 },
+    ];
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        FlotaFacade,
+        { provide: SupabaseService, useValue: buildSupabaseMock(vehicleRows, expenseRows) },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) },
+        },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+      ],
+    });
+    const flotaFacade = TestBed.inject(FlotaFacade);
+
+    await flotaFacade.initialize();
+
+    const rows = flotaFacade.vehicles();
+    expect(rows.find((v) => v.id === 1)?.combustibleMes).toBe(25_000);
+    expect(rows.find((v) => v.id === 2)?.combustibleMes).toBe(0);
   });
 });

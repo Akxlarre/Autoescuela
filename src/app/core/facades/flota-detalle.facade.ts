@@ -169,6 +169,8 @@ export class FlotaDetalleFacade {
           expiryDate: d.expiry_date ?? '',
           status: 'valid' as const,
         })),
+        // fix-007-i: esta vista de detalle no muestra el gasto mensual de combustible; 0 por defecto.
+        combustibleMes: 0,
       });
 
       // Mapear mantenimientos

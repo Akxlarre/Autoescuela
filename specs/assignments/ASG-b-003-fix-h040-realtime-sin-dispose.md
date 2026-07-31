@@ -1,14 +1,14 @@
 # Asignación ASG-b-003 — Fix H-040: Realtime sin limpiar + polling prohibido en Dashboard
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-07-30
+> **resulting_track:** fix-004-i-realtime-sin-dispose-dashboard-polling
 
 ---
 

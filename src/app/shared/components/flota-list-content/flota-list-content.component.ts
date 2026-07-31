@@ -50,6 +50,7 @@ import type {
   VehicleStatus,
 } from '@core/models/ui/vehicle-table.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
+import { formatCLP } from '@core/utils/date.utils';
 
 /**
  * FlotaListContentComponent — Dumb Component (Organismo)
@@ -217,6 +218,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
                       <th>Sede</th>
                     }
                     <th>KM</th>
+                    <th>Combustible (Mes)</th>
                     <th>Estado</th>
                     <th class="pr-6 text-right">Acciones</th>
                   </tr>
@@ -258,6 +260,9 @@ import type { BranchOption } from '@core/models/ui/branch.model';
                     }
                     <td class="text-xs font-mono text-text-secondary">
                       {{ v.currentKm | number }} km
+                    </td>
+                    <td class="text-xs font-mono text-text-secondary">
+                      {{ clp(v.combustibleMes) }}
                     </td>
                     <td>
                       <p-tag
@@ -309,7 +314,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 
                 <ng-template pTemplate="emptymessage">
                   <tr>
-                    <td [attr.colspan]="showSedeColumn() ? 7 : 6" class="p-0">
+                    <td [attr.colspan]="showSedeColumn() ? 8 : 7" class="p-0">
                       <app-empty-state
                         icon="car"
                         message="No se encontraron vehículos"
@@ -595,6 +600,8 @@ export class FlotaListContentComponent {
     this.typeFilterChange.emit(null);
     this.statusFilterChange.emit(null);
   }
+
+  protected readonly clp = formatCLP;
 
   statusLabel(status: string): string {
     return (

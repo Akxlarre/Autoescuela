@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject } from '@angular/core';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
@@ -43,8 +43,11 @@ export class AdminContabilidadCuadraturaComponent {
   private readonly pagosFacade = inject(PagosFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();

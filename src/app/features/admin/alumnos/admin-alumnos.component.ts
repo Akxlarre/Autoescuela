@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   effect,
   inject,
   OnInit,
@@ -52,6 +53,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 export class AdminAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
   protected readonly branchFacade = inject(BranchFacade);
+  private readonly destroyRef = inject(DestroyRef);
 
   // ── Estado del modal de borrado ──────────────────────────────────────────
   protected readonly deleteTarget = signal<AlumnoTableRow | null>(null);
@@ -72,6 +74,7 @@ export class AdminAlumnosComponent implements OnInit {
 
   ngOnInit(): void {
     this.facade.initialize();
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
   }
 
   // ── Flujo de borrado ─────────────────────────────────────────────────────

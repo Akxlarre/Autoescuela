@@ -1,11 +1,14 @@
 # Asignación ASG-b-039 — Botón "Registrar egreso" accesible + atajo para carga de combustible
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** i
+> **claimed_at:** 2026-07-30
+> **resulting_track:** fix-006-i-registrar-egreso-dashboard-boton
 
 ---
 
