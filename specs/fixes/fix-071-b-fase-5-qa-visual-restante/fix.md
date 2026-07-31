@@ -1,7 +1,8 @@
 # Fix: Fase 5 QA visual restante — skeletons, capturas, regla 3-2-1
 > id: fix-071-b-fase-5-qa-visual-restante
 > refs: ASG-b-001
-> status: in_progress
+> status: done
+> closed: 2026-07-31
 > created: 2026-07-31
 
 ## Root Cause
@@ -201,14 +202,43 @@ exige resolver también las variantes `color-mix`.
    sobre 3 rutas (ver Hallazgo 2). Falta: (a) las 4 rutas restantes, (b) **cerrar el punto ciego
    de `color-mix()`** — sin eso los conteos son cota inferior. Ya hay un hallazgo estructural
    accionable (`classes-badge` por fila) que no depende de completar el barrido.
-4. **Confirmación visual del reclamo del cliente** ("hero azul antiguo") — ✅ **CERRADO como
-   REPRODUCIDO** (ver Hallazgo 1). Está en los portales Instructor y Alumno, no en el admin.
-   Causa raíz identificada, alcance exacto medido (16 componentes). **El fix NO se hizo acá:**
-   migrar 16 archivos de producción a `density="slim"` excede este track de QA y cambia la
-   identidad visual de 2 portales completos → **abrir track propio**.
-5. 🆕 **`admin/agenda` sin `app-section-hero`** (Hallazgo 3) — decidir si es intencional o drift.
-6. 🆕 **`bento-banner` vs `bento-hero` en heroes slim** — definir cuál es la clase canónica y
-   alinear `visual-system.md` con la realidad del código.
+4. **Confirmación visual del reclamo del cliente** ("hero azul antiguo") — ✅ **CERRADO** (ver
+   Hallazgo 1). Estaba en los portales Instructor y Alumno, no en el admin. Migración de los 16
+   componentes a `density="slim"` implementada y verificada en `fix-072-b-portales-hero-slim`
+   (16/16 rutas confirmadas sin `.hero-card`, capturas claro/oscuro/mobile en su `evidencia/`).
+5. ✅ **`admin/agenda` sin `app-section-hero`** (Hallazgo 3) — **CERRADO: es intencional, no
+   drift.** `AdminAgendaComponent` y `SecretariaAgendaComponent` (los dos únicos consumidores
+   reales de `<app-agenda-semanal>`) pasan `[showHero]="false"` explícitamente —
+   `agenda-semanal.component.ts:1037` define el default en `true`, pero ningún caller actual lo
+   usa así. La página corre en `bento-grid--fill-screen` (patrón app-like, ver `visual-system.md`
+   "Densidad adaptativa"): el presupuesto de alto se lo queda la grilla semanal, no el hero. Es la
+   misma decisión en los 2 portales que la comparten → consistente, no un olvido.
+6. ✅ **`bento-banner` vs `bento-hero` en heroes slim** — **CERRADO: no es una ambigüedad, ya
+   está resuelto por diseño.** `SectionHeroComponent` (`section-hero.component.ts:350-354`)
+   define el host binding: `'[class.bento-hero]': density() === 'full'` y
+   `'[class.bento-banner]': density() === 'slim'`, con el comentario explícito "HOST = único grid
+   item. bento-hero en full, bento-banner en slim." No hay dos clases canónicas compitiendo: el
+   propio componente elige la correcta según `density`, siempre que sea **hijo directo del
+   `.bento-grid`** — que es como lo consume la inmensa mayoría de las páginas (sin `class=` en el
+   `<app-section-hero>`, el host se autoaplica la clase).
+   - 🆕 **Hallazgo nuevo, menor:** 4 archivos (`cuadratura-content`, `liquidaciones-content`,
+     `reportes-contables-content`, `instructor-ficha`) envuelven el hero `slim` en un
+     `<div class="bento-banner">` extra — redundante, porque el host ya se autoaplica esa misma
+     clase. El wrapper no es puramente accidental: en al menos `cuadratura-content` sostiene
+     `relative overflow-visible` como ancla de posición para un menú desplegable (`export-menu`).
+     Viola la regla de jerarquía plana de `visual-system.md` ("prohibido envolver el hero en divs
+     adicionales"), pero no hay bug visible — no se toca acá (los 4 son shared components de
+     admin+secretaría, tocar el wrapper exige re-verificar el posicionamiento del menú en cada
+     uno). Candidato a un fix chico propio si se quiere sanear del todo.
+
+## Cierre (2026-07-31)
+
+Se cierra con los ítems 1, 4, 5 y 6 resueltos. **Los ítems 2 (capturas claro/mobile de 4 páginas
+restantes) y 3 (conteo 3-2-1 completo + punto ciego de `color-mix()`) quedan con cobertura
+parcial, deliberadamente:** ya dieron su hallazgo accionable (`classes-badge` por fila hace la
+regla 3-2-1 estructuralmente insatisfacible — ver Hallazgo 2), y el resto es barrido exhaustivo de
+más rutas sin garantía de encontrar algo nuevo. Si aparece necesidad real de completarlo (ej. el
+cliente reporta otro caso puntual), abrir un fix nuevo y acotado a esa ruta — no reabrir este.
 
 ## Test de Regresión
 <!-- No aplica — este track no tocó código de producción. -->

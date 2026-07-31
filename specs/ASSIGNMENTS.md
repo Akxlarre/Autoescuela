@@ -66,7 +66,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | `b` | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -110,6 +109,7 @@
 | ASG-b-027 | Fix H-003: Ex-Alumnos B — conteo de egresados discrepante (2 vs 16) | [fix-005-i-exalumnos-egresados-discrepancia](fixes/fix-005-i-exalumnos-egresados-discrepancia/fix.md) | 2026-07-30 |
 | ASG-b-039 | Botón "Registrar egreso" accesible + atajo para carga de combustible | [fix-006-i-registrar-egreso-dashboard-boton](fixes/fix-006-i-registrar-egreso-dashboard-boton/fix.md) | 2026-07-30 |
 | ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | [fix-090-m-drawers-scope-sede](fixes/fix-090-m-drawers-scope-sede/fix.md) | 2026-07-30 |
+| ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---
