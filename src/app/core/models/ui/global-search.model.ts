@@ -31,7 +31,16 @@ export interface AlumnoResult {
   quickActions: AlumnoQuickAction[];
 }
 
-export type SearchResult = ActionResult | AlumnoResult;
+/** Resultado de tipo "instructor" generado por búsqueda en memoria (solo admin/secretaria). */
+export interface InstructorResult {
+  type: 'instructor';
+  instructorId: number;
+  label: string;
+  rut: string;
+  route: string[];
+}
+
+export type SearchResult = ActionResult | AlumnoResult | InstructorResult;
 
 /** Grupo de resultados con encabezado visible en el panel. */
 export interface SearchResultGroup {

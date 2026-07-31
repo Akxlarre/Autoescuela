@@ -64,7 +64,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-024 | Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores | `b` | [fix-075-b-buscador-global-datos-negocio](fixes/fix-075-b-buscador-global-datos-negocio/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -110,6 +109,7 @@
 | ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | [fix-090-m-drawers-scope-sede](fixes/fix-090-m-drawers-scope-sede/fix.md) | 2026-07-30 |
 | ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 | ASG-b-022 | Fix H-007: skeletons faltantes en Agenda y Libro de Clases | [fix-074-b-skeletons-agenda-libro-clases](fixes/fix-074-b-skeletons-agenda-libro-clases/fix.md) | 2026-07-31 |
+| ASG-b-024 | Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores | [fix-075-b-buscador-global-datos-negocio](fixes/fix-075-b-buscador-global-datos-negocio/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---

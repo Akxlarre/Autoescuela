@@ -1,10 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   HostBinding,
+  afterNextRender,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -38,13 +41,13 @@ import type {
       <div class="search-panel__input-row">
         <app-icon name="search" [size]="16" class="search-panel__search-icon" aria-hidden="true" />
         <input
+          #searchInput
           type="search"
           class="search-panel__input"
           placeholder="Busca 'caja', 'agendar', un alumno o RUT..."
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
-          autofocus
           [value]="query()"
           (input)="onInput($event)"
           (keydown.escape)="closed.emit()"
@@ -125,6 +128,28 @@ import type {
                         <span class="search-panel__result-body">
                           <span class="search-panel__result-label">{{ result.label }}</span>
                           <span class="search-panel__result-desc">{{ result.description }}</span>
+                        </span>
+                        <app-icon
+                          name="arrow-right"
+                          [size]="14"
+                          class="search-panel__result-arrow"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    } @else if (result.type === 'instructor') {
+                      <!-- Instructor — click navega directo (sin acciones rápidas) -->
+                      <span
+                        class="search-panel__result-item-inner"
+                        (click)="selectResult(result)"
+                        (keydown.enter)="selectResult(result)"
+                        data-llm-action="search-instructor-row"
+                      >
+                        <span class="search-panel__result-icon search-panel__result-icon--action">
+                          <app-icon name="user-check" [size]="15" aria-hidden="true" />
+                        </span>
+                        <span class="search-panel__result-body">
+                          <span class="search-panel__result-label">{{ result.label }}</span>
+                          <span class="search-panel__result-desc">{{ result.rut }}</span>
                         </span>
                         <app-icon
                           name="arrow-right"
@@ -222,8 +247,19 @@ export class SearchPanelComponent {
   /** ID del alumno expandido — nil = todos colapsados */
   private readonly _expandedId = signal<string | null>(null);
 
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
   @HostBinding('style.right') get rightStyle(): string {
     return `${this.rightPx()}px`;
+  }
+
+  constructor() {
+    // El atributo HTML `autofocus` no es fiable en un `<input>` insertado
+    // dinámicamente vía `@if`: el signal write que abre el panel dispara la
+    // re-renderización en un microtask fuera del gesto de teclado (Ctrl+K) que
+    // lo originó, y Chromium requiere activación transitoria vigente para
+    // autofocar. `.focus()` explícito no depende de esa ventana (H-031).
+    afterNextRender(() => this.searchInput()?.nativeElement.focus());
   }
 
   protected readonly quickChips = [
