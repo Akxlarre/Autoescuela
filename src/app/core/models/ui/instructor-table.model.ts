@@ -31,6 +31,7 @@ export interface InstructorTableRow {
   paternalLastName: string;
   maternalLastName: string;
   branchId: number | null;
+  bothBranches: boolean;
 }
 
 export interface VehicleOption {
@@ -38,6 +39,8 @@ export interface VehicleOption {
   licensePlate: string;
   label: string;
   status: 'available' | 'assigned' | 'maintenance';
+  branchId: number | null;
+  bothBranches: boolean;
 }
 
 export interface VehicleAssignmentHistory {

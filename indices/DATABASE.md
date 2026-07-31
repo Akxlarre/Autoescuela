@@ -30,7 +30,7 @@
 | `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog, `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
-| `instructors` | M4 - Acad. B | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: **R por sede** (SELECT `branch_visible` sobre la sede del user dueño — spec 0017; honra `can_access_both_branches`), Inst: R (self) | ✅ Definida · `20260624120000` scope SELECT por sede |
+| `instructors` | M4 - Acad. B | `id`, `user_id`, `both_branches` (BOOL, def false) | `user_id` | Admin: CRUD, Sec: **R por sede** (SELECT `branch_visible` sobre la sede del user dueño **OR `both_branches`** — spec 0017 + 0004-m; honra `can_access_both_branches`), Inst: R (self) | ✅ Definida · `20260624120000` scope SELECT por sede · `20260730100000` (spec 0004-m): columna `both_branches` — instructor dicta clases en las dos sedes; `branch_id` (de `users`) sigue siendo su sede principal |
 | `instructor_documents` | M4 - Acad. B | `id`, `instructor_id`, `type`, `status` (def `'pending'`) | `instructor_id`→instructors, `uploaded_by`→users | Admin: CRUD, Sec: CRU **por sede** (`branch_visible` sobre la sede del user dueño del instructor, vía join `instructors.user_id`) | ✅ Definida · `20260729120000` (spec 0003-m) |
 | `vehicle_assignments` | M4 - Acad. B | `id`, `vehicle_id` | `instructor_id`, `vehicle_id`, `assigned_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
 | `instructor_replacements` | M4 - Acad. B | `id`, `date` | `absent_instructor_id`, `replacement_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -72,7 +72,7 @@
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
 | `document_templates` | M6 - Matrí. | `id`, `name` | `updated_by` | Admin: CRUD, Sec: R, Stu: R, Inst: R | ✅ Definida |
-| `vehicles` | M7 - Flota | `id`, `license_plate` (UNIQUE NOT NULL) | `branch_id` | Admin: CRUD, Sec: CRUD, Inst: R | ✅ Definida |
+| `vehicles` | M7 - Flota | `id`, `license_plate` (UNIQUE NOT NULL), `both_branches` (BOOL, def false) | `branch_id` | Admin: CRUD, Sec: **CRU por sede** (`insert`/`update` acotado a su propia sede, nunca `both_branches=true` — spec 0004-m; antes admin-only pese a documentar "Sec: CRUD"), Inst: R | ✅ Definida · `20260730100000` (spec 0004-m): columna `both_branches` + RLS `insert_vehicles`/`update_vehicles` habilitada para secretary |
 | `vehicle_documents` | M7 - Flota | `id`, `type` | `vehicle_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `maintenance_records` | M7 - Flota | `id`, `type` | `vehicle_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `tasks` | M8 - Tareas | `id` (UUID), `branch_id`, `from_user_id`, `from_role` (`admin`\|`secretary`), `to_user_id`, `to_role` (`admin`\|`secretary`\|`instructor`), `type` (`task`\|`observation`\|`question`), `subject`, `body`, `status` (`pending`\|`in_progress`\|`completed`\|`seen`), `due_date` (solo type=task), `completed_at`, `seen_at`, `seen_by`, `created_at`, `updated_at`, `deleted_at` | `branch_id`→branches, `from_user_id`→users, `to_user_id`→users, `seen_by`→users · constraints: `role_matrix` (admin→{sec,inst}, sec→{admin,inst}), `due_date_only_for_tasks` | Admin: SELECT (branch_visible), INSERT/UPDATE (branch_visible), DELETE (admin). Sec: SELECT (from=me OR to=me), INSERT (from_role=secretary, to_role in admin/instructor, misma sede), UPDATE (from=me OR to=me). Inst: SELECT (to=me), UPDATE (to=me). Soft delete vía UPDATE.deleted_at | ✅ Definida — `20260518000000` · Realtime habilitado (publicación supabase_realtime) · Reemplaza `secretary_observations` |
@@ -94,7 +94,7 @@
 | `v_student_progress_b` | M4 - Acad. B | Progreso prácticas (0-12) `completed_practices`/`pct_practices`/`last_practice_session` por matrícula Clase B. **`20260630000000` (Spec 0001-m): eliminada `pct_theory_attendance`** — la asistencia teórica ya no existe. | Admin, Sec, Inst (propias), Stu (propia) |
 | `v_professional_attendance` | M5 - Prof. | Semáforo `green`/`yellow`/`red` de asistencia por matrícula profesional (RF-070) | Admin, Sec, Stu (propia) |
 | `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts`) | Admin, Sec, Stu (propios) |
-| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (cada elemento del JSONB es un slot exacto, no un rango). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). **`20260513000001`:** Vista recreada — ya no usa `generate_series` de 45 min; expande directamente los slots del JSONB a los días operativos de las próximas 4 semanas. | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
+| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (cada elemento del JSONB es un slot exacto, no un rango). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). **`20260513000001`:** Vista recreada — ya no usa `generate_series` de 45 min; expande directamente los slots del JSONB a los días operativos de las próximas 4 semanas. **`20260730100000` (spec 0004-m):** un instructor `both_branches=true` genera filas para las dos sedes (join de `course_slots` ya no ancla solo a su sede); el vehículo asignado debe cubrir la sede del slot (`v.branch_id = cs.branch_id OR v.both_branches`) — si su vehículo no es `both_branches`, la sede no cubierta queda **sin filas** (no "occupied", ausente). Los `NOT EXISTS` de conflicto siguen siendo globales por `instructor_id`/`vehicle_id` sin filtro de sede (sin cambios): un instructor u vehículo ocupado en una sede ya bloqueaba el mismo horario en la otra. | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
 
@@ -1091,6 +1091,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `active_classes_count` | INT | sí | `0` | — |
 | `active` | BOOLEAN | sí | `true` | — |
 | `registration_date` | DATE | sí | — | — |
+| `both_branches` | BOOLEAN | NO | `false` | — |
 
 **Policies:**
 
@@ -2190,15 +2191,16 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `last_inspection` | DATE | sí | — | — |
 | `last_maintenance` | DATE | sí | — | — |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `both_branches` | BOOLEAN | NO | `false` | — |
 
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| insert_vehicles | INSERT | — | `auth_user_role() = 'admin'` |
-| update_vehicles | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_vehicles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
+| update_vehicles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` | — |
 
 ### `website_config` — 🔒 RLS
 
@@ -2223,7 +2225,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
+| `v_class_b_schedule_availability` | `20260730100000_instructors_vehicles_both_branches.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |

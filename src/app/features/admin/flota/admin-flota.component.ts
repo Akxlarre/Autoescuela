@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -37,6 +38,8 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
       [vehicles]="facade.filteredVehicles()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
+      [showSedeColumn]="showSedeColumn()"
+      [branches]="branchFacade.branches()"
       (refreshRequested)="facade.init()"
       (newVehicle)="openVehicleForm()"
       (editVehicle)="openVehicleForm($event)"
@@ -50,11 +53,13 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
 })
 export class AdminFlotaComponent {
   protected readonly facade = inject(FlotaFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly localSearchTerm = signal('');
+  /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
+  protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   constructor() {
     this.destroyRef.onDestroy(() => this.facade.destroyRealtime());

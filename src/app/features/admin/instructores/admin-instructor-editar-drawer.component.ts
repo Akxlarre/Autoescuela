@@ -13,7 +13,9 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
+import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
@@ -38,6 +40,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     StableWidthDirective,
+    BranchScopeSelectorComponent,
   ],
   template: `
     @if (facade.selectedInstructor(); as inst) {
@@ -249,21 +252,19 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 />
               </div>
 
-              <!-- Sede -->
-              <div class="flex flex-col gap-1.5">
-                <label class="field-label" for="e-sede">Sede asignada *</label>
-                <p-select
-                  inputId="e-sede"
-                  [options]="sedeOptions()"
-                  [(ngModel)]="sedeIdModel"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Seleccione sede"
-                  styleClass="w-full"
-                  aria-required="true"
-                  data-llm-description="Sede de trabajo del instructor"
-                />
-              </div>
+              <!-- Sede (solo admin: la secretaria pertenece a una única sede, ya implícita) -->
+              @if (authFacade.currentUser()?.role === 'admin') {
+                <div class="flex flex-col gap-1.5">
+                  <app-branch-scope-selector
+                    [branches]="branchFacade.branches()"
+                    [branchId]="sedeId()"
+                    [bothBranches]="bothBranches()"
+                    [role]="authFacade.currentUser()?.role ?? ''"
+                    mode="editar"
+                    (valueChange)="onSedeScopeChange($event)"
+                  />
+                </div>
+              }
             </div>
 
             <!-- ── Información de Licencia ─────────────────────────────────────── -->
@@ -370,6 +371,20 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     Al cambiar el vehículo, se creará una nueva entrada en el historial de
                     asignaciones.
                   </span>
+                }
+                @if (sedeSinCoberturaWarning(); as warning) {
+                  <div
+                    class="flex items-start gap-2 p-2.5 rounded-lg border border-warning bg-warning/10"
+                    data-llm-description="warning that this instructor cannot take classes in the branch not covered by their assigned vehicle"
+                  >
+                    <app-icon
+                      name="alert-triangle"
+                      [size]="14"
+                      color="var(--state-warning)"
+                      class="shrink-0 mt-0.5"
+                    />
+                    <span class="text-xs text-warning">{{ warning }}</span>
+                  </div>
                 }
               </div>
             </div>
@@ -530,6 +545,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly dmsFacade = inject(DmsFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly branchFacade = inject(BranchFacade);
+  protected readonly authFacade = inject(AuthFacade);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -542,6 +558,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
   protected readonly sedeId = signal<number | null>(null);
+  protected readonly bothBranches = signal(false);
   protected readonly activo = signal(true);
 
   protected currentEmail = '';
@@ -603,26 +620,37 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     { label: 'Ambos', value: 'both' },
   ];
 
-  protected readonly vehicleOptions = computed(() =>
-    this.facade
+  /** Disponibles + el actual, filtrados por (sede elegida) o "Ambas" — spec 0004-m, AC6. */
+  protected readonly vehicleOptions = computed(() => {
+    const sedeId = this.sedeId();
+    return this.facade
       .vehicles()
       .filter((v) => v.status === 'available' || v.id === this.currentVehicleId())
+      .filter((v) => v.bothBranches || v.branchId === sedeId)
       .map((v) => ({
         label: v.label,
         value: v.id,
-      })),
-  );
+      }));
+  });
 
-  // ── Sede ──────────────────────────────────────────────────────────────────
-  protected readonly sedeOptions = computed(() =>
-    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
-  );
+  /** AC-E1: instructor "Ambas" con vehículo que no cubre la otra sede. */
+  protected readonly sedeSinCoberturaWarning = computed((): string | null => {
+    if (!this.bothBranches()) return null;
+    const vid = this.vehicleId();
+    if (vid === null) return null;
+    const vehicle = this.facade.vehicles().find((v) => v.id === vid);
+    if (!vehicle || vehicle.bothBranches) return null;
+    const sedeNoCubierta = this.branchFacade
+      .branches()
+      .find((b) => b.id !== vehicle.branchId)?.name;
+    const sedeVehiculo = this.branchFacade.branches().find((b) => b.id === vehicle.branchId)?.name;
+    if (!sedeNoCubierta || !sedeVehiculo) return null;
+    return `Este instructor no podrá dictar clases en ${sedeNoCubierta}: su vehículo asignado es de ${sedeVehiculo} y no está marcado "Ambas". Para que pueda operar en las dos sedes, asígnale un vehículo "Ambas".`;
+  });
 
-  protected get sedeIdModel(): number | null {
-    return this.sedeId();
-  }
-  protected set sedeIdModel(v: number | null) {
-    this.sedeId.set(v);
+  protected onSedeScopeChange(value: { branchId: number | null; bothBranches: boolean }): void {
+    this.sedeId.set(value.branchId);
+    this.bothBranches.set(value.bothBranches);
   }
 
   // ── p-select models ────────────────────────────────────────────────────────
@@ -676,6 +704,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.vehicleId.set(inst.vehicleId);
         this.currentVehicleId.set(inst.vehicleId);
         this.sedeId.set(inst.branchId);
+        this.bothBranches.set(inst.bothBranches);
         this.activo.set(inst.estado === 'activo');
 
         // Parse license expiry date
@@ -732,6 +761,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       vehicleId: this.vehicleId(),
       currentVehicleId: this.currentVehicleId(),
       branchId: this.sedeId()!,
+      bothBranches: this.bothBranches(),
     });
 
     if (ok) {

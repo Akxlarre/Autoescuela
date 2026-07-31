@@ -49,6 +49,7 @@ import type {
   VehicleType,
   VehicleStatus,
 } from '@core/models/ui/vehicle-table.model';
+import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatCLP } from '@core/utils/date.utils';
 
 /**
@@ -213,6 +214,9 @@ import { formatCLP } from '@core/utils/date.utils';
                     <th class="pl-6 py-4">Patente</th>
                     <th>Vehículo</th>
                     <th>Instructor</th>
+                    @if (showSedeColumn()) {
+                      <th>Sede</th>
+                    }
                     <th>KM</th>
                     <th>Combustible (Mes)</th>
                     <th>Estado</th>
@@ -249,6 +253,11 @@ import { formatCLP } from '@core/utils/date.utils';
                         }}</span>
                       </div>
                     </td>
+                    @if (showSedeColumn()) {
+                      <td class="text-xs text-text-secondary">
+                        {{ sedeLabel(v.branchId, v.bothBranches) }}
+                      </td>
+                    }
                     <td class="text-xs font-mono text-text-secondary">
                       {{ v.currentKm | number }} km
                     </td>
@@ -305,7 +314,7 @@ import { formatCLP } from '@core/utils/date.utils';
 
                 <ng-template pTemplate="emptymessage">
                   <tr>
-                    <td colspan="7" class="p-0">
+                    <td [attr.colspan]="showSedeColumn() ? 8 : 7" class="p-0">
                       <app-empty-state
                         icon="car"
                         message="No se encontraron vehículos"
@@ -358,6 +367,12 @@ import { formatCLP } from '@core/utils/date.utils';
                         <span class="text-text-muted mb-0.5">Kilometraje</span>
                         <span class="font-mono">{{ v.currentKm | number }} km</span>
                       </div>
+                      @if (showSedeColumn()) {
+                        <div class="flex flex-col">
+                          <span class="text-text-muted mb-0.5">Sede</span>
+                          <span>{{ sedeLabel(v.branchId, v.bothBranches) }}</span>
+                        </div>
+                      }
                     </div>
                   </div>
                   <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
@@ -491,6 +506,14 @@ export class FlotaListContentComponent {
   readonly kpis = input<FlotaKpis>({ total: 0, available: 0, inClass: 0, maintenance: 0 });
   readonly isLoading = input(false);
   readonly basePath = input<string>('/app/admin');
+  /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
+  readonly showSedeColumn = input(false);
+  readonly branches = input<BranchOption[]>([]);
+
+  protected sedeLabel(branchId: number | null, bothBranches: boolean): string {
+    if (bothBranches) return 'Ambas';
+    return this.branches().find((b) => b.id === branchId)?.name ?? '—';
+  }
 
   readonly newVehicle = output<void>();
   readonly editVehicle = output<number>();

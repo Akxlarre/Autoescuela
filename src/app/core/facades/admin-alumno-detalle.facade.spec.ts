@@ -1337,5 +1337,45 @@ describe('AdminAlumnoDetalleFacade', () => {
 
       expect(isSpy).toHaveBeenCalledWith('vehicle_assignments.end_date', null);
     });
+
+    // spec 0004-m: instructor both_branches=true de otra sede también debe aparecer.
+    // Mismo problema que InstructoresFacade — PostgREST rechaza or() mezclando
+    // users.branch_id (embebido) con both_branches (raíz) → segunda query + merge.
+    it('AC6 — incluye instructores both_branches=true de OTRA sede vía segunda query', async () => {
+      (facade as any)._alumno.set({ branchId: 2 });
+
+      const byBranchRow = {
+        id: 1,
+        users: { first_names: 'A', paternal_last_name: 'B' },
+        vehicle_assignments: [{ vehicles: { brand: '', model: '', license_plate: '' } }],
+      };
+      const bothBranchesRow = {
+        id: 5,
+        users: { first_names: 'C', paternal_last_name: 'D' },
+        vehicle_assignments: [{ vehicles: { brand: '', model: '', license_plate: '' } }],
+      };
+
+      let callCount = 0;
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            is: vi.fn().mockReturnValue({
+              eq: vi.fn().mockImplementation(() => {
+                callCount += 1;
+                return Promise.resolve({
+                  data: callCount === 1 ? [byBranchRow] : [bothBranchesRow],
+                  error: null,
+                });
+              }),
+            }),
+          }),
+        }),
+      });
+
+      await facade.loadInstructores();
+
+      const ids = facade.instructores().map((i: any) => i.id);
+      expect(ids).toEqual(expect.arrayContaining([1, 5]));
+    });
   });
 });
