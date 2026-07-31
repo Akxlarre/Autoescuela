@@ -33,6 +33,7 @@ interface RawVehicleForDetail {
   current_km: number;
   last_maintenance: string | null;
   branch_id: number | null;
+  both_branches: boolean;
   vehicle_assignments: {
     instructor_id: number;
     end_date: string | null;
@@ -60,8 +61,8 @@ const SOON_DAYS = 14;
  */
 @Injectable({ providedIn: 'root' })
 export class FlotaDetalleFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
   private readonly _vehicle = signal<VehicleTableRow | null>(null);
@@ -113,7 +114,7 @@ private readonly supabase = inject(SupabaseService);
         this.supabase.client
           .from('vehicles')
           .select(
-            `id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id,
+            `id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id, both_branches,
              vehicle_assignments(instructor_id, end_date, instructors(users(first_names, paternal_last_name))),
              vehicle_documents(type, expiry_date, status)`,
           )
@@ -162,6 +163,7 @@ private readonly supabase = inject(SupabaseService);
         instructorName,
         instructorId,
         branchId: v.branch_id ?? null,
+        bothBranches: v.both_branches ?? false,
         documents: v.vehicle_documents.map((d) => ({
           type: d.type ?? 'unknown',
           expiryDate: d.expiry_date ?? '',
@@ -194,7 +196,9 @@ private readonly supabase = inject(SupabaseService);
       this._scheduledMaintenances.set(scheduled);
     } catch (err) {
       this._error.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el detalle del vehículo',
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar el detalle del vehículo',
       );
     } finally {
       this._isLoading.set(false);
@@ -283,6 +287,6 @@ private readonly supabase = inject(SupabaseService);
       circulation_permit: 'Permiso de Circulación',
       insurance: 'Seguro',
     };
-    return map[type ?? ''] ?? (type ?? 'Documento');
+    return map[type ?? ''] ?? type ?? 'Documento';
   }
 }

@@ -1,9 +1,11 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   SesionProfesional,
   SesionAlumnoAsistencia,
@@ -19,10 +21,11 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class AsistenciaProfesionalFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly confirmModal = inject(ConfirmModalService);
 
   async confirm(config: {
@@ -202,13 +205,32 @@ private readonly supabase = inject(SupabaseService);
     }
   }
 
+  /**
+   * Sede activa para el scope de queries (fix-090).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   // ── Carga de promociones ────────────────────────────────────────────────────
   private async loadPromociones(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    const branchId = this.getActiveBranchId();
+    let query = this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, status')
       .in('status', ['in_progress', 'planned'])
       .order('start_date', { ascending: false });
+
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data, error } = await query;
 
     if (error) throw error;
     this._promociones.set(
@@ -536,7 +558,8 @@ private readonly supabase = inject(SupabaseService);
       await this.selectSesion(sesion);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar asistencia';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar asistencia';
       this.toast.error(msg);
       return false;
     } finally {
@@ -584,7 +607,8 @@ private readonly supabase = inject(SupabaseService);
       if (cursoId) await this.fetchResumenAlumnos(cursoId);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al editar sesión';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al editar sesión';
       this.toast.error(msg);
       return false;
     } finally {
@@ -876,7 +900,8 @@ private readonly supabase = inject(SupabaseService);
       await this.fetchFirmasSemana();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar firmas';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar firmas';
       this.toast.error(msg);
       return false;
     } finally {

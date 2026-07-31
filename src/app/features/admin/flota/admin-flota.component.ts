@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 
 // Facades
 import { FlotaFacade } from '@core/facades/flota.facade';
@@ -30,6 +37,8 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
       [vehicles]="facade.filteredVehicles()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
+      [showSedeColumn]="showSedeColumn()"
+      [branches]="branchFacade.branches()"
       (refreshRequested)="facade.init()"
       (newVehicle)="openVehicleForm()"
       (editVehicle)="openVehicleForm($event)"
@@ -43,10 +52,12 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
 })
 export class AdminFlotaComponent {
   protected readonly facade = inject(FlotaFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected readonly localSearchTerm = signal('');
+  /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
+  protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   constructor() {
     effect(() => {

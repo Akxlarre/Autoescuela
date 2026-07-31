@@ -28,6 +28,7 @@ export interface VehicleTableRow {
   instructorName: string | null;
   instructorId: number | null;
   branchId: number | null;
+  bothBranches: boolean;
   documents: VehicleDocSummary[];
 }
 

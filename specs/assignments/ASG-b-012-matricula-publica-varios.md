@@ -1,6 +1,6 @@
 # Asignación ASG-b-012 — Matrícula pública: overlay, landing sin sede, retry roto, storage huérfano
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

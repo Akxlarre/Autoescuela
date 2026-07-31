@@ -32,6 +32,7 @@ export interface CrearInstructorPayload {
   licenseExpiry: string;
   vehicleId: number | null;
   branchId: number;
+  bothBranches: boolean;
 }
 
 export interface EditarInstructorPayload {
@@ -49,6 +50,7 @@ export interface EditarInstructorPayload {
   vehicleId: number | null;
   currentVehicleId: number | null;
   branchId: number;
+  bothBranches: boolean;
 }
 
 // ── DTOs internos de Supabase ─────────────────────────────────────────────────
@@ -77,6 +79,7 @@ interface InstructorRow {
   license_status: string | null;
   active: boolean;
   registration_date: string | null;
+  both_branches: boolean;
   users: {
     id: number;
     rut: string;
@@ -221,40 +224,41 @@ export class InstructoresFacade {
     }
   }
 
+  private static readonly INSTRUCTOR_SELECT = `
+    id,
+    user_id,
+    type,
+    license_number,
+    license_class,
+    license_expiry,
+    license_status,
+    active,
+    registration_date,
+    both_branches,
+    users!inner (
+      id,
+      rut,
+      first_names,
+      paternal_last_name,
+      maternal_last_name,
+      email,
+      phone,
+      active,
+      branch_id
+    ),
+    vehicle_assignments (
+      vehicle_id,
+      start_date,
+      vehicles ( id, license_plate, brand, model, year )
+    )
+  `;
+
   private async fetchData(): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
       .from('instructors')
-      .select(
-        `
-        id,
-        user_id,
-        type,
-        license_number,
-        license_class,
-        license_expiry,
-        license_status,
-        active,
-        registration_date,
-        users!inner (
-          id,
-          rut,
-          first_names,
-          paternal_last_name,
-          maternal_last_name,
-          email,
-          phone,
-          active,
-          branch_id
-        ),
-        vehicle_assignments (
-          vehicle_id,
-          start_date,
-          vehicles ( id, license_plate, brand, model, year )
-        )
-      `,
-      )
+      .select(InstructoresFacade.INSTRUCTOR_SELECT)
       .is('vehicle_assignments.end_date', null)
       .order('registration_date', { ascending: false });
 
@@ -269,7 +273,31 @@ export class InstructoresFacade {
       throw error;
     }
 
-    const rows = (data as unknown as InstructorRow[]) ?? [];
+    let rows = (data as unknown as InstructorRow[]) ?? [];
+
+    // spec 0004-m (AC6): un instructor `both_branches=true` de OTRA sede también debe
+    // aparecer. PostgREST rechaza `or=()` mezclando una columna de recurso embebido
+    // (`users.branch_id`) con una columna raíz (`both_branches`) — PGRST100, confirmado
+    // contra Supabase local — por eso es una segunda query + merge client-side, no un
+    // solo `.or()`.
+    if (branchId !== null) {
+      const { data: bothBranchesData, error: bbError } = await this.supabase.client
+        .from('instructors')
+        .select(InstructoresFacade.INSTRUCTOR_SELECT)
+        .is('vehicle_assignments.end_date', null)
+        .eq('both_branches', true);
+
+      if (!bbError && bothBranchesData) {
+        const seenIds = new Set(rows.map((r) => r.id));
+        for (const extra of bothBranchesData as unknown as InstructorRow[]) {
+          if (!seenIds.has(extra.id)) {
+            rows = [...rows, extra];
+            seenIds.add(extra.id);
+          }
+        }
+      }
+    }
+
     const activeClassesById = await this.fetchActiveClassesCounts(rows.map((r) => r.id));
     this._instructores.set(rows.map((r) => this.mapRow(r, activeClassesById.get(r.id) ?? 0)));
   }
@@ -312,10 +340,12 @@ export class InstructoresFacade {
   async loadVehicles(): Promise<void> {
     if (this._vehiclesLoaded) return;
 
-    // Cargar todos los vehículos activos
+    // Cargar todos los vehículos activos. Sin filtro de sede acá: el picker de
+    // "Vehículo asignado" (Crear/Editar Instructor) filtra client-side por la sede
+    // elegida en el form + `bothBranches` (spec 0004-m, AC6) — ver drawers.
     const { data: allVehicles, error: vError } = await this.supabase.client
       .from('vehicles')
-      .select('id, license_plate, brand, model, year, status')
+      .select('id, license_plate, brand, model, year, status, branch_id, both_branches')
       .order('license_plate');
 
     if (vError || !allVehicles) return;
@@ -339,6 +369,8 @@ export class InstructoresFacade {
           model: string | null;
           year: number | null;
           status: string | null;
+          branch_id: number | null;
+          both_branches: boolean;
         }) => {
           const modelLabel = [v.brand, v.model, v.year].filter(Boolean).join(' ');
           let status: 'available' | 'assigned' | 'maintenance' = 'available';
@@ -352,6 +384,8 @@ export class InstructoresFacade {
             licensePlate: v.license_plate,
             label: `${v.license_plate} - ${modelLabel}`.trim(),
             status,
+            branchId: v.branch_id,
+            bothBranches: v.both_branches,
           };
         },
       ),
@@ -584,6 +618,7 @@ export class InstructoresFacade {
           vehicleId: payload.vehicleId,
           currentVehicleId: payload.currentVehicleId,
           branchId: payload.branchId,
+          bothBranches: payload.bothBranches,
         },
       });
 
@@ -654,6 +689,7 @@ export class InstructoresFacade {
       paternalLastName: u.paternal_last_name,
       maternalLastName: u.maternal_last_name ?? '',
       branchId: u.branch_id,
+      bothBranches: r.both_branches ?? false,
     };
   }
 }

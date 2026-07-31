@@ -1,6 +1,6 @@
 # Asignación ASG-b-043 — Drawers muestran datos de todas las sedes en vez de una
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

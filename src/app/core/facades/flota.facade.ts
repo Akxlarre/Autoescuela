@@ -146,13 +146,19 @@ export class FlotaFacade {
       .from('vehicles')
       .select(
         `
-        id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id,
+        id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id, both_branches,
         vehicle_assignments(instructor_id, end_date, instructors(user_id, users(first_names, paternal_last_name))),
         vehicle_documents(type, expiry_date, status)
       `,
       )
       .order('id', { ascending: true });
-    if (branchId !== null) query = query.eq('branch_id', branchId);
+    // spec 0004-m (AC7): un vehículo both_branches=true también debe aparecer con
+    // cualquier sede seleccionada. A diferencia de instructors (users.branch_id es un
+    // recurso embebido), acá branch_id y both_branches viven en la misma tabla raíz —
+    // el .or() de PostgREST sí funciona (confirmado contra Supabase local).
+    if (branchId !== null) {
+      query = query.or(`branch_id.eq.${branchId},both_branches.eq.true`);
+    }
     const { data, error } = await query;
 
     if (error) throw error;
@@ -186,6 +192,7 @@ export class FlotaFacade {
       instructorName,
       instructorId,
       branchId: v.branch_id ?? null,
+      bothBranches: v.both_branches ?? false,
       documents: (v.vehicle_documents ?? []).map((d: any) => ({
         type: d.type ?? 'unknown',
         expiryDate: d.expiry_date ?? '',

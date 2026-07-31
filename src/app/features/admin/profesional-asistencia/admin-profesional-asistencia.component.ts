@@ -127,7 +127,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 <app-icon name="chevron-left" [size]="16" />
               </button>
 
-              <div class="px-3 flex flex-col items-center justify-center min-w-[160px]">
+              <div class="px-3 flex flex-col items-center justify-center min-w-40">
                 <span class="text-sm font-semibold text-text-primary">{{
                   facade.weekLabel()
                 }}</span>
@@ -349,11 +349,15 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
         void this.facade.fetchFirmasSemana();
       }
     });
+
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   ngOnInit(): void {
     this.branchFacade.setProfessionalOnly(true);
-    void this.facade.initialize();
   }
 
   ngOnDestroy(): void {

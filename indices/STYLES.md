@@ -210,7 +210,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--state-success` | 173 | `#4ade80` |
 | `--color-primary` | 158 | `#38bdf8` |
 | `--border-default` | 132 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 122 | `#fbbf24` |
+| `--state-warning` | 124 | `#fbbf24` |
 | `--bg-elevated` | 78 | `#27272a` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
 | `--text-sm` | 63 | `0.875rem` |
@@ -322,7 +322,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **tabs** | `.p-tabs` |
 | **toast** | `.p-toast` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` · `.p-toast-message` +11 |
 | **togglebutton** | `.p-togglebutton` · `.p-togglebutton-checked` |
-| **toggleswitch** | `.p-toggleswitch` · `.p-toggleswitch-checked` |
+| **toggleswitch** | `.p-toggleswitch` · `.p-toggleswitch-checked` · `.p-toggleswitch-handle` · `.p-toggleswitch-input` · `.p-toggleswitch-slider` |
 | **tooltip** | `.p-tooltip` · `.p-tooltip-arrow` · `.p-tooltip-bottom` · `.p-tooltip-left` · `.p-tooltip-right` +2 |
 | **yearpicker** | `.p-yearpicker-year` |
 
@@ -346,8 +346,8 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 15 | `font-bold text-sm text-text-primary truncate` |
+| 15 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
-| 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
 | 13 | `text-xs font-semibold text-text-primary` |

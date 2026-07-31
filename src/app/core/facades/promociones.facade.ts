@@ -2,6 +2,9 @@
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   PromocionTableRow,
   PromocionCursoRow,
@@ -19,6 +22,8 @@ export class PromocionesFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionTableRow[]>([]);
@@ -73,9 +78,25 @@ export class PromocionesFacade {
     }
   }
 
+  /**
+   * Sede activa para el scope de queries (fix-090).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   private async fetchData(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+
     // 1. Fetch promotions with courses, lecturers
-    const { data, error } = await this.supabase.client
+    let query = this.supabase.client
       .from('professional_promotions')
       .select(
         `id, code, name, start_date, end_date, max_students, status, created_at,
@@ -90,6 +111,10 @@ export class PromocionesFacade {
       )
       .not('status', 'eq', 'finished')
       .order('start_date', { ascending: false });
+
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -253,7 +278,7 @@ export class PromocionesFacade {
           end_date: payload.endDate,
           status: 'planned',
           current_day: 0,
-          branch_id: 2, // Conductores Chillán
+          branch_id: this.getActiveBranchId(),
         })
         .select('id')
         .single();

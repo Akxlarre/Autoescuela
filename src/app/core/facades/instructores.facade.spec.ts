@@ -268,4 +268,213 @@ describe('InstructoresFacade', () => {
       );
     });
   });
+
+  // ─── spec 0004-m: instructores/vehículos "Ambas sedes" ─────────────────────
+  describe('scope multi-sede — both_branches (spec 0004-m)', () => {
+    function buildInstructorRow(id: number, branchId: number, bothBranches = false): any {
+      return {
+        id,
+        user_id: id * 10,
+        type: 'practice',
+        license_number: 'X',
+        license_class: 'B',
+        license_expiry: null,
+        license_status: 'valid',
+        active: true,
+        registration_date: null,
+        both_branches: bothBranches,
+        users: {
+          id: id * 10,
+          rut: `${id}`,
+          first_names: 'Juan',
+          paternal_last_name: 'Perez',
+          maternal_last_name: null,
+          email: `instructor${id}@test.cl`,
+          phone: null,
+          active: true,
+          branch_id: branchId,
+        },
+        vehicle_assignments: [],
+      };
+    }
+
+    /**
+     * PostgREST rechaza `or=()` mezclando una columna de recurso embebido
+     * (`users.branch_id`) con una columna raíz (`both_branches`) — confirmado
+     * empíricamente contra Supabase local (PGRST100). Por eso `fetchData()` hace
+     * dos queries (la de siempre por `users.branch_id`, y una segunda por
+     * `both_branches=true`) y las mergea client-side, dedupe por `id`.
+     */
+    function mockInstructorsTwoQueries(
+      byBranchRows: any[],
+      bothBranchesRows: any[],
+    ): { eqCalls: [string, unknown][] } {
+      const eqCalls: [string, unknown][] = [];
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'class_b_sessions') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockReturnValue({
+                  gte: vi.fn().mockReturnValue({
+                    lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        const builder: any = {
+          select: vi.fn(() => builder),
+          is: vi.fn(() => builder),
+          order: vi.fn(() => builder),
+          eq: vi.fn((col: string, val: unknown) => {
+            eqCalls.push([col, val]);
+            const isBranchFilter = col === 'users.branch_id';
+            builder._lastResult = isBranchFilter ? byBranchRows : bothBranchesRows;
+            return builder;
+          }),
+          then: (resolve: any) =>
+            Promise.resolve({ data: builder._lastResult ?? byBranchRows, error: null }).then(
+              resolve,
+            ),
+        };
+        return builder;
+      });
+      return { eqCalls };
+    }
+
+    it('AC6 — con sede seleccionada, incluye instructores both_branches=true de OTRA sede', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockInstructorsTwoQueries(
+        [buildInstructorRow(1, 1, false)],
+        [buildInstructorRow(2, 2, true)],
+      );
+
+      await facade.initialize();
+
+      const ids = facade.instructores().map((r) => r.id);
+      expect(ids).toContain(1);
+      expect(ids).toContain(2);
+    });
+
+    it('AC6 — dedup: un instructor both_branches=true de la MISMA sede no aparece duplicado', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockInstructorsTwoQueries([buildInstructorRow(1, 1, true)], [buildInstructorRow(1, 1, true)]);
+
+      await facade.initialize();
+
+      const ids = facade.instructores().map((r) => r.id);
+      expect(ids.filter((id) => id === 1)).toHaveLength(1);
+    });
+
+    it('admin con "Todas las sedes" (null): no ejecuta la segunda query de both_branches', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      const { eqCalls } = mockInstructorsTwoQueries([], []);
+
+      await facade.initialize();
+
+      expect(eqCalls.find(([col]) => col === 'both_branches')).toBeUndefined();
+    });
+
+    it('loadVehicles() propaga branchId y bothBranches en VehicleOption', async () => {
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'instructors') {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 1,
+                    license_plate: 'AA1111',
+                    brand: 'Suzuki',
+                    model: 'Swift',
+                    year: 2022,
+                    status: 'available',
+                    branch_id: 1,
+                    both_branches: true,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+        if (table === 'vehicle_assignments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await facade.loadVehicles();
+
+      const options = facade.vehicles();
+      expect(options[0].branchId).toBe(1);
+      expect(options[0].bothBranches).toBe(true);
+    });
+
+    it('crearInstructor() propaga bothBranches en el body de la edge function', async () => {
+      await facade.crearInstructor({
+        firstNames: 'Juan',
+        paternalLastName: 'Perez',
+        maternalLastName: '',
+        rut: '11111111-1',
+        email: 'juan@test.cl',
+        phone: '',
+        type: 'practice',
+        licenseNumber: '',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        vehicleId: null,
+        branchId: 1,
+        bothBranches: true,
+      } as any);
+
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'create-instructor',
+        expect.objectContaining({ body: expect.objectContaining({ bothBranches: true }) }),
+      );
+    });
+
+    it('editarInstructor() propaga bothBranches en el body de la edge function', async () => {
+      await facade.editarInstructor(1, 10, {
+        firstNames: 'Juan',
+        paternalLastName: 'Perez',
+        maternalLastName: '',
+        phone: '',
+        email: 'juan@test.cl',
+        currentEmail: 'juan@test.cl',
+        type: 'practice',
+        licenseNumber: '',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        active: true,
+        vehicleId: null,
+        currentVehicleId: null,
+        branchId: 1,
+        bothBranches: true,
+      } as any);
+
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'update-instructor',
+        expect.objectContaining({ body: expect.objectContaining({ bothBranches: true }) }),
+      );
+    });
+  });
 });

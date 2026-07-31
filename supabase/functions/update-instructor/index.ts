@@ -21,6 +21,9 @@
 //   active            : boolean — estado activo/inactivo
 //   vehicleId         : number | null — nuevo vehículo asignado
 //   currentVehicleId  : number | null — vehículo actual para detectar cambios
+//   bothBranches      : boolean — instructor dicta clases en las dos sedes (spec 0004-m).
+//                        Solo admin puede cambiarlo — si el caller es secretary, el campo
+//                        se ignora silenciosamente (no se toca su valor actual).
 //
 // @ts-nocheck
 
@@ -122,6 +125,7 @@ Deno.serve(async (req: Request) => {
       vehicleId,
       currentVehicleId,
       branchId,
+      bothBranches,
     } = await req.json();
 
     if (
@@ -193,16 +197,24 @@ Deno.serve(async (req: Request) => {
     // ── Actualizar public.instructors ────────────────────────────────────────
     const licenseStatus = computeLicenseStatus(licenseExpiry);
 
+    const instructorPayload: Record<string, unknown> = {
+      type,
+      license_number: licenseNumber || null,
+      license_class: licenseClass,
+      license_expiry: licenseExpiry,
+      license_status: licenseStatus,
+      active,
+    };
+
+    // Defensa en profundidad: solo admin puede cambiar el scope "Ambas sedes"
+    // (no confiar solo en que el front lo deshabilite para secretary).
+    if (callerRole === 'admin' && bothBranches !== undefined) {
+      instructorPayload['both_branches'] = Boolean(bothBranches);
+    }
+
     const { error: updateInstructorError } = await supabaseAudit
       .from('instructors')
-      .update({
-        type,
-        license_number: licenseNumber || null,
-        license_class: licenseClass,
-        license_expiry: licenseExpiry,
-        license_status: licenseStatus,
-        active,
-      })
+      .update(instructorPayload)
       .eq('id', instructorId);
 
     if (updateInstructorError) {

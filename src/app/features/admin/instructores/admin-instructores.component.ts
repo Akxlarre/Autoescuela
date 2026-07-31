@@ -110,7 +110,9 @@ type FilterTab = 'all' | 'active' | 'expiring';
                   <th>RUT</th>
                   <th>Licencia</th>
                   <th>Vehículo</th>
-                  <th>Tipo</th>
+                  @if (showSedeColumn()) {
+                    <th>Sede</th>
+                  }
                   <th class="text-center">Clases activas</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -139,7 +141,9 @@ type FilterTab = 'all' | 'active' | 'expiring';
                           <app-skeleton-block variant="text" width="120px" height="11px" />
                         </div>
                       </td>
-                      <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
+                      @if (showSedeColumn()) {
+                        <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
+                      }
                       <td class="text-center">
                         <app-skeleton-block variant="circle" width="32px" height="32px" />
                       </td>
@@ -149,7 +153,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                   }
                 } @else if (filteredInstructores().length === 0) {
                   <tr>
-                    <td colspan="8">
+                    <td [attr.colspan]="showSedeColumn() ? 8 : 7">
                       <div class="py-14 text-center">
                         <div class="flex flex-col items-center gap-2">
                           <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
@@ -216,12 +220,14 @@ type FilterTab = 'all' | 'active' | 'expiring';
                         }
                       </td>
 
-                      <!-- Tipo -->
-                      <td>
-                        <span class="text-sm text-text-primary">
-                          {{ inst.tipoLabel }}
-                        </span>
-                      </td>
+                      <!-- Sede -->
+                      @if (showSedeColumn()) {
+                        <td>
+                          <span class="text-sm text-text-primary">
+                            {{ sedeLabel(inst.branchId, inst.bothBranches) }}
+                          </span>
+                        </td>
+                      }
 
                       <!-- Clases activas -->
                       <td class="text-center">
@@ -316,12 +322,14 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       >
                       <span>{{ inst.rut }}</span>
                     </div>
-                    <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                        >Tipo</span
-                      >
-                      <span>{{ inst.tipoLabel }}</span>
-                    </div>
+                    @if (showSedeColumn()) {
+                      <div class="flex flex-col">
+                        <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                          >Sede</span
+                        >
+                        <span>{{ sedeLabel(inst.branchId, inst.bothBranches) }}</span>
+                      </div>
+                    }
                     <div class="flex flex-col">
                       <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
                         >Vehículo</span
@@ -553,9 +561,17 @@ type FilterTab = 'all' | 'active' | 'expiring';
 })
 export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(InstructoresFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
+
+  /** Columna "Sede" solo tiene sentido cuando se ven instructores de varias sedes a la vez. */
+  protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
+
+  protected sedeLabel(branchId: number | null, bothBranches: boolean): string {
+    if (bothBranches) return 'Ambas';
+    return this.branchFacade.branches().find((b) => b.id === branchId)?.name ?? '—';
+  }
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly listCard = viewChild<ElementRef<HTMLElement>>('listCard');

@@ -17,6 +17,8 @@
 //   licenseClass      : string  — clase de licencia (ej: 'B', 'A2', 'A3')
 //   licenseExpiry     : string  — fecha de vencimiento ISO (YYYY-MM-DD)
 //   vehicleId         : number | null — ID del vehículo a asignar (opcional)
+//   bothBranches      : boolean — instructor dicta clases en las dos sedes (spec 0004-m).
+//                        Solo admin puede pedirlo — se fuerza false para secretary.
 //
 // Flujo:
 //   1. Valida que el llamador sea admin o secretary
@@ -121,7 +123,12 @@ Deno.serve(async (req: Request) => {
       licenseExpiry,
       vehicleId,
       branchId,
+      bothBranches,
     } = await req.json();
+
+    // Defensa en profundidad: solo admin puede crear un instructor "Ambas sedes"
+    // (no confiar solo en que el front lo deshabilite para secretary).
+    const effectiveBothBranches = callerRole === 'admin' ? Boolean(bothBranches) : false;
 
     if (
       !firstNames ||
@@ -213,6 +220,7 @@ Deno.serve(async (req: Request) => {
         license_status: licenseStatus,
         active: true,
         registration_date: new Date().toISOString().split('T')[0],
+        both_branches: effectiveBothBranches,
       })
       .select('id')
       .single();
