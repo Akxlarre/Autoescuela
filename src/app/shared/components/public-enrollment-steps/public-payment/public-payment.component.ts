@@ -108,11 +108,8 @@ export interface PublicPaymentSummary {
 
         <!-- Total box -->
         <div
-          class="flex items-center justify-between rounded-xl p-4"
-          style="
-            background: linear-gradient(135deg, var(--color-primary-muted) 0%, transparent 100%);
-            border: 1px solid color-mix(in srgb, var(--ds-brand) 25%, transparent);
-          "
+          class="flex items-center justify-between rounded-xl p-4 border border-brand/25"
+          style="background: linear-gradient(135deg, var(--color-primary-muted) 0%, transparent 100%)"
         >
           <span class="font-semibold text-sm" style="color: var(--text-primary);">
             Total a pagar ahora

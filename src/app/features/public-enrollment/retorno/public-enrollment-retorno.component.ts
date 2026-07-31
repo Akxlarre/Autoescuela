@@ -112,11 +112,8 @@ function readPendingBranchId(): number | null {
             <div class="flex flex-col items-center gap-5">
               <!-- Ícono éxito premium con gradiente de sede -->
               <div
-                class="flex h-20 w-20 items-center justify-center rounded-full"
-                style="
-                  background: var(--gradient-primary);
-                  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ds-brand) 50%, transparent);
-                "
+                class="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-primary"
+                style="box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ds-brand) 50%, transparent)"
               >
                 <app-icon name="check" [size]="38" color="white" />
               </div>
@@ -138,11 +135,8 @@ function readPendingBranchId(): number | null {
               <!-- N° Matrícula prominente -->
               @if (enrollmentNumber()) {
                 <div
-                  class="w-full rounded-xl p-4 text-center"
-                  style="
-                    background: var(--color-primary-muted);
-                    border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent);
-                  "
+                  class="w-full rounded-xl p-4 text-center border border-brand/30"
+                  style="background: var(--color-primary-muted)"
                 >
                   <p
                     class="text-xs font-bold uppercase tracking-wider mb-1"

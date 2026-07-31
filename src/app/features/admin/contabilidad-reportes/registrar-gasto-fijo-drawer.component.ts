@@ -154,10 +154,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             </div>
 
             @if (saveError()) {
-              <div
-                class="flex items-start gap-2 p-3 rounded-lg"
-                style="background: color-mix(in srgb, var(--state-error) 8%, transparent)"
-              >
+              <div class="flex items-start gap-2 p-3 rounded-lg bg-error/8">
                 <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
                 <p class="text-sm" style="color: var(--state-error)">{{ saveError() }}</p>
               </div>

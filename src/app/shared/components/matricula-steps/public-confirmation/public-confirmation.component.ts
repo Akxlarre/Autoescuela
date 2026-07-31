@@ -11,11 +11,8 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
     <div class="text-center space-y-6 py-4">
       <!-- Success icon (premium gradient) -->
       <div
-        class="mx-auto flex h-20 w-20 items-center justify-center rounded-full"
-        style="
-          background: var(--gradient-primary);
-          box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ds-brand) 50%, transparent);
-        "
+        class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-primary"
+        style="box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ds-brand) 50%, transparent)"
       >
         <app-icon name="check" [size]="38" color="white" />
       </div>
@@ -32,12 +29,8 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
           <!-- Folio number (prominent) -->
           @if (enrollmentNumber()) {
             <div
-              class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold"
-              style="
-                background: var(--color-primary-muted);
-                border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent);
-                color: var(--color-primary);
-              "
+              class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold border border-brand/30"
+              style="background: var(--color-primary-muted); color: var(--color-primary)"
             >
               <app-icon name="hash" [size]="14" color="var(--color-primary)" />
               Folio {{ enrollmentNumber() }}

@@ -399,8 +399,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             >
               <div class="flex items-center gap-3">
                 <div
-                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
                 >
                   <app-icon name="lock" [size]="16" color="var(--state-error)" />
                 </div>
