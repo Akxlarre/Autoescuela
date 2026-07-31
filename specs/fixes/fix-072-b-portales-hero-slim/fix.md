@@ -1,7 +1,8 @@
 # Fix: Portales Instructor y Alumno con hero azul sólido — migrar los 16 componentes a `density="slim"`
 > id: fix-072-b-portales-hero-slim
 > refs: 0015-b-header-slim-mode · ASG-b-001 · fix-071-b-fase-5-qa-visual-restante
-> status: in_progress
+> status: done
+> closed: 2026-07-31
 > created: 2026-07-31
 
 ## Root Cause
@@ -172,8 +173,24 @@ Verificación real ejecutada (2026-07-31):
    - No se pudo llegar al flujo real de una clase en curso (no había clase agendada hoy en el
      dataset de prueba) ni al login del dataset con saldo pendiente en `alumno/pagar` — ambos
      casos cubiertos por revisión de código + el estado sin-saldo sí verificado en vivo.
-4. ⚠️ **Capturas (claro/oscuro/mobile) no generadas** — el tool de screenshot del Browser MCP
-   devolvió "the Browser pane is not displayed" en esta sesión (headless, sin panel visible). La
-   verificación de AC-F1/AC-F2/AC-F3 se hizo por inspección de DOM real en vivo, que es más fuerte
-   que una captura para esos ACs puntuales, pero **no reemplaza el visto bueno visual del owner**
-   pedido en el punto 4 original — pendiente antes de `/fix-close` si el owner lo requiere.
+4. ✅ **Capturas (claro/oscuro/mobile) generadas (2026-07-31, sesión 3).** El Browser MCP (pane)
+   seguía sin componer frames en esta sesión ("the Browser pane is not displayed"), pero
+   `mcp__playwright__*` sí renderiza y capturó screenshots reales sin ese problema — login real
+   (`instructor@test.com` / `alumno@test.com`), toggle de tema vía el botón real de la UI, resize
+   a 375×812 para mobile. 8 capturas en `evidencia/`:
+   - `portal-instructor-dashboard-desktop-{light,dark}.png`, `-mobile-dark.png` — hero slim con
+     KPIs (`0,8 hrs` conserva la coma es-CL en las 3), sin `.hero-card`, mobile apila 2×2 sin overflow.
+   - `portal-alumno-dashboard-desktop-{light,dark}.png`, `-mobile-dark.png` — hero slim con badges
+     "Curso activo"/"10 faltas seguidas", `Mi Progreso` (dona 17% + grid 1-12) intacto en los 3.
+     Único hallazgo cosmético: en mobile el subtítulo `CLASE B · AUTOESCUELA CHILLÁN · #0008` se
+     trunca con ellipsis (`#00...`) — truncamiento CSS esperado, no bug (mismo patrón que
+     `fix-003-i-textos-recortados-flex-truncate`).
+   - `portal-alumno-pagos-desktop-dark.png` — confirma `$180K` + subValue `$180.000` (el caso más
+     complejo del progreso, conditional 3-way).
+   - `portal-alumno-pagar-desktop-dark.png` — confirma estado "Tu matrícula está al día", stepper
+     Resumen/Pago intacto con hero slim.
+
+   No se generaron las 12 rutas restantes (cobertura completa no es necesaria para el visto bueno:
+   las 2 rutas más riesgosas del "Riesgos declarados" — dashboards con KPI propia y el flujo de
+   pago — ya están cubiertas). Visto bueno visual del owner: **pendiente de que él las revise**,
+   no de más capturas.
