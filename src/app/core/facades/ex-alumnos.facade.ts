@@ -230,12 +230,18 @@ export class ExAlumnosFacade {
       }
 
       // 2. Balance Real del Año (Egresados vs Licencias)
-      // Contar egresados (enrollments completed este año)
-      const { count: egresadosCount, error: countErr } = await this.supabase.client
+      // Contar egresados (enrollments completed este año) — mismo criterio que
+      // loadEgresadosList() (fix-005-i): solo Clase B y scope de sede, para que
+      // ambos números de la página coincidan (antes: 2 vs 16, H-003).
+      const branchId = this.getActiveBranchId();
+      let egresadosCountQuery: any = this.supabase.client
         .from('enrollments')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
+        .eq('license_group', 'class_b')
         .gte('updated_at', startOfYear);
+      if (branchId !== null) egresadosCountQuery = egresadosCountQuery.eq('branch_id', branchId);
+      const { count: egresadosCount, error: countErr } = await egresadosCountQuery;
 
       if (countErr) throw countErr;
       this.annualEgresadosTotal.set(egresadosCount || 0);

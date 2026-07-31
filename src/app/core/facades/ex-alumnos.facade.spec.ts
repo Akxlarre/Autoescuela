@@ -145,4 +145,54 @@ describe('ExAlumnosFacade', () => {
     const egresado = facade.egresadosClaseBList()[0];
     expect(egresado.branchId).toBe(3);
   });
+
+  describe('loadStatistics — annualEgresadosTotal (fix-005-i, H-003)', () => {
+    /** Builder Supabase encadenable: soporta select/eq/gte y es awaitable (thenable). */
+    function makeChainMock(result: { data?: any; count?: number; error: any }) {
+      const b: any = {
+        select: vi.fn(() => b),
+        eq: vi.fn(() => b),
+        gte: vi.fn(() => b),
+        then: (resolve: any) => resolve(result),
+      };
+      return b;
+    }
+
+    it('filtra por license_group=class_b y por sede activa — mismo criterio que loadEgresadosList (antes: 2 vs 16)', async () => {
+      const examsChain = makeChainMock({ data: [], error: null });
+      const enrollmentsChain = makeChainMock({ count: 2, error: null });
+      const surveysChain = makeChainMock({ count: 0, error: null });
+
+      (supabaseSpy as any).client = {
+        from: vi.fn((table: string) => {
+          if (table === 'class_b_exam_scores') return examsChain;
+          if (table === 'enrollments') return enrollmentsChain;
+          if (table === 'student_surveys') return surveysChain;
+          throw new Error(`tabla inesperada: ${table}`);
+        }),
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          ExAlumnosFacade,
+          { provide: SupabaseService, useValue: supabaseSpy },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => 7 } },
+          {
+            provide: ErrorSanitizerService,
+            useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+          },
+        ],
+      });
+      const scopedFacade = TestBed.inject(ExAlumnosFacade);
+
+      await (scopedFacade as any).loadStatistics();
+
+      expect(enrollmentsChain.eq).toHaveBeenCalledWith('status', 'completed');
+      expect(enrollmentsChain.eq).toHaveBeenCalledWith('license_group', 'class_b');
+      expect(enrollmentsChain.eq).toHaveBeenCalledWith('branch_id', 7);
+      expect(scopedFacade.annualEgresadosTotal()).toBe(2);
+    });
+  });
 });
