@@ -5,6 +5,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 describe('AdminAlumnoDetalleFacade', () => {
   let facade: AdminAlumnoDetalleFacade;
@@ -59,6 +60,7 @@ describe('AdminAlumnoDetalleFacade', () => {
         { provide: ToastService, useValue: toastSpy },
         { provide: DmsViewerService, useValue: dmsViewerSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
       ],
     });
 
@@ -541,6 +543,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
           { provide: DmsViewerService, useValue: dmsViewerSpy },
           { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
         ],
       });
       facade = TestBed.inject(AdminAlumnoDetalleFacade);
@@ -657,6 +660,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
           { provide: DmsViewerService, useValue: dmsViewerSpy },
           { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
         ],
       });
       facade = TestBed.inject(AdminAlumnoDetalleFacade);
@@ -751,6 +755,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
           { provide: DmsViewerService, useValue: dmsViewerSpy },
           { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
         ],
       });
       facade = TestBed.inject(AdminAlumnoDetalleFacade);
@@ -858,6 +863,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
           { provide: DmsViewerService, useValue: dmsViewerSpy },
           { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
         ],
       });
       facade = TestBed.inject(AdminAlumnoDetalleFacade);
@@ -885,14 +891,48 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
-  describe('reagendarClasesPenalizadas — RF-053', () => {
-    it('recicla in-place tanto las sesiones no_show como las cancelled de la selección (nunca inserta filas nuevas, sin borrar su historial de asistencia)', async () => {
+  describe('reagendarClasesPenalizadas — RF-053 + fix-008-i (razones)', () => {
+    /**
+     * Mock de `class_b_sessions` (select previo + update) y `class_b_reschedule_history`
+     * (insert + el select/eq/order que dispara `loadHistorialReagendamientos()` al final,
+     * fix-009-i: sin este refresh el historial quedaba pegado al snapshot pre-reagendamiento).
+     */
+    function buildReagendarMock(prevRows: any[]) {
       const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
       const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
-      const insertSpy = vi.fn();
+      const selectInSpy = vi.fn().mockResolvedValue({ data: prevRows, error: null });
+      const selectSpy = vi.fn().mockReturnValue({ in: selectInSpy });
+      const historyInsertSpy = vi.fn().mockResolvedValue({ error: null });
+      const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
+      const historySelectSpy = vi.fn().mockReturnValue({ eq: historyEqSpy });
 
-      const fromSpy = vi.fn().mockReturnValue({ update: updateSpy, insert: insertSpy });
-      supabaseSpy.client.from = fromSpy;
+      const fromSpy = vi.fn((table: string) => {
+        if (table === 'class_b_sessions') return { select: selectSpy, update: updateSpy };
+        if (table === 'class_b_reschedule_history') {
+          return { insert: historyInsertSpy, select: historySelectSpy };
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      return {
+        fromSpy,
+        updateSpy,
+        updateEqSpy,
+        selectSpy,
+        selectInSpy,
+        historyInsertSpy,
+        historySelectSpy,
+        historyOrderSpy,
+      };
+    }
+
+    it('recicla in-place tanto las sesiones no_show como las cancelled de la selección (nunca inserta filas nuevas en class_b_sessions, sin borrar su historial de asistencia)', async () => {
+      const mock = buildReagendarMock([
+        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+        { id: 601, scheduled_at: '2026-06-02T09:00:00', instructor_id: 3 },
+      ]);
+      supabaseSpy.client.from = mock.fromSpy;
 
       // El Paso 1 marcó 1 no_show (clase #9) + 1 cancelled (clase #11).
       facade.setReagendarSeleccion([
@@ -910,10 +950,11 @@ describe('AdminAlumnoDetalleFacade', () => {
         instructorId: 9,
         // Deliberadamente desordenado — el método debe ordenar cronológicamente.
         selectedSlotIds: ['2026-07-13T10:00:00', '2026-07-10T09:00:00'],
+        razon: 'medica',
       });
 
       // 1. Recicla la sesión no_show #501 (clase #9): mismo id, primer slot cronológico.
-      expect(updateSpy).toHaveBeenCalledWith({
+      expect(mock.updateSpy).toHaveBeenCalledWith({
         instructor_id: 9,
         vehicle_id: 55,
         scheduled_at: '2026-07-10T09:00:00',
@@ -921,10 +962,10 @@ describe('AdminAlumnoDetalleFacade', () => {
         start_time: null,
         end_time: null,
       });
-      expect(updateEqSpy).toHaveBeenCalledWith('id', 501);
+      expect(mock.updateEqSpy).toHaveBeenCalledWith('id', 501);
 
       // 2. Recicla la sesión cancelled #601 (clase #11): mismo id, segundo slot cronológico.
-      expect(updateSpy).toHaveBeenCalledWith({
+      expect(mock.updateSpy).toHaveBeenCalledWith({
         instructor_id: 9,
         vehicle_id: 55,
         scheduled_at: '2026-07-13T10:00:00',
@@ -932,18 +973,102 @@ describe('AdminAlumnoDetalleFacade', () => {
         start_time: null,
         end_time: null,
       });
-      expect(updateEqSpy).toHaveBeenCalledWith('id', 601);
+      expect(mock.updateEqSpy).toHaveBeenCalledWith('id', 601);
 
       // 3. Soft archive (RF-053): NUNCA se borra class_b_practice_attendance — el
       // historial de la inasistencia original se conserva para auditoría. La grilla
       // se ve "limpia" (azul) porque deriva su color de class_b_sessions.status.
-      expect(fromSpy).not.toHaveBeenCalledWith('class_b_practice_attendance');
+      expect(mock.fromSpy).not.toHaveBeenCalledWith('class_b_practice_attendance');
 
-      // 4. Nunca inserta una fila nueva — el class_number de la matrícula no cambia.
-      expect(insertSpy).not.toHaveBeenCalled();
-
-      // 5. Limpia la selección transitoria tras guardar.
+      // 4. Limpia la selección transitoria tras guardar.
       expect(facade.reagendarSeleccion()).toEqual([]);
+    });
+
+    it('inserta en el historial la razón, fecha anterior/nueva e instructor anterior/nuevo capturados ANTES del reciclaje (fix-008-i)', async () => {
+      const mock = buildReagendarMock([
+        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+      ]);
+      supabaseSpy.client.from = mock.fromSpy;
+
+      facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
+      (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
+
+      await facade.reagendarClasesPenalizadas({
+        enrollmentId: 100,
+        instructorId: 9,
+        selectedSlotIds: ['2026-07-10T09:00:00'],
+        razon: 'medica',
+      });
+
+      expect(mock.historyInsertSpy).toHaveBeenCalledWith([
+        {
+          class_session_id: 501,
+          enrollment_id: 100,
+          old_scheduled_at: '2026-06-01T09:00:00',
+          new_scheduled_at: '2026-07-10T09:00:00',
+          old_instructor_id: 3,
+          new_instructor_id: 9,
+          reason: 'medica',
+          reason_other: null,
+          registered_by: 7,
+        },
+      ]);
+    });
+
+    it('refresca historialReagendamientos tras insertar (fix-009-i, antes quedaba pegado al snapshot pre-reagendamiento)', async () => {
+      const mock = buildReagendarMock([
+        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+      ]);
+      mock.historyOrderSpy.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            old_scheduled_at: '2026-06-01T09:00:00',
+            new_scheduled_at: '2026-07-10T09:00:00',
+            reason: 'medica',
+            reason_other: null,
+            created_at: '2026-07-10T12:00:00',
+          },
+        ],
+        error: null,
+      });
+      supabaseSpy.client.from = mock.fromSpy;
+
+      facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
+      (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
+
+      await facade.reagendarClasesPenalizadas({
+        enrollmentId: 100,
+        instructorId: 9,
+        selectedSlotIds: ['2026-07-10T09:00:00'],
+        razon: 'medica',
+      });
+
+      expect(mock.historySelectSpy).toHaveBeenCalled();
+      expect(facade.historialReagendamientos()).toHaveLength(1);
+      expect(facade.historialReagendamientos()[0].razonLabel).toBe('Médica');
+    });
+
+    it('guarda reason_other solo cuando la razón es "otro"', async () => {
+      const mock = buildReagendarMock([
+        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+      ]);
+      supabaseSpy.client.from = mock.fromSpy;
+
+      facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
+      (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
+
+      await facade.reagendarClasesPenalizadas({
+        enrollmentId: 100,
+        instructorId: 9,
+        selectedSlotIds: ['2026-07-10T09:00:00'],
+        razon: 'otro',
+        razonOtro: 'Se rompió el vehículo del alumno',
+      });
+
+      const [rows] = mock.historyInsertSpy.mock.calls[0];
+      expect(rows[0].reason).toBe('otro');
+      expect(rows[0].reason_other).toBe('Se rompió el vehículo del alumno');
     });
 
     it('no hace ninguna llamada si no hay selección guardada (Paso 1 vacío)', async () => {
@@ -955,13 +1080,17 @@ describe('AdminAlumnoDetalleFacade', () => {
         enrollmentId: 100,
         instructorId: 9,
         selectedSlotIds: ['2026-07-10T09:00:00'],
+        razon: 'medica',
       });
 
       expect(fromSpy).not.toHaveBeenCalled();
     });
 
     it('lanza un error si no encuentra el vehículo del slot en el mapa', async () => {
-      supabaseSpy.client.from = vi.fn();
+      const mock = buildReagendarMock([
+        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+      ]);
+      supabaseSpy.client.from = mock.fromSpy;
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map();
 
@@ -970,6 +1099,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           enrollmentId: 100,
           instructorId: 9,
           selectedSlotIds: ['2026-07-10T09:00:00'],
+          razon: 'medica',
         }),
       ).rejects.toThrow('No se pudo determinar el vehículo');
     });
@@ -987,8 +1117,91 @@ describe('AdminAlumnoDetalleFacade', () => {
           enrollmentId: 100,
           instructorId: 9,
           selectedSlotIds: ['2026-07-10T09:00:00'],
+          razon: 'medica',
         }),
       ).rejects.toThrow('La cantidad de horarios elegidos no coincide con la selección.');
+    });
+  });
+
+  describe('loadHistorialReagendamientos — fix-008-i', () => {
+    it('mapea la razón al label legible y formatea las fechas', async () => {
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  old_scheduled_at: '2026-06-01T09:00:00',
+                  new_scheduled_at: '2026-07-10T09:00:00',
+                  reason: 'vehiculo',
+                  reason_other: null,
+                  created_at: '2026-07-10T12:00:00',
+                },
+              ],
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await facade.loadHistorialReagendamientos(100);
+
+      const [row] = facade.historialReagendamientos();
+      expect(row.razonLabel).toBe('Problema del vehículo');
+      expect(row.razonOtro).toBeNull();
+    });
+
+    it('mapea claseNumero desde el join a class_b_sessions, para distinguir filas con la misma razón/fecha (fix-009-i)', async () => {
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  old_scheduled_at: '2026-06-01T09:00:00',
+                  new_scheduled_at: '2026-07-10T09:00:00',
+                  reason: 'otro',
+                  reason_other: 'Le pica el poto',
+                  created_at: '2026-07-31T12:00:00',
+                  class_b_sessions: { class_number: 5 },
+                },
+                {
+                  id: 2,
+                  old_scheduled_at: '2026-06-02T09:00:00',
+                  new_scheduled_at: '2026-07-11T09:00:00',
+                  reason: 'otro',
+                  reason_other: 'Le pica el poto',
+                  created_at: '2026-07-31T12:05:00',
+                  class_b_sessions: { class_number: 7 },
+                },
+              ],
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      await facade.loadHistorialReagendamientos(100);
+
+      const [row1, row2] = facade.historialReagendamientos();
+      expect(row1.claseNumero).toBe(5);
+      expect(row2.claseNumero).toBe(7);
+    });
+
+    it('deja el historial vacío si la query falla (fail-safe, no rompe la ficha del alumno)', async () => {
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: null, error: new Error('boom') }),
+          }),
+        }),
+      });
+
+      await facade.loadHistorialReagendamientos(100);
+
+      expect(facade.historialReagendamientos()).toEqual([]);
     });
   });
 
@@ -1016,6 +1229,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           { provide: ToastService, useValue: toastSpy },
           { provide: DmsViewerService, useValue: dmsViewerSpy },
           { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
           {
             provide: AgendaSettingsService,
             useValue: { maxVisibleDateIso: vi.fn().mockReturnValue(maxVisibleDateIso) },

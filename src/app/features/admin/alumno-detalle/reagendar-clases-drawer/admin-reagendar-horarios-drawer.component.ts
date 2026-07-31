@@ -6,7 +6,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
+import {
+  AdminAlumnoDetalleFacade,
+  RAZON_REAGENDAMIENTO_OPTIONS,
+} from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { AssignmentComponent } from '@shared/components/matricula-steps/assignment/assignment.component';
@@ -25,10 +30,36 @@ import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assign
   selector: 'app-admin-reagendar-horarios-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AssignmentComponent],
+  imports: [AssignmentComponent, FormsModule, SelectModule],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <div class="flex-1 overflow-y-auto p-5">
+        <div class="flex flex-col gap-1.5 mb-5">
+          <label for="razon-reagendamiento" class="field-label">
+            Razón del reagendamiento <span class="text-error">*</span>
+          </label>
+          <p-select
+            inputId="razon-reagendamiento"
+            [options]="razonOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccionar razón..."
+            styleClass="w-full"
+            [ngModel]="razon()"
+            (ngModelChange)="razon.set($event)"
+            data-llm-description="Razón por la que se reagendan estas clases"
+          />
+          @if (razon() === 'otro') {
+            <input
+              type="text"
+              class="field-input"
+              placeholder="Especifica el motivo..."
+              [ngModel]="razonOtro()"
+              (ngModelChange)="razonOtro.set($event)"
+              data-llm-description="Detalle del motivo cuando la razón es Otro"
+            />
+          }
+        </div>
         <app-assignment-step
           [data]="assignmentData()"
           [loading]="isSaving()"
@@ -54,6 +85,10 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
   protected readonly selectedSlotIds = signal<string[]>([]);
   protected readonly isSaving = signal(false);
   protected readonly saveError = signal<string | null>(null);
+
+  protected readonly razonOptions = RAZON_REAGENDAMIENTO_OPTIONS;
+  protected readonly razon = signal<string | null>(null);
+  protected readonly razonOtro = signal('');
 
   /** Reconstruye el modelo compuesto del Step 2 de matrícula a partir del estado local + facade. */
   protected readonly assignmentData = computed<EnrollmentAssignmentData>(() => {
@@ -110,6 +145,16 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
     const instructorId = this.instructorId();
     if (!enrollmentId || !instructorId || this.selectedSlotIds().length === 0) return;
 
+    const razon = this.razon();
+    if (!razon) {
+      this.saveError.set('Selecciona una razón para el reagendamiento.');
+      return;
+    }
+    if (razon === 'otro' && !this.razonOtro().trim()) {
+      this.saveError.set('Especifica el motivo cuando eliges "Otro".');
+      return;
+    }
+
     this.isSaving.set(true);
     this.saveError.set(null);
     try {
@@ -117,6 +162,8 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
         enrollmentId,
         instructorId,
         selectedSlotIds: this.selectedSlotIds(),
+        razon,
+        razonOtro: razon === 'otro' ? this.razonOtro().trim() : null,
       });
       this.layoutDrawer.close();
     } catch (err) {

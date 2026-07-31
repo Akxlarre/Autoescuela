@@ -29,6 +29,7 @@ import { Button } from 'primeng/button';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
+import { AdminHistorialReagendamientosDrawerComponent } from './historial-reagendamientos-drawer/admin-historial-reagendamientos-drawer.component';
 import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
 import { AdminInasistenciasDrawerComponent } from './inasistencias-drawer/admin-inasistencias-drawer.component';
 import { AdminFichaTecnicaDrawerComponent } from './ficha-tecnica-drawer/admin-ficha-tecnica-drawer.component';
@@ -351,6 +352,17 @@ export function resolveListadoLabel(
                   <span class="truncate min-w-0">Ficha Técnica</span>
                 </button>
               </div>
+
+              <!-- fix-009-i: Historial de Reagendamientos — fila completa, abre drawer -->
+              <button
+                type="button"
+                class="btn-secondary w-full justify-center gap-1.5"
+                data-llm-action="ver-reagendamientos"
+                (click)="openReagendamientosPanel()"
+              >
+                <app-icon name="calendar-clock" [size]="14" />
+                <span class="truncate min-w-0">Reagendamientos</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1395,11 +1407,23 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     this.layoutDrawer.open(AdminFichaTecnicaDrawerComponent, 'Ficha Técnica', 'clipboard-check');
   }
 
+  /** fix-009-i: historial de reagendamientos movido de bento inline a drawer. */
+  protected openReagendamientosPanel(): void {
+    this.layoutDrawer.open(
+      AdminHistorialReagendamientosDrawerComponent,
+      'Reagendamientos',
+      'calendar-clock',
+    );
+  }
+
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
-      void this.facade.initialize(Number(id));
+      void this.facade.initialize(Number(id)).then(() => {
+        const enrollmentId = this.facade.alumno()?.enrollmentId;
+        if (enrollmentId) void this.facade.loadHistorialReagendamientos(enrollmentId);
+      });
     }
   }
 
