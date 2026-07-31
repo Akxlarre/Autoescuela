@@ -28,26 +28,53 @@ Ninguno — fix autónomo de QA visual, no corrige un AC de una spec puntual. Re
 `indices/FLOWS-QA-AUDIT.md` Fase 5 (iteraciones 19-21) y `indices/UI-HOMOGENEITY-AUDIT.md`
 (patrón "hero en `bento-banner` vs `bento-hero`").
 
-## ⚠️ Bloqueo de entorno (2026-07-31)
+## ⚠️ Bloqueo de entorno (2026-07-31) — CONFIRMADO, no es falta de esfuerzo
 
 Esta sesión corre en el entorno remoto de Claude Code (Cowork/web), **no** en el Claude Code CLI
-local del owner. Dos cosas que la Asignación da por sentadas no están disponibles acá:
+local del owner. Se investigó a fondo, con dos rondas:
 
-1. **Sin `mcp__playwright__*`** — la nota de la propia Asignación dice "Reservada para Benjamín
-   porque requiere el entorno de navegador local"; ese entorno es justamente el que falta acá.
-   `ToolSearch` confirma que no hay ningún tool `mcp__playwright__*` cargable en esta sesión.
-2. **Sin credenciales de sesión** — `environment.ts` apunta a un Supabase de desarrollo real
-   (`skvekggejikzxhzsjmkz.supabase.co`), pero no hay `.env`, ni `service_role` key, ni
-   `.claude/author.local.json` con contraseñas para los usuarios de prueba documentados en
-   `indices/FLOWS-QA-AUDIT.md` (`admin@test.com`, `secretaria@test.com`, `secretaria2@test.com`,
-   `instructor@test.com`, `alumno@test.com`). No hay forma de loguearse a las páginas
-   autenticadas que pide el alcance (Dashboard, Agenda, Pagos, Matrícula, Asistencia B, Base
-   Alumnos Prof., Instructores).
+**Ronda 1 — sin `mcp__playwright__*` ni credenciales.** `ToolSearch` confirmó que no hay ningún
+tool `mcp__playwright__*` cargable acá (la nota de la propia Asignación ya avisaba: "Reservada
+para Benjamín porque requiere el entorno de navegador local"). Tampoco había `.env` con
+credenciales para los usuarios de prueba de `indices/FLOWS-QA-AUDIT.md`.
 
-Sin browser real + sesión autenticada, **no puedo producir capturas reales, throttling de red,
-ni confirmar visualmente el reclamo del cliente** ("hero azul antiguo en Instructores y
-Alumnos"). Lo de abajo es lo que sí alcancé a verificar sin esas dos piezas — no reemplaza el
-QA visual real, es la mejor evidencia disponible en este entorno.
+**Ronda 2 — el usuario pidió reintentar ("prueba ahora desde aquí").** Se montó un driver de
+Playwright manual (el paquete está instalado globalmente en el entorno + Chromium preinstalado
+en `/opt/pw-browsers`), se hizo `npm ci` (`node_modules` no estaba instalado) y se levantó
+`ng serve` real en `localhost:4200`. **La pantalla de login del propio proyecto muestra un panel
+de "Credenciales de prueba" en desarrollo** (`admin@test.com` / `secretaria@test.com` /
+`secretaria2@test.com` / `instructor@test.com` / `alumno@test.com`, contraseña `Test123456`) —
+así que el problema de credenciales quedó resuelto solo. Captura: `login-light.png`.
+
+Pero al enviar el login, la llamada a Supabase Auth falla:
+
+```
+REQFAIL https://skvekggejikzxhzsjmkz.supabase.co/auth/v1/token?grant_type=password
+net::ERR_TUNNEL_CONNECTION_FAILED
+```
+
+Diagnóstico vía el status endpoint del proxy de egreso del entorno
+(`http://127.0.0.1:45845/__agentproxy/status`, documentado en `/root/.ccr/README.md`):
+
+```json
+{
+  "kind": "connect_rejected",
+  "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+  "host": "skvekggejikzxhzsjmkz.supabase.co:443"
+}
+```
+
+**Es un 403 de política de egreso a nivel de organización**, no un timeout ni un problema de
+configuración del lado del driver — el propio README del proxy es explícito: *"403/407... Do not
+retry or route around it — report the blocked host."* Este entorno remoto tiene bloqueado el
+dominio del Supabase de desarrollo del proyecto. Ninguna página que dependa de datos reales
+(prácticamente todo el panel autenticado, y probablemente también `/inscripcion` público, que
+también llama a Supabase) es alcanzable acá, sin importar credenciales ni Playwright.
+
+Sin poder llegar al backend real, **no puedo producir capturas con datos reales, throttling de
+red con la app funcionando, ni confirmar visualmente el reclamo del cliente** ("hero azul antiguo
+en Instructores y Alumnos"). Lo de abajo es lo que sí alcancé a verificar sin esa pieza — no
+reemplaza el QA visual real, es la mejor evidencia disponible en este entorno.
 
 ## Cambio
 
