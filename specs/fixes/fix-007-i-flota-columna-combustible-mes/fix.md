@@ -1,7 +1,8 @@
 # Fix: Columna "Combustible (Mes)" en Gestión de Flota + persistencia de vehicle_id en egresos
 > id: fix-007-i-flota-columna-combustible-mes
 > refs: ASG-b-037 (bloqueada — se adelanta la parte de persistencia de vehicle_id por decisión explícita del usuario)
-> status: in_progress
+> status: done
+> closed: 2026-07-30
 > created: 2026-07-30
 
 ## Root Cause
