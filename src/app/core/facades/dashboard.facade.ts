@@ -303,6 +303,14 @@ export class DashboardFacade {
           iconBg: 'transparent',
           iconColor: 'var(--text-secondary)',
         },
+        {
+          id: 'qa4',
+          icon: 'wallet',
+          label: 'Registrar Egreso',
+          llmAction: 'register-expense',
+          iconBg: 'transparent',
+          iconColor: 'var(--text-secondary)',
+        },
       ],
       systemStatus: [
         { name: 'Supabase', ok: true },

@@ -211,6 +211,87 @@ describe('CuadraturaFacade', () => {
   it('isSaving debe inicializar en false', () => {
     expect(facade.isSaving()).toBe(false);
   });
+
+  it('egresoTipoPreset debe inicializar en null', () => {
+    expect(facade.egresoTipoPreset()).toBeNull();
+  });
+});
+
+// ─── fix-006-i: registrarEgreso con tipo "combustible" ────────────────────────
+
+describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
+  let facade: CuadraturaFacade;
+  let insertSpy: ReturnType<typeof vi.fn>;
+
+  const mockUser = {
+    id: 'user-uuid',
+    dbId: 1,
+    name: 'Admin Test',
+    initials: 'AT',
+    role: 'admin' as const,
+    branch_id: 1,
+    firstLogin: false,
+  };
+
+  beforeEach(() => {
+    insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        {
+          provide: SupabaseService,
+          useValue: {
+            client: {
+              from: (table: string) => ({
+                select: () => ({
+                  gte: () => ({ lte: () => ({ order: () => Promise.resolve({ data: [] }) }) }),
+                }),
+                insert: (payload: unknown) => insertSpy(table, payload),
+              }),
+            },
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => mockUser } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+
+    facade = TestBed.inject(CuadraturaFacade);
+  });
+
+  it('inserta en expenses con category="combustible" cuando tipo es "combustible"', async () => {
+    await facade.registrarEgreso({
+      tipo: 'combustible',
+      monto: 25_000,
+      descripcion: 'Camioneta ABC-123',
+    });
+
+    expect(insertSpy).toHaveBeenCalledWith(
+      'expenses',
+      expect.objectContaining({ category: 'combustible', amount: 25_000 }),
+    );
+  });
+
+  it('inserta en expenses con category=null cuando tipo es "gasto" (sin cambio de comportamiento previo)', async () => {
+    await facade.registrarEgreso({ tipo: 'gasto', monto: 10_000, descripcion: 'Insumos' });
+
+    expect(insertSpy).toHaveBeenCalledWith(
+      'expenses',
+      expect.objectContaining({ category: null, amount: 10_000 }),
+    );
+  });
+
+  it('inserta en instructor_advances (sin category) cuando tipo es "anticipo"', async () => {
+    await facade.registrarEgreso({ tipo: 'anticipo', monto: 15_000, descripcion: 'Anticipo Juan' });
+
+    expect(insertSpy).toHaveBeenCalledWith(
+      'instructor_advances',
+      expect.objectContaining({ amount: 15_000, reason: 'Anticipo Juan' }),
+    );
+    const [, payload] = insertSpy.mock.calls[0];
+    expect((payload as Record<string, unknown>)['category']).toBeUndefined();
+  });
 });
 
 // ─── Regresión H-023: glosa traducida, no código crudo ────────────────────────

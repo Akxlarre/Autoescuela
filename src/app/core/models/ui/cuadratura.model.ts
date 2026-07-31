@@ -26,13 +26,15 @@ export interface IngresoRow {
 export interface EgresoRow {
   id: number;
   tipo: 'expense' | 'advance';
+  /** Categoría del gasto (ej. 'combustible', 'gasto') — null para anticipos o gastos sin categoría. */
+  category: string | null;
   descripcion: string;
   monto: number;
 }
 
 /** Datos del formulario para registrar un egreso desde el modal. */
 export interface EgresoFormData {
-  tipo: 'gasto' | 'anticipo';
+  tipo: 'gasto' | 'anticipo' | 'combustible';
   monto: number;
   descripcion: string;
 }

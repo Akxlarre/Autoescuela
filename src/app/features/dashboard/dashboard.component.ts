@@ -32,6 +32,8 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
 import { RegistrarPagoDrawerComponent } from '../admin/pagos/registrar-pago-drawer.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import { RegistrarEgresoDrawerComponent } from '../admin/contabilidad-cuadratura/registrar-egreso-drawer.component';
+import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
 import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
@@ -344,6 +346,7 @@ export class DashboardComponent {
   private readonly agendaFacade = inject(AgendaFacade);
   private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
   private readonly pagosFacade = inject(PagosFacade);
+  private readonly cuadraturaFacade = inject(CuadraturaFacade);
   private readonly destroyRef = inject(DestroyRef);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -451,6 +454,9 @@ export class DashboardComponent {
       this.pagosFacade.seleccionarParaPago(null);
       void this.pagosFacade.initialize();
       this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
+    } else if (actionId === 'qa4') {
+      this.cuadraturaFacade.egresoTipoPreset.set('combustible');
+      this.layoutDrawer.open(RegistrarEgresoDrawerComponent, 'Registrar Egreso', 'wallet');
     }
   }
 

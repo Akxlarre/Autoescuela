@@ -67,13 +67,20 @@ export function mapSingularSaleToIngreso(s: SingularSaleDto): IngresoRow {
 }
 
 function mapExpenseToEgreso(e: Expense): EgresoRow {
-  return { id: e.id, tipo: 'expense', descripcion: e.description, monto: e.amount };
+  return {
+    id: e.id,
+    tipo: 'expense',
+    category: e.category ?? null,
+    descripcion: e.description,
+    monto: e.amount,
+  };
 }
 
 function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
   return {
     id: a.id,
     tipo: 'advance',
+    category: null,
     descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
     monto: a.amount,
   };
@@ -90,6 +97,8 @@ export class CuadraturaFacade {
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   readonly fondoInicial = signal<number>(50_000);
+  /** Preset de tipo consumido una sola vez por RegistrarEgresoDrawerComponent al abrirse (fix-006-i). */
+  readonly egresoTipoPreset = signal<EgresoFormData['tipo'] | null>(null);
   private readonly _pagosHoy = signal<IngresoRow[]>([]);
   private readonly _gastosHoy = signal<EgresoRow[]>([]);
   private readonly _cajaYaCerrada = signal<boolean>(false);
@@ -378,11 +387,12 @@ export class CuadraturaFacade {
     this._isSaving.set(true);
     try {
       const today = toISODate(new Date());
-      if (datos.tipo === 'gasto') {
+      if (datos.tipo === 'gasto' || datos.tipo === 'combustible') {
         await this.supabase.client.from('expenses').insert({
           date: today,
           amount: datos.monto,
           description: datos.descripcion,
+          category: datos.tipo === 'combustible' ? 'combustible' : null,
           branch_id: this.getActiveBranchId(),
           registered_by: user.dbId,
         });

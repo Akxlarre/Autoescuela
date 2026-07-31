@@ -376,6 +376,9 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                   class="px-6 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center group hover:bg-subtle transition-colors"
                 >
                   <span class="text-[13px] font-medium text-text-primary truncate">
+                    @if (categoryLabel(egreso); as label) {
+                      <span class="text-text-muted">{{ label }} — </span>
+                    }
                     {{ egreso.descripcion }}
                   </span>
                   <span class="text-[13px] text-right font-bold text-text-primary tabular-nums">
@@ -899,6 +902,17 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   // ── Helpers de template ───────────────────────────────────────────────────
   protected readonly clp = formatCLP;
+
+  private static readonly CATEGORY_LABELS: Record<string, string> = {
+    combustible: 'Combustible',
+    gasto: 'Gasto',
+  };
+
+  /** Etiqueta legible de la categoría del egreso (fix-006-i) — null si no aplica (ej. anticipos). */
+  protected categoryLabel(egreso: EgresoRow): string | null {
+    if (!egreso.category) return null;
+    return CuadraturaContentComponent.CATEGORY_LABELS[egreso.category] ?? egreso.category;
+  }
 
   protected onCantidadChange(key: string, event: Event): void {
     const input = event.target as HTMLInputElement;

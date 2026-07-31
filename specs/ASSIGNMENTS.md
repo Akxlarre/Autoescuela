@@ -47,7 +47,6 @@
 | ASG-b-036 | 🔴 Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **BLOQUEADA.** Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-b-010 |
 | ASG-b-037 | 🔴 Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **BLOQUEADA.** `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. La cuadratura es un **arqueo físico**: sobrescribirla borra la evidencia del descuadre |
 | ASG-b-038 | 🔴 Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **BLOQUEADA.** Choca con `CHECK (class_number BETWEEN 1 AND 12)` y el gate del certificado. ⚠️ Coordinar con ASG-b-014 |
-| ASG-b-039 | Botón "Registrar egreso" accesible + atajo para carga de combustible | `i` | fix | Media | b | Sin migración: `expenses` ya tiene todo y RLS permite secretaria de su sede. ⚠️ Crea el formulario reutilizable que ASG-b-037 consume |
 | ASG-b-040 | Razones de reagendamiento (enum + "otro") | `i` | fix | Media | b | Reagendar recicla la fila in-place → no hay dónde guardar la razón. Recomendado: tabla de historial. Falta la lista de razones (pregunta liviana, no bloquea) |
 | ASG-b-042 | Repositorio de documentos: sección Instructores + poder abrir el archivo | `m` | spec | Media | b | Incluye como entregable la pregunta legal: **¿qué documentos necesitamos de los instructores para cumplir la ley?** El visor (`createSignedUrl`) ya existe en `dms.facade.ts:171` |
 | ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | `m` | fix | Media | b | **La auditoría de cuáles drawers es parte de la tarea.** Reusar `resolveBranchScope()` de fix-027, no escribir uno nuevo. Ojo con la regresión inversa (fix-002-b) |
@@ -110,6 +109,7 @@
 | ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino | [fix-002-i-voseo-configuracion-web](fixes/fix-002-i-voseo-configuracion-web/fix.md) | 2026-07-30 |
 | ASG-b-025 | Fix H-037: botones y títulos recortados a mitad de palabra | [fix-003-i-textos-recortados-flex-truncate](fixes/fix-003-i-textos-recortados-flex-truncate/fix.md) | 2026-07-30 |
 | ASG-b-027 | Fix H-003: Ex-Alumnos B — conteo de egresados discrepante (2 vs 16) | [fix-005-i-exalumnos-egresados-discrepancia](fixes/fix-005-i-exalumnos-egresados-discrepancia/fix.md) | 2026-07-30 |
+| ASG-b-039 | Botón "Registrar egreso" accesible + atajo para carga de combustible | [fix-006-i-registrar-egreso-dashboard-boton](fixes/fix-006-i-registrar-egreso-dashboard-boton/fix.md) | 2026-07-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---
