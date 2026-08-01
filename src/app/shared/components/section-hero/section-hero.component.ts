@@ -5,6 +5,7 @@ import {
   ElementRef,
   OnDestroy,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -455,7 +456,7 @@ import type {
                     {{ contextLine() }}
                   </p>
                 }
-                <h1 class="text-sm font-semibold text-text-primary m-0 leading-tight line-clamp-2">
+                <h1 class="item-title m-0 leading-tight line-clamp-2">
                   {{ title() }}
                 </h1>
                 @if (subtitle() && !contextLine()) {
@@ -618,7 +619,7 @@ import type {
                         class="flex items-center gap-0.5 mt-1 transition-transform duration-200 ease-out delay-75 group-hover:translate-x-1"
                         [style.color]="getKpiValueColor(kpi)"
                       >
-                        <span class="text-[9px] font-medium leading-none opacity-70">Ver</span>
+                        <span class="text-2xs font-medium leading-none opacity-70">Ver</span>
                         <app-icon name="arrow-right" [size]="9" />
                       </div>
                     </div>
@@ -685,11 +686,13 @@ import type {
            de cualquier transform que pudiera tener el wrapper. -->
       @if (openMenuId()) {
         <div
+          #menuPanelRef
           appAnimateIn
           role="menu"
           class="hero-menu-panel"
           [style.top.px]="menuPos()?.top"
           [style.right.px]="menuPos()?.right"
+          (keydown.escape)="onMenuEscape()"
         >
           @for (item of openMenuItems(); track item.id) {
             @if (item.header) {
@@ -904,11 +907,13 @@ import type {
          el viewport. ──────────────────────────────────────────────────── -->
       @if (openMenuId()) {
         <div
+          #menuPanelRef
           appAnimateIn
           role="menu"
           class="hero-menu-panel"
           [style.top.px]="menuPos()?.top"
           [style.right.px]="menuPos()?.right"
+          (keydown.escape)="onMenuEscape()"
         >
           @for (item of openMenuItems(); track item.id) {
             @if (item.header) {
@@ -1037,11 +1042,15 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   // ── Menú desplegable de acción (panel flotante del DS) ──────────────────────
 
   protected readonly menuPos = signal<{ top: number; right: number } | null>(null);
+  private readonly menuPanelRef = viewChild<ElementRef<HTMLElement>>('menuPanelRef');
   private triggerEl: HTMLElement | null = null;
 
   private readonly outsideListener = (event: MouseEvent): void => {
     if (this.openMenuId() === null) return;
     if (this.hostEl.nativeElement.contains(event.target as Node)) return;
+    // Click fuera (mouse): cierra sin robar el foco — el propio click ya movió
+    // el foco a lo que sea que el usuario tocó. Forzarlo de vuelta al trigger
+    // acá sería un secuestro de foco, no una restauración.
     this.closeMenu();
   };
 
@@ -1049,6 +1058,22 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     document.addEventListener('click', this.outsideListener);
+
+    // Foco al primer ítem al abrir (WAI-ARIA menu button pattern). rAF porque
+    // el panel recién se monta este mismo ciclo (@if) — hay que esperar a que
+    // el DOM exista antes de poder enfocarlo.
+    effect(() => {
+      if (this.openMenuId() === null) return;
+      requestAnimationFrame(() => {
+        this.menuPanelRef()
+          ?.nativeElement.querySelector<HTMLElement>('.hero-menu-panel__item:not(:disabled)')
+          ?.focus();
+      });
+    });
+  }
+
+  protected onMenuEscape(): void {
+    this.closeMenu(true);
   }
 
   ngOnDestroy(): void {
@@ -1070,11 +1095,18 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
     window.addEventListener('resize', this.repositionListener);
   }
 
-  private closeMenu(): void {
+  /**
+   * @param restoreFocus Devuelve el foco al botón que abrió el menú. Solo se pide
+   * en cierres iniciados por teclado (Escape) o por selección de un ítem — un
+   * cierre por click-outside NO debe robar el foco de lo que el usuario tocó.
+   */
+  private closeMenu(restoreFocus = false): void {
+    const trigger = this.triggerEl;
     this.openMenuId.set(null);
     this.menuPos.set(null);
     this.triggerEl = null;
     this.detachReposition();
+    if (restoreFocus) trigger?.focus();
   }
 
   private detachReposition(): void {
@@ -1090,7 +1122,7 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   protected onMenuItemClick(item: SectionHeroMenuItem): void {
     if (item.disabled || item.header) return;
-    this.closeMenu();
+    this.closeMenu(true);
     this.actionClick.emit(item.id);
   }
 

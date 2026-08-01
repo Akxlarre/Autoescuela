@@ -74,7 +74,7 @@ interface FilaReagendar extends ClasePendienteReagendarUI {
                   </span>
                 </span>
                 @if (row.fechaOriginal) {
-                  <span class="text-[10px] text-text-muted">{{ row.fechaOriginal }}</span>
+                  <span class="text-2xs text-text-muted">{{ row.fechaOriginal }}</span>
                 }
               </span>
             </label>

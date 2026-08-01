@@ -72,7 +72,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <ng-template #content>
           <!-- Filtro de Fecha (Simple por ahora) -->
           <div class="flex items-center justify-between pb-4 mb-4 border-b border-border-subtle">
-            <h3 class="text-sm font-bold text-text-primary">Agenda del Día</h3>
+            <h3 class="item-title">Agenda del Día</h3>
             <span class="text-xs text-text-muted">{{ today | date: 'dd/MM/yyyy' }}</span>
           </div>
 
@@ -135,15 +135,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                         </div>
                         <div>
                           @if (slot.type === 'class') {
-                            <p class="text-sm font-bold text-text-primary">
+                            <p class="item-title">
                               {{ slot.studentName }}
                             </p>
-                            <p class="text-[11px] text-text-muted">
-                              Clase B #{{ slot.classNumber }}
-                            </p>
+                            <p class="text-2xs text-text-muted">Clase B #{{ slot.classNumber }}</p>
                           } @else if (slot.type === 'maintenance') {
                             <p class="text-sm font-bold text-warning">{{ slot.description }}</p>
-                            <p class="text-[11px] text-text-muted uppercase tracking-wider">
+                            <p class="text-2xs text-text-muted uppercase tracking-wider">
                               Mantenimiento
                             </p>
                           } @else {

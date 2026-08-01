@@ -268,7 +268,7 @@ export function resolveListadoLabel(
                   >{{ alumno.nombre }}</span
                 >
                 <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
-                <span class="text-sm font-bold text-text-primary mt-0.5" data-llm-info="matricula"
+                <span class="item-title mt-0.5" data-llm-info="matricula"
                   >Matrícula #{{ alumno.matricula }}</span
                 >
                 <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
@@ -546,17 +546,15 @@ export function resolveListadoLabel(
                       }
                     </div>
                     @if (clase.ausente) {
-                      <span class="text-[11px] text-error font-semibold">
+                      <span class="text-2xs text-error font-semibold">
                         {{ clase.justificada ? 'Inasistencia — Justificada' : 'Inasistencia' }}
                       </span>
                     } @else if (clase.cancelada) {
-                      <span class="text-[11px] text-warning font-semibold"
+                      <span class="text-2xs text-warning font-semibold"
                         >Cancelada — pendiente reagendar</span
                       >
                     } @else if (clase.instructor) {
-                      <span class="text-[11px] text-text-muted truncate">{{
-                        clase.instructor
-                      }}</span>
+                      <span class="text-2xs text-text-muted truncate">{{ clase.instructor }}</span>
                     } @else {
                       <span class="text-2xs text-text-muted italic">Sin agendar</span>
                     }

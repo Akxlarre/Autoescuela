@@ -79,7 +79,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <ng-template #content>
           <!-- ── Información general ───────────────────────────────────── -->
           <section>
-            <h3 class="text-sm font-semibold mb-4 text-text-primary">Información general</h3>
+            <h3 class="item-title mb-4">Información general</h3>
 
             <!-- Nombre (editable) -->
             <div class="mb-4">
@@ -132,7 +132,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 </div>
               </div>
             </div>
-            <p class="text-[10px] text-text-muted">
+            <p class="text-2xs text-text-muted">
               <app-icon name="info" [size]="10" />
               Las fechas de inicio y término no son modificables una vez creada la promoción.
             </p>
@@ -140,7 +140,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
           <!-- ── Estado ────────────────────────────────────────────────── -->
           <section>
-            <h3 class="text-sm font-semibold mb-3 text-text-primary">Estado de la promoción</h3>
+            <h3 class="item-title mb-3">Estado de la promoción</h3>
 
             <p-select
               [options]="availableStatusOptions()"

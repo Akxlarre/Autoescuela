@@ -44,7 +44,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             <div
               class="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
             >
-              <span class="text-[9px] uppercase tracking-wider font-bold text-brand leading-tight"
+              <span class="text-2xs uppercase tracking-wider font-bold text-brand leading-tight"
                 >Clase</span
               >
               <span class="text-lg font-display font-bold text-brand leading-none">{{

@@ -53,9 +53,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         <div class="flex flex-col md:flex-row gap-6">
           <!-- Selector -->
           <div class="flex-1 max-w-xl">
-            <label class="mb-2 block text-sm font-semibold text-text-primary">
-              Promoción archivada
-            </label>
+            <label class="item-title mb-2 block"> Promoción archivada </label>
             <p class="mb-4 text-xs text-text-muted">
               Busca y selecciona una promoción archivada para revisar notas y asistencia.
             </p>
@@ -85,9 +83,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             <div
               class="flex-1 border-t md:border-t-0 md:border-l border-border-subtle pt-4 md:pt-0 md:pl-6"
             >
-              <label class="mb-2 block text-sm font-semibold text-text-primary">
-                Cursos impartidos en esta promoción
-              </label>
+              <label class="item-title mb-2 block"> Cursos impartidos en esta promoción </label>
               <p class="mb-4 text-xs text-text-muted">
                 Selecciona el curso para ver los resultados de los alumnos.
               </p>
@@ -153,7 +149,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <div class="flex items-center gap-2">
                 <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
-                <h2 class="text-sm font-semibold text-text-primary m-0">Resultados por alumno</h2>
+                <h2 class="item-title m-0">Resultados por alumno</h2>
               </div>
               <span class="hidden sm:inline text-border-default">|</span>
               <span class="text-xs font-medium text-text-secondary">
@@ -376,7 +372,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <div class="flex items-center gap-3 min-w-0">
                       <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
                       <div class="min-w-0 flex flex-col">
-                        <p class="text-sm font-semibold text-text-primary truncate">
+                        <p class="item-title truncate">
                           {{ alumno.nombre }}
                         </p>
                         <p class="text-2xs text-text-muted">{{ alumno.rut }}</p>
@@ -400,8 +396,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
                   >
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span
-                        class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
+                      <span class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Teoría</span
                       >
                       <div class="flex items-center gap-2">
@@ -423,8 +418,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       </div>
                     </div>
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span
-                        class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
+                      <span class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Práctica</span
                       >
                       <div class="flex items-center gap-2">
@@ -458,7 +452,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <div
                           class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-9"
                         >
-                          <span class="text-[9px] text-text-muted mb-1 font-medium"
+                          <span class="text-2xs text-text-muted mb-1 font-medium"
                             >M{{ nota.moduleNumber }}</span
                           >
                           @if (nota.grade !== null) {
@@ -479,7 +473,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       <div
                         class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]"
                       >
-                        <span class="text-[9px] text-brand font-bold mb-1 uppercase">Prom</span>
+                        <span class="text-2xs text-brand font-bold mb-1 uppercase">Prom</span>
                         @if (alumno.notaPromedio !== null) {
                           <span class="text-sm font-bold text-brand">{{
                             alumno.notaPromedio

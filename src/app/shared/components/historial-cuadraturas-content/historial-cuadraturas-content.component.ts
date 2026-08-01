@@ -376,25 +376,23 @@ function formatCLP(value: number): string {
                         <div class="flex items-center gap-1.5 mb-0.5">
                           @if (cierre.estadoDiferencia === 'balanced') {
                             <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
-                            <span class="text-[13px] font-bold text-text-primary">Cuadrado</span>
+                            <span class="text-compact font-bold text-text-primary">Cuadrado</span>
                           } @else if (cierre.estadoDiferencia === 'surplus') {
                             <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
-                            <span class="text-[13px] font-bold text-text-primary">Sobrante</span>
+                            <span class="text-compact font-bold text-text-primary">Sobrante</span>
                           } @else {
                             <div class="w-1.5 h-1.5 rounded-full bg-error"></div>
-                            <span class="text-[13px] font-bold text-text-primary">Descuadre</span>
+                            <span class="text-compact font-bold text-text-primary">Descuadre</span>
                           }
                         </div>
                         <div class="flex items-center gap-1 text-text-muted text-xs">
                           <app-icon name="user" [size]="10" />
-                          <span class="truncate max-w-30 lg:max-w-none">{{
-                            cierre.cajero
-                          }}</span>
+                          <span class="truncate max-w-30 lg:max-w-none">{{ cierre.cajero }}</span>
                         </div>
                       } @else if (celda.isToday) {
                         <div class="flex items-center gap-1.5 mb-1 text-brand">
                           <app-icon name="loader-circle" [size]="14" class="animate-spin" />
-                          <span class="text-[13px] font-bold">Sesión en curso</span>
+                          <span class="text-compact font-bold">Sesión en curso</span>
                         </div>
                         <span class="text-text-muted text-2xs font-semibold"
                           >Esperando cierre operativo</span
@@ -406,7 +404,7 @@ function formatCLP(value: number): string {
                   <div class="flex flex-col items-end gap-1">
                     @if (celda.cierre; as cierre) {
                       <span
-                        class="text-[13px] font-black tabular-nums tracking-tight"
+                        class="text-compact font-black tabular-nums tracking-tight"
                         [class.text-error]="cierre.estadoDiferencia === 'shortage'"
                         [class.text-warning]="cierre.estadoDiferencia === 'surplus'"
                         [class.text-success]="cierre.estadoDiferencia === 'balanced'"
@@ -433,7 +431,7 @@ function formatCLP(value: number): string {
                 >
                   <app-icon name="calendar-x" [size]="20" class="opacity-50" />
                 </div>
-                <h3 class="text-sm font-bold text-text-primary mb-1">Sin Actividad</h3>
+                <h3 class="item-title mb-1">Sin Actividad</h3>
                 <p class="text-xs max-w-50">
                   No existen cierres ni registros arqueados en este mes.
                 </p>

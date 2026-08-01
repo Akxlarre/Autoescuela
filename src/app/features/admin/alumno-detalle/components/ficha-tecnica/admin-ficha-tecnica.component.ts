@@ -142,6 +142,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <td class="text-center no-print">
                   @if (!clase.completada) {
                     <button
+                      aria-label="Reprogramar clase"
                       type="button"
                       class="btn-edit-clase"
                       title="Reprogramar clase"
@@ -165,12 +166,13 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             class="p-4 rounded-xl border border-border-subtle bg-surface shadow-sm flex flex-col gap-3"
           >
             <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded bg-elevated text-[10px] font-bold text-text-primary"
+              <span class="text-2xs px-2 py-0.5 rounded bg-elevated font-bold text-text-primary"
                 >SESIÓN #{{ clase.numero }}</span
               >
               <div class="flex items-center gap-2">
                 @if (!clase.completada) {
                   <button
+                    aria-label="Reprogramar"
                     type="button"
                     class="btn-edit-clase"
                     title="Reprogramar"
@@ -228,7 +230,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
             @if (clase.observaciones || clase.justificacion) {
               <div class="p-2 rounded bg-elevated/50 border-l-2 border-brand/30">
-                <p class="text-[11px] text-text-secondary m-0 line-clamp-2 italic">
+                <p class="text-2xs text-text-secondary m-0 line-clamp-2 italic">
                   "{{ clase.observaciones || clase.justificacion }}"
                 </p>
               </div>

@@ -33,7 +33,10 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
 
       <!-- Contract Terms Scrollable Box -->
       @if (data().isMinor) {
-        <div class="rounded-xl p-4 text-sm" style="background: var(--bg-surface); border: 1px solid var(--border-default);">
+        <div
+          class="rounded-xl p-4 text-sm"
+          style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+        >
           <div class="flex items-start gap-3 mb-2">
             <app-icon name="info" [size]="20" color="var(--ds-brand)" class="shrink-0 mt-0.5" />
             <h3 class="font-bold" style="color: var(--text-primary);">
@@ -44,10 +47,12 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
             Dado que tienes 17 años, no puedes firmar este contrato de forma digital por ti mismo.
           </p>
           <p class="mb-2" style="color: var(--text-secondary);">
-            Deberás acudir a la escuela junto a tu apoderado para que él/ella firme el contrato y entregue una autorización notarial.
+            Deberás acudir a la escuela junto a tu apoderado para que él/ella firme el contrato y
+            entregue una autorización notarial.
           </p>
           <p style="color: var(--text-secondary);">
-            Puedes continuar al pago para asegurar tu matrícula. Tu cupo quedará reservado hasta que entregues los documentos en sucursal.
+            Puedes continuar al pago para asegurar tu matrícula. Tu cupo quedará reservado hasta que
+            entregues los documentos en sucursal.
           </p>
         </div>
       } @else {
@@ -67,17 +72,18 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
           <p class="mb-2">
             <strong>1. Objeto:</strong> La Escuela se compromete a impartir al alumno/a
             <strong>{{ data().studentSummary.fullName }}</strong> el curso
-            <strong>{{ data().studentSummary.courseLabel }}</strong>, conforme a los
-            programas del Ministerio de Transportes y Telecomunicaciones.
+            <strong>{{ data().studentSummary.courseLabel }}</strong
+            >, conforme a los programas del Ministerio de Transportes y Telecomunicaciones.
           </p>
           <p class="mb-2">
             <strong>2. Asistencia:</strong> Las clases no asistidas sin aviso previo de 24 horas se
             considerarán realizadas. La escuela podrá reprogramar clases por fuerza mayor.
           </p>
           <p class="mb-2">
-            <strong>3. Pagos y Devolución:</strong> El/la alumno/a se obliga a pagar el valor del curso. 
-            En caso de desistimiento, se reembolsará el valor proporcional a las clases no realizadas, 
-            descontando un 10% por gastos administrativos, solicitándolo con 7 días hábiles de anticipación.
+            <strong>3. Pagos y Devolución:</strong> El/la alumno/a se obliga a pagar el valor del
+            curso. En caso de desistimiento, se reembolsará el valor proporcional a las clases no
+            realizadas, descontando un 10% por gastos administrativos, solicitándolo con 7 días
+            hábiles de anticipación.
           </p>
           <p>
             <strong>4. Datos y Vigencia:</strong> Los datos se tratarán según Ley Nº 19.628. El
@@ -102,11 +108,13 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
         </label>
 
         <!-- Signature Canvas -->
-        <div class="space-y-2" [class.opacity-50]="!termsAccepted()" [class.pointer-events-none]="!termsAccepted()">
+        <div
+          class="space-y-2"
+          [class.opacity-50]="!termsAccepted()"
+          [class.pointer-events-none]="!termsAccepted()"
+        >
           <div class="flex justify-between items-center">
-            <p class="text-sm font-semibold" style="color: var(--text-primary);">
-              Dibuja tu firma
-            </p>
+            <p class="text-sm font-semibold" style="color: var(--text-primary);">Dibuja tu firma</p>
             <button
               type="button"
               class="text-xs font-medium hover:underline"
@@ -144,17 +152,13 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
       <div class="pt-4 flex flex-col gap-3">
         <button
           type="button"
-          class="btn-primary w-full rounded-xl py-3.5 text-[15px] font-semibold"
+          class="btn-primary w-full rounded-xl py-3.5"
           [disabled]="!data().isMinor && !termsAccepted()"
           (click)="handleConfirm()"
         >
           {{ data().isMinor ? 'Continuar' : 'Firmar y Continuar' }}
         </button>
-        <button
-          type="button"
-          class="btn-secondary w-full rounded-xl py-3 text-[15px] font-semibold"
-          (click)="goBack.emit()"
-        >
+        <button type="button" class="btn-secondary w-full rounded-xl py-3" (click)="goBack.emit()">
           Volver atrás
         </button>
       </div>
@@ -163,7 +167,7 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
 })
 export class PublicContractComponent {
   readonly data = input.required<EnrollmentContractData>();
-  
+
   // Emit base64 string
   readonly contractSigned = output<string>();
   readonly goBack = output<void>();
@@ -196,7 +200,7 @@ export class PublicContractComponent {
     const rect = el.getBoundingClientRect();
     el.width = rect.width * window.devicePixelRatio;
     el.height = rect.height * window.devicePixelRatio;
-    
+
     this.ctx = el.getContext('2d', { willReadFrequently: true });
     if (this.ctx) {
       this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
@@ -219,12 +223,12 @@ export class PublicContractComponent {
     this.isDrawing = true;
     this.signatureError.set(false);
     this.hasSignature = true;
-    
+
     const el = this.canvas().nativeElement;
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
     // Draw dot for single tap
@@ -236,7 +240,7 @@ export class PublicContractComponent {
     if (!this.isDrawing || !this.ctx) return;
     // Stop scrolling
     e.preventDefault();
-    
+
     const el = this.canvas().nativeElement;
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -273,7 +277,7 @@ export class PublicContractComponent {
     }
 
     const el = this.canvas().nativeElement;
-    
+
     // Create a temporary canvas to save with white background instead of transparent
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = el.width;
@@ -284,9 +288,8 @@ export class PublicContractComponent {
       tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
       tCtx.drawImage(el, 0, 0);
     }
-    
+
     const base64 = tempCanvas.toDataURL('image/png');
     this.contractSigned.emit(base64);
   }
 }
-

@@ -97,7 +97,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
           @if (loading()) {
             <app-skeleton-block variant="text" width="80%" height="14px" />
           } @else if (side()?.nextClass) {
-            <p class="text-sm font-semibold text-text-primary m-0 leading-snug">
+            <p class="item-title m-0 leading-snug">
               {{ side()?.nextClass?.date }}
             </p>
             @if (side()?.nextClass?.time) {
@@ -174,7 +174,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
       >
         <div class="flex items-center gap-2">
           <app-icon name="trending-up" [size]="16" class="text-brand" />
-          <h2 class="m-0 font-semibold text-text-primary text-sm">Mi Progreso</h2>
+          <h2 class="item-title m-0">Mi Progreso</h2>
           @if (!loading()) {
             <span class="ml-auto text-xs font-bold text-brand">
               {{ progress()?.pctOverall ?? 0 }}%
@@ -292,7 +292,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
       >
         <div class="flex items-center gap-2">
           <app-icon name="star" [size]="16" class="text-warning" />
-          <h2 class="m-0 font-semibold text-text-primary text-sm">
+          <h2 class="item-title m-0">
             @if (licenseGroup() === 'class_b') {
               Examen y Certificado
             } @else {
@@ -420,7 +420,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
       <div class="bento-banner bento-card flex flex-col gap-3" appCardHover appScrollReveal>
         <div class="flex items-center gap-2">
           <app-icon name="calendar-check" [size]="16" class="text-brand" />
-          <h2 class="m-0 font-semibold text-text-primary text-sm">Asistencia reciente</h2>
+          <h2 class="item-title m-0">Asistencia reciente</h2>
           @if (!loading() && attendance()) {
             <app-badge [variant]="semaphoreVariant()" class="ml-auto">
               {{ semaphoreLabel() }}
@@ -451,10 +451,10 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                     [style.color]="sessionDotColor(s.status)"
                   />
                 </div>
-                <span class="text-[9px] text-text-muted text-center leading-tight">
+                <span class="text-2xs text-text-muted text-center leading-tight">
                   {{ formatSessionDate(s.date) }}
                 </span>
-                <span class="text-[9px] text-text-muted leading-tight">
+                <span class="text-2xs text-text-muted leading-tight">
                   {{ s.kind === 'theory' ? 'T' : 'P' }}
                 </span>
               </div>
