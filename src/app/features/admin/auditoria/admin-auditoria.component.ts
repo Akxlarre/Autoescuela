@@ -9,8 +9,11 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { PaginatorModule } from 'primeng/paginator';
 import { AuditoriaFacade } from '@core/facades/auditoria.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AuditLogDetailDrawerComponent } from './audit-log-detail-drawer.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -35,6 +38,7 @@ const ACTION_OPTIONS = [
     DatePipe,
     FormsModule,
     SelectModule,
+    PaginatorModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
@@ -57,140 +61,145 @@ const ACTION_OPTIONS = [
         [actions]="[]"
       />
 
-      <!-- ── Filtros ──────────────────────────────────────────────────────── -->
-      <div class="bento-banner card p-5" appCardHover>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-          <!-- Fecha desde -->
-          <div class="flex flex-col gap-1">
-            <app-date-input
-              label="Fecha desde"
-              [value]="fechaDesde() ?? ''"
-              (valueChange)="fechaDesde.set($event); applyFilters()"
-              data-llm-description="Filtrar logs desde esta fecha"
-            />
-          </div>
-
-          <!-- Fecha hasta -->
-          <div class="flex flex-col gap-1">
-            <app-date-input
-              label="Fecha hasta"
-              [value]="fechaHasta() ?? ''"
-              (valueChange)="fechaHasta.set($event); applyFilters()"
-              data-llm-description="Filtrar logs hasta esta fecha"
-            />
-          </div>
-
-          <!-- Secretaria -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-text-secondary">Secretaria</label>
-            <p-select
-              [options]="secretariaOptions()"
-              [(ngModel)]="secretariaModel"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todos los usuarios"
-              styleClass="w-full"
-              aria-label="Filtrar por secretaria"
-              data-llm-description="Filtrar logs por secretaria específica"
-            />
-          </div>
-
-          <!-- Acción -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-text-secondary">Acción</label>
-            <p-select
-              [options]="actionOptions"
-              [(ngModel)]="accionModel"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todas las acciones"
-              styleClass="w-full"
-              aria-label="Filtrar por tipo de acción"
-              data-llm-description="Filtrar logs por tipo de acción"
-            />
-          </div>
-
-          <!-- Módulo -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-text-secondary">Módulo</label>
-            <p-select
-              [options]="moduloOptions"
-              [(ngModel)]="moduloModel"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Todos los módulos"
-              styleClass="w-full"
-              aria-label="Filtrar por módulo"
-              data-llm-description="Filtrar logs por módulo del sistema"
-            />
-          </div>
-        </div>
-
-        <!-- Acciones de filtro -->
-        <div class="flex items-center justify-between flex-wrap gap-3">
-          <button
-            class="filter-clear-btn flex items-center gap-2 text-sm text-text-secondary"
-            (click)="clearFilters()"
-            data-llm-action="limpiar-filtros-auditoria"
-          >
-            <app-icon name="refresh-cw" [size]="14" />
-            Limpiar Filtros
-          </button>
-
-          <div class="relative">
-            <button
-              type="button"
-              class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-              [disabled]="facade.isExporting()"
-              [appStableWidth]="facade.isExporting()"
-              (click)="exportMenuOpen.set(!exportMenuOpen())"
-              data-llm-action="open-export-menu-auditoria"
-            >
-              @if (facade.isExporting()) {
-                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
-              } @else {
-                <app-icon name="download" [size]="16" />
-              }
-              Exportar
-              <app-icon name="chevron-down" [size]="14" />
-            </button>
-            @if (exportMenuOpen()) {
-              <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-              <div class="export-menu">
-                <button
-                  type="button"
-                  class="export-menu-item"
-                  (click)="requestExport('excel')"
-                  data-llm-action="exportar-excel-auditoria"
-                >
-                  <app-icon name="table-2" [size]="15" />
-                  Exportar como Excel
-                </button>
-                <button
-                  type="button"
-                  class="export-menu-item"
-                  (click)="requestExport('pdf')"
-                  data-llm-action="exportar-pdf-auditoria"
-                >
-                  <app-icon name="file-text" [size]="15" />
-                  Exportar como PDF
-                </button>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
+      <!-- ── Filtros + Tabla (una sola card, consistente con Base Alumnos B) ── -->
       <div class="bento-banner card card-accent p-0 overflow-hidden" appCardHover>
+        <!-- Toolbar de filtros -->
+        <div class="p-5 border-b border-border-default">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+            <!-- Fecha desde -->
+            <div class="flex flex-col gap-1">
+              <app-date-input
+                label="Fecha desde"
+                [value]="fechaDesde() ?? ''"
+                (valueChange)="fechaDesde.set($event); applyFilters()"
+                data-llm-description="Filtrar logs desde esta fecha"
+              />
+            </div>
+
+            <!-- Fecha hasta -->
+            <div class="flex flex-col gap-1">
+              <app-date-input
+                label="Fecha hasta"
+                [value]="fechaHasta() ?? ''"
+                (valueChange)="fechaHasta.set($event); applyFilters()"
+                data-llm-description="Filtrar logs hasta esta fecha"
+              />
+            </div>
+
+            <!-- Secretaria -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-text-secondary">Secretaria</label>
+              <p-select
+                [options]="secretariaOptions()"
+                [(ngModel)]="secretariaModel"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Todos los usuarios"
+                styleClass="w-full"
+                aria-label="Filtrar por secretaria"
+                data-llm-description="Filtrar logs por secretaria específica"
+              />
+            </div>
+
+            <!-- Acción -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-text-secondary">Acción</label>
+              <p-select
+                [options]="actionOptions"
+                [(ngModel)]="accionModel"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Todas las acciones"
+                styleClass="w-full"
+                aria-label="Filtrar por tipo de acción"
+                data-llm-description="Filtrar logs por tipo de acción"
+              />
+            </div>
+
+            <!-- Módulo -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-text-secondary">Módulo</label>
+              <p-select
+                [options]="moduloOptions"
+                [(ngModel)]="moduloModel"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Todos los módulos"
+                styleClass="w-full"
+                aria-label="Filtrar por módulo"
+                data-llm-description="Filtrar logs por módulo del sistema"
+              />
+            </div>
+          </div>
+
+          <!-- Acciones de filtro -->
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <button
+              class="filter-clear-btn flex items-center gap-2 text-sm text-text-secondary"
+              (click)="clearFilters()"
+              data-llm-action="limpiar-filtros-auditoria"
+            >
+              <app-icon name="refresh-cw" [size]="14" />
+              Limpiar Filtros
+            </button>
+
+            <div class="relative">
+              <button
+                type="button"
+                class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                [disabled]="facade.isExporting()"
+                [appStableWidth]="facade.isExporting()"
+                (click)="exportMenuOpen.set(!exportMenuOpen())"
+                data-llm-action="open-export-menu-auditoria"
+              >
+                @if (facade.isExporting()) {
+                  <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                } @else {
+                  <app-icon name="download" [size]="16" />
+                }
+                Exportar
+                <app-icon name="chevron-down" [size]="14" />
+              </button>
+              @if (exportMenuOpen()) {
+                <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+                <div class="export-menu">
+                  <button
+                    type="button"
+                    class="export-menu-item"
+                    (click)="requestExport('excel')"
+                    data-llm-action="exportar-excel-auditoria"
+                  >
+                    <app-icon name="table-2" [size]="15" />
+                    Exportar como Excel
+                  </button>
+                  <button
+                    type="button"
+                    class="export-menu-item"
+                    (click)="requestExport('pdf')"
+                    data-llm-action="exportar-pdf-auditoria"
+                  >
+                    <app-icon name="file-text" [size]="15" />
+                    Exportar como PDF
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
         <!-- Scroll wrapper: habilita scroll horizontal en pantallas chicas -->
         <div class="overflow-x-auto">
           <!-- Header tabla -->
           <div
             class="audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted audit-header"
+            [class.audit-grid--no-sede]="!showSedeColumn()"
           >
             <span>Fecha/Hora</span>
             <span>Usuario</span>
+            @if (showSedeColumn()) {
+              <span>Sede</span>
+            }
             <span>Acción</span>
             <span>Módulo</span>
             <span>Detalles</span>
@@ -200,12 +209,18 @@ const ACTION_OPTIONS = [
           <!-- Filas -->
           @if (facade.isLoading()) {
             @for (_ of skeletonRows; track $index) {
-              <div class="audit-grid px-6 py-4 items-center audit-row-border">
+              <div
+                class="audit-grid px-6 py-4 items-center audit-row-border"
+                [class.audit-grid--no-sede]="!showSedeColumn()"
+              >
                 <app-skeleton-block variant="text" width="120px" height="13px" />
                 <div class="flex flex-col gap-1.5">
                   <app-skeleton-block variant="text" width="140px" height="13px" />
                   <app-skeleton-block variant="text" width="180px" height="11px" />
                 </div>
+                @if (showSedeColumn()) {
+                  <app-skeleton-block variant="text" width="90px" height="13px" />
+                }
                 <app-skeleton-block variant="rect" width="80px" height="24px" />
                 <app-skeleton-block variant="text" width="90px" height="13px" />
                 <app-skeleton-block variant="text" width="200px" height="13px" />
@@ -221,7 +236,15 @@ const ACTION_OPTIONS = [
             </div>
           } @else {
             @for (log of facade.logs(); track log.id) {
-              <div class="audit-row audit-grid px-6 py-4 items-start audit-row-border">
+              <div
+                class="audit-row audit-grid px-6 py-4 items-start audit-row-border"
+                [class.audit-grid--no-sede]="!showSedeColumn()"
+                role="button"
+                tabindex="0"
+                (click)="verDetalle(log)"
+                (keydown.enter)="verDetalle(log)"
+                data-llm-action="ver-detalle-auditoria"
+              >
                 <!-- Fecha/Hora -->
                 <span class="text-sm tabular-nums text-text-secondary">
                   {{ log.fechaHora | date: 'yyyy-MM-dd HH:mm:ss' }}
@@ -232,10 +255,19 @@ const ACTION_OPTIONS = [
                   <span class="text-sm font-semibold text-text-primary">{{
                     log.usuarioNombre
                   }}</span>
-                  <a [href]="'mailto:' + log.usuarioEmail" class="text-xs brand-link">
+                  <a
+                    [href]="'mailto:' + log.usuarioEmail"
+                    class="text-xs brand-link"
+                    (click)="$event.stopPropagation()"
+                  >
                     {{ log.usuarioEmail }}
                   </a>
                 </div>
+
+                @if (showSedeColumn()) {
+                  <!-- Sede -->
+                  <span class="text-sm text-text-secondary">{{ log.sedeNombre }}</span>
+                }
 
                 <!-- Acción badge -->
                 <div>
@@ -264,56 +296,19 @@ const ACTION_OPTIONS = [
           }
         </div>
 
-        <!-- Paginación -->
+        <!-- Paginación PrimeNG — mismo componente/look que Base Alumnos B.
+             Sin borde propio: la última fila ya aporta la línea separadora
+             (.audit-row-border) — igual que entre cualquier par de filas. -->
         @if (!facade.isLoading() && facade.totalCount() > 0) {
-          <div
-            class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 pagination-border"
-          >
-            <p class="text-xs text-brand">
-              Mostrando {{ facade.paginationStart() }}-{{ facade.paginationEnd() }} de
-              {{ facade.totalCount() }} registros
-            </p>
-            <div class="flex items-center gap-1">
-              <button
-                class="page-btn"
-                [disabled]="facade.currentPage() === 1"
-                (click)="goToPage(facade.currentPage() - 1)"
-                data-llm-action="auditoria-pagina-anterior"
-              >
-                ← Anterior
-              </button>
-
-              <!-- Números de página: ocultos en mobile para no saturar -->
-              <div class="hidden sm:flex items-center gap-1">
-                @for (p of visiblePages(); track p) {
-                  @if (p === -1) {
-                    <span class="text-xs px-1 text-text-muted">…</span>
-                  } @else {
-                    <button
-                      class="page-btn"
-                      [class.page-btn--active]="p === facade.currentPage()"
-                      (click)="goToPage(p)"
-                    >
-                      {{ p }}
-                    </button>
-                  }
-                }
-              </div>
-
-              <!-- Indicador compacto solo en mobile -->
-              <span class="text-xs text-text-muted sm:hidden px-2">
-                {{ facade.currentPage() }} / {{ facade.totalPages() }}
-              </span>
-
-              <button
-                class="page-btn"
-                [disabled]="facade.currentPage() >= facade.totalPages()"
-                (click)="goToPage(facade.currentPage() + 1)"
-                data-llm-action="auditoria-pagina-siguiente"
-              >
-                Siguiente →
-              </button>
-            </div>
+          <div>
+            <p-paginator
+              [rows]="pageSize"
+              [totalRecords]="facade.totalCount()"
+              [first]="(facade.currentPage() - 1) * pageSize"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
+              (onPageChange)="onPageChange($event)"
+            />
           </div>
         }
       </div>
@@ -366,8 +361,12 @@ const ACTION_OPTIONS = [
     /* Tabla — el min-width garantiza scroll horizontal antes de colapsar */
     .audit-grid {
       display: grid;
-      grid-template-columns: 148px 220px 110px 130px 1fr 120px;
+      grid-template-columns: 148px 220px 130px 110px 130px 1fr 120px;
       gap: 16px;
+      min-width: 900px;
+    }
+    .audit-grid--no-sede {
+      grid-template-columns: 148px 220px 110px 130px 1fr 120px;
       min-width: 780px;
     }
 
@@ -381,14 +380,15 @@ const ACTION_OPTIONS = [
     }
 
     .audit-row {
+      cursor: pointer;
       transition: background var(--duration-fast);
     }
     .audit-row:hover {
       background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
     }
-
-    .pagination-border {
-      border-top: 1px solid var(--border-subtle);
+    .audit-row:focus-visible {
+      outline: 2px solid var(--ds-brand);
+      outline-offset: -2px;
     }
 
     .warning-banner {
@@ -448,44 +448,12 @@ const ACTION_OPTIONS = [
     .export-menu-item:hover {
       background: var(--bg-elevated);
     }
-
-    /* Paginación */
-    .page-btn {
-      min-width: 32px;
-      height: 32px;
-      padding: 0 8px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .page-btn:hover:not(:disabled):not(.page-btn--active) {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-    }
-    .page-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .page-btn--active {
-      background: var(--ds-brand);
-      color: var(--color-primary-text);
-      border-color: var(--ds-brand);
-      cursor: default;
-    }
-    .page-btn--active:hover {
-      background: var(--ds-brand);
-      color: var(--color-primary-text);
-    }
   `,
 })
 export class AdminAuditoriaComponent {
   protected readonly facade = inject(AuditoriaFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   constructor() {
     effect(() => {
@@ -512,6 +480,9 @@ export class AdminAuditoriaComponent {
   );
 
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  /** Columna "Sede" solo aporta valor cuando el admin ve todas las sedes a la vez. */
+  protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   // Modelos two-way p-select
   protected get secretariaModel(): number | null {
@@ -557,8 +528,11 @@ export class AdminAuditoriaComponent {
     this.facade.clearFilters();
   }
 
-  protected goToPage(page: number): void {
-    this.facade.setPage(page);
+  /** Debe coincidir con PAGE_SIZE de AuditoriaFacade (paginación server-side). */
+  protected readonly pageSize = 25;
+
+  protected onPageChange(event: { page?: number }): void {
+    this.facade.setPage((event.page ?? 0) + 1);
   }
 
   protected badgeClass(log: AuditLogRow): string {
@@ -567,20 +541,10 @@ export class AdminAuditoriaComponent {
     return 'warning';
   }
 
-  protected readonly visiblePages = computed(() => {
-    const total = this.facade.totalPages();
-    const current = this.facade.currentPage();
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-    const pages: number[] = [1];
-    if (current > 3) pages.push(-1);
-    for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
-      pages.push(p);
-    }
-    if (current < total - 2) pages.push(-1);
-    pages.push(total);
-    return pages;
-  });
+  protected verDetalle(log: AuditLogRow): void {
+    this.facade.selectLog(log);
+    this.layoutDrawer.open(AuditLogDetailDrawerComponent, 'Detalle de Auditoría', 'file-text');
+  }
 
   protected readonly exportMenuOpen = signal(false);
 

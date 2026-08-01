@@ -17,6 +17,9 @@ export interface LibroCabecera {
   classBookId: number | null;
   senceCode: string;
   horario: string;
+  /** Auditoría del último cambio al Código SENCE (RF-103, fiscalizable) */
+  senceCodeUpdatedByName: string | null;
+  senceCodeUpdatedAt: string | null;
 }
 
 // ── Profesores por módulo ────────────────────────────────────────────────────

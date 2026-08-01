@@ -73,7 +73,7 @@ Opciones por evento: (a) **trigger SQL** AFTER UPDATE/INSERT (recomendado: no co
 
 | # | Evento | Origen | Destinatario(s) | `reference_type` | Vía sugerida |
 |---|---|---|---|---|---|
-| C1 | ✅ **Clase completada** (práctica B) — implementado Spec 0026 | `InstructorClasesFacade.finishClass()` → trigger `notify_class_b_completed()` | Alumno ("Clase N/12 completada") | `class_b` | Trigger `AFTER UPDATE OF status ON class_b_sessions` (`20260710000000`) |
+| C1 | ✅ **Clase completada** (práctica B) — implementado Spec 0026, extendido fix-091-m (ASG-b-044) | `InstructorClasesFacade.finishClass()` → trigger `notify_class_b_completed()` | Alumno ("Clase N/12 completada") **+ todas las secretarias de la sede** ("Clase cerrada por instructor", una notificación por clase, sin agregación) | `class_b` | Trigger `AFTER UPDATE OF status ON class_b_sessions` (`20260710000000` → `20260801100000`) |
 | C2 | ✅ **Respuesta / cierre de tarea** — implementado Spec 0026 | `TasksFacade.addReply()` / `updateStatus()` → triggers `notify_task_reply()`/`notify_task_completed()` | La contraparte de la tarea (emisor o receptor), nunca el actor | `task` | Trigger en `task_replies` (AFTER INSERT) y en `tasks.status` (AFTER UPDATE, excluye al actor vía `auth_user_id()`) — `20260710000100` |
 
 ## 5. Grupo D — Programados (sin actor humano; pg_cron o EF agendada) — horizonte posterior

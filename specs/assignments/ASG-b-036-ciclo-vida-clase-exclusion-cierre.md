@@ -82,3 +82,25 @@ Una vez respondidas las preguntas, el núcleo es:
   la rama mock. Idealmente ASG-b-010 se cierra primero, o se toman juntas.
 - Antes de agregar el constraint, revisar si hay filas `in_progress` viejas en producción que
   lo violarían — es muy probable que sí, dado que nunca se cerraron solas.
+
+### Actualización (2026-08-01) — parte del "aviso" ya está resuelta
+
+`ASG-b-044` (alerta a secretaría cuando un instructor cierra una clase, distinta de esta
+asignación pero mencionada arriba como solape) se implementó en
+**fix-091-m-alerta-secretaria-cierre-clase** + **fix-092-m-deeplink-secretaria-notif-class-b**:
+`notify_class_b_completed()` (`supabase/migrations/20260801100000_...`) ahora notifica a
+**todas las secretarias de la sede** cada vez que una clase pasa a `completed` — cierre
+manual del instructor, vía `finishClass()`. El deep-link de esa notificación en el topbar
+lleva a `/app/secretaria/agenda`.
+
+**Lo que NO cubre ese fix (sigue siendo trabajo de esta asignación, ASG-b-036):**
+- No dispara nada cuando una clase queda `in_progress` sin cerrar — el trigger solo escucha
+  la transición **a** `completed`, y hoy nada fuerza esa transición si el instructor nunca
+  aprieta "Finalizar" (ver Hallazgo verificado arriba).
+- No hay exclusión mutua ni cierre automático — sigue todo el alcance original sin tocar.
+
+**Cuando se implemente el cierre automático de clases olvidadas:** decidir si ese cierre
+también debe generar la notificación a secretaría (probablemente sí, con texto distinto que
+distinga "cerrada por el instructor" de "cerrada automáticamente por el sistema" — ya hay un
+precedente de mensaje diferenciado en `notify_class_b_completed()` para copiar el patrón, y
+el mismo bloque `FOR ... LOOP` sobre secretarias de la sede es reutilizable tal cual).

@@ -1,11 +1,15 @@
 # Asignación ASG-b-051 — Poder cambiar el código de autorización del libro de clases
 
-> **status:** pendiente
-> **owner:** cualquiera
+> **status:** completada
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** m
+> **claimed_at:** 2026-08-01
+> **resulting_track:** fix-098-m-codigo-autorizacion-libro-editable
+> **closed_at:** 2026-08-01
 
 ---
 
