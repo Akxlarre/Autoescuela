@@ -149,7 +149,7 @@ type UploadMode = 'student' | 'school' | 'instructor';
 
               @if (selectedFile()) {
                 <div>
-                  <p class="font-semibold text-sm m-0 text-text-primary">
+                  <p class="item-title m-0">
                     {{ selectedFile()!.name }}
                   </p>
                   <p class="text-xs m-0 mt-1 text-text-secondary">

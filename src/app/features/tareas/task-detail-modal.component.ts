@@ -129,9 +129,7 @@ const TYPE_ICON: Record<string, string> = {
 
         <!-- Hilo de respuestas -->
         <div class="border-t pt-4 border-border-default">
-          <p class="text-xs font-semibold uppercase tracking-wide mb-3 text-text-muted">
-            Respuestas
-          </p>
+          <p class="overline mb-3">Respuestas</p>
           <app-task-reply-thread
             [replies]="tasksFacade.selectedTaskReplies()"
             [taskStatus]="task()!.status"

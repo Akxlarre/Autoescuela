@@ -76,7 +76,7 @@ interface DayGroup {
           >
             <div class="avatar-sm">{{ inst.initials }}</div>
             <div>
-              <p class="text-sm font-semibold text-text-primary">
+              <p class="item-title">
                 {{ inst.nombre }}
               </p>
               <p class="text-xs text-text-muted">

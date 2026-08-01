@@ -160,7 +160,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="graduation-cap" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="text-xs text-text-muted uppercase tracking-wide">Curso</span>
+                    <span class="overline">Curso</span>
                     <span class="text-sm font-medium text-text-primary">{{
                       enroll.courseName
                     }}</span>
@@ -169,7 +169,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="building-2" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="text-xs text-text-muted uppercase tracking-wide">Sede</span>
+                    <span class="overline">Sede</span>
                     <span class="text-sm font-medium text-text-primary">{{
                       enroll.branchName
                     }}</span>
@@ -178,7 +178,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="hash" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="text-xs text-text-muted uppercase tracking-wide">Matrícula</span>
+                    <span class="overline">Matrícula</span>
                     <span class="text-sm font-medium text-text-primary"
                       >N° {{ enroll.number }}</span
                     >
@@ -197,10 +197,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <app-icon name="calendar-check" [size]="18" class="text-success" />
                   </div>
                   <div>
-                    <p class="text-xs text-text-muted uppercase tracking-wide">Clases agendadas</p>
-                    <p class="text-sm font-semibold text-text-primary">
-                      Todas tus clases ya están reservadas
-                    </p>
+                    <p class="overline">Clases agendadas</p>
+                    <p class="item-title">Todas tus clases ya están reservadas</p>
                   </div>
                 </div>
                 <p class="text-xs text-text-muted">
@@ -236,7 +234,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <app-icon name="calendar-check" [size]="20" class="text-success" />
               </div>
               <div>
-                <p class="text-sm font-semibold text-text-primary">Tus clases ya están agendadas</p>
+                <p class="item-title">Tus clases ya están agendadas</p>
                 <p class="text-xs text-text-muted mt-1">
                   Solo necesitas completar el pago para confirmar tu matrícula.
                 </p>
@@ -253,7 +251,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   </div>
                   <div class="border-t pt-3 border-border-default">
                     <div class="flex items-center justify-between">
-                      <span class="text-sm font-semibold text-text-primary">Total a pagar</span>
+                      <span class="item-title">Total a pagar</span>
                       <span
                         class="text-lg font-bold text-brand"
                         data-llm-description="total amount to pay via Webpay"

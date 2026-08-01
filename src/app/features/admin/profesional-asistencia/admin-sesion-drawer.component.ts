@@ -86,7 +86,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                     [name]="sesion.tipo === 'theory' ? 'book-open' : 'wrench'"
                     [size]="20"
                   />
-                  <span class="text-sm font-semibold text-text-primary">
+                  <span class="item-title">
                     {{ sesion.tipo === 'theory' ? 'Sesión Teórica' : 'Sesión Práctica' }}
                   </span>
                 </div>

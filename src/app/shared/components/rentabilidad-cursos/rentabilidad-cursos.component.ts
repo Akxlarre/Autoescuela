@@ -20,9 +20,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
         <app-icon name="bar-chart-2" [size]="18" color="var(--text-primary)" />
-        <h2 class="text-base font-semibold">
-          Rentabilidad Estimada por Tipo de Curso
-        </h2>
+        <h2 class="text-base font-semibold">Rentabilidad Estimada por Tipo de Curso</h2>
       </div>
       <span class="text-sm font-medium text-brand">
         {{ mesActual() }}
@@ -33,7 +31,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div>
       <!-- Encabezado de columnas -->
       <div
-        class="hidden lg:grid gap-4 px-6 py-2 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+        class="overline hidden lg:grid gap-4 px-6 py-2 border-b bg-surface border-border-muted"
         style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr"
       >
         <span>Tipo de Curso</span>
@@ -52,7 +50,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr"
           >
             <!-- Tipo de Curso -->
-            <span class="text-sm font-semibold text-text-primary">
+            <span class="item-title">
               {{ item.tipoCurso }}
             </span>
 
@@ -64,7 +62,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Ingresos</span
                 >
-                <span class="text-sm font-semibold lg:font-normal text-text-primary">
+                <span class="item-title lg:font-normal">
                   {{ item.ingresos | shortCurrency }}
                 </span>
               </div>
@@ -143,7 +141,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Ingresos</span
               >
-              <span class="text-sm font-bold text-center lg:text-right text-text-primary">
+              <span class="item-title text-center lg:text-right">
                 {{ totales().ingresos | shortCurrency }}
               </span>
             </div>

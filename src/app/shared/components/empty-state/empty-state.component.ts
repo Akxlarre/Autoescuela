@@ -58,7 +58,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
 
     <!-- Texto principal -->
     <div class="flex flex-col gap-1.5 max-w-70">
-      <p class="m-0 text-sm font-semibold text-text-primary">{{ message() }}</p>
+      <p class="item-title m-0">{{ message() }}</p>
       @if (subtitle()) {
         <p class="m-0 text-sm text-text-muted">{{ subtitle() }}</p>
       }
@@ -69,7 +69,6 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
       <button
         type="button"
         class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border cursor-pointer border-border-subtle bg-elevated text-text-secondary"
-        
         [appPressFeedback]="'press'"
         (click)="action.emit()"
         [attr.aria-label]="actionLabel()"

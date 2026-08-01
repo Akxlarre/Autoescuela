@@ -62,9 +62,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           <!-- Sidebar Info -->
           <div class="lg:col-span-1 space-y-6">
             <div class="card p-5">
-              <h3
-                class="text-xs font-bold uppercase tracking-wider text-text-muted mb-4 border-b border-border-subtle pb-2"
-              >
+              <h3 class="overline mb-4 border-b border-border-subtle pb-2">
                 Información Clase #{{ cls.classNumber }}
               </h3>
               <div class="space-y-4">
@@ -102,9 +100,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               <div class="p-6 space-y-8 bg-surface">
                 <!-- Nota -->
                 <div>
-                  <h3
-                    class="text-base font-semibold mb-1 flex items-center gap-2"
-                  >
+                  <h3 class="text-base font-semibold mb-1 flex items-center gap-2">
                     <app-icon name="award" [size]="18" class="text-warning" />
                     Nota Global
                   </h3>

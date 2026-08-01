@@ -51,9 +51,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
           class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3 border-warning bg-warning/5"
         >
           <app-icon name="alert-triangle" [size]="28" />
-          <p class="text-text-primary text-sm font-semibold">
-            Este branch no tiene cursos operacionales activos
-          </p>
+          <p class="item-title">Este branch no tiene cursos operacionales activos</p>
           <p class="text-text-muted text-xs max-w-sm">
             Primero crea cursos en el Catálogo Operacional antes de configurar las cards de la
             landing.
@@ -91,7 +89,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               <div
                 class="flex items-center justify-between border-b pb-2 mb-1 border-border-subtle"
               >
-                <span class="text-sm font-bold text-text-primary">
+                <span class="item-title">
                   Card #{{ $index + 1 }}:
                   {{
                     catalogItem?.name ??

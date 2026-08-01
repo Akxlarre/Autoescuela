@@ -186,9 +186,7 @@ const ACTION_OPTIONS = [
         <!-- Scroll wrapper: habilita scroll horizontal en pantallas chicas -->
         <div class="overflow-x-auto">
           <!-- Header tabla -->
-          <div
-            class="audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted audit-header"
-          >
+          <div class="overline audit-grid px-6 py-3 audit-header">
             <span>Fecha/Hora</span>
             <span>Usuario</span>
             <span>Acción</span>
@@ -229,9 +227,7 @@ const ACTION_OPTIONS = [
 
                 <!-- Usuario -->
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-semibold text-text-primary">{{
-                    log.usuarioNombre
-                  }}</span>
+                  <span class="item-title">{{ log.usuarioNombre }}</span>
                   <a [href]="'mailto:' + log.usuarioEmail" class="text-xs brand-link">
                     {{ log.usuarioEmail }}
                   </a>

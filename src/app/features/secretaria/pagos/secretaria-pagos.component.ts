@@ -132,7 +132,7 @@ const POR_PAGINA = 5;
             } @else {
               <div>
                 <div
-                  class="deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="overline deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
                 >
                   <span>Alumno</span>
                   <span>RUT</span>
@@ -147,11 +147,9 @@ const POR_PAGINA = 5;
                       class="deudores-row deudores-grid-cols p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
                     >
                       <div class="flex flex-col min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate text-text-primary"
-                          [title]="alumno.alumno"
-                          >{{ alumno.alumno }}</span
-                        >
+                        <span class="item-title truncate" [title]="alumno.alumno">{{
+                          alumno.alumno
+                        }}</span>
                         <span class="text-xs lg:hidden mt-0.5 text-text-secondary"
                           >RUT: {{ alumno.rut }}</span
                         >
@@ -337,7 +335,7 @@ const POR_PAGINA = 5;
                 </div>
               } @else {
                 <div
-                  class="pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="overline pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 border-b bg-surface border-border-muted"
                 >
                   <span>Fecha</span><span>Alumno</span><span>Concepto</span>
                   <span class="text-right">Monto</span><span>Método</span> <span>N° Documento</span
@@ -360,11 +358,9 @@ const POR_PAGINA = 5;
                         </app-badge>
                       </div>
                       <div class="flex flex-col lg:contents min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate text-text-primary"
-                          [title]="pago.alumno"
-                          >{{ pago.alumno }}</span
-                        >
+                        <span class="item-title truncate" [title]="pago.alumno">{{
+                          pago.alumno
+                        }}</span>
                         <span class="text-xs truncate mt-0.5 lg:mt-0 text-text-muted">{{
                           pago.concepto ?? '—'
                         }}</span>
@@ -373,12 +369,8 @@ const POR_PAGINA = 5;
                         class="fin-group flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
                       >
                         <div class="flex justify-between items-center lg:contents">
-                          <span class="text-xs uppercase font-bold lg:hidden text-text-muted"
-                            >Monto</span
-                          >
-                          <span class="text-sm font-bold lg:text-right text-text-primary">{{
-                            clp(pago.monto)
-                          }}</span>
+                          <span class="overline lg:hidden">Monto</span>
+                          <span class="item-title lg:text-right">{{ clp(pago.monto) }}</span>
                         </div>
                         <div class="flex items-center justify-between lg:contents mt-2 lg:mt-0">
                           <span class="flex items-center gap-1.5 text-xs text-text-secondary">
@@ -428,9 +420,7 @@ const POR_PAGINA = 5;
 
             <div class="lg:col-span-4 flex flex-col gap-4">
               <div class="card p-5 flex flex-col gap-4" appCardHover>
-                <h3 class="text-sm font-semibold text-text-primary">
-                  Métodos de Pago ({{ mesActual() }})
-                </h3>
+                <h3 class="item-title">Métodos de Pago ({{ mesActual() }})</h3>
                 @if (facade.isLoading()) {
                   @for (i of [1, 2, 3]; track i) {
                     <div class="flex flex-col gap-1.5">
@@ -496,9 +486,7 @@ const POR_PAGINA = 5;
     >
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
-          <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Período del reporte
-          </p>
+          <p class="overline">Período del reporte</p>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Desde</label>

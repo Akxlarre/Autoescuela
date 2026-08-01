@@ -95,9 +95,7 @@ const PAGE_STEP = 12;
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-2 mb-1.5">
-                      <span class="text-sm font-bold text-text-primary truncate">{{
-                        comentario.nombre
-                      }}</span>
+                      <span class="item-title truncate">{{ comentario.nombre }}</span>
                       <div
                         class="flex items-center gap-0.5 shrink-0"
                         role="img"

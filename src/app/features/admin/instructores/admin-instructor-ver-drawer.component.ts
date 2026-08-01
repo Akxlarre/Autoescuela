@@ -284,7 +284,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 @for (h of facade.assignmentHistory(); track h.id) {
                   <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
                     <div>
-                      <p class="text-sm font-semibold text-text-primary">
+                      <p class="item-title">
                         {{ h.vehiclePlate }}
                       </p>
                       <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>

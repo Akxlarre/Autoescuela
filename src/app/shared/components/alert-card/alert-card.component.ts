@@ -74,7 +74,7 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
 
     <!-- Contenido principal -->
     <div class="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
-      <p class="m-0 text-sm font-semibold text-text-primary">{{ title() }}</p>
+      <p class="item-title m-0">{{ title() }}</p>
 
       <!-- Cuerpo libre — proyectado por el consumidor -->
       <div class="text-sm text-text-secondary leading-relaxed">

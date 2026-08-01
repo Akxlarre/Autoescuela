@@ -117,7 +117,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
               <app-icon name="check-circle" [size]="22" class="text-success" />
             </div>
             <div>
-              <p class="text-sm font-semibold text-text-primary">Matrícula al día</p>
+              <p class="item-title">Matrícula al día</p>
               <p class="text-xs text-text-muted mt-0.5">No tienes saldos pendientes de pago.</p>
             </div>
           </div>

@@ -39,7 +39,7 @@ const COLOR_MAP: Record<string, string> = {
     <div class="space-y-4">
       @if (title()) {
         <div class="flex justify-between items-end mb-2">
-          <h4 class="text-sm font-semibold text-text-primary">{{ title() }}</h4>
+          <h4 class="item-title">{{ title() }}</h4>
           <span class="text-xs text-text-muted">{{ subtitle() }}</span>
         </div>
       }
