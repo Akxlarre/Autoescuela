@@ -160,6 +160,7 @@ import type {
                     <button
                       type="button"
                       class="absolute border-0 bg-transparent right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-text-muted hover:text-text-primary"
+                      aria-label="Limpiar búsqueda"
                       (click)="studentSearch.set('')"
                     >
                       <app-icon name="x" [size]="14" />
@@ -565,7 +566,7 @@ import type {
                           {{ tpl.format.toUpperCase() }}
                         </div>
                         <div class="flex-1 min-w-0">
-                          <p class="font-semibold text-sm leading-snug m-0 text-text-primary">
+                          <p class="item-title leading-snug m-0">
                             {{ tpl.name }}
                           </p>
                           <app-badge variant="neutral" class="mt-1">{{

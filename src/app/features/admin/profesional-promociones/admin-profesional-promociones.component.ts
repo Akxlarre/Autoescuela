@@ -159,7 +159,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                         <app-icon name="calendar" [size]="18" />
                       </div>
                       <div class="flex flex-col min-w-0">
-                        <h3 class="text-sm font-semibold truncate text-text-primary">
+                        <h3 class="item-title truncate">
                           {{ promo.name }}
                         </h3>
                         <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
@@ -215,6 +215,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                     </span>
                     <div class="inline-flex items-center gap-0.5">
                       <button
+                        aria-label="Ver detalle"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Ver detalle"
@@ -224,6 +225,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                         <app-icon name="eye" [size]="16" />
                       </button>
                       <button
+                        aria-label="Editar promoción"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Editar promoción"

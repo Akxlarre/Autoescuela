@@ -189,46 +189,14 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10 bg-surface">
                 <tr class="border-b border-(--border-default)">
-                  <th
-                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Alumno
-                  </th>
-                  <th
-                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    RUT
-                  </th>
-                  <th
-                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Curso
-                  </th>
-                  <th
-                    class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Prácticas
-                  </th>
-                  <th
-                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Fecha Término
-                  </th>
-                  <th
-                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    N° Certificado
-                  </th>
-                  <th
-                    class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Estado
-                  </th>
-                  <th
-                    class="text-right px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                  >
-                    Acciones
-                  </th>
+                  <th class="overline text-left px-4 py-2">Alumno</th>
+                  <th class="overline text-left px-4 py-2">RUT</th>
+                  <th class="overline text-left px-4 py-2">Curso</th>
+                  <th class="overline text-center px-4 py-2">Prácticas</th>
+                  <th class="overline text-left px-4 py-2">Fecha Término</th>
+                  <th class="overline text-left px-4 py-2">N° Certificado</th>
+                  <th class="overline text-center px-4 py-2">Estado</th>
+                  <th class="overline text-right px-4 py-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -448,7 +416,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               >
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <p class="text-sm font-semibold text-text-primary truncate m-0">
+                    <p class="item-title truncate m-0">
                       {{ alumno.nombre }}
                     </p>
                     <p class="text-xs text-brand m-0">{{ alumno.rut }}</p>
@@ -610,6 +578,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() === 0"
+                  aria-label="Página anterior"
                   (click)="prevPageAlumnos()"
                 >
                   <app-icon name="chevron-left" [size]="16" />

@@ -93,7 +93,7 @@ const PAYMENT_METHODS: {
               <app-icon name="star" [size]="16" color="var(--ds-brand)" />
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-semibold truncate text-text-primary">
+              <p class="item-title truncate">
                 {{ curso.nombre }}
               </p>
               <p class="text-xs text-text-muted">
@@ -137,9 +137,7 @@ const PAYMENT_METHODS: {
           <div class="flex flex-col gap-5">
             <!-- Búsqueda por RUT -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-bold uppercase tracking-wide text-text-muted">
-                RUT del alumno *
-              </label>
+              <label class="overline"> RUT del alumno * </label>
               <p class="text-xs leading-relaxed text-text-secondary">
                 Puedes inscribir a cualquier persona, sea alumno nuevo o ya registrado. Al buscar el
                 RUT, si ya existe en la escuela (Clase B o Profesional) sus datos se pre-cargarán
@@ -198,7 +196,7 @@ const PAYMENT_METHODS: {
               >
                 <app-icon name="check-circle" [size]="18" color="var(--state-success)" />
                 <div>
-                  <p class="text-sm font-semibold text-text-primary">
+                  <p class="item-title">
                     {{ found.nombreCompleto }}
                   </p>
                   <p class="text-xs text-text-muted">
@@ -216,7 +214,7 @@ const PAYMENT_METHODS: {
                   class="mt-0.5 shrink-0"
                 />
                 <div>
-                  <p class="text-sm font-semibold text-text-primary">Alumno nuevo</p>
+                  <p class="item-title">Alumno nuevo</p>
                   <p class="text-xs leading-relaxed text-text-secondary">
                     Este RUT aún no está registrado en la escuela. Completa sus datos a continuación
                     para registrarlo e inscribirlo en el curso.
@@ -230,9 +228,7 @@ const PAYMENT_METHODS: {
               <div class="flex flex-col gap-4">
                 <div class="grid grid-cols-2 gap-3">
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                      >Nombres *</label
-                    >
+                    <label class="overline">Nombres *</label>
                     <input
                       type="text"
                       [(ngModel)]="form().firstNames"
@@ -244,9 +240,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                      >Ap. Paterno *</label
-                    >
+                    <label class="overline">Ap. Paterno *</label>
                     <input
                       type="text"
                       [(ngModel)]="form().paternalLastName"
@@ -258,9 +252,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                      >Ap. Materno</label
-                    >
+                    <label class="overline">Ap. Materno</label>
                     <input
                       type="text"
                       [(ngModel)]="form().maternalLastName"
@@ -271,9 +263,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                      >Teléfono</label
-                    >
+                    <label class="overline">Teléfono</label>
                     <input
                       type="tel"
                       [(ngModel)]="form().phone"
@@ -285,9 +275,7 @@ const PAYMENT_METHODS: {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >Email *</label
-                  >
+                  <label class="overline">Email *</label>
                   <input
                     type="email"
                     [(ngModel)]="form().email"
@@ -313,9 +301,7 @@ const PAYMENT_METHODS: {
                     }
                   </div>
                   <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                      >Género</label
-                    >
+                    <label class="overline">Género</label>
                     <div
                       class="flex rounded-lg overflow-hidden"
                       [style.border]="'1.5px solid var(--border-default)'"
@@ -349,9 +335,7 @@ const PAYMENT_METHODS: {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >Dirección</label
-                  >
+                  <label class="overline">Dirección</label>
                   <input
                     type="text"
                     [(ngModel)]="form().address"
@@ -387,8 +371,8 @@ const PAYMENT_METHODS: {
           <div class="flex flex-col gap-5">
             <!-- Resumen del alumno -->
             <div class="p-3 rounded-xl border bg-surface border-border-muted">
-              <p class="text-xs font-bold uppercase tracking-wide mb-1 text-text-muted">Alumno</p>
-              <p class="text-sm font-semibold text-text-primary">
+              <p class="overline mb-1">Alumno</p>
+              <p class="item-title">
                 {{ nombreAlumnoResumen() }}
               </p>
               <p class="text-xs text-text-muted">{{ form().rut }}</p>
@@ -448,6 +432,7 @@ const PAYMENT_METHODS: {
                 <button
                   type="button"
                   class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors text-error bg-error/10"
+                  aria-label="Quitar descuento"
                   (click)="clearDiscount()"
                   data-llm-action="quitar-descuento-singular"
                 >
@@ -456,9 +441,7 @@ const PAYMENT_METHODS: {
               </div>
             } @else {
               <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                  >Descuento (opcional)</label
-                >
+                <label class="overline">Descuento (opcional)</label>
                 <div class="grid grid-cols-2 gap-2">
                   <input
                     type="number"
@@ -492,9 +475,7 @@ const PAYMENT_METHODS: {
 
             <!-- Método de pago (2x2) -->
             <div class="flex flex-col gap-2">
-              <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                >Método de pago *</label
-              >
+              <label class="overline">Método de pago *</label>
               <div class="grid grid-cols-2 gap-2">
                 @for (method of paymentMethods; track method.value) {
                   <button

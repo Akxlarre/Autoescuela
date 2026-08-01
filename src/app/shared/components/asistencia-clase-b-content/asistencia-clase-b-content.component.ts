@@ -302,9 +302,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   [size]="18"
                   [style.color]="'var(--color-primary)'"
                 />
-                <h2 class="text-sm font-semibold text-text-primary">
-                  Asistencia del Día — Prácticas
-                </h2>
+                <h2 class="item-title">Asistencia del Día — Prácticas</h2>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Selector de fecha -->
@@ -526,6 +524,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               <!-- Marcar inasistencia (solo si ya pasó la hora) -->
                               @if (isPastStartTime(row.scheduledAt)) {
                                 <button
+                                  aria-label="Marcar inasistencia"
                                   class="p-1.5 rounded-md transition-colors cursor-pointer text-error"
                                   pTooltip="Marcar inasistencia"
                                   tooltipPosition="top"
