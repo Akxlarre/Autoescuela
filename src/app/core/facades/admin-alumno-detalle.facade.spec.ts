@@ -1378,4 +1378,69 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(ids).toEqual(expect.arrayContaining([1, 5]));
     });
   });
+
+  describe('fetchCertificateEmailSentMap — fix-012-i', () => {
+    function mockCertData(certs: any[], logs: any[]) {
+      const certsBuilder: any = {
+        select: vi.fn(() => certsBuilder),
+        in: vi.fn(() => certsBuilder),
+        eq: vi.fn(() => Promise.resolve({ data: certs, error: null })),
+      };
+      const logsBuilder: any = {
+        select: vi.fn(() => logsBuilder),
+        in: vi.fn(() => logsBuilder),
+        eq: vi.fn(() => Promise.resolve({ data: logs, error: null })),
+      };
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'certificates') return certsBuilder;
+        if (table === 'certificate_issuance_log') return logsBuilder;
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+    }
+
+    it('devuelve un mapa vacío si no hay enrollmentIds', async () => {
+      const result = await (facade as any).fetchCertificateEmailSentMap([]);
+      expect(result.size).toBe(0);
+    });
+
+    it('marca true solo para el enrollment con evento email_sent', async () => {
+      mockCertData(
+        [
+          { id: 900, enrollment_id: 100 },
+          { id: 901, enrollment_id: 200 },
+        ],
+        [{ certificate_id: 900 }],
+      );
+
+      const result = await (facade as any).fetchCertificateEmailSentMap([100, 200]);
+
+      expect(result.get(100)).toBe(true);
+      expect(result.get(200)).toBe(false);
+    });
+  });
+
+  describe('marcarComoExAlumno — fix-012-i', () => {
+    it('actualiza enrollments.status a completed y muestra toast de éxito', async () => {
+      const eqSpy = vi.fn().mockResolvedValue({ error: null });
+      const updateSpy = vi.fn(() => ({ eq: eqSpy }));
+      supabaseSpy.client.from = vi.fn(() => ({ update: updateSpy }));
+
+      await facade.marcarComoExAlumno(134);
+
+      expect(updateSpy).toHaveBeenCalledWith({ status: 'completed' });
+      expect(eqSpy).toHaveBeenCalledWith('id', 134);
+      expect(toastSpy.success).toHaveBeenCalledWith('Alumno marcado como ex-alumno correctamente.');
+    });
+
+    it('muestra toast de error si la actualización falla', async () => {
+      supabaseSpy.client.from = vi.fn(() => ({
+        update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: new Error('boom') }) })),
+      }));
+
+      await facade.marcarComoExAlumno(134);
+
+      expect(toastSpy.error).toHaveBeenCalledWith('No se pudo marcar al alumno como ex-alumno.');
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+  });
 });

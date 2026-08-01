@@ -404,6 +404,17 @@ export class AdminAlumnosFacade {
       const rows = validStudents
         .map((s) => this.mapToAlumnoTableRow(s))
         .filter((r) => r.status !== 'Finalizado');
+
+      // fix-012-i: marca los alumnos con curso completo (12/12 prácticas + certificado
+      // ya enviado) pero aún activos — todavía no se marcaron como ex-alumno.
+      const pendientesEgreso = await this.fetchCursoCompletoPendienteEgresoSet(
+        rows.map((r) => r.enrollmentId).filter((id): id is number => id !== undefined),
+      );
+      for (const row of rows) {
+        row.cursoCompletoPendienteEgreso =
+          row.enrollmentId !== undefined && pendientesEgreso.has(row.enrollmentId);
+      }
+
       this._alumnos.set(rows);
     } catch (err) {
       this._error.set(
@@ -459,6 +470,8 @@ export class AdminAlumnosFacade {
       pago_total: enrollment?.total_paid ?? 0,
       exp_teorico: 'pendiente',
       exp_practico: 'pendiente',
+      // Se completa en fetchAlumnosData() tras fetchCursoCompletoPendienteEgresoSet() (fix-012-i).
+      cursoCompletoPendienteEgreso: false,
       expediente: this.deriveExpediente(docs),
       expiresAt: enrollment?.expires_at ?? null,
       vencimiento: enrollment?.expires_at
@@ -466,6 +479,57 @@ export class AdminAlumnosFacade {
         : undefined,
       enrollmentId: enrollment?.id,
     };
+  }
+
+  /**
+   * fix-012-i: enrollment_ids con las 12 prácticas completas (evaluation_grade IS NOT NULL,
+   * mismo criterio que certificacion-clase-b.facade.ts) Y certificado ya enviado por email
+   * (certificates → certificate_issuance_log action='email_sent') — candidatos a "Marcar
+   * como Ex-Alumno" que todavía no se pasaron.
+   */
+  private async fetchCursoCompletoPendienteEgresoSet(
+    enrollmentIds: number[],
+  ): Promise<Set<number>> {
+    const result = new Set<number>();
+    if (enrollmentIds.length === 0) return result;
+
+    const { data: sessions } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('enrollment_id')
+      .in('enrollment_id', enrollmentIds)
+      .not('evaluation_grade', 'is', null);
+
+    const practiceCounts = new Map<number, number>();
+    for (const row of (sessions ?? []) as Array<{ enrollment_id: number }>) {
+      practiceCounts.set(row.enrollment_id, (practiceCounts.get(row.enrollment_id) ?? 0) + 1);
+    }
+    const completedIds = enrollmentIds.filter((id) => (practiceCounts.get(id) ?? 0) >= 12);
+    if (completedIds.length === 0) return result;
+
+    const { data: certs } = await this.supabase.client
+      .from('certificates')
+      .select('id, enrollment_id')
+      .in('enrollment_id', completedIds)
+      .eq('type', 'class_b');
+
+    const certRows = (certs ?? []) as Array<{ id: number; enrollment_id: number }>;
+    if (certRows.length === 0) return result;
+
+    const certIds = certRows.map((c) => c.id);
+    const { data: logs } = await this.supabase.client
+      .from('certificate_issuance_log')
+      .select('certificate_id')
+      .in('certificate_id', certIds)
+      .eq('action', 'email_sent');
+
+    const sentCertIds = new Set(
+      ((logs ?? []) as Array<{ certificate_id: number }>).map((l) => l.certificate_id),
+    );
+
+    for (const c of certRows) {
+      if (sentCertIds.has(c.id)) result.add(c.enrollment_id);
+    }
+    return result;
   }
 
   private deriveStatus(

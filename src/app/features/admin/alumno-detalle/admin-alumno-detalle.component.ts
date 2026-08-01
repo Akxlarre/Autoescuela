@@ -1303,11 +1303,28 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       });
     }
 
+    // fix-012-i: CTA destacada junto al nombre — solo cuando el certificado de Clase B
+    // ya se envió y la matrícula sigue activa (deja de mostrarse una vez marcado).
+    const exAlumnoActions: SectionHeroAction[] =
+      alumno.licenseGroup === 'class_b' &&
+      alumno.estado !== 'Finalizado' &&
+      alumno.certificateEmailSent
+        ? [
+            {
+              id: 'marcar-ex-alumno',
+              label: 'Marcar como Ex-Alumno',
+              icon: 'graduation-cap',
+              primary: true,
+            },
+          ]
+        : [];
+
     return [
       ...reagendarActions,
       ...contractActions,
       ...carnetActions,
       certAction,
+      ...exAlumnoActions,
       { id: 'editar-alumno', label: 'Editar Perfil', icon: 'user-pen', primary: true },
       {
         id: 'eliminar-alumno',
@@ -1416,6 +1433,23 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** fix-012-i: pasa la matrícula a ex-alumno (enrollments.status='completed'), con confirmación. */
+  protected async onMarcarExAlumno(): Promise<void> {
+    const alumno = this.facade.alumno();
+    if (!alumno?.enrollmentId || !alumno.certificateEmailSent) return;
+
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Marcar como Ex-Alumno',
+      message: `${alumno.nombre} pasará a la lista de Ex-Alumnos y dejará de aparecer en Alumnos. Esta acción no se puede deshacer desde la interfaz.`,
+      severity: 'danger',
+      confirmLabel: 'Marcar como Ex-Alumno',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    await this.facade.marcarComoExAlumno(alumno.enrollmentId);
+  }
+
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -1468,6 +1502,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         break;
       case 'subir-contrato-firmado':
         this.signedContractInputRef()?.nativeElement.click();
+        break;
+      case 'marcar-ex-alumno':
+        void this.onMarcarExAlumno();
         break;
     }
   }
