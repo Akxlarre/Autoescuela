@@ -26,6 +26,7 @@
 | ASG-b-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
 | ASG-b-028 | Fix H-010 + H-014 + H-018: Agenda muestra "Todos los instructores" pero carga uno específico, texto RBAC "solo visible para admin" se muestra a secretaria, chips "P" ambiguos en asistencia | `i` | fix | Baja | b | 3 fixes cosméticos pequeños y no relacionados entre sí — buen paquete para alguien con poco tiempo |
 | ASG-b-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
+| ASG-b-059 | Botón "Recordar" del rail de alertas de Asistencia B no envía nada (stub que muestra "Recordatorio enviado al alumno") + UX de los botones de alerta | cualquiera | fix | Alta | b | El toast miente: la secretaria cree que avisó a un alumno en riesgo y nadie se entera. Incluye `isSaving()` global (bloquea todas las filas), "Eliminar" destructivo sin confirmación y sin estado post-acción. Requiere decisión de negocio sobre qué significa "Recordar" |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -52,6 +53,22 @@
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
 | ASG-b-051 | Poder cambiar el código de autorización del libro de clases | `cualquiera` | fix | Baja | b | `class_book.sence_code` ya existe. **Confirmar que es ese el código** antes de estimar. ¿Se puede cambiar con el libro ya cerrado? |
+
+### Tanda auditoría del Design System — 2026-07-31
+
+> Revisión del DS completo (tokens, guardrails, vocabulario, a11y, doc) contrastando
+> `indices/STYLES.md` + `ANTI-PATTERNS.md` + los dos audits contra el código real.
+>
+> **Diagnóstico de fondo:** el DS es fuerte donde la mayoría son débiles (4 capas de
+> tokens + 8 guardrails AST con ratchet) y débil donde la mayoría son fuertes
+> (vocabulario de componentes y accesibilidad). Las 6 asignaciones atacan esa asimetría.
+>
+> **Orden recomendado:** `056` primero (es barata y el resto construye sobre esa doc),
+> después `053` y `054` en paralelo, `055` y `058` cuando haya hueco, `057` solo si el
+> equipo decide pagar el refactor.
+
+> ✅ **Tanda completa (2026-07-31)** — las 6 asignaciones (053-058) reclamadas y
+> cerradas. Ver sección "Completadas" más abajo para los tracks resultantes.
 
 ---
 
@@ -112,6 +129,12 @@
 | ASG-b-024 | Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores | [fix-075-b-buscador-global-datos-negocio](fixes/fix-075-b-buscador-global-datos-negocio/fix.md) | 2026-07-31 |
 | ASG-b-034 | Terminar la migración de `color-mix()` pendiente | [fix-076-b-color-mix-drift-y-criterio](fixes/fix-076-b-color-mix-drift-y-criterio/fix.md) | 2026-07-31 |
 | ASG-b-040 | Razones de reagendamiento (enum + "otro") | [fix-008-i-razones-reagendamiento](fixes/fix-008-i-razones-reagendamiento/fix.md) | 2026-07-31 |
+| ASG-b-053 | Vocabulario tipográfico: promover los clusters repetidos a clases del DS | [fix-078-b-vocabulario-tipografico-ds](fixes/fix-078-b-vocabulario-tipografico-ds/fix.md) | 2026-07-31 |
+| ASG-b-054 | Accesibilidad: 94 botones sin nombre accesible + foco en menús + primer guardrail a11y | [fix-079-b-accesibilidad-nombres-y-foco](fixes/fix-079-b-accesibilidad-nombres-y-foco/fix.md) | 2026-07-31 |
+| ASG-b-055 | Escala tipográfica: eliminar los tamaños ilegibles y cerrar el ratchet ARCH-17 | [fix-082-b-escala-tipografica-legible](fixes/fix-082-b-escala-tipografica-legible/fix.md) | 2026-07-31 |
+| ASG-b-056 | Alinear las fuentes de verdad del DS (la doc contradice al código) | [fix-077-b-alinear-fuentes-verdad-ds](fixes/fix-077-b-alinear-fuentes-verdad-ds/fix.md) | 2026-07-31 |
+| ASG-b-057 | Sprawl de la API pública del DS: 30+ clases bento y 9 variantes de botón | [fix-084-b-sprawl-api-ds-nivel1](fixes/fix-084-b-sprawl-api-ds-nivel1/fix.md) | 2026-07-31 |
+| ASG-b-058 | Cerrar la fase 4 del roadmap de badges (los 4 residuos) | [fix-083-b-cerrar-fase-4-badges](fixes/fix-083-b-cerrar-fase-4-badges/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -566,37 +566,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 **Índices:** `idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`
 
-### `class_b_reschedule_history` — 🔒 RLS — ✅ Aplicada manualmente por el usuario (fix-008-i)
-
-> Migración entregada como SQL en `specs/fixes/fix-008-i-razones-reagendamiento/fix.md` — no
-> escrita a `supabase/migrations/` (el usuario aplica migraciones manualmente). Documentada acá
-> para que quede registrada aunque el archivo `.sql` no exista en el repo. Confirmada aplicada y
-> funcionando en QA visual (fix-009-i).
-
-> Historial de reagendamientos de `class_b_sessions` (RF-053 recicla la fila in-place, así que
-> esta tabla es la única forma de conservar razón + fecha/instructor anteriores). **fix-009-i:**
-> `AdminAlumnoDetalleFacade.loadHistorialReagendamientos()` hace join a
-> `class_b_sessions(class_number)` vía `class_session_id` para poder mostrar "Clase #N" en el
-> drawer y distinguir filas con la misma razón/fecha.
-
-| Columna | Tipo | Null | Default | FK |
-|---------|------|------|---------|----|
-| `id` PK | SERIAL | NO | — | — |
-| `class_session_id` | INT | NO | — | → `class_b_sessions.id` |
-| `enrollment_id` | INT | NO | — | → `enrollments.id` |
-| `old_scheduled_at` | TIMESTAMPTZ | sí | — | — |
-| `new_scheduled_at` | TIMESTAMPTZ | NO | — | — |
-| `old_instructor_id` | INT | sí | — | → `instructors.id` |
-| `new_instructor_id` | INT | NO | — | → `instructors.id` |
-| `reason` | TEXT | NO | — | — |
-| `reason_other` | TEXT | sí | — | — |
-| `registered_by` | INT | sí | — | → `users.id` |
-| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
-
-**Policies (calcadas de `class_b_sessions`):** admin + secretaria, CRUD completo.
-
-**Índices:** `idx_class_b_reschedule_history_enrollment_id`
-
 ### `class_b_theory_cycles` — 🔒 RLS
 
 > Ciclos teóricos Clase B (Spec 0001): cohorte de 2 semanas, 6 clases L/X/V. '
