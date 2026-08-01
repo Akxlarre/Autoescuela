@@ -30,6 +30,46 @@ import { AjustesDrawerComponent } from '@shared/components/ajustes-drawer/ajuste
 import { Button } from 'primeng/button';
 
 /**
+ * Tabla de deep-links por `referenceType` × rol (Spec 0024, AC3; extendida fix-092-m).
+ * Un tipo sin ruta para el rol actual devuelve `null` — el caller solo cierra el panel,
+ * sin navegar ni error. Función pura (Functional Core) para poder testearla sin TestBed.
+ */
+export function resolveNotificationRoute(
+  referenceType: Notification['referenceType'],
+  referenceId: Notification['referenceId'],
+  role: string | undefined,
+): string | null {
+  const isSecretaria = role === 'secretary' || role === 'secretaria';
+
+  switch (referenceType) {
+    case 'task':
+      if (role === 'admin') return '/app/admin/tareas';
+      if (isSecretaria) return '/app/secretaria/observaciones';
+      if (role === 'instructor') return '/app/instructor/tareas';
+      return null;
+    case 'preinscription':
+      if (role === 'admin') return '/app/admin/clase-profesional/pre-inscritos';
+      if (isSecretaria) return '/app/secretaria/profesional/pre-inscritos';
+      return null;
+    case 'enrollment':
+      if (role === 'admin') return referenceId ? `/app/admin/alumnos/${referenceId}` : null;
+      if (isSecretaria) return referenceId ? `/app/secretaria/alumnos/${referenceId}` : null;
+      if (role === 'alumno') return '/app/alumno/dashboard';
+      return null;
+    case 'class_b':
+      if (role === 'instructor') return '/app/instructor/horario';
+      if (role === 'alumno') return '/app/alumno/horario';
+      if (isSecretaria) return '/app/secretaria/agenda';
+      return null;
+    case 'certificate':
+      if (role === 'alumno') return '/app/alumno/dashboard';
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
  * TopbarComponent — barra superior de la aplicación.
  *
  * Smart component: inyecta LayoutService, AuthFacade, NotificationsFacade,
@@ -286,36 +326,7 @@ export class TopbarComponent {
     this.panelOpen.set(false);
 
     const role = this.auth.currentUser()?.role as string | undefined;
-    const isSecretaria = role === 'secretary' || role === 'secretaria';
-    const refId = n.referenceId;
-
-    const route: string | null = (() => {
-      switch (n.referenceType) {
-        case 'task':
-          if (role === 'admin') return '/app/admin/tareas';
-          if (isSecretaria) return '/app/secretaria/observaciones';
-          if (role === 'instructor') return '/app/instructor/tareas';
-          return null;
-        case 'preinscription':
-          if (role === 'admin') return '/app/admin/clase-profesional/pre-inscritos';
-          if (isSecretaria) return '/app/secretaria/profesional/pre-inscritos';
-          return null;
-        case 'enrollment':
-          if (role === 'admin') return refId ? `/app/admin/alumnos/${refId}` : null;
-          if (isSecretaria) return refId ? `/app/secretaria/alumnos/${refId}` : null;
-          if (role === 'alumno') return '/app/alumno/dashboard';
-          return null;
-        case 'class_b':
-          if (role === 'instructor') return '/app/instructor/horario';
-          if (role === 'alumno') return '/app/alumno/horario';
-          return null;
-        case 'certificate':
-          if (role === 'alumno') return '/app/alumno/dashboard';
-          return null;
-        default:
-          return null;
-      }
-    })();
+    const route = resolveNotificationRoute(n.referenceType, n.referenceId, role);
 
     if (!route) return;
     void this.router.navigateByUrl(route);

@@ -1,6 +1,6 @@
 # Asignación ASG-b-044 — Alerta a secretaría cuando un instructor cierra una clase
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P3
@@ -9,6 +9,7 @@
 > **claimed_by:** m
 > **claimed_at:** 2026-08-01
 > **resulting_track:** fix-091-m-alerta-secretaria-cierre-clase
+> **closed_at:** 2026-08-01
 
 ---
 

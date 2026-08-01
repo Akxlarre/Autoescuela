@@ -250,6 +250,12 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                       (ngModelChange)="editSenceCode.set($event)"
                       data-llm-description="input for SENCE authorized code"
                     />
+                    @if (cab.senceCodeUpdatedAt) {
+                      <p class="mt-1 text-xs text-text-muted">
+                        Última modificación: {{ cab.senceCodeUpdatedByName || '—' }} ·
+                        {{ formatTimestamp(cab.senceCodeUpdatedAt) }}
+                      </p>
+                    }
                   </div>
                   <div>
                     <label class="mb-1 block text-xs font-medium text-text-secondary"
@@ -853,5 +859,16 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
     if (!dateStr) return '';
     const d = new Date(dateStr + 'T12:00:00');
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  formatTimestamp(isoStr: string): string {
+    if (!isoStr) return '—';
+    return new Date(isoStr).toLocaleString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 }

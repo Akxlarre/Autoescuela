@@ -259,6 +259,70 @@
   (`core/utils/course-resolution.utils.ts`) en vez de un `.find()` manual.
 - **Fuente:** `specs/fixes/fix-013-i-precio-profesional-a2-incorrecto`, `specs/assignments/ASG-b-016-fix-h029-precio-profesional-incorrecto.md`
 
+### DG-041 — `log_change()` solo resuelve `entity_label` legible para un subconjunto de tablas; el resto cae a `id=X`
+- **Trampa:** asumir que cualquier tabla con trigger `trg_audit_*` → `log_change()` produce un
+  detalle de auditoría legible ("Registrado: Juan Pérez"). Migrar una tabla nueva a auditoría
+  agregando solo el `CREATE TRIGGER ... EXECUTE FUNCTION log_change()` (sin tocar la función)
+  no alcanza.
+- **Realidad:** `log_change()` resuelve `v_entity_label` con una cadena `IF/ELSIF` explícita por
+  `TG_TABLE_NAME`. Cualquier tabla sin rama propia cae al `ELSE` genérico
+  (`'id=' || COALESCE(v_src->>'id', '?')`), produciendo entradas inútiles como
+  `"Creado: id=97"`. Antes de `fix-097-m` (`20260801120000_audit_log_enrich_missing_entities.sql`)
+  esto afectaba a `student_documents`, `certificates`, `vehicles`, `vehicle_documents`,
+  `maintenance_records`, `class_b_theory_sessions`, `promotion_courses`, `class_book`,
+  `professional_theory_sessions`, `professional_practice_sessions` y
+  `professional_module_grades` — 11 de las ~23 tablas auditadas. Además, la migración
+  `20260614201000_enrich_audit_log_trigger.sql` reemplazó por completo la versión anterior de
+  `log_change()` (`20260323130000`) y en el camino **perdió sin querer** el skip de acciones de
+  admin y la resolución de `user_id` vía header `x-audit-user-id` (Edge Functions) — esa
+  regresión sigue sin corregir, quedó documentada en `indices/DATABASE.md` pero fuera del
+  alcance de `fix-097-m` (una sola causa raíz por fix). Al agregar auditoría a una tabla nueva,
+  siempre agregar también su rama `ELSIF` en `log_change()`, no solo el trigger.
+- **Fuente:** `specs/fixes/fix-097-m-auditoria-detalle-enriquecido`
+
+### DG-042 — `audit_log` no registró NINGUNA acción entre 2026-06-14 y 2026-08-01 (bug `record ->> texto`)
+- **Trampa:** asumir que porque `audit_log` tiene filas y la UI de Auditoría las muestra, el
+  trigger `log_change()` está funcionando en el presente. Un `SELECT COUNT(*) FROM audit_log`
+  con resultados > 0 no prueba que siga insertando — puede estar mostrando solo historial
+  viejo.
+- **Realidad:** la migración `20260614201000_enrich_audit_log_trigger.sql` declaró la variable
+  de trabajo `v_src` como `record` y luego usó `v_src->>'columna'` en casi cada línea de la
+  función. El operador `->>` **no existe para el tipo `record`/fila compuesta en Postgres**
+  (solo para `json`/`jsonb`) — la función rompía literalmente en la primera operación después
+  del `BEGIN`, para **cualquier tabla y cualquier operación** (INSERT/UPDATE/DELETE). El
+  `EXCEPTION WHEN OTHERS` que envuelve toda la función atrapaba el error, hacía
+  `RAISE WARNING 'audit_log error: %'` y retornaba `NEW`/`OLD` sin insertar nada — silencioso
+  a nivel de aplicación (no rompe la transacción principal, por diseño), pero significa que
+  **desde 2026-06-14 hasta el fix de 2026-08-01, ninguna acción de ninguna secretaria/admin
+  quedó auditada**. Se detectó al verificar empíricamente `fix-099-m` contra Supabase local
+  (`docker exec supabase_db_Autoescuela psql`): un `UPDATE` de prueba lanzaba
+  `WARNING: audit_log error: operator does not exist: <tabla> ->> unknown` y no dejaba fila
+  nueva. Se corrigió cambiando `v_src` a `jsonb` con `to_jsonb(OLD)`/`to_jsonb(NEW)`. Lección:
+  cualquier cambio a `log_change()` debe verificarse con un INSERT/UPDATE/DELETE real contra
+  Supabase local (`npx supabase db push --local` + docker exec psql), no solo revisando el
+  SQL a simple vista — los `EXCEPTION WHEN OTHERS` genéricos en triggers de auditoría ocultan
+  este tipo de rotura por completo.
+- **Fuente:** `specs/fixes/fix-099-m-audit-log-header-user-id-perdido`
+
+### DG-043 — `log_change()` tiene múltiples migraciones que la redefinen completa; agregar una rama `ELSIF` en una sola no alcanza
+- **Trampa:** agregar la rama `ELSIF TG_TABLE_NAME = 'tabla_nueva'` en la migración que
+  "parece" la más reciente (`20260801120000_audit_log_enrich_missing_entities.sql`, la de
+  `fix-097-m`) y asumir que ya quedó cubierta en la BD real.
+- **Realidad:** `20260801140000_audit_log_restore_header_user_id.sql` (`fix-099-m`) corre
+  **después** y hace su propio `CREATE OR REPLACE FUNCTION log_change()` completo — copiado
+  del cuerpo de la función *antes* de que `fix-097-m` agregara sus ramas nuevas. Como Postgres
+  no tiene "diff de funciones", cada `CREATE OR REPLACE` reemplaza el cuerpo entero: la versión
+  que gana es la de la migración con el timestamp más alto, sin importar en qué migración
+  intermedia se agregó una rama. `website_config` cayó en este hueco (fix-097-m no la incluyó
+  porque no estaba en su lista de triggers auditados, y aunque se le hubiera agregado ahí,
+  `fix-099-m` la habría vuelto a perder igual). **Antes de agregar/tocar una rama de
+  `log_change()`, buscar cuál es la migración con el timestamp MÁS ALTO que contenga
+  `CREATE OR REPLACE FUNCTION public.log_change()` (`grep -rl "FUNCTION public.log_change" supabase/migrations | sort | tail -1`) y aplicar el cambio ahí — es la única versión
+  que realmente queda vigente.** Verificar siempre contra la BD local
+  (`docker exec supabase_db_Autoescuela psql -c "SELECT pg_get_functiondef('public.log_change'::regproc)"`),
+  no contra el archivo de migración que uno cree que es el "correcto".
+- **Fuente:** `specs/fixes/fix-100-m-auditoria-website-config-sin-enriquecer`
+
 ---
 
 ## Convención para agregar una entrada nueva
