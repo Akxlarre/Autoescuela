@@ -244,6 +244,21 @@
   no había excusa de ambigüedad para no filtrar.
 - **Fuente:** `specs/fixes/fix-090-m-drawers-scope-sede`, `specs/assignments/ASG-b-043-drawers-informacion-de-sede.md`
 
+### DG-040 — `EnrollmentFacade.loadCourses()` sin `branchId` explícito carga cursos de TODAS las sedes mezclados
+- **Trampa:** asumir que `_courses()` en `EnrollmentFacade` siempre está acotado a una sola
+  sede, y buscar un curso ahí filtrando solo por `license_class` (ej. `'A2'`, `'B'`).
+- **Realidad:** `loadCourses(branchId?: number)` solo aplica `.eq('branch_id', ...)` si
+  `branchId` (o el fallback `user?.branchId`) resuelve a un valor. Si se llama sin argumento
+  desde un contexto donde el usuario no tiene una sede propia (ej. un admin reanudando un
+  borrador vía `resumeDraft()`), no hay filtro y `_courses()` termina con cursos de **todas
+  las sedes**. Como los cursos "Profesional" (A2–A5) solo existen en la sede "Conductores
+  Chillán" y esa misma sede tiene un curso "Clase B" a un precio distinto, un `.find()` por
+  `license_class` sin `branch_id` puede resolver al curso equivocado — causó que una
+  matrícula Profesional A2 ($800.000) se cobrara al precio de Clase B de otra sede
+  ($180.000). Usar siempre `findCourseByLicenseClass(courses, licenseClass, { branchId })`
+  (`core/utils/course-resolution.utils.ts`) en vez de un `.find()` manual.
+- **Fuente:** `specs/fixes/fix-013-i-precio-profesional-a2-incorrecto`, `specs/assignments/ASG-b-016-fix-h029-precio-profesional-incorrecto.md`
+
 ---
 
 ## Convención para agregar una entrada nueva

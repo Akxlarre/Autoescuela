@@ -17,6 +17,7 @@ import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reen
 import { toISODate, to24hTime } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
+import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
   EnrollmentPersonalData,
@@ -141,7 +142,7 @@ export class EnrollmentFacade {
     const pd = this._personalData();
     if (!pd || pd.courseCategory !== 'non-professional') return 0;
     const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
-    const course = this._courses().find((c) => c.license_class === licenseClass);
+    const course = findCourseByLicenseClass(this._courses(), licenseClass);
     return course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
   });
 
@@ -247,8 +248,9 @@ export class EnrollmentFacade {
       .slice(0, 2)
       .map((w) => w[0].toUpperCase())
       .join('');
-    const course = this._courses().find(
-      (c) => c.license_class === this.courseTypeToLicenseClass(pd.courseType),
+    const course = findCourseByLicenseClass(
+      this._courses(),
+      this.courseTypeToLicenseClass(pd.courseType),
     );
     const baseName = course?.name ?? this.courseTypeToLicenseClass(pd.courseType);
     const convSuffix = pd.convalidatesSimultaneously
@@ -543,7 +545,7 @@ export class EnrollmentFacade {
           const fullName =
             `${existing.firstNames} ${existing.paternalLastName} ${existing.maternalLastName}`.trim();
           const licenseClass = this.courseTypeToLicenseClass(data.courseType);
-          const course = this._courses().find((c) => c.license_class === licenseClass);
+          const course = findCourseByLicenseClass(this._courses(), licenseClass, { branchId });
           const courseName = course?.name ?? licenseClass;
 
           // Veredicto de re-matrícula en el MISMO curso (fix-020).
@@ -1559,8 +1561,9 @@ export class EnrollmentFacade {
 
       const user = (student as any).users;
 
-      // 3. Cargar cursos para resolver courseType
-      await this.loadCourses();
+      // 3. Cargar cursos para resolver courseType (acotado a la sede del enrollment
+      //    para no contaminar _courses() con cursos de otras sedes)
+      await this.loadCourses(enrollment.branch_id ?? undefined);
       const course = this._courses().find((c) => c.id === enrollment.course_id);
 
       if (!course) {
@@ -2071,14 +2074,7 @@ export class EnrollmentFacade {
     // Para SENCE vs no-SENCE, filtrar por si el código incluye 'sence'
     const licenseClass = this.courseTypeToLicenseClass(data.courseType);
     const isSence = data.courseType.includes('sence');
-    const course = this._courses().find(
-      (c) =>
-        c.license_class === licenseClass &&
-        c.branch_id === branchId &&
-        (isSence
-          ? c.code?.toLowerCase().includes('sence')
-          : !c.code?.toLowerCase().includes('sence')),
-    );
+    const course = findCourseByLicenseClass(this._courses(), licenseClass, { branchId, isSence });
 
     if (!course) {
       this._error.set(`No se encontró un curso activo para la clase ${licenseClass} en esta sede`);
