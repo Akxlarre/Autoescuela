@@ -55,7 +55,13 @@ function setup(tables: Record<string, TableConfig> = {}) {
       {
         provide: AuthFacade,
         useValue: {
-          currentUser: vi.fn(() => ({ role: 'admin', branchId: 1, canAccessBothBranches: false })),
+          currentUser: vi.fn(() => ({
+            dbId: 42,
+            name: 'Ana Admin',
+            role: 'admin',
+            branchId: 1,
+            canAccessBothBranches: false,
+          })),
         },
       },
       { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
@@ -254,10 +260,17 @@ describe('LibroDeClasesFacade', () => {
       expect(ok).toBe(true);
       const insertMock = mockSupabase._builders.get('class_book').insert;
       expect(insertMock).toHaveBeenCalledWith(
-        expect.objectContaining({ period: 'P26', promotion_course_id: 5, status: 'draft' }),
+        expect.objectContaining({
+          period: 'P26',
+          promotion_course_id: 5,
+          status: 'draft',
+          sence_code_updated_by: 42,
+          sence_code_updated_at: expect.any(String),
+        }),
       );
       expect(facade.cabecera()?.classBookId).toBe(55);
       expect(facade.cabecera()?.senceCode).toBe('SENCE-1');
+      expect(facade.cabecera()?.senceCodeUpdatedByName).toBe('Ana Admin');
       expect(mockToast.success).toHaveBeenCalled();
     });
 
@@ -271,9 +284,29 @@ describe('LibroDeClasesFacade', () => {
       const ok = await facade.saveClassBookFields('NEW', 'Sáb 10:00');
       expect(ok).toBe(true);
       const updateMock = mockSupabase._builders.get('class_book').update;
-      expect(updateMock).toHaveBeenCalledWith({ sence_code: 'NEW', horario: 'Sáb 10:00' });
+      expect(updateMock).toHaveBeenCalledWith({
+        sence_code: 'NEW',
+        horario: 'Sáb 10:00',
+        sence_code_updated_by: 42,
+        sence_code_updated_at: expect.any(String),
+      });
       expect(facade.cabecera()?.classBookId).toBe(7);
       expect(facade.cabecera()?.senceCode).toBe('NEW');
+      expect(facade.cabecera()?.senceCodeUpdatedByName).toBe('Ana Admin');
+    });
+
+    it('código SENCE sin cambios (solo cambia horario) → no toca el rastro de auditoría', async () => {
+      const tables = cursoCompleto();
+      tables['class_book'] = {
+        maybeSingle: { data: { id: 7, sence_code: 'SAME', horario: 'x' }, error: null },
+      };
+      const { facade, mockSupabase } = setup(tables);
+      await facade.selectPromocion(1);
+      const ok = await facade.saveClassBookFields('SAME', 'Nuevo horario');
+      expect(ok).toBe(true);
+      const updateMock = mockSupabase._builders.get('class_book').update;
+      expect(updateMock).toHaveBeenCalledWith({ sence_code: 'SAME', horario: 'Nuevo horario' });
+      expect(facade.cabecera()?.senceCodeUpdatedByName).toBeNull();
     });
 
     it('sin curso seleccionado → false sin tocar la BD', async () => {

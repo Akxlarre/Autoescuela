@@ -31,8 +31,8 @@ const PAGE_SIZE = 25;
 
 @Injectable({ providedIn: 'root' })
 export class AuditoriaFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -54,6 +54,9 @@ private readonly supabase = inject(SupabaseService);
 
   private _isExporting = signal(false);
   readonly isExporting = this._isExporting.asReadonly();
+
+  private _selectedLog = signal<AuditLogRow | null>(null);
+  readonly selectedLog = this._selectedLog.asReadonly();
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -130,6 +133,10 @@ private readonly supabase = inject(SupabaseService);
     void this.fetchLogs();
   }
 
+  selectLog(log: AuditLogRow): void {
+    this._selectedLog.set(log);
+  }
+
   // ── Fetch privado ───────────────────────────────────────────────────────────
 
   private async fetchLogs(): Promise<void> {
@@ -160,7 +167,8 @@ private readonly supabase = inject(SupabaseService);
             paternal_last_name,
             email,
             branch_id,
-            roles!inner ( name )
+            roles!inner ( name ),
+            branches ( name )
           )
         `,
           { count: 'exact' },
@@ -205,7 +213,10 @@ private readonly supabase = inject(SupabaseService);
       this._totalCount.set(count ?? 0);
       this._logs.set((data ?? []).map((row: any) => this.mapToRow(row)));
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el log de auditoría';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar el log de auditoría';
       this._error.set(msg);
       this.toast.error(msg);
     } finally {
@@ -294,6 +305,7 @@ private readonly supabase = inject(SupabaseService);
       fechaHora: raw.created_at,
       usuarioNombre: user ? `${user.first_names} ${user.paternal_last_name}` : '—',
       usuarioEmail: user?.email ?? '—',
+      sedeNombre: user?.branches?.name ?? '—',
       accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
       modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '—',
       detalle: raw.detail ?? '—',
