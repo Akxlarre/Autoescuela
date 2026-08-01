@@ -42,8 +42,6 @@
 | ASG-b-036 | 🔴 Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **BLOQUEADA.** Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-b-010 |
 | ASG-b-037 | 🔴 Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **BLOQUEADA.** `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. La cuadratura es un **arqueo físico**: sobrescribirla borra la evidencia del descuadre |
 | ASG-b-038 | 🔴 Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **BLOQUEADA.** Choca con `CHECK (class_number BETWEEN 1 AND 12)` y el gate del certificado. ⚠️ Coordinar con ASG-b-014 |
-| ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | `m` | fix | Media | b | **La auditoría de cuáles drawers es parte de la tarea.** Reusar `resolveBranchScope()` de fix-027, no escribir uno nuevo. Ojo con la regresión inversa (fix-002-b) |
-| ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | `m` | fix | Baja | b | Extender `notify_class_b_completed()`, que ya notifica al alumno. ⚠️ Coordinar con ASG-b-036 (¿el cierre automático también alerta?) |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `cualquiera` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
 | ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `cualquiera` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
@@ -62,6 +60,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | `m` | [fix-091-m-alerta-secretaria-cierre-clase](fixes/fix-091-m-alerta-secretaria-cierre-clase/fix.md) | 2026-08-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
