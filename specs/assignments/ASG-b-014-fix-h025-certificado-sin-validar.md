@@ -1,14 +1,14 @@
 # Asignación ASG-b-014 — Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-01
+> **resulting_track:** fix-011-i-certificado-clase-b-gate-validacion
 
 ---
 

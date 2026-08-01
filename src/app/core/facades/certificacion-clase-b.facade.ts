@@ -113,8 +113,8 @@ export class CertificacionClaseBFacade {
    * persiste el PATH en `enrollments.certificate_b_pdf_url` y abre el visor
    * con la signed URL devuelta directamente por la Edge Function (TTL 1h).
    */
-  async generarCertificado(enrollmentId: number): Promise<void> {
-    const result = await this.invokeGenerateCertificate(enrollmentId);
+  async generarCertificado(enrollmentId: number, force = false): Promise<void> {
+    const result = await this.invokeGenerateCertificate(enrollmentId, force);
     if (!result) return;
     this.toast.success('Certificado generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
@@ -184,15 +184,19 @@ export class CertificacionClaseBFacade {
 
   private async invokeGenerateCertificate(
     enrollmentId: number,
+    force = false,
   ): Promise<{ url: string; path: string } | null> {
     this._generatingId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-certificate-b-pdf',
-        { body: { enrollment_id: enrollmentId } },
+        { body: { enrollment_id: enrollmentId, force } },
       );
       if (error || !data?.pdfUrl) {
-        this.toast.error('No se pudo generar el certificado');
+        // fix-011-i (H-025): el gate server-side devuelve un mensaje específico
+        // (ej. "no cumple el mínimo de clases prácticas") — mostrarlo si existe,
+        // en vez de un genérico que oculta la razón real del rechazo.
+        this.toast.error(data?.error ?? 'No se pudo generar el certificado');
         return null;
       }
       return { url: data.pdfUrl as string, path: data.pdfPath as string };

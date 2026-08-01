@@ -15,8 +15,13 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { escapePdfWinAnsi, textWidth, loadPngForPdf, assemblePdf, wrapLines as wrap } from '../_shared/pdf-utils.ts';
-
+import {
+  escapePdfWinAnsi,
+  textWidth,
+  loadPngForPdf,
+  assemblePdf,
+  wrapLines as wrap,
+} from '../_shared/pdf-utils.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -47,7 +52,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { enrollment_id } = await req.json();
+    const { enrollment_id, force } = await req.json();
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
@@ -57,8 +62,9 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // 0. Obtener user_id interno del caller (para auditoría)
+    // 0. Obtener user_id interno del caller (para auditoría) + su rol (para el bypass admin del gate H-025)
     let callerUserId: number | null = null;
+    let callerRole: string | null = null;
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
       const userClient = createClient(
@@ -72,10 +78,11 @@ Deno.serve(async (req: Request) => {
       if (caller) {
         const { data: callerRow } = await supabase
           .from('users')
-          .select('id')
+          .select('id, roles ( name )')
           .eq('supabase_uid', caller.id)
           .maybeSingle();
         callerUserId = callerRow?.id ?? null;
+        callerRole = callerRow?.roles?.name ?? null;
       }
     }
 
@@ -96,6 +103,34 @@ Deno.serve(async (req: Request) => {
 
     if (enrollmentErr || !enrollment) {
       return jsonRes({ error: `Enrollment ${enrollment_id} no encontrado` }, 404);
+    }
+
+    // 1.5 Gate H-025: exigir 12 prácticas completadas antes de emitir el certificado.
+    //     Mismo criterio que certificacion-clase-b.facade.ts (evaluation_grade IS NOT NULL) —
+    //     NO usar status='completed' (eso es solo para las fechas del texto del certificado).
+    //     Un admin puede saltarse el gate explícitamente con `force: true` (mismo bypass que
+    //     ya existe en la UI de admin); una secretaría nunca puede, aunque mande force=true.
+    const { count: clasesCompletadas, error: countErr } = await supabase
+      .from('class_b_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('enrollment_id', enrollment_id)
+      .not('evaluation_grade', 'is', null);
+
+    if (countErr) {
+      return jsonRes({ error: `Error al validar prácticas: ${countErr.message}` }, 500);
+    }
+
+    const REQUIRED_PRACTICAS = 12;
+    const isEligible = (clasesCompletadas ?? 0) >= REQUIRED_PRACTICAS;
+    const isAdminBypass = force === true && callerRole === 'admin';
+
+    if (!isEligible && !isAdminBypass) {
+      return jsonRes(
+        {
+          error: `El alumno no cumple el mínimo de clases prácticas completadas (${clasesCompletadas ?? 0}/${REQUIRED_PRACTICAS}).`,
+        },
+        400,
+      );
     }
 
     const u = enrollment.students.users;
