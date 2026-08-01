@@ -26,13 +26,13 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Notificaciones"
         subtitle="Centro de alertas y mensajes importantes"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions"
+        density="slim"
         (actionClick)="onHeroAction($event)"
       />
 

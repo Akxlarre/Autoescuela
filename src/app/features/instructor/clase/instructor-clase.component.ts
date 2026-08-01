@@ -34,12 +34,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <app-section-hero
-        class="bento-hero"
         title="Iniciar Clase"
         subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions"
+        density="slim"
       />
 
       <div class="bento-banner">
@@ -153,9 +153,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div
                   class="w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
                 >
-                  <span class="text-2xs uppercase tracking-wider font-bold text-brand"
-                    >Ruta</span
-                  >
+                  <span class="text-2xs uppercase tracking-wider font-bold text-brand">Ruta</span>
                   <span class="text-xl font-display font-bold text-brand leading-none mt-0.5">{{
                     cls.classNumber
                   }}</span>

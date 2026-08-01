@@ -85,23 +85,23 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 
         <!-- ── Layout con skeletons inline ── -->
       } @else {
-        <!-- Hero — direct child → bento-hero host class aplica grid span -->
         @if (facade.detailLoading()) {
           <div class="bento-banner">
             <app-skeleton-block variant="rect" width="100%" height="120px" />
           </div>
         } @else if (facade.studentDetail(); as detail) {
-          <div class="bento-banner">
-            <app-section-hero
-              [contextLine]="heroContextLine"
-              [title]="detail.name"
-              [subtitle]="detail.courseName"
-              [chips]="heroChips()"
-              [actions]="heroActions"
-              backRoute="/app/instructor/alumnos"
-              backLabel="Mis Alumnos"
-            />
-          </div>
+          <!-- Hero — hijo directo del grid: el host de app-section-hero se autoaplica
+               bento-banner (density="slim") para el grid span, sin wrapper redundante -->
+          <app-section-hero
+            [contextLine]="heroContextLine"
+            [title]="detail.name"
+            [subtitle]="detail.courseName"
+            [chips]="heroChips()"
+            [actions]="heroActions"
+            backRoute="/app/instructor/alumnos"
+            backLabel="Mis Alumnos"
+            density="slim"
+          />
         }
 
         <!-- ── Contenido principal ── -->

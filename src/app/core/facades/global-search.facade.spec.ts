@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalSearchFacade, buildAlumnoQuickActions } from './global-search.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
+import { InstructoresFacade } from '@core/facades/instructores.facade';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,13 +20,42 @@ const makeAlumno = (overrides: Record<string, string> = {}) => ({
   ...overrides,
 });
 
+const makeInstructorStudent = (overrides: Record<string, unknown> = {}) => ({
+  studentId: 1,
+  enrollmentId: 10,
+  name: 'Pedro Soto',
+  rut: '11.111.111-1',
+  statusLabel: 'Activo',
+  ...overrides,
+});
+
+const makeInstructor = (overrides: Record<string, unknown> = {}) => ({
+  id: 1,
+  nombre: 'María López',
+  rut: '9.999.999-9',
+  ...overrides,
+});
+
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const currentUser$ = signal<{ role: string } | null>({ role: 'admin' });
 const alumnos$ = signal<ReturnType<typeof makeAlumno>[]>([]);
+const instructorStudents$ = signal<ReturnType<typeof makeInstructorStudent>[]>([]);
+const instructores$ = signal<ReturnType<typeof makeInstructor>[]>([]);
 
 const authMock = { currentUser: currentUser$.asReadonly() };
-const alumnosMock = { alumnos: alumnos$.asReadonly() };
+const adminAlumnosMock = {
+  alumnos: alumnos$.asReadonly(),
+  loadAlumnos: vi.fn().mockResolvedValue(undefined),
+};
+const instructorAlumnosMock = {
+  students: instructorStudents$.asReadonly(),
+  initialize: vi.fn().mockResolvedValue(undefined),
+};
+const instructoresMock = {
+  instructores: instructores$.asReadonly(),
+  initialize: vi.fn().mockResolvedValue(undefined),
+};
 const routerMock = { navigate: vi.fn().mockResolvedValue(true) };
 
 // ── Suite ────────────────────────────────────────────────────────────────────
@@ -36,12 +67,16 @@ describe('GlobalSearchFacade', () => {
     vi.clearAllMocks();
     currentUser$.set({ role: 'admin' });
     alumnos$.set([]);
+    instructorStudents$.set([]);
+    instructores$.set([]);
 
     TestBed.configureTestingModule({
       providers: [
         GlobalSearchFacade,
         { provide: AuthFacade, useValue: authMock },
-        { provide: AdminAlumnosFacade, useValue: alumnosMock },
+        { provide: AdminAlumnosFacade, useValue: adminAlumnosMock },
+        { provide: InstructorAlumnosFacade, useValue: instructorAlumnosMock },
+        { provide: InstructoresFacade, useValue: instructoresMock },
         { provide: Router, useValue: routerMock },
       ],
     });
@@ -92,6 +127,12 @@ describe('GlobalSearchFacade', () => {
     it('should use the given studentId in the view route', () => {
       const actions = buildAlumnoQuickActions(base, prefix, 'xyz-999');
       expect(actions[0].route[0]).toContain('xyz-999');
+    });
+
+    it('should return only "Ver Ficha" for role instructor', () => {
+      const actions = buildAlumnoQuickActions(base, prefix, id, 'instructor');
+      expect(actions).toHaveLength(1);
+      expect(actions[0].actionType).toBe('view');
     });
   });
 
@@ -186,6 +227,91 @@ describe('GlobalSearchFacade', () => {
       const result = facade.alumnoResults()[0];
       expect(result.route[0]).toContain('/app/admin/');
     });
+
+    // ── Scope por rol (H-031 / ampliación cliente 2026-07-28) ─────────────
+
+    it('instructor role: reads from InstructorAlumnosFacade, not AdminAlumnosFacade', () => {
+      currentUser$.set({ role: 'instructor' });
+      alumnos$.set([makeAlumno({ nombre: 'Otro', apellido: 'DeAdmin' })]);
+      instructorStudents$.set([makeInstructorStudent({ name: 'Pedro Soto' })]);
+      facade.setQuery('pedro');
+      const results = facade.alumnoResults();
+      expect(results).toHaveLength(1);
+      expect(results[0].label).toBe('Pedro Soto');
+    });
+
+    it('instructor role: quickActions only include "Ver Ficha"', () => {
+      currentUser$.set({ role: 'instructor' });
+      instructorStudents$.set([makeInstructorStudent()]);
+      facade.setQuery('pedro');
+      const result = facade.alumnoResults()[0];
+      expect(result.quickActions).toHaveLength(1);
+      expect(result.quickActions[0].actionType).toBe('view');
+    });
+
+    it('instructor role: route points to /app/instructor/alumnos/:id', () => {
+      currentUser$.set({ role: 'instructor' });
+      instructorStudents$.set([makeInstructorStudent({ studentId: 7 })]);
+      facade.setQuery('pedro');
+      const result = facade.alumnoResults()[0];
+      expect(result.route).toEqual(['/app/instructor/alumnos/7']);
+    });
+
+    it('alumno role: never returns alumno results, regardless of AdminAlumnosFacade data', () => {
+      currentUser$.set({ role: 'alumno' });
+      alumnos$.set([makeAlumno()]);
+      facade.setQuery('juan');
+      expect(facade.alumnoResults()).toEqual([]);
+    });
+  });
+
+  // ── instructorResults computed ───────────────────────────────────────────
+
+  describe('instructorResults', () => {
+    it('should return empty when query is empty', () => {
+      facade.setQuery('');
+      expect(facade.instructorResults()).toEqual([]);
+    });
+
+    it('admin role: matches instructors by name', () => {
+      instructores$.set([makeInstructor({ nombre: 'María López' })]);
+      facade.setQuery('maría');
+      expect(facade.instructorResults()).toHaveLength(1);
+      expect(facade.instructorResults()[0].label).toBe('María López');
+    });
+
+    it('admin role: matches instructors by RUT ignoring dots/dashes', () => {
+      instructores$.set([makeInstructor({ rut: '9.999.999-9' })]);
+      facade.setQuery('99999999');
+      expect(facade.instructorResults()).toHaveLength(1);
+    });
+
+    it('admin role: result route points to the instructores list', () => {
+      instructores$.set([makeInstructor()]);
+      facade.setQuery('maría');
+      expect(facade.instructorResults()[0].route).toEqual(['/app/admin/instructores']);
+    });
+
+    it('secretaria role: uses secretaria route prefix', () => {
+      currentUser$.set({ role: 'secretaria' });
+      instructores$.set([makeInstructor()]);
+      facade.setQuery('maría');
+      expect(facade.instructorResults()[0].route).toEqual(['/app/secretaria/instructores']);
+    });
+
+    it('instructor role: never returns instructor results', () => {
+      currentUser$.set({ role: 'instructor' });
+      instructores$.set([makeInstructor()]);
+      facade.setQuery('maría');
+      expect(facade.instructorResults()).toEqual([]);
+    });
+
+    it('alumno role: never returns instructor results', () => {
+      currentUser$.set({ role: 'alumno' });
+      instructores$.set([makeInstructor()]);
+      facade.setQuery('maría');
+      expect(facade.instructorResults()).toEqual([]);
+    });
   });
 
   // ── actionResults computed ──────────────────────────────────────────────
@@ -232,6 +358,13 @@ describe('GlobalSearchFacade', () => {
       expect(groups.some((g) => g.label === 'Alumnos encontrados')).toBe(true);
     });
 
+    it('should include instructores group when instructors match', () => {
+      instructores$.set([makeInstructor()]);
+      facade.setQuery('maría');
+      const groups = facade.groups();
+      expect(groups.some((g) => g.label === 'Instructores encontrados')).toBe(true);
+    });
+
     it('should include actions group when keywords match', () => {
       facade.setQuery('agenda');
       const groups = facade.groups();
@@ -268,6 +401,48 @@ describe('GlobalSearchFacade', () => {
     it('should be false when query has 2+ chars', () => {
       facade.setQuery('ju');
       expect(facade.tooShortForAlumnos()).toBe(false);
+    });
+  });
+
+  // ── loadBusinessData (H-031 root cause) ──────────────────────────────────
+
+  describe('business data loading', () => {
+    it('admin role: triggers AdminAlumnosFacade.loadAlumnos() and InstructoresFacade.initialize() once query reaches 2 chars', () => {
+      facade.setQuery('ju');
+      expect(adminAlumnosMock.loadAlumnos).toHaveBeenCalledTimes(1);
+      expect(instructoresMock.initialize).toHaveBeenCalledTimes(1);
+      expect(instructorAlumnosMock.initialize).not.toHaveBeenCalled();
+    });
+
+    it('instructor role: triggers InstructorAlumnosFacade.initialize() only', () => {
+      currentUser$.set({ role: 'instructor' });
+      facade.setQuery('pe');
+      expect(instructorAlumnosMock.initialize).toHaveBeenCalledTimes(1);
+      expect(adminAlumnosMock.loadAlumnos).not.toHaveBeenCalled();
+      expect(instructoresMock.initialize).not.toHaveBeenCalled();
+    });
+
+    it('does not re-trigger on every keystroke while the panel stays open', () => {
+      facade.setQuery('j');
+      facade.setQuery('ju');
+      facade.setQuery('jua');
+      facade.setQuery('juan');
+      expect(adminAlumnosMock.loadAlumnos).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-triggers after reset() (panel closed and reopened)', () => {
+      facade.setQuery('ju');
+      facade.reset();
+      facade.setQuery('ju');
+      expect(adminAlumnosMock.loadAlumnos).toHaveBeenCalledTimes(2);
+    });
+
+    it('alumno role: does not trigger any business data load', () => {
+      currentUser$.set({ role: 'alumno' });
+      facade.setQuery('ju');
+      expect(adminAlumnosMock.loadAlumnos).not.toHaveBeenCalled();
+      expect(instructoresMock.initialize).not.toHaveBeenCalled();
+      expect(instructorAlumnosMock.initialize).not.toHaveBeenCalled();
     });
   });
 

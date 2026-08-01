@@ -39,11 +39,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <app-section-hero
-        class="bento-hero"
         title="Pagar"
         subtitle="Completa el pago de tu matrícula"
         icon="credit-card"
         [actions]="[]"
+        density="slim"
       />
 
       <!-- ── Stepper ── -->

@@ -42,13 +42,13 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi horario">
       <!-- ── HERO ─────────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
         icon="calendar-days"
         title="Mi Horario"
         [contextLine]="heroContextLine()"
         [chips]="heroChips()"
         [actions]="[]"
         [animateOnInit]="false"
+        density="slim"
       />
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->

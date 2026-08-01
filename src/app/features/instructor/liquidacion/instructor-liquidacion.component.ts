@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import {
@@ -12,7 +11,8 @@ import {
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
@@ -23,7 +23,6 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     BadgeComponent,
     DatePipe,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     AlertCardComponent,
     IconComponent,
     HorizontalBarChartComponent,
@@ -35,67 +34,25 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Mis Horas"
         subtitle="Registro de horas trabajadas del mes actual"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="facade.isLoading()"
+        [loadingKpiCount]="3"
       />
 
-      @if (facade.isLoading()) {
-        <!-- KPI Skeletons como hijos directos del bento-grid -->
-        @for (n of [1, 2, 3]; track n) {
-          <div class="bento-square">
-            <app-kpi-card-variant label="..." [value]="0" [loading]="true" />
-          </div>
-        }
-      } @else if (facade.error()) {
+      @if (facade.error()) {
         <div class="bento-banner">
           <app-alert-card title="Error al cargar liquidación" severity="error">
             {{ facade.error() }}
           </app-alert-card>
         </div>
       } @else if (facade.monthlyTarget(); as target) {
-        <!-- KPIs como hijos directos del bento-grid -->
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Horas Realizadas"
-            [value]="target.completedHours"
-            [subValue]="'/ ' + target.targetHours + ' hrs meta'"
-            suffix=" hrs"
-            icon="clock"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Clases Completadas (Mes)"
-            [value]="target.breakdown[0]?.horas ?? 0"
-            [subValue]="
-              target.breakdown[0]?.horas === 1
-                ? '1 clase'
-                : (target.breakdown[0]?.horas ?? 0) + ' clases'
-            "
-            icon="check-circle"
-            color="success"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Proyección Mensual"
-            [value]="target.projectedHours"
-            suffix=" hrs"
-            icon="trending-up"
-            [color]="target.projectedHours >= target.targetHours ? 'success' : 'warning'"
-            [trendLabel]="
-              target.projectedHours >= target.targetHours
-                ? 'Cumplirías la meta'
-                : target.targetHours - target.projectedHours + ' hrs restantes'
-            "
-          />
-        </div>
-
         <!-- Contenido principal -->
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
@@ -179,6 +136,49 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 export class InstructorLiquidacionComponent implements OnInit {
   public facade = inject(InstructorHorasFacade);
   readonly heroActions: SectionHeroAction[] = [];
+
+  /**
+   * KPIs del strip del hero slim (antes: 3 celdas `bento-square` sueltas).
+   * Los valores van pre-formateados: el strip renderiza `{{ kpi.value }}` crudo
+   * y no pasa por `animateCounter`, que era quien localizaba a es-CL.
+   *
+   * El texto de proyección viaja en `subValue` y no en `trendLabel`: el strip
+   * solo pinta `trendLabel` cuando existe un `trend` numérico, que acá no hay.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const target = this.facade.monthlyTarget();
+    if (!target) return [];
+
+    const clases = target.breakdown[0]?.horas ?? 0;
+    const cumpleMeta = target.projectedHours >= target.targetHours;
+
+    return [
+      {
+        id: 'horas-realizadas',
+        label: 'Horas Realizadas',
+        value: formatKpiEsCl(target.completedHours),
+        suffix: ' hrs',
+        subValue: `/ ${formatKpiEsCl(target.targetHours)} hrs meta`,
+      },
+      {
+        id: 'clases-mes',
+        label: 'Clases Completadas (Mes)',
+        value: formatKpiEsCl(clases),
+        subValue: clases === 1 ? '1 clase' : `${formatKpiEsCl(clases)} clases`,
+        color: 'success',
+      },
+      {
+        id: 'proyeccion',
+        label: 'Proyección Mensual',
+        value: formatKpiEsCl(target.projectedHours),
+        suffix: ' hrs',
+        color: cumpleMeta ? 'success' : 'warning',
+        subValue: cumpleMeta
+          ? 'Cumplirías la meta'
+          : `${formatKpiEsCl(target.targetHours - target.projectedHours)} hrs restantes`,
+      },
+    ];
+  });
 
   async ngOnInit() {
     await this.facade.initialize();

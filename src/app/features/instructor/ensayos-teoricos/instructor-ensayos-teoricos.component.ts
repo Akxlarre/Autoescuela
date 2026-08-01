@@ -13,10 +13,11 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 
 @Component({
   selector: 'app-instructor-ensayos-teoricos',
@@ -29,7 +30,6 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     BentoRevealDirective,
     CardHoverDirective,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     AlertCardComponent,
     EmptyStateComponent,
@@ -38,43 +38,17 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Ensayos Teóricos"
         subtitle="Consulta los puntajes de preparación para el examen municipal"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="[]"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="isDataLoading()"
+        [loadingKpiCount]="3"
       />
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Registros"
-          [value]="kpis().total"
-          icon="file-check"
-          [loading]="isDataLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Promedio"
-          [value]="kpis().promedio"
-          suffix="/100"
-          icon="bar-chart-2"
-          [loading]="isDataLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Aprobados (80+)"
-          [value]="kpis().aprobados"
-          icon="award"
-          color="success"
-          [accent]="true"
-          [loading]="isDataLoading()"
-        />
-      </div>
 
       <!-- Main content -->
       <div class="bento-banner">
@@ -200,6 +174,25 @@ export class InstructorEnsayosTeoricosComponent implements OnInit {
     const promedio = total ? Math.round(scores.reduce((acc, r) => acc + r.score, 0) / total) : 0;
     const aprobados = scores.filter((r) => r.score >= 80).length;
     return { total, promedio, aprobados };
+  });
+
+  /**
+   * KPIs del strip del hero slim (antes: 3 celdas `bento-square` sueltas).
+   * Los valores van pre-formateados: el strip renderiza `{{ kpi.value }}` crudo
+   * y no pasa por `animateCounter`, que era quien localizaba a es-CL.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const k = this.kpis();
+    return [
+      { id: 'total', label: 'Total Registros', value: formatKpiEsCl(k.total) },
+      { id: 'promedio', label: 'Promedio', value: formatKpiEsCl(k.promedio), suffix: '/100' },
+      {
+        id: 'aprobados',
+        label: 'Aprobados (80+)',
+        value: formatKpiEsCl(k.aprobados),
+        color: 'success',
+      },
+    ];
   });
 
   async ngOnInit(): Promise<void> {

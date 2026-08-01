@@ -106,7 +106,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       </div>
 
       <!-- ═══ Skeleton secciones — imita el subnav + la card "Cabecera" (sección activa por defecto al entrar) ═══ -->
-      @if (facade.isLoadingSections()) {
+      <!-- Unificado con isLoading() (fix-074): el bootstrap inicial encadena selectPromocion→selectCurso
+           DENTRO de loadPromociones(), por lo que isLoadingSections() puede apagarse y volver a prenderse
+           mientras isLoading() sigue en true, dejando un tick con AMBOS flags en false y sin datos aún
+           (main completamente vacío, sin ni el empty-state). Cubrir la unión evita ese hueco. -->
+      @if (facade.isLoading() || facade.isLoadingSections()) {
         <div class="bento-banner flex items-center">
           <div class="flex gap-1 p-1 rounded-xl bg-subtle w-full">
             @for (i of skeletonRows; track i) {

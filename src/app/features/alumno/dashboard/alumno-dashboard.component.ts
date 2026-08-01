@@ -11,7 +11,12 @@ import { RouterLink } from '@angular/router';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -48,13 +53,16 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi progreso">
       <!-- ── HERO ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
         icon="graduation-cap"
         [title]="heroTitle()"
         [contextLine]="heroContextLine()"
         [chips]="heroChips()"
         [actions]="heroActions()"
         [animateOnInit]="false"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="loading()"
+        [loadingKpiCount]="2"
         (actionClick)="onHeroAction($event)"
       />
 
@@ -70,30 +78,12 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
         </div>
       }
 
-      <!-- ── KPI 1 — Prácticas ─────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Clases prácticas"
-          [value]="practicesCompleted()"
-          [suffix]="'/' + practicesTotal()"
-          icon="car"
-          color="default"
-          [accent]="true"
-          [loading]="loading()"
-        />
-      </div>
-
-      <!-- ── KPI 2 — Asistencia teoría ─────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asist. teoría"
-          [value]="pctTheory()"
-          suffix="%"
-          icon="clipboard-check"
-          [color]="attendanceColor()"
-          [loading]="loading()"
-        />
-      </div>
+      <!-- ── KPI 3/4 — Próxima clase y Saldo: quedan fuera del strip [kpis] del
+           hero (AC-F3) porque cada una lleva un routerLink de navegación
+           propio ("Ver horario →", "Pagar"); SectionHeroKpi no soporta ese
+           contenido interactivo, solo label/value/color/icon. KPI 1 y 2
+           (Prácticas, Asist. teoría) sí migraron al strip por ser métricas
+           puras equivalentes a app-kpi-card-variant. ── -->
 
       <!-- ── KPI 3 — Próxima clase ─────────────────────────────────────────── -->
       <div class="bento-square">
@@ -599,6 +589,30 @@ export class AlumnoDashboardComponent {
   });
   readonly pctTheory = computed(() => this.progress()?.pctTheoryAttendance ?? 0);
   readonly practices = computed(() => this.progress()?.practices ?? []);
+
+  /**
+   * KPIs del strip del hero slim (antes: 2 de las 4 celdas `bento-square` de
+   * la fila original — ver comentario en el template sobre por qué las otras
+   * 2 se quedan fuera). Valores pre-formateados: el strip renderiza
+   * `{{ kpi.value }}` crudo y no pasa por `animateCounter`.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => [
+    {
+      id: 'practicas',
+      label: 'Clases prácticas',
+      value: formatKpiEsCl(this.practicesCompleted()),
+      suffix: '/' + formatKpiEsCl(this.practicesTotal()),
+      icon: 'car',
+    },
+    {
+      id: 'asist-teoria',
+      label: 'Asist. teoría',
+      value: formatKpiEsCl(this.pctTheory()),
+      suffix: '%',
+      icon: 'clipboard-check',
+      color: this.attendanceColor(),
+    },
+  ]);
 
   readonly attendanceColor = computed(() => {
     const s = this.attendance()?.semaphore;
