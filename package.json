@@ -15,6 +15,7 @@
     "indices:sync": "node scripts/indices-sync.js",
     "assignments:audit": "node scripts/assignments-audit.js",
     "assignments:sync": "node scripts/assignments-sync.js",
+    "check:bento": "node scripts/check-bento-classes.js",
     "test:ci": "vitest run --reporter=verbose",
     "test:coverage": "vitest run --coverage"
   },
