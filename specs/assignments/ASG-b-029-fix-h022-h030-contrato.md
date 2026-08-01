@@ -1,14 +1,14 @@
 # Asignación ASG-b-029 — Fix H-022 + H-030: vista previa de contrato y contenido genérico
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-01
+> **resulting_track:** fix-014-i-contrato-preview-generico
 
 ---
 
