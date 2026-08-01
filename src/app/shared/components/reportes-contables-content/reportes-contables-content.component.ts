@@ -389,8 +389,9 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         </div>
       }
 
-      <!-- ── Gastos Fijos del Período ─────────────────────────────────────────── -->
-      @if (!isLoading()) {
+      <!-- ── Gastos Fijos del Período — solo admin (fix-010-i, H-014): fixed_expenses
+           es RLS admin-only, así que la secretaría ni ve ni puede registrar gastos fijos. -->
+      @if (!isLoading() && isAdmin()) {
         <div class="bento-banner">
           <div class="card p-0 flex flex-col overflow-hidden shadow-sm">
             <div
@@ -409,7 +410,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     Gastos Fijos del Período
                   </h2>
                   <p class="text-xs" style="color: var(--text-muted)">
-                    Arriendo, sueldos, servicios y otros — solo visible para admin
+                    Arriendo, sueldos, servicios y otros
                   </p>
                 </div>
               </div>
@@ -631,6 +632,8 @@ export class ReportesContablesContentComponent {
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
   readonly gastosFijos = input<GastoFijoRow[]>([]);
+  /** fix-010-i (H-014): "Gastos Fijos del Período" es admin-only (RLS de fixed_expenses). */
+  readonly isAdmin = input<boolean>(false);
   readonly filtros = input.required<FiltrosReporte>();
 
   // ── Outputs ────────────────────────────────────────────────────────────────

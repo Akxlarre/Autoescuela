@@ -440,9 +440,12 @@ export class AgendaFacade {
     );
 
     this._instructors.set(filters);
-    if (this._selectedInstructorId() === null && filters.length > 0) {
-      this._selectedInstructorId.set(filters[0].id);
-    }
+    // fix-010-i (H-010): `loadInstructors()` solo corre en un cambio de sede real
+    // (initialize() ya filtra los refrescos SWR), así que siempre hay que re-anclar
+    // la selección a la nueva lista — dejar el id de la sede anterior "pegado" hacía
+    // que el label mostrara "Todos los instructores" mientras un instructor de otra
+    // sede seguía filtrando la grilla por debajo.
+    this._selectedInstructorId.set(filters.length > 0 ? filters[0].id : null);
   }
 
   // ── Construcción de la estructura semanal ─────────────────────────────────

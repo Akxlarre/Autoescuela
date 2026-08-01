@@ -22,6 +22,7 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
       [gastosFijos]="facade.gastosFijos()"
+      [isAdmin]="true"
       [filtros]="facade.filtros()"
       (aplicarFiltros)="onAplicarFiltros($event)"
       (exportRequested)="facade.exportar($event)"

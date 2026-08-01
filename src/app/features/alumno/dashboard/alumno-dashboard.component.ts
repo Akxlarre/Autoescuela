@@ -454,8 +454,11 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                 <span class="text-[9px] text-text-muted text-center leading-tight">
                   {{ formatSessionDate(s.date) }}
                 </span>
+                <!-- fix-010-i (H-018): "P"/"T" de una sola letra se confundía con el ícono de
+                     estado (check/x) — parecía decir "Presente" incluso en clases con inasistencia.
+                     Texto completo, sin ambigüedad con el estado de asistencia. -->
                 <span class="text-[9px] text-text-muted leading-tight">
-                  {{ s.kind === 'theory' ? 'T' : 'P' }}
+                  {{ s.kind === 'theory' ? 'Teoría' : 'Práctica' }}
                 </span>
               </div>
             }

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { AgendaFacade } from './agenda.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 
 /**
  * Builder de cadena Supabase genérico y "thenable": cualquier método
@@ -50,16 +51,19 @@ describe('AgendaFacade', () => {
   let facade: AgendaFacade;
   let supabaseSpy: any;
   let authFacadeSpy: any;
+  let branchFacadeSpy: any;
 
   beforeEach(() => {
     supabaseSpy = makeFlexibleSupabaseMock();
-    authFacadeSpy = { currentUser: vi.fn() };
+    authFacadeSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) };
+    branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
 
     TestBed.configureTestingModule({
       providers: [
         AgendaFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
+        { provide: BranchFacade, useValue: branchFacadeSpy },
       ],
     });
 
@@ -162,6 +166,46 @@ describe('AgendaFacade', () => {
       // ...y la fila real fuera del bloque estándar se agrega, no reemplaza nada.
       expect(rows).toContain('13:30');
       expect(rows.length).toBe(14);
+    });
+  });
+
+  describe('loadInstructors (vía initialize) — fix-010-i, H-010', () => {
+    it('re-ancla selectedInstructorId al cambiar de sede, en vez de dejar pegado el id de la sede anterior', async () => {
+      supabaseSpy.setResult('instructors', [
+        { id: 1, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+      ]);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+
+      await facade.initialize();
+      expect(facade.selectedInstructorId()).toBe(1);
+
+      // Cambia de sede — nueva lista de instructores, sin overlap de ids con la anterior.
+      supabaseSpy.setResult('instructors', [
+        { id: 7, users: { first_names: 'Camila', paternal_last_name: 'Rojas' } },
+      ]);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+
+      await facade.initialize();
+
+      // Antes del fix: quedaba en 1 (id de la sede anterior, inexistente en la sede nueva),
+      // haciendo que el selector no encontrara la opción y mostrara "Todos los instructores"
+      // mientras la grilla seguía filtrando por el instructor de la sede vieja.
+      expect(facade.selectedInstructorId()).toBe(7);
+    });
+
+    it('deja selectedInstructorId en null si la nueva sede no tiene instructores', async () => {
+      supabaseSpy.setResult('instructors', [
+        { id: 1, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+      ]);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      await facade.initialize();
+      expect(facade.selectedInstructorId()).toBe(1);
+
+      supabaseSpy.setResult('instructors', []);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      await facade.initialize();
+
+      expect(facade.selectedInstructorId()).toBeNull();
     });
   });
 });
