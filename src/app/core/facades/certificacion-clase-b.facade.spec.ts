@@ -146,11 +146,19 @@ describe('CertificacionClaseBFacade', () => {
   });
 
   describe('generarCertificado()', () => {
-    it('invoca la Edge Function con el enrollment_id correcto', async () => {
+    it('invoca la Edge Function con el enrollment_id correcto y force=false por defecto', async () => {
       await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
         'generate-certificate-b-pdf',
-        { body: { enrollment_id: 42 } },
+        { body: { enrollment_id: 42, force: false } },
+      );
+    });
+
+    it('fix-011-i: propaga force=true al bypass admin (H-025)', async () => {
+      await facade.generarCertificado(42, true);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-b-pdf',
+        { body: { enrollment_id: 42, force: true } },
       );
     });
 
@@ -167,6 +175,17 @@ describe('CertificacionClaseBFacade', () => {
       });
       await facade.generarCertificado(42);
       expect(toastSpy.error).toHaveBeenCalledWith('No se pudo generar el certificado');
+    });
+
+    it('fix-011-i: muestra el mensaje específico del gate server-side (H-025) cuando data.error existe', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
+        data: { error: 'El alumno no cumple el mínimo de clases prácticas completadas (4/12).' },
+        error: null,
+      });
+      await facade.generarCertificado(42);
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'El alumno no cumple el mínimo de clases prácticas completadas (4/12).',
+      );
     });
 
     it('limpia generatingId tras la llamada (éxito o error)', async () => {

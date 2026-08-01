@@ -1,14 +1,14 @@
 # Asignación ASG-b-016 — Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000
 
-> **status:** pendiente
+> **status:** claimed
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-01
+> **resulting_track:** fix-013-i-precio-profesional-a2-incorrecto
 
 ---
 

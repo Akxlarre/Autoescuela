@@ -67,4 +67,10 @@ export interface AlumnoTableRow {
   vencimiento?: string;
   /** enrollments.id for navigation */
   enrollmentId?: number;
+  /**
+   * true si la matrícula (Clase B) tiene las 12 prácticas completas y el certificado
+   * ya fue enviado por email, pero `enrollments.status` sigue `active` — todavía no
+   * se marcó como ex-alumno (fix-012-i).
+   */
+  cursoCompletoPendienteEgreso: boolean;
 }

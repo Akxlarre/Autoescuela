@@ -22,6 +22,8 @@ export interface EnrollmentSummary {
   registrationChannel: 'presential' | 'online' | null;
   totalPagado: number;
   saldoPendiente: number;
+  /** true si `certificate_issuance_log` registra un evento `action='email_sent'` para este enrollment (fix-012-i). */
+  certificateEmailSent: boolean;
 }
 
 export interface AlumnoDetalleUI {
@@ -53,6 +55,8 @@ export interface AlumnoDetalleUI {
   totalPagado: number;
   /** Saldo aún no abonado (enrollments.pending_balance) */
   saldoPendiente: number;
+  /** true si el certificado de Clase B del enrollment activo ya fue enviado por email (fix-012-i). */
+  certificateEmailSent: boolean;
 }
 
 /** Progreso de asistencia para alumnos profesionales (teoría o práctica). */

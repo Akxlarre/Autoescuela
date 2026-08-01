@@ -31,6 +31,7 @@ import { EnviarMasivoDrawerComponent } from './drawers/enviar-masivo-drawer.comp
       [isGeneratingPendientes]="facade.isGeneratingPendientes()"
       [isAdmin]="isAdmin()"
       (generarCertificado)="facade.generarCertificado($event)"
+      (generarCertificadoForzado)="facade.generarCertificado($event, true)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
       (abrirHistorialDrawer)="openHistorialDrawer()"

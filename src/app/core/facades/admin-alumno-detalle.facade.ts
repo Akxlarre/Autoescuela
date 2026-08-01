@@ -371,6 +371,7 @@ export class AdminAlumnoDetalleFacade {
       licenseGroup: summary.licenseGroup,
       totalPagado: summary.totalPagado,
       saldoPendiente: summary.saldoPendiente,
+      certificateEmailSent: summary.certificateEmailSent,
     });
 
     // Re-cargar progreso para el enrollment seleccionado
@@ -453,8 +454,18 @@ export class AdminAlumnoDetalleFacade {
             registrationChannel: ch,
             totalPagado: e.total_paid ?? 0,
             saldoPendiente: e.pending_balance ?? 0,
+            // Se completa más abajo, tras resolver fetchCertificateEmailSent() (fix-012-i).
+            certificateEmailSent: false,
           };
         });
+      // fix-012-i: resolver si el certificado de Clase B ya fue enviado por email,
+      // para cada enrollment de este alumno — habilita el botón "Marcar como Ex-Alumno".
+      const emailSentByEnrollment = await this.fetchCertificateEmailSentMap(
+        summaries.filter((sm) => sm.licenseGroup === 'class_b').map((sm) => sm.id),
+      );
+      for (const sm of summaries) {
+        sm.certificateEmailSent = emailSentByEnrollment.get(sm.id) ?? false;
+      }
       this._enrollmentSummaries.set(summaries);
 
       this._certPdfPath.set(
@@ -500,6 +511,7 @@ export class AdminAlumnoDetalleFacade {
         licenseGroup,
         totalPagado: lastEnrollment?.total_paid ?? 0,
         saldoPendiente: lastEnrollment?.pending_balance ?? 0,
+        certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
       });
 
       // ── Step 2: Queries según tipo de licencia ──
@@ -1085,6 +1097,63 @@ export class AdminAlumnoDetalleFacade {
     if ((p.transfer_amount ?? 0) > 0) return 'Transferencia';
     if ((p.card_amount ?? 0) > 0) return 'Tarjeta';
     return null;
+  }
+
+  /**
+   * fix-012-i: resuelve, para cada enrollment_id dado, si su certificado de Clase B
+   * ya fue enviado por email — mismo patrón de `certificates` → `certificate_issuance_log`
+   * (action='email_sent') que usa `certificacion-clase-b.facade.ts`.
+   */
+  private async fetchCertificateEmailSentMap(
+    enrollmentIds: number[],
+  ): Promise<Map<number, boolean>> {
+    const result = new Map<number, boolean>();
+    if (enrollmentIds.length === 0) return result;
+
+    const { data: certs } = await this.supabase.client
+      .from('certificates')
+      .select('id, enrollment_id')
+      .in('enrollment_id', enrollmentIds)
+      .eq('type', 'class_b');
+
+    const certRows = (certs ?? []) as Array<{ id: number; enrollment_id: number }>;
+    if (certRows.length === 0) return result;
+
+    const certIds = certRows.map((c) => c.id);
+    const { data: logs } = await this.supabase.client
+      .from('certificate_issuance_log')
+      .select('certificate_id')
+      .in('certificate_id', certIds)
+      .eq('action', 'email_sent');
+
+    const sentCertIds = new Set(
+      ((logs ?? []) as Array<{ certificate_id: number }>).map((l) => l.certificate_id),
+    );
+
+    for (const c of certRows) {
+      result.set(c.enrollment_id, sentCertIds.has(c.id));
+    }
+    return result;
+  }
+
+  /**
+   * fix-012-i: pasa la matrícula a `status = 'completed'` — acción manual, disponible
+   * solo cuando el certificado de Clase B ya fue enviado. Es lo único que distingue
+   * "Alumnos" de "Ex-Alumnos" (`ExAlumnosFacade`/`AdminAlumnosFacade` filtran por esto).
+   */
+  async marcarComoExAlumno(enrollmentId: number): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('enrollments')
+      .update({ status: 'completed' })
+      .eq('id', enrollmentId);
+
+    if (error) {
+      this.toast.error('No se pudo marcar al alumno como ex-alumno.');
+      return;
+    }
+
+    this.toast.success('Alumno marcado como ex-alumno correctamente.');
+    await this.refreshSilently();
   }
 
   private formatStatus(status: string | null | undefined): string {

@@ -160,6 +160,25 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           </button>
         </div>
 
+        <!-- ── Indicador de criterio admin/secretaría (fix-011-i, H-012) ──────────────────
+             Admin y secretaría ven listas distintas (admin: todos los estados + puede
+             forzar el bypass; secretaría: solo alumnos habilitados) — esto es intencional,
+             pero antes no se comunicaba en la UI. Vive dentro de la card (no como hijo
+             directo del bento-grid) para no romper el template de filas del fill-screen. -->
+        <div
+          class="flex items-center gap-2 px-4 py-2 text-xs font-medium shrink-0"
+          style="background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary)"
+        >
+          <app-icon name="info" [size]="14" color="var(--text-muted)" />
+          @if (isAdmin()) {
+            Vista admin: se muestran todos los alumnos (activos y con curso completado), incluidos
+            los que aún no cumplen las 12 prácticas.
+          } @else {
+            Vista secretaría: solo se muestran alumnos habilitados para certificado (12/12 prácticas
+            completadas).
+          }
+        </div>
+
         <!-- ── Tabla principal ─────────────────────────────────────────── -->
         @if (isLoading()) {
           <div class="p-6 flex flex-col gap-4">
@@ -245,7 +264,16 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                           <button
                             class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                             data-llm-action="generate-certificate"
-                            [disabled]="generatingId() !== null"
+                            [disabled]="generatingId() !== null || isBlockedForRow(alumno)"
+                            [attr.title]="
+                              isBlockedForRow(alumno)
+                                ? 'Faltan prácticas por completar (' +
+                                  alumno.clasesCompletadas +
+                                  '/' +
+                                  alumno.clasesTotales +
+                                  ')'
+                                : null
+                            "
                             [appStableWidth]="generatingId() === alumno.enrollmentId"
                             (click)="onClickGenerar(alumno)"
                           >
@@ -456,7 +484,16 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     <button
                       class="flex-1 inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       data-llm-action="generate-certificate"
-                      [disabled]="generatingId() !== null"
+                      [disabled]="generatingId() !== null || isBlockedForRow(alumno)"
+                      [attr.title]="
+                        isBlockedForRow(alumno)
+                          ? 'Faltan prácticas por completar (' +
+                            alumno.clasesCompletadas +
+                            '/' +
+                            alumno.clasesTotales +
+                            ')'
+                          : null
+                      "
                       (click)="onClickGenerar(alumno)"
                     >
                       @if (generatingId() === alumno.enrollmentId) {
@@ -647,6 +684,8 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Outputs ──
   readonly generarCertificado = output<number>();
+  /** fix-011-i (H-025): bypass admin explícito — el consumidor debe pasar force=true al facade. */
+  readonly generarCertificadoForzado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
   readonly abrirHistorialDrawer = output<void>();
@@ -786,6 +825,15 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
    * - Prácticas incompletas + admin → abre la fila de confirmación inline (bypass).
    * - Prácticas incompletas + secretaria → bloqueado, no emite (checkeo obligatorio).
    */
+  /**
+   * fix-011-i (H-025): secretaría nunca puede saltarse el gate de prácticas —
+   * el botón queda deshabilitado (antes: clickeaba y no pasaba nada, sin feedback).
+   * Admin no se bloquea acá: su click abre la fila de confirmación de bypass.
+   */
+  isBlockedForRow(alumno: CertificacionAlumnoRow): boolean {
+    return !this.isAdmin() && alumno.clasesCompletadas < alumno.clasesTotales;
+  }
+
   onClickGenerar(alumno: CertificacionAlumnoRow): void {
     if (alumno.clasesCompletadas >= alumno.clasesTotales) {
       this.generarCertificado.emit(alumno.enrollmentId);
@@ -799,7 +847,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   confirmarGenerar(): void {
     const id = this.pendingConfirmId();
     if (id !== null) {
-      this.generarCertificado.emit(id);
+      this.generarCertificadoForzado.emit(id);
       this.pendingConfirmId.set(null);
     }
   }

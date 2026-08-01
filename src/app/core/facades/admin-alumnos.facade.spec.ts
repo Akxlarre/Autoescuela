@@ -77,6 +77,12 @@ describe('AdminAlumnosFacade', () => {
         neq: vi.fn(() => builder),
         eq: vi.fn(() => builder),
         order: vi.fn(() => Promise.resolve({ data, error: null })),
+        // fix-012-i: fetchCursoCompletoPendienteEgresoSet() consulta class_b_sessions/
+        // certificates/certificate_issuance_log en cadenas terminadas en .in()/.not() —
+        // sin .order() al final. Resuelven "vacío" (builder sin `data` es awaited a sí
+        // mismo, `sessions`/`certs` quedan undefined → [] por los `?? []` del facade).
+        in: vi.fn(() => builder),
+        not: vi.fn(() => builder),
       };
       supabaseSpy.client.from = vi.fn(() => builder);
     }
@@ -258,6 +264,103 @@ describe('AdminAlumnosFacade', () => {
       const ids = facade.alumnos().map((a) => a.id);
       expect(ids).not.toContain('60');
       expect(ids).toContain('61');
+    });
+
+    describe('cursoCompletoPendienteEgreso — fix-012-i', () => {
+      /** Mock por tabla: students devuelve `data`, el resto según lo indicado. */
+      function mockStudentsAndCertData(
+        students: any[],
+        opts: { sessions?: any[]; certs?: any[]; logs?: any[] } = {},
+      ): void {
+        const studentsBuilder: any = {
+          select: vi.fn(() => studentsBuilder),
+          neq: vi.fn(() => studentsBuilder),
+          order: vi.fn(() => Promise.resolve({ data: students, error: null })),
+        };
+        const sessionsBuilder: any = {
+          select: vi.fn(() => sessionsBuilder),
+          in: vi.fn(() => sessionsBuilder),
+          not: vi.fn(() => Promise.resolve({ data: opts.sessions ?? [], error: null })),
+        };
+        const certsBuilder: any = {
+          select: vi.fn(() => certsBuilder),
+          in: vi.fn(() => certsBuilder),
+          eq: vi.fn(() => Promise.resolve({ data: opts.certs ?? [], error: null })),
+        };
+        const logsBuilder: any = {
+          select: vi.fn(() => logsBuilder),
+          in: vi.fn(() => logsBuilder),
+          eq: vi.fn(() => Promise.resolve({ data: opts.logs ?? [], error: null })),
+        };
+        supabaseSpy.client.from = vi.fn((table: string) => {
+          if (table === 'students') return studentsBuilder;
+          if (table === 'class_b_sessions') return sessionsBuilder;
+          if (table === 'certificates') return certsBuilder;
+          if (table === 'certificate_issuance_log') return logsBuilder;
+          throw new Error(`tabla inesperada: ${table}`);
+        });
+      }
+
+      it('marca true cuando hay 12 evaluation_grade + certificado + email enviado', async () => {
+        mockStudentsAndCertData(
+          [
+            makeStudent({
+              id: 70,
+              users: makeUser({ rut: '70-0' }),
+              enrollments: [makeEnrollment({ id: 501, status: 'active' })],
+            }),
+          ],
+          {
+            sessions: Array.from({ length: 12 }, () => ({ enrollment_id: 501 })),
+            certs: [{ id: 900, enrollment_id: 501 }],
+            logs: [{ certificate_id: 900 }],
+          },
+        );
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].cursoCompletoPendienteEgreso).toBe(true);
+      });
+
+      it('marca false si tiene 12 prácticas pero el certificado no fue enviado', async () => {
+        mockStudentsAndCertData(
+          [
+            makeStudent({
+              id: 71,
+              users: makeUser({ rut: '71-1' }),
+              enrollments: [makeEnrollment({ id: 502, status: 'active' })],
+            }),
+          ],
+          {
+            sessions: Array.from({ length: 12 }, () => ({ enrollment_id: 502 })),
+            certs: [{ id: 901, enrollment_id: 502 }],
+            logs: [], // sin action='email_sent'
+          },
+        );
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].cursoCompletoPendienteEgreso).toBe(false);
+      });
+
+      it('marca false si todavía no completa las 12 prácticas', async () => {
+        mockStudentsAndCertData(
+          [
+            makeStudent({
+              id: 72,
+              users: makeUser({ rut: '72-2' }),
+              enrollments: [makeEnrollment({ id: 503, status: 'active' })],
+            }),
+          ],
+          {
+            sessions: Array.from({ length: 5 }, () => ({ enrollment_id: 503 })),
+          },
+        );
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].cursoCompletoPendienteEgreso).toBe(false);
+      });
     });
   });
 

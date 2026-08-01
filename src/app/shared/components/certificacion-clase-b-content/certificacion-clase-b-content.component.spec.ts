@@ -63,15 +63,17 @@ describe('CertificacionClaseBContentComponent — bypass de prácticas incomplet
     expect(component.pendingConfirmId()).toBe(alumno.enrollmentId);
   });
 
-  it('confirmarGenerar tras el bypass admin sí emite y limpia el estado', () => {
+  it('fix-011-i: confirmarGenerar tras el bypass admin emite generarCertificadoForzado (no el output normal) y limpia el estado', () => {
     stubIsAdmin(component, true);
     const emitSpy = vi.spyOn(component.generarCertificado, 'emit');
+    const forzadoSpy = vi.spyOn(component.generarCertificadoForzado, 'emit');
     const alumno = makeAlumno({ clasesCompletadas: 1, clasesTotales: 12 });
 
     component.onClickGenerar(alumno);
     component.confirmarGenerar();
 
-    expect(emitSpy).toHaveBeenCalledWith(alumno.enrollmentId);
+    expect(forzadoSpy).toHaveBeenCalledWith(alumno.enrollmentId);
+    expect(emitSpy).not.toHaveBeenCalled();
     expect(component.pendingConfirmId()).toBeNull();
   });
 
@@ -84,5 +86,25 @@ describe('CertificacionClaseBContentComponent — bypass de prácticas incomplet
 
     expect(emitSpy).not.toHaveBeenCalled();
     expect(component.pendingConfirmId()).toBeNull();
+  });
+
+  describe('isBlockedForRow — fix-011-i (H-025)', () => {
+    it('bloquea a la secretaria (no admin) cuando faltan prácticas', () => {
+      stubIsAdmin(component, false);
+      const alumno = makeAlumno({ clasesCompletadas: 4, clasesTotales: 12 });
+      expect(component.isBlockedForRow(alumno)).toBe(true);
+    });
+
+    it('NO bloquea al admin aunque falten prácticas — su click abre el bypass', () => {
+      stubIsAdmin(component, true);
+      const alumno = makeAlumno({ clasesCompletadas: 4, clasesTotales: 12 });
+      expect(component.isBlockedForRow(alumno)).toBe(false);
+    });
+
+    it('NO bloquea a nadie cuando las prácticas están completas', () => {
+      stubIsAdmin(component, false);
+      const alumno = makeAlumno({ clasesCompletadas: 12, clasesTotales: 12 });
+      expect(component.isBlockedForRow(alumno)).toBe(false);
+    });
   });
 });

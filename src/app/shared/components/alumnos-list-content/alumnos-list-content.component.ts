@@ -426,11 +426,23 @@ interface ExpedienteStatus {
                     <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
                     <!-- Estado -->
                     <td>
-                      <p-tag
-                        [value]="alumno.status"
-                        [severity]="getStatusSeverity(alumno.status)"
-                        styleClass="text-xs font-bold px-2 py-0.5"
-                      ></p-tag>
+                      <div class="flex flex-col gap-1 items-start">
+                        <p-tag
+                          [value]="alumno.status"
+                          [severity]="getStatusSeverity(alumno.status)"
+                          styleClass="text-xs font-bold px-2 py-0.5"
+                        ></p-tag>
+                        @if (alumno.cursoCompletoPendienteEgreso) {
+                          <!-- fix-012-i: curso completo (12/12 + certificado enviado), falta pasar a ex-alumno -->
+                          <p-tag
+                            value="Curso completo"
+                            severity="warn"
+                            styleClass="text-2xs font-bold px-2 py-0.5"
+                            pTooltip="Certificado enviado y 12/12 prácticas — falta marcar como Ex-Alumno en su ficha"
+                            tooltipPosition="top"
+                          ></p-tag>
+                        }
+                      </div>
                     </td>
                     <!-- RF-085: Expediente (Completo/Parcial/Pendiente) -->
                     <td>
@@ -559,11 +571,22 @@ interface ExpedienteStatus {
                           >
                         </div>
                       </div>
-                      <p-tag
-                        [value]="alumno.status"
-                        [severity]="getStatusSeverity(alumno.status)"
-                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                      ></p-tag>
+                      <div class="flex flex-col gap-1 items-end shrink-0">
+                        <p-tag
+                          [value]="alumno.status"
+                          [severity]="getStatusSeverity(alumno.status)"
+                          styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                        ></p-tag>
+                        @if (alumno.cursoCompletoPendienteEgreso) {
+                          <p-tag
+                            value="Curso completo"
+                            severity="warn"
+                            styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                            pTooltip="Certificado enviado y 12/12 prácticas — falta marcar como Ex-Alumno"
+                            tooltipPosition="top"
+                          ></p-tag>
+                        }
+                      </div>
                     </div>
 
                     <!-- Body -->
