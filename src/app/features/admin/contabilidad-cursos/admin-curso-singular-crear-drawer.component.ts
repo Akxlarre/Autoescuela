@@ -77,9 +77,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           <form [formGroup]="form" (ngSubmit)="onGuardar()" class="space-y-4">
             <!-- Nombre -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Nombre del curso *
-              </label>
+              <label class="overline"> Nombre del curso * </label>
               <input
                 formControlName="nombre"
                 type="text"
@@ -94,9 +92,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <!-- Tipo + Facturación -->
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Tipo *
-                </label>
+                <label class="overline"> Tipo * </label>
                 <p-select
                   formControlName="tipo"
                   [options]="tipoOptions"
@@ -106,9 +102,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Facturación *
-                </label>
+                <label class="overline"> Facturación * </label>
                 <p-select
                   formControlName="billingType"
                   [options]="billingTypeOptions"
@@ -122,9 +116,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <!-- Precio + Duración -->
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Precio (CLP) *
-                </label>
+                <label class="overline"> Precio (CLP) * </label>
                 <input
                   formControlName="precio"
                   type="number"
@@ -137,9 +129,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 }
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Duración (hrs) *
-                </label>
+                <label class="overline"> Duración (hrs) * </label>
                 <input
                   formControlName="duracionHoras"
                   type="number"
@@ -153,9 +143,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <!-- Sede (solo admin: secretarias quedan ancladas a la suya) -->
             @if (isAdmin()) {
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Sede *
-                </label>
+                <label class="overline"> Sede * </label>
                 <p-select
                   formControlName="branchId"
                   [options]="branchOptions()"
@@ -176,9 +164,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <!-- Cupos + Fecha inicio -->
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  Cupos máx. *
-                </label>
+                <label class="overline"> Cupos máx. * </label>
                 <input
                   formControlName="cupos"
                   type="number"

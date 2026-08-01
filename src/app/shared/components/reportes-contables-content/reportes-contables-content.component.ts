@@ -333,7 +333,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     class="flex justify-between pt-3"
                     style="border-top: 1px solid var(--border-subtle)"
                   >
-                    <span class="text-sm font-semibold text-text-primary"> Total Ingresos </span>
+                    <span class="item-title"> Total Ingresos </span>
                     <span class="text-sm font-bold text-success">
                       {{ clp(totalIngresos()) }}
                     </span>
@@ -377,7 +377,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     class="flex justify-between pt-3"
                     style="border-top: 1px solid var(--border-subtle)"
                   >
-                    <span class="text-sm font-semibold text-text-primary"> Total Gastos </span>
+                    <span class="item-title"> Total Gastos </span>
                     <span class="text-sm font-bold text-error">
                       {{ clp(totalGastos()) }}
                     </span>
@@ -400,8 +400,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             >
               <div class="flex items-center gap-3">
                 <div
-                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
                 >
                   <app-icon name="lock" [size]="16" color="var(--state-error)" />
                 </div>

@@ -92,7 +92,11 @@ const PAGE_SIZE = 9;
                 (ngModelChange)="onSearch($event)"
               />
               @if (searchTerm()) {
-                <button class="search-field__clear" (click)="onSearch('')">
+                <button
+                  class="search-field__clear"
+                  aria-label="Limpiar búsqueda"
+                  (click)="onSearch('')"
+                >
                   <app-icon name="x" [size]="14" />
                 </button>
               }
@@ -279,7 +283,12 @@ const PAGE_SIZE = 9;
           @if (!facade.isLoading() && totalPages() > 1) {
             <div class="pagination-footer">
               <div class="pagination-shell">
-                <button class="pag-btn" [disabled]="currentPage() === 0" (click)="prevPage()">
+                <button
+                  class="pag-btn"
+                  [disabled]="currentPage() === 0"
+                  aria-label="Página anterior"
+                  (click)="prevPage()"
+                >
                   <app-icon name="chevron-left" [size]="16" />
                 </button>
                 @for (p of pageNumbers(); track p) {
@@ -294,6 +303,7 @@ const PAGE_SIZE = 9;
                 <button
                   class="pag-btn"
                   [disabled]="currentPage() === totalPages() - 1"
+                  aria-label="Página siguiente"
                   (click)="nextPage()"
                 >
                   <app-icon name="chevron-right" [size]="16" />

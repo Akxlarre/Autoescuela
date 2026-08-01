@@ -14,9 +14,7 @@
 
     <div class="p-6 space-y-8">
       <!-- Resumen Informativo de Opciones -->
-      <div
-        class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info"
-      >
+      <div class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info">
         <app-icon name="info" [size]="20" class="mt-0.5 shrink-0" />
         <div class="space-y-2">
           <p class="text-sm font-bold">Opciones de pago disponibles</p>
@@ -105,6 +103,7 @@
               </span>
               <button
                 type="button"
+                aria-label="Quitar descuento"
                 (click)="clearDiscount()"
                 class="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-colors"
               >

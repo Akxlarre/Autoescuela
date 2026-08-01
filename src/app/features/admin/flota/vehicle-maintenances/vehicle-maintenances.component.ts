@@ -94,9 +94,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           <h2 class="text-base font-bold">Historial Cronológico</h2>
           <div class="flex items-center gap-2">
             @if (!facade.isLoading()) {
-              <span class="text-xs font-bold text-text-muted uppercase tracking-widest">
-                {{ facade.maintenances().length }} registros
-              </span>
+              <span class="overline"> {{ facade.maintenances().length }} registros </span>
             }
             <button
               pButton
@@ -135,31 +133,13 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           >
             <ng-template pTemplate="header">
               <tr class="text-left">
-                <th
-                  class="pl-6 py-4 text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle"
-                >
-                  Fecha
-                </th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
-                  Tipo
-                </th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
-                  Kilometraje
-                </th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
-                  Costo
-                </th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
-                  Taller
-                </th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
-                  Estado
-                </th>
-                <th
-                  class="pr-6 text-right text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle"
-                >
-                  Acc.
-                </th>
+                <th class="overline pl-6 py-4 bg-subtle">Fecha</th>
+                <th class="overline bg-subtle">Tipo</th>
+                <th class="overline bg-subtle">Kilometraje</th>
+                <th class="overline bg-subtle">Costo</th>
+                <th class="overline bg-subtle">Taller</th>
+                <th class="overline bg-subtle">Estado</th>
+                <th class="overline pr-6 text-right bg-subtle">Acc.</th>
               </tr>
             </ng-template>
 
@@ -167,7 +147,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
               <tr class="group hover:bg-subtle transition-colors border-b border-border-subtle">
                 <td class="pl-6 py-4 text-sm font-medium text-text-secondary">{{ m.date }}</td>
                 <td>
-                  <span class="font-bold text-sm text-text-primary">{{ m.type }}</span>
+                  <span class="item-title">{{ m.type }}</span>
                   @if (m.description) {
                     <p
                       class="text-2xs text-text-muted truncate max-w-50"
@@ -181,7 +161,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                 <td class="font-mono text-xs text-text-secondary">
                   {{ m.km !== null ? (m.km | number) + ' km' : '—' }}
                 </td>
-                <td class="font-bold text-sm text-text-primary">
+                <td class="item-title">
                   {{ m.cost !== null ? '$' + (m.cost | number) : '—' }}
                 </td>
                 <td class="text-xs text-text-muted italic">{{ m.workshop ?? '—' }}</td>
@@ -196,6 +176,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                   <button
                     pButton
                     class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
+                    aria-label="Editar mantención"
                     data-llm-action="edit-maintenance"
                     (click)="openMaintenanceForm(m.id)"
                   >
@@ -238,7 +219,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                 <p-tag
                   [value]="scheduledStatusLabel(s.status)"
                   [severity]="scheduledSeverity(s.status)"
-                  styleClass="text-[9px] font-bold px-1.5"
+                  styleClass="text-2xs font-bold px-1.5"
                 />
               </div>
               <p class="text-lg font-bold text-text-primary mt-1">{{ s.dueDate ?? 'Sin fecha' }}</p>

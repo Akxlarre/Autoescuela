@@ -44,10 +44,7 @@ import {
           style="border-color: var(--border-muted)"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-              style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
-            >
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-error/10">
               <app-icon name="receipt" [size]="18" color="var(--state-error)" />
             </div>
             <div>

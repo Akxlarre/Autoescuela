@@ -18,13 +18,8 @@ const COURSE_ICON: Record<string, string> = {
   imports: [IconComponent],
   template: `
     <div
-      class="rounded-xl mb-6 relative overflow-hidden"
-      style="
-        background: var(--pe-gradient-badge, linear-gradient(135deg, var(--color-primary-muted) 0%, var(--bg-surface) 100%));
-        border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent);
-        padding: var(--space-5);
-        box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset;
-      "
+      class="rounded-xl mb-6 relative overflow-hidden border border-brand/30"
+      style="background: var(--pe-gradient-badge, linear-gradient(135deg, var(--color-primary-muted) 0%, var(--bg-surface) 100%)); padding: var(--space-5); box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset"
       role="region"
       aria-label="Resumen de tu inscripción"
     >
@@ -32,11 +27,8 @@ const COURSE_ICON: Record<string, string> = {
       <div class="flex items-center gap-4">
         <!-- Course icon badge -->
         <div
-          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-          style="
-            background: var(--gradient-primary);
-            box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--ds-brand) 50%, transparent);
-          "
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-primary"
+          style="box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--ds-brand) 50%, transparent)"
           aria-hidden="true"
         >
           <app-icon [name]="courseIcon()" [size]="22" color="white" />
@@ -97,10 +89,7 @@ const COURSE_ICON: Record<string, string> = {
       </div>
 
       <!-- Price + edit (solo en mobile, segunda fila) -->
-      <div
-        class="flex sm:hidden items-center justify-between mt-3 pt-3"
-        style="border-top: 1px solid color-mix(in srgb, var(--ds-brand) 15%, transparent);"
-      >
+      <div class="flex sm:hidden items-center justify-between mt-3 pt-3 border-t border-brand/15">
         <p
           class="font-bold"
           style="

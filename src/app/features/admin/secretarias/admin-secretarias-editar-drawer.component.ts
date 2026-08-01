@@ -111,7 +111,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 {{ sec.initials }}
               </div>
               <div class="min-w-0">
-                <p class="text-sm font-semibold truncate text-text-primary">
+                <p class="item-title truncate">
                   {{ sec.nombre }}
                 </p>
                 <p

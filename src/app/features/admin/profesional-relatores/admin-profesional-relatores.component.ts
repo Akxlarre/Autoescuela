@@ -177,9 +177,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
               currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} relatores"
             >
               <ng-template pTemplate="header">
-                <tr
-                  class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                >
+                <tr class="overline bg-subtle text-left">
                   <th class="pl-6 py-4">Relator</th>
                   <th>Especialidades</th>
                   <th>WhatsApp</th>
@@ -198,9 +196,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                         {{ rel.initials }}
                       </div>
                       <div class="flex flex-col min-w-0">
-                        <span class="font-bold text-sm text-text-primary truncate">{{
-                          rel.nombre
-                        }}</span>
+                        <span class="item-title truncate">{{ rel.nombre }}</span>
                         <span class="text-xs text-text-muted">{{ rel.rut }}</span>
                       </div>
                     </div>
@@ -231,6 +227,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                   <td class="pr-6 text-right">
                     <div class="inline-flex items-center justify-end gap-0.5">
                       <button
+                        aria-label="Ver detalle"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Ver detalle"
@@ -240,6 +237,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                         <app-icon name="eye" [size]="16" />
                       </button>
                       <button
+                        aria-label="Editar relator"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Editar relator"
@@ -285,9 +283,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                       {{ rel.initials }}
                     </div>
                     <div class="flex flex-col min-w-0">
-                      <span class="text-sm font-bold text-text-primary truncate">{{
-                        rel.nombre
-                      }}</span>
+                      <span class="item-title truncate">{{ rel.nombre }}</span>
                       <span class="text-xs text-text-muted truncate">{{ rel.rut }}</span>
                     </div>
                   </div>
@@ -323,6 +319,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
 
                 <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
                   <button
+                    aria-label="Ver detalle"
                     class="action-btn"
                     (click)="openVerDrawer(rel)"
                     pTooltip="Ver detalle"
@@ -331,6 +328,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     <app-icon name="eye" [size]="16" />
                   </button>
                   <button
+                    aria-label="Editar relator"
                     class="action-btn"
                     (click)="openEditarDrawer(rel)"
                     pTooltip="Editar relator"

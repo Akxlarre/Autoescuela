@@ -81,7 +81,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <ng-template #content>
           <!-- Header Info -->
           <div class="pb-4 mb-4 border-b border-border-subtle">
-            <h3 class="text-sm font-bold text-text-primary">Documentación Obligatoria</h3>
+            <h3 class="item-title">Documentación Obligatoria</h3>
           </div>
 
           <!-- Lista de Documentos -->
@@ -141,7 +141,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                         <app-icon [name]="docIcon(doc.type)" [size]="24" />
                       </div>
                       <div>
-                        <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
+                        <h4 class="item-title leading-tight mb-0.5">
                           {{ docLabel(doc.type) }}
                         </h4>
                         <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
@@ -156,6 +156,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       </app-badge>
                       <button
                         class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                        aria-label="Ver documento"
                         data-llm-action="view-vehicle-document"
                       >
                         <app-icon name="external-link" [size]="14" />

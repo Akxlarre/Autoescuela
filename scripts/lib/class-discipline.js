@@ -51,15 +51,30 @@ export function isPillWhitelisted(relPath) {
   return PILL_WHITELIST_SEGMENTS.some((seg) => p.includes(seg));
 }
 
+// Opening tag completo (nombre + atributos), no solo el class="..." — necesario para
+// el refinamiento fix-083-b: distinguir un <button> interactivo de una pill real.
+const OPENING_TAG_RE = /<(\w[\w-]*)\b([^>]*)>/g;
+
 export function findAdhocPills(content) {
   const hits = [];
-  for (const attr of extractClassAttributes(content)) {
+  OPENING_TAG_RE.lastIndex = 0;
+  let m;
+  while ((m = OPENING_TAG_RE.exec(content)) !== null) {
+    const [, tagName, attrsRaw] = m;
+    const classMatch = attrsRaw.match(/\bclass\s*=\s*"([^"]*)"/);
+    if (!classMatch) continue;
+    const attr = classMatch[1];
     if (!ROUNDED_FULL_RE.test(attr)) continue;
     if (!MICRO_TEXT_RE.test(attr)) continue;
     if (!PX_PAD_RE.test(attr)) continue;
     // Círculo de tamaño fijo con padding raro: igual lo dejamos pasar solo si
     // tiene w- Y h- (avatar/dot), que no es un pill de contenido.
     if (FIXED_CIRCLE_RE.test(attr) && /(?:^|\s)h-(?:\d|\[)/.test(attr)) continue;
+    // Refinamiento fix-083-b (ASG-b-058): <button> con (click) es un control
+    // interactivo (filtro, toggle), no un badge de estado — 6 falsos positivos
+    // confirmados entre fix-043-m/044-m (asistencia-clase-b-content,
+    // public-context-banner ×2, entre otros). Un badge de estado real es <span>.
+    if (tagName === 'button' && /\(click\)\s*=/.test(attrsRaw)) continue;
     hits.push(attr.trim().slice(0, 90));
   }
   return hits;
@@ -101,10 +116,60 @@ export function findArbitraryTextSizes(content) {
   return hits;
 }
 
+// ── ARCH-19: clusters tipográficos ad-hoc ────────────────────────────────────
+// Recomposición a mano de un rol tipográfico que YA tiene clase semántica.
+// fix-078-b encontró 221 overlines escritos a mano en 25 variantes distintas
+// (14 archivos mezclaban varias entre sí) + 166 títulos de ítem en 2 pesos.
+//
+// La causa raíz no fue falta de clase, sino una restricción de alcance mal puesta:
+// `.kpi-label` (que ES el overline) estaba documentada como "SOLO datos numéricos",
+// así que quien necesitaba un micro-label fuera de un KPI lo recomponía.
+//
+// NOTA: el detector marca también la familia `text-2xs` del overline, que fix-078-b
+// dejó deliberadamente sin migrar (subirla a `.overline` cambiaría 10px→12px, un
+// cambio de densidad visible en tablas). Entran al baseline como deuda conocida.
+
+const UPPERCASE_RE = /(?:^|\s)(?:[\w-]+:)?uppercase(?=\s|$)/;
+const MUTED_RE = /(?:^|\s)(?:[\w-]+:)?text-text-muted(?=\s|$|\/)/;
+const OVERLINE_SIZE_RE = /(?:^|\s)(?:[\w-]+:)?text-(?:xs|2xs)(?=\s|$|\/)/;
+const TITLE_SIZE_RE = /(?:^|\s)(?:[\w-]+:)?text-sm(?=\s|$|\/)/;
+const PRIMARY_RE = /(?:^|\s)(?:[\w-]+:)?text-text-primary(?=\s|$|\/)/;
+const STRONG_WEIGHT_RE = /(?:^|\s)(?:[\w-]+:)?font-(?:semibold|bold)(?=\s|$)/;
+
+/** Archivos que DEFINEN el vocabulario — exentos. */
+export const TYPOGRAPHY_WHITELIST_SEGMENTS = ['styles/tokens/'];
+
+export function isTypographyWhitelisted(relPath) {
+  const p = relPath.replace(/\\/g, '/');
+  return TYPOGRAPHY_WHITELIST_SEGMENTS.some((seg) => p.includes(seg));
+}
+
+export function findAdhocTypography(content) {
+  const hits = [];
+  for (const attr of extractClassAttributes(content)) {
+    // Ya migrado → no es violación
+    if (/(?:^|\s)(?:overline|item-title)(?=\s|$)/.test(attr)) continue;
+
+    if (UPPERCASE_RE.test(attr) && MUTED_RE.test(attr) && OVERLINE_SIZE_RE.test(attr)) {
+      hits.push('overline');
+      continue;
+    }
+    if (
+      !UPPERCASE_RE.test(attr) &&
+      TITLE_SIZE_RE.test(attr) &&
+      PRIMARY_RE.test(attr) &&
+      STRONG_WEIGHT_RE.test(attr)
+    ) {
+      hits.push('item-title');
+    }
+  }
+  return hits;
+}
+
 // ── Ratchet / baseline ───────────────────────────────────────────────────────
 // Shape: { generatedAt, rules: { 'ARCH-15': { total, files: { relPath: n } }, ... } }
 
-export const DS_RULES = ['ARCH-15', 'ARCH-16', 'ARCH-17'];
+export const DS_RULES = ['ARCH-15', 'ARCH-16', 'ARCH-17', 'ARCH-19'];
 
 export function buildBaseline(countsByRule) {
   const rules = {};

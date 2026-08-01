@@ -523,8 +523,14 @@ function collectStyles() {
         tokensBySection.get(currentSection).push({ name: varMatch[1], value: varMatch[2].trim() });
       }
 
-      // Top-level semantic class (not nested, not state pseudo-class)
-      const clsMatch = line.match(/^(\.[\w-]+)\s*\{/);
+      // Top-level semantic class (not nested, not state pseudo-class).
+      // Acepta las 3 formas que aparecen en _variables.scss:
+      //   .clase {                          → selector simple
+      //   .clase,                           → primera línea de un selector por coma
+      //   .clase /* comentario */ {         → con comentario inline antes de la llave
+      // Antes exigía `^\.clase\s*\{` estricto, así que el alias `.overline, .kpi-label {…}`
+      // de fix-078-b hacía DESAPARECER ambas clases del índice sin ningún error visible.
+      const clsMatch = line.match(/^(\.[\w-]+)\s*(?:\/\*.*?\*\/)?\s*[,{]/);
       if (clsMatch && !clsMatch[1].startsWith('.p-')) {
         semanticClasses.push({ name: clsMatch[1], file: 'src/styles/tokens/_variables.scss' });
       }
@@ -914,8 +920,22 @@ function generateStylesContent(data) {
       'bento-media':   'Celda de media (imagen/video)',
       'bento-card':    'Alias visual de celda con card',
     };
+    // Alias dimensionales legacy (ASG-b-057 / fix-084-b): 0 usos reales en src/app
+    // hoy — la convención semántica ya ganó en la práctica. Se documentan acá para
+    // que la tabla auto-generada no siga presentando ambas formas como equivalentes.
+    const legacyOf = {
+      'bento-1x1': 'bento-square',
+      'bento-2x1': 'bento-wide',
+      'bento-3x1': 'bento-wide',
+      'bento-4x1': 'bento-wide',
+      'bento-2x2': 'bento-tall',
+      'bento-3x2': 'bento-feature',
+    };
     for (const cls of data.bentoClasses) {
-      lines.push(`| \`.${cls}\` | ${descriptions[cls] ?? '—'} |`);
+      const desc = legacyOf[cls]
+        ? `⚠️ Legacy — usar \`.${legacyOf[cls]}\``
+        : (descriptions[cls] ?? '—');
+      lines.push(`| \`.${cls}\` | ${desc} |`);
     }
     lines.push('');
   }

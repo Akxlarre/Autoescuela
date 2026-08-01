@@ -237,6 +237,7 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
                   </p>
                 </div>
                 <button
+                  aria-label="Descartar"
                   class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
                   (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
                   pTooltip="Descartar"

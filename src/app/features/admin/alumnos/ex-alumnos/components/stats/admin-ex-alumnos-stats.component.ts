@@ -22,9 +22,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       <div class="flex flex-col gap-6 flex-1">
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
-              >Aprobación Municipal</span
-            >
+            <span class="overline">Aprobación Municipal</span>
             <span class="text-sm font-black text-text-primary">{{ municipalRate() }}%</span>
           </div>
           <div class="progress-bar-track">
@@ -37,9 +35,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
-              >Examen Psicotécnico</span
-            >
+            <span class="overline">Examen Psicotécnico</span>
             <span class="text-sm font-black text-info">{{ psychoRate() }}%</span>
           </div>
           <div class="progress-bar-track">
@@ -49,9 +45,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
-              >Licencia Obtenida</span
-            >
+            <span class="overline">Licencia Obtenida</span>
             <span class="text-sm font-black text-warning">{{ successRate() }}%</span>
           </div>
           <div class="progress-bar-track">
@@ -67,7 +61,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             Balance de Gestión Anual
           </h3>
           <div
-            class="px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 text-[9px] font-bold text-brand uppercase"
+            class="text-2xs px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 font-bold text-brand uppercase"
           >
             Real-time
           </div>
@@ -106,7 +100,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           <div class="relative flex items-center justify-between">
             <div class="flex flex-col">
               <span class="kpi-label mb-0.5">Tasa de Efectividad</span>
-              <span class="text-[9px] text-text-muted font-medium pr-8"
+              <span class="text-2xs text-text-muted font-medium pr-8"
                 >Conversión de egresados a conductores licenciados.</span
               >
             </div>

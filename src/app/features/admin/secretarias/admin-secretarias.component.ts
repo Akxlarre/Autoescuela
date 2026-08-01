@@ -62,24 +62,9 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <app-skeleton-block variant="text" width="180px" height="20px" />
               <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <app-skeleton-block
-                  variant="rect"
-                  width="100%"
-                  height="36px"
-                  class="md:w-50"
-                />
-                <app-skeleton-block
-                  variant="rect"
-                  width="100%"
-                  height="36px"
-                  class="sm:w-30"
-                />
-                <app-skeleton-block
-                  variant="rect"
-                  width="100%"
-                  height="36px"
-                  class="sm:w-30"
-                />
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="md:w-50" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-30" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-30" />
               </div>
             </div>
 
@@ -115,9 +100,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <div class="bento-wide" data-col-span="9" data-col-span-md="8">
           <div class="card p-6 flex flex-col h-full" appCardHover>
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
-              <h2 class="font-bold whitespace-nowrap text-text-primary">
-                Lista de Personal
-              </h2>
+              <h2 class="font-bold whitespace-nowrap text-text-primary">Lista de Personal</h2>
 
               <!-- Search + Filters (Fully Responsive) -->
               <div
@@ -189,7 +172,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                       <!-- Info principal -->
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-sm font-semibold truncate text-text-primary">
+                          <span class="item-title truncate">
                             {{ sec.nombre }}
                           </span>
 
@@ -223,10 +206,20 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
                       <!-- Acciones -->
                       <div class="flex items-center gap-2 shrink-0">
-                        <button class="action-btn" title="Ver detalle" (click)="openVerDrawer(sec)">
+                        <button
+                          aria-label="Ver detalle"
+                          class="action-btn"
+                          title="Ver detalle"
+                          (click)="openVerDrawer(sec)"
+                        >
                           <app-icon name="eye" [size]="15" />
                         </button>
-                        <button class="action-btn" title="Editar" (click)="openEditarDrawer(sec)">
+                        <button
+                          aria-label="Editar"
+                          class="action-btn"
+                          title="Editar"
+                          (click)="openEditarDrawer(sec)"
+                        >
                           <app-icon name="pencil" [size]="15" />
                         </button>
                       </div>
@@ -301,7 +294,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </div>
 
             <div style="border-top: 1px solid var(--border-subtle);" class="pt-6">
-              <h4 class="text-sm font-bold mb-2 text-text-primary">Auditoría de Acciones</h4>
+              <h4 class="item-title mb-2">Auditoría de Acciones</h4>
               <p class="text-2xs mb-5 leading-relaxed text-text-muted">
                 Historial de movimientos realizados por el personal administrativo.
               </p>

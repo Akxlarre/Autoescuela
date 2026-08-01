@@ -158,7 +158,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <!-- Nombre + email -->
                       <td>
                         <div class="flex flex-col">
-                          <span class="text-sm font-semibold text-text-primary">
+                          <span class="item-title">
                             {{ inst.nombre }}
                           </span>
                           <a
@@ -196,7 +196,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <td>
                         @if (inst.vehiclePlate) {
                           <div class="flex flex-col">
-                            <span class="text-sm font-semibold text-text-primary">
+                            <span class="item-title">
                               {{ inst.vehiclePlate }}
                             </span>
                             <span class="text-xs text-text-muted">
@@ -235,6 +235,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <td>
                         <div class="flex items-center gap-1">
                           <button
+                            aria-label="Ver detalle"
                             class="action-btn"
                             title="Ver detalle"
                             (click)="openVerDrawer(inst)"
@@ -243,6 +244,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
+                            aria-label="Editar instructor"
                             class="action-btn"
                             title="Editar instructor"
                             (click)="openEditarDrawer(inst)"
@@ -283,9 +285,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                     class="p-4 border-b border-border-subtle flex items-start justify-between bg-subtle"
                   >
                     <div class="flex flex-col min-w-0">
-                      <span class="text-sm font-bold text-text-primary truncate">{{
-                        inst.nombre
-                      }}</span>
+                      <span class="item-title truncate">{{ inst.nombre }}</span>
                       <span
                         class="text-xs text-text-muted truncate"
                         [pTooltip]="inst.email"
@@ -334,10 +334,18 @@ type FilterTab = 'all' | 'active' | 'expiring';
                     </div>
                   </div>
                   <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
-                    <button class="action-btn" (click)="openVerDrawer(inst)">
+                    <button
+                      aria-label="Ver detalle"
+                      class="action-btn"
+                      (click)="openVerDrawer(inst)"
+                    >
                       <app-icon name="eye" [size]="16" />
                     </button>
-                    <button class="action-btn" (click)="openEditarDrawer(inst)">
+                    <button
+                      aria-label="Editar instructor"
+                      class="action-btn"
+                      (click)="openEditarDrawer(inst)"
+                    >
                       <app-icon name="edit" [size]="16" />
                     </button>
                   </div>

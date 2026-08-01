@@ -153,7 +153,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                         <div
                           class="w-14 h-14 rounded-lg bg-elevated border border-border-default flex flex-col items-center justify-center shrink-0 shadow-sm"
                         >
-                          <span class="text-sm font-bold text-text-primary leading-none">{{
+                          <span class="item-title leading-none">{{
                             cls.timeLabel.split(' - ')[0]
                           }}</span>
                         </div>

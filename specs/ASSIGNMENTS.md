@@ -22,9 +22,8 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
-| ASG-b-034 | Terminar migración de `color-mix()` pendiente: 11 archivos con drift post-mayo (mismo patrón que ya resolvía el script) + 56 archivos con gap de diseño (CSS embebido / bindings dinámicos que el script nunca cubrió) | `b` | fix | Baja | b | Ver `scripts/migrate-color-mix-t4.mjs` (corrió una sola vez el 28-may, commit `673c4bd`). Requiere decisión sobre si `color-mix(var(--token))` embebido es deuda o válido por diseño |
-| ASG-b-024 | Fix H-031: la búsqueda global (Ctrl+K) no indexa alumnos ni instructores, solo navegación | `b` | fix | Media | b | Extender el índice del buscador a datos de negocio (alumnos por nombre/RUT, instructores) |
 | ASG-b-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
+| ASG-b-059 | Botón "Recordar" del rail de alertas de Asistencia B no envía nada (stub que muestra "Recordatorio enviado al alumno") + UX de los botones de alerta | cualquiera | fix | Alta | b | El toast miente: la secretaria cree que avisó a un alumno en riesgo y nadie se entera. Incluye `isSaving()` global (bloquea todas las filas), "Eliminar" destructivo sin confirmación y sin estado post-acción. Requiere decisión de negocio sobre qué significa "Recordar" |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -47,6 +46,22 @@
 | ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `cualquiera` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
+
+### Tanda auditoría del Design System — 2026-07-31
+
+> Revisión del DS completo (tokens, guardrails, vocabulario, a11y, doc) contrastando
+> `indices/STYLES.md` + `ANTI-PATTERNS.md` + los dos audits contra el código real.
+>
+> **Diagnóstico de fondo:** el DS es fuerte donde la mayoría son débiles (4 capas de
+> tokens + 8 guardrails AST con ratchet) y débil donde la mayoría son fuertes
+> (vocabulario de componentes y accesibilidad). Las 6 asignaciones atacan esa asimetría.
+>
+> **Orden recomendado:** `056` primero (es barata y el resto construye sobre esa doc),
+> después `053` y `054` en paralelo, `055` y `058` cuando haya hueco, `057` solo si el
+> equipo decide pagar el refactor.
+
+> ✅ **Tanda completa (2026-07-31)** — las 6 asignaciones (053-058) reclamadas y
+> cerradas. Ver sección "Completadas" más abajo para los tracks resultantes.
 
 ---
 
@@ -105,7 +120,14 @@
 | ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 | ASG-b-022 | Fix H-007: skeletons faltantes en Agenda y Libro de Clases | [fix-074-b-skeletons-agenda-libro-clases](fixes/fix-074-b-skeletons-agenda-libro-clases/fix.md) | 2026-07-31 |
 | ASG-b-024 | Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores | [fix-075-b-buscador-global-datos-negocio](fixes/fix-075-b-buscador-global-datos-negocio/fix.md) | 2026-07-31 |
+| ASG-b-034 | Terminar la migración de `color-mix()` pendiente | [fix-076-b-color-mix-drift-y-criterio](fixes/fix-076-b-color-mix-drift-y-criterio/fix.md) | 2026-07-31 |
 | ASG-b-040 | Razones de reagendamiento (enum + "otro") | [fix-008-i-razones-reagendamiento](fixes/fix-008-i-razones-reagendamiento/fix.md) | 2026-07-31 |
+| ASG-b-053 | Vocabulario tipográfico: promover los clusters repetidos a clases del DS | [fix-078-b-vocabulario-tipografico-ds](fixes/fix-078-b-vocabulario-tipografico-ds/fix.md) | 2026-07-31 |
+| ASG-b-054 | Accesibilidad: 94 botones sin nombre accesible + foco en menús + primer guardrail a11y | [fix-079-b-accesibilidad-nombres-y-foco](fixes/fix-079-b-accesibilidad-nombres-y-foco/fix.md) | 2026-07-31 |
+| ASG-b-055 | Escala tipográfica: eliminar los tamaños ilegibles y cerrar el ratchet ARCH-17 | [fix-082-b-escala-tipografica-legible](fixes/fix-082-b-escala-tipografica-legible/fix.md) | 2026-07-31 |
+| ASG-b-056 | Alinear las fuentes de verdad del DS (la doc contradice al código) | [fix-077-b-alinear-fuentes-verdad-ds](fixes/fix-077-b-alinear-fuentes-verdad-ds/fix.md) | 2026-07-31 |
+| ASG-b-057 | Sprawl de la API pública del DS: 30+ clases bento y 9 variantes de botón | [fix-084-b-sprawl-api-ds-nivel1](fixes/fix-084-b-sprawl-api-ds-nivel1/fix.md) | 2026-07-31 |
+| ASG-b-058 | Cerrar la fase 4 del roadmap de badges (los 4 residuos) | [fix-083-b-cerrar-fase-4-badges](fixes/fix-083-b-cerrar-fase-4-badges/fix.md) | 2026-07-31 |
 | ASG-b-014 | Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio | [fix-011-i-certificado-clase-b-gate-validacion](fixes/fix-011-i-certificado-clase-b-gate-validacion/fix.md) | 2026-08-01 |
 | ASG-b-016 | Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000 | [fix-013-i-precio-profesional-a2-incorrecto](fixes/fix-013-i-precio-profesional-a2-incorrecto/fix.md) | 2026-08-01 |
 | ASG-b-028 | 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos | [fix-010-i-cosmeticos-agenda-rbac-chips](fixes/fix-010-i-cosmeticos-agenda-rbac-chips/fix.md) | 2026-08-01 |

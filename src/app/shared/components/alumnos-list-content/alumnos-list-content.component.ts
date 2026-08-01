@@ -27,6 +27,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
+import { BadgeComponent } from '../badge/badge.component';
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -85,6 +86,7 @@ interface ExpedienteStatus {
     IconComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
@@ -362,9 +364,7 @@ interface ExpedienteStatus {
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
               >
                 <ng-template pTemplate="header">
-                  <tr
-                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                  >
+                  <tr class="overline bg-subtle text-left">
                     <th class="pl-6 py-4">Alumno</th>
                     <th>RUT</th>
                     <th>Nº Exp.</th>
@@ -389,9 +389,7 @@ interface ExpedienteStatus {
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-bold text-sm text-text-primary"
-                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                          >
+                          <span class="item-title">{{ alumno.apellido }} {{ alumno.nombre }}</span>
                           <span class="text-xs text-text-muted">{{ alumno.email }}</span>
                         </div>
                       </div>
@@ -412,13 +410,11 @@ interface ExpedienteStatus {
                     <td>
                       <div class="flex flex-wrap gap-1">
                         @for (curso of alumno.cursos; track curso.nombre) {
-                          <span
-                            class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary"
-                            [class.bg-elevated]="curso.licenseGroup === 'class_b'"
-                            [class.bg-brand-muted]="curso.licenseGroup === 'professional'"
+                          <app-badge
+                            [variant]="curso.licenseGroup === 'professional' ? 'brand' : 'neutral'"
                           >
                             {{ curso.nombre }}
-                          </span>
+                          </app-badge>
                         }
                       </div>
                     </td>
@@ -475,6 +471,7 @@ interface ExpedienteStatus {
                         @if (trashView()) {
                           <!-- Vista Papelera: solo Restaurar -->
                           <button
+                            aria-label="Restaurar alumno"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
                             pTooltip="Restaurar alumno"
@@ -486,6 +483,7 @@ interface ExpedienteStatus {
                         } @else {
                           <!-- Vista Normal: Ver / Certificado / PDF / Archivar -->
                           <button
+                            aria-label="Ver ficha"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Ver ficha"
@@ -497,6 +495,7 @@ interface ExpedienteStatus {
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Exportar Ficha PDF"
+                            aria-label="Exportar Ficha PDF"
                             [disabled]="isGeneratingFicha() === alumno.enrollmentId"
                             (click)="exportarFicha(alumno)"
                           >
@@ -507,6 +506,7 @@ interface ExpedienteStatus {
                             }
                           </button>
                           <button
+                            aria-label="Archivar alumno"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
                             pTooltip="Archivar alumno"
@@ -558,7 +558,7 @@ interface ExpedienteStatus {
                         </div>
                         <div class="flex flex-col min-w-0">
                           <span
-                            class="font-bold text-sm text-text-primary truncate"
+                            class="item-title truncate"
                             [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
                             tooltipPosition="top"
                             >{{ alumno.apellido }} {{ alumno.nombre }}</span
@@ -612,12 +612,13 @@ interface ExpedienteStatus {
                         <span class="text-2xs text-text-muted mb-0.5">Curso</span>
                         <div class="flex flex-wrap gap-1">
                           @for (curso of alumno.cursos; track curso.nombre) {
-                            <span
-                              class="text-2xs px-1.5 py-0.5 rounded-full border border-border-subtle text-text-secondary"
-                              [class.bg-elevated]="curso.licenseGroup === 'class_b'"
-                              [class.bg-brand-muted]="curso.licenseGroup === 'professional'"
-                              >{{ curso.nombre }}</span
+                            <app-badge
+                              [variant]="
+                                curso.licenseGroup === 'professional' ? 'brand' : 'neutral'
+                              "
                             >
+                              {{ curso.nombre }}
+                            </app-badge>
                           }
                         </div>
                       </div>
@@ -636,6 +637,7 @@ interface ExpedienteStatus {
                       @if (trashView()) {
                         <!-- Vista Papelera: solo Restaurar -->
                         <button
+                          aria-label="Restaurar alumno"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
                           pTooltip="Restaurar alumno"
@@ -647,6 +649,7 @@ interface ExpedienteStatus {
                       } @else {
                         <!-- Vista Normal -->
                         <button
+                          aria-label="Ver ficha"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                           pTooltip="Ver ficha"
@@ -658,6 +661,7 @@ interface ExpedienteStatus {
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                           pTooltip="Exportar Ficha PDF"
+                          aria-label="Exportar Ficha PDF"
                           [disabled]="isGeneratingFicha() === alumno.enrollmentId"
                           (click)="exportarFicha(alumno)"
                         >
@@ -668,6 +672,7 @@ interface ExpedienteStatus {
                           }
                         </button>
                         <button
+                          aria-label="Archivar alumno"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
                           pTooltip="Archivar alumno"

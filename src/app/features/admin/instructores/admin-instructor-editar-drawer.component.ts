@@ -126,7 +126,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 {{ inst.initials }}
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-semibold truncate text-text-primary">
+                <p class="item-title truncate">
                   {{ inst.nombre }}
                 </p>
                 <p
@@ -406,7 +406,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 @for (h of facade.assignmentHistory(); track h.id) {
                   <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
                     <div>
-                      <p class="text-sm font-semibold text-text-primary">
+                      <p class="item-title">
                         {{ h.vehiclePlate }}
                       </p>
                       <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>

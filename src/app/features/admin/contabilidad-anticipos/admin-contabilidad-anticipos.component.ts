@@ -74,50 +74,20 @@ function clp(n: number): string {
           style="border-bottom: 1px solid var(--border-subtle)"
         >
           <span class="indicator-live"></span>
-          <span class="text-sm font-semibold text-text-primary">
-            Cuenta Corriente por Instructor
-          </span>
+          <span class="item-title"> Cuenta Corriente por Instructor </span>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
-                <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Instructor
-                </th>
-                <th
-                  class="text-left px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Tipo
-                </th>
-                <th
-                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Anticipos Totales
-                </th>
-                <th
-                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Saldo Pendiente
-                </th>
-                <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Último Anticipo
-                </th>
-                <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Estado
-                </th>
-                <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Acciones
-                </th>
+                <th class="overline text-left px-5 py-3">Instructor</th>
+                <th class="overline text-left px-4 py-3">Tipo</th>
+                <th class="overline text-right px-4 py-3">Anticipos Totales</th>
+                <th class="overline text-right px-4 py-3">Saldo Pendiente</th>
+                <th class="overline text-center px-4 py-3">Último Anticipo</th>
+                <th class="overline text-center px-4 py-3">Estado</th>
+                <th class="overline text-center px-4 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -183,6 +153,7 @@ function clp(n: number): string {
                     <td class="px-4 py-3 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <button
+                          aria-label="Ver historial de este instructor"
                           class="btn-ghost p-1.5 rounded-lg"
                           title="Ver historial de este instructor"
                           data-llm-action="ver-historial-instructor"
@@ -192,6 +163,7 @@ function clp(n: number): string {
                         </button>
                         @if (row.estado === 'pendiente') {
                           <button
+                            aria-label="Registrar anticipo"
                             class="btn-ghost p-1.5 rounded-lg"
                             title="Registrar anticipo"
                             data-llm-action="registrar-anticipo-instructor"
@@ -217,7 +189,7 @@ function clp(n: number): string {
           class="flex items-center justify-between px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"
         >
-          <span class="text-sm font-semibold text-text-primary"> Historial de Anticipos </span>
+          <span class="item-title"> Historial de Anticipos </span>
           @if (!facade.isLoading()) {
             <span class="text-sm font-medium text-brand">
               {{ facade.historial().length }} registros
@@ -229,31 +201,11 @@ function clp(n: number): string {
           <table class="w-full text-sm">
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
-                <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Fecha
-                </th>
-                <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Instructor
-                </th>
-                <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Motivo
-                </th>
-                <th
-                  class="text-right px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Monto
-                </th>
-                <th
-                  class="text-center px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
-                >
-                  Estado
-                </th>
+                <th class="overline text-left px-5 py-3">Fecha</th>
+                <th class="overline text-left px-5 py-3">Instructor</th>
+                <th class="overline text-left px-5 py-3">Motivo</th>
+                <th class="overline text-right px-5 py-3">Monto</th>
+                <th class="overline text-center px-5 py-3">Estado</th>
               </tr>
             </thead>
             <tbody>

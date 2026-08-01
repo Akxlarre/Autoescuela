@@ -235,7 +235,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     [style.border-color]="'var(--border-subtle)'"
                   >
                     <div class="flex items-center justify-between gap-2">
-                      <p class="text-sm font-semibold text-text-primary">{{ clase.label }}</p>
+                      <p class="item-title">{{ clase.label }}</p>
                       @if (clase.zoomSentAt) {
                         <app-badge variant="success">
                           <app-icon name="mail-check" [size]="11" />
@@ -398,6 +398,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                         data-llm-description="Ciclo destino para cambiar al alumno de ciclo"
                       />
                       <button
+                        aria-label="Confirmar"
                         class="p-1.5 rounded-md cursor-pointer"
                         [style.color]="'var(--state-success)'"
                         [disabled]="moveTargetCycleId() === null || isSaving()"
@@ -408,6 +409,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                         <app-icon name="check" [size]="16" />
                       </button>
                       <button
+                        aria-label="Cancelar"
                         class="p-1.5 rounded-md cursor-pointer text-text-muted"
                         title="Cancelar"
                         (click)="cancelMove()"
@@ -456,12 +458,11 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
               <div class="min-w-0">
-                <span class="font-bold text-base block truncate"
-                  >Elegir destinatarios</span
-                >
+                <span class="font-bold text-base block truncate">Elegir destinatarios</span>
                 <span class="text-xs text-text-muted truncate block">{{ clase.label }}</span>
               </div>
               <button
+                aria-label="Cerrar"
                 type="button"
                 class="p-1.5 rounded-md cursor-pointer text-text-muted hover:bg-elevated shrink-0"
                 title="Cerrar"
@@ -567,10 +568,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <div
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
-              <span class="font-bold text-base"
-                >Incorporar alumno de otro ciclo</span
-              >
+              <span class="font-bold text-base">Incorporar alumno de otro ciclo</span>
               <button
+                aria-label="Cerrar"
                 type="button"
                 class="p-1.5 rounded-md cursor-pointer text-text-muted hover:bg-elevated"
                 title="Cerrar"

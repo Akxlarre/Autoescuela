@@ -31,6 +31,7 @@ const MONTH_NAMES = [
         <!-- ── Navegación de mes ───────────────────────────────────────────────── -->
         <div class="flex items-center justify-between">
           <button
+            aria-label="Mes anterior"
             class="nav-btn"
             (click)="facade.navHorasAnterior()"
             data-llm-action="mes-anterior"
@@ -49,6 +50,7 @@ const MONTH_NAMES = [
           </div>
 
           <button
+            aria-label="Mes siguiente"
             class="nav-btn"
             [class.nav-btn--disabled]="facade.isHorasCurrentMonth()"
             [disabled]="facade.isHorasCurrentMonth()"
@@ -127,13 +129,13 @@ const MONTH_NAMES = [
               <tfoot>
                 <tr>
                   <td>
-                    <span class="text-xs font-semibold uppercase text-text-muted">
+                    <span class="overline">
                       Total — {{ facade.horasMensuales().length }}
                       {{ facade.horasMensuales().length === 1 ? 'instructor' : 'instructores' }}
                     </span>
                   </td>
                   <td class="text-right">
-                    <span class="text-sm font-semibold text-text-primary">
+                    <span class="item-title">
                       {{ totales().clases }}
                       {{ totales().clases === 1 ? 'clase' : 'clases' }}
                     </span>

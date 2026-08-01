@@ -30,18 +30,9 @@ import { AdminCursoSingularCrearDrawerComponent } from './admin-curso-singular-c
 
 // ── Helpers de presentación ────────────────────────────────────────────────────
 
-/** Devuelve estilos semánticos CSS para el badge de tipo. */
-function getTipoStyle(tipo: 'sence' | 'particular'): { bg: string; color: string } {
-  if (tipo === 'sence') {
-    return {
-      bg: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-      color: 'var(--color-primary)',
-    };
-  }
-  return {
-    bg: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
-    color: 'var(--color-purple)',
-  };
+/** Variant de app-badge para el tipo de curso. */
+function getTipoVariant(tipo: 'sence' | 'particular'): 'brand' | 'neutral' {
+  return tipo === 'sence' ? 'brand' : 'neutral';
 }
 
 /** Variant de app-badge para el estado del curso. */
@@ -160,7 +151,7 @@ const BILLING_LABEL: Record<string, string> = {
                   <!-- Cabecera de card: nombre + badges -->
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="text-sm font-semibold truncate text-text-primary">
+                      <p class="item-title truncate">
                         {{ curso.nombre }}
                       </p>
                       <p class="text-xs mt-0.5 text-text-muted">
@@ -169,13 +160,9 @@ const BILLING_LABEL: Record<string, string> = {
                     </div>
                     <div class="shrink-0 flex items-center gap-1.5">
                       <!-- Badge tipo -->
-                      <span
-                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
-                        [style.background]="getTipoStyle(curso.tipo).bg"
-                        [style.color]="getTipoStyle(curso.tipo).color"
-                      >
+                      <app-badge [variant]="getTipoVariant(curso.tipo)">
                         {{ curso.tipo === 'sence' ? 'SENCE' : 'Part.' }}
-                      </span>
+                      </app-badge>
                       <!-- Badge estado -->
                       <app-badge [variant]="getEstadoVariant(curso.estado)">
                         {{ estadoLabel(curso.estado) }}
@@ -186,18 +173,14 @@ const BILLING_LABEL: Record<string, string> = {
                   <!-- Grid de datos clave (3 cols) -->
                   <div class="grid grid-cols-3 divide-x px-0 border-t border-b border-border-muted">
                     <div class="py-3 px-4 flex flex-col gap-0.5">
-                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                        Precio
-                      </p>
-                      <p class="text-sm font-bold text-text-primary">
+                      <p class="overline">Precio</p>
+                      <p class="item-title">
                         {{ formatCLP(curso.precio) }}
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-center">
-                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                        Inscritos
-                      </p>
-                      <p class="text-sm font-bold text-text-primary">
+                      <p class="overline">Inscritos</p>
+                      <p class="item-title">
                         {{ curso.inscritos
                         }}<span class="text-xs font-normal text-text-muted"
                           >/{{ curso.cupos }}</span
@@ -205,9 +188,7 @@ const BILLING_LABEL: Record<string, string> = {
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-right">
-                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                        Cobrado
-                      </p>
+                      <p class="overline">Cobrado</p>
                       <p
                         class="text-sm font-bold"
                         [style.color]="
@@ -260,7 +241,7 @@ const BILLING_LABEL: Record<string, string> = {
               <div
                 class="rounded-xl px-4 py-3 flex items-center justify-between border-t-2 bg-surface border-border-muted"
               >
-                <span class="text-sm font-bold text-text-primary">TOTAL</span>
+                <span class="item-title">TOTAL</span>
                 <div class="flex items-center gap-4">
                   <span class="text-xs text-text-muted">
                     <strong class="text-text-primary">{{ totales().inscritos }}</strong>
@@ -324,17 +305,12 @@ const BILLING_LABEL: Record<string, string> = {
                         </p>
                       </td>
                       <td class="py-3 px-4 text-center">
-                        <span
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                          [style.background]="getTipoStyle(curso.tipo).bg"
-                          [style.color]="getTipoStyle(curso.tipo).color"
-                          >{{ curso.tipo === 'sence' ? 'SENCE' : 'Particular' }}</span
-                        >
+                        <app-badge [variant]="getTipoVariant(curso.tipo)">
+                          {{ curso.tipo === 'sence' ? 'SENCE' : 'Particular' }}
+                        </app-badge>
                       </td>
                       <td class="py-3 px-4 text-right">
-                        <span class="text-sm font-semibold text-text-primary">{{
-                          formatCLP(curso.precio)
-                        }}</span>
+                        <span class="item-title">{{ formatCLP(curso.precio) }}</span>
                       </td>
                       <td class="py-3 px-4 text-center">
                         <span class="text-sm text-text-secondary"
@@ -378,6 +354,7 @@ const BILLING_LABEL: Record<string, string> = {
                       <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
+                            aria-label="Ver detalle"
                             class="accion-btn accion-btn--ver p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Ver detalle"
                             data-llm-action="view-curso-singular"
@@ -386,6 +363,7 @@ const BILLING_LABEL: Record<string, string> = {
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
+                            aria-label="Registrar cobro"
                             class="accion-btn accion-btn--cobro p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Registrar cobro"
                             data-llm-action="registrar-cobro-singular"
@@ -403,9 +381,9 @@ const BILLING_LABEL: Record<string, string> = {
               @if (!facade.isLoading() && cursosFiltrados().length > 0) {
                 <tfoot>
                   <tr class="border-t-2 border-border-muted bg-surface">
-                    <td class="py-3 px-4 text-sm font-bold text-text-primary">TOTAL</td>
+                    <td class="item-title py-3 px-4">TOTAL</td>
                     <td colspan="3"></td>
-                    <td class="py-3 px-4 text-center text-sm font-bold text-text-primary">
+                    <td class="item-title py-3 px-4 text-center">
                       {{ totales().inscritos }}
                     </td>
                     <td colspan="2"></td>
@@ -458,7 +436,7 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   // ── Helpers expuestos al template ──────────────────────────────────────────
   protected readonly formatCLP = formatCLP;
   protected readonly formatChileanDate = formatChileanDate;
-  protected readonly getTipoStyle = getTipoStyle;
+  protected readonly getTipoVariant = getTipoVariant;
   protected readonly getEstadoVariant = getEstadoVariant;
 
   // ── Columnas de tabla ──────────────────────────────────────────────────────

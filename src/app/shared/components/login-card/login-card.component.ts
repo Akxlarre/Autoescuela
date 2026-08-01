@@ -46,11 +46,7 @@ export interface LoginFormData {
         >
           <app-icon name="car" [size]="32" color="white" />
         </div>
-        <p
-          class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted"
-        >
-          Autoescuela
-        </p>
+        <p class="overline m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
         <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
           @switch (mode()) {
             @case ('reset') {

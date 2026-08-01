@@ -136,7 +136,7 @@ type TabId = 'practice' | 'theory';
                     <!-- Detalle -->
                     <div class="flex flex-col gap-0.5 flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-primary truncate">
+                        <span class="item-title truncate">
                           {{ formatDate(session.date) }}
                           @if (session.time) {
                             <span class="font-normal text-text-muted"> · {{ session.time }}</span>
@@ -176,7 +176,7 @@ type TabId = 'practice' | 'theory';
                       <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
                     </div>
                     <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="text-sm font-semibold text-text-primary">
+                      <span class="item-title">
                         {{ formatDate(s.date) }}
                       </span>
                       <span class="text-xs text-text-muted">Sesión práctica</span>
@@ -210,7 +210,7 @@ type TabId = 'practice' | 'theory';
                       <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
                     </div>
                     <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="text-sm font-semibold text-text-primary">
+                      <span class="item-title">
                         {{ formatDate(s.date) }}
                         @if (s.time) {
                           <span class="font-normal text-text-muted"> · {{ s.time }}</span>
@@ -244,7 +244,7 @@ type TabId = 'practice' | 'theory';
                       <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
                     </div>
                     <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="text-sm font-semibold text-text-primary">
+                      <span class="item-title">
                         {{ formatDate(s.date) }}
                       </span>
                       <span class="text-xs text-text-muted">Sesión de teoría</span>

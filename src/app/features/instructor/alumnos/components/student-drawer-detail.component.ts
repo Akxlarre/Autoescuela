@@ -99,9 +99,7 @@ function avatarPalette(name: string) {
 
             <!-- Contacto -->
             <div class="space-y-1">
-              <p class="text-xs font-bold uppercase tracking-wider mb-2 text-text-muted">
-                Contacto
-              </p>
+              <p class="overline mb-2">Contacto</p>
               @if (detail.phone) {
                 <a [href]="'tel:' + detail.phone" class="drawer-contact-link">
                   <span class="drawer-contact-link__icon"
@@ -122,15 +120,11 @@ function avatarPalette(name: string) {
 
             <!-- Progreso -->
             <div>
-              <p class="text-xs font-bold uppercase tracking-wider mb-3 text-text-muted">
-                Progreso
-              </p>
+              <p class="overline mb-3">Progreso</p>
               <div class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle">
                 <div>
                   <span class="block text-xs mb-0.5 text-text-muted">Curso</span>
-                  <span class="text-sm font-semibold text-text-primary">{{
-                    detail.courseName
-                  }}</span>
+                  <span class="item-title">{{ detail.courseName }}</span>
                 </div>
                 <!-- Práctica -->
                 <div>
@@ -172,7 +166,7 @@ function avatarPalette(name: string) {
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-brand">Próxima Clase</p>
-                  <p class="text-sm font-bold text-text-primary">
+                  <p class="item-title">
                     {{ detail.nextClassDate | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}
                   </p>
                 </div>

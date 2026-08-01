@@ -183,7 +183,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           <!-- 4. Historial de pagos -->
           <div class="card p-0 overflow-hidden">
             <div class="px-4 py-3 border-b border-border-muted">
-              <h3 class="text-sm font-semibold text-text-primary">Historial de Pagos</h3>
+              <h3 class="item-title">Historial de Pagos</h3>
             </div>
 
             @if (facade.estadoCuentaHistorial().length === 0) {
@@ -194,7 +194,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             } @else {
               <!-- Header columnas -->
               <div
-                class="px-4 py-2 grid text-xs font-semibold tracking-wide uppercase text-text-muted bg-surface"
+                class="overline px-4 py-2 grid bg-surface"
                 style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
               >
                 <span>Fecha</span>
@@ -258,9 +258,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 <span class="text-xs text-text-muted">
                   {{ facade.estadoCuentaHistorial().length }} pago(s) registrado(s)
                 </span>
-                <span class="text-sm font-bold text-text-primary">
-                  Total: {{ clp(totalHistorial()) }}
-                </span>
+                <span class="item-title"> Total: {{ clp(totalHistorial()) }} </span>
               </div>
             }
           </div>

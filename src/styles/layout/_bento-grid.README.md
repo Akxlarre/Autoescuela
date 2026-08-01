@@ -44,7 +44,10 @@ Compatibilidad con nomenclatura antigua. **Misma lógica**, sin duplicación:
 | `bento-2x2` | `bento-tall` |
 | `bento-3x2` | `bento-feature` |
 
-> **Recomendación**: usar nombres semánticos (`bento-wide`) en código nuevo.
+> **PROHIBIDO en código nuevo** (fix-084-b / ASG-b-057): 0 usos reales de estos alias en
+> `src/app` hoy — la convención semántica (`bento-wide`, no `bento-2x1`) ya ganó en la
+> práctica. Se mantienen en el CSS solo por compatibilidad retroactiva, no por vigencia.
+> `indices/STYLES.md` los marca `⚠️ Legacy` en la tabla auto-generada de clases.
 
 ## Data-Attributes (Placement Exacto)
 

@@ -41,9 +41,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
           <div class="flex items-center gap-2.5">
             <app-icon name="minus-circle" [size]="18" color="var(--state-warning)" />
-            <h2 id="egreso-modal-title" class="text-base font-semibold">
-              Registrar Egreso
-            </h2>
+            <h2 id="egreso-modal-title" class="text-base font-semibold">Registrar Egreso</h2>
           </div>
           <button
             class="flex items-center justify-center w-8 h-8 rounded-lg opacity-60 hover:opacity-100 transition-opacity text-text-muted"
@@ -58,10 +56,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <form [formGroup]="form" class="flex flex-col gap-5 px-6 py-5" (ngSubmit)="onSubmit()">
           <!-- Tipo de egreso -->
           <div class="flex flex-col gap-1.5">
-            <label
-              for="egreso-tipo"
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            >
+            <label for="egreso-tipo" class="overline">
               Tipo de Egreso <span class="text-error">*</span>
             </label>
             <p-select
@@ -80,10 +75,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Monto -->
           <div class="flex flex-col gap-1.5">
-            <label
-              for="egreso-monto"
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            >
+            <label for="egreso-monto" class="overline">
               Monto (CLP) <span class="text-error">*</span>
             </label>
             <div class="relative">
@@ -116,10 +108,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Descripción / Motivo -->
           <div class="flex flex-col gap-1.5">
-            <label
-              for="egreso-descripcion"
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            >
+            <label for="egreso-descripcion" class="overline">
               {{ tipoLabel() }} <span class="text-error">*</span>
             </label>
             <input
@@ -142,9 +131,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Fecha (display-only) -->
           <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Fecha
-            </label>
+            <label class="overline"> Fecha </label>
             <div
               class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
             >
