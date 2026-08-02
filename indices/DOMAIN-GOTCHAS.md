@@ -323,6 +323,146 @@
   no contra el archivo de migración que uno cree que es el "correcto".
 - **Fuente:** `specs/fixes/fix-100-m-auditoria-website-config-sin-enriquecer`
 
+### DG-044 — `log_change()` mostraba nombres de columna crudos y valores de FK como ID de Supabase
+- **Trampa:** asumir que agregar una columna al `CASE` de 8 entradas de `v_col_label` era
+  suficiente para que "Actividad reciente"/"Auditoría" fueran legibles. Aunque se tradujera
+  el nombre (`promotion_course_id` → "Curso de promoción"), el diff seguía mostrando el
+  **valor** crudo (`null -> 29`) — un ID de Supabase que el humano no maneja ni puede
+  interpretar sin abrir la BD.
+- **Realidad:** desde `fix-102-m` (`20260802120000_audit_log_humanize_columns_and_values.sql`)
+  el diff de UPDATE usa dos funciones nuevas, independientes de `log_change()`:
+  `audit_humanize_column(text)` (diccionario de ~90 columnas + fallback genérico
+  `initcap(replace(col,'_',' '))`) y `audit_resolve_display_value(column, value)` (resuelve
+  IDs de FK y enums conocidos a texto legible, ej. `promotion_course_id=29` →
+  `"PC-A2-01 (Clase Profesional A2)"`, `current_step=3` → `"Documentos"`). Ambas devuelven un
+  fallback razonable (nombre humanizado / valor crudo) cuando no tienen regla — nunca rompen
+  el flujo. **Agregar una columna nueva al diccionario o una FK nueva a resolver ya NO requiere
+  tocar `log_change()` completa** — solo `CREATE OR REPLACE FUNCTION audit_humanize_column`
+  o `audit_resolve_display_value`, evitando el problema de DG-043 (múltiples migraciones que
+  redefinen `log_change()` completa y se pisan entre sí).
+- **Fuente:** `specs/fixes/fix-102-m-auditoria-diccionario-columnas-completo`
+
+### DG-045 — Fallback 3 de `v_user_id` en `log_change()` casteaba un UUID directo a `INT` — nunca funcionó
+- **Trampa:** asumir que cualquier acción hecha desde una sesión autenticada normal (no Edge
+  Function) queda atribuida al usuario real en `audit_log`, para cualquier tabla.
+- **Realidad:** `request.jwt.claim.sub` es el **UUID** de Supabase Auth (`auth.uid()`), no el
+  `id` serial de `public.users`. El Fallback 3 (vigente desde el origen de `log_change()`
+  hasta `20260801140000`) hacía
+  `v_user_id := (NULLIF(current_setting('request.jwt.claim.sub', true), ''))::INT` — castear
+  un string UUID a `INT` **siempre lanza excepción**, atrapada por el
+  `EXCEPTION WHEN OTHERS THEN v_user_id := NULL` que envuelve ese mismo bloque. Este fallback
+  **nunca pudo resolver un usuario real**, para ninguna tabla ni operación. Como la mayoría de
+  las tablas auditadas tienen `registered_by` (Fallback 2, sí funciona), el bug pasó
+  desapercibido — pero `users`, `students`, `vehicles`, `vehicle_documents`,
+  `promotion_courses` y `website_config` no tienen esa columna, y cualquier UPDATE/INSERT
+  sobre ellas desde una sesión normal (ej. un instructor completando su primer login vía el
+  RPC `user_complete_first_login()`) quedaba con `user_id=NULL` → "Sistema / Online" en el
+  frontend, en vez del nombre real del actor. El proyecto ya resolvía este mapeo
+  correctamente en otro lado — `auth_user_id()` (`20260301000011_10_rls_policies.sql:23-26`,
+  usada en RLS) — pero `log_change()` nunca lo reutilizó. Corregido en `fix-103-m`
+  (`20260802130000_audit_log_fix_jwt_sub_cast.sql`): el Fallback 3 ahora resuelve
+  `SELECT id FROM public.users WHERE supabase_uid = <uuid>::UUID` en vez de castear directo.
+  Al tocar `log_change()` de nuevo, verificar que este fallback siga usando `supabase_uid`,
+  no un cast directo del claim `sub`.
+  > ⚠️ **Corrección posterior (DG-049/fix-108-m):** este fix arregló el cast pero seguía leyendo
+  > un GUC (`current_setting('request.jwt.claim.sub')`) que PostgREST **nunca setea** en este
+  > stack — verificado solo con un fixture SQL que simulaba el GUC a mano, nunca contra una
+  > petición HTTP real. El Fallback 3 vigente ya no usa ese GUC — ver DG-049.
+- **Fuente:** `specs/fixes/fix-103-m-auditoria-atribucion-autor-first-login`
+
+### DG-046 — Traducir el NOMBRE de columna no basta si el VALOR sigue en inglés (booleanos y enums)
+- **Trampa:** dar por resuelto "Actividad reciente" en español apenas `audit_humanize_column()`
+  (DG-044/fix-102-m) traduce la etiqueta de columna. `"Primer inicio de sesión: true -> false"`
+  demuestra que la etiqueta puede estar perfecta y el VALOR seguir crudo — Postgres inserta
+  literalmente `true`/`false` para booleanos y el token del enum (`draft`, `active`,
+  `no_show`, etc.) tal cual está en la BD.
+- **Realidad:** `audit_resolve_display_value()` ahora intenta, en cascada, cuando la columna
+  no tiene una regla de FK/enum propia por NOMBRE: (1) booleano → `"Sí"`/`"No"`, (2)
+  `audit_humanize_enum_value()` — diccionario de ~110 valores de enum conocidos del esquema.
+  A diferencia del diccionario de columnas, **este NO tiene fallback de humanización
+  genérica** — capitalizar una palabra en inglés (`"Draft"`) no la traduce, así que un enum
+  nuevo no listado sigue mostrándose crudo hasta agregarlo a `audit_humanize_enum_value()`.
+  El público de este sistema (dueño, secretarias, instructores) no necesariamente maneja
+  inglés — cualquier trigger o feature nueva que dependa de mostrar un valor de enum en
+  auditoría/UI debe considerar agregarlo a este diccionario, no asumir que el token en inglés
+  es aceptable.
+- **Fuente:** `specs/fixes/fix-104-m-auditoria-traducir-valores-booleanos-enum`
+
+### DG-047 — El backend puede tener el detalle legible y el frontend igual mostrarlo genérico (lo tira)
+- **Trampa:** asumir que arreglar `log_change()` (DG-041/044/046) garantiza que "Actividad
+  reciente" se vea bien, porque `audit_log.detail` ya viene legible. **No es así si el
+  consumidor frontend descarta ese dato.**
+- **Realidad:** `DashboardFacade.mapAuditLogToActivity()` (`dashboard.facade.ts`), para
+  `action === 'DELETE'`, ignoraba por completo `log.detail` (que `log_change()` ya llena con
+  `'Eliminado: ' || v_entity_label`, ej. `"Eliminado: Juan Perez - Clase Profesional A2
+  ($800.000)"`) y lo reemplazaba por un mensaje genérico `"Eliminad{o/a} por {usuario}"` — ni
+  arreglando el backend a la perfección se veía el QUÉ se eliminó. Además, el diccionario
+  `entityNames` de esa misma función solo cubría 9 de ~23 tablas auditadas — **el mismo
+  patrón de "cobertura parcial hardcodeada" de DG-041/DG-044, pero en el frontend, no en
+  SQL** — cualquier tabla fuera de esa lista mostraba el título genérico "Registro" en vez
+  del nombre real de la entidad. Corregido en `fix-105-m`: la rama DELETE ahora usa
+  `log.detail` (limpiando el prefijo `"Eliminado: "`) y el diccionario se completó con las
+  11 tablas que faltaban. **Lección:** cuando se audite/arregle un pipeline de datos con
+  transformación en dos capas (BD → frontend), verificar AMBAS — un backend perfecto no
+  sirve si el frontend tiene su propio fallback/diccionario incompleto que pisa el dato bueno.
+- **Fuente:** `specs/fixes/fix-105-m-actividad-reciente-eliminados-genericos`
+
+### DG-048 — `audit_humanize_enum_value()` no cubre entity_label; y los comentarios de columna del esquema original mienten sobre los valores reales
+- **Trampa doble:** (a) asumir que agregar un valor a `audit_humanize_enum_value()`
+  (DG-046/fix-104-m) lo traduce en TODA "Actividad reciente"/"Auditoría" — esa función solo
+  se invocaba desde `audit_resolve_display_value()`, que corre exclusivamente dentro del
+  diff de UPDATE. La construcción de `v_entity_label` (usada por INSERT y DELETE, y como
+  prefijo `[...]` del propio UPDATE) es código aparte en `log_change()` que concatena
+  columnas crudas vía `v_src->>'columna'` sin pasar por ningún diccionario. (b) confiar en
+  los valores de enum documentados en el comentario `-- 'valor1' | 'valor2'` de la
+  `CREATE TABLE` original como si fueran los que usa la app en producción.
+- **Realidad:** tres ramas de `entity_label` (`student_documents`, `vehicle_documents`,
+  `maintenance_records`) embebían la columna `type` cruda. Peor aún: el comentario de
+  `student_documents.type` en `20260301000006_06_documents_and_dms.sql` documenta valores
+  en inglés (`'national_id'`, `'driver_license'`, `'driver_record'`, `'psychological_exam'`,
+  `'background_certificate'`) que **nunca se usaron en el código real** — verificado en
+  `src/app/core/models/ui/enrollment-documents.model.ts` y
+  `dms-upload-drawer.component.ts`, los valores reales son español-snake_case:
+  `cedula_identidad`, `licencia_conducir`, `hoja_vida_conductor`, `autorizacion_notarial`,
+  `contrato`, `certificado_medico`, `certificado_antecedentes`, `id_photo`. Reportado por el
+  dueño con captura real: `"Sistema / Online eliminó: cedula_identidad de Ignacio Sorko"`.
+  Corregido en `fix-106-m`: las tres ramas ahora pasan por
+  `audit_humanize_enum_value()` antes de caer al valor crudo, y el diccionario se completó
+  con los valores REALES (se conservan los del comentario original solo por compatibilidad,
+  por si algún dato legacy los tiene). **Lección doble:** (1) cuando una función de
+  traducción se agrega a un solo call-site, verificar TODOS los lugares donde el mismo tipo
+  de dato crudo puede llegar al usuario — un diccionario que no está centralizado en una
+  única función invocada desde todos los puntos de salida no cubre todo. (2) los comentarios
+  `-- 'valor' | 'valor'` en `CREATE TABLE` son documentación aspiracional, no ground truth —
+  antes de construir un diccionario de traducción, grepear el código real (`src/app/`) por
+  el valor literal, no confiar en el comentario SQL.
+- **Fuente:** `specs/fixes/fix-106-m-entity-label-tipo-documento-crudo`
+
+### DG-049 — Un fixture SQL que simula `SET LOCAL request.jwt.claim.sub` no prueba nada sobre PostgREST real
+- **Trampa:** dar por verificado un fix de atribución de usuario en `log_change()` porque un
+  test SQL con `SET LOCAL request.jwt.claim.sub = '<uuid>'` + `UPDATE` + `SELECT` pasó en
+  verde (así se "verificó" `fix-103-m`). Ese fixture solo prueba que la función parsea
+  correctamente el GUC **si existiera** — nunca prueba que PostgREST lo setee en una petición
+  HTTP real.
+- **Realidad:** verificado empíricamente contra Supabase local (JWT firmado a mano con el
+  `JWT_SECRET` del proyecto + `PATCH /rest/v1/users` real, sin fixture): PostgREST en este
+  stack (Supabase, JWT/`db-pre-request` moderno) **solo** expone el JSON agregado
+  `request.jwt.claims` (`{"aud":...,"sub":"<uuid>",...}`); el GUC plano
+  `request.jwt.claim.<claim>` (legacy, `role-claim-key`) **no existe en absoluto** —
+  `current_setting('request.jwt.claim.sub', true)` devuelve `NULL` silenciosamente (con
+  `missing_ok=true` no hay excepción que delate el problema). Resultado: el Fallback 3 de
+  `v_user_id` en `log_change()` (DG-045/fix-103-m) nunca resolvió un usuario real en NINGUNA
+  petición real desde que existe, para ninguna tabla sin `registered_by` — "Sistema / Online"
+  seguía apareciendo en producción pese al fix "verificado". `auth.uid()` sí funciona
+  correctamente en el mismo contexto (confirmado con la misma prueba) — es el mecanismo que
+  ya usa `auth_user_id()` en RLS (`20260301000011_10_rls_policies.sql:23-26`). Corregido en
+  `fix-108-m`: el Fallback 3 ahora usa `auth.uid()` directo en vez del GUC plano. **Lección:**
+  para cualquier lógica que dependa de contexto de petición HTTP (headers, JWT claims, GUCs de
+  PostgREST), un test que fabrica ese contexto con `SET LOCAL`/mocks no reemplaza una prueba
+  contra una petición real — verificar con `curl`/`fetch` real contra el Supabase local antes
+  de dar el fix por cerrado.
+- **Fuente:** `specs/fixes/fix-108-m-log-change-jwt-guc-inexistente`
+
 ---
 
 ## Convención para agregar una entrada nueva

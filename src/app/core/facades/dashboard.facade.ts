@@ -429,6 +429,17 @@ export class DashboardFacade {
       professional_pre_registrations: 'Preinscripción',
       standalone_course_enrollments: 'Curso Singular',
       special_service_sales: 'Servicio Especial',
+      student_documents: 'Documento',
+      certificates: 'Certificado',
+      vehicle_documents: 'Documento de Vehículo',
+      maintenance_records: 'Mantención',
+      class_b_theory_sessions: 'Clase Teórica',
+      promotion_courses: 'Curso de Promoción',
+      class_book: 'Libro de Clases',
+      professional_theory_sessions: 'Sesión Teórica Profesional',
+      professional_practice_sessions: 'Sesión Práctica Profesional',
+      professional_module_grades: 'Nota de Módulo',
+      website_config: 'Configuración Web',
     };
     const entityLabel = entityNames[log.entity] || 'Registro';
     const userName = log.users
@@ -447,7 +458,12 @@ export class DashboardFacade {
 
     if (log.action === 'INSERT') {
       title = `Nuev${artO} ${entityLabel.toLowerCase()}`;
-      desc = `Registrad${artO} por ${userName}`;
+      // Usar el detalle real ("Registrado: Foto (Carnet) de Patricia Aguilar") en vez de un
+      // mensaje genérico que no dice qué se registró (fix-107-m, mismo patrón que DELETE).
+      const registeredLabel = (log.detail || '').replace(/^(Registrado|Inscripción Web):\s*/, '');
+      desc = registeredLabel
+        ? `${userName} registró: ${registeredLabel}`
+        : `Registrad${artO} por ${userName}`;
       icon = 'plus';
       iconBg = 'var(--color-success-muted)';
       iconColor = 'var(--color-success)';
@@ -464,7 +480,12 @@ export class DashboardFacade {
       desc = `${userName} modificó: ${desc}`;
     } else if (log.action === 'DELETE') {
       title = `${entityLabel} eliminad${artO}`;
-      desc = `Eliminad${artO} por ${userName}`;
+      // Usar el detalle real ("Eliminado: Juan Perez - Curso X ($800.000)") en vez de un
+      // mensaje genérico que no dice qué se eliminó (fix-105-m).
+      const deletedLabel = (log.detail || '').replace(/^Eliminado:\s*/, '');
+      desc = deletedLabel
+        ? `${userName} eliminó: ${deletedLabel}`
+        : `Eliminad${artO} por ${userName}`;
       icon = 'trash-2';
       iconBg = 'var(--color-error-muted)';
       iconColor = 'var(--color-error)';

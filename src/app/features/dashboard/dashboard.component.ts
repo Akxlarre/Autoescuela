@@ -160,63 +160,65 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             }
           </ul>
         } @else {
-          <ul
-            #activityList
-            class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
-          >
-            @for (item of visibleActivities(); track item.id; let i = $index) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-              >
-                <!-- Ícono del evento -->
-                <div
-                  class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                  [style.background]="item.iconBg"
-                  [style.color]="item.iconColor"
+          <div class="scroll-fade flex-1 min-h-0">
+            <ul
+              #activityList
+              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+            >
+              @for (item of visibleActivities(); track item.id; let i = $index) {
+                <li
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
                 >
-                  <app-icon [name]="item.icon" [size]="14" />
-                </div>
-
-                <!-- Contenido del evento -->
-                <div class="flex-1 min-w-0">
-                  <p
-                    class="m-0 text-sm font-medium text-text-primary truncate"
-                    [pTooltip]="item.title"
-                    tooltipPosition="top"
+                  <!-- Ícono del evento -->
+                  <div
+                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                    [style.background]="item.iconBg"
+                    [style.color]="item.iconColor"
                   >
-                    {{ item.title }}
-                  </p>
-                  <p
-                    class="m-0 text-xs text-text-muted truncate"
-                    [pTooltip]="item.description"
-                    tooltipPosition="bottom"
-                  >
-                    {{ item.description }}
-                  </p>
-                </div>
+                    <app-icon [name]="item.icon" [size]="14" />
+                  </div>
 
-                <!-- Timestamp -->
-                <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
-              </li>
-            } @empty {
-              <li class="flex-1 flex flex-col justify-center py-6">
-                <app-empty-state
-                  icon="activity"
-                  message="Sin actividad reciente"
-                  subtitle="Aún no hay registros en la escuela."
-                />
-              </li>
-            }
-            <!-- Footer: Ver todas al final del scroll -->
-            <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-              <button
-                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-                (click)="openRecentActivity()"
-              >
-                Ver toda la actividad
-              </button>
-            </li>
-          </ul>
+                  <!-- Contenido del evento -->
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="m-0 text-sm font-medium text-text-primary truncate"
+                      [pTooltip]="item.title"
+                      tooltipPosition="top"
+                    >
+                      {{ item.title }}
+                    </p>
+                    <p
+                      class="m-0 text-xs text-text-muted truncate"
+                      [pTooltip]="item.description"
+                      tooltipPosition="bottom"
+                    >
+                      {{ item.description }}
+                    </p>
+                  </div>
+
+                  <!-- Timestamp -->
+                  <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
+                </li>
+              } @empty {
+                <li class="flex-1 flex flex-col justify-center py-6">
+                  <app-empty-state
+                    icon="activity"
+                    message="Sin actividad reciente"
+                    subtitle="Aún no hay registros en la escuela."
+                  />
+                </li>
+              }
+            </ul>
+          </div>
+          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+            <button
+              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+              (click)="openRecentActivity()"
+            >
+              Ver toda la actividad
+            </button>
+          </div>
         }
       </div>
 
@@ -250,88 +252,109 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             }
           </ul>
         } @else {
-          <ul
-            class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
-          >
-            @for (alert of visibleAlerts(); track alert.id; let i = $index) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-              >
-                <!-- Ícono del evento (según severity) -->
-                <div
-                  class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                  [style.background]="getAlertBg(alert.severity)"
-                  [style.color]="getAlertColor(alert.severity)"
+          <div class="scroll-fade flex-1 min-h-0">
+            <ul
+              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+            >
+              @for (alert of visibleAlerts(); track alert.id; let i = $index) {
+                <li
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
                 >
-                  <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
-                </div>
-
-                <!-- Contenido del evento -->
-                <div class="flex-1 min-w-0">
-                  <p
-                    class="m-0 text-sm font-medium text-text-primary truncate"
-                    [pTooltip]="alert.title"
-                    tooltipPosition="top"
+                  <!-- Ícono del evento (según severity) -->
+                  <div
+                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                    [style.background]="getAlertBg(alert.severity)"
+                    [style.color]="getAlertColor(alert.severity)"
                   >
-                    {{ alert.title }}
-                  </p>
-                  <p
-                    class="m-0 text-xs text-text-muted truncate"
-                    [pTooltip]="alert.description"
-                    tooltipPosition="bottom"
-                  >
-                    {{ alert.description }}
-                  </p>
-                </div>
+                    <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
+                  </div>
 
-                <!-- Botón descartar -->
-                <button
-                  aria-label="Descartar"
-                  class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
-                  (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
-                  pTooltip="Descartar"
-                >
-                  <app-icon name="x" [size]="12" />
-                </button>
-              </li>
-            } @empty {
-              <li class="flex-1 flex flex-col justify-center py-6">
-                <app-empty-state
-                  icon="bell"
-                  message="Todo en orden"
-                  subtitle="No hay alertas importantes por revisar."
-                />
-              </li>
-            }
-            <!-- Footer: Ver todas al final del scroll -->
-            <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-              <button
-                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-                (click)="openAlerts()"
-              >
-                Ver todas las alertas
-              </button>
-            </li>
-          </ul>
+                  <!-- Contenido del evento -->
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="m-0 text-sm font-medium text-text-primary truncate"
+                      [pTooltip]="alert.title"
+                      tooltipPosition="top"
+                    >
+                      {{ alert.title }}
+                    </p>
+                    <p
+                      class="m-0 text-xs text-text-muted truncate"
+                      [pTooltip]="alert.description"
+                      tooltipPosition="bottom"
+                    >
+                      {{ alert.description }}
+                    </p>
+                  </div>
+
+                  <!-- Botón descartar -->
+                  <button
+                    aria-label="Descartar"
+                    class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
+                    (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
+                    pTooltip="Descartar"
+                  >
+                    <app-icon name="x" [size]="12" />
+                  </button>
+                </li>
+              } @empty {
+                <li class="flex-1 flex flex-col justify-center py-6">
+                  <app-empty-state
+                    icon="bell"
+                    message="Todo en orden"
+                    subtitle="No hay alertas importantes por revisar."
+                  />
+                </li>
+              }
+            </ul>
+          </div>
+          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+            <button
+              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+              (click)="openAlerts()"
+            >
+              Ver todas las alertas
+            </button>
+          </div>
         }
       </div>
     </section>
   `,
   styles: [
     `
-      /* Scrollbar minimalista para las listas */
+      /* Scrollbar minimalista pero visible por defecto (affordance de scroll) */
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-muted) transparent;
+      }
       .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
+        width: 6px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
         background: transparent;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: var(--border-subtle);
+        background-color: var(--text-muted);
         border-radius: 4px;
       }
       .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: var(--text-muted);
+        background-color: var(--text-secondary);
+      }
+
+      /* Fade inferior: insinúa que la lista tiene más contenido para scrollear */
+      .scroll-fade {
+        position: relative;
+      }
+      .scroll-fade::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 28px;
+        background: linear-gradient(to bottom, transparent, var(--card-bg));
+        pointer-events: none;
       }
     `,
   ],
