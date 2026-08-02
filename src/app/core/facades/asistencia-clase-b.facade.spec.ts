@@ -4,7 +4,11 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import type { ClasePracticaRow } from '@core/models/ui/asistencia-clase-b.model';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import type {
+  AlertaFaltaConsecutiva,
+  ClasePracticaRow,
+} from '@core/models/ui/asistencia-clase-b.model';
 
 /** Builder Supabase encadenable y awaitable, con resultado por tabla. */
 function makeSupabaseMock() {
@@ -66,14 +70,31 @@ function makeRow(over: Partial<ClasePracticaRow> = {}): ClasePracticaRow {
   };
 }
 
+function makeAlerta(over: Partial<AlertaFaltaConsecutiva> = {}): AlertaFaltaConsecutiva {
+  return {
+    studentId: 5,
+    enrollmentId: 10,
+    alumnoName: 'Juan Pérez',
+    faltasConsecutivas: 2,
+    nivel: 'warning',
+    ultimaFechaFalta: '2026-07-28',
+    horarioActivo: true,
+    branchId: 1,
+    branchName: 'Chillán',
+    ...over,
+  };
+}
+
 describe('AsistenciaClaseBFacade', () => {
   let facade: AsistenciaClaseBFacade;
   let mock: ReturnType<typeof makeSupabaseMock>;
   let toast: any;
+  let notifications: any;
 
   beforeEach(() => {
     mock = makeSupabaseMock();
     toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
+    notifications = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -82,6 +103,7 @@ describe('AsistenciaClaseBFacade', () => {
         { provide: ToastService, useValue: toast },
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 99 }) } },
         { provide: BranchFacade, useValue: { branches: vi.fn().mockReturnValue([]) } },
+        { provide: NotificationsFacade, useValue: notifications },
       ],
     });
 
@@ -157,5 +179,66 @@ describe('AsistenciaClaseBFacade', () => {
 
   it('setBranchFilter no dispara error y permite recarga', () => {
     expect(() => facade.setBranchFilter(2)).not.toThrow();
+  });
+
+  // ── sendReminder (fix-093-b) ──────────────────────────────────────────────
+
+  it('sendReminder crea la notificación con el users.id del alumno (no students.id)', async () => {
+    (facade as any)._alertas.set([makeAlerta({ studentId: 5, enrollmentId: 10 })]);
+    mock.setResult('students:single', { user_id: 77 });
+
+    await facade.sendReminder(10);
+
+    expect(notifications.notifyUsers).toHaveBeenCalledTimes(1);
+    const [recipients, payload] = notifications.notifyUsers.mock.calls[0];
+    // 77 = users.id resuelto vía students.user_id; 5 sería el students.id (bug clásico)
+    expect(recipients).toEqual([77]);
+    expect(payload.referenceType).toBe('class_b');
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('sendReminder NO muestra toast de éxito si el envío falla', async () => {
+    (facade as any)._alertas.set([makeAlerta()]);
+    mock.setResult('students:single', { user_id: 77 });
+    notifications.notifyUsers.mockRejectedValueOnce(new Error('RLS'));
+
+    await facade.sendReminder(10);
+
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('sendReminder no notifica ni miente si el alumno no tiene user_id', async () => {
+    (facade as any)._alertas.set([makeAlerta()]);
+    mock.setResult('students:single', { user_id: null });
+
+    await facade.sendReminder(10);
+
+    expect(notifications.notifyUsers).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('sendReminder marca y limpia isSaving', async () => {
+    (facade as any)._alertas.set([makeAlerta()]);
+    mock.setResult('students:single', { user_id: 77 });
+
+    let sawSavingDuringCall = false;
+    notifications.notifyUsers.mockImplementationOnce(async () => {
+      sawSavingDuringCall = facade.isSaving();
+    });
+
+    await facade.sendReminder(10);
+
+    expect(sawSavingDuringCall).toBe(true);
+    expect(facade.isSaving()).toBe(false);
+  });
+
+  it('sendReminder ignora un enrollmentId que no está entre las alertas', async () => {
+    (facade as any)._alertas.set([makeAlerta({ enrollmentId: 10 })]);
+
+    await facade.sendReminder(999);
+
+    expect(notifications.notifyUsers).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });
