@@ -135,6 +135,7 @@
 | ASG-b-059 | Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta | [fix-093-b-boton-recordar-alertas-asistencia-b](fixes/fix-093-b-boton-recordar-alertas-asistencia-b/fix.md) | 2026-08-01 |
 | ASG-b-060 | El CTA de `ConfirmModalService` ignora `severity: 'danger'` y sale en azul de marca | [fix-094-b-confirm-modal-severity-cta](fixes/fix-094-b-confirm-modal-severity-cta/fix.md) | 2026-08-01 |
 | ASG-b-061 | Área táctil de los botones del rail de alertas por debajo de 44×44px | [fix-095-b-area-tactil-rail-alertas](fixes/fix-095-b-area-tactil-rail-alertas/fix.md) | 2026-08-02 |
+| ASG-b-062 | El ícono del modal de confirmación es `alert-triangle` incluso para `info`/`success`/`secondary` | [fix-096-b-icono-modal-confirmacion](fixes/fix-096-b-icono-modal-confirmacion/fix.md) | 2026-08-02 |
 <!-- AUTO-GENERATED:END -->
 
 ---

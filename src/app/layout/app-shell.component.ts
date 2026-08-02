@@ -13,7 +13,7 @@ import { Router, RouterOutlet } from '@angular/router';
 
 import { LayoutService } from '@core/services/ui/layout.service';
 import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { ConfirmModalService, type ConfirmSeverity } from '@core/services/ui/confirm-modal.service';
 import { SearchPanelComponent } from '@shared/components/search-panel/search-panel.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
@@ -94,9 +94,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               "
             >
               <app-icon
-                [name]="
-                  confirmModal.config()?.severity === 'danger' ? 'circle-alert' : 'alert-triangle'
-                "
+                [name]="confirmModalIcon()"
                 [size]="20"
                 [class.text-warning]="confirmModal.config()?.severity === 'warn'"
                 [class.text-error]="confirmModal.config()?.severity === 'danger'"
@@ -219,6 +217,23 @@ export class AppShellComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
+
+  /**
+   * Ícono del modal de confirmación por severidad — mismo vocabulario que
+   * `alert-card.component.ts` (canon del DS). `secondary` no tiene equivalente propio ahí;
+   * reusa `info` porque `--state-info` y `--color-primary` son el mismo azul en modo oscuro
+   * (fix-096-b: antes cualquier severidad no-`danger` caía en `alert-triangle`).
+   */
+  protected confirmModalIcon(): string {
+    const icons: Record<ConfirmSeverity, string> = {
+      danger: 'circle-alert',
+      warn: 'alert-triangle',
+      info: 'info',
+      success: 'circle-check',
+      secondary: 'info',
+    };
+    return icons[this.confirmModal.config()?.severity ?? 'secondary'];
+  }
 
   onSearchQuery(query: string): void {
     this.globalSearch.setQuery(query);
