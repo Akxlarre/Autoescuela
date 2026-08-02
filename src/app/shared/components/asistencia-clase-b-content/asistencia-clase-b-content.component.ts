@@ -264,7 +264,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         @if (alerta.nivel === 'danger') {
                           @if (alerta.horarioActivo) {
                             <button
-                              class="btn-danger-ghost btn-sm"
+                              class="btn-danger-ghost btn-sm rail-action-btn"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
                               data-llm-action="remove-schedule"
                               (click)="removeSchedule.emit(alerta.enrollmentId)"
@@ -277,7 +277,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             </button>
                           } @else {
                             <button
-                              class="btn-secondary btn-sm"
+                              class="btn-secondary btn-sm rail-action-btn"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
                               data-llm-action="reactivate-schedule"
                               (click)="reactivateSchedule.emit(alerta.enrollmentId)"
@@ -291,7 +291,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           }
                         } @else {
                           <button
-                            class="btn-secondary btn-sm"
+                            class="btn-secondary btn-sm rail-action-btn"
                             [disabled]="isAlertaBusy(alerta.enrollmentId)"
                             data-llm-action="send-reminder"
                             (click)="sendReminder.emit(alerta.enrollmentId)"
@@ -748,6 +748,27 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       }
     </div>
   `,
+  styles: [
+    `
+      /* fix-095-b: área de toque invisible en los botones del rail de alertas.
+         Ya cumplen WCAG 2.5.8 (AA, mínimo real 24×24px) — esto los sube a 44×44
+         (guía HIG/AAA) sin agrandar el botón visualmente, así no reabre la
+         densidad deliberada de btn-sm (fix-086-m). El ancho visual (71-79px) ya
+         supera 44px, por eso el ::before solo crece en alto. */
+      .rail-action-btn {
+        position: relative;
+      }
+      .rail-action-btn::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        min-height: 44px;
+        transform: translateY(-50%);
+      }
+    `,
+  ],
 })
 export class AsistenciaClaseBContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
