@@ -255,34 +255,52 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
                       </span>
                       <div class="shrink-0">
+                        <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
+                             spinner el botón de LA alerta en curso. Antes el booleano
+                             global isSaving() bloqueaba las de todos los alumnos y no
+                             se veía cuál se estaba procesando. "Eliminar" es la acción
+                             destructiva del grupo → btn-ghost, el peso visual más bajo
+                             (antes btn-primary, invirtiendo la jerarquía). -->
                         @if (alerta.nivel === 'danger') {
                           @if (alerta.horarioActivo) {
                             <button
-                              class="btn-primary btn-sm"
-                              [disabled]="isSaving()"
+                              class="btn-danger-ghost btn-sm rail-action-btn"
+                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
                               data-llm-action="remove-schedule"
                               (click)="removeSchedule.emit(alerta.enrollmentId)"
                             >
-                              Eliminar
+                              @if (isAlertaBusy(alerta.enrollmentId)) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                              } @else {
+                                Eliminar
+                              }
                             </button>
                           } @else {
                             <button
-                              class="btn-secondary btn-sm"
-                              [disabled]="isSaving()"
+                              class="btn-secondary btn-sm rail-action-btn"
+                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
                               data-llm-action="reactivate-schedule"
                               (click)="reactivateSchedule.emit(alerta.enrollmentId)"
                             >
-                              Reactivar
+                              @if (isAlertaBusy(alerta.enrollmentId)) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                              } @else {
+                                Reactivar
+                              }
                             </button>
                           }
                         } @else {
                           <button
-                            class="btn-secondary btn-sm"
-                            [disabled]="isSaving()"
+                            class="btn-secondary btn-sm rail-action-btn"
+                            [disabled]="isAlertaBusy(alerta.enrollmentId)"
                             data-llm-action="send-reminder"
                             (click)="sendReminder.emit(alerta.enrollmentId)"
                           >
-                            Recordar
+                            @if (isAlertaBusy(alerta.enrollmentId)) {
+                              <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                            } @else {
+                              Recordar
+                            }
                           </button>
                         }
                       </div>
@@ -730,6 +748,27 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       }
     </div>
   `,
+  styles: [
+    `
+      /* fix-095-b: área de toque invisible en los botones del rail de alertas.
+         Ya cumplen WCAG 2.5.8 (AA, mínimo real 24×24px) — esto los sube a 44×44
+         (guía HIG/AAA) sin agrandar el botón visualmente, así no reabre la
+         densidad deliberada de btn-sm (fix-086-m). El ancho visual (71-79px) ya
+         supera 44px, por eso el ::before solo crece en alto. */
+      .rail-action-btn {
+        position: relative;
+      }
+      .rail-action-btn::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        min-height: 44px;
+        transform: translateY(-50%);
+      }
+    `,
+  ],
 })
 export class AsistenciaClaseBContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
@@ -742,6 +781,12 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly instructores = input<InstructorOption[]>([]);
   readonly isLoading = input(false);
   readonly isSaving = input(false);
+  /**
+   * `enrollmentId` de la alerta cuya acción está en vuelo, o `null`.
+   * Permite deshabilitar/animar solo el botón de esa fila en vez de los de todas
+   * las alertas, que es lo que hacía `isSaving()` global (fix-093-b).
+   */
+  readonly savingAlertaId = input<number | null>(null);
   /** Presupuesto de densidad (spec 0028/0030): null = sin límite (desktop). Llega resuelto por input — este Dumb NO inyecta LayoutService. */
   readonly maxVisible = input<number | null>(null);
 
@@ -983,6 +1028,11 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected formatIsoDateShort(iso: string): string {
     const [, m, d] = iso.slice(0, 10).split('-');
     return `${d}-${m}`;
+  }
+
+  /** true si ESTA alerta (y no otra) tiene una acción en vuelo (fix-093-b). */
+  protected isAlertaBusy(enrollmentId: number): boolean {
+    return this.savingAlertaId() === enrollmentId;
   }
 
   protected initials(name: string): string {

@@ -3,6 +3,8 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { todayIso } from '@core/utils/date.utils';
 import type {
   AsistenciaClaseBKpis,
@@ -47,6 +49,8 @@ export class AsistenciaClaseBFacade {
   private readonly toast = inject(ToastService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly notifications = inject(NotificationsFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── 1. Estado privado ──────────────────────────────────────────────────────
 
@@ -59,6 +63,14 @@ export class AsistenciaClaseBFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private readonly _isSaving = signal(false);
+  /**
+   * `enrollmentId` de la alerta cuya acción está en vuelo, o `null`.
+   *
+   * Existe aparte de `_isSaving` porque el rail de alertas tiene una acción por fila:
+   * con el booleano global, apretar un botón deshabilitaba los de TODAS las alertas y
+   * no se veía cuál se estaba procesando (fix-093-b).
+   */
+  private readonly _savingAlertaId = signal<number | null>(null);
 
   // Practical class drawer state
   private readonly _selectedPractica = signal<ClasePracticaRow | null>(null);
@@ -75,6 +87,7 @@ export class AsistenciaClaseBFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
+  readonly savingAlertaId = this._savingAlertaId.asReadonly();
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
 
@@ -210,9 +223,27 @@ export class AsistenciaClaseBFacade {
     }
   }
 
-  /** Elimina el horario de un alumno. */
+  /**
+   * Elimina (cancela) el horario de un alumno.
+   *
+   * Pide confirmación: cancela TODAS las clases agendadas de esa matrícula de un solo
+   * clic y hasta fix-093-b no había forma de deshacerlo por error.
+   */
   async removeSchedule(enrollmentId: number): Promise<void> {
+    const alerta = this._alertas().find((a) => a.enrollmentId === enrollmentId);
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar horario',
+      message: `Se cancelarán todas las clases prácticas agendadas de ${
+        alerta?.alumnoName ?? 'este alumno'
+      }. Podés reactivarlas después desde la misma alerta.`,
+      confirmLabel: 'Eliminar horario',
+      cancelLabel: 'Cancelar',
+      severity: 'danger',
+    });
+    if (!confirmed) return;
+
     this._isSaving.set(true);
+    this._savingAlertaId.set(enrollmentId);
     try {
       const { error } = await this.supabase.client
         .from('class_b_sessions')
@@ -230,12 +261,14 @@ export class AsistenciaClaseBFacade {
       this.toast.error('Error al eliminar el horario');
     } finally {
       this._isSaving.set(false);
+      this._savingAlertaId.set(null);
     }
   }
 
   /** Reactiva el horario previamente eliminado de un alumno. */
   async reactivateSchedule(enrollmentId: number): Promise<void> {
     this._isSaving.set(true);
+    this._savingAlertaId.set(enrollmentId);
     try {
       const { error } = await this.supabase.client
         .from('class_b_sessions')
@@ -253,13 +286,56 @@ export class AsistenciaClaseBFacade {
       this.toast.error('Error al reactivar el horario');
     } finally {
       this._isSaving.set(false);
+      this._savingAlertaId.set(null);
     }
   }
 
-  /** Envía recordatorio al alumno en riesgo. */
+  /**
+   * Envía un recordatorio in-app al alumno en riesgo por faltas consecutivas.
+   *
+   * La alerta ya trae `studentId` en estado, así que solo falta resolver
+   * `students.user_id` → `users.id`: `students.id` NO es el `users.id` que espera
+   * `notifications.recipient_id` (patrón FK de spec 0024).
+   *
+   * El toast de éxito se emite **solo** si la notificación se insertó de verdad
+   * (fix-093-b: antes era un stub que afirmaba el envío sin hacer nada).
+   */
   async sendReminder(enrollmentId: number): Promise<void> {
-    void enrollmentId;
-    this.toast.info('Recordatorio enviado al alumno');
+    const alerta = this._alertas().find((a) => a.enrollmentId === enrollmentId);
+    if (!alerta) return;
+
+    this._isSaving.set(true);
+    this._savingAlertaId.set(enrollmentId);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('students')
+        .select('user_id')
+        .eq('id', alerta.studentId)
+        .single();
+
+      if (error) throw error;
+
+      const userId = data?.user_id;
+      if (!userId) {
+        this.toast.error('El alumno no tiene una cuenta asociada para recibir el recordatorio');
+        return;
+      }
+
+      await this.notifications.notifyUsers([userId], {
+        subject: 'Recordatorio de asistencia',
+        message: `Registramos ${alerta.faltasConsecutivas} ${
+          alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas'
+        } consecutivas en tus clases prácticas. Contáctanos para reagendar antes de perder tu horario.`,
+        referenceType: 'class_b',
+      });
+
+      this.toast.success('Recordatorio enviado al alumno');
+    } catch {
+      this.toast.error('No se pudo enviar el recordatorio');
+    } finally {
+      this._isSaving.set(false);
+      this._savingAlertaId.set(null);
+    }
   }
 
   /** Carga los vehículos disponibles de una sede para el selector del drawer. */
