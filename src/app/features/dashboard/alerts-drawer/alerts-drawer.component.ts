@@ -225,7 +225,7 @@ export class AlertsDrawerComponent {
 
   private routeForAlert(alertId: string): void {
     const alertRoutes: Record<string, string[]> = {
-      'alert-cash-not-closed': ['/app/admin/cuadratura'],
+      'alert-cash-not-closed': ['/app/admin/contabilidad/cuadratura'],
     };
     const route = alertRoutes[alertId];
     if (route) void this.router.navigate(route);

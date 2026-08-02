@@ -83,24 +83,28 @@ Una vez respondidas las preguntas, el núcleo es:
 - Antes de agregar el constraint, revisar si hay filas `in_progress` viejas en producción que
   lo violarían — es muy probable que sí, dado que nunca se cerraron solas.
 
-### Actualización (2026-08-01) — parte del "aviso" ya está resuelta
+### Nota (2026-08-01) — ya existe un aviso de cierre MANUAL, reutilizable pero fuera de alcance
 
-`ASG-b-044` (alerta a secretaría cuando un instructor cierra una clase, distinta de esta
-asignación pero mencionada arriba como solape) se implementó en
+Esto **no forma parte del alcance de ASG-b-036** (que es sobre el aviso de **cierre
+automático**, aún sin implementar). Se deja como referencia porque quien tome esta asignación
+va a necesitar un patrón de notificación a secretaría y ya existe uno para el caso manual.
+
+`ASG-b-044` (alerta a secretaría cuando un instructor cierra una clase manualmente — tarea
+distinta, solo mencionada arriba como solape) se implementó en
 **fix-091-m-alerta-secretaria-cierre-clase** + **fix-092-m-deeplink-secretaria-notif-class-b**:
-`notify_class_b_completed()` (`supabase/migrations/20260801100000_...`) ahora notifica a
-**todas las secretarias de la sede** cada vez que una clase pasa a `completed` — cierre
-manual del instructor, vía `finishClass()`. El deep-link de esa notificación en el topbar
+`notify_class_b_completed()` (`supabase/migrations/20260801100000_...`) notifica a
+**todas las secretarias de la sede** cada vez que una clase pasa a `completed` vía
+`finishClass()` (cierre manual del instructor). El deep-link de esa notificación en el topbar
 lleva a `/app/secretaria/agenda`.
 
-**Lo que NO cubre ese fix (sigue siendo trabajo de esta asignación, ASG-b-036):**
-- No dispara nada cuando una clase queda `in_progress` sin cerrar — el trigger solo escucha
-  la transición **a** `completed`, y hoy nada fuerza esa transición si el instructor nunca
-  aprieta "Finalizar" (ver Hallazgo verificado arriba).
-- No hay exclusión mutua ni cierre automático — sigue todo el alcance original sin tocar.
+**Todo el alcance original de esta asignación sigue sin tocar:**
+- No hay nada que dispare aviso cuando una clase queda `in_progress` sin cerrar — el trigger
+  de `notify_class_b_completed()` solo escucha la transición **a** `completed`, y hoy nada
+  fuerza esa transición si el instructor nunca aprieta "Finalizar" (ver Hallazgo verificado
+  arriba).
+- No hay exclusión mutua ni cierre automático.
 
-**Cuando se implemente el cierre automático de clases olvidadas:** decidir si ese cierre
-también debe generar la notificación a secretaría (probablemente sí, con texto distinto que
-distinga "cerrada por el instructor" de "cerrada automáticamente por el sistema" — ya hay un
-precedente de mensaje diferenciado en `notify_class_b_completed()` para copiar el patrón, y
-el mismo bloque `FOR ... LOOP` sobre secretarias de la sede es reutilizable tal cual).
+**Al implementar el aviso de cierre automático de esta asignación:** evaluar si conviene
+reutilizar el mismo patrón que `notify_class_b_completed()` (el bloque `FOR ... LOOP` sobre
+secretarias de la sede es reutilizable tal cual), con texto que distinga "cerrada por el
+instructor" de "cerrada automáticamente por el sistema".

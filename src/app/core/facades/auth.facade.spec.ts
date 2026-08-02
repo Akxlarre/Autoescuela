@@ -19,7 +19,9 @@ describe('AuthFacade', () => {
           authCallback = cb;
           return { data: { subscription: { unsubscribe: () => {} } } };
         }),
+        updateUser: vi.fn().mockResolvedValue({ error: null }),
       },
+      rpc: vi.fn().mockResolvedValue({ error: null }),
       from: () => ({
         select: () => ({
           eq: () => ({
@@ -168,6 +170,19 @@ describe('AuthFacade', () => {
   it('resetPasswordForEmail() should call supabase.resetPasswordForEmail', async () => {
     await service.resetPasswordForEmail('user@example.com');
     expect(supabaseSpy.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com');
+  });
+
+  it('updatePassword() retorna mensaje de error legible cuando la nueva contraseña es igual a la anterior', async () => {
+    const authError = Object.assign(
+      new Error('New password should be different from the old password.'),
+      { name: 'AuthApiError' },
+    );
+    (service as any).supabase.client.auth.updateUser.mockResolvedValue({ error: authError });
+
+    const result = await service.updatePassword('samepassword');
+
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.error?.message).toBe('La nueva contraseña debe ser diferente a la anterior.');
   });
 
   it('whenReady se resuelve al llegar INITIAL_SESSION sin sesión', async () => {

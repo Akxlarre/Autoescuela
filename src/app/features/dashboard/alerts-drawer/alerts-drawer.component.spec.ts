@@ -197,7 +197,7 @@ describe('AlertsDrawerComponent', () => {
 
       await component.handleAction(alert);
       expect(facadeMock.clearScheduleForEnrollment).not.toHaveBeenCalled();
-      expect(routerMock.navigate).toHaveBeenCalledWith(['/app/admin/cuadratura']);
+      expect(routerMock.navigate).toHaveBeenCalledWith(['/app/admin/contabilidad/cuadratura']);
     });
 
     it('should not navigate for unknown alert IDs', async () => {
