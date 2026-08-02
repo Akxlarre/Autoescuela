@@ -264,7 +264,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         @if (alerta.nivel === 'danger') {
                           @if (alerta.horarioActivo) {
                             <button
-                              class="btn-ghost btn-sm"
+                              class="btn-danger-ghost btn-sm"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
                               data-llm-action="remove-schedule"
                               (click)="removeSchedule.emit(alerta.enrollmentId)"
