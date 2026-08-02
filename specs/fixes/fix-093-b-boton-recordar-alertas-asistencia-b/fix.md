@@ -1,7 +1,8 @@
 # Fix: Botón "Recordar" del rail de alertas de Asistencia B no envía nada + UX de los botones de alerta
 > id: fix-093-b-boton-recordar-alertas-asistencia-b
 > refs: ASG-b-059
-> status: in_progress
+> status: done
+> closed: 2026-08-01
 > created: 2026-08-01
 
 ## Root Cause
@@ -47,16 +48,48 @@ sus botones; su contrato sigue intacto y no debe rediseñarse el layout acá.
 - **Archivo:** `src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts`
 - **Qué cambia:** estado de proceso por fila (`enrollmentId`) en vez del `isSaving()` global que
   bloquea todas las alertas; confirmación en "Eliminar" vía `ConfirmModalService` y baja de su
-  peso visual (hoy `btn-primary` para la acción destructiva).
+  peso visual (era `btn-primary` para la acción destructiva → `btn-danger-ghost`).
+
+- **Archivos:** `src/app/features/{admin,secretaria}/asistencia/*.component.ts`
+- **Qué cambia:** pasan el input nuevo `[savingAlertaId]` al Dumb. Cambio de una línea cada uno.
 
 - **Archivo:** `src/app/core/facades/asistencia-clase-b.facade.spec.ts`
 - **Qué cambia:** tests de `sendReminder` (hoy 0 cobertura) — TDD: escribir primero.
 
 ## Test de Regresión
 
-- `asistencia-clase-b.facade.spec.ts > sendReminder crea la notificación con el users.id del alumno (no students.id)` ✓
-- `asistencia-clase-b.facade.spec.ts > sendReminder NO muestra toast de éxito si el insert falla` ✓
-- `asistencia-clase-b.facade.spec.ts > sendReminder marca y limpia _isSaving` ✓
+5 tests nuevos en `asistencia-clase-b.facade.spec.ts` (todos verdes, verificados con
+`npx vitest run` → 13/13 en el archivo; suite completa `npm run test:ci` → 1683/1683):
+
+- `sendReminder crea la notificación con el users.id del alumno (no students.id)` ✓
+- `sendReminder NO muestra toast de éxito si el envío falla` ✓
+- `sendReminder no notifica ni miente si el alumno no tiene user_id` ✓
+- `sendReminder marca y limpia isSaving` ✓
+- `sendReminder ignora un enrollmentId que no está entre las alertas` ✓
+
+## Verificación visual (/verify, 2026-08-01)
+
+Corrida en `/app/admin/asistencia` como admin, 1280×800. **Prueba en vivo de la causa raíz:**
+`GET /students?select=user_id&id=eq.115` → 200, seguido de `POST /notifications` → **201**.
+La notificación se crea de verdad; el stub ya no miente.
+
+Resto de probes: consola limpia (0 errores), sin 4xx/5xx, datos reales (5 alertas desde
+Supabase, cero mock), contrato app-like intacto (`documentScrolls: false`, `contain: size`,
+rail con scroll interno, 0 violaciones inline), sin overflow horizontal, claro y oscuro OK,
+mobile 375 OK.
+
+**Ronda de feedback visual del owner** (misma dinámica que spec 0030 — el QA geométrico no lo
+detectó): con `btn-ghost` el "Eliminar" quedaba en texto plano y se leía como etiqueta, no
+como botón. Corregido a `btn-danger-ghost`, que ya existía en el DS (`tailwind.css:319`) y
+resuelve borde + señal de destructivo a la vez. Contraste medido en runtime: dark ~6.6:1,
+light ~7.5:1, ambos AA.
+
+## Hallazgos derivados (fuera de alcance, levantados aparte)
+
+- **ASG-b-060** — el CTA del `ConfirmModalService` ignora `severity: 'danger'` y sale en azul
+  de marca. Transversal a toda confirmación destructiva de la app, no solo a esta pantalla.
+- Botones del rail a 30–32px de alto en móvil, bajo el mínimo táctil de 44px. Pre-existente
+  del canon `btn-sm` (`fix-086-m`), no introducido acá.
 
 ## Decisión de negocio pendiente (no bloquea el arranque)
 

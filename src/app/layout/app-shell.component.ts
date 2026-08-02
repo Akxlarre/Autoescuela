@@ -87,6 +87,8 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               [class.bg-warning-subtle]="confirmModal.config()?.severity === 'warn'"
               [class.bg-error-subtle]="confirmModal.config()?.severity === 'danger'"
+              [class.bg-success-subtle]="confirmModal.config()?.severity === 'success'"
+              [class.bg-info-subtle]="confirmModal.config()?.severity === 'info'"
               [class.bg-brand-muted]="
                 confirmModal.config()?.severity === 'secondary' || !confirmModal.config()?.severity
               "
@@ -98,6 +100,8 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
                 [size]="20"
                 [class.text-warning]="confirmModal.config()?.severity === 'warn'"
                 [class.text-error]="confirmModal.config()?.severity === 'danger'"
+                [class.text-success]="confirmModal.config()?.severity === 'success'"
+                [class.text-info]="confirmModal.config()?.severity === 'info'"
                 [class.text-brand]="
                   confirmModal.config()?.severity === 'secondary' ||
                   !confirmModal.config()?.severity
@@ -121,16 +125,21 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
             @if (confirmModal.config()?.cancelLabel) {
               <button
                 type="button"
-                class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-secondary-radius) border border-(--btn-secondary-border) bg-(--btn-secondary-bg) px-5 py-2 text-sm font-semibold text-(--btn-secondary-text) transition-colors hover:bg-(--btn-secondary-bg-hover)"
+                class="btn-secondary"
                 (click)="confirmModal.cancel()"
                 data-llm-action="confirm-modal-cancel"
               >
                 {{ confirmModal.config()?.cancelLabel }}
               </button>
             }
+            <!-- El CTA respeta la severidad (fix-094-b): una confirmación destructiva NO puede
+                 verse igual que un "Guardar". Antes clavaba --btn-primary-bg ignorando
+                 severity, así que las 24 llamadas con severity:'danger' confirmaban en azul
+                 de marca — el color es la única señal cuando el usuario no lee el texto. -->
             <button
               type="button"
-              class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-5 py-2 text-sm font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-colors hover:bg-(--btn-primary-bg-hover) hover:shadow-(--btn-primary-shadow-hover) active:scale-(--btn-press-scale-value)"
+              [class.btn-danger-solid]="confirmModal.config()?.severity === 'danger'"
+              [class.btn-primary]="confirmModal.config()?.severity !== 'danger'"
               (click)="confirmModal.accept()"
               data-llm-action="confirm-modal-accept"
             >

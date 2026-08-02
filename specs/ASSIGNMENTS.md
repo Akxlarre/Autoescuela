@@ -73,7 +73,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-059 | Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta | `b` | [fix-093-b-boton-recordar-alertas-asistencia-b](fixes/fix-093-b-boton-recordar-alertas-asistencia-b/fix.md) | 2026-08-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -133,6 +132,8 @@
 | ASG-b-028 | 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos | [fix-010-i-cosmeticos-agenda-rbac-chips](fixes/fix-010-i-cosmeticos-agenda-rbac-chips/fix.md) | 2026-08-01 |
 | ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | [fix-091-m-alerta-secretaria-cierre-clase](fixes/fix-091-m-alerta-secretaria-cierre-clase/fix.md) | 2026-08-01 |
 | ASG-b-051 | Poder cambiar el código de autorización del libro de clases | [fix-098-m-codigo-autorizacion-libro-editable](fixes/fix-098-m-codigo-autorizacion-libro-editable/fix.md) | 2026-08-01 |
+| ASG-b-059 | Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta | [fix-093-b-boton-recordar-alertas-asistencia-b](fixes/fix-093-b-boton-recordar-alertas-asistencia-b/fix.md) | 2026-08-01 |
+| ASG-b-060 | El CTA de `ConfirmModalService` ignora `severity: 'danger'` y sale en azul de marca | [fix-094-b-confirm-modal-severity-cta](fixes/fix-094-b-confirm-modal-severity-cta/fix.md) | 2026-08-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
