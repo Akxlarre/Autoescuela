@@ -94,6 +94,20 @@
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `cualquiera` | spec | Alta | b | 1654 líneas, máximo tráfico. No reclamar sin haber hecho ASG-b-084 antes. QA visual exhaustivo obligatorio. Ver `specs/assignments/ASG-b-085-*.md` |
 | ASG-b-086 | App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases` | `cualquiera` | spec | Alta | b | 7 secciones secuenciales. Resolver junto con el bug de skeleton gap (fix-074) en el mismo track. Ver `specs/assignments/ASG-b-086-*.md` |
 
+### Tanda auditoría fresca del DS — 2026-08-03
+
+> Auditoría completa del Design System más allá de `lint:arch` (`indices/DS-AUDIT-2026-08-03.md`,
+> hallazgos H1-H10). H3/H5/H10 ya se corrigieron directo (fix-110-b/111-b/112-b). Quedan estos 2
+> como ASG por su tamaño — el resto de los hallazgos (H4/H6/H7/H8/H9) sigue solo documentado en
+> el informe, sin ASG todavía.
+>
+> ⚠️ **Numeración:** la rama `claude/exciting-curie-2bdfdd` ya pusheó `ASG-b-087`/`ASG-b-088`
+> (investigación de listas grandes/virtual scroll) — no reutilizar esos números. Estas 2 arrancan
+> en `ASG-b-089`.
+
+| ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `cualquiera` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
+| ASG-b-090 | 5 paletas de color duplicadas/hardcodeadas en ~12 archivos (`SPEC_COLORS`, `COURSE_COLORS`, avatares, `INCOME_COLORS`, liquidaciones) | `cualquiera` | fix | Media | b | El mismo set de hex vive copiado en 3-4 archivos sueltos — garantiza drift si alguien cambia uno sin saber de las copias. Divisible por cluster. Ver `specs/assignments/ASG-b-090-*.md` |
+
 ### Tanda auditoría del Design System — 2026-07-31
 
 > Revisión del DS completo (tokens, guardrails, vocabulario, a11y, doc) contrastando
