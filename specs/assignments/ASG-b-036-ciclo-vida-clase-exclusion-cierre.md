@@ -6,7 +6,6 @@
 > **priority:** P1
 > **created:** 2026-07-28
 > **created_by:** b
-> **bloqueada_por:** respuesta del cliente (ver "Preguntas abiertas")
 
 ---
 
@@ -37,21 +36,20 @@ O sea: la respuesta a la anotación 3 es **no, la clase no se cierra sola, y ade
 existente la ignora**. Eso contamina las horas del instructor (`recalc_instructor_monthly_hours`
 solo cuenta `completed`), el avance del alumno y los KPIs de "clases en curso".
 
-## Preguntas abiertas (BLOQUEANTE — preguntar al cliente antes de codear)
+## Respuestas del cliente (2026-08-02)
 
-1. **"Clase abierta mucho rato" = ¿cuántos minutos?** La clase dura 45 min por defecto
-   (`duration_min`). ¿Se avisa a los 90 min, a las 2 horas? **¿Y a quién se le avisa** —
-   ¿al instructor, a la secretaría de la sede, a ambos?
-2. **¿El sistema debe EXIGIR volver a la sede entre la clase 1 y la 2, o alcanza con impedir
-   dos clases abiertas a la vez?** Las columnas `gps_start` y `gps_end` ya existen en
-   `class_b_sessions` pero están **sin usar**, así que la geocerca es técnicamente posible.
-   ⚠️ **Esta respuesta define si esto es un fix chico o una spec grande.** Con geocerca entran
-   permisos de ubicación en el navegador, radio de tolerancia y un plan B para cuando el GPS
-   falle o el instructor niegue el permiso. No se puede estimar la tarea sin esta respuesta.
+1. **Umbral de "clase abierta mucho rato":** 15 minutos de retraso sin cerrarse. El aviso es
+   visual en el dashboard donde se muestra "inicio de clase": cambia de color/estado la sesión
+   en cuestión (no se especificó notificación adicional a secretaría/instructor más allá de ese
+   cambio visual — confirmar con capa 2 de notificaciones solo si se pide explícitamente).
+2. **Sin geocerca GPS.** No se exige volver a la sede. En su lugar: exclusión mutua dura —
+   el dashboard puede **mostrar** la próxima clase agendada justo después de la actual, pero
+   **no permite iniciarla** (`startClass()` debe rechazar) si la clase anterior del mismo
+   instructor sigue sin cerrarse (`status='in_progress'`).
 
 ## Alcance sugerido
 
-Una vez respondidas las preguntas, el núcleo es:
+Con las respuestas ya incorporadas, el núcleo es:
 
 - **Exclusión mutua**: impedir `startClass()` si el instructor ya tiene una sesión
   `in_progress`. Preferir constraint/trigger en BD sobre validación solo en el cliente — el
@@ -59,8 +57,12 @@ Una vez respondidas las preguntas, el núcleo es:
 - **Cierre automático**: extender el cron para que las sesiones `in_progress` olvidadas se
   resuelvan a fin de jornada. Definir a qué estado van (¿`completed` con marca de "cerrada
   automáticamente"? ¿un estado nuevo?) — no deberían contar como clase dictada sin evidencia.
-- **Aviso** de clase abierta mucho rato (capa 2 del sistema de notificaciones, ver
-  `.claude/rules/notifications.md`).
+- **Aviso** de clase abierta mucho rato (15 min): cambio visual de color/estado en el dashboard
+  de "inicio de clase" sobre la sesión afectada. No requiere capa 2 (notificación persistente)
+  salvo que se decida ampliarlo al implementar — el requisito del cliente es visual en vivo.
+- **Bloqueo de inicio**: `startClass()` debe rechazar si el instructor ya tiene una sesión
+  `in_progress`. El dashboard puede seguir mostrando la próxima clase agendada, pero su botón de
+  inicio queda deshabilitado hasta que la anterior se cierre.
 
 ## Referencias
 

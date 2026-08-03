@@ -6,7 +6,6 @@
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
-> **bloqueada_por:** respuesta del cliente (ver "Preguntas abiertas")
 
 ---
 
@@ -37,30 +36,19 @@ La cuadratura **no es un reporte, es un arqueo físico**: la tabla guarda `qty_b
 ese día". Sobrescribirla borra la evidencia del descuadre, que es justamente lo que la
 cuadratura existe para detectar.
 
-## Preguntas abiertas (BLOQUEANTE — preguntar al cliente antes de codear)
+## Respuesta del cliente (2026-08-02)
 
-1. **Cuando el admin edita una cuadratura ya cerrada, ¿qué pasa con el arqueo original?**
-   - **(a) Ajuste posterior con motivo** — la cuadratura cerrada queda inmutable; editar es
-     registrar un ajuste con monto, motivo y autor; el total vigente es original + ajustes.
-     Resuelve de paso el caso del egreso con fecha pasada. Es la opción recomendada por
-     trazabilidad, y la más cara.
-   - **(b) Sobrescribir con bitácora de auditoría** — se edita el valor, se guarda
-     quién/cuándo/qué cambió en una tabla aparte. Más simple de usar; el arqueo físico
-     original deja de ser consultable desde la app.
-   - **(c) Sobrescribir sin más** — lo más barato y probablemente lo que el cliente imagina al
-     pedirlo, pero destruye la trazabilidad. **Solo tomar esta opción si el cliente confirma
-     explícitamente que asume ese riesgo.**
-
-   ⚠️ Plantearle al cliente el riesgo en estos términos: *"si alguien se equivoca o hay un
-   faltante de caja, ¿quieren poder ver que la cifra cambió y por qué, o alcanza con la cifra
-   corregida?"*
+Opción **(a) Ajuste posterior con motivo** — confirmado. La cuadratura cerrada queda inmutable;
+editar es registrar un ajuste con monto, motivo y autor. El total vigente = original + ajustes.
+Esto resuelve de paso el caso del egreso con fecha pasada.
 
 ## Alcance sugerido
 
 - Migración: `expenses.vehicle_id` (FK nullable → `vehicles.id`).
 - Vista de registro de egreso de combustible asociada al vehículo (probablemente desde Flota).
-- Según la respuesta a la pregunta: ajuste/bitácora/sobrescritura + que la Cuadratura deje de
-  estar clavada a `today` para poder reflejar egresos con fecha anterior.
+- Migración: tabla de ajustes de cuadratura (monto, motivo, autor, fecha, `cuadratura_id`).
+- Cuadratura deja de estar clavada a `today` para poder reflejar egresos con fecha anterior vía
+  ajuste posterior.
 
 ## Referencias
 
