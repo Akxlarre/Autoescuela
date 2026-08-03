@@ -46,6 +46,16 @@
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
 
+### Tanda auditoría "peor cliente posible" — 2026-08-03
+
+> Evaluación de qué tan resiliente es la orquestación/arquitectura ante un usuario que
+> consulta/opera de la peor forma posible (doble submit, dos pestañas, cambios rápidos de
+> filtro/sede). Dos hallazgos concretos, distintos en severidad: uno es plata (pierde saldo
+> de alumno), el otro es UX (dato viejo un instante en pantalla).
+
+| ASG-b-063 | 🔴 Race condition "lost update" en `pending_balance` al registrar pagos | `cualquiera` | fix | **Alta** | b | `pagos.facade.ts:357` calcula el saldo desde un snapshot pasado por parámetro, no relee BD. Doble submit/dos pestañas pisa el saldo del primer pago. Mismo patrón en `enrollment.facade.ts` (`confirmEnrollment`/`confirmWithPayment`). Fix: RPC atómico, mismo patrón que `get_next_enrollment_number` |
+| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `cualquiera` | spec | Media | b | Cero `AbortController`/`requestId`/`switchMap` en los 100+ Facades del proyecto. Cambiar de sede/filtro rápido puede dejar en pantalla el resultado de la consulta vieja si llega después que la nueva. Afecta sobre todo a los Facades branch-scoped (`.claude/rules/facades.md` §7) |
+
 ### Tanda auditoría del Design System — 2026-07-31
 
 > Revisión del DS completo (tokens, guardrails, vocabulario, a11y, doc) contrastando
