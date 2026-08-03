@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Toast } from 'primeng/toast';
 import { ThemeService } from '@core/services/ui/theme.service';
@@ -8,6 +8,7 @@ import { ThemeService } from '@core/services/ui/theme.service';
   imports: [RouterOutlet, Toast],
   templateUrl: './app.html',
   styleUrl: './app.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
   /**
