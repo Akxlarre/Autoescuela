@@ -104,3 +104,4 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 - Sistema de Hooks: @docs/HOOKS-SYSTEM.md
 - Visión del producto: @docs/PRODUCT-VISION.md
 - Guía de usuario: @docs/CLAUDE-USER-GUIDE.md
+- Setup de MCP servers: @docs/MCP-SETUP.md
