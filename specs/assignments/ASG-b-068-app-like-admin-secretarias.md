@@ -1,7 +1,7 @@
 # Asignación ASG-b-068 — App-like: `/admin/secretarias`
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03

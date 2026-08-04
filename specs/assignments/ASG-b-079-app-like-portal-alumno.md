@@ -1,7 +1,7 @@
 # Asignación ASG-b-079 — App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
