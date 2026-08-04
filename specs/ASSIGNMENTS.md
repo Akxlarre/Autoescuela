@@ -22,8 +22,7 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
-| ASG-b-034 | Terminar migración de `color-mix()` pendiente: 11 archivos con drift post-mayo (mismo patrón que ya resolvía el script) + 56 archivos con gap de diseño (CSS embebido / bindings dinámicos que el script nunca cubrió) | `b` | fix | Baja | b | Ver `scripts/migrate-color-mix-t4.mjs` (corrió una sola vez el 28-may, commit `673c4bd`). Requiere decisión sobre si `color-mix(var(--token))` embebido es deuda o válido por diseño |
-| ASG-b-024 | Fix H-031: la búsqueda global (Ctrl+K) no indexa alumnos ni instructores, solo navegación | `b` | fix | Media | b | Extender el índice del buscador a datos de negocio (alumnos por nombre/RUT, instructores) |
+| ASG-b-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -38,17 +37,30 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-036 | 🔴 Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **BLOQUEADA.** Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-b-010 |
-| ASG-b-037 | 🔴 Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **BLOQUEADA.** `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. La cuadratura es un **arqueo físico**: sobrescribirla borra la evidencia del descuadre |
-| ASG-b-038 | 🔴 Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **BLOQUEADA.** Choca con `CHECK (class_number BETWEEN 1 AND 12)` y el gate del certificado. ⚠️ Coordinar con ASG-b-014 |
-| ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | `m` | fix | Media | b | **La auditoría de cuáles drawers es parte de la tarea.** Reusar `resolveBranchScope()` de fix-027, no escribir uno nuevo. Ojo con la regresión inversa (fix-002-b) |
-| ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | `m` | fix | Baja | b | Extender `notify_class_b_completed()`, que ya notifica al alumno. ⚠️ Coordinar con ASG-b-036 (¿el cierre automático también alerta?) |
+| ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **2026-08-02: desbloqueada.** Cliente respondió: aviso visual a los 15 min de retraso sin cerrar (cambia color/estado en el dashboard de "inicio de clase"); sin geocerca GPS, exclusión mutua dura (`startClass()` rechaza si la anterior sigue `in_progress`). Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-b-010. Ver respuestas completas en `specs/assignments/ASG-b-036-*.md` |
+| ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: ajuste posterior con motivo (cuadratura cerrada queda inmutable, editar = registrar ajuste con monto/motivo/autor). `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. Ver `specs/assignments/ASG-b-037-*.md` |
+| ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `cualquiera` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
 | ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `cualquiera` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
-| ASG-b-051 | Poder cambiar el código de autorización del libro de clases | `cualquiera` | fix | Baja | b | `class_book.sence_code` ya existe. **Confirmar que es ese el código** antes de estimar. ¿Se puede cambiar con el libro ya cerrado? |
+
+### Tanda auditoría del Design System — 2026-07-31
+
+> Revisión del DS completo (tokens, guardrails, vocabulario, a11y, doc) contrastando
+> `indices/STYLES.md` + `ANTI-PATTERNS.md` + los dos audits contra el código real.
+>
+> **Diagnóstico de fondo:** el DS es fuerte donde la mayoría son débiles (4 capas de
+> tokens + 8 guardrails AST con ratchet) y débil donde la mayoría son fuertes
+> (vocabulario de componentes y accesibilidad). Las 6 asignaciones atacan esa asimetría.
+>
+> **Orden recomendado:** `056` primero (es barata y el resto construye sobre esa doc),
+> después `053` y `054` en paralelo, `055` y `058` cuando haya hueco, `057` solo si el
+> equipo decide pagar el refactor.
+
+> ✅ **Tanda completa (2026-07-31)** — las 6 asignaciones (053-058) reclamadas y
+> cerradas. Ver sección "Completadas" más abajo para los tracks resultantes.
 
 ---
 
@@ -61,7 +73,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | `i` | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -112,6 +123,7 @@
 | ASG-b-014 | Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio | [fix-011-i-certificado-clase-b-gate-validacion](fixes/fix-011-i-certificado-clase-b-gate-validacion/fix.md) | 2026-08-01 |
 | ASG-b-016 | Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000 | [fix-013-i-precio-profesional-a2-incorrecto](fixes/fix-013-i-precio-profesional-a2-incorrecto/fix.md) | 2026-08-01 |
 | ASG-b-028 | 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos | [fix-010-i-cosmeticos-agenda-rbac-chips](fixes/fix-010-i-cosmeticos-agenda-rbac-chips/fix.md) | 2026-08-01 |
+| ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---

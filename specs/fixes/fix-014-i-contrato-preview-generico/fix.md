@@ -1,20 +1,25 @@
 # Fix: Vista previa de contrato distinta al PDF real + texto genérico para Profesional
 > id: fix-014-i-contrato-preview-generico
 > refs: ASG-b-029
-> status: in_progress
+> status: done
+> closed: 2026-08-04
 > created: 2026-08-01
 
 ## Root Cause
-[Heredado de ASG-b-029, a confirmar]: 2 hallazgos del mismo módulo (generación de contrato de matrícula):
-- **H-022**: en el wizard interno, el HTML de vista previa del contrato tiene estructura y redacción distinta al PDF real generado ("CONTRATO DE PRESTACIÓN DE SERVICIOS DE ENSEÑANZA DE CONDUCCIÓN" vs "...SERVICIOS EDUCACIONALES" en el PDF), y la vista previa muestra la fecha vacía mientras el PDF real sí la trae correcta. El PDF (documento oficial) está bien formado — el problema es solo el HTML de preview.
-- **H-030**: el contrato usa idénticamente el mismo texto genérico para Clase B y Profesional — no menciona el curso profesional (A2), la promoción, ni condiciones específicas (evaluaciones, examen final).
+Confirmado, en el wizard interno (secretaria/admin):
+- **H-022**: el preview (`contract.component.html:159-202`) es HTML hardcodeado con título/cláusulas distintas al PDF real (`buildStructuredPdf` en `supabase/functions/_shared/contract-pdf.ts:128`, título "CONTRATO DE PRESTACIÓN DE SERVICIOS EDUCACIONALES"). La fecha vacía se debe a que `secretaria-matricula.component.ts:309` fija `contractGeneration.generatedAt: null` **siempre**, sin actualizarlo tras `onGenerateContract()` — el PDF real sí calcula su fecha en el momento (`contract-pdf.ts:67`).
+- **H-030**: el preview no tiene ningún dato dinámico. El PDF real ya muestra curso/licencia/horas reales y una cláusula de convalidación, pero no tiene cláusula de evaluación/examen final para cursos Profesional.
 
 ## ACs Afectados
 Ninguno — fix autónomo (originado de Asignación de equipo, no de una spec).
 
 ## Cambio
-- H-022: alinear el HTML de vista previa (`src/app/shared/components/matricula-steps/contract/contract.component.ts`) con el contenido/estructura real del PDF generado (`supabase/functions/generate-contract-pdf/index.ts`), incluyendo que la fecha se calcule igual en ambos lugares.
-- H-030: agregar contenido específico para matrículas Profesional (mención del curso/promoción, cláusulas de evaluación/examen final) en vez de reutilizar el texto genérico de Clase B.
+- `secretaria-matricula.component.ts`: setear `generatedAt` real tras generar el PDF (signal `_contractGeneratedAt`).
+- `enrollment-contract.model.ts`: agregar `isProfessional: boolean`.
+- `contract.component.html`: alinear título con el PDF real + párrafo condicional de evaluación/examen final para Profesional.
+- `contract-pdf.ts`: agregar cláusula condicional de evaluación/examen final para cursos Profesional (mismo patrón que la cláusula de convalidación).
+- Fuera de scope: matrícula pública (`public-enrollment.component.ts`) — no está en el repro original de H-022/H-030 y su flujo de generación de PDF es distinto.
 
 ## Test de Regresión
-- Pendiente de definir al implementar, una vez investigados ambos archivos.
+- Sin test unitario existente para `contract.component.ts` (dumb, sin lógica en TS — cambio de template).
+- Manual: generar contrato Profesional A2 → preview y PDF muestran la misma fecha y mencionan evaluación/examen final; Clase B → sin esa cláusula, resto sin cambios.

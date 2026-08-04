@@ -43,6 +43,8 @@ export interface EnrollmentContractData {
   contractGeneration: ContractGeneration;
   signedContract: SignedContractUpload | null;
   isMinor: boolean;
+  /** true si el curso matriculado es de categoría Profesional (A2-A5) */
+  isProfessional: boolean;
   /** Upload or signature is required to advance to step 6 */
   canAdvance: boolean;
 }

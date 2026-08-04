@@ -212,6 +212,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── Estado local del contrato (generación + firma) ────────────────────────
   private readonly _contractPdfUrl = signal<string | null>(null);
   private readonly _contractStatus = signal<ContractStatus>('pending');
+  private readonly _contractGeneratedAt = signal<string | null>(null);
   /** Almacena el objeto completo de firma (digital o archivo físico). */
   private readonly _signedContractUpload = signal<SignedContractUpload | null>(null);
 
@@ -306,11 +307,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       contractGeneration: {
         status: this._contractStatus(),
         pdfUrl: this._contractPdfUrl(),
-        generatedAt: null,
+        generatedAt: this._contractGeneratedAt(),
         errorMessage: this.enrollment.error() ?? null,
       },
       signedContract: this._signedContractUpload(),
       isMinor,
+      isProfessional: pd?.courseCategory === 'professional',
       canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
     };
   });
@@ -476,6 +478,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this._step1Form.set(DEFAULT_PERSONAL_DATA);
     this._contractPdfUrl.set(null);
     this._contractStatus.set('pending');
+    this._contractGeneratedAt.set(null);
     this._signedContractUpload.set(null);
     await this.enrollment.loadCourses(branch);
 
@@ -679,6 +682,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const url = await this.enrollment.generateContract();
     this._contractPdfUrl.set(url);
     this._contractStatus.set(url ? 'generated' : 'error');
+    this._contractGeneratedAt.set(url ? new Date().toISOString() : null);
   }
 
   onStep4DataChange(data: EnrollmentContractData): void {
