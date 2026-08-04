@@ -1,6 +1,6 @@
-# Spec 0001-i — Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso
+# Spec 0001-i — Ciclo de vida de la clase: exclusión mutua y aviso de cierre atrasado
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-08-04
 > **Owner:** i
 > **Priority:** P1
@@ -40,15 +40,22 @@ existente la ignora. Eso contamina las horas del instructor
 (`recalc_instructor_monthly_hours` solo cuenta `completed`), el avance del alumno y los KPIs de
 "clases en curso".
 
-**Respuestas del cliente (2026-08-02):**
-1. **Umbral de "clase abierta mucho rato":** 15 minutos de retraso sin cerrarse. El aviso es
-   visual en el dashboard donde se muestra "inicio de clase": cambia de color/estado la sesión
-   en cuestión (no se especificó notificación adicional a secretaría/instructor más allá de ese
-   cambio visual — confirmar con capa 2 de notificaciones solo si se pide explícitamente).
-2. **Sin geocerca GPS.** No se exige volver a la sede. En su lugar: exclusión mutua dura — el
-   dashboard puede mostrar la próxima clase agendada justo después de la actual, pero no
-   permite iniciarla (`startClass()` debe rechazar) si la clase anterior del mismo instructor
-   sigue sin cerrarse (`status='in_progress'`).
+**Respuestas del cliente (2026-08-02, confirmadas y ampliadas el 2026-08-04):**
+1. **No existe cierre automático a un estado terminal.** La clase SIEMPRE la cierra un humano
+   (el instructor apretando "Finalizar"). Lo único automático es el **aviso**: pasados 15
+   minutos desde la hora de inicio sin que la sesión se haya cerrado, el dashboard donde se
+   muestra "inicio de clase" cambia de color/estado en esa sesión puntual, para que
+   secretaría/admin note visualmente que el cierre está atrasado. No hay notificación
+   persistente adicional (capa 2) salvo que se pida explícitamente más adelante.
+2. **Sin geocerca GPS.** No se exige volver a la sede. En su lugar: exclusión mutua dura, pero
+   **solo sobre la acción de iniciar, no sobre la visibilidad**. Ejemplo real del cliente: la
+   secretaria puede ver en el dashboard la clase A (que debía cerrar a las 15:00) y la clase B
+   (que arranca a las 15:00) al mismo tiempo, incluso si ya son las 15:05 y A sigue abierta —
+   ambas se muestran. Lo que se bloquea es que el instructor **inicie** B mientras A siga
+   `in_progress`: `startClass()` debe rechazar la acción hasta que A se cierre.
+3. **ASG-b-010 (Portal Instructor sobre datos mock) ya está completada** (fix-001-i, cerrada
+   2026-07-29, `useMock = false` en producción) — el riesgo de solape mencionado originalmente
+   ya no aplica, se puede implementar y probar contra datos reales sin coordinación adicional.
 
 **Hipótesis de valor:**
 Cierra un hueco real de integridad de datos (clases que quedan `in_progress` para siempre,
@@ -63,9 +70,9 @@ depender de que alguien note el problema manualmente.
   `in_progress` sin cerrar, para no generar sesiones simultáneas inconsistentes.
 - **US2**: Como Secretaria/Admin, quiero ver un aviso visual en el dashboard cuando una clase
   lleva más de 15 minutos abierta sin cerrarse, para poder intervenir si hace falta.
-- **US3**: Como Secretaria/Admin, quiero que las clases que quedaron abiertas sin cerrar se
-  resuelvan automáticamente a fin de jornada, para que no contaminen horas del instructor ni
-  KPIs de "clases en curso" indefinidamente.
+- **US3**: Como Secretaria/Admin, quiero ver ambas clases (la que sigue abierta y la que ya
+  debería empezar) al mismo tiempo en el dashboard, aunque no se pueda iniciar la segunda
+  todavía, para tener visibilidad completa del día del instructor.
 - **US4**: Como Instructor, quiero seguir viendo mi próxima clase agendada aunque la actual siga
   abierta, aunque no pueda iniciarla todavía, para saber qué sigue en mi día.
 
@@ -84,22 +91,23 @@ depender de que alguien note el problema manualmente.
 - **AC3**: Given una sesión `in_progress` que superó los 15 minutos desde su hora de inicio sin
   cerrarse, When se consulta el dashboard de "inicio de clase", Then esa sesión se muestra con
   un color/estado distinto al de una sesión `in_progress` recién iniciada.
-- **AC4**: Given una sesión `in_progress` al final de la jornada que nunca se cerró
-  manualmente, When corre el proceso de cierre automático, Then la sesión pasa a un estado
-  terminal marcado explícitamente como "cerrada automáticamente" (no se confunde con un cierre
-  manual normal) y no cuenta como clase dictada con evidencia para `recalc_instructor_monthly_hours()`.
-- **AC5**: Given una sesión ya cerrada (`completed`/`no_show`/cancelada) del mismo instructor,
-  When intenta iniciar la siguiente sesión agendada, Then `startClass()` lo permite sin
-  restricción.
+- **AC4**: Given que el instructor tiene la clase A `in_progress` (por ejemplo, debía cerrar a
+  las 15:00) y la clase B agendada a las 15:00 con el mismo instructor, When se consulta el
+  dashboard a las 15:05, Then ambas sesiones (A y B) se muestran normalmente — la visibilidad
+  no se restringe, solo la acción de iniciar B (ver AC1).
+- **AC5**: Given una sesión ya cerrada manualmente (`completed`/`no_show`/cancelada) del mismo
+  instructor, When intenta iniciar la siguiente sesión agendada, Then `startClass()` lo permite
+  sin restricción.
 
 ### Edge cases obligatorios
 
-- **AC-E1**: Given que el proceso de cierre automático corre más de una vez sobre la misma
-  sesión ya resuelta, When se ejecuta, Then no debe re-procesarla ni duplicar efectos (horas,
-  notificaciones).
-- **AC-E2**: Given un instructor con clases en dos sedes distintas el mismo día (si el modelo lo
+- **AC-E1**: Given un instructor con clases en dos sedes distintas el mismo día (si el modelo lo
   permite), When evalúa la exclusión mutua, Then el criterio de "sesión abierta" es por
-  instructor global, no por sede — confirmar contra el modelo de datos real en `plan.md`.
+  instructor global (no por sede) — un instructor es una sola persona física, no puede estar
+  dictando dos clases a la vez sin importar la sede.
+- **AC-E2**: Given una sesión `in_progress` que ya pasó los 15 minutos y se muestra en aviso
+  visual, When el instructor finalmente la cierra manualmente, Then el aviso desaparece de
+  inmediato (no queda una sesión `completed` marcada como atrasada).
 
 ---
 
@@ -110,16 +118,14 @@ depender de que alguien note el problema manualmente.
 
 - ❌ Geocerca GPS / validar que el instructor volvió físicamente a la sede — descartado
   explícitamente por el cliente (respuesta 2, 2026-08-02).
+- ❌ Cierre automático a un estado terminal (`completed`, `no_show`, o cualquier otro) — el
+  cliente confirmó el 2026-08-04 que la clase SIEMPRE la cierra un humano. No se crea ningún
+  cron/trigger que cambie el `status` de una sesión `in_progress` sin acción del instructor.
 - ❌ Notificación persistente (capa 2, `NotificationsFacade`) por clase abierta mucho rato — el
   cliente pidió solo aviso visual en vivo. Si se decide ampliar, es una spec/fix aparte.
-- ❌ ASG-b-010 (Portal Instructor corriendo sobre `useMock=true` hardcodeado en
-  `instructor-clases.facade.ts:53`) — la Asignación original marca solape y sugiere resolver
-  ASG-b-010 primero o tomarlas juntas. Se deja fuera de este scope; ver sección 5.
 - ❌ ASG-b-044 (alerta a secretaría cuando el instructor cierra una clase manualmente) — ya
   implementada en `fix-091-m-alerta-secretaria-cierre-clase` /
-  `fix-092-m-deeplink-secretaria-notif-class-b`. Esta spec puede reutilizar el mismo patrón de
-  notificación para el cierre automático (ver Asignación, nota 2026-08-01), pero no modifica lo
-  ya cerrado.
+  `fix-092-m-deeplink-secretaria-notif-class-b`. No se modifica.
 
 ---
 
@@ -129,26 +135,16 @@ depender de que alguien note el problema manualmente.
 - Ninguna directa.
 
 ### Capacidades del proyecto que se asumen existentes
-- `mark_end_of_day_class_b_absences()` (pg_cron `0 1 * * *`) — punto de referencia para el
-  nuevo proceso de cierre automático (mismo patrón de cron, alcance distinto: hoy solo cubre
-  `scheduled`).
-- `notify_class_b_completed()` (`supabase/migrations/20260801100000_...`) — patrón de
-  notificación a secretarias reutilizable para el aviso de cierre automático.
 - `SessionStatus` (`src/app/core/utils/schedule-status.utils.ts`) —
   `'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'`.
-
-### Riesgo de solape (no bloqueante, coordinar)
-- ⚠️ **ASG-b-010**: `instructor-clases.facade.ts` tiene `useMock=true` hardcodeado (línea 53).
-  No tiene sentido validar exclusión mutua real contra la rama mock. Confirmar con el owner de
-  ASG-b-010 antes de implementar, o resolver esa asignación primero.
+- ASG-b-010 ya resuelta (`useMock = false`) — sin riesgo de solape ni bloqueo, ver sección 1.
 
 ### Capacidades nuevas requeridas
 - Validación de exclusión mutua en `startClass()` — preferir constraint/trigger en BD sobre
   validación solo en el cliente (el Facade no es el único camino a la tabla).
-- Extensión/nuevo cron para cierre automático de sesiones `in_progress` olvidadas a fin de
-  jornada.
-- Lógica de "15 minutos de retraso" para el aviso visual (puede ser computado en el cliente a
-  partir de la hora de inicio agendada, o precomputado — decidir en `plan.md`).
+- Lógica de "15 minutos de retraso" para el aviso visual — puramente de lectura/presentación,
+  computable en el cliente a partir de la hora de inicio agendada vs. hora actual (no requiere
+  cron ni cambio de estado en BD).
 
 ---
 
@@ -157,11 +153,11 @@ depender de que alguien note el problema manualmente.
 > Solo si el feature toca persistencia. Detalle técnico final va en `plan.md`.
 
 - Tablas existentes involucradas: `class_b_sessions`.
-- Tablas/columnas nuevas: por definir en `plan.md`. Probablemente se necesita distinguir
-  "cerrada automáticamente" de un cierre manual normal (¿columna `auto_closed: boolean`? ¿un
-  estado terminal nuevo?) — pendiente de decisión técnica, no bloquea la spec pero sí el AC4.
-- RLS: reutilizar policies existentes de `class_b_sessions` — el cron/trigger corre con rol de
-  servicio.
+- Tablas/columnas nuevas: ninguna esperada — el aviso de 15 min es cálculo derivado (hora actual
+  vs. hora de inicio agendada), no requiere persistir nada nuevo. La exclusión mutua se valida
+  contra el `status` ya existente. A confirmar en `plan.md` si se implementa como constraint/
+  trigger en BD o solo en el Facade.
+- RLS: reutilizar policies existentes de `class_b_sessions` — sin cambios de superficie.
 
 ---
 
@@ -169,13 +165,14 @@ depender de que alguien note el problema manualmente.
 
 > Solo a nivel de wireframe verbal. Detalle visual va con el diseñador/DS.
 
-- Pantalla(s) afectada(s): dashboard de "inicio de clase" (instructor), posiblemente vista de
-  agenda/dashboard de secretaría si se decide reflejar el aviso ahí también.
+- Pantalla(s) afectada(s): dashboard de "inicio de clase" (instructor y secretaría/admin).
 - Flujo principal: instructor intenta iniciar una clase nueva mientras tiene otra
   `in_progress` → botón de inicio deshabilitado o acción rechazada con mensaje claro. El
-  dashboard puede seguir mostrando la próxima clase agendada.
-- Estado especial: sesión `in_progress` que supera los 15 minutos → cambio visual de
-  color/estado en la tarjeta/fila de esa sesión.
+  dashboard sigue mostrando ambas sesiones (la abierta y la siguiente agendada) sin ocultar
+  ninguna.
+- Estado especial: sesión `in_progress` que supera los 15 minutos desde su hora de inicio →
+  cambio visual de color/estado en la tarjeta/fila de esa sesión puntual, hasta que se cierre
+  manualmente.
 
 ---
 
@@ -183,19 +180,20 @@ depender de que alguien note el problema manualmente.
 
 > Cómo sabremos en producción que funciona. Opcional para specs internas.
 
-- Cero sesiones `in_progress` que persistan más de 1 día de jornada sin resolver.
 - Cero instructores con 2+ sesiones `in_progress` simultáneas.
+- Toda sesión que supera los 15 minutos sin cerrar queda visualmente marcada en el dashboard
+  hasta que un humano la cierre.
 
 ---
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] Definir el estado terminal exacto para el cierre automático (AC4): ¿`completed` +
-  columna/flag, o un estado nuevo? Afecta a `recalc_instructor_monthly_hours()` y a cualquier
-  reporte que cuente `completed` como "clase dictada con evidencia".
-- [ ] Confirmar si el criterio de exclusión mutua (AC-E2) es por instructor global o por sede,
-  contra el modelo real de `class_b_sessions` / multi-sede de instructores.
-- [ ] Coordinar con ASG-b-010 (useMock hardcodeado) antes de implementar — ver sección 5.
+- [x] No hay cierre automático a estado terminal — confirmado por el owner (i) el 2026-08-04.
+  La clase siempre la cierra un humano; lo único automático es el aviso visual a los 15 min.
+- [x] Exclusión mutua es por instructor global, con visibilidad sin restricción (AC-E1, AC4) —
+  confirmado por el owner (i) el 2026-08-04, con ejemplo concreto de clase A/B superpuestas en
+  el dashboard.
+- [x] ASG-b-010 (useMock hardcodeado) ya resuelta — sin riesgo de solape.
 - Originado de Asignación ASG-b-036 (specs/assignments/ASG-b-036-ciclo-vida-clase-exclusion-cierre.md).
 
 ---
@@ -203,3 +201,7 @@ depender de que alguien note el problema manualmente.
 ## Changelog
 
 - 2026-08-04 — draft inicial por i, a partir de ASG-b-036 (reclamada vía /assign-claim).
+- 2026-08-04 — aclarado con el owner: no hay cierre automático a estado terminal (solo aviso
+  visual a los 15 min), exclusión mutua es global por instructor y no oculta la visibilidad de
+  clases en el dashboard, y ASG-b-010 ya está resuelta (sin riesgo de solape). Se simplifica el
+  scope técnico (sin cron nuevo, sin columna/estado nuevo en BD).
