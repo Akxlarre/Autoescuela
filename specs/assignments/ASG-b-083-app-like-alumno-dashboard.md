@@ -1,7 +1,7 @@
 # Asignación ASG-b-083 — App-like: `/alumno/dashboard`
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-03
