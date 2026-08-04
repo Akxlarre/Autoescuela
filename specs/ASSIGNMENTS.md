@@ -37,7 +37,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **2026-08-02: desbloqueada.** Cliente respondió: aviso visual a los 15 min de retraso sin cerrar (cambia color/estado en el dashboard de "inicio de clase"); sin geocerca GPS, exclusión mutua dura (`startClass()` rechaza si la anterior sigue `in_progress`). Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-b-010. Ver respuestas completas en `specs/assignments/ASG-b-036-*.md` |
 | ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: ajuste posterior con motivo (cuadratura cerrada queda inmutable, editar = registrar ajuste con monto/motivo/autor). `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. Ver `specs/assignments/ASG-b-037-*.md` |
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
@@ -73,6 +72,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | [0001-i-ciclo-vida-clase-exclusion-cierre](specs/0001-i-ciclo-vida-clase-exclusion-cierre/spec.md) | 2026-08-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -130,13 +130,13 @@
 | ASG-b-014 | Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio | [fix-011-i-certificado-clase-b-gate-validacion](fixes/fix-011-i-certificado-clase-b-gate-validacion/fix.md) | 2026-08-01 |
 | ASG-b-016 | Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000 | [fix-013-i-precio-profesional-a2-incorrecto](fixes/fix-013-i-precio-profesional-a2-incorrecto/fix.md) | 2026-08-01 |
 | ASG-b-028 | 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos | [fix-010-i-cosmeticos-agenda-rbac-chips](fixes/fix-010-i-cosmeticos-agenda-rbac-chips/fix.md) | 2026-08-01 |
-| ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-04 |
 | ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | [fix-091-m-alerta-secretaria-cierre-clase](fixes/fix-091-m-alerta-secretaria-cierre-clase/fix.md) | 2026-08-01 |
 | ASG-b-051 | Poder cambiar el código de autorización del libro de clases | [fix-098-m-codigo-autorizacion-libro-editable](fixes/fix-098-m-codigo-autorizacion-libro-editable/fix.md) | 2026-08-01 |
 | ASG-b-059 | Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta | [fix-093-b-boton-recordar-alertas-asistencia-b](fixes/fix-093-b-boton-recordar-alertas-asistencia-b/fix.md) | 2026-08-01 |
 | ASG-b-060 | El CTA de `ConfirmModalService` ignora `severity: 'danger'` y sale en azul de marca | [fix-094-b-confirm-modal-severity-cta](fixes/fix-094-b-confirm-modal-severity-cta/fix.md) | 2026-08-01 |
 | ASG-b-061 | Área táctil de los botones del rail de alertas por debajo de 44×44px | [fix-095-b-area-tactil-rail-alertas](fixes/fix-095-b-area-tactil-rail-alertas/fix.md) | 2026-08-02 |
 | ASG-b-062 | El ícono del modal de confirmación es `alert-triangle` incluso para `info`/`success`/`secondary` | [fix-096-b-icono-modal-confirmacion](fixes/fix-096-b-icono-modal-confirmacion/fix.md) | 2026-08-02 |
+| ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---
