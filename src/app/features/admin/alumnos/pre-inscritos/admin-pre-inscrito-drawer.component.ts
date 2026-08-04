@@ -257,7 +257,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
               <div class="space-y-4" #tabContent>
                 <!-- Test no rendido online → ofrecer descarga del test en papel -->
                 @if (!p.psychAnswers || p.psychAnswers.length === 0) {
-                  <div class="card card-accent space-y-3">
+                  <div class="card space-y-3">
                     <div class="flex items-start gap-3">
                       <app-icon
                         name="printer"
