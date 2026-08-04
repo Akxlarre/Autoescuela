@@ -219,9 +219,7 @@ interface SemaforoInfo {
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
               >
                 <ng-template pTemplate="header">
-                  <tr
-                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                  >
+                  <tr class="overline bg-subtle text-left">
                     <th class="pl-6 py-4">Alumno</th>
                     <th>Nº Mat.</th>
                     <th>Promoción</th>
@@ -242,9 +240,7 @@ interface SemaforoInfo {
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-bold text-sm text-text-primary"
-                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                          >
+                          <span class="item-title">{{ alumno.apellido }} {{ alumno.nombre }}</span>
                           <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
                         </div>
                       </div>
@@ -292,6 +288,7 @@ interface SemaforoInfo {
                       <div class="inline-flex items-center justify-end gap-0.5">
                         @if (trashView()) {
                           <button
+                            aria-label="Restaurar alumno"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
                             pTooltip="Restaurar alumno"
@@ -302,6 +299,7 @@ interface SemaforoInfo {
                           </button>
                         } @else {
                           <button
+                            aria-label="Ver ficha"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                             pTooltip="Ver ficha"
@@ -310,6 +308,7 @@ interface SemaforoInfo {
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
+                            aria-label="Archivar alumno"
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
                             pTooltip="Archivar alumno"
@@ -361,7 +360,7 @@ interface SemaforoInfo {
                         </div>
                         <div class="flex flex-col min-w-0">
                           <span
-                            class="font-bold text-sm text-text-primary truncate"
+                            class="item-title truncate"
                             [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
                             tooltipPosition="top"
                             >{{ alumno.apellido }} {{ alumno.nombre }}</span
@@ -432,6 +431,7 @@ interface SemaforoInfo {
                     >
                       @if (trashView()) {
                         <button
+                          aria-label="Restaurar alumno"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
                           pTooltip="Restaurar alumno"
@@ -442,6 +442,7 @@ interface SemaforoInfo {
                         </button>
                       } @else {
                         <button
+                          aria-label="Ver ficha"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                           pTooltip="Ver ficha"
@@ -450,6 +451,7 @@ interface SemaforoInfo {
                           <app-icon name="eye" [size]="16" />
                         </button>
                         <button
+                          aria-label="Archivar alumno"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
                           pTooltip="Archivar alumno"

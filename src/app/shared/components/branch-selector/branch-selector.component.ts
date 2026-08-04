@@ -143,7 +143,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
     } @else {
       <!-- ── MODO WIZARD: pills horizontales ── -->
       <div class="flex flex-col gap-1">
-        <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Sede</p>
+        <p class="overline">Sede</p>
         <div class="flex gap-2 flex-wrap">
           @if (showAllOption()) {
             <button

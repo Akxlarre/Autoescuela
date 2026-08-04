@@ -6,7 +6,6 @@
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
-> **bloqueada_por:** respuesta del cliente (ver "Preguntas abiertas")
 
 ---
 
@@ -31,24 +30,21 @@ El modelo actual asume **12 prácticas** en todas partes:
 Un alumno de 6 clases de refuerzo **no es candidato al certificado Clase B**. Meterlo en la
 misma matrícula rompe el gate del certificado y descuadra los indicadores de avance.
 
-## Preguntas abiertas (BLOQUEANTE — preguntar al cliente antes de codear)
+## Respuesta del cliente (2026-08-02)
 
-1. **El alumno de refuerzo, ¿qué es respecto de la Clase B?**
-   - **(a) Otro producto** — un curso "Refuerzo" propio en `courses`, con su precio y su
-     cantidad de clases. No toca el modelo de Clase B. **Recomendada.**
-   - **(b) Una Clase B con menos clases** — implica volver variable el 12 en todo el sistema:
-     CHECK constraint, gate del certificado, KPIs, precio prorrateado. Transversal y caro.
-2. **¿El alumno de refuerzo recibe algún certificado o constancia?**
-3. **¿Puede hacer refuerzo alguien que nunca hizo la Clase B con ustedes** (un externo), o solo
-   ex-alumnos propios?
-4. **¿El precio es por clase suelta o es un paquete cerrado de 6?**
+Opción **(a) Otro producto** — confirmado. Curso "Refuerzo" propio en `courses`, con su precio y
+su cantidad de clases (6). No toca el modelo de 12 prácticas de Clase B.
+
+> Preguntas 2–4 (certificado/constancia, elegibilidad de externos, precio por clase suelta vs.
+> paquete cerrado) no se respondieron explícitamente — quien reclame esta asignación debe
+> confirmarlas con el cliente antes de definir el detalle del curso nuevo, pero ya no son
+> bloqueantes para arrancar el diseño del modelo (curso separado).
 
 ## Alcance sugerido
 
-Depende enteramente de la respuesta a la pregunta 1. Si es (a) — que es lo probable — el
-alcance es acotado: curso nuevo en `courses`, ajuste del wizard de matrícula para ofrecerlo, y
-verificar que el gate del certificado y los KPIs de avance filtren por tipo de curso en vez de
-asumir 12.
+Con la pregunta 1 resuelta, el alcance es acotado: curso nuevo en `courses`, ajuste del wizard
+de matrícula para ofrecerlo, y verificar que el gate del certificado y los KPIs de avance
+filtren por tipo de curso en vez de asumir 12.
 
 ## Referencias
 

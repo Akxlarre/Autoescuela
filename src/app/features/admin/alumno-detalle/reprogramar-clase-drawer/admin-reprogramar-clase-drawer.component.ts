@@ -32,7 +32,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             <app-icon name="calendar-clock" [size]="18" />
           </div>
           <div class="flex flex-col">
-            <span class="text-sm font-bold text-text-primary">
+            <span class="item-title">
               Clase #{{ facade.reprogramarTarget()?.claseNumero }} —
               {{ facade.alumno()?.nombre }}
             </span>
@@ -131,7 +131,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 class="p-8 rounded-2xl flex flex-col items-center gap-2 text-center bg-base border border-border-default"
               >
                 <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
-                <p class="text-sm font-bold text-text-primary">Sin disponibilidad</p>
+                <p class="item-title">Sin disponibilidad</p>
                 <p class="text-xs text-text-muted">
                   Este instructor no tiene horarios disponibles en las próximas semanas.
                 </p>
@@ -144,6 +144,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 >
                   <button
                     type="button"
+                    aria-label="Semana anterior"
                     (click)="prevWeek()"
                     [disabled]="!hasPrevWeek()"
                     class="w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
@@ -153,6 +154,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                   <span class="text-xs font-bold text-text-secondary">{{ weekLabel() }}</span>
                   <button
                     type="button"
+                    aria-label="Semana siguiente"
                     (click)="nextWeek()"
                     [disabled]="!hasNextWeek()"
                     class="w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"

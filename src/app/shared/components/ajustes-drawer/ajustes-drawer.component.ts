@@ -131,7 +131,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             <div class="rounded-xl border border-border-default overflow-hidden">
               <button
                 type="button"
-                class="w-full flex items-center justify-between p-4 text-sm font-semibold text-text-primary hover:bg-base transition-colors cursor-pointer"
+                class="item-title w-full flex items-center justify-between p-4 hover:bg-base transition-colors cursor-pointer"
                 (click)="togglePasswordForm()"
               >
                 <div class="flex items-center gap-2">
@@ -197,13 +197,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               class="flex items-center justify-between rounded-xl bg-base p-4 border border-border-default"
             >
               <div class="space-y-0.5">
-                <p class="text-sm font-semibold text-text-primary">Modo Oscuro</p>
+                <p class="item-title">Modo Oscuro</p>
                 <p class="text-xs text-text-muted">Cambia la paleta de colores del sistema</p>
               </div>
               <button
                 type="button"
                 class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg border border-border-default bg-surface hover:bg-subtle text-text-secondary"
                 data-llm-action="toggle-color-mode"
+                [attr.aria-label]="theme.darkMode() ? 'Activar modo claro' : 'Activar modo oscuro'"
                 (click)="theme.cycleColorMode($event)"
               >
                 <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
@@ -213,9 +214,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             <!-- Límite de Visualización de Agenda -->
             <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
               <div class="space-y-0.5">
-                <p class="text-sm font-semibold text-text-primary">
-                  Límite de Visualización de Agenda
-                </p>
+                <p class="item-title">Límite de Visualización de Agenda</p>
                 <p class="text-xs text-text-muted">
                   Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar clases
                 </p>
@@ -235,7 +234,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             <!-- Website Landing Config card -->
             <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
               <div class="space-y-0.5">
-                <p class="text-sm font-semibold text-text-primary">Landing Pages en Caliente</p>
+                <p class="item-title">Landing Pages en Caliente</p>
                 <p class="text-xs text-text-muted">
                   Personaliza la web promocional y tarifas de venta en vivo
                 </p>
@@ -255,7 +254,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
                 <div class="space-y-0.5">
-                  <p class="text-sm font-semibold text-text-primary">Grilla Horaria Base</p>
+                  <p class="item-title">Grilla Horaria Base</p>
                   <p class="text-xs text-text-muted">
                     Configura la estructura matemática de los bloques de horarios
                   </p>
@@ -276,7 +275,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
                 <div class="space-y-0.5">
-                  <p class="text-sm font-semibold text-text-primary">Conmutar Sede Activa</p>
+                  <p class="item-title">Conmutar Sede Activa</p>
                   <p class="text-xs text-text-muted">
                     Cambia rápidamente el filtro global de la autoescuela
                   </p>
@@ -300,7 +299,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                         <app-icon name="check" [size]="14" />
                       } @else if (branch.hasProfessional) {
                         <span
-                          class="text-[9px] px-1.5 py-0.5 rounded bg-brand text-brand-text font-bold uppercase"
+                          class="text-2xs px-1.5 py-0.5 rounded bg-brand text-brand-text font-bold uppercase"
                           >Pro</span
                         >
                       }

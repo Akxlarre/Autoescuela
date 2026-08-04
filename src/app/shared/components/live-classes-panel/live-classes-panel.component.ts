@@ -119,7 +119,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   formatTime(cls.scheduledAt)
                 }}</span>
                 <span
-                  class="text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300"
+                  class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress'"
                   [class.text-text-muted]="cls.status === 'completed'"
@@ -155,7 +155,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
                   <span
-                    class="text-sm font-semibold text-text-primary truncate"
+                    class="item-title truncate"
                     [pTooltip]="cls.studentName"
                     tooltipPosition="top"
                     >{{ cls.studentName.split(' ')[0] }}</span

@@ -66,6 +66,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         <!-- Navegación de semana -->
         <div class="flex items-center p-1 rounded-xl bg-elevated border border-border-subtle">
           <button
+            aria-label="Semana anterior"
             class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
             (click)="prevWeek.emit()"
             title="Semana anterior"
@@ -74,13 +75,14 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
             <app-icon name="chevron-left" [size]="18" />
           </button>
           <button
-            class="px-4 h-8 text-sm font-bold rounded-lg transition-colors mx-1 text-text-primary"
+            class="item-title px-4 h-8 rounded-lg transition-colors mx-1"
             (click)="today.emit()"
             data-llm-action="go-today"
           >
             Hoy
           </button>
           <button
+            aria-label="Siguiente semana"
             class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
             (click)="nextWeek.emit()"
             title="Siguiente semana"
@@ -234,7 +236,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                         <!-- Layout normal: hora + nombre + footer -->
                         <div class="flex items-center justify-between shrink-0 mb-1">
                           <span
-                            class="text-[9px] font-black tracking-widest uppercase"
+                            class="text-2xs font-black tracking-widest uppercase"
                             [style.color]="
                               block.status === 'in_progress'
                                 ? 'var(--color-primary-text)'
@@ -270,7 +272,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                           style="opacity: 0.8"
                         >
                           <span
-                            class="text-[9px] font-bold uppercase tracking-wider truncate"
+                            class="text-2xs font-bold uppercase tracking-wider truncate"
                             [style.color]="
                               block.status === 'in_progress'
                                 ? 'var(--color-primary-text)'
@@ -280,7 +282,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                             #{{ block.classNumber }}
                           </span>
                           <span
-                            class="text-[9px] font-black shrink-0 ml-2"
+                            class="text-2xs font-black shrink-0 ml-2"
                             [style.color]="
                               block.status === 'in_progress'
                                 ? 'var(--color-primary-text)'
@@ -293,7 +295,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                       } @else {
                         <!-- Layout ultra-compacto para bloques ≤ 30min -->
                         <span
-                          class="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md"
+                          class="text-2xs font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md"
                           class="bg-white/20"
                           [style.color]="
                             block.status === 'in_progress'

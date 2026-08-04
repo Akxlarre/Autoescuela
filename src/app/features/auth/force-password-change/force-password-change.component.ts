@@ -24,17 +24,12 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div
-          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
-          
-        ></div>
+        <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"></div>
         <div
           class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
-          
         ></div>
         <div
           class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
-          
         ></div>
       </div>
 
@@ -47,11 +42,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             >
               <app-icon name="shield-alert" [size]="32" color="white" />
             </div>
-            <p
-              class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted"
-            >
-              Autoescuela
-            </p>
+            <p class="overline m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
               Actualiza tu contraseña
             </h1>
@@ -108,8 +99,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   host: { style: 'display: contents;' },
 })
 export class ForcePasswordChangeComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly fb = inject(FormBuilder);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly gsap = inject(GsapAnimationsService);

@@ -208,9 +208,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vehículos"
               >
                 <ng-template pTemplate="header">
-                  <tr
-                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                  >
+                  <tr class="overline bg-subtle text-left">
                     <th class="pl-6 py-4">Patente</th>
                     <th>Vehículo</th>
                     <th>Instructor</th>
@@ -235,9 +233,7 @@ import { formatCLP } from '@core/utils/date.utils';
                     </td>
                     <td>
                       <div class="flex flex-col">
-                        <span class="font-bold text-sm text-text-primary"
-                          >{{ v.brand }} {{ v.model }}</span
-                        >
+                        <span class="item-title">{{ v.brand }} {{ v.model }}</span>
                         <span class="text-2xs text-text-muted">{{ v.year }}</span>
                       </div>
                     </td>
@@ -276,6 +272,7 @@ import { formatCLP } from '@core/utils/date.utils';
                         class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all"
                       >
                         <button
+                          aria-label="Agenda"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Agenda"
@@ -284,6 +281,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           <app-icon name="calendar" [size]="16" />
                         </button>
                         <button
+                          aria-label="Documentos"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Documentos"
@@ -292,6 +290,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           <app-icon name="file-text" [size]="16" />
                         </button>
                         <button
+                          aria-label="Editar"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Editar"
@@ -345,11 +344,11 @@ import { formatCLP } from '@core/utils/date.utils';
                     <p-tag
                       [value]="statusLabel(v.status)"
                       [severity]="statusSeverity(v.status)"
-                      styleClass="text-[9px] px-1.5"
+                      styleClass="text-2xs px-1.5"
                     />
                   </div>
                   <div class="p-4 space-y-3">
-                    <p class="font-bold text-sm text-text-primary">
+                    <p class="item-title">
                       {{ v.brand }} {{ v.model }}
                       <span class="text-text-muted font-medium">({{ v.year }})</span>
                     </p>
@@ -377,6 +376,7 @@ import { formatCLP } from '@core/utils/date.utils';
                   </div>
                   <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
                     <button
+                      aria-label="Agenda"
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="viewAgenda.emit(v.id)"
@@ -384,6 +384,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       <app-icon name="calendar" [size]="14" />
                     </button>
                     <button
+                      aria-label="Documentos"
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="manageDocuments.emit(v.id)"
@@ -391,6 +392,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       <app-icon name="file-text" [size]="14" />
                     </button>
                     <button
+                      aria-label="Editar"
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="editVehicle.emit(v.id)"

@@ -2,6 +2,28 @@
 
 > **Regla de Actualización:** El Agente debe consultar esta tabla ANTES de crear estilos nuevos. Si ya existe una clase o token que resuelve la necesidad, **reutilizar**. Añadir a esta tabla cada vez que se cree un archivo de estilos nuevo.
 
+## Fuentes de verdad del DS — jerarquía (fix-077-b)
+
+El DS se documenta en cuatro lugares y **divergieron** hasta fix-077-b (la doc llegó a describir
+una implementación de botones que ya no existía, y dos reglas se contradecían sobre skeletons).
+Para que no vuelva a pasar, esta es la jerarquía; ante conflicto, gana el de más arriba:
+
+| # | Fuente | Autoridad | Qué contiene |
+|---|--------|-----------|--------------|
+| 1 | **El código** (`_variables.scss`, `tailwind.css`) | 🥇 Definitiva | Los tokens y utilidades reales. Si la doc no coincide, **la doc está mal** |
+| 2 | `.claude/rules/visual-system.md` + `architecture.md` | Normativa | Lo que *debés* hacer. Es lo que aplican los hooks |
+| 3 | `indices/STYLES.md` (este archivo) | Registro | Qué existe y cómo se usa. Secciones `AUTO-GENERATED` se regeneran con `npm run indices:sync` |
+| 4 | `~/.claude/skills/design-system/` + `docs/BRAND_GUIDELINES.md` | Didáctica | Material de enseñanza. **Deriva de 1-3, nunca define reglas propias** |
+
+**Reglas de mantenimiento:**
+
+- Si cambiás un token o una utilidad (nivel 1), actualizá el nivel 3 **en el mismo commit**.
+  El desfase de fix-031-b→fix-077-b duró ~3 semanas justamente por saltarse esto.
+- El nivel 4 **no debe reescribir** una regla del nivel 2: la cita y linkea. Una copia es una
+  copia que se va a desactualizar.
+- Antes de creerle a cualquier nivel 2-4, verificá contra el código si la afirmación es
+  específica (un valor, un nombre de token, una garantía de comportamiento).
+
 ## Design Tokens
 
 | Archivo | Responsabilidad | Ubicación | Estado |
@@ -74,6 +96,45 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 | `postcss.config.json` | **Configuración PostCSS activa** para Tailwind v4. Angular `@angular/build:application` solo lee JSON (`postcss.config.json` / `.postcssrc.json`). Declara `@tailwindcss/postcss` como plugin. **CRÍTICO: nunca renombrar a .mjs/.js o Tailwind dejará de procesar CSS.** | `postcss.config.json` (root) | ✅ Estable |
 | `postcss.config.mjs` | Legado — Angular lo ignora. Solo referencia para entender la configuración. No modificar: usar `postcss.config.json`. | `postcss.config.mjs` (root) | ⚠️ Legado |
 
+## Cómo elegir: bento + botones (árbol de decisión, fix-084-b)
+
+La API de celdas bento y de botones creció por acumulación — 33 clases `.bento-*` y 9
+variantes de `btn-*`, sin una respuesta obvia a "¿cuál uso?". Esto reemplaza el tener que
+leer las 33/9 filas de referencia para decidir (esas tablas siguen abajo, para consulta
+puntual de detalles).
+
+**Bento — ¿qué celda uso?**
+
+| Necesito | Clase |
+|---|---|
+| Header/hero de la página | `.bento-hero` |
+| Card de ancho normal (1/3) | `.bento-square` |
+| Card ancha (2/3) | `.bento-wide` |
+| Card angosta pero alta (2 filas) | `.bento-tall` |
+| Card ancha Y alta (2/3 × 2 filas) | `.bento-feature` |
+| Tabla o listado (100% ancho) | `.bento-banner` |
+
+**PROHIBIDO usar los alias dimensionales** (`bento-1x1`, `bento-2x1`, `bento-2x2`,
+`bento-3x1`, `bento-3x2`, `bento-4x1`) **en código nuevo** — 0 usos reales en `src/app`
+hoy, siguen existiendo solo por compatibilidad con código legacy que ya no está. Ver tabla
+completa (auto-generada) más abajo, con cada alias marcado `⚠️ Legacy`.
+
+**Botones — ¿qué `btn-*` uso?**
+
+| Necesito | Clase |
+|---|---|
+| CTA principal de la sección | `btn-primary` |
+| Acción secundaria estándar | `btn-secondary` |
+| Acción terciaria discreta (fila de tabla, lista) | `btn-ghost` |
+| Confirmar una acción positiva (ej. "Completar") | `btn-success-soft` |
+| Transición a estado de alerta (ej. "Iniciar") | `btn-warning-soft` |
+| Acción destructiva en un hero/cabecera | `btn-danger-ghost` |
+| Confirmar una acción destructiva (modal) | `btn-danger-solid` |
+| Botón más chico — componer con cualquiera de arriba | agregar `btn-sm` |
+
+`btn-outline`/`btn-neutral` son de uso puntual (paginación, cancelar-en-modal
+respectivamente) — ver la tabla de detalle si ninguna fila de arriba encaja.
+
 ## Component Utility Classes (`tailwind.css`)
 
 Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE estas clases en lugar de componer Tailwind ad-hoc.
@@ -85,12 +146,31 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 | `btn-ghost` | Sin borde, fondo transparente. Hover: `bg-subtle` + texto sube a `text-primary`. Tokens `--btn-ghost-*`. | Acción terciaria discreta (filas de tabla, listas) |
 | `btn-warning-soft` | Fondo `--state-warning-bg`, texto `--state-warning`, borde `--state-warning-border`. Dark-mode aware vía tokens. | Acción de transición de estado warning (ej: "Iniciar") |
 | `btn-success-soft` | Fondo `--state-success-bg`, texto `--state-success`, borde `--state-success-border`. Dark-mode aware vía tokens. | Acción de confirmación positiva (ej: "Completar") |
-| `btn-danger-ghost` | **Fondo blanco puro, borde rojo-300, texto rojo-600**. Usa `theme()` — **inmune a cascade** de `surface-hero`. Hover: rojo-50. | Acción destructiva en heroes/cabeceras |
-| `btn-danger-solid` | **Fondo rojo-600, texto blanco**. Hover: rojo-700. Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
-| `btn-neutral` | **Fondo gris-100, texto gris-700**. Hover: gris-200. Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales (sin dependencia de cascade) |
+| `btn-danger-ghost` | Fondo `--bg-surface`, borde `--state-error-border`, texto `--state-error`. Hover: `--state-error-bg`. Dark-mode aware vía tokens. **Inmune al cascade de `surface-hero`** (ver nota abajo). | Acción destructiva en heroes/cabeceras |
+| `btn-danger-solid` | Fondo `--state-error-strong`, texto `--color-primary-text`. Hover: `--state-error-strong-hover`. Padding ligeramente mayor (`py-2.5 px-5`). **Inmune al cascade.** ⚠️ `--state-error-strong` **no se redefine en dark** (queda `#dc2626` en ambos modos) — es deliberado: un confirm destructivo mantiene el rojo saturado, y blanco sobre `#dc2626` cumple AA. No "arreglarlo" sin leer esto. | Confirmación de acción destructiva (modales) |
+| `btn-neutral` | Fondo `--bg-subtle`, texto `--text-primary`. Hover: `filter: brightness(0.96)`. Padding igual que `btn-danger-solid`. ⚠️ **NO es inmune al cascade** — ver nota. | Cancelar/cerrar en modales |
 | `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. `:disabled` → opacity 0.4 + cursor not-allowed via CSS. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
 
-> **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
+> **Nota cascade** (corregida en fix-077-b — la versión anterior de esta nota describía una
+> implementación que dejó de existir en `fix-031-m`):
+>
+> **Todos** los `btn-*` son hoy `var(--)` tokens; ninguno usa `theme()`. La inmunidad al cascade
+> de `.surface-hero` no viene del mecanismo del valor, sino de **cuáles** tokens sobrescribe el
+> hero — y hoy sobrescribe exactamente 22 declaraciones (ver §"Token Cascade en `.surface-hero`").
+>
+> | Utilidad | ¿Inmune a `.surface-hero`? | Por qué |
+> |---|---|---|
+> | `btn-danger-ghost` | ✅ Sí | Depende de `--bg-surface` y `--state-error*`, que el hero **no** toca |
+> | `btn-danger-solid` | ✅ Sí | Depende de `--state-error-strong`, que el hero **no** toca |
+> | `btn-neutral` | ❌ **No** | Depende de `--bg-subtle` y `--text-primary`, y el hero **sobrescribe ambos** → dentro de un hero renderiza como glass blanco con texto blanco |
+>
+> ⚠️ **La inmunidad de los dos primeros es incidental, no un contrato.** Nadie la declaró: se
+> sostiene solo mientras `.surface-hero` no agregue `--bg-surface` o `--state-error*` a su lista
+> de overrides. Si necesitas la garantía de verdad, hay que darle tokens propios que no deriven
+> de la capa semántica — hoy no existe tal botón.
+>
+> **Para "cancelar" dentro de un hero, `btn-neutral` es la elección incorrecta.** Usar
+> `btn-secondary`, que el hero adapta a glass blanco *a propósito*.
 
 **Modificador de tamaño — `btn-sm`** (fix-086-m/ASG-b-008): componible con **cualquiera** de los
 `btn-*` de arriba (`class="btn-primary btn-sm"`, `class="btn-ghost btn-sm"`, etc.) — no crea
@@ -145,14 +225,22 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | Clase | Propósito | Cuándo usar |
 |-------|-----------|-------------|
 | `.kpi-value` | Número KPI principal — `font-display`, clamp 2xl→4xl, tabular-nums | Métricas numéricas en dashboards y cards |
-| `.kpi-label` | Etiqueta de KPI — `text-xs`, uppercase, `tracking-wider`, muted | **Solo** etiquetas de datos numéricos. NUNCA para contexto de sección |
+| `.overline` | Micro-label uppercase — `text-xs`, `font-semibold`, `letter-spacing: 0.06em`, muted | **Cualquier** micro-label en mayúsculas: label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura |
+| `.kpi-label` | ⚠️ **Alias deprecado de `.overline`** (fix-078-b) | Sigue funcionando por compatibilidad. No usar en código nuevo |
+| `.item-title` | Título de fila/card/ítem — `text-sm`, `font-semibold`, `text-primary`, `leading-snug` | Título de una fila de tabla, card o ítem de lista |
 | `.section-eyebrow` | Línea de contexto pre-título — `text-sm`, `font-medium`, color secondary, sin uppercase | `contextLine` en `app-section-hero`, cabeceras de sección, breadcrumb textual |
 | `.surface-hero` | Superficie gradient (sky→indigo→violet) con glow overlay | Banners, `app-section-hero` variant full, CTAs de alta jerarquía |
 | `.surface-glass` | Overlay glass con backdrop-blur | Modales flotantes, panels, tooltips ricos |
 | `.indicator-live` | Dot verde pulsante — sistema activo / conexión online | Indicadores de estado en tiempo real |
 | `.badge-pulse` | Badge con pulso de atención | Conteos sin leer, alertas nuevas |
 
-> **⚠️ Distinción clave:** `.kpi-label` ≠ `.section-eyebrow`. La primera es para datos numéricos (uppercase + tracking agresivo). La segunda es para texto de contexto pre-título (natural, legible).
+> **⚠️ Distinción clave:** `.overline` ≠ `.section-eyebrow`. La primera es un micro-label en
+> mayúsculas que **etiqueta** algo (un dato, una columna, un grupo). La segunda es texto de
+> contexto **legible** antes de un título (`text-sm`, sin uppercase, `text-secondary`).
+>
+> Antes esta nota separaba `.kpi-label` de `.section-eyebrow` y la regla era "kpi-label solo para
+> datos numéricos". Esa restricción de alcance fue la causa raíz de 221 overlines ad-hoc en 25
+> variantes (fix-078-b) — quien necesitaba un micro-label fuera de un KPI lo recomponía a mano.
 
 ## Campos de Formulario (`styles/components/_form-fields.scss`)
 
@@ -200,28 +288,28 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 455 | `#38bdf8` |
-| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 436 | `#38bdf8` |
+| `--text-muted` | 408 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
-| `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 214 | `#f87171` |
-| `--bg-surface` | 201 | `#18181b` |
+| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
+| `--border-subtle` | 221 | `rgba(255, 255, 255, 0.18)` |
+| `--state-error` | 208 | `#f87171` |
+| `--bg-surface` | 199 | `#18181b` |
 | `--state-success` | 173 | `#4ade80` |
-| `--color-primary` | 158 | `#38bdf8` |
-| `--border-default` | 132 | `rgba(255, 255, 255, 0.28)` |
+| `--color-primary` | 148 | `#38bdf8` |
+| `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
 | `--state-warning` | 124 | `#fbbf24` |
-| `--bg-elevated` | 78 | `#27272a` |
+| `--bg-elevated` | 80 | `#27272a` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
-| `--text-sm` | 63 | `0.875rem` |
-| `--duration-fast` | 57 | `200ms` |
-| `--radius-md` | 57 | `10px` |
+| `--text-sm` | 62 | `0.875rem` |
+| `--duration-fast` | 56 | `200ms` |
+| `--radius-md` | 56 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 51 | `var(--border-subtle)` |
 | `--color-primary-muted` | 46 | `rgba(56, 189, 248, 0.15)` |
-| `--bg-base` | 46 | `#09090b` |
 | `--text-xs` | 45 | `0.75rem` |
-| `--color-primary-text` | 43 | `#ffffff` |
+| `--bg-base` | 45 | `#09090b` |
+| `--color-primary-text` | 41 | `#ffffff` |
 | `--color-success` | 39 | `—` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
 | `--state-success-bg` | 25 | `rgba(74, 222, 128, 0.1)` |
@@ -230,7 +318,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 234 | `src/styles/tokens/_variables.scss` |
+| `.card` | 235 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 167 | `src/styles/tokens/_variables.scss` |
+| `.overline` | 138 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
@@ -245,12 +335,12 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase CSS | Proporción |
 |-----------|-----------|
-| `.bento-1x1` | — |
-| `.bento-2x1` | — |
-| `.bento-2x2` | — |
-| `.bento-3x1` | — |
-| `.bento-3x2` | — |
-| `.bento-4x1` | — |
+| `.bento-1x1` | ⚠️ Legacy — usar `.bento-square` |
+| `.bento-2x1` | ⚠️ Legacy — usar `.bento-wide` |
+| `.bento-2x2` | ⚠️ Legacy — usar `.bento-tall` |
+| `.bento-3x1` | ⚠️ Legacy — usar `.bento-wide` |
+| `.bento-3x2` | ⚠️ Legacy — usar `.bento-feature` |
+| `.bento-4x1` | ⚠️ Legacy — usar `.bento-wide` |
 | `.bento-activity-lg` | — |
 | `.bento-alerts-lg` | — |
 | `.bento-banner` | 100% ancho — para tablas y listados |
@@ -333,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 54 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1192 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 925 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -341,21 +431,21 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 54 | `text-sm font-semibold text-text-primary` |
-| 40 | `text-sm font-bold text-text-primary` |
-| 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
-| 15 | `font-bold text-sm text-text-primary truncate` |
-| 15 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
-| 14 | `text-sm font-semibold truncate text-text-primary` |
-| 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
 | 13 | `text-xs font-semibold text-text-primary` |
-| 13 | `text-sm font-semibold text-text-primary m-0` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
+| 12 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 11 | `text-2xl font-semibold text-text-primary` |
-| 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
 | 10 | `text-sm font-bold text-warning` |
+| 10 | `text-text-muted mb-0.5 uppercase tracking-tighter font-bold` |
+| 10 | `text-lg font-semibold text-text-primary` |
+| 10 | `text-sm font-bold text-text-primary` |
+| 9 | `m-0 font-semibold text-text-primary` |
+| 8 | `text-xs font-semibold uppercase tracking-wider` |
+| 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
+| 6 | `text-text-secondary font-semibold text-xs tracking-wider` |
+| 5 | `w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase` |
 
 
 <!-- AUTO-GENERATED:END -->

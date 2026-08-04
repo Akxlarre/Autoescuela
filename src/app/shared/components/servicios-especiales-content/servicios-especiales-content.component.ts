@@ -97,7 +97,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   </app-badge>
                 </div>
                 <div class="flex-1">
-                  <h3 class="font-semibold text-text-primary text-sm m-0 mb-1">
+                  <h3 class="item-title m-0 mb-1">
                     {{ servicio.nombre }}
                   </h3>
                   <p class="text-xs text-text-muted m-0 leading-relaxed">
@@ -193,36 +193,12 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <table class="w-full text-sm">
               <thead>
                 <tr style="border-bottom:1px solid var(--border-subtle)">
-                  <th
-                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Cliente
-                  </th>
-                  <th
-                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Servicio
-                  </th>
-                  <th
-                    class="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Monto
-                  </th>
-                  <th
-                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Estado
-                  </th>
-                  <th
-                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Cobro
-                  </th>
-                  <th
-                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Fecha
-                  </th>
+                  <th class="overline text-left py-3 px-4">Cliente</th>
+                  <th class="overline text-left py-3 px-4">Servicio</th>
+                  <th class="overline text-right py-3 px-4">Monto</th>
+                  <th class="overline text-center py-3 px-4">Estado</th>
+                  <th class="overline text-center py-3 px-4">Cobro</th>
+                  <th class="overline text-left py-3 px-4">Fecha</th>
                 </tr>
               </thead>
               <tbody>

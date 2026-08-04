@@ -79,14 +79,14 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
                   <span class="text-2xs text-text-muted font-medium">{{ pago.fecha }}</span>
                   @if (pago.metodo) {
                     <span
-                      class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-subtle text-text-muted border border-border-subtle"
+                      class="text-2xs uppercase font-bold px-1.5 py-0.5 rounded bg-subtle text-text-muted border border-border-subtle"
                     >
                       {{ pago.metodo }}
                     </span>
                   }
                 </div>
                 <span
-                  class="inas-badge !px-2 !py-0.5 !text-[9px]"
+                  class="inas-badge !px-2 !py-0.5 !text-2xs"
                   [class.inas-badge--approved]="pago.estado === 'Pagado'"
                   [class.inas-badge--pending]="pago.estado === 'Pendiente'"
                 >

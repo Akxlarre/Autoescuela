@@ -37,6 +37,7 @@ import type {
       [selectedDate]="facade.selectedDate()"
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
+      [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"

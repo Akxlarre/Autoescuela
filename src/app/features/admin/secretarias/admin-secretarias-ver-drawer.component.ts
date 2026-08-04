@@ -96,9 +96,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
             <!-- Datos de contacto y acceso -->
             <div class="flex flex-col gap-4 mb-6">
-              <h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Información
-              </h3>
+              <h3 class="overline">Información</h3>
 
               <div class="grid grid-cols-2 gap-3 pb-3">
                 <app-stat-box

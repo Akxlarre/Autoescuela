@@ -162,15 +162,13 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="text-xs font-semibold uppercase tracking-wide text-brand">
                         Seleccionado
                       </span>
-                      <span class="text-sm font-semibold text-text-primary">
+                      <span class="item-title">
                         {{ alumno.alumno }}
                       </span>
                       <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
                     </div>
                     <div class="flex flex-col gap-0.5 text-right">
-                      <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                        Saldo Pendiente
-                      </span>
+                      <span class="overline"> Saldo Pendiente </span>
                       <span class="font-bold text-warning">
                         {{ clp(alumno.saldo) }}
                       </span>
@@ -190,14 +188,12 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   <span class="text-xs font-semibold uppercase tracking-wide text-brand">
                     Alumno
                   </span>
-                  <span class="text-sm font-semibold text-text-primary">
+                  <span class="item-title">
                     {{ ctx.alumno }}
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5 text-right">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    Saldo Pendiente
-                  </span>
+                  <span class="overline"> Saldo Pendiente </span>
                   <span class="font-bold text-warning">
                     {{ clp(ctx.saldoPendiente) }}
                   </span>
@@ -211,12 +207,10 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="text-xs font-semibold uppercase tracking-wide text-brand"
                       >Alumno</span
                     >
-                    <span class="text-sm font-semibold text-text-primary">{{ alumno.alumno }}</span>
+                    <span class="item-title">{{ alumno.alumno }}</span>
                   </div>
                   <div class="flex flex-col gap-0.5 text-right">
-                    <span class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-                      >Saldo Pendiente</span
-                    >
+                    <span class="overline">Saldo Pendiente</span>
                     <span class="font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
                 </div>

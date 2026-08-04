@@ -120,6 +120,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
               class="flex items-center gap-1 bg-elevated border border-subtle rounded-lg p-1 shrink-0"
             >
               <button
+                aria-label="Semana Anterior"
                 class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
                 (click)="facade.prevWeek()"
                 title="Semana Anterior"
@@ -128,9 +129,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
               </button>
 
               <div class="px-3 flex flex-col items-center justify-center min-w-40">
-                <span class="text-sm font-semibold text-text-primary">{{
-                  facade.weekLabel()
-                }}</span>
+                <span class="item-title">{{ facade.weekLabel() }}</span>
                 @if (!facade.isCurrentWeek()) {
                   <button
                     class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
@@ -142,6 +141,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
               </div>
 
               <button
+                aria-label="Semana Siguiente"
                 class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
                 (click)="facade.nextWeek()"
                 title="Semana Siguiente"
@@ -166,7 +166,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
           } @else {
             <div class="py-6 text-center">
               <app-icon name="calendar-check" [size]="40" color="var(--text-muted)" class="mb-2" />
-              <h3 class="text-sm font-semibold text-text-primary">Información Semanal</h3>
+              <h3 class="item-title">Información Semanal</h3>
               <p class="mt-1 text-xs text-text-secondary">
                 Selecciona la Promoción y luego el Módulo de Curso para revisar su Calendario.
               </p>

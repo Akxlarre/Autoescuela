@@ -78,9 +78,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 <app-icon name="user" [size]="20" />
               </div>
               <div class="flex flex-col">
-                <span class="text-sm font-semibold text-text-primary">{{
-                  facade.alumno()?.nombre
-                }}</span>
+                <span class="item-title">{{ facade.alumno()?.nombre }}</span>
                 <span class="text-xs text-text-muted"
                   >Matrícula {{ facade.alumno()?.matricula }}</span
                 >

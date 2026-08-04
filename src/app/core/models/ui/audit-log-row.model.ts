@@ -5,6 +5,7 @@ export interface AuditLogRow {
   fechaHora: string; // ISO string
   usuarioNombre: string;
   usuarioEmail: string;
+  sedeNombre: string;
   accion: AuditAction;
   modulo: string;
   detalle: string;

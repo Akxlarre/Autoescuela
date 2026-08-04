@@ -66,9 +66,7 @@ interface SimulatorLink {
       @if (!isProfessional()) {
         <div class="bento-banner">
           <div class="card p-6">
-            <p class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4">
-              Formato del Examen — Licencia Clase B
-            </p>
+            <p class="overline mb-4">Formato del Examen — Licencia Clase B</p>
             <div class="bento-grid">
               @for (stat of classBStats; track stat.label) {
                 <div class="card-tinted rounded-xl p-4 flex flex-col gap-1 bento-square">

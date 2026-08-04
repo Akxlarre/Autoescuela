@@ -24,9 +24,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
           <app-icon name="bell" [size]="18" />
         </div>
         <div class="flex-1 min-w-0">
-          <h2 class="m-0 text-sm font-semibold text-text-primary leading-tight">
-            Alertas del sistema
-          </h2>
+          <h2 class="item-title m-0 leading-tight">Alertas del sistema</h2>
           <p class="m-0 text-xs text-text-muted mt-0.5">
             @if (isLoading()) {
               Verificando condiciones...
@@ -66,7 +64,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
               <app-icon name="check-circle" [size]="28" />
             </div>
             <div>
-              <p class="m-0 text-sm font-semibold text-text-primary">Todo al día</p>
+              <p class="item-title m-0">Todo al día</p>
               <p class="m-0 text-xs text-text-muted mt-1 max-w-48 mx-auto leading-relaxed">
                 Sin alertas activas. El sistema opera con normalidad.
               </p>
@@ -98,6 +96,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
                     {{ alert.title }}
                   </p>
                   <button
+                    aria-label="Descartar alerta"
                     class="shrink-0 w-5 h-5 rounded flex items-center justify-center
                            border-none bg-transparent cursor-pointer text-text-muted
                            hover:bg-subtle hover:text-text-primary transition-colors"
@@ -226,7 +225,7 @@ export class AlertsDrawerComponent {
 
   private routeForAlert(alertId: string): void {
     const alertRoutes: Record<string, string[]> = {
-      'alert-cash-not-closed': ['/app/admin/cuadratura'],
+      'alert-cash-not-closed': ['/app/admin/contabilidad/cuadratura'],
     };
     const route = alertRoutes[alertId];
     if (route) void this.router.navigate(route);

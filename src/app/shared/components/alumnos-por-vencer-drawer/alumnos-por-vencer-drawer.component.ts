@@ -45,15 +45,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 class="card p-3 flex items-center justify-between hover:bg-subtle transition-all border-l-4 border-l-error"
               >
                 <div class="flex flex-col gap-0.5">
-                  <span class="font-bold text-sm text-text-primary">
-                    {{ item.nombre }} {{ item.apellido }}
-                  </span>
+                  <span class="item-title"> {{ item.nombre }} {{ item.apellido }} </span>
                   <span class="text-xs text-text-muted font-mono">
                     {{ item.cursos[0].nombre }} — {{ item.nroExpedientes[0] }}
                   </span>
                   <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
                 </div>
                 <button
+                  aria-label="Contactar"
                   pButton
                   class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center"
                   pTooltip="Contactar"

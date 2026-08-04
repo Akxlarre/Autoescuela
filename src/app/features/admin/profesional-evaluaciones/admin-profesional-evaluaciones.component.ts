@@ -152,7 +152,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <div class="flex items-center gap-3 min-w-0">
                 <app-icon name="graduation-cap" [size]="18" color="var(--ds-brand)" />
                 <div class="min-w-0">
-                  <h2 class="font-bold text-text-primary text-sm truncate">{{ promo.name }}</h2>
+                  <h2 class="item-title truncate">{{ promo.name }}</h2>
                   <p class="text-xs text-text-muted">{{ promo.code }}</p>
                 </div>
               </div>
@@ -450,7 +450,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       {{ fila.initials }}
                     </div>
                     <div class="min-w-0">
-                      <p class="font-bold text-text-primary text-sm truncate">{{ fila.nombre }}</p>
+                      <p class="item-title truncate">{{ fila.nombre }}</p>
                       <p class="text-2xs text-text-muted">{{ fila.rut }}</p>
                     </div>
                   </div>

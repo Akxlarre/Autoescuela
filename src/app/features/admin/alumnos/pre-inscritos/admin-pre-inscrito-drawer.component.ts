@@ -183,7 +183,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   </div>
                   <div class="card">
                     <span class="text-xs text-text-secondary uppercase tracking-wide">Clase</span>
-                    <p class="text-sm font-semibold text-text-primary mt-1">
+                    <p class="item-title mt-1">
                       {{ p.licencia }}
                       @if (p.convalida) {
                         <span class="text-xs text-text-secondary ml-1"
@@ -266,7 +266,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         class="mt-0.5 shrink-0"
                       />
                       <div>
-                        <h3 class="text-sm font-semibold text-text-primary">Test pendiente</h3>
+                        <h3 class="item-title">Test pendiente</h3>
                         <p class="text-xs text-text-secondary mt-0.5">
                           El alumno no respondió el test psicológico online. Debe rendirlo de forma
                           presencial: descarga e imprime el test, el alumno lo contesta en papel y
@@ -310,7 +310,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         "
                       />
                       <div>
-                        <p class="text-sm font-semibold text-text-primary">
+                        <p class="item-title">
                           {{
                             p.psychResult === 'fit'
                               ? 'Apto psicológicamente'
@@ -349,7 +349,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 <!-- Formulario de evaluación -->
                 @if (p.psychResult === null || showReEvaluate()) {
                   <div class="card card-accent space-y-4">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="clipboard-check" [size]="15" />
                       {{ p.psychResult !== null ? 'Re-evaluar test' : 'Evaluar test psicológico' }}
                     </h3>
@@ -440,7 +440,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 <!-- Respuestas EPQ -->
                 @if (p.psychAnswers && p.psychAnswers.length > 0) {
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="list" [size]="15" />
                       Respuestas ({{ p.psychAnswers.length }} preguntas)
                     </h3>
@@ -491,16 +491,14 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   >
                     <app-icon name="check-circle" [size]="16" color="var(--color-success)" />
                     <div>
-                      <p class="text-sm font-semibold text-text-primary">
-                        Matrícula creada correctamente
-                      </p>
+                      <p class="item-title">Matrícula creada correctamente</p>
                       <p class="text-xs text-text-secondary font-mono">N° {{ enroll.number }}</p>
                     </div>
                   </div>
 
                   <!-- Card contrato -->
                   <div class="card space-y-4">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="file-signature" [size]="15" />
                       Contrato de matrícula
                     </h3>
@@ -631,6 +629,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             <button
                               type="button"
                               class="btn-ghost p-1"
+                              aria-label="Quitar archivo firmado"
                               (click)="signedContractFile.set(null)"
                             >
                               <app-icon name="x" [size]="14" />
@@ -765,7 +764,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Datos complementarios -->
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="user-check" [size]="15" />
                       Datos complementarios
                     </h3>
@@ -796,7 +795,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Documentos -->
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="folder-open" [size]="15" />
                       Documentos
                     </h3>
@@ -884,7 +883,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Pago -->
                   <div class="card space-y-4">
-                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <h3 class="item-title flex items-center gap-2">
                       <app-icon name="credit-card" [size]="15" />
                       Pago
                     </h3>
@@ -935,6 +934,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           <button
                             type="button"
                             class="btn-danger-ghost p-1 text-xs"
+                            aria-label="Quitar descuento"
                             (click)="formDiscountAmount.set(0); formDiscountReason.set('')"
                           >
                             <app-icon name="x" [size]="13" />

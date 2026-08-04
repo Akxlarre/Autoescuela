@@ -117,7 +117,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             <app-icon name="chevron-left" [size]="16" />
           </button>
 
-          <span class="flex-1 text-center text-sm font-semibold text-text-primary">
+          <span class="item-title flex-1 text-center">
             {{ facade.weekMeta().weekLabel }}
           </span>
 
@@ -169,7 +169,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     "
                   >
                     <span
-                      class="text-[9px] uppercase font-bold tracking-wider"
+                      class="text-2xs uppercase font-bold tracking-wider"
                       [style.color]="day.isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
                     >
                       {{ dayAbbr(day.date) }}
@@ -187,7 +187,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                       {{ dayNumber(day.date) }}
                     </span>
                     <span
-                      class="text-[9px] leading-none mt-0.5"
+                      class="text-2xs leading-none mt-0.5"
                       [style.color]="day.isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
                     >
                       {{ monthAbbr(day.date) }}
@@ -220,7 +220,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 
                       @if (session.isNext) {
                         <span
-                          class="text-[8px] font-bold px-1 py-0.5 rounded-full self-center bg-brand"
+                          class="text-2xs font-bold px-1 py-0.5 rounded-full self-center bg-brand"
                           style="color: #fff"
                         >
                           PRÓXIMA

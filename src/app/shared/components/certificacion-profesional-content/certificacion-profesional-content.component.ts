@@ -88,9 +88,7 @@ const PAGE_SIZE = 10;
           style="border-bottom: 1px solid var(--border-default)"
         >
           <div class="flex flex-col gap-1.5 min-w-55 flex-1">
-            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Promoción
-            </label>
+            <label class="overline"> Promoción </label>
             @if (isLoading()) {
               <app-skeleton-block variant="rect" width="100%" height="38px" />
             } @else {
@@ -270,55 +268,32 @@ const PAGE_SIZE = 10;
               <table class="w-full text-sm">
                 <thead class="sticky top-0 z-10 bg-surface">
                   <tr class="border-b border-(--border-default)">
+                    <th class="overline text-left px-4 py-2">Alumno</th>
+                    <th class="overline text-left px-4 py-2">RUT</th>
+                    <th class="overline text-left px-4 py-2">Promoción</th>
                     <th
-                      class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Alumno
-                    </th>
-                    <th
-                      class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      RUT
-                    </th>
-                    <th
-                      class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Promoción
-                    </th>
-                    <th
-                      class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                      class="overline text-center px-4 py-2"
                       title="Asistencia a clases teóricas (mínimo 75%)"
                     >
                       Teoría
                     </th>
                     <th
-                      class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                      class="overline text-center px-4 py-2"
                       title="Asistencia a clases prácticas (recomendado 100%)"
                     >
                       Práctica
                     </th>
                     <th
-                      class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                      class="overline text-center px-4 py-2"
                       title="Promedio de módulos (mínimo 75 en escala MTT)"
                     >
                       Nota Prom.
                     </th>
-                    <th
-                      class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                      title="Saldo pendiente de pago"
-                    >
+                    <th class="overline text-center px-4 py-2" title="Saldo pendiente de pago">
                       Pago
                     </th>
-                    <th
-                      class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Estado
-                    </th>
-                    <th
-                      class="text-right px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Acciones
-                    </th>
+                    <th class="overline text-center px-4 py-2">Estado</th>
+                    <th class="overline text-right px-4 py-2">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -604,7 +579,7 @@ const PAGE_SIZE = 10;
                 >
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <p class="text-sm font-semibold text-text-primary truncate m-0">
+                      <p class="item-title truncate m-0">
                         {{ alumno.nombre }}
                       </p>
                       <p class="text-xs text-brand m-0">{{ alumno.rut }}</p>

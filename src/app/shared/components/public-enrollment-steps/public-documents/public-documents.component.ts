@@ -234,8 +234,8 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   JPG o PNG · Máx. 5 MB
                 </p>
                 <span
-                  class="mt-3 inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold transition-colors"
-                  style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); color: var(--ds-brand);"
+                  class="mt-3 inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold transition-colors bg-brand/8"
+                  style="color: var(--ds-brand)"
                 >
                   Seleccionar foto
                 </span>

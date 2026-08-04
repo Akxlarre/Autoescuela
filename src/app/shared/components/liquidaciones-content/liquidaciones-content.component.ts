@@ -320,10 +320,7 @@ function formatCLP(value: number): string {
             >
               <app-icon name="chevron-left" [size]="16" />
             </button>
-            <span
-              class="text-sm font-semibold px-4 text-text-primary"
-              style="min-width: 140px; text-align: center"
-            >
+            <span class="item-title px-4" style="min-width: 140px; text-align: center">
               {{ mesLabel() }}
             </span>
             <button
@@ -446,9 +443,7 @@ function formatCLP(value: number): string {
                             {{ row.initials }}
                           </div>
                           <div class="min-w-0">
-                            <p
-                              class="text-sm font-semibold text-text-primary leading-tight truncate max-w-30 lg:max-w-50"
-                            >
+                            <p class="item-title leading-tight truncate max-w-30 lg:max-w-50">
                               {{ row.nombre }}
                             </p>
                             <p
@@ -464,9 +459,7 @@ function formatCLP(value: number): string {
 
                       <!-- Clases impartidas -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-semibold text-text-primary">{{
-                          row.practicalSessions
-                        }}</span>
+                        <span class="item-title">{{ row.practicalSessions }}</span>
                         <span class="text-xs text-text-muted ml-1">{{
                           row.practicalSessions === 1 ? 'clase' : 'clases'
                         }}</span>
@@ -501,9 +494,7 @@ function formatCLP(value: number): string {
 
                       <!-- Total a pagar -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-bold text-text-primary">{{
-                          formatCLP(row.finalPaymentAmount)
-                        }}</span>
+                        <span class="item-title">{{ formatCLP(row.finalPaymentAmount) }}</span>
                       </td>
 
                       <!-- Acciones -->
@@ -554,9 +545,7 @@ function formatCLP(value: number): string {
                       {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
                     </td>
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-bold text-text-primary">{{
-                        totales().clases
-                      }}</span>
+                      <span class="item-title">{{ totales().clases }}</span>
                       <span class="text-xs text-text-muted ml-1">{{
                         totales().clases === 1 ? 'clase' : 'clases'
                       }}</span>
@@ -631,7 +620,7 @@ function formatCLP(value: number): string {
                       {{ row.initials }}
                     </div>
                     <div>
-                      <h3 class="text-[15px] font-bold text-text-primary leading-tight">
+                      <h3 class="item-title leading-tight">
                         {{ row.nombre }}
                       </h3>
                       <p class="text-xs text-text-muted mt-0.5">{{ row.rut }}</p>
@@ -651,7 +640,7 @@ function formatCLP(value: number): string {
                 <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
                   <div class="flex flex-col gap-1">
                     <span class="text-2xs uppercase font-bold text-text-muted">Base (Ganado)</span>
-                    <span class="text-[13px] font-bold text-success">
+                    <span class="text-compact font-bold text-success">
                       {{ formatCLP(row.totalBaseAmount) }}
                     </span>
                   </div>
@@ -659,7 +648,7 @@ function formatCLP(value: number): string {
                     <span class="text-2xs uppercase font-bold text-text-muted"
                       >Horas Equivalentes</span
                     >
-                    <div class="text-[13px] font-bold tabular-nums text-brand">
+                    <div class="text-compact font-bold tabular-nums text-brand">
                       {{ row.totalHours }}
                       <span class="font-normal text-text-muted">hrs</span>
                       <span class="text-2xs font-normal text-text-muted ml-1"
@@ -675,7 +664,7 @@ function formatCLP(value: number): string {
                       <span class="text-2xs uppercase font-bold text-text-muted"
                         >Anticipos Emitidos</span
                       >
-                      <span class="text-[13px] font-bold tabular-nums text-error">
+                      <span class="text-compact font-bold tabular-nums text-error">
                         {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
                       </span>
                     </div>

@@ -65,8 +65,8 @@ import {
       >
         @if (scheduleLoading()) {
           <div
-            class="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl"
-            style="background: color-mix(in srgb, var(--bg-surface) 55%, transparent); backdrop-filter: blur(1px);"
+            class="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-surface/55"
+            style="backdrop-filter: blur(1px)"
           >
             <app-icon
               name="loader-circle"

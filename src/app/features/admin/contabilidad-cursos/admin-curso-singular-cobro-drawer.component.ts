@@ -68,7 +68,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 class="card card-tinted rounded-xl px-4 py-3 flex items-center justify-between gap-4"
               >
                 <div>
-                  <p class="text-sm font-bold text-text-primary">
+                  <p class="item-title">
                     {{ curso.nombre }}
                   </p>
                   <p class="text-xs mt-0.5 font-medium text-text-muted">
@@ -78,19 +78,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     {{ billingLabel(curso.billingType) }}
                   </p>
                 </div>
-                <span
-                  class="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
-                  [style.background]="
-                    curso.tipo === 'sence'
-                      ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
-                      : 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
-                  "
-                  [style.color]="
-                    curso.tipo === 'sence' ? 'var(--color-primary)' : 'var(--color-purple)'
-                  "
-                >
+                <app-badge [variant]="curso.tipo === 'sence' ? 'brand' : 'neutral'">
                   {{ curso.tipo === 'sence' ? 'SENCE' : 'Part.' }}
-                </span>
+                </app-badge>
               </div>
 
               <!-- ── Resumen de cobros ─────────────────────────────────────────────── -->
@@ -122,7 +112,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <div class="card p-0 overflow-hidden">
                 <div class="px-4 py-3 border-b flex items-center gap-2 border-border-muted">
                   <app-icon name="dollar-sign" [size]="16" color="var(--text-muted)" />
-                  <p class="text-sm font-semibold text-text-primary">Estado de cobro por alumno</p>
+                  <p class="item-title">Estado de cobro por alumno</p>
                 </div>
 
                 @if (facade.isLoadingInscriptos()) {

@@ -35,10 +35,7 @@ interface FilaReagendar extends ClasePendienteReagendarUI {
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body scrolleable ── -->
       <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-        <div
-          class="flex items-start gap-3 rounded-lg p-2.5"
-          style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent);"
-        >
+        <div class="flex items-start gap-3 rounded-lg p-2.5 bg-brand/6 border border-brand/20">
           <app-icon name="info" [size]="16" color="var(--ds-brand)" />
           <p class="text-xs leading-relaxed" style="color: var(--ds-brand)">
             Todas las clases pendientes vienen preseleccionadas. Desmarca las que NO quieras
@@ -77,7 +74,7 @@ interface FilaReagendar extends ClasePendienteReagendarUI {
                   </span>
                 </span>
                 @if (row.fechaOriginal) {
-                  <span class="text-[10px] text-text-muted">{{ row.fechaOriginal }}</span>
+                  <span class="text-2xs text-text-muted">{{ row.fechaOriginal }}</span>
                 }
               </span>
             </label>

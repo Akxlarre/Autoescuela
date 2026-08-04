@@ -86,6 +86,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() === 0"
+                  aria-label="Página anterior"
                   data-llm-action="previous-page"
                   (click)="prevPage()"
                 >

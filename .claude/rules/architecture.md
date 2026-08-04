@@ -42,7 +42,12 @@ supabase/
 
 - **Dumb (`shared/`)**: Solo `input()` y `output()`. Sin inyección de Facades.
 - **Smart (`features/`)**: Inyectan Facades. Coordinan Dumb Components.
-- **Skeleton colocated**: Cada Dumb que recibe data async tiene su `{nombre}-skeleton.component.ts` al lado
+- **Skeletons**: **NO** se crean componentes `*-skeleton.component.ts` colocados. El estado de
+  carga se resuelve **dentro del mismo componente** con `@if (loading())` + `<app-skeleton-block>`.
+  Fuente única de esta regla: `visual-system.md` §"Skeletons y Estados de Carga".
+  > Hasta fix-077-b esta línea decía lo contrario ("cada Dumb tiene su
+  > `{nombre}-skeleton.component.ts` al lado"), contradiciendo a `visual-system.md:91`. Era ley
+  > muerta: el único skeleton en `src/app` es `shared/components/skeleton-block/`.
 
 ## Clases Semánticas vs Tailwind Genérico
 

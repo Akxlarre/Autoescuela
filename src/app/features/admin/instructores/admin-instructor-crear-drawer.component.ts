@@ -331,6 +331,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                     <button
                       type="button"
                       class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
+                      aria-label="Quitar documento adjunto"
                       data-llm-action="quitar-documento-adjunto"
                       (click)="removeStagedDoc(doc.type)"
                     >

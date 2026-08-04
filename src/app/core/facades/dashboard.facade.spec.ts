@@ -228,4 +228,136 @@ describe('DashboardFacade', () => {
       expect(mock.client.removeChannel).toHaveBeenCalledWith(mock.channel);
     });
   });
+
+  describe('fetchActivityHistory (fix-105-m)', () => {
+    /** Builder Supabase encadenable y awaitable para audit_log, con resultado fijo. */
+    function makeAuditLogMock(rows: any[]) {
+      const b: any = {
+        select: vi.fn(() => b),
+        order: vi.fn(() => b),
+        limit: vi.fn(() => b),
+        or: vi.fn(() => b),
+        then: (resolve: any) => resolve({ data: rows, error: null }),
+      };
+      return { client: { from: vi.fn(() => b) }, builder: b };
+    }
+
+    function setupWithRows(rows: any[]) {
+      const mock = makeAuditLogMock(rows);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: () => null } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+        ],
+      });
+      return TestBed.inject(DashboardFacade);
+    }
+
+    it('DELETE conserva el detalle real en vez de un mensaje genérico', async () => {
+      const rows = [
+        {
+          id: 1,
+          action: 'DELETE',
+          entity: 'enrollments',
+          entity_id: 42,
+          detail: 'Eliminado: Juan Perez - Clase Profesional A2 ($800.000)',
+          created_at: new Date().toISOString(),
+          users: { first_names: 'Ana', paternal_last_name: 'Soto' },
+        },
+      ];
+      const dashFacade = setupWithRows(rows);
+
+      const [result] = await dashFacade.fetchActivityHistory(10);
+
+      expect(result.title).toBe('Matrícula eliminada');
+      expect(result.description).toBe(
+        'Ana Soto eliminó: Juan Perez - Clase Profesional A2 ($800.000)',
+      );
+      expect(result.description).not.toContain('Eliminada por');
+    });
+
+    it('DELETE sin detalle cae al mensaje genérico como fallback', async () => {
+      const rows = [
+        {
+          id: 2,
+          action: 'DELETE',
+          entity: 'enrollments',
+          entity_id: 43,
+          detail: null,
+          created_at: new Date().toISOString(),
+          users: null,
+        },
+      ];
+      const dashFacade = setupWithRows(rows);
+
+      const [result] = await dashFacade.fetchActivityHistory(10);
+
+      expect(result.description).toBe('Eliminada por Sistema / Online');
+    });
+
+    it('INSERT incluye el detalle del registro creado (fix-107-m)', async () => {
+      const rows = [
+        {
+          id: 4,
+          action: 'INSERT',
+          entity: 'student_documents',
+          entity_id: 51,
+          detail: 'Registrado: Foto (Carnet) de Patricia Aguilar',
+          created_at: new Date().toISOString(),
+          users: null,
+        },
+      ];
+      const dashFacade = setupWithRows(rows);
+
+      const [result] = await dashFacade.fetchActivityHistory(10);
+
+      expect(result.description).toBe(
+        'Sistema / Online registró: Foto (Carnet) de Patricia Aguilar',
+      );
+      expect(result.description).not.toBe('Registrado por Sistema / Online');
+    });
+
+    it('INSERT sin detalle cae al mensaje genérico como fallback', async () => {
+      const rows = [
+        {
+          id: 5,
+          action: 'INSERT',
+          entity: 'enrollments',
+          entity_id: 52,
+          detail: null,
+          created_at: new Date().toISOString(),
+          users: { first_names: 'Ana', paternal_last_name: 'Soto' },
+        },
+      ];
+      const dashFacade = setupWithRows(rows);
+
+      const [result] = await dashFacade.fetchActivityHistory(10);
+
+      expect(result.description).toBe('Registrada por Ana Soto');
+    });
+
+    it('usa el nombre de entidad correcto para tablas antes ausentes del diccionario', async () => {
+      const rows = [
+        {
+          id: 3,
+          action: 'DELETE',
+          entity: 'vehicle_documents',
+          entity_id: 7,
+          detail: 'Eliminado: SOAP - AB-CD-12',
+          created_at: new Date().toISOString(),
+          users: { first_names: 'Ana', paternal_last_name: 'Soto' },
+        },
+      ];
+      const dashFacade = setupWithRows(rows);
+
+      const [result] = await dashFacade.fetchActivityHistory(10);
+
+      expect(result.title).toBe('Documento de Vehículo eliminado');
+      expect(result.title).not.toContain('Registro');
+    });
+  });
 });

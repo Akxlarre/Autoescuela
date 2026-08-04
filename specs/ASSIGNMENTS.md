@@ -119,11 +119,24 @@
 | ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 | ASG-b-022 | Fix H-007: skeletons faltantes en Agenda y Libro de Clases | [fix-074-b-skeletons-agenda-libro-clases](fixes/fix-074-b-skeletons-agenda-libro-clases/fix.md) | 2026-07-31 |
 | ASG-b-024 | Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores | [fix-075-b-buscador-global-datos-negocio](fixes/fix-075-b-buscador-global-datos-negocio/fix.md) | 2026-07-31 |
+| ASG-b-034 | Terminar la migración de `color-mix()` pendiente | [fix-076-b-color-mix-drift-y-criterio](fixes/fix-076-b-color-mix-drift-y-criterio/fix.md) | 2026-07-31 |
 | ASG-b-040 | Razones de reagendamiento (enum + "otro") | [fix-008-i-razones-reagendamiento](fixes/fix-008-i-razones-reagendamiento/fix.md) | 2026-07-31 |
+| ASG-b-053 | Vocabulario tipográfico: promover los clusters repetidos a clases del DS | [fix-078-b-vocabulario-tipografico-ds](fixes/fix-078-b-vocabulario-tipografico-ds/fix.md) | 2026-07-31 |
+| ASG-b-054 | Accesibilidad: 94 botones sin nombre accesible + foco en menús + primer guardrail a11y | [fix-079-b-accesibilidad-nombres-y-foco](fixes/fix-079-b-accesibilidad-nombres-y-foco/fix.md) | 2026-07-31 |
+| ASG-b-055 | Escala tipográfica: eliminar los tamaños ilegibles y cerrar el ratchet ARCH-17 | [fix-082-b-escala-tipografica-legible](fixes/fix-082-b-escala-tipografica-legible/fix.md) | 2026-07-31 |
+| ASG-b-056 | Alinear las fuentes de verdad del DS (la doc contradice al código) | [fix-077-b-alinear-fuentes-verdad-ds](fixes/fix-077-b-alinear-fuentes-verdad-ds/fix.md) | 2026-07-31 |
+| ASG-b-057 | Sprawl de la API pública del DS: 30+ clases bento y 9 variantes de botón | [fix-084-b-sprawl-api-ds-nivel1](fixes/fix-084-b-sprawl-api-ds-nivel1/fix.md) | 2026-07-31 |
+| ASG-b-058 | Cerrar la fase 4 del roadmap de badges (los 4 residuos) | [fix-083-b-cerrar-fase-4-badges](fixes/fix-083-b-cerrar-fase-4-badges/fix.md) | 2026-07-31 |
 | ASG-b-014 | Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio | [fix-011-i-certificado-clase-b-gate-validacion](fixes/fix-011-i-certificado-clase-b-gate-validacion/fix.md) | 2026-08-01 |
 | ASG-b-016 | Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000 | [fix-013-i-precio-profesional-a2-incorrecto](fixes/fix-013-i-precio-profesional-a2-incorrecto/fix.md) | 2026-08-01 |
 | ASG-b-028 | 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos | [fix-010-i-cosmeticos-agenda-rbac-chips](fixes/fix-010-i-cosmeticos-agenda-rbac-chips/fix.md) | 2026-08-01 |
 | ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-04 |
+| ASG-b-044 | Alerta a secretaría cuando un instructor cierra una clase | [fix-091-m-alerta-secretaria-cierre-clase](fixes/fix-091-m-alerta-secretaria-cierre-clase/fix.md) | 2026-08-01 |
+| ASG-b-051 | Poder cambiar el código de autorización del libro de clases | [fix-098-m-codigo-autorizacion-libro-editable](fixes/fix-098-m-codigo-autorizacion-libro-editable/fix.md) | 2026-08-01 |
+| ASG-b-059 | Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta | [fix-093-b-boton-recordar-alertas-asistencia-b](fixes/fix-093-b-boton-recordar-alertas-asistencia-b/fix.md) | 2026-08-01 |
+| ASG-b-060 | El CTA de `ConfirmModalService` ignora `severity: 'danger'` y sale en azul de marca | [fix-094-b-confirm-modal-severity-cta](fixes/fix-094-b-confirm-modal-severity-cta/fix.md) | 2026-08-01 |
+| ASG-b-061 | Área táctil de los botones del rail de alertas por debajo de 44×44px | [fix-095-b-area-tactil-rail-alertas](fixes/fix-095-b-area-tactil-rail-alertas/fix.md) | 2026-08-02 |
+| ASG-b-062 | El ícono del modal de confirmación es `alert-triangle` incluso para `info`/`success`/`secondary` | [fix-096-b-icono-modal-confirmacion](fixes/fix-096-b-icono-modal-confirmacion/fix.md) | 2026-08-02 |
 <!-- AUTO-GENERATED:END -->
 
 ---

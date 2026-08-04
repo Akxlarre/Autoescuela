@@ -680,6 +680,7 @@ const INTERFACE_ICONS = [
                             <button
                               type="button"
                               class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer border-none bg-transparent"
+                              aria-label="Limpiar búsqueda de íconos"
                               (click)="clearIconSearch($event)"
                             >
                               <app-icon name="x" [size]="10" />
@@ -692,7 +693,7 @@ const INTERFACE_ICONS = [
                           @for (cat of iconCategories; track cat.id) {
                             <button
                               type="button"
-                              class="category-pill flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide transition-all cursor-pointer border-none"
+                              class="text-2xs category-pill flex items-center gap-1 px-2 py-0.5 rounded-full font-bold tracking-wide transition-all cursor-pointer border-none"
                               [style.background]="
                                 selectedCategory() === cat.id
                                   ? 'var(--color-primary-muted, rgba(14, 165, 233, 0.12))'
@@ -718,7 +719,7 @@ const INTERFACE_ICONS = [
                         >
                           <button
                             type="button"
-                            class="col-span-6 flex items-center justify-center gap-1 py-1 rounded hover:bg-subtle text-[9px] text-text-muted transition-colors cursor-pointer border-none"
+                            class="text-2xs col-span-6 flex items-center justify-center gap-1 py-1 rounded hover:bg-subtle text-text-muted transition-colors cursor-pointer border-none"
                             (click)="
                               featCtrl.get('icon')?.setValue(''); showIconDropdown[$index] = false
                             "
@@ -732,6 +733,7 @@ const INTERFACE_ICONS = [
                               type="button"
                               class="flex flex-col items-center justify-center p-1 rounded hover:bg-brand-muted hover:text-brand transition-colors border border-transparent hover:border-brand/20 cursor-pointer h-7"
                               [title]="iconName"
+                              [attr.aria-label]="iconName"
                               (click)="
                                 featCtrl.get('icon')?.setValue(iconName);
                                 showIconDropdown[$index] = false

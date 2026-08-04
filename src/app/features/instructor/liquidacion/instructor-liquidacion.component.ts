@@ -81,9 +81,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                   <thead>
-                    <tr
-                      class="border-b border-border-subtle text-xs text-text-muted uppercase tracking-wider bg-subtle"
-                    >
+                    <tr class="overline border-b border-border-subtle bg-subtle">
                       <th class="p-4 font-semibold">Fecha</th>
                       <th class="p-4 font-semibold">Tipo de Actividad</th>
                       <th class="p-4 font-semibold">Sesiones</th>

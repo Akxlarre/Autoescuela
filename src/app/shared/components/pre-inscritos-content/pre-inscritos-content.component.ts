@@ -258,6 +258,7 @@ const PAGE_SIZE_MOBILE = 6;
                   </td>
                   <td>
                     <button
+                      aria-label="Ver detalle"
                       type="button"
                       class="p-1.5 rounded-lg hover:bg-elevated transition-colors cursor-pointer"
                       pTooltip="Ver detalle"
@@ -288,7 +289,7 @@ const PAGE_SIZE_MOBILE = 6;
                         {{ row.nombre[0] }}{{ row.apellido[0] }}
                       </div>
                       <div class="flex flex-col min-w-0">
-                        <span class="font-bold text-sm text-text-primary truncate">
+                        <span class="item-title truncate">
                           {{ row.nombreCompleto }}
                         </span>
                         <span class="text-xs text-text-muted truncate">{{ row.email }}</span>
@@ -363,6 +364,7 @@ const PAGE_SIZE_MOBILE = 6;
                       Pre-inscrito: {{ row.fechaPreInscripcion }}
                     </span>
                     <button
+                      aria-label="Ver detalle"
                       type="button"
                       class="p-1.5 rounded-lg hover:bg-elevated transition-colors cursor-pointer"
                       pTooltip="Ver detalle"

@@ -37,7 +37,7 @@ type GroupEntry = Extract<NotificationPanelEntry, { kind: 'group' }>;
     >
       <!-- Header -->
       <div class="notif-panel__header">
-        <span class="text-sm font-semibold text-text-primary">Notificaciones</span>
+        <span class="item-title">Notificaciones</span>
         @if (unreadCount() > 0) {
           <button
             class="text-xs text-text-muted hover:text-text-primary cursor-pointer transition-colors"

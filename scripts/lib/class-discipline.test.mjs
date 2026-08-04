@@ -6,7 +6,9 @@ import {
   findAdhocPills,
   findButtonSizeOverrides,
   findArbitraryTextSizes,
+  findAdhocTypography,
   isPillWhitelisted,
+  isTypographyWhitelisted,
   buildBaseline,
   compareWithBaseline,
 } from './class-discipline.js';
@@ -56,6 +58,34 @@ check(
 check('whitelist: components/badge/', isPillWhitelisted('src\\app\\shared\\components\\badge\\badge.component.ts'));
 check('whitelist: task-status-badge', isPillWhitelisted('src/app/shared/components/task-status-badge/task-status-badge.component.ts'));
 check('no-whitelist: página cualquiera', !isPillWhitelisted('src/app/features/admin/pagos/admin-pagos.component.ts'));
+
+// ── ARCH-15 refinamiento fix-083-b: <button> con (click) NO es una pill ──────
+// 3 falsos positivos reales confirmados (asistencia-clase-b-content,
+// public-context-banner ×2) antes de este refinamiento.
+check(
+  '<button> con (click) y forma de pill → NO se marca (es un filtro/toggle)',
+  findAdhocPills(
+    `<button (click)="toggle()" class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors">`,
+  ).length === 0,
+);
+check(
+  '<span> con la MISMA forma de pill → SÍ se marca (es un badge real)',
+  findAdhocPills(
+    `<span class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors">`,
+  ).length === 1,
+);
+check(
+  '<button> SIN (click) y forma de pill → SÍ se marca (button decorativo, no filtro)',
+  findAdhocPills(
+    `<button class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors">`,
+  ).length === 1,
+);
+check(
+  '<div> con (click) [output] y forma de pill → SÍ se marca (la exclusión es solo <button>)',
+  findAdhocPills(
+    `<div (click)="toggle()" class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors">`,
+  ).length === 1,
+);
 
 // ── ARCH-16: overrides de tamaño sobre btn-* ─────────────────────────────────
 const o1 = findButtonSizeOverrides(`<button class="btn-primary text-xs px-3 py-1.5">`);
@@ -133,6 +163,56 @@ check('mejora detectada (4→1)', impr.improved && impr.regressions.length === 0
 // Baseline ausente → todo cuenta como regresión (primer run la crea aparte)
 const noBase = compareWithBaseline(counts, null);
 check('sin baseline → cada archivo con violaciones regresa', noBase.regressions.length === 3);
+
+// ── ARCH-19: clusters tipográficos ad-hoc ────────────────────────────────────
+check(
+  'overline ad-hoc detectado (xs + semibold + wide)',
+  findAdhocTypography(`<p class="text-xs font-semibold uppercase tracking-wide text-text-muted">`)
+    .length === 1,
+);
+check(
+  'overline ad-hoc detectado en OTRO orden de clases',
+  findAdhocTypography(`<p class="uppercase text-text-muted tracking-widest font-bold text-xs">`)
+    .length === 1,
+);
+check(
+  'overline familia text-2xs también entra (deuda conocida de fix-078-b)',
+  findAdhocTypography(`<p class="text-2xs font-bold uppercase tracking-wider text-text-muted">`)
+    .length === 1,
+);
+check(
+  'ya migrado a .overline → NO es violación (idempotencia del ratchet)',
+  findAdhocTypography(`<p class="overline mb-1">`).length === 0,
+);
+check(
+  'item-title ad-hoc detectado (semibold)',
+  findAdhocTypography(`<p class="text-sm font-semibold text-text-primary truncate">`).length === 1,
+);
+check(
+  'item-title ad-hoc detectado (bold)',
+  findAdhocTypography(`<p class="font-bold text-sm text-text-primary">`).length === 1,
+);
+check(
+  'ya migrado a .item-title → NO es violación',
+  findAdhocTypography(`<p class="item-title truncate">`).length === 0,
+);
+check(
+  'uppercase + primary NO es item-title (es otro rol)',
+  findAdhocTypography(`<p class="text-sm font-bold text-text-primary uppercase">`).length === 0,
+);
+check(
+  'text-sm sin peso fuerte NO es item-title',
+  findAdhocTypography(`<p class="text-sm text-text-primary">`).length === 0,
+);
+check(
+  'overline sin uppercase NO cuenta',
+  findAdhocTypography(`<p class="text-xs font-semibold text-text-muted">`).length === 0,
+);
+check(
+  'archivo de tokens está whitelisted',
+  isTypographyWhitelisted('src/styles/tokens/_variables.scss') &&
+    !isTypographyWhitelisted('src/app/shared/components/task-card/task-card.component.ts'),
+);
 
 if (failures > 0) {
   console.error(`\n${failures} caso(s) fallidos`);

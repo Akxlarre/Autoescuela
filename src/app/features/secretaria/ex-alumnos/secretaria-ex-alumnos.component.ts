@@ -163,9 +163,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} egresados"
               >
                 <ng-template pTemplate="header">
-                  <tr
-                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                  >
+                  <tr class="overline bg-subtle text-left">
                     <th class="pl-6 py-4">Alumno</th>
                     <th>RUT</th>
                     <th>Nº Exp.</th>
@@ -185,9 +183,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                           {{ initials(egresado.nombre) }}
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-bold text-sm text-text-primary">{{
-                            egresado.nombre
-                          }}</span>
+                          <span class="item-title">{{ egresado.nombre }}</span>
                           <span class="text-xs text-text-muted">{{ egresado.correo }}</span>
                         </div>
                       </div>
@@ -232,6 +228,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                         class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all"
                       >
                         <button
+                          aria-label="Ver ficha"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                           pTooltip="Ver ficha"
@@ -242,6 +239,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                           <app-icon name="eye" [size]="16" />
                         </button>
                         <button
+                          aria-label="Re-matricular"
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-brand"
                           pTooltip="Re-matricular"
@@ -292,7 +290,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                         </div>
                         <div class="flex flex-col min-w-0">
                           <span
-                            class="font-bold text-sm text-text-primary truncate"
+                            class="item-title truncate"
                             [pTooltip]="egresado.nombre"
                             tooltipPosition="top"
                             >{{ egresado.nombre }}</span
@@ -356,6 +354,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                       class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
                     >
                       <button
+                        aria-label="Ver ficha"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                         pTooltip="Ver ficha"
@@ -365,6 +364,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
                         <app-icon name="eye" [size]="16" />
                       </button>
                       <button
+                        aria-label="Re-matricular"
                         pButton
                         class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                         pTooltip="Re-matricular"

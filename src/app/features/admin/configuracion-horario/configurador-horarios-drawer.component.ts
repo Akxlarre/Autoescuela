@@ -81,7 +81,7 @@ interface HorarioBlock {
 
           <!-- Courses Selection -->
           <section class="space-y-3">
-            <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+            <h3 class="item-title flex items-center gap-2">
               <app-icon name="book-open" [size]="16" class="text-brand" />
               1. Selecciona los Cursos a afectar
             </h3>
@@ -134,7 +134,7 @@ interface HorarioBlock {
                       data-llm-action="alternar-curso-afectado-por-grilla"
                     />
                     <div class="flex-1">
-                      <div class="text-sm font-semibold text-text-primary">{{ course.name }}</div>
+                      <div class="item-title">{{ course.name }}</div>
                     </div>
                   </label>
                 }
@@ -144,7 +144,7 @@ interface HorarioBlock {
 
           <!-- Turnos Builder -->
           <section class="space-y-3">
-            <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+            <h3 class="item-title flex items-center gap-2">
               <app-icon name="clock" [size]="16" class="text-brand" />
               2. Define los Turnos
             </h3>
@@ -155,6 +155,7 @@ interface HorarioBlock {
                   <button
                     type="button"
                     class="absolute top-3 right-3 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Eliminar turno"
                     (click)="removeTurno(turno.id)"
                     data-llm-action="eliminar-turno"
                   >
@@ -164,7 +165,7 @@ interface HorarioBlock {
                   <input
                     type="text"
                     [(ngModel)]="turno.name"
-                    class="turno-name-input text-sm font-bold border-none outline-none focus:ring-0 p-0 text-text-primary w-full sm:w-48 mb-3"
+                    class="item-title turno-name-input border-none outline-none focus:ring-0 p-0 w-full sm:w-48 mb-3"
                     placeholder="Nombre del Turno"
                     data-llm-description="input for the shift/turno name"
                   />
@@ -173,7 +174,7 @@ interface HorarioBlock {
                     <!-- Start Time -->
                     <div class="flex flex-col gap-1.5 flex-1 min-w-30">
                       <label
-                        class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
+                        class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
                       >
                         Hora Inicio
                       </label>
@@ -204,7 +205,7 @@ interface HorarioBlock {
                     <!-- End Time -->
                     <div class="flex flex-col gap-1.5 flex-1 min-w-30">
                       <label
-                        class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
+                        class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
                       >
                         <span>Hora Fin</span>
                         <app-icon name="clock" [size]="12" class="text-text-muted" />
@@ -237,13 +238,13 @@ interface HorarioBlock {
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                      <label class="text-2xs block font-semibold text-text-muted mb-1"
                         >Duración Bloque (min)</label
                       >
                       <input type="number" [(ngModel)]="turno.blockDuration" class="field-input" />
                     </div>
                     <div>
-                      <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                      <label class="text-2xs block font-semibold text-text-muted mb-1"
                         >Descanso (min)</label
                       >
                       <input type="number" [(ngModel)]="turno.breakDuration" class="field-input" />
@@ -279,11 +280,11 @@ interface HorarioBlock {
             <section class="space-y-4 pt-4 border-t border-border-subtle">
               <div class="flex items-center justify-between pb-1">
                 <div class="space-y-0.5">
-                  <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+                  <h3 class="item-title flex items-center gap-2">
                     <app-icon name="layout-list" [size]="16" class="text-success" />
                     3. Vista Previa de la Grilla
                   </h3>
-                  <p class="text-[11px] text-text-muted">
+                  <p class="text-2xs text-text-muted">
                     Bloques resultantes: <strong>{{ activeBlocksCount() }} activos</strong>.
                     Deshabilita las excepciones (ej. bloque de colación largo).
                   </p>
@@ -295,9 +296,7 @@ interface HorarioBlock {
                   <div class="space-y-2">
                     <!-- Cabecera del Turno -->
                     <div class="flex items-center gap-2">
-                      <span
-                        class="text-[10px] font-bold uppercase tracking-wider text-text-secondary"
-                      >
+                      <span class="text-2xs font-bold uppercase tracking-wider text-text-secondary">
                         {{ group.turnoName }}
                       </span>
                       <div class="h-px flex-1 bg-border-subtle"></div>
@@ -334,7 +333,7 @@ interface HorarioBlock {
                           <!-- Mini status overlay for disabled items -->
                           @if (!block.active) {
                             <span
-                              class="text-[8px] uppercase font-bold text-error mt-0.5 tracking-widest opacity-80"
+                              class="text-2xs uppercase font-bold text-error mt-0.5 tracking-widest opacity-80"
                               >Omitido</span
                             >
                           }

@@ -33,12 +33,15 @@ import {
     findAdhocPills,
     findButtonSizeOverrides,
     findArbitraryTextSizes,
+    findAdhocTypography,
     isPillWhitelisted,
+    isTypographyWhitelisted,
     buildBaseline,
     compareWithBaseline,
     DS_RULES,
 } from './lib/class-discipline.js';
-
+import { findIconOnlyButtonsWithoutLabel } from './lib/a11y-guardrails.js';
+import { extractBentoClasses, diffBentoClasses } from './check-bento-classes.js';
 // TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
 const require = createRequire(import.meta.url);
@@ -74,6 +77,29 @@ function checkForbiddenThemeAliases() {
         );
     }
 }
+
+// ── ARCH-21 (fix-084-b): freno contra clases .bento-* nuevas sin revisión.
+// Corre UNA vez contra _bento-grid.scss (no es un check por-archivo), igual que ARCH-18. ──
+function checkBentoClassAllowlist() {
+    const scssPath = path.join(process.cwd(), 'src', 'styles', 'layout', '_bento-grid.scss');
+    const allowlistPath = path.join(process.cwd(), 'scripts', 'lib', 'bento-classes.allowlist.json');
+    let scssContent, allowlistJson;
+    try {
+        scssContent = fs.readFileSync(scssPath, 'utf-8');
+        allowlistJson = JSON.parse(fs.readFileSync(allowlistPath, 'utf-8'));
+    } catch {
+        return; // fail-open: si algún archivo no existe, no bloqueamos el resto del lint
+    }
+    const current = extractBentoClasses(scssContent);
+    const { newClasses } = diffBentoClasses(current, allowlistJson.classes);
+    for (const cls of newClasses) {
+        reportError(
+            'ARCH-21', scssPath,
+            `Clase .${cls} nueva en _bento-grid.scss, no está en el allowlist revisado.`,
+        );
+    }
+}
+
 
 function reportDeadTokenClasses(filePath, content) {
     if (!THEME) return;
@@ -202,6 +228,21 @@ const RULES = {
         doc: 'indices/ANTI-PATTERNS.md (AP-015)',
         fix: 'Si una clase text-X no renderiza, migra los USOS a la forma canónica text-text-X (fix-030). NUNCA agregues un alias --color-X bare al @theme para resucitar la forma corta — eso vuelve a abrir la ambigüedad que fix-030/fix-033 cerraron y deja ciego a ARCH-11.',
     },
+    'ARCH-19': {
+        name: 'Cluster tipográfico ad-hoc (ratchet)',
+        doc: 'indices/STYLES.md (§Vocabulario tipográfico) + fix-078-b',
+        fix: 'Usa .overline (micro-label uppercase) o .item-title (título de fila/card) en vez de recomponer text-xs/text-sm + font-* + uppercase + tracking-* a mano.',
+    },
+     'ARCH-20': {
+        name: 'Botón icon-only sin nombre accesible',
+        doc: 'indices/ANTI-PATTERNS.md + fix-079-b (ASG-b-054)',
+        fix: 'Todo <button> que solo contiene <app-icon> (sin texto visible) necesita aria-label describiendo la ACCIÓN ("Eliminar alumno", no "Basurero"). Si ya tiene pTooltip, promové ese mismo texto a aria-label.',
+    },
+    'ARCH-21': {
+        name: 'Clase .bento-* nueva sin revisar',
+        doc: 'indices/STYLES.md (§Cómo elegir: bento + botones) + fix-084-b (ASG-b-057)',
+        fix: 'Antes de agregar una clase .bento-* nueva a _bento-grid.scss, revisá si alguna de las 34 existentes ya resuelve el caso (ver tabla de decisión). Si es legítima, sumala a scripts/lib/bento-classes.allowlist.json con la justificación.',
+    },
 };
 
 // ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
@@ -264,8 +305,8 @@ const dsCounts = {
     'ARCH-15': new Map(),
     'ARCH-16': new Map(),
     'ARCH-17': new Map(),
+    'ARCH-19': new Map(),
 };
-
 function trackClassDiscipline(filePath, content) {
     const rel = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
     const add = (rule, count, sample) => {
@@ -280,6 +321,22 @@ function trackClassDiscipline(filePath, content) {
     add('ARCH-16', overrides.length, overrides[0] ? `${overrides[0].attr} (→ ${overrides[0].offenders.join(', ')})` : undefined);
     const sizes = findArbitraryTextSizes(content);
     add('ARCH-17', sizes.length, [...new Set(sizes)].join(', '));
+    if (!isTypographyWhitelisted(rel)) {
+        const clusters = findAdhocTypography(content);
+        add('ARCH-19', clusters.length, [...new Set(clusters)].join(', '));
+    }
+}
+
+/** ARCH-20 — error duro, sin ratchet: la a11y no tiene backlog legítimo que tolerar. */
+function checkIconOnlyButtons(filePath, content) {
+    const icons = findIconOnlyButtonsWithoutLabel(content);
+    for (const icon of icons) {
+        reportError(
+            'ARCH-20',
+            filePath,
+            `Botón icon-only (ícono "${icon}") sin nombre accesible (aria-label/title/pButton label).`,
+        );
+    }
 }
 
 /** Post-barrido: ratchet contra el baseline (crea/actualiza según flags). */
@@ -581,11 +638,14 @@ function analyzeTypeScript(filePath) {
     // ── Regla 11 v2: clases muertas contra whitelist derivada del @theme ─────
     reportDeadTokenClasses(filePath, content);
 
-    // ── Regla 14: acumular íconos usados (template inline + configs icon:) ───
+        // ── Regla 14: acumular íconos usados (template inline + configs icon:) ───
     trackIconUsage(filePath, content);
 
-    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    // ── Reglas 15/16/17/19: disciplina de clases del DS (ratchet) ────────────
     trackClassDiscipline(filePath, content);
+
+    // ── Regla 20: botones icon-only sin nombre accesible (error duro) ────────
+    checkIconOnlyButtons(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
@@ -633,8 +693,11 @@ function analyzeTemplate(filePath) {
     // ── Regla 14: acumular íconos usados en templates externos ──────────────
     trackIconUsage(filePath, content);
 
-    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    // ── Reglas 15/16/17/19: disciplina de clases del DS (ratchet) ────────────
     trackClassDiscipline(filePath, content);
+
+    // ── Regla 20: botones icon-only sin nombre accesible (error duro) ────────
+    checkIconOnlyButtons(filePath, content);
 }
 
 // ─── Análisis de Estilos SCSS ───────────────────────────────────────────────
@@ -705,6 +768,7 @@ for (const dir of targetDirs) {
 
 // ── ARCH-18: auditoría del bridge @theme (una sola vez, no por-archivo) ──────
 checkForbiddenThemeAliases();
+checkBentoClassAllowlist();
 
 // ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
 checkIconRegistry();

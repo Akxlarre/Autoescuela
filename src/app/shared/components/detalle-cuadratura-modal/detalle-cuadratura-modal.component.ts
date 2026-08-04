@@ -28,13 +28,13 @@ interface DenominacionRow {
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
             <span class="text-2xs font-bold text-text-muted uppercase tracking-wider">Cajero</span>
-            <span class="text-sm font-bold text-text-primary">{{ d.cajero }}</span>
+            <span class="item-title">{{ d.cajero }}</span>
           </div>
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
             <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
               >Fecha Cierre</span
             >
-            <span class="text-sm font-bold text-text-primary">{{ fechaLabel() }}</span>
+            <span class="item-title">{{ fechaLabel() }}</span>
           </div>
           <div
             class="card p-3 flex flex-col gap-1 border-border-muted"
@@ -49,7 +49,7 @@ interface DenominacionRow {
                 [class.bg-warning]="d.estadoDiferencia === 'surplus'"
                 [class.bg-error]="d.estadoDiferencia === 'shortage'"
               ></div>
-              <span class="text-sm font-bold text-text-primary">
+              <span class="item-title">
                 {{
                   d.estadoDiferencia === 'balanced'
                     ? 'Cuadrado'
@@ -108,7 +108,7 @@ interface DenominacionRow {
                 <div class="flex items-center justify-between border-b border-border-muted/50 pb-3">
                   <div class="flex items-center gap-2">
                     <app-icon name="calculator" [size]="18" class="text-brand" />
-                    <h3 class="text-sm font-bold text-text-primary">Conciliación Operativa</h3>
+                    <h3 class="item-title">Conciliación Operativa</h3>
                   </div>
                   <span class="text-2xs font-black uppercase tracking-widest text-text-muted"
                     >Resumen Financiero</span
@@ -250,7 +250,7 @@ interface DenominacionRow {
               >
                 <button
                   type="button"
-                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
+                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-compact text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
                   (click)="requestExport('excel')"
                   data-llm-action="export-detalle-cuadratura-excel"
                 >
@@ -259,7 +259,7 @@ interface DenominacionRow {
                 </button>
                 <button
                   type="button"
-                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
+                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-compact text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
                   (click)="requestExport('pdf')"
                   data-llm-action="export-detalle-cuadratura-pdf"
                 >

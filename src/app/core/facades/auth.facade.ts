@@ -253,7 +253,7 @@ export class AuthFacade {
 
   async updatePassword(password: string): Promise<{ error: Error | null }> {
     const { error } = await this.supabase.client.auth.updateUser({ password });
-    if (error) return { error };
+    if (error) return { error: new Error(mapAuthError(error)) };
 
     // Utilizamos un RPC (Stored Procedure) porque las políticas RLS
     // de la tabla "users" impiden que los no-admin hagan UPDATE directamente.

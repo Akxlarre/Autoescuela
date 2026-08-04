@@ -34,17 +34,23 @@ El color de marca `var(--ds-brand)` debe aparecer en **máximo 3 elementos por v
 - Fondos de sección completos con el brand color (usar `.surface-hero` en su lugar)
 - Más de 1 elemento puramente decorativo de marca por viewport
 
-## Tipografía de Datos — KPI (OBLIGATORIO)
+## Vocabulario tipográfico (OBLIGATORIO)
 
-En componentes con datos numéricos (KPIs, métricas, estadísticas):
-- **OBLIGATORIO** `.kpi-value` para el número principal (reemplaza `text-4xl font-bold`)
-- **OBLIGATORIO** `.kpi-label` para la etiqueta descriptiva (reemplaza `text-xs uppercase`)
-- Combinar con `.card-tinted` para máximo contraste visual
+Cuatro clases cubren el 90% de la tipografía de la app. **Usarlas siempre en lugar de recomponer
+utilities** — cada recomposición a mano es un punto de divergencia (fix-078-b encontró **221
+overlines escritos a mano en 25 variantes distintas**, con 14 archivos mezclando varias entre sí).
+
+| Clase | Qué es | Reemplaza a |
+|---|---|---|
+| `.kpi-value` | Número KPI principal | `text-4xl font-bold` |
+| `.overline` | **Micro-label uppercase** — label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura | `text-xs uppercase tracking-* font-* text-text-muted` |
+| `.item-title` | Título de fila / card / ítem de lista | `text-sm font-semibold text-text-primary` |
+| `.section-eyebrow` | Línea de contexto **legible** antes de un título (sin uppercase) | `text-sm text-text-secondary` |
 
 ```html
 <!-- CORRECTO -->
 <div class="card-tinted">
-  <span class="kpi-label">Usuarios activos</span>
+  <span class="overline">Usuarios activos</span>
   <span class="kpi-value">24.8K</span>
 </div>
 
@@ -54,6 +60,19 @@ En componentes con datos numéricos (KPIs, métricas, estadísticas):
   <p class="text-4xl font-bold">24.8K</p>
 </div>
 ```
+
+> **`.kpi-label` es alias deprecado de `.overline`** (fix-078-b). Sigue funcionando; no usarla en
+> código nuevo.
+>
+> ⚠️ **Hasta fix-078-b esta sección decía que `.kpi-label` era "SOLO para etiquetas de datos
+> numéricos, NUNCA para contexto de sección".** Esa restricción fue la causa raíz de las 221
+> instancias ad-hoc: quien necesitaba un micro-label fuera de un KPI tenía prohibida la única
+> clase que hacía exactamente eso, así que la recomponía a mano. **`.overline` no tiene
+> restricción de alcance** — es para cualquier micro-label en mayúsculas.
+>
+> La distinción que **sí** importa es `.overline` (uppercase, micro, `text-muted`) vs
+> `.section-eyebrow` (`text-sm`, natural, `text-secondary`): la primera etiqueta un dato, la
+> segunda da contexto legible antes de un título.
 
 ## Superficies Activas (OBLIGATORIO)
 
@@ -78,7 +97,7 @@ En componentes con datos numéricos (KPIs, métricas, estadísticas):
 - **`.badge-pulse`** → pulso de atención en badges de conteo (nuevos items, alertas no leídas)
 
 ```html
-<span class="indicator-live text-sm text-secondary">Sistema activo</span>
+<span class="indicator-live text-sm text-text-secondary">Sistema activo</span>
 <span class="badge-pulse">
   <p-badge value="3" severity="danger" />
 </span>

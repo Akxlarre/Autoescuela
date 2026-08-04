@@ -139,10 +139,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             <h4 class="text-xl font-bold mb-2" [style.color]="'var(--text-primary)'">
               Agenda Libre
             </h4>
-            <p
-              class="text-xs font-medium text-center max-w-50"
-              [style.color]="'var(--text-muted)'"
-            >
+            <p class="text-xs font-medium text-center max-w-50" [style.color]="'var(--text-muted)'">
               No tienes actividades programadas para el día seleccionado.
             </p>
           </div>
@@ -191,7 +188,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                 >
                   <div class="flex items-center justify-between mb-2">
                     <span
-                      class="text-[9px] font-black tracking-widest uppercase opacity-60"
+                      class="text-2xs font-black tracking-widest uppercase opacity-60"
                       [style.color]="
                         block.status === 'in_progress'
                           ? 'var(--color-primary-text)'

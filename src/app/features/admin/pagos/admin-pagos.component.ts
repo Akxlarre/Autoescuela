@@ -144,7 +144,7 @@ const POR_PAGINA = 5;
             } @else {
               <div>
                 <div
-                  class="deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="overline deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
                 >
                   <span>Alumno</span>
                   <span class="dc-rut">RUT</span>
@@ -160,10 +160,7 @@ const POR_PAGINA = 5;
                     >
                       <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
                       <div class="flex flex-col min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate text-text-primary"
-                          [title]="alumno.alumno"
-                        >
+                        <span class="item-title truncate" [title]="alumno.alumno">
                           {{ alumno.alumno }}
                         </span>
                         <!-- RUT Mobile only -->
@@ -363,7 +360,7 @@ const POR_PAGINA = 5;
                 </div>
               } @else {
                 <div
-                  class="pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="overline pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 border-b bg-surface border-border-muted"
                 >
                   <span>Fecha</span>
                   <span>Alumno</span>
@@ -391,10 +388,7 @@ const POR_PAGINA = 5;
                         </app-badge>
                       </div>
                       <div class="flex flex-col lg:contents min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate text-text-primary"
-                          [title]="pago.alumno"
-                        >
+                        <span class="item-title truncate" [title]="pago.alumno">
                           {{ pago.alumno }}
                         </span>
                         <span
@@ -407,10 +401,8 @@ const POR_PAGINA = 5;
                         class="fin-group flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
                       >
                         <div class="flex justify-between items-center lg:contents">
-                          <span class="text-xs uppercase font-bold lg:hidden text-text-muted"
-                            >Monto</span
-                          >
-                          <span class="text-sm font-bold lg:text-right text-text-primary">
+                          <span class="overline lg:hidden">Monto</span>
+                          <span class="item-title lg:text-right">
                             {{ clp(pago.monto) }}
                           </span>
                         </div>
@@ -466,9 +458,7 @@ const POR_PAGINA = 5;
 
             <div class="lg:col-span-4 flex flex-col gap-4">
               <div class="card p-5 flex flex-col gap-4" appCardHover>
-                <h3 class="text-sm font-semibold text-text-primary">
-                  Métodos de Pago ({{ mesActual() }})
-                </h3>
+                <h3 class="item-title">Métodos de Pago ({{ mesActual() }})</h3>
 
                 @if (facade.isLoading()) {
                   @for (i of [1, 2, 3]; track i) {
@@ -547,9 +537,7 @@ const POR_PAGINA = 5;
 
         <!-- Rango de fechas (inline — evita overlay que cierra al hacer scroll) -->
         <div class="flex flex-col gap-2">
-          <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Período del reporte
-          </p>
+          <p class="overline">Período del reporte</p>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Desde</label>

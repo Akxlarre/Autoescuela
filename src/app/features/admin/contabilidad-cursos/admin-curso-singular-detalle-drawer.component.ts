@@ -121,19 +121,9 @@ const PAYMENT_LABEL: Record<string, string> = {
                       </p>
                     </div>
                   </div>
-                  <span
-                    class="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
-                    [style.background]="
-                      curso.tipo === 'sence'
-                        ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
-                        : 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
-                    "
-                    [style.color]="
-                      curso.tipo === 'sence' ? 'var(--color-primary)' : 'var(--color-purple)'
-                    "
-                  >
+                  <app-badge [variant]="curso.tipo === 'sence' ? 'brand' : 'neutral'">
                     {{ curso.tipo === 'sence' ? 'SENCE' : 'Particular' }}
-                  </span>
+                  </app-badge>
                 </div>
 
                 <!-- Datos en grid -->
@@ -177,9 +167,7 @@ const PAYMENT_LABEL: Record<string, string> = {
               <!-- ── Acciones de estado ──────────────────────────────────────────── -->
               @if (curso.estado === 'active' || curso.estado === 'upcoming') {
                 <div class="card p-4 flex flex-col gap-3">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    Cambiar estado
-                  </p>
+                  <p class="overline">Cambiar estado</p>
 
                   @if (confirmingAction() === null) {
                     <div class="flex gap-2">
@@ -261,7 +249,7 @@ const PAYMENT_LABEL: Record<string, string> = {
                 >
                   <div class="flex items-center gap-2">
                     <app-icon name="users" [size]="16" color="var(--text-muted)" />
-                    <p class="text-sm font-semibold text-text-primary">Inscritos</p>
+                    <p class="item-title">Inscritos</p>
                   </div>
                   @if (curso.estado !== 'cancelled' && curso.inscritos < curso.cupos) {
                     <button

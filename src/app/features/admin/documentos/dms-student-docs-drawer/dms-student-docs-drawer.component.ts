@@ -68,6 +68,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 </div>
                 @if (isAdmin() && doc.source !== 'enrollment_license') {
                   <button
+                    aria-label="Eliminar"
                     type="button"
                     class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
                     pTooltip="Eliminar"

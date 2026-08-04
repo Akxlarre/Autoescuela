@@ -21,7 +21,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <div class="flex items-start gap-3">
           <app-icon name="file-check" [size]="20" class="text-brand shrink-0 mt-0.5" />
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-text-primary m-0">
+            <p class="item-title m-0">
               {{ pendientes().length }} certificado{{ pendientes().length !== 1 ? 's' : '' }} por
               generar
             </p>

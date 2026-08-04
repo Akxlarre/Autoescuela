@@ -30,10 +30,7 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
       <form [formGroup]="ventaForm" (ngSubmit)="submitVenta()" class="flex flex-col gap-5">
         <!-- Servicio -->
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            for="v-servicio"
-          >
+          <label class="overline" for="v-servicio">
             Servicio <span class="text-error">*</span>
           </label>
           <p-select
@@ -50,10 +47,7 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
         <!-- Nombre + RUT -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="v-nombre"
-            >
+            <label class="overline" for="v-nombre">
               Nombre del cliente <span class="text-error">*</span>
             </label>
             <input
@@ -65,12 +59,7 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="v-rut"
-            >
-              RUT <span class="text-error">*</span>
-            </label>
+            <label class="overline" for="v-rut"> RUT <span class="text-error">*</span> </label>
             <input
               id="v-rut"
               type="text"
@@ -87,12 +76,7 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
         <!-- Tipo de cliente (condicional para psicotécnico/informe) -->
         @if (showTipoCliente()) {
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="v-tipo"
-            >
-              Tipo de cliente
-            </label>
+            <label class="overline" for="v-tipo"> Tipo de cliente </label>
             <p-select
               id="v-tipo"
               formControlName="esAlumno"
@@ -116,10 +100,7 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="v-precio"
-            >
+            <label class="overline" for="v-precio">
               Monto ($) <span class="text-error">*</span>
             </label>
             <div class="relative">

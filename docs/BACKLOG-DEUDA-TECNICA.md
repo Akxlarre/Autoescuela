@@ -101,6 +101,28 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       decisión de diseño: 8-9px es ilegible → subir a `text-2xs`; 13/15/17px → encajar en la
       escala existente o formalizar un nuevo peldaño
 
+## Decisiones de diseño cerradas
+
+### `color-mix()` con tokens semánticos — válido por diseño (fix-076-b, 2026-07-31)
+
+- [x] **ASG-b-034** — Se auditaron los 67 usos de `color-mix()` en `src/app` (estáticos, CSS
+      embebido en `styles: [...]` y bindings dinámicos `[style.x]`) y se comparó contra el
+      patrón canónico del propio design system (`_form-fields.scss`, `_primeng-overrides.scss`,
+      `_scrollbar.scss`, `_public-enrollment.scss`). **100% de los usos, en ambos lados, son
+      `color-mix(in srgb, var(--token) N%, transparent|black)` — nunca un hex/rgb crudo.**
+      **Criterio oficial:** válido por diseño, NO es deuda técnica, en cualquier forma
+      (`style=""` estático, CSS embebido, binding dinámico) — el token ya es semántico,
+      `color-mix()` es solo su derivación de opacidad/blend. La única violación real sería
+      `color-mix()` con un color hardcodeado como ingrediente (no se encontró ningún caso).
+      Los 11 archivos con drift (`style=""` estático reintroducido tras la corrida única del
+      28-may de `migrate-color-mix-t4.mjs`) se migraron a clases `bg-COLOR/N`/`border-COLOR/N`
+      donde el script podía mapearlos; los casos con `box-shadow`, props no reconocidas
+      (`border-top`, resuelto a mano) o `var()` con fallback anidado quedaron correctamente
+      sin migrar — son válidos tal cual por el criterio de arriba. Ver
+      `specs/fixes/fix-076-b-color-mix-drift-y-criterio/fix.md`.
+      **No agregar una regla ARCH nueva por ahora** (punto 3 de ASG-b-034) — no hay violaciones
+      que detectar hoy; revisar si el patrón deriva en el futuro.
+
 ## Saneamiento general (escaneado 2026-07-07, sin actuar)
 
 - [ ] 322 `TODO`/`FIXME`/`HACK` en `src/app` — triar cuáles siguen vigentes vs. ya resueltos

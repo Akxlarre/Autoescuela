@@ -196,9 +196,7 @@ function generatePromoName(startIso: string): string {
           <!-- ── Nombre (auto-generado) ──────────────────────────────────────── -->
           @if (selectedStartDate()) {
             <section>
-              <h3 class="text-sm font-semibold mb-3 text-text-primary">
-                Información de la promoción
-              </h3>
+              <h3 class="item-title mb-3">Información de la promoción</h3>
               <div>
                 <label class="text-xs font-medium mb-1 block text-text-secondary">
                   Nombre (automático)
@@ -217,9 +215,7 @@ function generatePromoName(startIso: string): string {
 
           <!-- ── Cursos y asignación de relatores ──────────────────────────── -->
           <section>
-            <h3 class="text-sm font-semibold mb-1 text-text-primary">
-              Cursos y asignación de relatores
-            </h3>
+            <h3 class="item-title mb-1">Cursos y asignación de relatores</h3>
             <p class="text-xs mb-4 text-brand">
               Cada curso admite máximo 25 alumnos. Capacidad total: 100 alumnos.
             </p>
@@ -242,7 +238,7 @@ function generatePromoName(startIso: string): string {
                       {{ curso.name }}
                     </span>
                     <span class="ml-auto text-xs text-brand"> Capacidad </span>
-                    <span class="text-sm font-semibold text-text-primary"> 25 alumnos </span>
+                    <span class="item-title"> 25 alumnos </span>
                   </div>
 
                   <!-- Relatores asignados -->
