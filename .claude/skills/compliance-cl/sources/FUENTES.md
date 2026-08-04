@@ -14,6 +14,11 @@ Si algo no se puede verificar contra estos textos, se marca `[verificar contra f
 | `ley-20393-resp-penal-pj.xml` | Ley 20.393 Resp. Penal PJ | 1008668 | XML | `35d67a14…` | Ley Chile (BCN) |
 | `ley-19628-consolidada.xml` | Ley 19.628 (texto base que la 21.719 modifica) | 141599 | XML | `4b4a6d85…` | Ley Chile (BCN) |
 | `clausulas-modelo-transferencia-economia.pdf/.txt` | Cláusulas Contractuales Modelo (transferencia internacional) | RAEX202503748 | **PDF + texto** | `55f78aef…` | Diario Oficial 19-12-2025 |
+| `ley-18290-transito.xml` | Ley 18.290, Ley de Tránsito (Título II: escuelas de conductores) | 29708 | XML abreviado | ⏳ pendiente de descarga | Ley Chile (BCN) |
+| `ds-39-1985-escuelas-clase-b.xml` | DS 39/1985 MTT, Reglamento Escuelas de Conductores Clase B | 7993 | XML abreviado | ⏳ pendiente de descarga | Ley Chile (BCN) |
+| `ds-251-1999-escuelas-clase-a.xml` | DS 251/1999 MTT, Reglamento Escuelas de Conductores Clase A | 131534 | XML abreviado | ⏳ pendiente de descarga | Ley Chile (BCN) |
+| `ley-19496-consumidor.xml` | Ley 19.496, Protección al Consumidor | 61438 | XML abreviado | ⏳ pendiente de descarga | Ley Chile (BCN) |
+| `dl-825-iva.xml` | DL 825, Ley sobre Impuesto a las Ventas y Servicios (IVA), Art. 13 | 6369 | XML abreviado | ⏳ pendiente de descarga | Ley Chile (BCN) |
 
 ## Notas de validez (IMPORTANTE)
 - **La 21.719 MODIFICA la Ley 19.628**: el articulado sustantivo de datos (consentimiento,
@@ -28,6 +33,11 @@ Si algo no se puede verificar contra estos textos, se marca `[verificar contra f
 - **DS 662/2025** (reglamento del Modelo de Prevención de Infracciones, Min. Hacienda/Economía):
   estaba en toma de razón en Contraloría — verificar publicación en Diario Oficial.
 - **Guía oficial de implementación**: https://wikiguias.digital.gob.cl/es/datos-personales/guia-datos-personales
+- **Pack `autoescuela-cl` (2026-08-03):** las 5 normas de la tabla de arriba con estado ⏳ se
+  verificaron por consulta directa a la API `obtxml` de LeyChile (contenido real, no inventado) pero
+  el entorno de esa sesión bloqueó `curl` por política de seguridad de red — **falta correr los
+  comandos de "Cómo re-descargar" de abajo y completar el SHA-256 real**. Hasta entonces, tratar el
+  contenido citado en `packs/autoescuela-cl/pack.md` como verificado-pero-no-archivado offline.
 
 > Cláusulas modelo de transferencia: ✅ ya descargadas
 > (`clausulas-modelo-transferencia-economia.pdf`, Diario Oficial 19-12-2025).
@@ -41,6 +51,12 @@ curl -L -A "$UA" "https://www.diariooficial.interior.gob.cl/publicaciones/2024/1
 curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=1209272" -o ley-21719-datos.xml
 # Cláusulas contractuales modelo (transferencia internacional, Min. Economía)
 curl -L -A "$UA" "https://www.diariooficial.interior.gob.cl/publicaciones/2025/12/19/44328/01/2742586.pdf" -o clausulas-modelo-transferencia-economia.pdf
+# Pack autoescuela-cl (idNorma: 18290=29708, DS39=7993, DS251=131534, 19496=61438, DL825=6369)
+curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=29708"  -o ley-18290-transito.xml
+curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=7993"   -o ds-39-1985-escuelas-clase-b.xml
+curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=131534" -o ds-251-1999-escuelas-clase-a.xml
+curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=61438"  -o ley-19496-consumidor.xml
+curl -L -A "$UA" "https://www.leychile.cl/Consulta/obtxml?opt=7&idNorma=6369"   -o dl-825-iva.xml
 # Verificar integridad
 sha256sum *.pdf *.xml
 ```
