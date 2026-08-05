@@ -121,6 +121,38 @@ tenga las rules y skills presentes **sin tener que leerlas manualmente**.
 - **Matcher**: `Edit|Write|MultiEdit`
 - **Función**: Formatea automáticamente con Prettier cada archivo editado.
 
+### 7. Harness Gate (`harness-gate.js`)
+- **Evento**: PreToolUse
+- **Matcher**: `Edit|Write|MultiEdit`
+- **Función**: Gobierna las ediciones al harness mismo (no al código de la app). Se activa
+  solo sobre dos familias de superficies:
+
+  | Superficie | Archivos | Rol |
+  |---|---|---|
+  | Guía | `.claude/rules/*.md`, `indices/ANTI-PATTERNS.md`, `indices/DOMAIN-GOTCHAS.md`, `CLAUDE.md` | Memoria/prosa que el agente lee |
+  | Capacidad | `scripts/*.js`, `.claude/scripts/*.js` (excepto `scripts/architect.js`, ya protegido) | Código que corre y decide |
+
+  Deliberadamente **no** toca `specs/**`: ahí un track ID (`fix-NNN`/`spec-NNNN`/`hotfix-NNN`)
+  es el contenido legítimo del contrato, no una superficie de memoria global.
+
+  Aplica dos disciplinas, inspiradas en el paper *HarnessCompass* (arXiv:2608.01918)
+  sobre evolución automática de harnesses de agentes:
+
+  | Chequeo | Superficie | Qué bloquea |
+  |---|---|---|
+  | GATE-A1 | Guía | Cita un track (`fix-NNN`/`spec-NNNN`/`hotfix-NNN`) sin ningún criterio de aplicabilidad cerca — receta memorizada en vez de regla reusable |
+  | GATE-A2 | Guía | Snippet de despacho por keyword-matching literal (`if ("token" in text)`) — ni siquiera como prosa/pseudo-código |
+  | GATE-B1 | Guía | Lógica ejecutable real (`require`/`process.exit`/`fs.*`) colada en un archivo que debería ser solo prosa |
+  | GATE-B2 | Capacidad | `console.log`/`console.warn` con tono de consejo y sin ningún `process.exit(2)` que lo respalde — guía disfrazada de script |
+
+  La intuición: una lección que sobrevive a una sesión debe quedar escrita como un
+  **principio + criterio de cuándo aplica** (el patrón que ya sigue `fix-078-b` en
+  `visual-system.md`), nunca como la respuesta memorizada a un track puntual; y la
+  separación capacidad/guía evita que el harness acumule "consejo" en lugares donde nadie
+  lo hace cumplir, o código real donde nadie lo lee como tal. Ver también el skill
+  `/harness-feedback`, que alimenta estas superficies de guía con fricción real reportada
+  por el propio agente al cerrar sesión.
+
 ## Linter Arquitectónico Completo (`architect.js` v2.0)
 
 El linter AST se ejecuta con `npm run lint:arch` y valida **8 reglas**:
