@@ -1,7 +1,8 @@
 # Fix: App-like `/admin/secretarias`
 > id: fix-017-i-app-like-admin-secretarias
 > refs: ASG-b-068
-> status: open
+> status: done
+> closed: 2026-08-05
 > created: 2026-08-05
 
 ## Root Cause
@@ -45,4 +46,16 @@ Patrón de densidad a copiar:
 - `force-compact` verificado con un drawer abierto.
 
 ## Resultado
-_Pendiente de implementación._
+- Los 5 cambios del plan aplicados en `admin-secretarias.component.ts`: root `bento-grid--fill-screen`
+  (sin el `style` inline redundante), `bento-fill` en lista y sidebar, `min-h-0 overflow-y-auto` en
+  el contenedor interno de la lista, y paginación Anterior/Siguiente reemplazada por densidad
+  adaptativa (`LayoutService.tier()` + `mobileShown` + `sliceByBudget` + "Cargar más").
+- Reset de densidad implementado con métodos explícitos (`updateSearchTerm`/`updateFiltroSede`/
+  `updateFiltroEstado`) en vez de un `effect()`, siguiendo el patrón real de
+  `alumnos-list-content.updateFilter()` citado en el fix — más testeable sin depender de CD/render.
+- `admin-secretarias.component.spec.ts` nuevo: 11 tests cubriendo `maxVisible`, `visibleSecretarias`,
+  `remainingSecretarias`, `loadMoreSecretarias` y el reset de densidad en los 3 filtros — todos en
+  verde.
+- `npm run lint:arch` y `npx ng build --configuration=development` limpios.
+- `/verify` visual (390×844, 1440×900, 768px de alto, force-compact con drawer) confirmado
+  manualmente por el usuario — sin acceso a Playwright MCP en esta sesión para hacerlo vía agente.
