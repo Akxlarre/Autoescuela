@@ -241,4 +241,32 @@ describe('AsistenciaClaseBFacade', () => {
     expect(notifications.notifyUsers).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
   });
+
+  // ── startClass (spec 0001-i) ──────────────────────────────────────────────
+
+  describe('startClass', () => {
+    it('actualiza la sesión y muestra toast de éxito', async () => {
+      mock.setResult('class_b_sessions', null, null);
+
+      await facade.startClass(1, 12000);
+
+      expect(toast.success).toHaveBeenCalledWith('Clase iniciada');
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('propaga el mensaje legible del trigger de exclusión mutua (P0001, spec 0001-i)', async () => {
+      mock.setResult('class_b_sessions', null, {
+        code: 'P0001',
+        message: 'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      });
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow(
+        'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      );
+      expect(toast.error).toHaveBeenCalledWith(
+        'Error al iniciar la clase',
+        'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      );
+    });
+  });
 });

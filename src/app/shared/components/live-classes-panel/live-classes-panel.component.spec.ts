@@ -1,5 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { LiveClassesPanelComponent } from './live-classes-panel.component';
+import type { LiveClassModel } from '@core/models/ui/dashboard.model';
+
+function makeLiveClass(over: Partial<LiveClassModel> = {}): LiveClassModel {
+  return {
+    id: 'prac-1',
+    originalId: 1,
+    studentName: 'Juan Pérez',
+    instructorName: 'Ana Soto',
+    timeLabel: '09:00 - 09:45',
+    status: 'in_progress',
+    type: 'practical',
+    scheduledAt: '2026-07-27T11:15:00.000Z',
+    durationMin: 45,
+    studentId: 1,
+    kmStart: null,
+    ...over,
+  };
+}
 
 describe('LiveClassesPanelComponent', () => {
   let component: LiveClassesPanelComponent;
@@ -63,6 +81,45 @@ describe('LiveClassesPanelComponent', () => {
 
     it('completed → "Finalizada"', () => {
       expect(component.statusLabel('completed')).toBe('Finalizada');
+    });
+
+    it('in_progress atrasada (overdue=true) → "Atrasada" (spec 0001-i)', () => {
+      expect(component.statusLabel('in_progress', true)).toBe('Atrasada');
+    });
+  });
+
+  // ─── isOverdue / aviso de cierre atrasado (spec 0001-i, AC3) ────────────────
+  describe('isOverdue', () => {
+    it('false para in_progress recién iniciada (fin agendado no llegó)', () => {
+      const cls = makeLiveClass({
+        status: 'in_progress',
+        scheduledAt: new Date(NOW - 10 * 60000).toISOString(),
+        durationMin: 45,
+      });
+      expect(component.isOverdue(cls)).toBe(false);
+    });
+
+    it('true para in_progress cuyo fin agendado + 15 min ya pasó', () => {
+      const cls = makeLiveClass({
+        status: 'in_progress',
+        scheduledAt: new Date(NOW - 70 * 60000).toISOString(), // fin agendado hace 25 min (70-45)
+        durationMin: 45,
+      });
+      expect(component.isOverdue(cls)).toBe(true);
+    });
+
+    it('false para pending sin importar el tiempo', () => {
+      const cls = makeLiveClass({
+        status: 'pending',
+        scheduledAt: new Date(NOW - 200 * 60000).toISOString(),
+        durationMin: 45,
+      });
+      expect(component.isOverdue(cls)).toBe(false);
+    });
+
+    it('getRelativeTime muestra "Cierre atrasado" cuando overdue=true', () => {
+      const past = new Date(NOW - 60 * 60000).toISOString();
+      expect(component.getRelativeTime(past, 'in_progress', true)).toBe('Cierre atrasado');
     });
   });
 });

@@ -1,6 +1,6 @@
 # Spec 0001-i — Ciclo de vida de la clase: exclusión mutua y aviso de cierre atrasado
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-08-04
 > **Owner:** i
 > **Priority:** P1

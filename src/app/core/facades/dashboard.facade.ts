@@ -332,6 +332,7 @@ export class DashboardFacade {
         id,
         class_number,
         scheduled_at,
+        duration_min,
         status,
         km_start,
         vehicles(brand, model, license_plate),
@@ -381,6 +382,7 @@ export class DashboardFacade {
           vehicleModel: vehicle?.model,
           vehiclePlate: vehicle?.license_plate,
           scheduledAt: row.scheduled_at,
+          durationMin: row.duration_min ?? 45,
           studentId: row.enrollments?.student_id ?? null,
           kmStart: row.km_start ?? null,
         } as LiveClassModel;

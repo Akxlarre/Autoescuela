@@ -4,13 +4,17 @@ import {
   computed,
   input,
   output,
+  signal,
   ElementRef,
   viewChild,
   effect,
+  inject,
+  DestroyRef,
 } from '@angular/core';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { CommonModule } from '@angular/common';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
+import { isSessionOverdue } from '@core/utils/class-b-session-overdue.utils';
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -119,12 +123,19 @@ import { TooltipModule } from 'primeng/tooltip';
                   formatTime(cls.scheduledAt)
                 }}</span>
                 <span
-                  class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300"
+                  class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300 inline-flex items-center gap-1"
                   [class.text-warning]="cls.status === 'pending'"
-                  [class.text-success]="cls.status === 'in_progress'"
+                  [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
                   [class.text-text-muted]="cls.status === 'completed'"
+                  [class.text-error]="isOverdue(cls)"
+                  [attr.data-llm-description]="
+                    isOverdue(cls) ? 'Clase con cierre atrasado, requiere atención' : null
+                  "
                 >
-                  {{ statusLabel(cls.status) }}
+                  @if (isOverdue(cls)) {
+                    <app-icon name="alert-triangle" [size]="11" class="badge-pulse shrink-0" />
+                  }
+                  {{ statusLabel(cls.status, isOverdue(cls)) }}
                 </span>
               </div>
 
@@ -179,23 +190,32 @@ import { TooltipModule } from 'primeng/tooltip';
                 <span
                   class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
                   [class.text-warning]="cls.status === 'pending'"
-                  [class.text-success]="cls.status === 'in_progress'"
+                  [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
                   [class.text-text-muted]="cls.status === 'completed'"
+                  [class.text-error]="isOverdue(cls)"
                 >
-                  {{ getRelativeTime(cls.scheduledAt, cls.status) }}
+                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls)) }}
                 </span>
               </div>
 
               <div
                 class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm hover-icon-container"
-                [class.bg-brand]="cls.status === 'in_progress'"
-                [class.text-brand-text]="cls.status === 'in_progress'"
+                [class.bg-brand]="cls.status === 'in_progress' && !isOverdue(cls)"
+                [class.text-brand-text]="cls.status === 'in_progress' && !isOverdue(cls)"
                 [class.bg-subtle]="cls.status === 'pending' || cls.status === 'completed'"
                 [class.text-brand]="cls.status === 'pending'"
                 [class.text-text-muted]="cls.status === 'completed'"
+                [class.bg-error-subtle]="isOverdue(cls)"
+                [class.text-error]="isOverdue(cls)"
               >
                 <app-icon
-                  [name]="cls.status === 'completed' ? 'chevron-right' : 'play'"
+                  [name]="
+                    cls.status === 'completed'
+                      ? 'chevron-right'
+                      : isOverdue(cls)
+                        ? 'alert-triangle'
+                        : 'play'
+                  "
                   [size]="14"
                   [class.animate-pulse]="cls.status === 'in_progress'"
                 />
@@ -261,13 +281,23 @@ export class LiveClassesPanelComponent {
   readonly actionClick = output<LiveClassModel>();
   readonly viewAllClick = output<void>();
   private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly visibleClasses = computed(() => sliceByBudget(this.classes(), this.maxItems()));
   readonly skeletonItems = computed(() =>
     Array.from({ length: this.maxItems() ?? 5 }, (_, i) => i),
   );
 
+  /** Tick de UI puro (spec 0001-i): re-evalúa isOverdue() cada minuto sin
+   * volver a pedir datos — no confundir con el polling de fetch eliminado
+   * en fix-004-i. `classes()` solo cambia con datos nuevos (Realtime/SWR);
+   * "atrasada" depende del paso del tiempo, así que necesita su propio tick. */
+  private readonly _now = signal(new Date());
+
   constructor() {
+    const intervalId = setInterval(() => this._now.set(new Date()), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(intervalId));
+
     effect(() => {
       const classList = this.visibleClasses();
       const container = this.scrollContainer()?.nativeElement;
@@ -300,7 +330,15 @@ export class LiveClassesPanelComponent {
     });
   }
 
-  statusLabel(status: string): string {
+  /** Sesión in_progress cuyo fin agendado (scheduledAt + durationMin) ya pasó
+   * hace 15+ min sin cerrarse (spec 0001-i, AC3). Se re-evalúa cada minuto vía
+   * `_now` (tick de UI, sin fetch). */
+  isOverdue(cls: LiveClassModel): boolean {
+    return isSessionOverdue(cls.scheduledAt, cls.durationMin, cls.status, this._now());
+  }
+
+  statusLabel(status: string, overdue = false): string {
+    if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
     return 'Finalizada';
@@ -312,9 +350,10 @@ export class LiveClassesPanelComponent {
     return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
-  getRelativeTime(isoString: string, status: string): string {
+  getRelativeTime(isoString: string, status: string, overdue = false): string {
     if (!isoString) return '';
     if (status === 'completed') return 'Concluida';
+    if (overdue) return 'Cierre atrasado';
     if (status === 'in_progress') return 'Transcurriendo';
 
     const date = new Date(isoString);

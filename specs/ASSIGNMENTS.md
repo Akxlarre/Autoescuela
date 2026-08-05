@@ -72,7 +72,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | [0001-i-ciclo-vida-clase-exclusion-cierre](specs/0001-i-ciclo-vida-clase-exclusion-cierre/spec.md) | 2026-08-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -137,6 +136,7 @@
 | ASG-b-061 | Área táctil de los botones del rail de alertas por debajo de 44×44px | [fix-095-b-area-tactil-rail-alertas](fixes/fix-095-b-area-tactil-rail-alertas/fix.md) | 2026-08-02 |
 | ASG-b-062 | El ícono del modal de confirmación es `alert-triangle` incluso para `info`/`success`/`secondary` | [fix-096-b-icono-modal-confirmacion](fixes/fix-096-b-icono-modal-confirmacion/fix.md) | 2026-08-02 |
 | ASG-b-029 | Fix H-022 + H-030: vista previa de contrato y contenido genérico | [fix-014-i-contrato-preview-generico](fixes/fix-014-i-contrato-preview-generico/fix.md) | 2026-08-04 |
+| ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | [0001-i-ciclo-vida-clase-exclusion-cierre](specs/0001-i-ciclo-vida-clase-exclusion-cierre/spec.md) | 2026-08-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -82,4 +82,16 @@ describe('ErrorSanitizerService', () => {
     );
     expect(result.code).toBe('CUPOS_AGOTADOS');
   });
+
+  it('should trust error.message as-is for P0001 (business-rule RAISE EXCEPTION, spec 0001-i)', () => {
+    const error = {
+      code: 'P0001',
+      message: 'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+    };
+    const result = service.sanitize(error);
+    expect(result.message).toBe(
+      'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+    );
+    expect(result.code).toBe('P0001');
+  });
 });
