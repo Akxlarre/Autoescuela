@@ -537,6 +537,22 @@
   escritura solo introduce una carrera nueva.
 - **Fuente:** `specs/fixes/fix-114-m-race-condition-pending-balance-pagos`
 
+### DG-053 — Componentes con prefijo `Admin*` en `features/admin/` pueden ser compartidos con secretaría, no exclusivos de admin
+- **Trampa:** asumir que un componente en `src/app/features/admin/` y con nombre
+  `Admin<Algo>Component` solo lo ve/usa el rol admin — y que por lo tanto una regla de
+  negocio que dice "secretaría no debe ver X" no aplica a ese archivo porque "es de admin".
+- **Realidad:** `SecretariaAsistenciaComponent` importa e instancia directamente
+  `AdminIniciarClaseDrawerComponent` y `AdminFinalizarClaseDrawerComponent` (ver
+  `secretaria-asistencia.component.ts`) — son literalmente el mismo componente para ambos
+  roles, no una copia paralela. El prefijo `Admin` es un accidente de cuándo se creó el
+  componente, no una declaración de scope de rol. Un pedido de negocio de "ocultar X a
+  secretaría" que toque estas pantallas casi siempre es "ocultar X a admin también", porque
+  no hay forma de diferenciar el rol dentro del componente sin agregarla explícitamente.
+  Antes de asumir el alcance de un pedido de "el rol Y no debe ver Z", grepear quién más
+  importa ese componente (`grep -rn "Admin<Nombre>Component" src/app/features/`) en vez de
+  confiar en el nombre del archivo.
+- **Fuente:** `specs/fixes/fix-115-m-ocultar-evaluacion-secretaria-admin`
+
 ---
 
 ## Convención para agregar una entrada nueva
