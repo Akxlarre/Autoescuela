@@ -49,7 +49,6 @@
 > filtro/sede). Dos hallazgos concretos, distintos en severidad: uno es plata (pierde saldo
 > de alumno), el otro es UX (dato viejo un instante en pantalla).
 
-| ASG-b-063 | 🔴 Race condition "lost update" en `pending_balance` al registrar pagos | `m` | fix | **Alta** | b | `pagos.facade.ts:357` calcula el saldo desde un snapshot pasado por parámetro, no relee BD. Doble submit/dos pestañas pisa el saldo del primer pago. Mismo patrón en `enrollment.facade.ts` (`confirmEnrollment`/`confirmWithPayment`). Fix: RPC atómico, mismo patrón que `get_next_enrollment_number` |
 | ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `m` | spec | Media | b | Cero `AbortController`/`requestId`/`switchMap` en los 100+ Facades del proyecto. Cambiar de sede/filtro rápido puede dejar en pantalla el resultado de la consulta vieja si llega después que la nueva. Afecta sobre todo a los Facades branch-scoped (`.claude/rules/facades.md` §7) |
 
 ### Tanda rollout App-like — 2026-08-03
@@ -141,6 +140,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-063 | Race condition "lost update" en `pending_balance` al registrar pagos | `m` | [fix-114-m-race-condition-pending-balance-pagos](fixes/fix-114-m-race-condition-pending-balance-pagos/fix.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
