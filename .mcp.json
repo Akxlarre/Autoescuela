@@ -12,7 +12,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@angular/cli@latest",
+        "@angular/cli@^21.2.0",
         "mcp"
       ]
     },
