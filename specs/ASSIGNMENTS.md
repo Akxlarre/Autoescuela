@@ -38,7 +38,6 @@
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `m` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
-| ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `m` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `i` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
 
@@ -48,9 +47,6 @@
 > consulta/opera de la peor forma posible (doble submit, dos pestañas, cambios rápidos de
 > filtro/sede). Dos hallazgos concretos, distintos en severidad: uno es plata (pierde saldo
 > de alumno), el otro es UX (dato viejo un instante en pantalla).
-
-| ASG-b-063 | 🔴 Race condition "lost update" en `pending_balance` al registrar pagos | `m` | fix | **Alta** | b | `pagos.facade.ts:357` calcula el saldo desde un snapshot pasado por parámetro, no relee BD. Doble submit/dos pestañas pisa el saldo del primer pago. Mismo patrón en `enrollment.facade.ts` (`confirmEnrollment`/`confirmWithPayment`). Fix: RPC atómico, mismo patrón que `get_next_enrollment_number` |
-| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `m` | spec | Media | b | Cero `AbortController`/`requestId`/`switchMap` en los 100+ Facades del proyecto. Cambiar de sede/filtro rápido puede dejar en pantalla el resultado de la consulta vieja si llega después que la nueva. Afecta sobre todo a los Facades branch-scoped (`.claude/rules/facades.md` §7) |
 
 ### Tanda rollout App-like — 2026-08-03
 
@@ -208,6 +204,9 @@
 | ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | [0001-i-ciclo-vida-clase-exclusion-cierre](specs/0001-i-ciclo-vida-clase-exclusion-cierre/spec.md) | 2026-08-04 |
 | ASG-b-005 | Cobertura data-llm-* — Lote 2: terminar hero-tab + Config Web resto + varios | [fix-015-i-cobertura-data-llm-lote-2](fixes/fix-015-i-cobertura-data-llm-lote-2/fix.md) | 2026-08-05 |
 | ASG-b-007 | Cobertura data-llm-* — Lote 4: shared/components parte 2 | [fix-016-i-cobertura-data-llm-lote-4](fixes/fix-016-i-cobertura-data-llm-lote-4/fix.md) | 2026-08-05 |
+| ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | [fix-115-m-ocultar-evaluacion-secretaria-admin](fixes/fix-115-m-ocultar-evaluacion-secretaria-admin/fix.md) | 2026-08-05 |
+| ASG-b-063 | Race condition "lost update" en `pending_balance` al registrar pagos | [fix-114-m-race-condition-pending-balance-pagos](fixes/fix-114-m-race-condition-pending-balance-pagos/fix.md) | 2026-08-05 |
+| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | [0005-m-facades-respuestas-stale](specs/0005-m-facades-respuestas-stale/spec.md) | 2026-08-05 |
 | ASG-b-068 | App-like: `/admin/secretarias` | [fix-017-i-app-like-admin-secretarias](fixes/fix-017-i-app-like-admin-secretarias/fix.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 

@@ -552,6 +552,21 @@ describe('EnrollmentFacade', () => {
       expect(mockNotifications.notifyUsers).not.toHaveBeenCalled();
       expect(mockNotifications.notifyRole).not.toHaveBeenCalled();
     });
+
+    // fix-114-m (ASG-b-063): re-entrada rechazada a nivel de dominio, no solo de UI
+    it('rechaza una re-entrada concurrente (doble submit) mientras ya hay una confirmación en curso', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+
+      const [first, second] = await Promise.all([
+        facade.confirmEnrollment(),
+        facade.confirmEnrollment(),
+      ]);
+
+      expect([first, second]).toContain(null);
+      expect(mockSupabase.client.rpc).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('confirmWithPayment', () => {
@@ -594,6 +609,20 @@ describe('EnrollmentFacade', () => {
       const result = await facade.confirmWithPayment();
 
       expect(result).toBe('2026-0002');
+    });
+
+    // fix-114-m (ASG-b-063): re-entrada rechazada a nivel de dominio, no solo de UI
+    it('rechaza una re-entrada concurrente (doble submit) mientras ya hay una confirmación en curso', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0002', error: null });
+
+      const [first, second] = await Promise.all([
+        facade.confirmWithPayment(),
+        facade.confirmWithPayment(),
+      ]);
+
+      expect([first, second]).toContain(null);
+      expect(mockSupabase.client.rpc).toHaveBeenCalledTimes(1);
     });
   });
 

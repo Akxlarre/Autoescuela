@@ -258,13 +258,10 @@ export class FlotaDetalleFacade {
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
-  private resolveStatus(
-    raw: string | null,
-  ): 'available' | 'in_class' | 'maintenance' | 'out_of_service' {
-    const map: Record<string, 'available' | 'in_class' | 'maintenance' | 'out_of_service'> = {
+  private resolveStatus(raw: string | null): 'available' | 'maintenance' | 'out_of_service' {
+    const map: Record<string, 'available' | 'maintenance' | 'out_of_service'> = {
       available: 'available',
       disponible: 'available',
-      in_class: 'in_class',
       maintenance: 'maintenance',
       mantenimiento: 'maintenance',
       out_of_service: 'out_of_service',

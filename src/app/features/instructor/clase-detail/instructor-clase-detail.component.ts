@@ -200,7 +200,7 @@ import {
                 </div>
                 <div class="flex-1 min-w-0">
                   <h2
-                    class="text-lg sm:text-xl font-display font-bold text-text-primary leading-tight break-words"
+                    class="text-lg sm:text-xl font-display font-bold text-text-primary leading-tight wrap-break-word"
                   >
                     {{ cls.studentName }}
                   </h2>
@@ -333,7 +333,7 @@ import {
                         type="number"
                         [(ngModel)]="kmEnd"
                         max="999999"
-                        class="!bg-transparent !border-none !outline-none !shadow-none !ring-0 text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:!bg-transparent"
+                        class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
                         placeholder="0"
                         data-llm-description="input for the odometer reading at class return"
                       />
@@ -366,6 +366,7 @@ import {
                       class="font-bold text-text-primary uppercase tracking-widest text-sm text-center"
                     >
                       Calificación General
+                      <span class="font-normal normal-case text-text-muted">(opcional)</span>
                     </h3>
                     <div
                       class="flex gap-2 sm:gap-4 p-2 bg-subtle rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
@@ -533,9 +534,7 @@ export class InstructorClaseDetailComponent implements OnInit {
 
   canFinalize(): boolean {
     const cls = this.clasesFacade.selectedClass();
-    const kmValid = this.kmEnd !== null && this.kmEnd > (cls?.kmStart || 0);
-    const gradeValid = this.selectedGrade() !== null;
-    return !!kmValid && !!gradeValid;
+    return this.kmEnd !== null && this.kmEnd > (cls?.kmStart || 0);
   }
 
   async onFinalize(cls: any) {
@@ -543,28 +542,28 @@ export class InstructorClaseDetailComponent implements OnInit {
 
     this.isSubmitting.set(true);
     try {
-      // 1. Guardar Evaluación
-      const evalData: EvaluationFormData = {
-        sessionId: cls.sessionId,
-        classNumber: cls.classNumber,
-        studentName: cls.studentName,
-        kmStart: cls.kmStart,
-        kmEnd: this.kmEnd,
-        grade: this.selectedGrade()!,
-        observations: this.observations,
-        checklist: this.checklistItems,
-        studentSignature: this.studentSignature,
-        instructorSignature: this.instructorSignature,
-      };
-
-      // 2. Finalizar clase (status + km_end)
+      // 1. Finalizar clase (status + km_end) — la evaluación NUNCA es requisito para cerrar.
       await this.clasesFacade.finishClass(cls.sessionId, this.kmEnd!);
-      await this.clasesFacade.saveEvaluation(evalData);
 
-      this.clasesFacade.showSuccess(
-        'Clase Finalizada',
-        'La sesión y evaluación se han guardado con éxito.',
-      );
+      // 2. Guardar evaluación solo si el instructor alcanzó a calificarla ahora mismo;
+      // si no, la completa después desde su propio portal (fix-115-m).
+      if (this.selectedGrade() !== null) {
+        const evalData: EvaluationFormData = {
+          sessionId: cls.sessionId,
+          classNumber: cls.classNumber,
+          studentName: cls.studentName,
+          kmStart: cls.kmStart,
+          kmEnd: this.kmEnd,
+          grade: this.selectedGrade()!,
+          observations: this.observations,
+          checklist: this.checklistItems,
+          studentSignature: this.studentSignature,
+          instructorSignature: this.instructorSignature,
+        };
+        await this.clasesFacade.saveEvaluation(evalData);
+      }
+
+      this.clasesFacade.showSuccess('Clase Finalizada', 'La sesión se ha guardado con éxito.');
       this.router.navigate(['/app/instructor/dashboard']);
     } catch {
       this.clasesFacade.showError('Error al finalizar', 'Hubo un problema al guardar los datos.');

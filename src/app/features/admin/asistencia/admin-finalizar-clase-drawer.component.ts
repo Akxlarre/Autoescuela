@@ -7,12 +7,7 @@ import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
-import { EvaluationChecklistComponent } from '@shared/components/evaluation-checklist/evaluation-checklist.component';
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
-import {
-  EVALUATION_CHECKLIST_ITEMS,
-  type EvaluationChecklistItem,
-} from '@core/models/ui/instructor-portal.model';
 import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.model';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
@@ -26,7 +21,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     ReactiveFormsModule,
     IconComponent,
     AlertCardComponent,
-    EvaluationChecklistComponent,
     SignaturePadComponent,
     DrawerFormComponent,
   ],
@@ -133,58 +127,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             }
           </div>
 
-          <!-- Calificación -->
-          <div class="flex flex-col items-center border-t border-b border-border-subtle py-5">
-            <h3
-              class="text-xs font-bold text-text-secondary uppercase tracking-widest text-center mb-4"
-            >
-              Calificación General
-            </h3>
-            <div
-              class="flex gap-2 p-2 bg-subtle rounded-2xl border border-border-default/50 w-max mx-auto"
-            >
-              @for (grade of [3, 4, 5, 6, 7]; track grade) {
-                <button
-                  type="button"
-                  class="w-11 h-11 flex items-center justify-center font-display font-bold text-lg rounded-xl transition-all duration-200 cursor-pointer"
-                  [class.bg-brand]="selectedGrade() === grade"
-                  [class.text-white]="selectedGrade() === grade"
-                  [class.shadow-sm]="selectedGrade() === grade"
-                  [class.scale-110]="selectedGrade() === grade"
-                  [class.text-text-muted]="selectedGrade() !== grade"
-                  (click)="selectedGrade.set(grade)"
-                >
-                  {{ grade }}
-                </button>
-              }
-            </div>
-          </div>
-
-          <!-- Checklist de evaluación -->
-          <app-evaluation-checklist
-            [items]="checklistItems"
-            (itemsChange)="onChecklistChange($event)"
-          />
-
-          <!-- Observaciones -->
-          <div class="flex flex-col gap-2">
-            <label
-              class="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2"
-              for="obsAdmin"
-            >
-              <app-icon name="pen-tool" [size]="14" />
-              Observaciones
-            </label>
-            <textarea
-              id="obsAdmin"
-              formControlName="observations"
-              rows="3"
-              class="form-control w-full resize-none rounded-xl p-3 text-sm border border-border-default/60 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/40 placeholder:text-text-muted"
-              placeholder="Áreas de mejora, destrezas adquiridas..."
-              data-llm-description="Observaciones del instructor sobre el desempeño del alumno en la clase práctica"
-            ></textarea>
-          </div>
-
           <!-- Firmas (opcionales) -->
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
@@ -256,7 +198,6 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
 
   protected readonly isSubmitting = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly selectedGrade = signal<number | null>(null);
   protected readonly signaturesExpanded = signal(false);
 
   protected readonly form = this.fb.group({
@@ -265,28 +206,16 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
       Validators.min(1),
       Validators.max(999999),
     ]),
-    observations: this.fb.control(''),
   });
-
-  protected checklistItems: EvaluationChecklistItem[] = EVALUATION_CHECKLIST_ITEMS.map((item) => ({
-    ...item,
-    checked: true,
-  }));
 
   private studentSignature: string | null = null;
   private instructorSignature: string | null = null;
 
   ngOnInit(): void {
-    this.form.reset({ kmEnd: null, observations: '' });
-    this.checklistItems = EVALUATION_CHECKLIST_ITEMS.map((item) => ({ ...item, checked: true }));
-    this.selectedGrade.set(null);
+    this.form.reset({ kmEnd: null });
     this.studentSignature = null;
     this.instructorSignature = null;
     this.error.set(null);
-  }
-
-  protected onChecklistChange(items: EvaluationChecklistItem[]): void {
-    this.checklistItems = items;
   }
 
   protected onSignatureChange(type: 'student' | 'instructor', dataUrl: string | null): void {
@@ -296,8 +225,7 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
 
   protected canFinalize(cls: { kmStart: number | null }): boolean {
     const kmEnd = this.form.controls.kmEnd.value;
-    const kmValid = kmEnd !== null && kmEnd > 0 && kmEnd > (cls.kmStart ?? 0);
-    return kmValid && this.selectedGrade() !== null;
+    return kmEnd !== null && kmEnd > 0 && kmEnd > (cls.kmStart ?? 0);
   }
 
   protected async onFinalize(cls: {
@@ -313,9 +241,6 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
         sessionId: cls.id,
         studentId: cls.studentId,
         kmEnd: this.form.controls.kmEnd.value!,
-        grade: this.selectedGrade()!,
-        observations: this.form.controls.observations.value ?? '',
-        checklist: this.checklistItems,
         studentSignature: this.studentSignature,
         instructorSignature: this.instructorSignature,
       };

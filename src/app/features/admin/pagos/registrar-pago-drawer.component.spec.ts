@@ -83,23 +83,14 @@ describe('RegistrarPagoDrawerComponent', () => {
     expect(facadeSpy.registrarNuevoPago).not.toHaveBeenCalled();
   });
 
-  it('onSubmit() prioriza estadoCuentaResumen sobre la lista de deudores para montosActuales', async () => {
+  it('saldoPendienteActual prioriza estadoCuentaResumen sobre la lista de deudores', () => {
     setup({
       enrollmentSeleccionado: 42,
       alumnosConDeuda: [{ enrollmentId: 42, alumno: 'X', rut: '1-1', saldo: 999, pagado: 1 }],
       estadoCuentaResumen: { enrollmentId: 42, totalPagado: 100, saldoPendiente: 900 },
     });
 
-    (component as any).form.patchValue({
-      type: 'Abono',
-      total_amount: 500,
-      cash_amount: 500,
-    });
-
-    await (component as any).onSubmit();
-
-    const [, , montosActuales] = facadeSpy.registrarNuevoPago.mock.calls[0];
-    expect(montosActuales).toEqual({ total_paid: 100, pending_balance: 900 });
+    expect((component as any).saldoPendienteActual).toBe(900);
   });
 
   it('onSubmit() BLOQUEA el guardado si el monto excede el saldo pendiente (regresión H-024)', async () => {

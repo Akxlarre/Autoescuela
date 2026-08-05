@@ -722,22 +722,16 @@ export class RegistrarPagoDrawerComponent {
         ? (v.enrollment_id ?? null)
         : this.facade.enrollmentSeleccionado();
 
-      const montosActuales = this.resolveMontosActuales(enrollmentId);
-
-      await this.facade.registrarNuevoPago(
-        enrollmentId,
-        {
-          payment_date: v.payment_date!,
-          type: v.type!,
-          total_amount: v.total_amount!,
-          cash_amount: v.cash_amount ?? 0,
-          transfer_amount: v.transfer_amount ?? 0,
-          card_amount: v.card_amount ?? 0,
-          voucher_amount: v.voucher_amount ?? 0,
-          document_number: v.document_number || null,
-        },
-        montosActuales,
-      );
+      await this.facade.registrarNuevoPago(enrollmentId, {
+        payment_date: v.payment_date!,
+        type: v.type!,
+        total_amount: v.total_amount!,
+        cash_amount: v.cash_amount ?? 0,
+        transfer_amount: v.transfer_amount ?? 0,
+        card_amount: v.card_amount ?? 0,
+        voucher_amount: v.voucher_amount ?? 0,
+        document_number: v.document_number || null,
+      });
 
       this.facade.showSuccess('Pago registrado correctamente.');
       this.saved.emit();

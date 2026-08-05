@@ -87,14 +87,15 @@ export interface VehicleOption {
   currentKm: number | null;
 }
 
-/** Payload para finalizar una clase práctica desde admin/secretaria. */
+/**
+ * Payload para finalizar una clase práctica desde admin/secretaria.
+ * fix-115-m: no incluye evaluación (grade/checklist/observations) — es materia exclusiva
+ * del instructor, que la completa por separado desde su propio portal.
+ */
 export interface FinishClassPayload {
   sessionId: number;
   studentId: number | null;
   kmEnd: number;
-  grade: number;
-  observations: string;
-  checklist: EvaluationChecklistItem[];
   studentSignature: string | null;
   instructorSignature: string | null;
 }

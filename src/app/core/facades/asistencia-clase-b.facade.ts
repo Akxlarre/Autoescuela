@@ -412,7 +412,11 @@ export class AsistenciaClaseBFacade {
     }
   }
 
-  /** Finaliza una clase práctica: km_end + grade + checklist + asistencia + firmas opcionales. */
+  /**
+   * Finaliza una clase práctica desde admin/secretaria: km_end + asistencia + firmas
+   * opcionales. No toca evaluación (grade/checklist/notes) — es materia exclusiva del
+   * instructor, que la completa por separado (fix-115-m).
+   */
   async finishClass(payload: FinishClassPayload): Promise<void> {
     this._isSaving.set(true);
     try {
@@ -425,9 +429,6 @@ export class AsistenciaClaseBFacade {
           end_time: new Date().toTimeString().split(' ')[0],
           km_end: payload.kmEnd,
           completed_at: new Date().toISOString(),
-          evaluation_grade: payload.grade,
-          notes: payload.observations ?? null,
-          evaluation_checklist: payload.checklist ?? null,
           signature_timestamp:
             payload.studentSignature || payload.instructorSignature
               ? new Date().toISOString()

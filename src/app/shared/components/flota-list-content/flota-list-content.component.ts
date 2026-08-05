@@ -517,7 +517,7 @@ import { formatCLP } from '@core/utils/date.utils';
 })
 export class FlotaListContentComponent {
   readonly vehicles = input<VehicleTableRow[]>([]);
-  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, inClass: 0, maintenance: 0 });
+  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0 });
   readonly isLoading = input(false);
   readonly basePath = input<string>('/app/admin');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
@@ -553,7 +553,6 @@ export class FlotaListContentComponent {
   ];
   readonly statusOptions = [
     { label: 'Disponible', value: 'available' as VehicleStatus },
-    { label: 'En Clase', value: 'in_class' as VehicleStatus },
     { label: 'Mantenimiento', value: 'maintenance' as VehicleStatus },
     { label: 'Fuera de Servicio', value: 'out_of_service' as VehicleStatus },
   ];
@@ -571,7 +570,6 @@ export class FlotaListContentComponent {
       icon: 'circle-check',
       color: 'success',
     },
-    { id: 'en-clase', label: 'En Clase', value: this.kpis().inClass, icon: 'graduation-cap' },
     {
       id: 'en-taller',
       label: 'En Taller',
@@ -621,7 +619,6 @@ export class FlotaListContentComponent {
     return (
       {
         available: 'Disponible',
-        in_class: 'En Clase',
         maintenance: 'Taller',
         out_of_service: 'Baja',
       }[status] || status
@@ -629,9 +626,8 @@ export class FlotaListContentComponent {
   }
   statusSeverity(status: string): 'success' | 'warn' | 'danger' | 'info' {
     return (
-      ({ available: 'success', in_class: 'info', maintenance: 'warn', out_of_service: 'danger' }[
-        status
-      ] as any) || 'info'
+      ({ available: 'success', maintenance: 'warn', out_of_service: 'danger' }[status] as any) ||
+      'info'
     );
   }
 }

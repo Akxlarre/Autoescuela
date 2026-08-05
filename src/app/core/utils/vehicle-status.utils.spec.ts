@@ -6,8 +6,8 @@ describe('resolveVehicleStatus', () => {
     expect(resolveVehicleStatus('operational')).toBe('available');
   });
 
-  it('mapea "in_use" a "in_class"', () => {
-    expect(resolveVehicleStatus('in_use')).toBe('in_class');
+  it('mapea "in_use" a "available" (legacy, ya no existe in_class — fix-121-m)', () => {
+    expect(resolveVehicleStatus('in_use')).toBe('available');
   });
 
   it('mapea "maintenance" a "maintenance"', () => {

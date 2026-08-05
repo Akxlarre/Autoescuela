@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import { toISODate } from '@core/utils/date.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
@@ -22,6 +23,8 @@ export class DashboardFacade {
   private _initialized = false;
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
+  /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
+  private readonly dashboardGuard = createRequestGuard();
 
   // ── 2. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
@@ -105,6 +108,7 @@ export class DashboardFacade {
   }
 
   private async fetchRealDashboardData(branchId: number | null): Promise<void> {
+    const requestToken = this.dashboardGuard.next();
     const todayStr = toISODate(new Date());
     const [year, month] = todayStr.split('-');
     const firstOfMonth = `${year}-${month}-01`;
@@ -224,6 +228,9 @@ export class DashboardFacade {
       month: 'long',
       year: 'numeric',
     }).format(today);
+
+    // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+    if (!this.dashboardGuard.isCurrent(requestToken)) return;
 
     this.data.set({
       hero: {

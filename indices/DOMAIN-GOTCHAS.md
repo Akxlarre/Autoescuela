@@ -514,6 +514,45 @@
   eliminada por una migración posterior a la que se usó como base.
 - **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`
 
+### DG-052 — `enrollments.pending_balance`/`total_paid` ya se recalculan atómicamente vía trigger; escribirlos manualmente desde el cliente causa lost-update
+- **Trampa:** después de insertar un `payment`, hacer un segundo `UPDATE` manual sobre
+  `enrollments` para "sincronizar" `total_paid`/`pending_balance`/`payment_status` a partir de
+  un snapshot leído antes del insert (patrón que parece razonable: "calculo el nuevo saldo y lo
+  guardo").
+- **Realidad:** el trigger `trg_update_balance` (`recalculate_enrollment_balance()`,
+  `20260301000008_08_misc_and_triggers.sql:170-202`) ya corre `AFTER INSERT OR UPDATE ON
+  payments` y recalcula esos tres campos **siempre desde `SUM(payments.total_amount WHERE
+  status='paid')`** — nunca desde un snapshot. Al ser un `UPDATE ... WHERE id =
+  enrollment_id`, Postgres serializa triggers concurrentes vía row lock: dos inserts de pago
+  al mismo enrollment (doble submit, dos pestañas) quedan correctamente sumados porque el
+  segundo trigger espera al primero y su `SUM` ve ambos pagos. Un `UPDATE` manual posterior
+  desde el cliente, calculado con un snapshot pasado por parámetro (leído *antes* de que
+  cualquiera de los dos inserts corriera), **pisa** ese valor ya correcto — exactamente el
+  lost-update que el trigger existe para evitar. `PagosFacade.registrarNuevoPago()` tenía este
+  segundo `UPDATE` redundante; el alumno quedaba con saldo pendiente incorrecto tras doble
+  submit, sin error visible. Corregido en `fix-114-m`: se eliminó el `UPDATE` manual — el
+  trigger es la única fuente de verdad. **Lección:** antes de escribir cualquier `UPDATE`
+  manual sobre `enrollments.total_paid`/`pending_balance`/`payment_status` tras un insert en
+  `payments`, verificar si el trigger ya lo resuelve — casi siempre sí, y agregar una segunda
+  escritura solo introduce una carrera nueva.
+- **Fuente:** `specs/fixes/fix-114-m-race-condition-pending-balance-pagos`
+
+### DG-053 — Componentes con prefijo `Admin*` en `features/admin/` pueden ser compartidos con secretaría, no exclusivos de admin
+- **Trampa:** asumir que un componente en `src/app/features/admin/` y con nombre
+  `Admin<Algo>Component` solo lo ve/usa el rol admin — y que por lo tanto una regla de
+  negocio que dice "secretaría no debe ver X" no aplica a ese archivo porque "es de admin".
+- **Realidad:** `SecretariaAsistenciaComponent` importa e instancia directamente
+  `AdminIniciarClaseDrawerComponent` y `AdminFinalizarClaseDrawerComponent` (ver
+  `secretaria-asistencia.component.ts`) — son literalmente el mismo componente para ambos
+  roles, no una copia paralela. El prefijo `Admin` es un accidente de cuándo se creó el
+  componente, no una declaración de scope de rol. Un pedido de negocio de "ocultar X a
+  secretaría" que toque estas pantallas casi siempre es "ocultar X a admin también", porque
+  no hay forma de diferenciar el rol dentro del componente sin agregarla explícitamente.
+  Antes de asumir el alcance de un pedido de "el rol Y no debe ver Z", grepear quién más
+  importa ese componente (`grep -rn "Admin<Nombre>Component" src/app/features/`) en vez de
+  confiar en el nombre del archivo.
+- **Fuente:** `specs/fixes/fix-115-m-ocultar-evaluacion-secretaria-admin`
+
 ---
 
 ## Convención para agregar una entrada nueva

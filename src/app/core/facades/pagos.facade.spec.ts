@@ -79,7 +79,6 @@ describe('PagosFacade', () => {
   describe('registrarNuevoPago — notificación al alumno (spec 0025, AC1, AC-E1)', () => {
     let notificationsSpy: any;
 
-    const montosActuales = { total_paid: 100000, pending_balance: 200000 };
     const payload = {
       type: 'enrollment',
       total_amount: 50000,
@@ -119,7 +118,7 @@ describe('PagosFacade', () => {
     });
 
     it('notifica al alumno resolviendo enrollments → students.user_id', async () => {
-      await facade.registrarNuevoPago(10, payload, montosActuales);
+      await facade.registrarNuevoPago(10, payload);
       await flushMicrotasks();
 
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
@@ -129,7 +128,7 @@ describe('PagosFacade', () => {
     });
 
     it('monto $0 no dispara notificación (AC-E1)', async () => {
-      await facade.registrarNuevoPago(10, { ...payload, total_amount: 0 }, montosActuales);
+      await facade.registrarNuevoPago(10, { ...payload, total_amount: 0 });
       await flushMicrotasks();
 
       expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
@@ -138,8 +137,101 @@ describe('PagosFacade', () => {
     it('un fallo en notifyUsers no revierte el abono', async () => {
       notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
 
-      await expect(facade.registrarNuevoPago(10, payload, montosActuales)).resolves.toBeUndefined();
+      await expect(facade.registrarNuevoPago(10, payload)).resolves.toBeUndefined();
       await flushMicrotasks();
+    });
+  });
+
+  // ── fix-114-m (ASG-b-063): lost-update en pending_balance/total_paid ──
+  describe('registrarNuevoPago — fix-114-m: sin lost-update en pending_balance/total_paid', () => {
+    const payload = {
+      type: 'enrollment',
+      total_amount: 50000,
+      cash_amount: 50000,
+      transfer_amount: 0,
+      card_amount: 0,
+      voucher_amount: 0,
+      document_number: null,
+      payment_date: '2026-04-01',
+    };
+
+    it('nunca escribe pending_balance/total_paid desde el cliente — es responsabilidad del trigger de BD', async () => {
+      const enrollmentsUpdate = vi
+        .fn()
+        .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+      const eqChain = {
+        single: vi.fn().mockResolvedValue({ data: { students: { user_id: 77 } }, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqChain) }),
+          };
+        }
+        if (table === 'enrollments') {
+          return {
+            select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqChain) }),
+            update: enrollmentsUpdate,
+          };
+        }
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+      });
+
+      await facade.registrarNuevoPago(10, payload);
+      await flushMicrotasks();
+
+      expect(enrollmentsUpdate).not.toHaveBeenCalled();
+    });
+
+    it('doble submit concurrente contra el mismo enrollment no pierde ningún abono (simula el trigger atómico recalculate_enrollment_balance)', async () => {
+      // Simula el trigger `trg_update_balance`: pending_balance/total_paid se derivan
+      // SIEMPRE de la suma de los `payments` ya insertados, nunca de un snapshot
+      // pasado por parámetro — así ambos abonos concurrentes quedan reflejados.
+      const basePrice = 300000;
+      const insertedAmounts: number[] = [];
+      const enrollmentState = { total_paid: 0, pending_balance: basePrice };
+
+      const paymentsInsert = vi.fn().mockImplementation((row: any) => {
+        insertedAmounts.push(row.total_amount);
+        enrollmentState.total_paid = insertedAmounts.reduce((a, b) => a + b, 0);
+        enrollmentState.pending_balance = basePrice - enrollmentState.total_paid;
+        return Promise.resolve({ error: null });
+      });
+      const eqChain = {
+        single: vi.fn().mockResolvedValue({ data: { students: { user_id: 77 } }, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return {
+            insert: paymentsInsert,
+            select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqChain) }),
+          };
+        }
+        if (table === 'enrollments') {
+          return {
+            select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqChain) }),
+            update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+          };
+        }
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+      });
+
+      // Dos promesas sin await intermedio contra el mismo enrollment (doble submit / dos pestañas).
+      await Promise.all([
+        facade.registrarNuevoPago(10, { ...payload, total_amount: 50000 }),
+        facade.registrarNuevoPago(10, { ...payload, total_amount: 30000 }),
+      ]);
+      await flushMicrotasks();
+
+      expect(enrollmentState.total_paid).toBe(80000);
+      expect(enrollmentState.pending_balance).toBe(220000);
     });
   });
 });

@@ -27,7 +27,6 @@ describe('AdminFinalizarClaseDrawerComponent', () => {
     component = TestBed.createComponent(AdminFinalizarClaseDrawerComponent).componentInstance;
     component.ngOnInit();
     component.form.patchValue({ kmEnd: 1500 });
-    component.selectedGrade.set(6);
   });
 
   // ─── fix-079: refresco inmediato de "Clases Actuales" del Dashboard ────────
@@ -40,6 +39,30 @@ describe('AdminFinalizarClaseDrawerComponent', () => {
       expect(facadeSpy.finishClass).toHaveBeenCalled();
       expect(dashboardFacadeSpy.refreshLiveClassesOnly).toHaveBeenCalled();
       expect(layoutDrawerSpy.close).toHaveBeenCalled();
+    });
+  });
+
+  // ─── fix-115-m: admin/secretaría nunca ven ni completan evaluación ────────
+  describe('fix-115-m — sin evaluación en el cierre de admin/secretaría', () => {
+    it('canFinalize no exige calificación — solo kilometraje válido', () => {
+      const cls = { id: 1, studentId: 42, kmStart: 1000 };
+      expect(component.canFinalize(cls)).toBe(true);
+    });
+
+    it('el payload enviado a finishClass nunca incluye grade/checklist/observations', async () => {
+      const cls = { id: 1, studentId: 42, kmStart: 1000 };
+
+      await component.onFinalize(cls);
+
+      const payload = facadeSpy.finishClass.mock.calls[0][0];
+      expect(payload).not.toHaveProperty('grade');
+      expect(payload).not.toHaveProperty('checklist');
+      expect(payload).not.toHaveProperty('observations');
+    });
+
+    it('no expone selectedGrade ni checklistItems en el componente', () => {
+      expect((component as any).selectedGrade).toBeUndefined();
+      expect((component as any).checklistItems).toBeUndefined();
     });
   });
 });
