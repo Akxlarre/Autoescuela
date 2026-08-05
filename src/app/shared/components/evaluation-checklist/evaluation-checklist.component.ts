@@ -48,6 +48,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
             [class.border-border-default]="!item.checked"
             [class.hover:border-border-strong]="!item.checked"
             (click)="toggleItem(item)"
+            data-llm-action="alternar-item-checklist-evaluacion"
           >
             <span
               class="checklist-item-text text-sm transition-colors sm:text-base pr-2 leading-tight flex-1"

@@ -72,6 +72,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
         [appPressFeedback]="'press'"
         (click)="action.emit()"
         [attr.aria-label]="actionLabel()"
+        data-llm-action="ejecutar-accion-empty-state"
       >
         @if (actionIcon()) {
           <app-icon [name]="actionIcon()!" [size]="14" />

@@ -44,19 +44,34 @@ export interface User {
       <!-- Action List -->
       <ul class="user-panel__list" role="presentation">
         <li role="none">
-          <button class="user-panel__item" role="menuitem" (click)="action.emit('profile')">
+          <button
+            class="user-panel__item"
+            role="menuitem"
+            (click)="action.emit('profile')"
+            data-llm-nav="mi-perfil"
+          >
             <app-icon name="user" class="text-text-muted" [size]="16" />
             <span>Mi perfil</span>
           </button>
         </li>
         <li role="none">
-          <button class="user-panel__item" role="menuitem" (click)="action.emit('settings')">
+          <button
+            class="user-panel__item"
+            role="menuitem"
+            (click)="action.emit('settings')"
+            data-llm-nav="ajustes"
+          >
             <app-icon name="settings" class="text-text-muted" [size]="16" />
             <span>Ajustes</span>
           </button>
         </li>
         <li role="none" class="sm:hidden">
-          <button class="user-panel__item" role="menuitem" (click)="toggleTheme.emit($event)">
+          <button
+            class="user-panel__item"
+            role="menuitem"
+            (click)="toggleTheme.emit($event)"
+            data-llm-action="alternar-tema-oscuro-claro"
+          >
             <app-icon [name]="darkMode() ? 'sun' : 'moon'" class="text-text-muted" [size]="16" />
             <span>{{ darkMode() ? 'Modo Claro' : 'Modo Oscuro' }}</span>
           </button>
@@ -72,6 +87,7 @@ export interface User {
             class="user-panel__item user-panel__item--danger"
             role="menuitem"
             (click)="logout.emit()"
+            data-llm-action="cerrar-sesion"
           >
             <app-icon name="log-out" [size]="16" />
             <span>Cerrar sesión</span>

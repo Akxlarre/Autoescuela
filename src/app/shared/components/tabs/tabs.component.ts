@@ -39,6 +39,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             [attr.aria-selected]="activeId() === tab.id"
             [disabled]="tab.disabled"
             (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+            [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
           >
             @if (tab.icon) {
               <app-icon [name]="tab.icon" [size]="16" />
@@ -77,6 +78,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             [attr.aria-selected]="activeId() === tab.id"
             [disabled]="tab.disabled"
             (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+            [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
           >
             @if (tab.icon) {
               <app-icon [name]="tab.icon" [size]="16" />
@@ -111,6 +113,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             [attr.aria-selected]="activeId() === tab.id"
             [disabled]="tab.disabled"
             (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+            [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
           >
             @if (activeId() === tab.id) {
               <div
