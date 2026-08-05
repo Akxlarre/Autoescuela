@@ -24,7 +24,8 @@ bazel-out/
 .DS_Store
 
 # Agentes de IA e Indexed (Koa Blueprint)
-.mcp.json
+# .mcp.json SÍ se commitea a propósito: sin secretos (playwright corre por npx),
+# así un dev nuevo lo tiene funcionando sin copiar nada. Ver docs/MCP-SETUP.md.
 .claude/logs/
 .claude/temp/
 .gemini/
