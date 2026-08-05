@@ -60,6 +60,7 @@ describe('DashboardFacade', () => {
         gte: vi.fn(() => b),
         lte: vi.fn(() => b),
         neq: vi.fn(() => b),
+        in: vi.fn(() => b),
         then: (resolve: any) => resolve({ data: rows, error: null }),
       };
       return { client: { from: vi.fn(() => b) }, builder: b };
@@ -93,8 +94,33 @@ describe('DashboardFacade', () => {
 
       const result = await dashFacade.fetchLiveClasses(1);
 
-      expect(mock.builder.neq).toHaveBeenCalledWith('status', 'cancelled');
       expect(result.every((c) => c.status !== 'cancelled')).toBe(true);
+    });
+
+    it('no incluye sesiones reserved de enrollments draft (fix-110)', async () => {
+      const mock = makeSupabaseMock([]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      await dashFacade.fetchLiveClasses(1);
+
+      expect(mock.builder.in).toHaveBeenCalledWith('status', [
+        'scheduled',
+        'in_progress',
+        'completed',
+        'no_show',
+      ]);
+      expect(mock.builder.eq).toHaveBeenCalledWith('enrollments.status', 'active');
     });
 
     it('mapea studentId y kmStart desde la fila de class_b_sessions (fix-076)', async () => {

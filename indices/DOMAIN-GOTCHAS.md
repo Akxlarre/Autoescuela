@@ -463,6 +463,57 @@
   de dar el fix por cerrado.
 - **Fuente:** `specs/fixes/fix-108-m-log-change-jwt-guc-inexistente`
 
+### DG-050 — `class_b_sessions` con `status='reserved'` de un `enrollment` en `draft` quedan visibles horas antes de que el cron las limpie
+- **Trampa:** asumir que el wizard de matrícula (`EnrollmentFacade`) guarda de forma
+  transaccional, y que por lo tanto cualquier `class_b_sessions` visible en BD pertenece a
+  una matrícula confirmada. Cualquier query nueva sobre `class_b_sessions` que solo excluya
+  `status='cancelled'` (patrón copiado de `dashboard.facade.ts`) hereda el mismo bug.
+- **Realidad:** el wizard es auto-save incremental por paso, no transaccional. El Paso 1
+  (`savePersonalData()`) crea el `enrollment` en `status='draft'`. El Paso 2
+  (`saveAssignment()`) ya inserta filas reales en `class_b_sessions` con
+  `status='reserved'` — mucho antes del Paso 6 (`confirmEnrollment()`), donde recién
+  `enrollments.status` pasa a `'active'` y las sesiones a `'scheduled'`. Si el usuario
+  abandona el wizard entre el Paso 2 y el Paso 6, esas filas `reserved` quedan huérfanas en
+  la base: un cron diario (`cleanup_expired_drafts`, 3am) las limpia, pero solo después de
+  `expires_at` (14h) — ventana real de exposición de hasta ~38h. Durante esa ventana,
+  aparecían como clases legítimas "por iniciar" en el Dashboard ("Clases Actuales") y en
+  Asistencia B (tab Prácticas + alertas de inasistencia), porque ninguna de esas tres
+  queries filtraba `enrollments.status` ni excluía `status='reserved'`. Reportado por el
+  dueño con captura real: dos matrículas ("Bruno", "Pedro") que nunca completaron el Paso 4
+  del wizard igual mostraban sus clases seleccionadas en el dashboard. Corregido en
+  `fix-110-m`: nuevo util `VALID_CLASS_B_SESSION_STATUSES`
+  (`core/utils/class-b-session.utils.ts`, excluye `'reserved'` y `'cancelled'`) aplicado en
+  los tres call sites (`dashboard.facade.ts::fetchLiveClasses()`,
+  `asistencia-clase-b.facade.ts::fetchPracticas()` y `::fetchAlertas()`), sumado a
+  `.eq('enrollments.status', 'active')` donde faltaba. **Lección:** cualquier query nueva
+  contra `class_b_sessions` debe usar `VALID_CLASS_B_SESSION_STATUSES` + filtro de
+  `enrollments.status='active'` — no basta con excluir `'cancelled'`, porque `'reserved'`
+  es un estado transitorio de matrícula en curso, no un estado final.
+- **Fuente:** `specs/fixes/fix-110-m-clases-fantasma-matricula-draft`
+
+### DG-051 — Un error sin capturar en `cleanup_expired_drafts()` aborta TODA la corrida del cron, no solo el último `DELETE`
+- **Trampa:** asumir que si el log de Postgres muestra un solo `ERROR` (ej. una FK violation
+  en el último `DELETE` de la función), solo esa sub-operación falló y el resto de la limpieza
+  de esa noche sí se aplicó.
+- **Realidad:** `cleanup_expired_drafts()` no tiene bloque `EXCEPTION`, así que cualquier error
+  sin capturar en PL/pgSQL revierte **toda la transacción de esa invocación** — todos los
+  `DELETE` anteriores (enrollments, class_b_sessions, payments, student_documents, etc.)
+  también se revierten, aunque el log solo muestre el statement donde reventó. Ocurrió porque
+  al agregar la limpieza de `users` huérfanos (`fix` del 2026-06-18) no se consideró que ese
+  `user` podía tener una fila propia en `notifications.recipient_id` (`REFERENCES users(id)`
+  sin `ON DELETE`, default `NO ACTION`) — el `DELETE FROM users` fallaba con FK violation,
+  y como consecuencia el cron completo de esa noche (y de cada noche siguiente, mientras el
+  mismo `user` bloqueado siguiera ahí) dejaba de limpiar cualquier draft expirado nuevo,
+  acumulando backlog silencioso. Corregido en `fix-113-m`: se borra
+  `notifications` del `user` huérfano antes del `DELETE FROM users`. **Lección:** cualquier
+  tabla nueva que agregue `REFERENCES users(id)` sin `ON DELETE` es un candidato a romper este
+  cron si algún día un `user` creado por el wizard de matrícula llega a tener una fila ahí antes
+  de expirar como draft — revisar `cleanup_expired_drafts()` al agregar ese tipo de FK. Además,
+  al editar esta función, verificar contra la migración más reciente que la toca (no contra un
+  fix intermedio) — `fix-113-m` casi reintrodujo una referencia a `biometric_records`, tabla
+  eliminada por una migración posterior a la que se usó como base.
+- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`
+
 ---
 
 ## Convención para agregar una entrada nueva

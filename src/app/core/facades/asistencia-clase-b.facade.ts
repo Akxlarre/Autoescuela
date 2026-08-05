@@ -7,6 +7,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { todayIso } from '@core/utils/date.utils';
+import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
   AlertaFaltaConsecutiva,
@@ -585,7 +586,8 @@ export class AsistenciaClaseBFacade {
       )
       .gte('scheduled_at', start)
       .lte('scheduled_at', end)
-      .or('status.neq.cancelled,status.is.null')
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active')
       .order('start_time', { ascending: true });
 
     if (branchId !== null) {
@@ -675,6 +677,7 @@ export class AsistenciaClaseBFacade {
       )
       .in('status', ['absent', 'no_show'])
       .eq('class_b_sessions.enrollments.status', 'active')
+      .in('class_b_sessions.status', VALID_CLASS_B_SESSION_STATUSES)
       .order('recorded_at', { ascending: false });
 
     if (branchId !== null) {

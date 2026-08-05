@@ -73,7 +73,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `AgendaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/agenda.facade.ts` |
 | `AnticiposFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/anticipos.facade.ts` |
 | `ArchivoFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `isLoading`, `isLoadingAlumnos`, `error`, `kpis`, `moduleNames` | `src/app/core/facades/archivo-profesional.facade.ts` |
-| `AsistenciaClaseBFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/asistencia-clase-b.facade.ts` |
+| `AsistenciaClaseBFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ConfirmModalService` | — | `src/app/core/facades/asistencia-clase-b.facade.ts` |
 | `AsistenciaProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade`, `ConfirmModalService` | — | `src/app/core/facades/asistencia-profesional.facade.ts` |
 | `AuditoriaFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/auditoria.facade.ts` |
 | `AuthFacade` | `SupabaseService`, `Router`, `BranchFacade` | — | `src/app/core/facades/auth.facade.ts` |
