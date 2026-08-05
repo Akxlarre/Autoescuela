@@ -4,7 +4,7 @@
  */
 
 export type VehicleType = 'class_b' | 'professional';
-export type VehicleStatus = 'available' | 'in_class' | 'maintenance' | 'out_of_service';
+export type VehicleStatus = 'available' | 'maintenance' | 'out_of_service';
 export type DocStatus = 'valid' | 'expiring_soon' | 'expired';
 
 export interface VehicleDocSummary {
@@ -37,6 +37,5 @@ export interface VehicleTableRow {
 export interface FlotaKpis {
   total: number;
   available: number;
-  inClass: number;
   maintenance: number;
 }
