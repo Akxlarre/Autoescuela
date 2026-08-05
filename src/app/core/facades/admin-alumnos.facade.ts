@@ -5,6 +5,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
   AlumnoTableRow,
@@ -93,6 +94,8 @@ export class AdminAlumnosFacade {
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
   private readonly _drawerMode = signal<'zoom' | 'asistencia'>('zoom');
+  /** Descarta respuestas de fetchAlumnosData() fuera de orden (spec 0005-m). */
+  private readonly alumnosGuard = createRequestGuard();
 
   // ── 2. ESTADO PÚBLICO (solo lectura) ────────────────────────────────────
   readonly alumnos = this._alumnos.asReadonly();
@@ -346,6 +349,7 @@ export class AdminAlumnosFacade {
   }
 
   private async fetchAlumnosData(branchId: number | null): Promise<void> {
+    const requestToken = this.alumnosGuard.next();
     try {
       let query: any = this.supabase.client
         .from('students')
@@ -368,6 +372,8 @@ export class AdminAlumnosFacade {
 
       const { data, error } = await query.order('id', { ascending: false });
       if (error) throw error;
+      // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+      if (!this.alumnosGuard.isCurrent(requestToken)) return;
 
       const rawData = (data ?? []) as unknown as RawStudent[];
 

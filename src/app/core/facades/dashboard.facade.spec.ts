@@ -51,6 +51,125 @@ describe('DashboardFacade', () => {
     // Por simplicidad, este test es estructural para cumplir con la regla de arquitectura TDD.
   });
 
+  describe('Request guard — respuestas stale (spec 0005-m, AC1, AC4, AC-E1)', () => {
+    /**
+     * fetchRealDashboardData() dispara exactamente 8 queries `.from(...)` por invocación
+     * (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así que
+     * cada tanda de 8 llamadas a `.from()` pertenece a una sola invocación del método —
+     * agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
+     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * 8` es una query
+     * auxiliar (ej. `fetchLiveClasses()`, que se dispara después de aplicar los datos
+     * principales) — se resuelve sola de inmediato, no la necesitamos controlada.
+     */
+    function makeRaceableSupabaseMock(expectedInitializeCalls: number) {
+      const mainCallsTotal = expectedInitializeCalls * 8;
+      const deferreds: {
+        promise: Promise<any>;
+        resolve: (v: any) => void;
+        reject: (e: any) => void;
+      }[] = [];
+      let fromCallCount = 0;
+
+      function deferredForBatch(batchIndex: number) {
+        if (!deferreds[batchIndex]) {
+          let resolve!: (v: any) => void;
+          let reject!: (e: any) => void;
+          const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+          });
+          deferreds[batchIndex] = { promise, resolve, reject };
+        }
+        return deferreds[batchIndex];
+      }
+
+      const client = {
+        from: vi.fn(() => {
+          const idx = fromCallCount++;
+          const isAuxiliaryQuery = idx >= mainCallsTotal;
+          const then = isAuxiliaryQuery
+            ? (resolve: any) => resolve({ data: [], error: null })
+            : (resolve: any, reject: any) =>
+                deferredForBatch(Math.floor(idx / 8)).promise.then(resolve, reject);
+          const builder: any = {
+            select: vi.fn(() => builder),
+            eq: vi.fn(() => builder),
+            gte: vi.fn(() => builder),
+            lte: vi.fn(() => builder),
+            or: vi.fn(() => builder),
+            in: vi.fn(() => builder),
+            order: vi.fn(() => builder),
+            limit: vi.fn(() => builder),
+            then,
+          };
+          return builder;
+        }),
+        channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() })),
+        removeChannel: vi.fn(),
+      };
+
+      return {
+        client,
+        resolveBatch: (i: number, count: number) =>
+          deferredForBatch(i).resolve({ data: [], count, error: null }),
+        rejectBatch: (i: number, err: Error) => deferredForBatch(i).reject(err),
+      };
+    }
+
+    it('AC-E2: si la fetch vigente falla, el error se setea igual — el guard no enmascara errores reales', async () => {
+      const mock = makeRaceableSupabaseMock(2);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente)
+
+      mock.resolveBatch(0, 100);
+      await oldCall;
+      mock.rejectBatch(1, new Error('network fail'));
+      await newCall;
+
+      expect(dashFacade.error()).toBe('Error al cargar datos del dashboard');
+    });
+
+    it('AC1/AC-E1: solo aplica el resultado de la fetch MÁS RECIENTE, aunque la vieja resuelva después', async () => {
+      const mock = makeRaceableSupabaseMock(2);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente) — dispara antes de que la vieja resuelva
+
+      // Orden de llegada invertido: la vigente resuelve primero.
+      mock.resolveBatch(1, 200);
+      await newCall;
+      mock.resolveBatch(0, 100);
+      await oldCall;
+
+      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+    });
+  });
+
   describe('fetchLiveClasses', () => {
     /** Builder Supabase encadenable y awaitable, con resultado fijo. */
     function makeSupabaseMock(rows: any[]) {

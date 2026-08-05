@@ -68,6 +68,129 @@ describe('AdminAlumnosFacade', () => {
     expect(facade.error()).toBeNull();
   });
 
+  // ─── Spec 0005-m: guard de requestId contra respuestas stale ──────────────
+  describe('Request guard — respuestas stale (AC1, AC-E1, AC-E2)', () => {
+    function makeDeferred<T>(): {
+      promise: Promise<T>;
+      resolve: (value: T) => void;
+      reject: (reason?: unknown) => void;
+    } {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    /** Cada llamada sucesiva a `.order()` consume la siguiente promesa de la lista. */
+    function mockStudentsSequence(promises: Promise<unknown>[]): void {
+      let callIndex = 0;
+      const builder: any = {
+        select: vi.fn(() => builder),
+        neq: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        in: vi.fn(() => builder),
+        not: vi.fn(() => builder),
+        order: vi.fn(() => promises[callIndex++]),
+      };
+      supabaseSpy.client.from = vi.fn(() => builder);
+    }
+
+    function makeMinimalStudent(id: number, rut: string): any {
+      return {
+        id,
+        status: 'active',
+        address: 'x',
+        users: {
+          id: 1,
+          rut,
+          first_names: 'N',
+          paternal_last_name: 'A',
+          maternal_last_name: 'S',
+          email: 'a@a.cl',
+          phone: null,
+          branch_id: 1,
+        },
+        enrollments: [],
+        standalone_course_enrollments: [],
+      };
+    }
+
+    it('AC1/AC-E1: solo aplica el resultado de la fetch MÁS RECIENTE disparada, aunque la vieja resuelva después', async () => {
+      const dOld = makeDeferred<{ data: any[]; error: null }>();
+      const dNew = makeDeferred<{ data: any[]; error: null }>();
+      mockStudentsSequence([dOld.promise, dNew.promise]);
+
+      const oldCall = facade.initialize(); // fetch #1 (vieja) — dispara primero
+      const newCall = facade.initialize(); // fetch #2 (vigente) — dispara segundo, antes de que la vieja resuelva
+
+      // Orden de llegada invertido a propósito: la vigente resuelve primero.
+      dNew.resolve({ data: [makeMinimalStudent(200, '200-0')], error: null });
+      await newCall;
+      dOld.resolve({ data: [makeMinimalStudent(100, '100-0')], error: null });
+      await oldCall;
+
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['200']);
+    });
+
+    it('AC-E1: con 3+ disparos rápidos, solo el último disparado se aplica sin importar el orden de llegada', async () => {
+      const d1 = makeDeferred<{ data: any[]; error: null }>();
+      const d2 = makeDeferred<{ data: any[]; error: null }>();
+      const d3 = makeDeferred<{ data: any[]; error: null }>();
+      mockStudentsSequence([d1.promise, d2.promise, d3.promise]);
+
+      const call1 = facade.initialize();
+      const call2 = facade.initialize();
+      const call3 = facade.initialize();
+
+      // Llega primero la del medio, después la última (vigente), y al final la primera.
+      d2.resolve({ data: [makeMinimalStudent(2, '2-0')], error: null });
+      await call2;
+      d3.resolve({ data: [makeMinimalStudent(3, '3-0')], error: null });
+      await call3;
+      d1.resolve({ data: [makeMinimalStudent(1, '1-0')], error: null });
+      await call1;
+
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['3']);
+    });
+
+    it('AC-E2: si la fetch vigente falla, el error se setea igual — el guard no enmascara errores reales', async () => {
+      const dOld = makeDeferred<{ data: any[]; error: null }>();
+      const dNew = makeDeferred<{ data: any[]; error: null }>();
+      mockStudentsSequence([dOld.promise, dNew.promise]);
+
+      const oldCall = facade.initialize();
+      const newCall = facade.initialize();
+
+      dOld.resolve({ data: [makeMinimalStudent(100, '100-0')], error: null });
+      await oldCall;
+      dNew.reject(new Error('network fail'));
+      await newCall.catch(() => {});
+
+      expect(facade.error()).toBe('Error al cargar alumnos');
+    });
+
+    it('AC-E3: refreshSilently() (post-acción) también respeta el guard si se solapa con initialize()', async () => {
+      const dOld = makeDeferred<{ data: any[]; error: null }>();
+      const dNew = makeDeferred<{ data: any[]; error: null }>();
+      mockStudentsSequence([dOld.promise, dNew.promise]);
+
+      const oldCall = facade.initialize(); // fetch #1 — carga inicial
+      // fetch #2 — simula un refresh post-acción (ej. restaurarAlumno()) disparado antes de
+      // que la carga inicial resuelva; refreshSilently() no espera `_initialized`.
+      const newCall = (facade as any).refreshSilently();
+
+      dNew.resolve({ data: [makeMinimalStudent(200, '200-0')], error: null });
+      await newCall;
+      dOld.resolve({ data: [makeMinimalStudent(100, '100-0')], error: null });
+      await oldCall;
+
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['200']);
+    });
+  });
+
   // ─── Fase 1 (T1.1): Base de Alumnos acotada a Clase B ──────────────────────
   describe('Clase B filtering (AC1, AC-E1)', () => {
     /** Reemplaza el resultado de la query de students con `data`. */

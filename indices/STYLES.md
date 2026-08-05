@@ -292,7 +292,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 218 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 208 | `#f87171` |
 | `--bg-surface` | 199 | `#18181b` |
 | `--state-success` | 173 | `#4ade80` |
@@ -328,8 +328,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 4 | `src/styles/tokens/_variables.scss` |
+| `.badge-pulse` | 2 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
-| `.badge-pulse` | 1 | `src/styles/tokens/_variables.scss` |
 
 ## Bento Grid — Clases de celda disponibles
 
@@ -403,9 +403,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **sortable** | `.p-sortable-column` |
 | **step** | `.p-step` · `.p-step-header` · `.p-step-number` · `.p-step-title` |
 | **steplist** | `.p-steplist` |
-| **steppanel** | `.p-steppanel` · `.p-steppanel-content` |
+| **steppanel** | `.p-steppanel` · `.p-steppanel-content` · `.p-steppanel-content-wrapper` |
 | **steppanels** | `.p-steppanels` |
-| **stepper** | `.p-stepper` · `.p-stepper-nav` · `.p-stepper-panels` · `.p-stepper-separator` |
+| **stepper** | `.p-stepper` · `.p-stepper-nav` · `.p-stepper-separator` |
 | **tab** | `.p-tab` · `.p-tab-active` |
 | **tablist** | `.p-tablist` |
 | **tabpanel** | `.p-tabpanel` |
