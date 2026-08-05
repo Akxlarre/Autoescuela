@@ -25,6 +25,10 @@
           },
           {
             "type": "command",
+            "command": "node .claude/hooks/harness-gate.js"
+          },
+          {
+            "type": "command",
             "command": "node .claude/hooks/sdd/plan-injector.js"
           }
         ]
