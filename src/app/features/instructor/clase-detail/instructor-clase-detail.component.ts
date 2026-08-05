@@ -294,6 +294,7 @@ import {
                         rows="4"
                         class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
                         placeholder="Documenta áreas de mejora, destrezas adquiridas o tareas pendientes para la próxima sesión..."
+                        data-llm-description="input for class observations and corrections"
                       ></textarea>
                     </div>
                   </div>
@@ -302,6 +303,7 @@ import {
                     <button
                       class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center sm:ml-auto group hover:-translate-y-0.5 transition-all"
                       (click)="showFinalStep.set(true)"
+                      data-llm-action="avanzar-a-registrar-retorno"
                     >
                       <app-icon
                         name="flag"
@@ -333,6 +335,7 @@ import {
                         max="999999"
                         class="!bg-transparent !border-none !outline-none !shadow-none !ring-0 text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:!bg-transparent"
                         placeholder="0"
+                        data-llm-description="input for the odometer reading at class return"
                       />
                       <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2"
                         >km</span
@@ -378,6 +381,7 @@ import {
                           [class.text-text-muted]="selectedGrade() !== grade"
                           [class.hover:bg-subtle]="selectedGrade() !== grade"
                           (click)="selectedGrade.set(grade)"
+                          data-llm-action="seleccionar-calificacion-clase"
                         >
                           <span class="leading-none">{{ grade }}</span>
                         </button>
@@ -405,6 +409,7 @@ import {
                     class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
                     [disabled]="!canFinalize() || isSubmitting()"
                     (click)="onFinalize(cls)"
+                    data-llm-action="cerrar-clase-definitivamente"
                   >
                     @if (isSubmitting()) {
                       <app-icon name="loader-2" [size]="20" class="animate-spin mr-2" />

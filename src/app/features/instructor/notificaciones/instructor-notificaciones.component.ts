@@ -79,7 +79,10 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                     {{ notif.message }}
                   </p>
                   @if (notif.actionLabel) {
-                    <button class="text-sm font-medium hover:underline text-brand">
+                    <button
+                      class="text-sm font-medium hover:underline text-brand"
+                      data-llm-action="abrir-accion-notificacion"
+                    >
                       {{ notif.actionLabel }}
                     </button>
                   }

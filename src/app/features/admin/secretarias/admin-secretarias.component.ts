@@ -118,6 +118,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     placeholder="Buscar por nombre o email..."
                     [ngModel]="searchTerm()"
                     (ngModelChange)="searchTerm.set($event)"
+                    data-llm-description="input for searching secretaries by name or email"
                   />
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -130,6 +131,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     appendTo="body"
                     [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
+                    data-llm-action="filtrar-secretarias-por-sede"
                   />
                   <p-select
                     [options]="estadoOptions"
@@ -140,6 +142,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     appendTo="body"
                     [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
+                    data-llm-action="filtrar-secretarias-por-estado"
                   />
                 </div>
               </div>
@@ -211,6 +214,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           class="action-btn"
                           title="Ver detalle"
                           (click)="openVerDrawer(sec)"
+                          data-llm-action="ver-detalle-secretaria"
                         >
                           <app-icon name="eye" [size]="15" />
                         </button>
@@ -219,6 +223,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           class="action-btn"
                           title="Editar"
                           (click)="openEditarDrawer(sec)"
+                          data-llm-action="editar-secretaria"
                         >
                           <app-icon name="pencil" [size]="15" />
                         </button>
@@ -244,6 +249,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     class="pagination-btn"
                     [disabled]="currentPage() === 1"
                     (click)="currentPage.set(currentPage() - 1)"
+                    data-llm-action="pagina-anterior-secretarias"
                   >
                     Anterior
                   </button>
@@ -251,6 +257,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     class="pagination-btn"
                     [disabled]="currentPage() >= totalPages()"
                     (click)="currentPage.set(currentPage() + 1)"
+                    data-llm-action="pagina-siguiente-secretarias"
                   >
                     Siguiente
                   </button>
@@ -298,7 +305,11 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
               <p class="text-2xs mb-5 leading-relaxed text-text-muted">
                 Historial de movimientos realizados por el personal administrativo.
               </p>
-              <button class="quick-action-btn-primary" (click)="goToAuditoria()">
+              <button
+                class="quick-action-btn-primary"
+                (click)="goToAuditoria()"
+                data-llm-nav="auditoria"
+              >
                 <app-icon name="clipboard-list" [size]="16" />
                 Explorar Auditoría
               </button>

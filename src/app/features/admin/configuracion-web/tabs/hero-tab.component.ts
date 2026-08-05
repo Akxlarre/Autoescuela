@@ -441,6 +441,7 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('none'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-ninguno"
                   >
                     <app-icon name="x-circle" [size]="13" />
                     <span>Ninguno</span>
@@ -452,6 +453,7 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('image'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-imagen"
                   >
                     <app-icon name="image" [size]="13" />
                     <span>Imagen Lateral</span>
@@ -463,6 +465,7 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('video'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-video"
                   >
                     <app-icon name="video" [size]="13" />
                     <span>Video Lateral</span>
@@ -547,6 +550,7 @@ const INTERFACE_ICONS = [
                 formControlName="headline"
                 class="field-input"
                 placeholder="Título de alto impacto"
+                data-llm-description="input for the hero section main headline"
               />
             </div>
 
@@ -557,6 +561,7 @@ const INTERFACE_ICONS = [
                 rows="3"
                 class="field-input resize-none"
                 placeholder="Propuesta de valor detallada sobre los cursos..."
+                data-llm-description="input for the hero section subheadline"
               ></textarea>
             </div>
           </div>
@@ -566,7 +571,11 @@ const INTERFACE_ICONS = [
             <div class="flex items-center justify-between">
               <span class="studio-card-title !mb-0">4. Prueba Social / Trust Badge</span>
               <label class="premium-switch">
-                <input type="checkbox" formControlName="enabled" />
+                <input
+                  type="checkbox"
+                  formControlName="enabled"
+                  data-llm-action="alternar-trust-badge-habilitado"
+                />
                 <span class="switch-slider"></span>
               </label>
             </div>
@@ -585,6 +594,7 @@ const INTERFACE_ICONS = [
                   formControlName="text"
                   class="field-input"
                   placeholder="Ej: 4.9/5 en Google Reviews"
+                  data-llm-description="input for the trust badge text"
                 />
               </div>
               <div class="flex flex-col gap-1.5 bento-wide">
@@ -596,6 +606,7 @@ const INTERFACE_ICONS = [
                   min="1"
                   max="5"
                   step="0.1"
+                  data-llm-description="input for the trust badge star rating"
                 />
               </div>
             </div>
@@ -612,6 +623,7 @@ const INTERFACE_ICONS = [
                   formControlName="text"
                   class="field-input"
                   placeholder="Ej: Consultar Cursos por WhatsApp"
+                  data-llm-description="input for the hero CTA button text"
                 />
               </div>
               <div class="flex flex-col gap-1.5 bento-wide">
@@ -621,6 +633,7 @@ const INTERFACE_ICONS = [
                   formControlName="whatsapp"
                   class="field-input"
                   placeholder="Ej: 56912345678"
+                  data-llm-description="input for the hero CTA WhatsApp phone number"
                 />
               </div>
             </div>
@@ -641,6 +654,7 @@ const INTERFACE_ICONS = [
                       type="button"
                       class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-[34px]"
                       (click)="toggleIconDropdown($index, $event)"
+                      data-llm-action="alternar-selector-icono-pilar"
                     >
                       <div class="flex items-center gap-2">
                         @if (featCtrl.get('icon')?.value) {
@@ -675,6 +689,7 @@ const INTERFACE_ICONS = [
                             (input)="onIconSearch($event)"
                             (click)="$event.stopPropagation()"
                             autofocus
+                            data-llm-description="input for searching an icon by name"
                           />
                           @if (iconSearchQuery()) {
                             <button
@@ -682,6 +697,7 @@ const INTERFACE_ICONS = [
                               class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer border-none bg-transparent"
                               aria-label="Limpiar búsqueda de íconos"
                               (click)="clearIconSearch($event)"
+                              data-llm-action="limpiar-busqueda-icono"
                             >
                               <app-icon name="x" [size]="10" />
                             </button>
@@ -705,6 +721,7 @@ const INTERFACE_ICONS = [
                                   : 'var(--text-muted)'
                               "
                               (click)="selectCategory(cat.id)"
+                              data-llm-action="seleccionar-categoria-icono"
                             >
                               <app-icon [name]="cat.icon" [size]="9" />
                               <span>{{ cat.label }}</span>
@@ -723,6 +740,7 @@ const INTERFACE_ICONS = [
                             (click)="
                               featCtrl.get('icon')?.setValue(''); showIconDropdown[$index] = false
                             "
+                            data-llm-action="quitar-icono-pilar"
                           >
                             <app-icon name="x" [size]="10" />
                             <span>Ocultar Icono</span>
@@ -738,6 +756,7 @@ const INTERFACE_ICONS = [
                                 featCtrl.get('icon')?.setValue(iconName);
                                 showIconDropdown[$index] = false
                               "
+                              data-llm-action="seleccionar-icono-pilar"
                             >
                               <app-icon [name]="iconName" [size]="14" />
                             </button>
@@ -753,6 +772,7 @@ const INTERFACE_ICONS = [
                       formControlName="text"
                       class="w-full bg-transparent border border-transparent rounded-lg py-2 px-3 text-sm text-text-primary outline-none transition-colors hover:bg-base focus:bg-base focus:border-ds-brand"
                       placeholder="Ej: Flota Moderna de Vehículos"
+                      data-llm-description="input for a hero feature pillar text"
                     />
                   </div>
                 </div>
