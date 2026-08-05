@@ -49,8 +49,6 @@
 > filtro/sede). Dos hallazgos concretos, distintos en severidad: uno es plata (pierde saldo
 > de alumno), el otro es UX (dato viejo un instante en pantalla).
 
-| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `m` | spec | Media | b | Cero `AbortController`/`requestId`/`switchMap` en los 100+ Facades del proyecto. Cambiar de sede/filtro rápido puede dejar en pantalla el resultado de la consulta vieja si llega después que la nueva. Afecta sobre todo a los Facades branch-scoped (`.claude/rules/facades.md` §7) |
-
 ### Tanda rollout App-like — 2026-08-03
 
 > Primeras 5 piezas del rollout del patrón app-like (fill-screen desktop / scroll móvil) a los 4
@@ -140,6 +138,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `m` | [0005-m-facades-respuestas-stale](specs/0005-m-facades-respuestas-stale/spec.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
