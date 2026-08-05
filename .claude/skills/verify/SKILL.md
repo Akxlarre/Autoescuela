@@ -33,12 +33,20 @@ if (Get-NetTCPConnection -LocalPort 4200 -State Listen -EA SilentlyContinue) { "
 
 Si está `DOWN`, pedir al usuario que lance `ng serve` (no lanzarlo tú en foreground).
 
-**Gotcha de perfil bloqueado** (`indices/FLOWS-QA-AUDIT.md`) — síntoma: `browser_navigate`
-responde `Browser is already in use for ...\mcp-chrome-<hash>`. El browser MCP quedó huérfano
-de una sesión anterior. Matarlo y reintentar.
+**Gotcha de perfil bloqueado (RESUELTO en `.mcp.json`, no debería reaparecer)** — síntoma:
+`browser_navigate` responde `Browser is already in use for ...\mcp-chrome-<hash>`. Causa raíz:
+sin `--isolated`, todo lanzamiento de `@playwright/mcp` (sesión huérfana anterior **o** otra
+sesión de Claude Code corriendo en paralelo) apunta al mismo directorio de perfil determinista
+en disco, y Chrome solo deja a un proceso dueño del `SingletonLock` de ese perfil.
 
-El perfil viaja en `--user-data-dir`, **no** en `.Path` del proceso — hay que filtrar por
-`CommandLine` (verificado; `Get-Process | Where Path -like '*mcp-chrome*'` no matchea nada):
+Fix aplicado: `.mcp.json` → `"playwright"` corre con `--isolated` (perfil en memoria, único por
+proceso). Elimina el lock compartido de raíz — sesiones concurrentes ya no compiten por el mismo
+perfil. Costo aceptado: no persisten cookies entre reinicios del server MCP, pero el Paso 0 de
+este skill ya limpia `localStorage` y relogea en cada corrida, así que no cambia nada del flujo.
+
+Si el error reaparece igual (por ejemplo si alguien revierte `--isolated`), el fallback manual
+sigue siendo matar el Chrome huérfano — el perfil viaja en `--user-data-dir`, **no** en `.Path`
+del proceso, hay que filtrar por `CommandLine`:
 
 ```powershell
 Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" |
