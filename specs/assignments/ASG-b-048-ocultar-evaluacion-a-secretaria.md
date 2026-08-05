@@ -65,3 +65,8 @@ Vale una pregunta.
   componente, `AdminFinalizarClaseDrawerComponent`). Además, la evaluación nunca debe ser
   requisito para cerrar una clase para ninguno de los 3 roles — solo el kilometraje. Ver
   `fix-115-m-ocultar-evaluacion-secretaria-admin/fix.md`.
+- **2026-08-05: `fix-115-m-ocultar-evaluacion-secretaria-admin` cerrado (`status: done`).**
+  Se sacaron nota/checklist/observaciones del drawer compartido admin/secretaría y dejaron de
+  ser requisito para cerrar clase en los 3 roles. De paso se corrigió que el cierre de
+  admin/secretaría pisaba con `null` una evaluación ya cargada por el instructor. Detalle
+  completo de cambios y tests en el `fix.md`.
