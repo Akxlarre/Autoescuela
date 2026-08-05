@@ -36,6 +36,7 @@ import { RegistrarEgresoDrawerComponent } from '../admin/contabilidad-cuadratura
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
 import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
+import { DailyAgendaDrawerComponent } from './daily-agenda-drawer/daily-agenda-drawer.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -529,7 +530,7 @@ export class DashboardComponent {
   }
 
   openAgenda() {
-    this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
+    this.layoutDrawer.open(DailyAgendaDrawerComponent, 'Agenda de Hoy', 'calendar-clock');
   }
 
   getAlertIcon(severity: string): string {

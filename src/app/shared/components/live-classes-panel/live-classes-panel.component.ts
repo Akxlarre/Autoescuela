@@ -205,15 +205,17 @@ import { TooltipModule } from 'primeng/tooltip';
         }
 
         <!-- Footer: Ver todas al final del scroll -->
-        <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-          <button
-            class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-            (click)="viewAllClick.emit()"
-            data-llm-action="view-all-classes"
-          >
-            Ver toda la agenda
-          </button>
-        </li>
+        @if (showViewAllFooter()) {
+          <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+            <button
+              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+              (click)="viewAllClick.emit()"
+              data-llm-action="view-all-classes"
+            >
+              Ver toda la agenda
+            </button>
+          </li>
+        }
       </ul>
     }
   `,
@@ -258,6 +260,8 @@ export class LiveClassesPanelComponent {
   readonly loading = input<boolean>(false);
   /** Presupuesto de densidad (spec 0028): null = sin límite (desktop). */
   readonly maxItems = input<number | null>(null);
+  /** Oculta el footer "Ver toda la agenda" — usar false cuando el consumidor YA es la vista completa (fix-111). */
+  readonly showViewAllFooter = input<boolean>(true);
   readonly actionClick = output<LiveClassModel>();
   readonly viewAllClick = output<void>();
   private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');

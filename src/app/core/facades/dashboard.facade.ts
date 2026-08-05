@@ -6,6 +6,7 @@ import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import { toISODate } from '@core/utils/date.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
+import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
@@ -341,7 +342,8 @@ export class DashboardFacade {
       )
       .gte('scheduled_at', `${todayStr}T00:00:00`)
       .lte('scheduled_at', `${todayStr}T23:59:59`)
-      .neq('status', 'cancelled');
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active');
 
     if (branchId !== null) {
       practicasQuery = practicasQuery.eq('enrollments.branch_id', branchId);

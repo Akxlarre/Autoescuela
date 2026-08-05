@@ -1092,9 +1092,16 @@ app-main-layout p-toast.p-toast-top-center,
     transition: background var(--stepper-transition);
   }
 
+  .p-steppanel-content-wrapper {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .p-steppanel-content {
     position: relative;
     pointer-events: auto;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   /* Layout del stepper en modo wizard de pantalla completa */
@@ -1103,12 +1110,20 @@ app-main-layout p-toast.p-toast-top-center,
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    min-width: 0;
   }
 
-  .p-stepper-panels {
+  /* Clase real de PrimeNG en <p-step-panels> es "p-steppanels" (sin guion entre
+     "step" y "panels") — "p-stepper-panels" era un typo que nunca coincidía con
+     nada en el DOM, dejando esta regla como código muerto. Verificado contra
+     node_modules/primeng/fesm2022/primeng-stepper.mjs (StepPanelsClasses.root). */
+  .p-steppanels {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
+    min-width: 0;
+    max-width: 100%;
     padding: 0;
   }
 

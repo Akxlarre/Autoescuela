@@ -2209,6 +2209,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |---------|-----------|
 | `apply_class_b_absence_penalty` | `(p_enrollment_id INT)` |
 | `assign_theory_cycle` | `()` |
+| `audit_format_evaluation_checklist` | `(p_value TEXT)` |
+| `audit_format_timestamp_value` | `(p_value TEXT)` |
+| `audit_humanize_column` | `(p_key TEXT)` |
+| `audit_humanize_enum_value` | `(p_value TEXT)` |
+| `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
 | `auth_instructor_id` | `()` |
@@ -2261,7 +2266,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
 
 
 <!-- AUTO-GENERATED:END -->
