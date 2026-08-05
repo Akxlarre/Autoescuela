@@ -1,7 +1,7 @@
 # Asignación ASG-b-048 — Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28

@@ -175,6 +175,7 @@ Aplicar solo el modificador CSS produce una página que "llena la pantalla" pero
 - `LayoutService.tier()` → signal `mobile | tablet | desktop` (umbrales 640/1024) alimentado por `observeMain(<main>)` (ResizeObserver, registrado una vez en `AppShellComponent`). Es **por contenedor**, no por viewport.
 - `core/utils/layout-tier.utils.ts` → `widthToTier`, **`sliceByBudget`** (recorta N items al presupuesto de alto), `visibleWithLoadMore`, `LoadMoreState`.
 - El Smart Component resuelve el presupuesto y lo pasa al Dumb como input (p. ej. `maxVisible: number | null`).
+- **Estados vacíos y skeletons dentro de un `.bento-fill`** (2026-08-03): la celda puede medir "el resto del viewport" (500px+), mucho más que la card de altura natural que tenían antes. `app-empty-state` y skeletons van SIEMPRE en un wrapper `flex-1 flex items-center justify-center` para centrarse en el alto disponible en vez de quedar pegados arriba con un hueco vacío debajo. Regla proactiva, no reactiva — precedente: fix-078-b encontró 221 overlines ad-hoc por no fijar la regla de entrada.
 
 ### Trampas ya resueltas (no reinventar)
 
@@ -199,6 +200,36 @@ Aplicar solo el modificador CSS produce una página que "llena la pantalla" pero
     [isDesktop]="isDesktopLayout()" />
 </div>
 ```
+
+### Cuándo NO aplica el patrón (excepción, no regla) — criterio formal (2026-08-02)
+
+**App-like es el default de toda página de contenido enrutable** (excluye auth pre-shell e
+impresión). "No aplica" es la **excepción**, y debe justificarse con al menos uno de estos 3
+criterios — nunca con "es un formulario" o "es una página de detalle" como motivo genérico:
+
+1. **Contenido genuinamente corto que nunca produce overflow.** El modificador no resuelve nada
+   porque no hay scroll que evitar (ej. pantalla de resultado de pago, un formulario de una sola
+   sección corta).
+2. **El caso de uso real es mobile/tablet-first por el contexto físico de la tarea.** El patrón
+   optimiza sesiones de escritorio; si la tarea casi nunca se hace en desktop (ej. instructor
+   calificando dentro del vehículo), no aporta.
+3. **No es una vista de navegación normal.** Hojas imprimibles (`@media print`, oculta el shell) o
+   pantallas previas al shell autenticado.
+
+**"Múltiples secciones secuenciales" NO es un criterio de exclusión válido por sí solo** — es la
+señal de que la página necesita **reestructurarse en tabs** (patrón ya validado en Asistencia B:
+Prácticas/Ciclos Teóricos) para que cada sección se vuelva su propio `.bento-fill`, **sin perder
+ninguna funcionalidad existente**. Ejemplos típicos: fichas de detalle con secciones fijas
+(matrículas, pagos, documentos, clases), páginas de configuración con múltiples bloques.
+
+**Wizards con stepper tampoco quedan excluidos por defecto.** Ya existe precedente
+(`secretaria-matricula.component.scss`) de un patrón full-height custom para wizards —
+`:host { display: flex }` + `@container layoutmain (min-width: 1024px) { height: calc(100vh - Npx) }`,
+fuera del canon `.bento-grid--fill-screen*` pero igual de "app-like" en espíritu. Replicar ese
+patrón en otros wizards en vez de excluirlos por default.
+
+Ver `indices/APP-LIKE-ROLLOUT.md` para el registro vivo de excepciones justificadas vs candidatas
+pendientes de reestructurar.
 
 ## Cards
 

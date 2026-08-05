@@ -38,12 +38,85 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: ajuste posterior con motivo (cuadratura cerrada queda inmutable, editar = registrar ajuste con monto/motivo/autor). `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. Ver `specs/assignments/ASG-b-037-*.md` |
-| ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
+| ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `m` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
-| ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `cualquiera` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
-| ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `cualquiera` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
-| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
-| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
+| ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
+| ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `m` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-b-036 |
+| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
+| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `i` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
+
+### Tanda auditoría "peor cliente posible" — 2026-08-03
+
+> Evaluación de qué tan resiliente es la orquestación/arquitectura ante un usuario que
+> consulta/opera de la peor forma posible (doble submit, dos pestañas, cambios rápidos de
+> filtro/sede). Dos hallazgos concretos, distintos en severidad: uno es plata (pierde saldo
+> de alumno), el otro es UX (dato viejo un instante en pantalla).
+
+| ASG-b-063 | 🔴 Race condition "lost update" en `pending_balance` al registrar pagos | `m` | fix | **Alta** | b | `pagos.facade.ts:357` calcula el saldo desde un snapshot pasado por parámetro, no relee BD. Doble submit/dos pestañas pisa el saldo del primer pago. Mismo patrón en `enrollment.facade.ts` (`confirmEnrollment`/`confirmWithPayment`). Fix: RPC atómico, mismo patrón que `get_next_enrollment_number` |
+| ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | `m` | spec | Media | b | Cero `AbortController`/`requestId`/`switchMap` en los 100+ Facades del proyecto. Cambiar de sede/filtro rápido puede dejar en pantalla el resultado de la consulta vieja si llega después que la nueva. Afecta sobre todo a los Facades branch-scoped (`.claude/rules/facades.md` §7) |
+
+### Tanda rollout App-like — 2026-08-03
+
+> Primeras 5 piezas del rollout del patrón app-like (fill-screen desktop / scroll móvil) a los 4
+> portales, auditado completo en `indices/APP-LIKE-ROLLOUT.md` (45 páginas candidatas, orden de
+> rollout al final del documento). Estresado con `/grill_me` — 9 edge cases resueltos, ver sección
+> "Edge cases estresados" del mismo documento (checklist aplicable a TODAS las piezas: verificar
+> `force-compact` con drawer abierto, tests obligatorios para lógica de densidad nueva, verificar
+> TODAS las rutas consumidoras si el componente es `shared`, `/verify` también en 768px de alto).
+>
+> **Rollout completo cubierto (2026-08-03):** ASG-b-065 a ASG-b-086 (22 asignaciones) cubren los
+> 17 pasos del orden de rollout de punta a punta. Reclamar en el orden numérico salvo indicación
+> contraria explícita en la asignación (ej. ASG-b-084 debe ir ANTES que ASG-b-085 a propósito).
+> Las marcadas `spec` (080, 082, 083, 085, 086) necesitan diseño previo, no son mecánicas — leer
+> su "Contexto/Objetivo" completo antes de estimar.
+>
+> **2026-08-04: repartidas entre los 3 devs** (junto con ASG-b-063/064/089/090 de las otras
+> tandas), por dominio/solape para no repetir contexto entre personas y balanceando carga
+> estimada (peso Alta=3/Media=2/Baja=1): **`m`** (~18) — resiliencia de Facades (063/064,
+> tocan `pagos.facade.ts`) + familia pagos (076, mismo archivo) + Clase Profesional
+> (080 matriz de notas + 081 archivo) + fillers bajos (069, 072, 090). **`b`** (~17) — dominio
+> instructor (066/070/078) + documentos (071) + flota (067/077, ambas tocan
+> `flota/mantenimientos`) + portal alumno (079/083) + fillers (065, 089). **`i`** (~17.5) —
+> contabilidad (074/075/082, mismo módulo) + el par secuencial obligatorio 084→085 + libro de
+> clases (086, mismo patrón de tabs que 084/085) + fillers (068, 073). Reasignar solo si alguien
+> queda bloqueado — no reordenar sin avisar al resto por el solape ya armado.
+
+| ASG-b-065 | App-like: `/secretaria/dashboard` — portar `--fill-screen-2` desde admin/dashboard | `b` | fix | Baja | b | 4 cambios reales (no 1 línea): shell, `bento-fill` en live-classes-panel, densidad adaptativa de Actividad/Alertas. Ver `specs/assignments/ASG-b-065-*.md` |
+| ASG-b-066 | App-like: familia "instructores" (`admin` + `secretaria`) | `b` | fix | Baja | b | Sacar paginación Anterior/Siguiente hand-rolled → patrón `sliceByBudget`+"Cargar más" mobile / todo+scroll desktop, copiado de `alumnos-list-content`. Mismo cambio en 2 archivos independientes. Ver `specs/assignments/ASG-b-066-*.md` |
+| ASG-b-067 | App-like: `/admin/flota` (`flota-list-content`) | `b` | fix | Baja | b | `p-table` MANTIENE el paginador nativo (a diferencia de instructores) — agregar `scrollable`+`scrollHeight=flex`, patrón ya probado en 6 páginas hermanas. Ver `specs/assignments/ASG-b-067-*.md` |
+| ASG-b-068 | App-like: `/admin/secretarias` | `i` | fix | Media | b | 2 columnas en la MISMA fila (`--fill-screen` singular, no `-2`) + sacar paginación de la lista. Ver `specs/assignments/ASG-b-068-*.md` |
+| ASG-b-069 | App-like: `/admin/auditoria` | `m` | fix | Baja | b | Paginador es SERVER-SIDE, no se saca. Banner informativo se pliega dentro de la card como footer fijo. Ver `specs/assignments/ASG-b-069-*.md` |
+| ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | `b` | fix | Baja-Media | b | Ninguna de las 2 usa `agenda-semanal`. `alumno/horario` necesita agrupar celdas condicionales. Ver `specs/assignments/ASG-b-070-*.md` |
+| ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`, `dms-list-content`) | `b` | fix | Media | b | Tiene `h-125` hardcodeado que hay que sacar primero. Componente `shared` — verificar ambas rutas. Ver `specs/assignments/ASG-b-071-*.md` |
+| ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | `m` | fix | Media | b | 6 tabs ya existentes (no 5), cada una su propio componente — verificar los 6 antes de aplicar el shell. Ver `specs/assignments/ASG-b-072-*.md` |
+| ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | `i` | fix | Media | b | 2 `.bento-banner` apiladas (no 2 columnas), sin paginación que sacar. Ver `specs/assignments/ASG-b-073-*.md` |
+| ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | `i` | fix | Baja-Media | b | `--fill-screen-kpi`, sin paginación que sacar. Ver `specs/assignments/ASG-b-074-*.md` |
+| ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | `i` | fix | Baja | b | Calendario mensual acotado, `--fill-screen-kpi`. Ver `specs/assignments/ASG-b-075-*.md` |
+| ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | `m` | fix | Alta | b | Alto tráfico. NO usar tabs (decisión ya tomada). 3 bloques apilados, no 2 tablas. 4 sets de tests de densidad. Ver `specs/assignments/ASG-b-076-*.md` |
+| ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
+| ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
+| ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
+| ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | `m` | spec | Alta | b | Modo dual landing/grilla no mapeado en detalle. Necesita diseño previo, no es mecánica. Ver `specs/assignments/ASG-b-080-*.md` |
+| ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | `m` | fix | Media | b | Más simple que la matriz de notas — sin modo dual. `sticky-col` ya existe, no romperlo. Ver `specs/assignments/ASG-b-081-*.md` |
+| ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | `i` | spec | Alta | b | 7 secciones (reportes) + CSS custom con contador táctil (cuadratura). Necesita diseño previo. Ver `specs/assignments/ASG-b-082-*.md` |
+| ASG-b-083 | App-like: `/alumno/dashboard` | `b` | spec | Alta | b | ~9 celdas condicionales, no mapeadas en detalle. Base de 2 columnas ya confirmada, resto necesita diseño. Ver `specs/assignments/ASG-b-083-*.md` |
+| ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | `i` | fix | Media | b | Va ANTES de ASG-b-085 a propósito — piloto de bajo riesgo para validar el patrón de tabs. Ver `specs/assignments/ASG-b-084-*.md` |
+| ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | spec | Alta | b | 1654 líneas, máximo tráfico. No reclamar sin haber hecho ASG-b-084 antes. QA visual exhaustivo obligatorio. Ver `specs/assignments/ASG-b-085-*.md` |
+| ASG-b-086 | App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases` | `i` | spec | Alta | b | 7 secciones secuenciales. Resolver junto con el bug de skeleton gap (fix-074) en el mismo track. Ver `specs/assignments/ASG-b-086-*.md` |
+
+### Tanda auditoría fresca del DS — 2026-08-03
+
+> Auditoría completa del Design System más allá de `lint:arch` (`indices/DS-AUDIT-2026-08-03.md`,
+> hallazgos H1-H10). H3/H5/H10 ya se corrigieron directo (fix-110-b/111-b/112-b). Quedan estos 2
+> como ASG por su tamaño — el resto de los hallazgos (H4/H6/H7/H8/H9) sigue solo documentado en
+> el informe, sin ASG todavía.
+>
+> ⚠️ **Numeración:** la rama `claude/exciting-curie-2bdfdd` ya pusheó `ASG-b-087`/`ASG-b-088`
+> (investigación de listas grandes/virtual scroll) — no reutilizar esos números. Estas 2 arrancan
+> en `ASG-b-089`.
+
+| ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `b` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
+| ASG-b-090 | 5 paletas de color duplicadas/hardcodeadas en ~12 archivos (`SPEC_COLORS`, `COURSE_COLORS`, avatares, `INCOME_COLORS`, liquidaciones) | `m` | fix | Media | b | El mismo set de hex vive copiado en 3-4 archivos sueltos — garantiza drift si alguien cambia uno sin saber de las copias. Divisible por cluster. Ver `specs/assignments/ASG-b-090-*.md` |
 
 ### Tanda auditoría del Design System — 2026-07-31
 

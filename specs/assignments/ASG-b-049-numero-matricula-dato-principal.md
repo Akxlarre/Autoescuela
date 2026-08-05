@@ -1,7 +1,7 @@
 # Asignación ASG-b-049 — El número de matrícula debe ser más principal que el nombre del alumno
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28
