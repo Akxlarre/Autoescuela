@@ -1,14 +1,14 @@
 # Asignación ASG-b-007 — Cobertura data-llm-* — Lote 4: shared/components parte 2
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-05
+> **resulting_track:** fix-016-i-cobertura-data-llm-lote-4
 
 ---
 

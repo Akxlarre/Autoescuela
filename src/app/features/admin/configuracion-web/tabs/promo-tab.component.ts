@@ -18,6 +18,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             type="checkbox"
             formControlName="active"
             class="accent-[var(--color-primary)] w-4 h-4"
+            data-llm-action="alternar-banner-promocional-activo"
           />
           <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
             >Activar Banner Promo</span
@@ -35,6 +36,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 formControlName="title"
                 class="field-input"
                 placeholder="Ej: 15% Descuento Matriculándote en Parejas"
+                data-llm-description="input for the promotional banner title"
               />
             </div>
             <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="4">
@@ -44,6 +46,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 formControlName="badge"
                 class="field-input"
                 placeholder="Ej: 🔥 Oferta Otoño"
+                data-llm-description="input for the promotional banner badge label"
               />
             </div>
             <div class="flex flex-col gap-1.5" data-col-span-md="8" data-col-span="12">
@@ -53,6 +56,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 rows="3"
                 class="field-input resize-none"
                 placeholder="Detalla los términos o limitaciones de la oferta."
+                data-llm-description="input for the promotional banner description"
               ></textarea>
             </div>
           </div>

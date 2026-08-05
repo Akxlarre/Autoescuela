@@ -1,14 +1,14 @@
 # Asignación ASG-b-005 — Cobertura data-llm-* — Lote 2: terminar hero-tab + Config Web resto + varios
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-05
+> **resulting_track:** fix-015-i-cobertura-data-llm-lote-2
 
 ---
 

@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -47,6 +48,7 @@ function toHHmm(val: string | null): string {
 @Injectable({ providedIn: 'root' })
 export class AsistenciaClaseBFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly toast = inject(ToastService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
@@ -401,9 +403,10 @@ export class AsistenciaClaseBFacade {
         });
       }
       this.toast.success('Clase iniciada');
-    } catch {
-      this.toast.error('Error al iniciar la clase');
-      throw new Error('startClass failed');
+    } catch (err) {
+      const sanitized = this.sanitizer.sanitize(err);
+      this.toast.error('Error al iniciar la clase', sanitized.message);
+      throw new Error(sanitized.message);
     } finally {
       this._isSaving.set(false);
     }

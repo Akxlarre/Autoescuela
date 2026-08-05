@@ -279,6 +279,22 @@ describe('InstructorClasesFacade', () => {
 
         await expect(facade.startClass(5, 12000)).rejects.toBeTruthy();
       });
+
+      it('propaga el mensaje legible del trigger de exclusión mutua (P0001, spec 0001-i)', async () => {
+        supabaseMock.client.from = vi.fn().mockReturnValue(
+          makeThenableChain({
+            error: {
+              code: 'P0001',
+              message:
+                'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+            },
+          }),
+        );
+
+        await expect(facade.startClass(5, 12000)).rejects.toThrow(
+          'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+        );
+      });
     });
 
     describe('finishClass', () => {

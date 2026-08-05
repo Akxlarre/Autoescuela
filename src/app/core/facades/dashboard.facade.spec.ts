@@ -156,6 +156,49 @@ describe('DashboardFacade', () => {
       expect(result.kmStart).toBe(12000);
     });
 
+    it('mapea durationMin desde duration_min, con fallback a 45 si viene null (spec 0001-i)', async () => {
+      const rows = [
+        {
+          id: 6,
+          class_number: 2,
+          scheduled_at: '2026-08-04T09:00:00',
+          duration_min: 60,
+          status: 'in_progress',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+        {
+          id: 7,
+          class_number: 3,
+          scheduled_at: '2026-08-04T10:00:00',
+          duration_min: null,
+          status: 'pending',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [first, second] = await dashFacade.fetchLiveClasses(1);
+
+      expect(first.durationMin).toBe(60);
+      expect(second.durationMin).toBe(45);
+    });
+
     it('refreshLiveClassesOnly() (fix-079) actualiza solo liveClasses, sin tocar el resto de data()', async () => {
       const rows = [
         {

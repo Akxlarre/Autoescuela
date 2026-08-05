@@ -1,11 +1,14 @@
 # Asignación ASG-b-036 — Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** i
+> **claimed_at:** 2026-08-04
+> **resulting_track:** 0001-i-ciclo-vida-clase-exclusion-cierre
 
 ---
 

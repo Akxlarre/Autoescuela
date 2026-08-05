@@ -57,6 +57,7 @@ import { ButtonModule } from 'primeng/button';
           class="flex-1"
           [disabled]="disabled() || isUploading()"
           (onClick)="fileInput.click()"
+          data-llm-action="adjuntar-archivo-media"
         >
           <div class="flex items-center justify-center gap-1.5 w-full">
             <app-icon [name]="buttonIcon()" [size]="13" />
@@ -70,6 +71,7 @@ import { ButtonModule } from 'primeng/button';
           [accept]="accept()"
           class="hidden"
           (change)="onFileChange($event)"
+          data-llm-description="hidden file input for media upload"
         />
 
         <p-button
@@ -78,6 +80,7 @@ import { ButtonModule } from 'primeng/button';
           (onClick)="clearValue()"
           [disabled]="disabled() || isUploading()"
           styleClass="w-10 px-0 flex items-center justify-center"
+          data-llm-action="limpiar-media-adjunta"
         >
           <app-icon name="rotate-ccw" [size]="13" />
         </p-button>
@@ -98,6 +101,7 @@ import { ButtonModule } from 'primeng/button';
               [disabled]="disabled()"
               (input)="onTextInput($event)"
               (blur)="onBlur()"
+              data-llm-description="input for the media resource URL, manual entry"
             />
             <span
               class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"

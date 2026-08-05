@@ -16,6 +16,8 @@ import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-drawer.component';
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
@@ -42,7 +44,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid style="--bento-row-min: 125px;">
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -97,7 +99,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <!-- ── Active View ──────────────────────────────────────────────────── -->
 
         <!-- Lista de Secretarias -->
-        <div class="bento-wide" data-col-span="9" data-col-span-md="8">
+        <div class="bento-wide bento-fill" data-col-span="9" data-col-span-md="8">
           <div class="card p-6 flex flex-col h-full" appCardHover>
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
               <h2 class="font-bold whitespace-nowrap text-text-primary">Lista de Personal</h2>
@@ -117,7 +119,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     class="w-full h-9 pl-9 pr-3 rounded-md border border-border-subtle bg-base text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
                     placeholder="Buscar por nombre o email..."
                     [ngModel]="searchTerm()"
-                    (ngModelChange)="searchTerm.set($event)"
+                    (ngModelChange)="updateSearchTerm($event)"
+                    data-llm-description="input for searching secretaries by name or email"
                   />
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -130,6 +133,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     appendTo="body"
                     [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
+                    data-llm-action="filtrar-secretarias-por-sede"
                   />
                   <p-select
                     [options]="estadoOptions"
@@ -140,13 +144,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     appendTo="body"
                     [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
+                    data-llm-action="filtrar-secretarias-por-estado"
                   />
                 </div>
               </div>
             </div>
 
-            <div class="flex-1">
-              @if (paginatedSecretarias().length === 0) {
+            <div class="flex-1 min-h-0 overflow-y-auto">
+              @if (visibleSecretarias().length === 0) {
                 <div class="py-14 text-center">
                   <div class="flex flex-col items-center gap-2">
                     <app-icon name="users" [size]="36" />
@@ -157,7 +162,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 </div>
               } @else {
                 <div class="flex flex-col">
-                  @for (sec of paginatedSecretarias(); track sec.id) {
+                  @for (sec of visibleSecretarias(); track sec.id) {
                     <div
                       class="secretaria-row flex items-center gap-4 py-4"
                       style="border-bottom: 1px solid var(--border-subtle);"
@@ -211,6 +216,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           class="action-btn"
                           title="Ver detalle"
                           (click)="openVerDrawer(sec)"
+                          data-llm-action="ver-detalle-secretaria"
                         >
                           <app-icon name="eye" [size]="15" />
                         </button>
@@ -219,6 +225,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           class="action-btn"
                           title="Editar"
                           (click)="openEditarDrawer(sec)"
+                          data-llm-action="editar-secretaria"
                         >
                           <app-icon name="pencil" [size]="15" />
                         </button>
@@ -229,39 +236,24 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
               }
             </div>
 
-            <!-- Paginación -->
-            @if (filteredSecretarias().length > 0) {
-              <div
-                class="flex items-center justify-between pt-5 mt-auto"
-                style="border-top: 1px solid var(--border-subtle);"
-              >
-                <p class="text-xs font-medium text-text-muted">
-                  {{ paginationStart() }}-{{ paginationEnd() }} de
-                  {{ filteredSecretarias().length }}
-                </p>
-                <div class="flex items-center gap-2">
-                  <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() === 1"
-                    (click)="currentPage.set(currentPage() - 1)"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() >= totalPages()"
-                    (click)="currentPage.set(currentPage() + 1)"
-                  >
-                    Siguiente
-                  </button>
-                </div>
+            <!-- Densidad adaptativa: "Cargar más" solo en tablet/mobile (maxVisible() no-null) -->
+            @if (remainingSecretarias() > 0) {
+              <div class="flex items-center justify-center pt-5 mt-auto">
+                <button
+                  type="button"
+                  class="pagination-btn"
+                  (click)="loadMoreSecretarias()"
+                  data-llm-action="cargar-mas-secretarias"
+                >
+                  Cargar más ({{ remainingSecretarias() }} restantes)
+                </button>
               </div>
             }
           </div>
         </div>
 
         <!-- Sidebar (Panel de Control) -->
-        <div class="bento-tall" data-col-span="3" data-col-span-md="8">
+        <div class="bento-tall bento-fill" data-col-span="3" data-col-span-md="8">
           <div class="card p-6 h-full flex flex-col" appCardHover>
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 text-text-secondary">
               Panel de Control
@@ -298,7 +290,11 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
               <p class="text-2xs mb-5 leading-relaxed text-text-muted">
                 Historial de movimientos realizados por el personal administrativo.
               </p>
-              <button class="quick-action-btn-primary" (click)="goToAuditoria()">
+              <button
+                class="quick-action-btn-primary"
+                (click)="goToAuditoria()"
+                data-llm-nav="auditoria"
+              >
                 <app-icon name="clipboard-list" [size]="16" />
                 Explorar Auditoría
               </button>
@@ -403,6 +399,7 @@ export class AdminSecretariasComponent {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
+  private readonly layoutService = inject(LayoutService);
 
   constructor() {
     // Recarga la lista cada vez que el admin cambia de sede
@@ -467,8 +464,6 @@ export class AdminSecretariasComponent {
   protected readonly searchTerm = signal('');
   protected readonly filtroSede = signal<string | null>(null);
   protected readonly filtroEstado = signal<string | null>(null);
-  protected readonly currentPage = signal(1);
-  private readonly pageSize = 10;
 
   // ── Lista filtrada ─────────────────────────────────────────────────────────
   protected readonly filteredSecretarias = computed<SecretariaTableRow[]>(() => {
@@ -489,21 +484,53 @@ export class AdminSecretariasComponent {
     return results;
   });
 
-  // ── Paginación ─────────────────────────────────────────────────────────────
-  protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredSecretarias().length / this.pageSize)),
+  // ── Densidad adaptativa (fix-017-i / ASG-b-068) ──────────────────────────────
+  // Sin límite en desktop (scroll interno vía bento-fill); presupuesto +
+  // "Cargar más" en tablet/mobile — mismo patrón que alumnos-list-content.
+  private static readonly CARDS_STEP = 10;
+  protected readonly mobileShown = signal(AdminSecretariasComponent.CARDS_STEP);
+
+  protected readonly maxVisible = computed(() =>
+    this.layoutService.tier() === 'desktop' ? null : this.mobileShown(),
   );
 
-  protected readonly paginatedSecretarias = computed<SecretariaTableRow[]>(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredSecretarias().slice(start, start + this.pageSize);
+  protected readonly visibleSecretarias = computed<SecretariaTableRow[]>(() =>
+    sliceByBudget(this.filteredSecretarias(), this.maxVisible()),
+  );
+
+  protected readonly remainingSecretarias = computed(() => {
+    const max = this.maxVisible();
+    if (max === null) return 0;
+    return Math.max(0, this.filteredSecretarias().length - max);
   });
 
-  protected readonly paginationStart = computed(() => (this.currentPage() - 1) * this.pageSize + 1);
+  protected loadMoreSecretarias(): void {
+    this.mobileShown.update((n) => n + AdminSecretariasComponent.CARDS_STEP);
+  }
 
-  protected readonly paginationEnd = computed(() =>
-    Math.min(this.currentPage() * this.pageSize, this.filteredSecretarias().length),
-  );
+  /**
+   * Setea un filtro y resetea la densidad (mismo patrón que
+   * alumnos-list-content.updateFilter): el filtro opera sobre el TOTAL y el
+   * contador de "Cargar más" se recalcula desde cero.
+   */
+  private resetDensity(): void {
+    this.mobileShown.set(AdminSecretariasComponent.CARDS_STEP);
+  }
+
+  protected updateSearchTerm(value: string): void {
+    this.searchTerm.set(value);
+    this.resetDensity();
+  }
+
+  protected updateFiltroSede(value: string | null): void {
+    this.filtroSede.set(value);
+    this.resetDensity();
+  }
+
+  protected updateFiltroEstado(value: string | null): void {
+    this.filtroEstado.set(value);
+    this.resetDensity();
+  }
 
   // ── Opciones para p-select ────────────────────────────────────────────────
   protected readonly sedeOptions = computed(() =>
@@ -523,14 +550,14 @@ export class AdminSecretariasComponent {
     return this.filtroSede();
   }
   protected set filtroSedeModel(v: string | null) {
-    this.filtroSede.set(v);
+    this.updateFiltroSede(v);
   }
 
   protected get filtroEstadoModel(): string | null {
     return this.filtroEstado();
   }
   protected set filtroEstadoModel(v: string | null) {
-    this.filtroEstado.set(v);
+    this.updateFiltroEstado(v);
   }
 
   // ── Datos estáticos ────────────────────────────────────────────────────────

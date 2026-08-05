@@ -10,18 +10,20 @@ export interface SanitizedError {
 const ERROR_DICTIONARY: Record<string, string> = {
   // PostgREST / PostgreSQL Errors
   '23505': 'Ya existe un registro con estos datos. Verifica el RUT o el correo ingresado.',
-  '23503': 'No se puede eliminar o modificar este registro porque está en uso por otra parte del sistema.',
+  '23503':
+    'No se puede eliminar o modificar este registro porque está en uso por otra parte del sistema.',
   '23502': 'Faltan datos obligatorios. Revisa que el formulario esté completo.',
-  '23514': 'Los datos no cumplen los requisitos: verifica la fecha de nacimiento (el alumno debe tener al menos 17 años).',
+  '23514':
+    'Los datos no cumplen los requisitos: verifica la fecha de nacimiento (el alumno debe tener al menos 17 años).',
   '42501': 'No tienes permisos para realizar esta acción en esta sede.',
   '22P02': 'El formato de los datos enviados es inválido.',
-  
+
   // Custom Supabase Auth Errors
-  'AuthApiError': 'Error de autenticación.',
-  'invalid_credentials': 'El correo electrónico o la contraseña son incorrectos.',
-  'user_not_found': 'Usuario no encontrado.',
-  'email_exists': 'El correo electrónico ya está registrado.',
-  
+  AuthApiError: 'Error de autenticación.',
+  invalid_credentials: 'El correo electrónico o la contraseña son incorrectos.',
+  user_not_found: 'Usuario no encontrado.',
+  email_exists: 'El correo electrónico ya está registrado.',
+
   // HTTP Errors
   '400': 'La solicitud no es válida. Por favor, verifica la información.',
   '401': 'No tienes autorización. Por favor, inicia sesión de nuevo.',
@@ -36,7 +38,7 @@ const ERROR_DICTIONARY: Record<string, string> = {
 };
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ErrorSanitizerService {
   /**
@@ -68,12 +70,22 @@ export class ErrorSanitizerService {
 
     // Tokens de negocio emitidos por triggers (RAISE EXCEPTION)
     if (error?.message?.includes('CUPOS_AGOTADOS')) {
-      return { 
-        originalError: error, 
-        message: 'No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.', 
-        code: 'CUPOS_AGOTADOS', 
-        isNetworkError 
+      return {
+        originalError: error,
+        message:
+          'No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.',
+        code: 'CUPOS_AGOTADOS',
+        isNetworkError,
       };
+    }
+
+    // P0001 es el SQLSTATE por defecto de un RAISE EXCEPTION sin ERRCODE explícito
+    // distinto de los enumerados arriba: convención del proyecto para excepciones de
+    // negocio ya redactadas en español para el usuario final (ver spec 0001-i,
+    // trg_prevent_concurrent_in_progress). A diferencia de otros códigos de error,
+    // confiamos en error.message tal cual en vez de mapear a un texto genérico.
+    if (error?.code === 'P0001' && error?.message) {
+      return { originalError: error, message: error.message, code: 'P0001', isNetworkError };
     }
 
     // 2. Manejo de Errores de Supabase / PostgREST
@@ -83,14 +95,13 @@ export class ErrorSanitizerService {
       // Buscamos en el diccionario si tenemos mapeado ese código específico de Postgres/PostgREST
       if (ERROR_DICTIONARY[code]) {
         message = ERROR_DICTIONARY[code];
-      } 
+      }
       // Manejo especial para errores de validación de Auth
       else if (error.name === 'AuthApiError' || error.message?.includes('invalid credentials')) {
         message = ERROR_DICTIONARY['invalid_credentials'];
-      }
-      else {
-         // Fallback seguro, no exponemos details ni hint
-         message = `Ha ocurrido un error procesando la solicitud (${code}).`;
+      } else {
+        // Fallback seguro, no exponemos details ni hint
+        message = `Ha ocurrido un error procesando la solicitud (${code}).`;
       }
       return { originalError: error, message, code, isNetworkError };
     }
