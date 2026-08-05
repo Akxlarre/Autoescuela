@@ -22,7 +22,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
-| ASG-b-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
