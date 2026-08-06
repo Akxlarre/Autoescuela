@@ -834,12 +834,12 @@ const INTERFACE_ICONS = [
       grid-template-columns: 1fr;
       gap: 1.5rem;
     }
-    @media (min-width: 768px) {
+    @container layoutmain (min-width: 768px) {
       .studio-controls {
         grid-template-columns: repeat(2, 1fr);
       }
     }
-    @media (min-width: 1200px) {
+    @container layoutmain (min-width: 1200px) {
       .studio-controls {
         grid-template-columns: repeat(3, 1fr);
       }
