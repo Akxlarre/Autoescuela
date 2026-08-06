@@ -1,14 +1,14 @@
 # Asignación ASG-b-076 — App-like: familia "pagos" (`admin` + `secretaria`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-06
+> **resulting_track:** fix-132-m-app-like-familia-pagos
 
 ---
 
@@ -36,23 +36,54 @@ Plan:
    Deudores. Sidebar: probablemente estático, `bento-fill flex flex-col h-full` con
    `overflow-y-auto` defensivo.
 
+## ⚠️ Decisión revisada durante la implementación (2026-08-06)
+
+El plan de arriba (fila 2 con Pagos Recientes + sidebar compartiendo `.bento-fill`) se
+implementó primero tal cual y se descartó tras verificar con Playwright: en un laptop típico
+(1440×900) la fila de Pagos Recientes quedaba con solo 220px totales — su header (buscador + 2
+selects) y footer ya consumían casi todo ese espacio, dejando **0 filas de pago visibles**. A
+768px de alto la situación era peor. La premisa "un split de filas visible siempre tiene
+espacio suficiente" (base de la decisión "NO tabs" de 2026-08-02) no se sostuvo con datos reales
+en esta página concreta (a diferencia de instructores/secretarias, que sí tienen headers
+livianos).
+
+**Decisión nueva, tomada con el dueño:** Deudores pasa a ser el único bloque de contenido
+(pantalla completa, `bento-grid--fill-screen`). Pagos Recientes + Métodos de Pago se movieron a
+un **drawer** (`PagosRecientesDrawerComponent`, scroll nativo sin límite de alto), abierto con
+un botón "Pagos Recientes" en el hero — la misma idea de "esconder detrás de un click" que la
+decisión original rechazaba, pero ahora justificada por evidencia concreta de que la
+alternativa (todo visible) no rendereaba filas reales en viewports típicos. Deudores además
+ganó paginador real (10/página) en desktop, igual que `alumnos-list-content` ("Base Alumnos
+B"), en vez de scroll interno sin límite.
+
+**Para quien lea esto en el futuro:** si vas a aplicar "NO tabs/drawer" como precedente en otra
+página de este rollout, primero medí con `/verify` si el contenido real cabe — no asumas que
+"todo visible" siempre es mejor UX que un drawer bien señalizado.
+
 ## Checklist de cierre (rollout app-like)
 
-- [ ] `force-compact` verificado con drawer abierto (ambas páginas)
-- [ ] `.spec.ts` nuevo para AMBOS sets de `sliceByBudget`/`mobileShown` (Deudores Y Pagos
-      Recientes) en CADA archivo (4 sets de tests en total, admin+secretaria × 2 listas) —
-      obligatorio por `testing-tdd.md`
-- [ ] `/verify` en ambas rutas, 390×844, 1440×900 y 768 de alto — atención especial a que 3
-      bloques quepan razonablemente en 768px de alto
+- [x] `force-compact` verificado con drawer abierto (ambas páginas) — ya no aplica el split de
+      columnas (Deudores es la única celda), pero se verificó que Deudores se compacta bien con
+      el drawer de Pagos Recientes abierto (`.deudores-compact`)
+- [x] `.spec.ts` nuevo para densidad de Deudores (paginador desktop + `sliceByBudget`/
+      `mobileShown` mobile) en CADA archivo, más `.spec.ts` de filtros para
+      `PagosRecientesDrawerComponent` (compartido, un solo archivo) — obligatorio por
+      `testing-tdd.md`
+- [x] `/verify` en ambas rutas, 390×844, 1440×900 y 1440×768 — confirmado que Deudores +
+      drawer caben sin overflow ni filas invisibles en los 3 tamaños
 - [ ] Realtime/SWR: caso de prueba explícito de reset de scroll (2 pestañas, una registra un
-      pago) — ver ítem 6 de "Edge cases estresados"
+      pago) — ver ítem 6 de "Edge cases estresados" — **pendiente**, no verificado en esta
+      sesión (requiere 2 pestañas simultáneas)
 
 ## Referencias
 
 - `indices/APP-LIKE-ROLLOUT.md` — filas `/admin/pagos` y `/secretaria/pagos`
 - `specs/assignments/ASG-b-066-app-like-familia-instructores.md` — patrón de densidad a copiar
+- `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` — patrón
+  de paginador real (desktop) + `sliceByBudget`/"Cargar más" (mobile) copiado para Deudores
 
 ## Archivos involucrados
 
 - `src/app/features/admin/pagos/admin-pagos.component.ts`
 - `src/app/features/secretaria/pagos/secretaria-pagos.component.ts`
+- `src/app/features/admin/pagos/pagos-recientes-drawer.component.ts` (nuevo)
