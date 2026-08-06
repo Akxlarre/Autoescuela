@@ -136,7 +136,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | [0002-i-cuadratura-editable-ajustes](specs/0002-i-cuadratura-editable-ajustes/spec.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -204,6 +203,7 @@
 | ASG-b-036 | Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | [0001-i-ciclo-vida-clase-exclusion-cierre](specs/0001-i-ciclo-vida-clase-exclusion-cierre/spec.md) | 2026-08-04 |
 | ASG-b-005 | Cobertura data-llm-* — Lote 2: terminar hero-tab + Config Web resto + varios | [fix-015-i-cobertura-data-llm-lote-2](fixes/fix-015-i-cobertura-data-llm-lote-2/fix.md) | 2026-08-05 |
 | ASG-b-007 | Cobertura data-llm-* — Lote 4: shared/components parte 2 | [fix-016-i-cobertura-data-llm-lote-4](fixes/fix-016-i-cobertura-data-llm-lote-4/fix.md) | 2026-08-05 |
+| ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | [0002-i-cuadratura-editable-ajustes](specs/0002-i-cuadratura-editable-ajustes/spec.md) | 2026-08-05 |
 | ASG-b-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | [fix-115-m-ocultar-evaluacion-secretaria-admin](fixes/fix-115-m-ocultar-evaluacion-secretaria-admin/fix.md) | 2026-08-05 |
 | ASG-b-063 | Race condition "lost update" en `pending_balance` al registrar pagos | [fix-114-m-race-condition-pending-balance-pagos](fixes/fix-114-m-race-condition-pending-balance-pagos/fix.md) | 2026-08-05 |
 | ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | [0005-m-facades-respuestas-stale](specs/0005-m-facades-respuestas-stale/spec.md) | 2026-08-05 |

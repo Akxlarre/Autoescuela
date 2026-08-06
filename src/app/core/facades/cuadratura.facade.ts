@@ -96,7 +96,9 @@ export class CuadraturaFacade {
   private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
-  readonly fondoInicial = signal<number>(50_000);
+  // Sin default asumido (hotfix-002-i): la caja no siempre arranca con $50.000 —
+  // el arqueo es opcional y el usuario ingresa el fondo real de ese día, si aplica.
+  readonly fondoInicial = signal<number>(0);
   /** Preset de tipo consumido una sola vez por RegistrarEgresoDrawerComponent al abrirse (fix-006-i). */
   readonly egresoTipoPreset = signal<EgresoFormData['tipo'] | null>(null);
   private readonly _pagosHoy = signal<IngresoRow[]>([]);

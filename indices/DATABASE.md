@@ -326,6 +326,34 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
 
+### `cuadratura_adjustments` — 🔒 RLS
+
+> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). La cuadratura cerrada
+> es un arqueo físico inmutable; un ajuste es la única forma de reflejar correcciones (ej. gasto
+> de combustible con fecha pasada) sin borrar la evidencia del snapshot original.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
+| `tipo` | TEXT | NO | — | CHECK IN (`gasto_olvidado`, `correccion_manual`) |
+| `monto` | INTEGER | NO | — | — (con signo: negativo reduce el total vigente) |
+| `motivo` | TEXT | NO | — | — |
+| `expense_id` | INT | sí | — | → `expenses.id` (solo si `tipo = 'gasto_olvidado'`) |
+| `registered_by` | INT | NO | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
+
+> ⚠️ **Sin policy de UPDATE/DELETE a propósito** — ni siquiera admin puede editar/borrar un
+> ajuste vía API REST normal. Inmutabilidad real a nivel BD, no solo en la UI: una corrección mal
+> hecha se compensa con OTRO ajuste, nunca se edita el original.
+
 ### `certificate_batches` — 🔒 RLS
 
 > Lotes de folios Casa de Moneda: rango y disponibilidad (RF-112)

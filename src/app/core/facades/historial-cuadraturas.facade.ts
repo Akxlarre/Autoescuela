@@ -1,13 +1,51 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
+import type {
+  AjusteFormData,
+  CuadraturaAdjustmentRow,
+} from '@core/models/ui/cuadratura-adjustment.model';
 import type { CashClosing } from '@core/models/dto/cash-closing.model';
+import type { CuadraturaAdjustment } from '@core/models/dto/cuadratura-adjustment.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+
+const TIPO_AJUSTE_LABEL: Record<CuadraturaAdjustment['tipo'], string> = {
+  gasto_olvidado: 'Gasto olvidado',
+  correccion_manual: 'Corrección manual',
+};
+
+function mapAdjustmentToRow(
+  row: CuadraturaAdjustment & {
+    users?: { first_names: string; paternal_last_name: string } | null;
+  },
+): CuadraturaAdjustmentRow {
+  const autorNombre = row.users
+    ? `${row.users.first_names} ${row.users.paternal_last_name}`.trim()
+    : '—';
+
+  const fecha = new Date(row.created_at);
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const yyyy = fecha.getFullYear();
+  const hh = String(fecha.getHours()).padStart(2, '0');
+  const min = String(fecha.getMinutes()).padStart(2, '0');
+
+  return {
+    id: row.id,
+    tipo: row.tipo,
+    tipoLabel: TIPO_AJUSTE_LABEL[row.tipo],
+    monto: row.monto,
+    motivo: row.motivo,
+    autorNombre,
+    fecha: `${dd}/${mm}/${yyyy} ${hh}:${min}`,
+  };
+}
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -29,7 +67,11 @@ function mapCierreToHistorial(
 
   return {
     id: row.id,
+    branchId: row.branch_id ?? null,
     fecha: row.date,
+    // El historial solo trae `.eq('closed', true)` — este campo documenta esa garantía
+    // en vez de asumirla implícitamente (spec 0002-i, AC-E1).
+    closed: row.closed ?? true,
     fondoInicial: 50_000,
     saldoSistema,
     saldoFisico,
@@ -87,11 +129,12 @@ function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][
 
 @Injectable({ providedIn: 'root' })
 export class HistorialCuadraturasFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
   private readonly _historialCierres = signal<HistorialCierre[]>([]);
@@ -99,6 +142,10 @@ private readonly supabase = inject(SupabaseService);
   private readonly _isLoadingHistorial = signal<boolean>(false);
   private readonly _isExporting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+
+  /** Ajustes del cierre actualmente seleccionado (spec 0002-i). */
+  private readonly _ajustesCierre = signal<CuadraturaAdjustmentRow[]>([]);
+  private readonly _isLoadingAjustes = signal<boolean>(false);
 
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
@@ -118,6 +165,29 @@ private readonly supabase = inject(SupabaseService);
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
+
+  /**
+   * Guard client-side para el botón "Registrar ajuste" (AC7, spec 0002-i). La RLS de
+   * `cuadratura_adjustments` es el guard real — esto solo evita mostrar la acción a
+   * quien no puede usarla. Vive acá (no en el componente) para que
+   * `DetalleCuadraturaModalComponent` (shared/) no necesite inyectar `AuthFacade`.
+   */
+  readonly isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
+
+  readonly ajustesCierre = this._ajustesCierre.asReadonly();
+  readonly isLoadingAjustes = this._isLoadingAjustes.asReadonly();
+
+  /**
+   * Total vigente del cierre seleccionado (spec 0002-i, AC4): el arqueo original
+   * (`saldoFisico`, inmutable) + la suma de todos sus ajustes (con signo). Nunca
+   * recalcula ni sobrescribe el snapshot original — es una cifra derivada aparte.
+   */
+  readonly totalVigente = computed(() => {
+    const cierre = this._cierreSeleccionado();
+    if (!cierre) return 0;
+    const sumaAjustes = this._ajustesCierre().reduce((acc, a) => acc + a.monto, 0);
+    return cierre.saldoFisico + sumaAjustes;
+  });
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -170,6 +240,113 @@ private readonly supabase = inject(SupabaseService);
 
   seleccionarCierre(cierre: HistorialCierre | null): void {
     this._cierreSeleccionado.set(cierre);
+    // Reset inmediato (spec 0002-i): nunca mostrar los ajustes del cierre anterior
+    // mientras se cargan los del nuevo — evita el riesgo de "arrastre" identificado
+    // en plan.md §8.
+    this._ajustesCierre.set([]);
+    if (cierre) void this.fetchAjustes(cierre.id);
+  }
+
+  // ── Ajustes de cuadratura (spec 0002-i) ───────────────────────────────────
+
+  /**
+   * Abre el drawer de registro de ajuste. Import dinámico (mismo patrón que
+   * `ServiciosEspecialesFacade.openAgregarServicioDrawer()`) para que el Facade
+   * pueda orquestar la apertura sin que `DetalleCuadraturaModalComponent`
+   * (shared/, Dumb) necesite inyectar `LayoutDrawerFacadeService` directamente.
+   */
+  abrirRegistrarAjusteDrawer(): void {
+    import('../../features/admin/contabilidad-cuadratura/registrar-ajuste-cuadratura-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(
+          m.RegistrarAjusteCuadraturaDrawerComponent,
+          'Registrar Ajuste',
+          'wrench',
+        );
+      },
+    );
+  }
+
+  private async fetchAjustes(cuadraturaId: number): Promise<void> {
+    this._isLoadingAjustes.set(true);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('cuadratura_adjustments')
+        .select('*, users(first_names, paternal_last_name)')
+        .eq('cuadratura_id', cuadraturaId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      this._ajustesCierre.set((data ?? []).map(mapAdjustmentToRow));
+    } catch {
+      this.toast.error('Error al cargar los ajustes de esta cuadratura.');
+    } finally {
+      this._isLoadingAjustes.set(false);
+    }
+  }
+
+  /**
+   * Inserta el gasto real de un ajuste "gasto_olvidado" en `expenses`, con la
+   * fecha del CIERRE corregido (AC2) — nunca la de hoy. Retorna el `id` insertado.
+   */
+  private async insertGastoOlvidado(
+    cierre: HistorialCierre,
+    datos: AjusteFormData,
+    registeredBy: number,
+  ): Promise<number> {
+    const { data, error } = await this.supabase.client
+      .from('expenses')
+      .insert({
+        date: cierre.fecha,
+        amount: Math.abs(datos.monto),
+        description: datos.motivo,
+        category: datos.categoria ?? null,
+        vehicle_id: datos.vehiculoId ?? null,
+        branch_id: cierre.branchId,
+        registered_by: registeredBy,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data.id;
+  }
+
+  /**
+   * Registra un ajuste sobre el cierre actualmente seleccionado (AC1-AC3, AC-E1).
+   * `tipo === 'gasto_olvidado'` también inserta en `expenses` (AC2).
+   */
+  async registrarAjuste(datos: AjusteFormData): Promise<boolean> {
+    const cierre = this._cierreSeleccionado();
+    if (!cierre || !cierre.closed) {
+      this.toast.error('Solo se pueden registrar ajustes sobre cuadraturas cerradas.');
+      return false;
+    }
+
+    const user = this.auth.currentUser();
+    if (!user?.dbId) return false;
+
+    try {
+      const expenseId =
+        datos.tipo === 'gasto_olvidado'
+          ? await this.insertGastoOlvidado(cierre, datos, user.dbId)
+          : null;
+
+      const { error } = await this.supabase.client.from('cuadratura_adjustments').insert({
+        cuadratura_id: cierre.id,
+        tipo: datos.tipo,
+        monto: datos.monto,
+        motivo: datos.motivo,
+        expense_id: expenseId,
+        registered_by: user.dbId,
+      });
+      if (error) throw error;
+
+      this.toast.success('Ajuste registrado correctamente.');
+      await this.fetchAjustes(cierre.id);
+      return true;
+    } catch {
+      this.toast.error('Error al registrar el ajuste.');
+      return false;
+    }
   }
 
   // ── Carga de datos ────────────────────────────────────────────────────────
@@ -250,7 +427,10 @@ private readonly supabase = inject(SupabaseService);
 
       this._historialCierres.set((data ?? []).map(mapCierreToHistorial as any));
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el historial.';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar el historial.';
       this._error.set(msg);
       this.toast.error(msg);
     } finally {
