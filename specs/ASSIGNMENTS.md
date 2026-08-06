@@ -79,7 +79,6 @@
 | ASG-b-067 | App-like: `/admin/flota` (`flota-list-content`) | `b` | fix | Baja | b | `p-table` MANTIENE el paginador nativo (a diferencia de instructores) — agregar `scrollable`+`scrollHeight=flex`, patrón ya probado en 6 páginas hermanas. Ver `specs/assignments/ASG-b-067-*.md` |
 | ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | `b` | fix | Baja-Media | b | Ninguna de las 2 usa `agenda-semanal`. `alumno/horario` necesita agrupar celdas condicionales. Ver `specs/assignments/ASG-b-070-*.md` |
 | ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`, `dms-list-content`) | `b` | fix | Media | b | Tiene `h-125` hardcodeado que hay que sacar primero. Componente `shared` — verificar ambas rutas. Ver `specs/assignments/ASG-b-071-*.md` |
-| ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | `m` | fix | Media | b | 6 tabs ya existentes (no 5), cada una su propio componente — verificar los 6 antes de aplicar el shell. Ver `specs/assignments/ASG-b-072-*.md` |
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | `i` | fix | Media | b | 2 `.bento-banner` apiladas (no 2 columnas), sin paginación que sacar. Ver `specs/assignments/ASG-b-073-*.md` |
 | ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | `i` | fix | Baja-Media | b | `--fill-screen-kpi`, sin paginación que sacar. Ver `specs/assignments/ASG-b-074-*.md` |
 | ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | `i` | fix | Baja | b | Calendario mensual acotado, `--fill-screen-kpi`. Ver `specs/assignments/ASG-b-075-*.md` |
@@ -136,7 +135,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
-| ASG-b-069 | App-like: `/admin/auditoria` | `m` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-05 |
+| ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | `m` | [fix-124-m-app-like-configuracion-web](fixes/fix-124-m-app-like-configuracion-web/fix.md) | 2026-08-06 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -208,6 +207,7 @@
 | ASG-b-063 | Race condition "lost update" en `pending_balance` al registrar pagos | [fix-114-m-race-condition-pending-balance-pagos](fixes/fix-114-m-race-condition-pending-balance-pagos/fix.md) | 2026-08-05 |
 | ASG-b-064 | Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede | [0005-m-facades-respuestas-stale](specs/0005-m-facades-respuestas-stale/spec.md) | 2026-08-05 |
 | ASG-b-068 | App-like: `/admin/secretarias` | [fix-017-i-app-like-admin-secretarias](fixes/fix-017-i-app-like-admin-secretarias/fix.md) | 2026-08-05 |
+| ASG-b-069 | App-like: `/admin/auditoria` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-06 |
 <!-- AUTO-GENERATED:END -->
 
 ---
