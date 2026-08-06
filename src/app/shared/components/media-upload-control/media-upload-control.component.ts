@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   forwardRef,
+  inject,
   input,
   output,
   signal,
@@ -11,6 +12,7 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ButtonModule } from 'primeng/button';
+import { ToastService } from '@core/services/ui/toast.service';
 
 @Component({
   selector: 'app-media-upload-control',
@@ -103,19 +105,23 @@ import { ButtonModule } from 'primeng/button';
               (blur)="onBlur()"
               data-llm-description="input for the media resource URL, manual entry"
             />
-            <span
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-              title="URL manual"
+            <button
+              type="button"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              title="Copiar URL"
+              [disabled]="!value()"
+              (click)="copyValue()"
+              data-llm-action="copiar-url-recurso"
             >
-              <app-icon name="link" [size]="14" />
-            </span>
+              <app-icon name="copy" [size]="14" />
+            </button>
           </div>
         </div>
       </div>
 
       @if (isUploading()) {
         <div
-          class="absolute inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20 bg-surface"
+          class="absolute inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20"
         >
           <app-icon name="loader-2" [size]="20" class="animate-spin text-brand" />
           <span class="text-2xs font-bold text-brand uppercase tracking-wider">Subiendo...</span>
@@ -133,6 +139,8 @@ import { ButtonModule } from 'primeng/button';
   ],
 })
 export class MediaUploadControlComponent implements ControlValueAccessor {
+  private readonly toast = inject(ToastService);
+
   label = input<string>('Ruta o URL del Recurso');
   buttonLabel = input<string>('Adjuntar Archivo');
   buttonIcon = input<string>('upload');
@@ -189,5 +197,12 @@ export class MediaUploadControlComponent implements ControlValueAccessor {
     this.value.set('');
     this.onChange('');
     this.onTouched();
+  }
+
+  async copyValue(): Promise<void> {
+    const url = this.value();
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    this.toast.success('URL copiada', 'El enlace se copió al portapapeles.');
   }
 }
