@@ -20,7 +20,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
   template: `
     @if (variant() === 'line') {
       <div
-        class="flex border-b border-border-default overflow-x-auto custom-scrollbar-hidden"
+        class="flex border-b border-border-default overflow-x-auto custom-scrollbar-hidden tabs-scroll-mask"
         role="tablist"
       >
         @for (tab of tabs(); track tab.id) {
@@ -63,7 +63,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
 
     @if (variant() === 'segmented') {
       <div
-        class="flex gap-1 self-start p-1 rounded-lg bg-subtle overflow-x-auto custom-scrollbar-hidden"
+        class="flex gap-1 self-start p-1 rounded-lg bg-subtle overflow-x-auto custom-scrollbar-hidden tabs-scroll-mask"
         role="tablist"
       >
         @for (tab of tabs(); track tab.id) {
@@ -101,7 +101,10 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
     }
 
     @if (variant() === 'pill') {
-      <div class="flex flex-wrap gap-2 overflow-x-auto custom-scrollbar-hidden" role="tablist">
+      <div
+        class="flex flex-wrap gap-2 overflow-x-auto custom-scrollbar-hidden tabs-scroll-mask"
+        role="tablist"
+      >
         @for (tab of tabs(); track tab.id) {
           <button
             type="button"
@@ -162,6 +165,12 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
       }
       .custom-scrollbar-hidden::-webkit-scrollbar {
         display: none;
+      }
+      /* Insinúa que hay más tabs fuera de vista al desvanecer el borde derecho —
+         mismo patrón que .category-scroll-container (admin-configuracion-web). */
+      .tabs-scroll-mask {
+        mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
       }
       .tab-line-active {
         background: radial-gradient(
