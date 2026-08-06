@@ -1,10 +1,26 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { pickSubnavTier, type SubnavTier } from '@core/utils/subnav-tier.utils';
 
 export interface TabOption {
   id: string;
   label: string;
+  /** Etiqueta abreviada para el tier "short" (variant="line") cuando el label completo no cabe. Si se omite, ese tier no abrevia este tab. */
+  shortLabel?: string;
   count?: number | null;
   icon?: string;
   disabled?: boolean;
@@ -15,48 +31,109 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
 @Component({
   selector: 'app-tabs',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, FormsModule, SelectModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (variant() === 'line') {
-      <div
-        class="flex border-b border-border-default overflow-x-auto custom-scrollbar-hidden"
-        role="tablist"
-      >
-        @for (tab of tabs(); track tab.id) {
-          <button
-            role="tab"
-            class="flex-1 min-w-30 px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
-            [class.border-brand]="activeId() === tab.id"
-            [class.border-transparent]="activeId() !== tab.id"
-            [class.tab-line-active]="activeId() === tab.id"
-            [style.color]="
-              activeId() === tab.id ? 'var(--ds-brand, var(--text-primary))' : 'var(--text-muted)'
-            "
-            [style.border-color]="
-              activeId() === tab.id ? 'var(--ds-brand, var(--color-brand))' : 'transparent'
-            "
-            [attr.aria-selected]="activeId() === tab.id"
-            [disabled]="tab.disabled"
-            (click)="!tab.disabled && activeIdChange.emit(tab.id)"
-            [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
-          >
-            @if (tab.icon) {
-              <app-icon [name]="tab.icon" [size]="16" />
-            }
-            <span
-              [class.uppercase]="uppercase()"
-              [class.text-xs]="uppercase()"
-              [class.tracking-wider]="uppercase()"
-            >
-              {{ tab.label }}
-            </span>
-            @if (tab.count != null && tab.count > 0) {
-              <span class="tab-count ml-1.5">
-                {{ tab.count }}
+      <div class="tabs-line-host" #lineHost>
+        <!-- Medición oculta: cada fila (full/short/icon) mide su ancho natural real
+             de forma independiente (inline-flex → shrink-to-fit propio), igual que
+             libro-de-clases-subnav.component.ts (fix-052-m). -->
+        <div class="tabs-measure" aria-hidden="true">
+          <div class="tabs-measure-row" #lineFullMeasure>
+            @for (tab of tabs(); track tab.id) {
+              <span class="tabs-measure-item">
+                @if (tab.icon) {
+                  <app-icon [name]="tab.icon" [size]="16" />
+                }
+                <span
+                  [class.uppercase]="uppercase()"
+                  [class.text-xs]="uppercase()"
+                  [class.tracking-wider]="uppercase()"
+                  >{{ tab.label }}</span
+                >
               </span>
             }
-          </button>
+          </div>
+          <div class="tabs-measure-row" #lineShortMeasure>
+            @for (tab of tabs(); track tab.id) {
+              <span class="tabs-measure-item">
+                @if (tab.icon) {
+                  <app-icon [name]="tab.icon" [size]="16" />
+                }
+                <span
+                  [class.uppercase]="uppercase()"
+                  [class.text-xs]="uppercase()"
+                  [class.tracking-wider]="uppercase()"
+                  >{{ tab.shortLabel || tab.label }}</span
+                >
+              </span>
+            }
+          </div>
+          <div class="tabs-measure-row" #lineIconMeasure>
+            @for (tab of tabs(); track tab.id) {
+              <span class="tabs-measure-item">
+                @if (tab.icon) {
+                  <app-icon [name]="tab.icon" [size]="16" />
+                }
+              </span>
+            }
+          </div>
+        </div>
+
+        @if (lineTier() === 'select') {
+          <p-select
+            [options]="tabs()"
+            optionLabel="label"
+            optionValue="id"
+            [ngModel]="activeId()"
+            (ngModelChange)="activeIdChange.emit($event)"
+            styleClass="w-full"
+            data-llm-description="dropdown para elegir la tab activa"
+          />
+        } @else {
+          <div class="flex border-b border-border-default" role="tablist">
+            @for (tab of tabs(); track tab.id) {
+              <button
+                role="tab"
+                class="flex-1 px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
+                [class.border-brand]="activeId() === tab.id"
+                [class.border-transparent]="activeId() !== tab.id"
+                [class.tab-line-active]="activeId() === tab.id"
+                [style.color]="
+                  activeId() === tab.id
+                    ? 'var(--ds-brand, var(--text-primary))'
+                    : 'var(--text-muted)'
+                "
+                [style.border-color]="
+                  activeId() === tab.id ? 'var(--ds-brand, var(--color-brand))' : 'transparent'
+                "
+                [attr.aria-selected]="activeId() === tab.id"
+                [attr.title]="tab.label"
+                [disabled]="tab.disabled"
+                (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+                [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
+              >
+                @if (tab.icon) {
+                  <app-icon [name]="tab.icon" [size]="16" />
+                }
+                @if (lineTier() !== 'icon') {
+                  <span
+                    [class.uppercase]="uppercase()"
+                    [class.text-xs]="uppercase()"
+                    [class.tracking-wider]="uppercase()"
+                  >
+                    {{ lineTier() === 'short' ? tab.shortLabel || tab.label : tab.label }}
+                  </span>
+                }
+                @if (tab.count != null && tab.count > 0) {
+                  <span class="tab-count ml-1.5">
+                    {{ tab.count }}
+                  </span>
+                }
+              </button>
+            }
+          </div>
         }
       </div>
     }
@@ -163,6 +240,31 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
       .custom-scrollbar-hidden::-webkit-scrollbar {
         display: none;
       }
+      .tabs-line-host {
+        position: relative;
+      }
+      .tabs-measure {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .tabs-measure-row {
+        display: inline-flex;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+      }
+      .tabs-measure-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.375rem;
+        white-space: nowrap;
+        padding: 0.875rem 1rem;
+        font-size: var(--text-sm);
+        font-weight: 500;
+      }
       .tab-line-active {
         background: radial-gradient(
             50% 20px at bottom center,
@@ -181,4 +283,46 @@ export class TabsComponent {
   uppercase = input<boolean>(false);
 
   activeIdChange = output<string>();
+
+  /** Tier vigente de la variante "line" — full/short/icon/select según el ancho real del host. */
+  readonly lineTier = signal<SubnavTier>('full');
+
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly lineHost = viewChild<ElementRef<HTMLElement>>('lineHost');
+  private readonly lineFullMeasure = viewChild<ElementRef<HTMLElement>>('lineFullMeasure');
+  private readonly lineShortMeasure = viewChild<ElementRef<HTMLElement>>('lineShortMeasure');
+  private readonly lineIconMeasure = viewChild<ElementRef<HTMLElement>>('lineIconMeasure');
+
+  private resizeObserver?: ResizeObserver;
+
+  constructor() {
+    afterNextRender(() => {
+      this.recomputeLineTier();
+
+      if (typeof ResizeObserver === 'undefined') return;
+
+      this.resizeObserver = new ResizeObserver(() => this.recomputeLineTier());
+      const host = this.lineHost()?.nativeElement;
+      if (host) this.resizeObserver.observe(host);
+      this.destroyRef.onDestroy(() => this.resizeObserver?.disconnect());
+    });
+  }
+
+  private recomputeLineTier(): void {
+    const host = this.lineHost()?.nativeElement;
+    const full = this.lineFullMeasure()?.nativeElement;
+    const short = this.lineShortMeasure()?.nativeElement;
+    const icon = this.lineIconMeasure()?.nativeElement;
+    if (!host || !full || !short || !icon) return;
+
+    const available = host.clientWidth;
+    const widths: Record<'full' | 'short' | 'icon', number> = {
+      full: full.scrollWidth,
+      short: short.scrollWidth,
+      icon: icon.scrollWidth,
+    };
+
+    const next = pickSubnavTier((t) => widths[t] <= available);
+    if (next !== this.lineTier()) this.lineTier.set(next);
+  }
 }
