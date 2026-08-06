@@ -20,15 +20,16 @@ import { mapConcepto } from '@core/utils/payment-concept.utils';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
-function mapEstado(status: string | null): string | null {
+export function mapEstado(status: string | null): string | null {
   if (!status) return null;
   switch (status.toLowerCase()) {
     case 'paid':
       return 'completado';
     case 'partial':
+    case 'pending':
       return 'pendiente';
     default:
-      return status;
+      return 'pendiente';
   }
 }
 
@@ -293,6 +294,10 @@ export class PagosFacade {
       .select(
         'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments!inner(branch_id, students(users(first_names, paternal_last_name, maternal_last_name)))',
       )
+      // Excluye matrículas confirmadas con pago pendiente (fix-135-m): son placeholders con
+      // $0 recibido para registrar la deuda, no pagos reales. Esos alumnos ya aparecen en
+      // la lista de deudores vía fetchAlumnosConDeuda().
+      .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);

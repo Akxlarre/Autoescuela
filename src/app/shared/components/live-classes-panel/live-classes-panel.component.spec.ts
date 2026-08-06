@@ -122,4 +122,49 @@ describe('LiveClassesPanelComponent', () => {
       expect(component.getRelativeTime(past, 'in_progress', true)).toBe('Cierre atrasado');
     });
   });
+
+  // ─── isFromPrevDay — sesiones in_progress colgadas de días anteriores (fix-131-m) ──
+  describe('isFromPrevDay', () => {
+    it('true para una sesión in_progress cuyo scheduledAt es de un día anterior a hoy', () => {
+      const cls = makeLiveClass({
+        status: 'in_progress',
+        scheduledAt: '2026-07-26T18:30:00.000Z', // día anterior a NOW (2026-07-27)
+      });
+      expect(component.isFromPrevDay(cls)).toBe(true);
+    });
+
+    it('false para una sesión con scheduledAt de hoy, aunque esté atrasada', () => {
+      const cls = makeLiveClass({
+        status: 'in_progress',
+        scheduledAt: new Date(NOW - 70 * 60000).toISOString(), // hoy, hace 70 min
+      });
+      expect(component.isFromPrevDay(cls)).toBe(false);
+    });
+
+    it('statusLabel con fromPrevDay=true → "Día Anterior", distinto de "Atrasada"', () => {
+      expect(component.statusLabel('in_progress', true, true)).toBe('Día Anterior');
+      expect(component.statusLabel('in_progress', true, false)).toBe('Atrasada');
+    });
+
+    it('formatShortDate devuelve fecha corta (día + mes) para distinguir del "solo hora" de hoy', () => {
+      const label = component.formatShortDate('2026-07-26T18:30:00.000Z');
+      expect(label).toMatch(/26/);
+      expect(label.length).toBeGreaterThan(0);
+    });
+
+    it('una sesión de ayer a las 18:30 y una de hoy a las 18:30 no son indistinguibles: una es isFromPrevDay, la otra no', () => {
+      const stuckYesterday = makeLiveClass({
+        id: 'prac-9',
+        status: 'in_progress',
+        scheduledAt: '2026-07-26T18:30:00.000Z',
+      });
+      const todayAtSameHour = makeLiveClass({
+        id: 'prac-10',
+        status: 'pending',
+        scheduledAt: '2026-07-27T18:30:00.000Z',
+      });
+      expect(component.isFromPrevDay(stuckYesterday)).toBe(true);
+      expect(component.isFromPrevDay(todayAtSameHour)).toBe(false);
+    });
+  });
 });

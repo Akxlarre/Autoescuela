@@ -81,7 +81,6 @@
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | `i` | fix | Media | b | 2 `.bento-banner` apiladas (no 2 columnas), sin paginación que sacar. Ver `specs/assignments/ASG-b-073-*.md` |
 | ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | `i` | fix | Baja-Media | b | `--fill-screen-kpi`, sin paginación que sacar. Ver `specs/assignments/ASG-b-074-*.md` |
 | ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | `i` | fix | Baja | b | Calendario mensual acotado, `--fill-screen-kpi`. Ver `specs/assignments/ASG-b-075-*.md` |
-| ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | `m` | fix | Alta | b | Alto tráfico. NO usar tabs (decisión ya tomada). 3 bloques apilados, no 2 tablas. 4 sets de tests de densidad. Ver `specs/assignments/ASG-b-076-*.md` |
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
 | ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
@@ -208,6 +207,7 @@
 | ASG-b-068 | App-like: `/admin/secretarias` | [fix-017-i-app-like-admin-secretarias](fixes/fix-017-i-app-like-admin-secretarias/fix.md) | 2026-08-05 |
 | ASG-b-069 | App-like: `/admin/auditoria` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-06 |
 | ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | [fix-124-m-app-like-configuracion-web](fixes/fix-124-m-app-like-configuracion-web/fix.md) | 2026-08-06 |
+| ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | [fix-132-m-app-like-familia-pagos](fixes/fix-132-m-app-like-familia-pagos/fix.md) | 2026-08-06 |
 <!-- AUTO-GENERATED:END -->
 
 ---

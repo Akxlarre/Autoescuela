@@ -21,3 +21,25 @@ export function isSessionOverdue(
 
   return now.getTime() >= overdueThreshold;
 }
+
+/**
+ * Determina si `scheduledAt` cae en un día calendario (local) anterior a `now`.
+ * Usado para distinguir, en el panel de "clases actuales", una sesión `in_progress`
+ * que quedó colgada de un día anterior de una clase agendada hoy a la misma hora
+ * con el mismo alumno — sin esta marca ambas se ven idénticas (fix-131-m).
+ */
+export function isFromPreviousDay(scheduledAt: string, now: Date = new Date()): boolean {
+  if (!scheduledAt) return false;
+
+  const scheduledDate = new Date(scheduledAt);
+  if (isNaN(scheduledDate.getTime())) return false;
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfScheduledDay = new Date(
+    scheduledDate.getFullYear(),
+    scheduledDate.getMonth(),
+    scheduledDate.getDate(),
+  );
+
+  return startOfScheduledDay.getTime() < startOfToday.getTime();
+}

@@ -328,26 +328,65 @@ export class DashboardFacade {
     });
   }
 
+  private static readonly PRACTICA_SELECT = `
+    id,
+    class_number,
+    scheduled_at,
+    duration_min,
+    status,
+    km_start,
+    vehicles(id, brand, model, license_plate, current_km),
+    instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
+    enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name)))
+  `;
+
+  private mapPracticaRow(row: any): LiveClassModel {
+    const instRel = row['instructors'] ?? row['instructors!class_b_sessions_instructor_id_fkey'];
+    const instUser = instRel?.users;
+    const studentUser = row.enrollments?.students?.users;
+    const vehicle = row.vehicles;
+
+    let status = 'pending';
+    if (row.status === 'in_progress') status = 'in_progress';
+    if (row.status === 'completed' || row.status === 'no_show') status = 'completed';
+
+    return {
+      id: `prac-${row.id}`,
+      originalId: row.id,
+      classNumber: row.class_number,
+      studentName: studentUser
+        ? `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim()
+        : 'Desconocido',
+      instructorName: instUser
+        ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim()
+        : 'Sin asignar',
+      timeLabel: '00:00 - 00:45',
+      status,
+      type: 'practical',
+      vehicle: vehicle
+        ? `${vehicle.brand ?? ''} ${vehicle.model ?? ''} - ${vehicle.license_plate ?? ''}`.trim()
+        : 'Sin vehículo',
+      vehicleBrand: vehicle?.brand,
+      vehicleModel: vehicle?.model,
+      vehiclePlate: vehicle?.license_plate,
+      vehicleId: vehicle?.id ?? null,
+      vehicleCurrentKm: vehicle?.current_km ?? null,
+      branchId: row.enrollments?.branch_id ?? null,
+      scheduledAt: row.scheduled_at,
+      durationMin: row.duration_min ?? 45,
+      studentId: row.enrollments?.student_id ?? null,
+      kmStart: row.km_start ?? null,
+    } as LiveClassModel;
+  }
+
   async fetchLiveClasses(branchId: number | null): Promise<LiveClassModel[]> {
     const todayStr = toISODate(new Date());
     let liveClasses: LiveClassModel[] = [];
 
-    // 1. Clases Prácticas
+    // 1. Clases Prácticas de hoy
     let practicasQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select(
-        `
-        id,
-        class_number,
-        scheduled_at,
-        duration_min,
-        status,
-        km_start,
-        vehicles(brand, model, license_plate),
-        instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
-        enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name)))
-      `,
-      )
+      .select(DashboardFacade.PRACTICA_SELECT)
       .gte('scheduled_at', `${todayStr}T00:00:00`)
       .lte('scheduled_at', `${todayStr}T23:59:59`)
       .in('status', VALID_CLASS_B_SESSION_STATUSES)
@@ -357,46 +396,30 @@ export class DashboardFacade {
       practicasQuery = practicasQuery.eq('enrollments.branch_id', branchId);
     }
 
-    const { data: practicasData, error: practicasError } = await practicasQuery;
+    // 2. Sesiones in_progress colgadas de días anteriores (fix-131-m): una sesión
+    // in_progress nunca se cierra sola (spec 0001-i), así que sin este segundo fetch
+    // desaparece del panel al día siguiente aunque siga bloqueando startClass() vía
+    // trg_prevent_concurrent_in_progress — sin límite inferior de fecha.
+    let stuckSessionsQuery: any = this.supabase.client
+      .from('class_b_sessions')
+      .select(DashboardFacade.PRACTICA_SELECT)
+      .lt('scheduled_at', `${todayStr}T00:00:00`)
+      .eq('status', 'in_progress')
+      .eq('enrollments.status', 'active');
+
+    if (branchId !== null) {
+      stuckSessionsQuery = stuckSessionsQuery.eq('enrollments.branch_id', branchId);
+    }
+
+    const [{ data: practicasData, error: practicasError }, { data: stuckData, error: stuckError }] =
+      await Promise.all([practicasQuery, stuckSessionsQuery]);
 
     if (!practicasError && practicasData) {
-      const mappedPracticas = practicasData.map((row: any) => {
-        const instRel =
-          row['instructors'] ?? row['instructors!class_b_sessions_instructor_id_fkey'];
-        const instUser = instRel?.users;
-        const studentUser = row.enrollments?.students?.users;
-        const vehicle = row.vehicles;
+      liveClasses = [...liveClasses, ...practicasData.map((row: any) => this.mapPracticaRow(row))];
+    }
 
-        let status = 'pending';
-        if (row.status === 'in_progress') status = 'in_progress';
-        if (row.status === 'completed' || row.status === 'no_show') status = 'completed';
-
-        return {
-          id: `prac-${row.id}`,
-          originalId: row.id,
-          classNumber: row.class_number,
-          studentName: studentUser
-            ? `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim()
-            : 'Desconocido',
-          instructorName: instUser
-            ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim()
-            : 'Sin asignar',
-          timeLabel: '00:00 - 00:45',
-          status,
-          type: 'practical',
-          vehicle: vehicle
-            ? `${vehicle.brand ?? ''} ${vehicle.model ?? ''} - ${vehicle.license_plate ?? ''}`.trim()
-            : 'Sin vehículo',
-          vehicleBrand: vehicle?.brand,
-          vehicleModel: vehicle?.model,
-          vehiclePlate: vehicle?.license_plate,
-          scheduledAt: row.scheduled_at,
-          durationMin: row.duration_min ?? 45,
-          studentId: row.enrollments?.student_id ?? null,
-          kmStart: row.km_start ?? null,
-        } as LiveClassModel;
-      });
-      liveClasses = [...liveClasses, ...mappedPracticas];
+    if (!stuckError && stuckData) {
+      liveClasses = [...liveClasses, ...stuckData.map((row: any) => this.mapPracticaRow(row))];
     }
 
     // Las clases teóricas ahora se gestionan por Ciclos (Spec 0001) y no se

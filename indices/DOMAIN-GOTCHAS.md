@@ -553,6 +553,78 @@
   confiar en el nombre del archivo.
 - **Fuente:** `specs/fixes/fix-115-m-ocultar-evaluacion-secretaria-admin`
 
+### DG-054 — `class_b_sessions.status='in_progress'` no tiene límite de vida: sigue bloqueando `startClass()` aunque desaparezca de todos los dashboards de "hoy"
+- **Trampa:** filtrar cualquier vista de "clases actuales/en curso" por `scheduled_at` acotado al
+  día de hoy (`.gte(hoy 00:00).lte(hoy 23:59)`) asumiendo que eso cubre todas las sesiones
+  `in_progress` relevantes — patrón usado en `dashboard.facade.ts`, `instructor-clases.facade.ts`
+  y `asistencia-clase-b.facade.ts` (`fetchPracticas` con `_selectedDate` por defecto hoy).
+- **Realidad:** la spec 0001-i decidió explícitamente que una sesión `in_progress` **nunca se
+  cierra sola** — solo un humano apretando "Finalizar" la mueve a estado terminal. Si eso no pasa
+  el mismo día, la fila sigue en `in_progress` indefinidamente, con `scheduled_at` de un día
+  pasado. Cualquier query acotada a "hoy" deja de verla al día siguiente — pero
+  `trg_prevent_concurrent_in_progress` (`supabase/migrations/20260804120000_...`) no tiene ningún
+  filtro de fecha: sigue bloqueando `startClass()` para ese instructor sin importar cuántos días
+  hayan pasado. Resultado antes de `fix-131-m`: la sesión colgada se volvía invisible en todo el
+  dashboard justo cuando más hacía falta verla, y el instructor quedaba bloqueado sin ninguna
+  pista visual de la causa. Corregido parcialmente en `fix-131-m` (solo para el panel
+  `app-live-classes-panel` del dashboard, vía una segunda query sin límite inferior de fecha +
+  marca visual "Día Anterior") — **`instructor-clases.facade.ts` y
+  `asistencia-clase-b.facade.ts::fetchPracticas` siguen con el mismo gap sin resolver.**
+  **Lección:** cualquier vista nueva (o ya existente) que liste sesiones `in_progress` filtrando
+  por fecha de hoy necesita el mismo tratamiento — traer también `in_progress` con
+  `scheduled_at` anterior, sin límite inferior, y marcarlas visualmente distintas de una clase de
+  hoy a la misma hora con el mismo alumno.
+- **Fuente:** `specs/fixes/fix-131-m-live-classes-panel-sesiones-dia-anterior`,
+  `specs/specs/0001-i-ciclo-vida-clase-exclusion-cierre`
+
+### DG-055 — El panel "Clases Actuales" del Dashboard alimenta `AsistenciaClaseBFacade.selectPractica()` con una fila recortada — un campo ausente ahí rompe silenciosamente lógica que asume el modelo completo
+- **Trampa:** agregar/leer un campo nuevo en `ClasePracticaRow` (el modelo completo que usan las
+  páginas dedicadas `admin-asistencia`/`secretaria-asistencia`) y asumir que también está
+  disponible cuando la misma acción (`startClass`/`finishClass` sobre `AsistenciaClaseBFacade`)
+  se dispara desde el panel "Clases Actuales" del Dashboard.
+- **Realidad:** `dashboard.component.ts::handleLiveClassAction()` construye la fila con
+  `resolveLiveClassActionPlan()` (`core/utils/live-class-action.utils.ts`), que arma un
+  `ClasePracticaActionRow` — un **subconjunto** de `ClasePracticaRow` mapeado desde
+  `LiveClassModel`/`DashboardFacade.mapPracticaRow()`, con su propio `PRACTICA_SELECT` de
+  Supabase. Y la llamada es `selectPractica(plan.row as any)`: el cast se salta el chequeo de
+  tipos, así que un campo que falte en `ClasePracticaActionRow` no produce ningún error de
+  compilación — solo un `undefined` silencioso en runtime. Pasó con `vehicleId`: `finishClass()`
+  lee `this._selectedPractica()?.vehicleId` para propagar `km_end` a `vehicles.current_km`; al
+  ser `undefined` el `if (vehicleId)` nunca entra y el update se salta sin error ni toast — la
+  sesión queda con `km_start`/`km_end` correctos pero el vehículo se queda con su `current_km`
+  desactualizado. El mismo hueco existía para `vehicleCurrentKm` (precarga del odómetro al
+  iniciar) y `branchId` (poblar el selector de vehículo).
+- **Lección:** cualquier campo que una acción sobre `AsistenciaClaseBFacade` necesite leer de
+  `_selectedPractica()` debe existir en **ambos** orígenes — `ClasePracticaRow` (Asistencia) y
+  `ClasePracticaActionRow` (Dashboard) — y el `PRACTICA_SELECT`/`mapPracticaRow()` de
+  `DashboardFacade` debe traerlo desde Supabase. Verificar los dos flujos, no solo el de
+  Asistencia (que suele ser el que se prueba primero).
+- **Fuente:** `specs/fixes/fix-133-m-vehicleid-faltante-dashboard-km`
+
+---
+
+### DG-056 — `payments.status = 'pending'` no es "un pago que está por cobrarse", es un placeholder con $0 recibido
+- **Trampa:** asumir que una fila de `payments` con `status = 'pending'` representa una
+  transacción real en curso (ej. cheque a fecha, transferencia por confirmar) y listarla en
+  cualquier vista tipo "Pagos recientes"/historial de cobros mostrando su `total_amount` como
+  si fuera dinero recibido.
+- **Realidad:** la única forma de producir `payments.status = 'pending'` es la RPC
+  `confirm_enrollment_with_payment` cuando `p_payment_method = 'pendiente'`
+  (`20260618130000_rpc_confirm_enrollment_with_payment.sql:59-98`) — el flujo de "matricular
+  ahora, cobrar después". Esa fila se inserta con `cash_amount`/`transfer_amount`/`card_amount`
+  en **$0** y `payment_date = NULL`; existe solo para dejar registrada la deuda junto al
+  enrollment. La inserción manual desde la UI (`registrarNuevoPago()` en `pagos.facade.ts`)
+  siempre usa `status: 'paid'` — no hay ningún camino que inserte un pago parcial real con
+  `status = 'pending'`.
+- **Lección:** cualquier vista que liste `payments` como "dinero cobrado" debe excluir
+  `status = 'pending'` (`.neq('status', 'pending')`, ver `fetchPagosRecientes()` en
+  `pagos.facade.ts`). El alumno con esa matrícula ya aparece en la lista de deudores vía
+  `fetchAlumnosConDeuda()` (`enrollments.pending_balance > 0`) — no hace falta duplicar la
+  señal desde `payments`. Si en el futuro se agrega un flujo real de pago parcial/en proceso
+  distinto al placeholder de matrícula, debe usar otro valor de `status` para no romper este
+  filtro.
+- **Fuente:** `specs/fixes/fix-135-m-excluir-matriculas-pago-pendiente-de-pagos-recientes`
+
 ---
 
 ## Convención para agregar una entrada nueva

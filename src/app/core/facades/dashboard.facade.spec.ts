@@ -96,6 +96,7 @@ describe('DashboardFacade', () => {
             eq: vi.fn(() => builder),
             gte: vi.fn(() => builder),
             lte: vi.fn(() => builder),
+            lt: vi.fn(() => builder),
             or: vi.fn(() => builder),
             in: vi.fn(() => builder),
             order: vi.fn(() => builder),
@@ -171,18 +172,39 @@ describe('DashboardFacade', () => {
   });
 
   describe('fetchLiveClasses', () => {
-    /** Builder Supabase encadenable y awaitable, con resultado fijo. */
-    function makeSupabaseMock(rows: any[]) {
-      const b: any = {
-        select: vi.fn(() => b),
-        eq: vi.fn(() => b),
-        gte: vi.fn(() => b),
-        lte: vi.fn(() => b),
-        neq: vi.fn(() => b),
-        in: vi.fn(() => b),
-        then: (resolve: any) => resolve({ data: rows, error: null }),
+    /**
+     * Builder Supabase encadenable y awaitable. fetchLiveClasses() ahora dispara DOS
+     * queries por invocación (hoy + sesiones in_progress colgadas de días anteriores,
+     * fix-131-m) — cada `.from()` devuelve un builder nuevo para no mezclar resultados;
+     * la primera llamada responde `rows` (hoy), la segunda `stuckRows` (colgadas, vacío
+     * por defecto para no romper los tests existentes que solo esperan datos de hoy).
+     */
+    function makeSupabaseMock(rows: any[], stuckRows: any[] = []) {
+      const builders: any[] = [];
+      const from = vi.fn(() => {
+        const data = builders.length === 0 ? rows : stuckRows;
+        const b: any = {
+          select: vi.fn(() => b),
+          eq: vi.fn(() => b),
+          gte: vi.fn(() => b),
+          lte: vi.fn(() => b),
+          lt: vi.fn(() => b),
+          neq: vi.fn(() => b),
+          in: vi.fn(() => b),
+          then: (resolve: any) => resolve({ data, error: null }),
+        };
+        builders.push(b);
+        return b;
+      });
+      return {
+        client: { from },
+        get builder() {
+          return builders[0];
+        },
+        get stuckBuilder() {
+          return builders[1];
+        },
       };
-      return { client: { from: vi.fn(() => b) }, builder: b };
     }
 
     it('excluye sesiones canceladas del resultado y filtra por query', async () => {
@@ -316,6 +338,53 @@ describe('DashboardFacade', () => {
 
       expect(first.durationMin).toBe(60);
       expect(second.durationMin).toBe(45);
+    });
+
+    it('incluye sesiones in_progress colgadas de días anteriores junto con las de hoy (fix-131-m)', async () => {
+      const todayRows = [
+        {
+          id: 10,
+          class_number: 1,
+          scheduled_at: '2026-08-06T18:30:00',
+          duration_min: 45,
+          status: 'pending',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const stuckRows = [
+        {
+          id: 9,
+          class_number: 1,
+          scheduled_at: '2026-08-05T18:30:00',
+          duration_min: 45,
+          status: 'in_progress',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(todayRows, stuckRows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const result = await dashFacade.fetchLiveClasses(1);
+
+      expect(result).toHaveLength(2);
+      expect(result.some((c) => c.originalId === 9 && c.status === 'in_progress')).toBe(true);
+      expect(mock.stuckBuilder.lt).toHaveBeenCalledWith('scheduled_at', expect.any(String));
+      expect(mock.stuckBuilder.eq).toHaveBeenCalledWith('status', 'in_progress');
     });
 
     it('refreshLiveClassesOnly() (fix-079) actualiza solo liveClasses, sin tocar el resto de data()', async () => {

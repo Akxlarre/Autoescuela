@@ -14,7 +14,7 @@ import {
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { CommonModule } from '@angular/common';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
-import { isSessionOverdue } from '@core/utils/class-b-session-overdue.utils';
+import { isSessionOverdue, isFromPreviousDay } from '@core/utils/class-b-session-overdue.utils';
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -111,6 +111,8 @@ import { TooltipModule } from 'primeng/tooltip';
           <li
             [attr.data-status]="cls.status"
             class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
+            [class.border-l-4]="isFromPrevDay(cls)"
+            [class.border-error]="isFromPrevDay(cls)"
             appPressFeedback="press"
             (click)="actionClick.emit(cls)"
             [appAnimateIn]="{ delay: 0.1 + i * 0.05 }"
@@ -118,7 +120,12 @@ import { TooltipModule } from 'primeng/tooltip';
             <!-- Lado Izquierdo: Hora y Avatares -->
             <div class="flex items-center gap-4 min-w-0">
               <!-- Hora y Estado -->
-              <div class="flex flex-col shrink-0 w-14">
+              <div class="flex flex-col shrink-0 w-16">
+                @if (isFromPrevDay(cls)) {
+                  <span class="text-2xs font-bold text-error uppercase tracking-wide leading-none">
+                    {{ formatShortDate(cls.scheduledAt) }}
+                  </span>
+                }
                 <span class="font-bold text-text-primary leading-none">{{
                   formatTime(cls.scheduledAt)
                 }}</span>
@@ -127,15 +134,21 @@ import { TooltipModule } from 'primeng/tooltip';
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
                   [class.text-text-muted]="cls.status === 'completed'"
-                  [class.text-error]="isOverdue(cls)"
+                  [class.text-error]="isOverdue(cls) || isFromPrevDay(cls)"
                   [attr.data-llm-description]="
-                    isOverdue(cls) ? 'Clase con cierre atrasado, requiere atención' : null
+                    isFromPrevDay(cls)
+                      ? 'Sesión in_progress sin cerrar de un día anterior, distinta de una clase agendada hoy'
+                      : isOverdue(cls)
+                        ? 'Clase con cierre atrasado, requiere atención'
+                        : null
                   "
                 >
-                  @if (isOverdue(cls)) {
+                  @if (isFromPrevDay(cls)) {
+                    <app-icon name="history" [size]="11" class="badge-pulse shrink-0" />
+                  } @else if (isOverdue(cls)) {
                     <app-icon name="alert-triangle" [size]="11" class="badge-pulse shrink-0" />
                   }
-                  {{ statusLabel(cls.status, isOverdue(cls)) }}
+                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls)) }}
                 </span>
               </div>
 
@@ -341,11 +354,26 @@ export class LiveClassesPanelComponent {
     return isSessionOverdue(cls.scheduledAt, cls.durationMin, cls.status, this._now());
   }
 
-  statusLabel(status: string, overdue = false): string {
+  /** Sesión in_progress colgada de un día calendario anterior a hoy (fix-131-m).
+   * Distinta de isOverdue(): una sesión de días anteriores está siempre atrasada,
+   * pero necesita marca propia para no confundirse con una clase de hoy a la
+   * misma hora con el mismo alumno. */
+  isFromPrevDay(cls: LiveClassModel): boolean {
+    return isFromPreviousDay(cls.scheduledAt, this._now());
+  }
+
+  statusLabel(status: string, overdue = false, fromPrevDay = false): string {
+    if (fromPrevDay) return 'Día Anterior';
     if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
     return 'Finalizada';
+  }
+
+  formatShortDate(isoString: string): string {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '');
   }
 
   formatTime(isoString: string): string {

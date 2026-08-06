@@ -13,6 +13,9 @@ export interface ClasePracticaActionRow {
   vehicleBrand?: string;
   vehicleModel?: string;
   vehiclePlate?: string;
+  vehicleId?: number | null;
+  vehicleCurrentKm?: number | null;
+  branchId?: number | null;
 }
 
 export type LiveClassActionPlan =
@@ -37,6 +40,9 @@ export function resolveLiveClassActionPlan(cls: LiveClassModel): LiveClassAction
     vehicleBrand: cls.vehicleBrand,
     vehicleModel: cls.vehicleModel,
     vehiclePlate: cls.vehiclePlate,
+    vehicleId: cls.vehicleId,
+    vehicleCurrentKm: cls.vehicleCurrentKm,
+    branchId: cls.branchId,
   };
 
   if (cls.status === 'pending') {

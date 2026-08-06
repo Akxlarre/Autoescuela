@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { PagosFacade } from './pagos.facade';
+import { PagosFacade, mapEstado } from './pagos.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from './auth.facade';
@@ -73,6 +73,53 @@ describe('PagosFacade', () => {
   it('seleccionarEnrollment should update signal', () => {
     facade.seleccionarEnrollment(123);
     expect(facade.enrollmentSeleccionado()).toBe(123);
+  });
+
+  // ── fix-134-m: mapEstado no debe filtrar valores crudos de payments.status ──
+  describe('mapEstado (fix-134-m)', () => {
+    it('traduce "pending" a "pendiente"', () => {
+      expect(mapEstado('pending')).toBe('pendiente');
+    });
+
+    it('traduce "paid" a "completado"', () => {
+      expect(mapEstado('paid')).toBe('completado');
+    });
+
+    it('traduce "partial" a "pendiente"', () => {
+      expect(mapEstado('partial')).toBe('pendiente');
+    });
+
+    it('cae a "pendiente" ante un status no reconocido, nunca devuelve el crudo', () => {
+      expect(mapEstado('confirmed')).toBe('pendiente');
+    });
+
+    it('devuelve null si no hay status', () => {
+      expect(mapEstado(null)).toBeNull();
+    });
+  });
+
+  // ── fix-135-m: "Pagos recientes" no debe listar matrículas con pago pendiente ──
+  describe('fetchPagosRecientes (fix-135-m)', () => {
+    it('excluye status=pending de la query a payments', async () => {
+      const genericMock = supabaseSpy.client.from();
+      const limitSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
+      const neqSpy = vi.fn().mockReturnValue({ order: orderSpy });
+      const paymentsSelectSpy = vi.fn().mockReturnValue({ neq: neqSpy });
+
+      supabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'payments' ? { select: paymentsSelectSpy } : genericMock,
+      );
+      supabaseSpy.client.channel = vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      });
+
+      await facade.initialize();
+      await flushMicrotasks();
+
+      expect(neqSpy).toHaveBeenCalledWith('status', 'pending');
+    });
   });
 
   // ── spec 0025 (T2.2): notificación al alumno tras registrar un abono ──
