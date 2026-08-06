@@ -866,7 +866,7 @@ const INTERFACE_ICONS = [
     }
     .layout-selector-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 0.75rem;
       width: 100%;
     }
@@ -975,6 +975,7 @@ const INTERFACE_ICONS = [
     }
     .media-type-pills {
       display: flex;
+      flex-wrap: wrap;
       background: var(--bg-subtle);
       border-radius: 10px;
       padding: 3px;
@@ -983,6 +984,7 @@ const INTERFACE_ICONS = [
     }
     .media-pill {
       flex: 1;
+      min-width: 0;
       display: flex;
       align-items: center;
       justify-content: center;
