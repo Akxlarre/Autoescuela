@@ -77,7 +77,6 @@
 | ASG-b-065 | App-like: `/secretaria/dashboard` — portar `--fill-screen-2` desde admin/dashboard | `b` | fix | Baja | b | 4 cambios reales (no 1 línea): shell, `bento-fill` en live-classes-panel, densidad adaptativa de Actividad/Alertas. Ver `specs/assignments/ASG-b-065-*.md` |
 | ASG-b-066 | App-like: familia "instructores" (`admin` + `secretaria`) | `b` | fix | Baja | b | Sacar paginación Anterior/Siguiente hand-rolled → patrón `sliceByBudget`+"Cargar más" mobile / todo+scroll desktop, copiado de `alumnos-list-content`. Mismo cambio en 2 archivos independientes. Ver `specs/assignments/ASG-b-066-*.md` |
 | ASG-b-067 | App-like: `/admin/flota` (`flota-list-content`) | `b` | fix | Baja | b | `p-table` MANTIENE el paginador nativo (a diferencia de instructores) — agregar `scrollable`+`scrollHeight=flex`, patrón ya probado en 6 páginas hermanas. Ver `specs/assignments/ASG-b-067-*.md` |
-| ASG-b-069 | App-like: `/admin/auditoria` | `m` | fix | Baja | b | Paginador es SERVER-SIDE, no se saca. Banner informativo se pliega dentro de la card como footer fijo. Ver `specs/assignments/ASG-b-069-*.md` |
 | ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | `b` | fix | Baja-Media | b | Ninguna de las 2 usa `agenda-semanal`. `alumno/horario` necesita agrupar celdas condicionales. Ver `specs/assignments/ASG-b-070-*.md` |
 | ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`, `dms-list-content`) | `b` | fix | Media | b | Tiene `h-125` hardcodeado que hay que sacar primero. Componente `shared` — verificar ambas rutas. Ver `specs/assignments/ASG-b-071-*.md` |
 | ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | `m` | fix | Media | b | 6 tabs ya existentes (no 5), cada una su propio componente — verificar los 6 antes de aplicar el shell. Ver `specs/assignments/ASG-b-072-*.md` |
@@ -137,6 +136,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-069 | App-like: `/admin/auditoria` | `m` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
