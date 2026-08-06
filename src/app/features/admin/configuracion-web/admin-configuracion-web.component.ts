@@ -55,7 +55,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     StableWidthDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid" appBentoGridLayout>
+    <div #bentoGrid class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
       <!-- Hero Section -->
       <app-section-hero
         density="slim"
@@ -71,9 +71,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
       <!-- Main Editor Bento Card -->
       <div
-        class="bento-banner card p-0 overflow-hidden"
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col h-full"
         appCardHover
-        style="min-height: 500px; display: flex; flex-direction: column;"
       >
         <!-- Header with branch selection for Admin and Tabs Switcher -->
         <div class="flex flex-col border-b border-border-default bg-base z-10">

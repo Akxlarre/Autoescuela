@@ -1,6 +1,6 @@
 # Asignación ASG-b-072 — App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
