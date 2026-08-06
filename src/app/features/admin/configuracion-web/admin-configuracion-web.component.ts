@@ -278,12 +278,32 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
 
   // Tab definitions
   protected readonly tabs = [
-    { id: 'general' as ConfigTab, label: 'General & Redes', icon: 'settings' },
-    { id: 'hero' as ConfigTab, label: 'Sección Hero', icon: 'layout' },
-    { id: 'cursos' as ConfigTab, label: 'Cursos & Precios', icon: 'book-open' },
-    { id: 'promo' as ConfigTab, label: 'Campaña Promo', icon: 'tag' },
-    { id: 'contacto' as ConfigTab, label: 'Contacto & Horas', icon: 'map-pin' },
-    { id: 'faqs' as ConfigTab, label: 'Preguntas FAQs', icon: 'help-circle' },
+    {
+      id: 'general' as ConfigTab,
+      label: 'General & Redes',
+      shortLabel: 'General',
+      icon: 'settings',
+    },
+    { id: 'hero' as ConfigTab, label: 'Sección Hero', shortLabel: 'Hero', icon: 'layout' },
+    {
+      id: 'cursos' as ConfigTab,
+      label: 'Cursos & Precios',
+      shortLabel: 'Cursos',
+      icon: 'book-open',
+    },
+    { id: 'promo' as ConfigTab, label: 'Campaña Promo', shortLabel: 'Promo', icon: 'tag' },
+    {
+      id: 'contacto' as ConfigTab,
+      label: 'Contacto & Horas',
+      shortLabel: 'Contacto',
+      icon: 'map-pin',
+    },
+    {
+      id: 'faqs' as ConfigTab,
+      label: 'Preguntas FAQs',
+      shortLabel: 'FAQs',
+      icon: 'help-circle',
+    },
   ];
 
   // Role Checks
