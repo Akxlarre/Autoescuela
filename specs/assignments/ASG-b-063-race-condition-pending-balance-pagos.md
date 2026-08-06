@@ -1,6 +1,6 @@
 # Asignación ASG-b-063 — Race condition "lost update" en `pending_balance` al registrar pagos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
