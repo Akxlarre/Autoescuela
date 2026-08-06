@@ -34,7 +34,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: ajuste posterior con motivo (cuadratura cerrada queda inmutable, editar = registrar ajuste con monto/motivo/autor). `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. Ver `specs/assignments/ASG-b-037-*.md` |
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `m` | spec | Media | b | **2026-08-02: desbloqueada.** Cliente confirmó: otro producto/curso propio en `courses`, no toca el modelo de 12 prácticas de Clase B. Preguntas 2-4 (certificado, elegibilidad externos, precio) siguen abiertas pero no bloquean el diseño. ⚠️ Coordinar con ASG-b-014. Ver `specs/assignments/ASG-b-038-*.md` |
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
@@ -137,6 +136,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-037 | Cuadratura editable + egresos de combustible por vehículo | `i` | [0002-i-cuadratura-editable-ajustes](specs/0002-i-cuadratura-editable-ajustes/spec.md) | 2026-08-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
