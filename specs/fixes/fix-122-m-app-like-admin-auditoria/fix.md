@@ -1,7 +1,8 @@
 # Fix: App-like — `/admin/auditoria`
 > id: fix-122-m-app-like-admin-auditoria
 > refs: ASG-b-069
-> status: in-progress
+> status: done
+> closed: 2026-08-06
 > created: 2026-08-05
 
 ## Root Cause
@@ -32,16 +33,37 @@ de la card, debajo del paginador — ningún modificador `--fill-screen-*` exist
   fuera de lg+).
 - AC-7: El menú de exportar (Excel/PDF, `position:absolute`) no queda visualmente interferido
   por el banner movido.
+- AC-8: La columna "Detalles" del grid (`.audit-grid`) tiene un piso mínimo real
+  (`minmax(200px, 1fr)`) — el texto no se parte palabra por palabra cuando el contenedor se
+  angosta (ej. drawer abierto).
 
 ## Checklist de cierre (rollout app-like, heredado de ASG-b-069)
 
-- [ ] `force-compact` verificado con un drawer abierto
-- [ ] `/verify` en 390×844, 1440×900 y 768 de alto
-- [ ] Confirmar que mover el banner dentro de la card no rompe el export a Excel/PDF
+- [x] `force-compact` verificado con un drawer abierto
+- [x] `/verify` en 390×844, 1440×900 y 768 de alto
+- [x] Confirmar que mover el banner dentro de la card no rompe el export a Excel/PDF
 
 ## Cambio
-_(a completar durante la implementación)_
+- **Archivo:** `src/app/features/admin/auditoria/admin-auditoria.component.ts`
+  - Root: `bento-grid--hero-fit` → `bento-grid--fill-screen`.
+  - Card de tabla (`bento-banner`): agrega `bento-fill flex flex-col h-full` (hijo directo del
+    root, cumple el contrato de `.bento-fill` en `_bento-grid.scss`).
+  - Wrapper de filas: `overflow-x-auto` → `flex-1 min-h-0 overflow-y-auto overflow-x-auto`
+    (scroll interno vertical + horizontal, toolbar/paginador quedan fijos).
+  - `<p-paginator>` envuelto en `div.shrink-0` (sin cambios de lógica).
+  - Banner de política de correos: se mueve de 3ra celda del grid (`bento-banner` propio) a
+    último elemento dentro de la card de tabla, `shrink-0`, debajo del paginador.
+  - **Hallazgo durante QA con drawer abierto (2026-08-06):** `.audit-grid`/`.audit-grid--no-sede`
+    declaraban la columna "Detalles" como `1fr` sin piso, y el `min-width` del grid (900px /
+    780px) era **menor** que la suma real de columnas fijas + gaps (954px / 808px) — el `1fr`
+    quedaba sin espacio y se apretaba a su `min-content`, partiendo el texto palabra por palabra.
+    Pre-existente, pero expuesto ahora porque el drawer angosta el contenedor con más frecuencia.
+    Fix: `minmax(200px, 1fr)` para Detalles + `min-width` recalculado a 1160px / 1010px (suma de
+    columnas fijas + gaps + el piso de 200px). Corregido en el mismo track por encajar en el
+    checklist "force-compact verificado con un drawer abierto" (línea 38).
 
 ## Test de Regresión
-_(a completar — `/verify` visual, sin lógica de densidad nueva que testear: el paginador ya
-existe y es server-side)_
+`/verify` visual — sin lógica de densidad nueva que testear (paginador server-side ya existente,
+sin cambios de lógica). Pendiente: `/verify` en 390×844, 1440×900, 768 de alto + `force-compact`
+con drawer abierto (confirmando que "Detalles" ya no se parte palabra por palabra) + confirmar
+que el menú de exportar no queda interferido por el banner.

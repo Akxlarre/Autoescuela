@@ -1,6 +1,6 @@
 # Asignación ASG-b-069 — App-like: `/admin/auditoria`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
