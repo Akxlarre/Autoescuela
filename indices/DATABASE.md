@@ -896,6 +896,12 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `receipt_url` | TEXT | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `vehicle_id` | INT | sí | — | → `vehicles.id` |
+
+> `vehicle_id` (migración `20260806000000_expenses_add_vehicle_id.sql`, fix-006-i /
+> ASG-b-037): vehículo asociado al egreso (ej. carga de combustible). Opcional — la
+> columna ya existía aplicada en producción sin migración versionada; este archivo
+> la documenta y la vuelve reproducible en otros entornos.
 
 **Policies:**
 

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { formatCLP } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -41,6 +42,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
@@ -376,11 +378,22 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                 <div
                   class="px-6 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center group hover:bg-subtle transition-colors"
                 >
-                  <span class="text-compact font-medium text-text-primary truncate">
-                    @if (categoryLabel(egreso); as label) {
-                      <span class="text-text-muted">{{ label }} — </span>
+                  <span class="flex items-center gap-2 min-w-0">
+                    @if (categoryIcon(egreso); as icon) {
+                      <span
+                        class="flex items-center justify-center w-6 h-6 rounded-md bg-warning/10 shrink-0"
+                      >
+                        <app-icon [name]="icon" [size]="12" color="var(--state-warning)" />
+                      </span>
                     }
-                    {{ egreso.descripcion }}
+                    <span class="flex items-center gap-2 min-w-0">
+                      @if (categoryLabel(egreso); as label) {
+                        <app-badge variant="neutral">{{ label }}</app-badge>
+                      }
+                      <span class="text-compact font-medium text-text-primary truncate">
+                        {{ egreso.descripcion }}
+                      </span>
+                    </span>
                   </span>
                   <span class="text-compact text-right font-bold text-text-primary tabular-nums">
                     {{ clp(egreso.monto) }}
@@ -910,10 +923,21 @@ export class CuadraturaContentComponent implements AfterViewInit {
     gasto: 'Gasto',
   };
 
+  private static readonly CATEGORY_ICONS: Record<string, string> = {
+    combustible: 'fuel',
+    gasto: 'receipt',
+  };
+
   /** Etiqueta legible de la categoría del egreso (fix-006-i) — null si no aplica (ej. anticipos). */
   protected categoryLabel(egreso: EgresoRow): string | null {
     if (!egreso.category) return null;
     return CuadraturaContentComponent.CATEGORY_LABELS[egreso.category] ?? egreso.category;
+  }
+
+  /** Ícono de categoría del egreso (hotfix-001-i) — null si no aplica (ej. anticipos). */
+  protected categoryIcon(egreso: EgresoRow): string | null {
+    if (!egreso.category) return null;
+    return CuadraturaContentComponent.CATEGORY_ICONS[egreso.category] ?? 'tag';
   }
 
   protected onCantidadChange(key: string, event: Event): void {
