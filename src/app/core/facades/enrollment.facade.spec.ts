@@ -261,6 +261,86 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // ── Matrícula tardía (0002-m, AC4/AC5) ──
+
+  describe('saveAssignment — gate de matrícula tardía (Profesional)', () => {
+    const TODAY = '2026-08-10';
+
+    function setupProfessional(promotionStartDate: string) {
+      (facade as any)._draft.set({ enrollmentId: 42, studentId: 1, userId: 1 });
+      (facade as any)._personalData.set({
+        courseCategory: 'professional',
+        courseType: 'a2',
+      });
+      (facade as any)._promotionGroups.set([
+        {
+          label: 'A2',
+          options: [
+            {
+              id: 99,
+              label: 'Promo 99',
+              code: '99',
+              courseCode: 'A2',
+              enrolledCount: 0,
+              maxCapacity: 25,
+              status: 'open',
+              startDate: promotionStartDate,
+            },
+          ],
+        },
+      ]);
+      facade.selectPromotion(99);
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(`${TODAY}T12:00:00`));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('promoción iniciada hace ≤ 3 días → no llama confirm(), persiste directo', async () => {
+      setupProfessional('2026-08-07'); // 3 días desde TODAY
+
+      const saved = await facade.saveAssignment();
+
+      expect(mockConfirm.confirm).not.toHaveBeenCalled();
+      expect(saved).toBe(true);
+    });
+
+    it('exactamente 3 días (límite inclusive) → no llama confirm()', async () => {
+      setupProfessional('2026-08-07');
+
+      const saved = await facade.saveAssignment();
+
+      expect(mockConfirm.confirm).not.toHaveBeenCalled();
+      expect(saved).toBe(true);
+    });
+
+    it('promoción iniciada hace > 3 días, usuario confirma → llama confirm(), luego persiste', async () => {
+      setupProfessional('2026-08-06'); // 4 días desde TODAY
+      mockConfirm.confirm.mockResolvedValue(true);
+
+      const saved = await facade.saveAssignment();
+
+      expect(mockConfirm.confirm).toHaveBeenCalledTimes(1);
+      expect(saved).toBe(true);
+    });
+
+    it('promoción iniciada hace > 3 días, usuario cancela → llama confirm(), NO persiste, retorna false', async () => {
+      setupProfessional('2026-08-06'); // 4 días desde TODAY
+      mockConfirm.confirm.mockResolvedValue(false);
+
+      const saved = await facade.saveAssignment();
+
+      expect(mockConfirm.confirm).toHaveBeenCalledTimes(1);
+      expect(saved).toBe(false);
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
+  });
+
   // ── Error Handling ──
 
   describe('Error Handling', () => {

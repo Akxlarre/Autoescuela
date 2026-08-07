@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { earlyLicenseWarningFn } from './personal-data.component';
+import { earlyLicenseWarningFn, hasRequiredProfessionalLicenseFn } from './personal-data.component';
 import { todayIso } from '@core/utils/date.utils';
 
 function yearsAgoIso(years: number): string {
@@ -44,5 +44,33 @@ describe('earlyLicenseWarningFn()', () => {
       year: 'numeric',
     });
     expect(warning?.message).toContain(today);
+  });
+});
+
+describe('hasRequiredProfessionalLicenseFn()', () => {
+  it('canAdvance es false en categoría profesional sin licencia previa ni fecha', () => {
+    expect(hasRequiredProfessionalLicenseFn('professional', null, null)).toBe(false);
+  });
+
+  it('es false si solo falta la licencia previa', () => {
+    expect(hasRequiredProfessionalLicenseFn('professional', null, '2020-01-01')).toBe(false);
+  });
+
+  it('es false si solo falta la fecha de licencia B', () => {
+    expect(hasRequiredProfessionalLicenseFn('professional', 'B', null)).toBe(false);
+  });
+
+  it('es false si la licencia previa es "none"', () => {
+    expect(hasRequiredProfessionalLicenseFn('professional', 'none', '2020-01-01')).toBe(false);
+  });
+
+  it('es true cuando ambos campos están completos en categoría profesional', () => {
+    expect(hasRequiredProfessionalLicenseFn('professional', 'B', '2020-01-01')).toBe(true);
+  });
+
+  it('es true en categorías no profesionales sin exigir los campos', () => {
+    expect(hasRequiredProfessionalLicenseFn('non-professional', null, null)).toBe(true);
+    expect(hasRequiredProfessionalLicenseFn('singular', null, null)).toBe(true);
+    expect(hasRequiredProfessionalLicenseFn(null, null, null)).toBe(true);
   });
 });

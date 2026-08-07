@@ -360,6 +360,9 @@ verify_jwt = false
 [functions.generate-class-book-pdf]
 verify_jwt = false
 
+[functions.auto-create-next-promotions]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

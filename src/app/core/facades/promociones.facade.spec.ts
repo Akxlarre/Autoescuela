@@ -157,6 +157,208 @@ describe('PromocionesFacade — editarPromocion propaga code a promotion_courses
   });
 });
 
+// 0002-m — AC6: recuperación de feriados en end_date (crearPromocion + previewEndDate)
+describe('PromocionesFacade — recuperación de feriados en end_date (0002-m)', () => {
+  const START = '2026-08-03'; // lunes
+  const HOLIDAY = '2026-08-13'; // jueves, semana 2 → 1 feriado ⇒ end_date = start + 35
+
+  function stubFeriados(fechas: string[]) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => fechas.map((fecha) => ({ fecha })),
+      }),
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('crearPromocion() con feriados en el rango → end_date del INSERT refleja la extensión, no start+33', async () => {
+    stubFeriados([HOLIDAY]);
+    const mockSupabase = createTableMock({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+    const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: toast },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    const facade = TestBed.inject(PromocionesFacade);
+
+    await facade.crearPromocion({
+      name: 'Promo Nueva',
+      startDate: START,
+      endDate: '2026-09-05', // valor "fijo" que el fix debe IGNORAR
+      cursos: [],
+    });
+
+    const promoBuilder = mockSupabase._builders.get('professional_promotions');
+    expect(promoBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ end_date: '2026-09-07' }),
+    );
+  });
+
+  it('previewEndDate(startDate) retorna el mismo valor que calcularía crearPromocion() para ese startDate', async () => {
+    stubFeriados([HOLIDAY]);
+    const mockSupabase = createTableMock({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    const facade = TestBed.inject(PromocionesFacade);
+
+    const preview = await facade.previewEndDate(START);
+    expect(preview).toBe('2026-09-07');
+
+    await facade.crearPromocion({
+      name: 'Promo Nueva',
+      startDate: START,
+      endDate: 'irrelevante',
+      cursos: [],
+    });
+    const promoBuilder = mockSupabase._builders.get('professional_promotions');
+    expect(promoBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ end_date: preview }),
+    );
+  });
+});
+
+// fix-138-m — fetch de feriados falla → señal visible en vez de asumir 0 feriados en silencio
+describe('PromocionesFacade — fallo del fetch de feriados es visible (fix-138)', () => {
+  const START = '2026-08-17'; // lunes
+
+  function makeFacade() {
+    const mockSupabase = createTableMock({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return TestBed.inject(PromocionesFacade);
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('fetch rechaza (ej. ERR_NAME_NOT_RESOLVED) → previewEndDate() sigue devolviendo start+33, pero holidaysCheckFailed() queda en true', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    const facade = makeFacade();
+
+    expect(facade.holidaysCheckFailed()).toBe(false);
+    const preview = await facade.previewEndDate(START);
+
+    expect(preview).toBe('2026-09-19'); // start+33, sin feriados
+    expect(facade.holidaysCheckFailed()).toBe(true);
+  });
+
+  it('fetch exitoso → holidaysCheckFailed() permanece en false', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    const facade = makeFacade();
+
+    await facade.previewEndDate(START);
+
+    expect(facade.holidaysCheckFailed()).toBe(false);
+  });
+
+  it('fetch falla en previewEndDate() pero luego se recupera en crearPromocion() → la señal vuelve a false', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal('fetch', fetchMock);
+    const facade = makeFacade();
+
+    await facade.previewEndDate(START);
+    expect(facade.holidaysCheckFailed()).toBe(true);
+
+    await facade.crearPromocion({ name: 'Promo Nueva', startDate: START, endDate: '', cursos: [] });
+    expect(facade.holidaysCheckFailed()).toBe(false);
+  });
+});
+
+// fix-139-m — apis.digital.gob.cl inalcanzable → fallback a api.boostr.cl antes de rendirse
+describe('PromocionesFacade — fallback a fuente alternativa de feriados (fix-139)', () => {
+  const START = '2026-08-03'; // lunes
+  const HOLIDAY = '2026-08-13'; // jueves, semana 2 → 1 feriado ⇒ end_date = start + 35
+
+  function makeFacade() {
+    const mockSupabase = createTableMock({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return TestBed.inject(PromocionesFacade);
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('gob.cl falla (DNS) pero boostr.cl responde con el feriado real → end_date lo refleja y holidaysCheckFailed() queda en false', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes('apis.digital.gob.cl')) {
+          return Promise.reject(new TypeError('Failed to fetch'));
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: [{ date: HOLIDAY, title: 'Feriado de prueba' }] }),
+        });
+      }),
+    );
+    const facade = makeFacade();
+
+    const preview = await facade.previewEndDate(START);
+
+    expect(preview).toBe('2026-09-07'); // start+35: feriado recuperado vía boostr, no start+33
+    expect(facade.holidaysCheckFailed()).toBe(false);
+  });
+
+  it('ambas fuentes fallan → holidaysCheckFailed() en true (último recurso, comportamiento fix-138 preservado)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    const facade = makeFacade();
+
+    const preview = await facade.previewEndDate(START);
+
+    expect(preview).toBe('2026-09-05'); // start+33, sin feriados
+    expect(facade.holidaysCheckFailed()).toBe(true);
+  });
+});
+
 // fix-090-m — AC1 + AC3: scope de sede en listado y creación de promociones
 describe('PromocionesFacade — scope de sede (fix-090)', () => {
   it('AC1 — fetchData() filtra por branch_id cuando hay una sede activa', async () => {

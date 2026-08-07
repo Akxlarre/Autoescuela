@@ -656,6 +656,11 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onDocPhotoRemoved(): Promise<void> {
+    const { enrollmentId } = this.enrollment.draft();
+    if (enrollmentId) await this.docs.removeCarnetPhoto(enrollmentId);
+  }
+
   async onStep3Next(): Promise<void> {
     this._isSaving.set(true);
     try {

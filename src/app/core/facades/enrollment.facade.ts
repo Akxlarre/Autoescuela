@@ -14,7 +14,7 @@ import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
-import { toISODate, to24hTime } from '@core/utils/date.utils';
+import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
 import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
@@ -1054,6 +1054,32 @@ export class EnrollmentFacade {
         if (!promotionCourseId) {
           this._error.set('Debe seleccionar una promoción');
           return false;
+        }
+
+        // Matrícula tardía (AC4/AC5): si la promoción elegida lleva más de 3 días iniciada,
+        // se pide confirmación explícita antes de persistir. Comparación por parte de fecha
+        // (todayIso()), no Date.now() con horas, para evitar bugs de timezone.
+        const selectedOption = this._promotionGroups()
+          .flatMap((g) => g.options)
+          .find((o) => o.id === promotionCourseId);
+        if (selectedOption?.startDate) {
+          const daysSinceStart = Math.round(
+            (new Date(`${todayIso()}T00:00:00`).getTime() -
+              new Date(`${selectedOption.startDate}T00:00:00`).getTime()) /
+              86_400_000,
+          );
+          if (daysSinceStart > 3) {
+            const confirmed = await this.confirm({
+              title: 'Matrícula tardía',
+              message: `Esta promoción comenzó hace ${daysSinceStart} días. ¿Deseas matricular al alumno de todas formas?`,
+              severity: 'warn',
+              confirmLabel: 'Sí, matricular',
+              cancelLabel: 'Cancelar',
+            });
+            if (!confirmed) {
+              return false;
+            }
+          }
         }
 
         const { error } = await this.supabase.client

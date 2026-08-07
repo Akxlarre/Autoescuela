@@ -201,6 +201,63 @@ describe('EnrollmentDocumentsFacade', () => {
     });
   });
 
+  // ── Remove Carnet Photo (fix-137) ──
+
+  describe('removeCarnetPhoto', () => {
+    function mockDeleteChain(errorResult: any = null) {
+      const builder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        then: (resolve: any) => resolve({ error: errorResult }),
+      };
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+      return builder;
+    }
+
+    it('elimina el registro persistido y limpia el signal', async () => {
+      const loadBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              enrollment_id: 42,
+              type: 'id_photo',
+              file_name: 'foto.png',
+              storage_url: 'students/42/id_photo',
+            },
+          ],
+          error: null,
+        }),
+      };
+      mockSupabase.client.from = vi.fn().mockReturnValue(loadBuilder);
+      await facade.loadDocuments(42);
+
+      const deleteBuilder = mockDeleteChain(null);
+
+      const result = await facade.removeCarnetPhoto(42);
+
+      expect(result).toBe(true);
+      expect(mockSupabase.client.storage.from).toHaveBeenCalledWith('documents');
+      expect(deleteBuilder.delete).toHaveBeenCalled();
+      expect(deleteBuilder.eq).toHaveBeenCalledWith('enrollment_id', 42);
+      expect(deleteBuilder.eq).toHaveBeenCalledWith('type', 'id_photo');
+      expect(facade.carnetPhoto()).toBeNull();
+    });
+
+    it('propaga el error si falla el delete en BD', async () => {
+      mockDeleteChain({ message: 'Connection failed' });
+
+      const result = await facade.removeCarnetPhoto(42);
+
+      expect(result).toBe(false);
+      expect(facade.error()).toContain('Error al eliminar foto carnet');
+    });
+  });
+
   // ── Load Existing Documents ──
 
   describe('loadDocuments', () => {

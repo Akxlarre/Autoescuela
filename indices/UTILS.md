@@ -20,7 +20,7 @@
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
-| `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue` |
+| `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
@@ -51,6 +51,7 @@
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
+| `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate` |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeDetalleDiario`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
