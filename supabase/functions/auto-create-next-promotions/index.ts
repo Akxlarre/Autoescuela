@@ -63,6 +63,27 @@ function addDaysIso(iso: string, days: number): string {
   return d.toISOString().split('T')[0];
 }
 
+const MONTH_NAMES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+/** Espejo de `generatePromoName()` en `admin-promocion-crear-drawer.component.ts` (creación manual). */
+function formatStartDateLabel(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  return `${d.getDate()} de ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 async function cancelHolidaySessions(
   supabase: ReturnType<typeof createClient>,
   promotionCourseId: number,
@@ -163,7 +184,7 @@ Deno.serve(async (req: Request) => {
         .from('professional_promotions')
         .insert({
           code: nextCode,
-          name: `Promoción ${nextCode}`,
+          name: `Promoción ${nextCode} (${formatStartDateLabel(nextStart)})`,
           start_date: nextStart,
           end_date: nextEnd,
           status: 'planned',
