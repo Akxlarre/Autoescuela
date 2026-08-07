@@ -1,8 +1,11 @@
 /** Fila del historial de cierres de caja para la vista de Historial de Cuadraturas. */
 export interface HistorialCierre {
   id: number;
+  branchId: number | null;
   /** Fecha del cierre (DATE string, ej: '2026-03-31') */
   fecha: string;
+  /** Siempre `true` en este modelo — el historial solo trae cierres cerrados (spec 0002-i). */
+  closed: boolean;
   fondoInicial: number;
   /** Saldo teórico del sistema (balance = fondoInicial + ingresos - egresos) */
   saldoSistema: number;

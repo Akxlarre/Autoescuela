@@ -46,9 +46,13 @@ export interface BranchScopeValue {
           (ngModelChange)="onBranchIdChange($event)"
           [disabled]="sedeDisabled()"
           styleClass="w-full"
+          appendTo="body"
           placeholder="Seleccione sede"
           data-llm-description="input for the instructor or vehicle's main branch"
         />
+        @if (disabledReason()) {
+          <p class="text-xs text-text-muted">{{ disabledReason() }}</p>
+        }
       </div>
 
       @if (bothBranchesVisible()) {
@@ -74,10 +78,14 @@ export class BranchScopeSelectorComponent {
   readonly bothBranches = input(false);
   readonly role = input.required<string>();
   readonly mode = input.required<'crear' | 'editar'>();
+  /** Fuerza el bloqueo del selector de sede más allá de la regla por rol (ej: vehículo con instructor activo asignado). */
+  readonly disabledReason = input<string | null>(null);
 
   readonly valueChange = output<BranchScopeValue>();
 
-  protected readonly sedeDisabled = computed(() => isSedeDisabled(this.role()));
+  protected readonly sedeDisabled = computed(
+    () => isSedeDisabled(this.role()) || this.disabledReason() !== null,
+  );
   protected readonly bothBranchesVisible = computed(() =>
     isBothBranchesVisible(this.role(), this.mode()),
   );

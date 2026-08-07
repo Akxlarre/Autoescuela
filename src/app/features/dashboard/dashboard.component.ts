@@ -36,6 +36,7 @@ import { RegistrarEgresoDrawerComponent } from '../admin/contabilidad-cuadratura
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
 import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
+import { DailyAgendaDrawerComponent } from './daily-agenda-drawer/daily-agenda-drawer.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -215,6 +216,7 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             <button
               class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
               (click)="openRecentActivity()"
+              data-llm-action="ver-toda-actividad-reciente"
             >
               Ver toda la actividad
             </button>
@@ -293,6 +295,7 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
                     class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
                     (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
                     pTooltip="Descartar"
+                    data-llm-action="descartar-alerta-dashboard"
                   >
                     <app-icon name="x" [size]="12" />
                   </button>
@@ -313,6 +316,7 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             <button
               class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
               (click)="openAlerts()"
+              data-llm-action="ver-todas-alertas-dashboard"
             >
               Ver todas las alertas
             </button>
@@ -529,7 +533,7 @@ export class DashboardComponent {
   }
 
   openAgenda() {
-    this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
+    this.layoutDrawer.open(DailyAgendaDrawerComponent, 'Agenda de Hoy', 'calendar-clock');
   }
 
   getAlertIcon(severity: string): string {

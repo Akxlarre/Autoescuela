@@ -175,6 +175,46 @@ export class AdminAlumnosFacade {
 }
 ```
 
+### Guard contra respuestas fuera de orden (requestId)
+
+Como el `effect()` del Smart Component puede disparar `loadX()`/`initialize()` varias veces
+seguidas (el admin cambiando de sede rápido, o un `refreshSilently()` post-acción solapándose
+con una carga en curso), una respuesta de red vieja puede llegar **después** de una más nueva
+y pisar el estado con datos que ya no corresponden al filtro/sede vigente — sin error visible.
+
+Todo Facade branch-scoped que siga el patrón SWR (`initialize()` + `refreshSilently()` +
+un método `fetchXxxData()` que aplica el resultado a los signals) debe protegerse con
+`createRequestGuard()` (`core/utils/request-guard.utils.ts`):
+
+```typescript
+import { createRequestGuard } from '@core/utils/request-guard.utils';
+
+@Injectable({ providedIn: 'root' })
+export class EjemploFacade {
+  // Un guard por cada método fetchXxxData() que aplique resultados a signals.
+  private readonly ejemploGuard = createRequestGuard();
+
+  private async fetchEjemploData(): Promise<void> {
+    const requestToken = this.ejemploGuard.next(); // token de ESTA llamada
+    const { data, error } = await this.supabase.client.from('ejemplo').select();
+    if (error) throw error;
+
+    // Si ya se disparó una fetch más reciente mientras esta esperaba, descartar.
+    if (!this.ejemploGuard.isCurrent(requestToken)) return;
+
+    this._data.set(data);
+  }
+}
+```
+
+- El `next()` se pide **al inicio** del método (antes del `await` de red), nunca en
+  `initialize()`/`refreshSilently()` — así protege por igual la carga inicial, el
+  `refreshSilently()` de re-entrada SWR y el `refreshSilently()` post-mutación.
+- El chequeo `isCurrent()` va **justo antes** de aplicar el resultado a un signal, no antes
+  del `throw error` — un error de la fetch vigente nunca debe quedar enmascarado por el guard.
+- Un Facade con más de un método `fetchXxxData()` independiente (que no comparten la misma
+  condición de carrera) usa un guard separado por método, no uno compartido.
+
 ### Facades que DEBEN aplicar branch filter
 
 | Facade | Campo a filtrar |

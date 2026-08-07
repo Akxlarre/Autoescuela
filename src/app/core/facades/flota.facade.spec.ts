@@ -3,6 +3,9 @@ import { FlotaFacade } from './flota.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
+import { ToastService } from '@core/services/ui/toast.service';
+
+const toastMock = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
 
 describe('FlotaFacade', () => {
   let service: FlotaFacade;
@@ -24,6 +27,8 @@ describe('FlotaFacade', () => {
         FlotaFacade,
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
 
@@ -45,6 +50,133 @@ describe('FlotaFacade', () => {
 
     service.selectVehicle(null);
     expect(service.selectedVehicleId()).toBeNull();
+  });
+});
+
+// ─── spec 0005-m: guard de requestId contra respuestas stale ─────────────────
+describe('FlotaFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
+  /**
+   * fetchVehiclesData() hace 2 queries SECUENCIALES (no en paralelo): `vehicles` primero,
+   * `expenses` (combustible) después. Solo controlamos la resolución de `vehicles` — es la
+   * única que alimenta `_vehicles.set()`. `expenses` se resuelve sola de inmediato con datos
+   * vacíos, no afecta el resultado que estamos probando.
+   */
+  function makeRaceableVehiclesMock() {
+    let vehiclesCallIndex = -1;
+    const deferreds: { promise: Promise<any>; resolve: (v: any) => void }[] = [];
+
+    function deferredFor(i: number) {
+      if (!deferreds[i]) {
+        let resolve!: (v: any) => void;
+        const promise = new Promise((res) => {
+          resolve = res;
+        });
+        deferreds[i] = { promise, resolve };
+      }
+      return deferreds[i];
+    }
+
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'vehicles') {
+          vehiclesCallIndex++;
+          const idx = vehiclesCallIndex;
+          const builder: any = {
+            select: vi.fn(() => builder),
+            order: vi.fn(() => builder),
+            or: vi.fn(() => builder),
+            then: (resolve: any, reject: any) => deferredFor(idx).promise.then(resolve, reject),
+          };
+          return builder;
+        }
+        const builder: any = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          not: vi.fn(() => builder),
+          gte: vi.fn(() => builder),
+          then: (resolve: any) => resolve({ data: [], error: null }),
+        };
+        return builder;
+      }),
+      channel: vi.fn().mockReturnValue({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() }),
+      removeChannel: vi.fn(),
+    };
+
+    return {
+      client,
+      resolveVehicles: (i: number, rows: any[]) =>
+        deferredFor(i).resolve({ data: rows, error: null }),
+      resolveVehiclesWithError: (i: number, err: any) =>
+        deferredFor(i).resolve({ data: null, error: err }),
+    };
+  }
+
+  function makeVehicleRow(id: number, plate: string): any {
+    return {
+      id,
+      license_plate: plate,
+      brand: 'Nissan',
+      model: 'Versa',
+      year: 2024,
+      status: 'available',
+      current_km: 0,
+      last_maintenance: null,
+      branch_id: 1,
+      both_branches: false,
+      vehicle_assignments: [],
+      vehicle_documents: [],
+    };
+  }
+
+  it('AC1/AC-E1: solo aplica el resultado de la fetch MÁS RECIENTE, aunque la vieja resuelva después', async () => {
+    const mock = makeRaceableVehiclesMock();
+
+    TestBed.configureTestingModule({
+      providers: [
+        FlotaFacade,
+        { provide: SupabaseService, useValue: mock },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        { provide: ToastService, useValue: toastMock },
+      ],
+    });
+    const facade = TestBed.inject(FlotaFacade);
+
+    const oldCall = facade.initialize(); // vehicles call #0 (vieja)
+    const newCall = facade.initialize(); // vehicles call #1 (vigente) — dispara antes de que la vieja resuelva
+
+    // Orden de llegada invertido: la vigente resuelve primero.
+    mock.resolveVehicles(1, [makeVehicleRow(200, 'NEW-01')]);
+    await newCall;
+    mock.resolveVehicles(0, [makeVehicleRow(100, 'OLD-01')]);
+    await oldCall;
+
+    expect(facade.vehicles().map((v) => v.id)).toEqual([200]);
+  });
+
+  it('AC-E2: si la fetch vigente falla, el error se setea igual — el guard no enmascara errores reales', async () => {
+    const mock = makeRaceableVehiclesMock();
+
+    TestBed.configureTestingModule({
+      providers: [
+        FlotaFacade,
+        { provide: SupabaseService, useValue: mock },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        { provide: ToastService, useValue: toastMock },
+      ],
+    });
+    const facade = TestBed.inject(FlotaFacade);
+
+    const oldCall = facade.initialize(); // vehicles call #0 (vieja)
+    const newCall = facade.initialize(); // vehicles call #1 (vigente)
+
+    mock.resolveVehicles(0, [makeVehicleRow(100, 'OLD-01')]);
+    await oldCall;
+    mock.resolveVehiclesWithError(1, new Error('network fail'));
+    await newCall;
+
+    expect(facade.error()).toBe('Error al cargar la flota vehicular.');
   });
 });
 
@@ -72,6 +204,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => 1 } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -99,6 +232,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -161,6 +295,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => 1 } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -249,6 +384,7 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
           useValue: { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) },
         },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const flotaFacade = TestBed.inject(FlotaFacade);

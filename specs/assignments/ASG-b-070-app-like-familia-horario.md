@@ -1,7 +1,7 @@
 # Asignación ASG-b-070 — App-like: familia "horario" (`instructor` + `alumno`)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03

@@ -174,7 +174,7 @@ const INTERFACE_ICONS = [
         class="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-3 border-border-subtle"
       >
         <div class="flex flex-col">
-          <h3 class="text-base font-bold text-text-primary m-0">Sección Hero (Config Studio)</h3>
+          <h3 class="font-bold text-text-primary m-0">Sección Hero (Config Studio)</h3>
           <span class="text-xs text-text-muted mt-0.5"
             >Diseña y previsualiza la cabecera principal en tiempo real.</span
           >
@@ -186,7 +186,7 @@ const INTERFACE_ICONS = [
         <div class="studio-controls">
           <!-- 1. Layout / Disposición -->
           <div class="studio-card span-full">
-            <label class="field-label !mb-0">1. Disposición / Layout de Pantalla</label>
+            <label class="field-label mb-0!">1. Disposición / Layout de Pantalla</label>
             <span class="text-2xs text-text-muted"
               >Elige cómo se organizarán las columnas en pantallas grandes.</span
             >
@@ -267,9 +267,10 @@ const INTERFACE_ICONS = [
                     heroGroup().get('background.type')?.setValue('none'); heroGroup().markAsDirty()
                   "
                   data-llm-action="seleccionar-fondo-hero-tema"
+                  title="Tema (Degradado)"
                 >
                   <app-icon name="palette" [size]="13" />
-                  <span>Tema (Degradado)</span>
+                  <span class="media-pill-label">Tema (Degradado)</span>
                 </button>
                 <button
                   type="button"
@@ -279,9 +280,10 @@ const INTERFACE_ICONS = [
                     heroGroup().get('background.type')?.setValue('color'); heroGroup().markAsDirty()
                   "
                   data-llm-action="seleccionar-fondo-hero-color"
+                  title="Color Personalizado"
                 >
                   <app-icon name="pipette" [size]="13" />
-                  <span>Color Personalizado</span>
+                  <span class="media-pill-label">Color Personalizado</span>
                 </button>
                 <button
                   type="button"
@@ -291,9 +293,10 @@ const INTERFACE_ICONS = [
                     heroGroup().get('background.type')?.setValue('image'); heroGroup().markAsDirty()
                   "
                   data-llm-action="seleccionar-fondo-hero-imagen"
+                  title="Imagen"
                 >
                   <app-icon name="image" [size]="13" />
-                  <span>Imagen</span>
+                  <span class="media-pill-label">Imagen</span>
                 </button>
                 <button
                   type="button"
@@ -303,9 +306,10 @@ const INTERFACE_ICONS = [
                     heroGroup().get('background.type')?.setValue('video'); heroGroup().markAsDirty()
                   "
                   data-llm-action="seleccionar-fondo-hero-video"
+                  title="Video (MP4)"
                 >
                   <app-icon name="video" [size]="13" />
-                  <span>Video (MP4)</span>
+                  <span class="media-pill-label">Video (MP4)</span>
                 </button>
               </div>
             </div>
@@ -388,7 +392,7 @@ const INTERFACE_ICONS = [
               <!-- Opacidad Visual Range Slider -->
               <div class="flex flex-col gap-2 mt-4">
                 <div class="flex justify-between items-center">
-                  <label class="field-label !mb-0"
+                  <label class="field-label mb-0!"
                     >Opacidad de Capa Oscura:
                     <strong
                       >{{ heroGroup().get('background.overlayOpacity')?.value }}%</strong
@@ -441,9 +445,11 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('none'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-ninguno"
+                    title="Ninguno"
                   >
                     <app-icon name="x-circle" [size]="13" />
-                    <span>Ninguno</span>
+                    <span class="media-pill-label">Ninguno</span>
                   </button>
                   <button
                     type="button"
@@ -452,9 +458,11 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('image'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-imagen"
+                    title="Imagen Lateral"
                   >
                     <app-icon name="image" [size]="13" />
-                    <span>Imagen Lateral</span>
+                    <span class="media-pill-label">Imagen Lateral</span>
                   </button>
                   <button
                     type="button"
@@ -463,20 +471,22 @@ const INTERFACE_ICONS = [
                     (click)="
                       heroGroup().get('media.type')?.setValue('video'); heroGroup().markAsDirty()
                     "
+                    data-llm-action="seleccionar-media-lateral-video"
+                    title="Video Lateral"
                   >
                     <app-icon name="video" [size]="13" />
-                    <span>Video Lateral</span>
+                    <span class="media-pill-label">Video Lateral</span>
                   </button>
                 </div>
               </div>
 
               @if (heroGroup().get('media.type')?.value === 'none') {
                 <div
-                  class="mt-4 p-4 rounded-xl border border-dashed flex flex-col items-center justify-center text-center gap-2 border-border-default bg-black/[0.02]"
+                  class="mt-4 p-4 rounded-xl border border-dashed flex flex-col items-center justify-center text-center gap-2 border-border-default bg-black/2"
                 >
                   <app-icon name="layout" [size]="20" class="text-text-muted opacity-50" />
                   <span class="text-sm font-medium text-text-primary">Sin elemento lateral</span>
-                  <span class="text-xs text-text-muted max-w-[280px]">
+                  <span class="text-xs text-text-muted max-w-70">
                     El layout dividido mostrará una tarjeta limpia y desenfocada sin contenido,
                     dándole más protagonismo al texto.
                   </span>
@@ -547,6 +557,7 @@ const INTERFACE_ICONS = [
                 formControlName="headline"
                 class="field-input"
                 placeholder="Título de alto impacto"
+                data-llm-description="input for the hero section main headline"
               />
             </div>
 
@@ -557,6 +568,7 @@ const INTERFACE_ICONS = [
                 rows="3"
                 class="field-input resize-none"
                 placeholder="Propuesta de valor detallada sobre los cursos..."
+                data-llm-description="input for the hero section subheadline"
               ></textarea>
             </div>
           </div>
@@ -564,9 +576,13 @@ const INTERFACE_ICONS = [
           <!-- 4. Prueba Social -->
           <div formGroupName="trustBadge" class="studio-card">
             <div class="flex items-center justify-between">
-              <span class="studio-card-title !mb-0">4. Prueba Social / Trust Badge</span>
+              <span class="studio-card-title mb-0!">4. Prueba Social / Trust Badge</span>
               <label class="premium-switch">
-                <input type="checkbox" formControlName="enabled" />
+                <input
+                  type="checkbox"
+                  formControlName="enabled"
+                  data-llm-action="alternar-trust-badge-habilitado"
+                />
                 <span class="switch-slider"></span>
               </label>
             </div>
@@ -585,6 +601,7 @@ const INTERFACE_ICONS = [
                   formControlName="text"
                   class="field-input"
                   placeholder="Ej: 4.9/5 en Google Reviews"
+                  data-llm-description="input for the trust badge text"
                 />
               </div>
               <div class="flex flex-col gap-1.5 bento-wide">
@@ -596,6 +613,7 @@ const INTERFACE_ICONS = [
                   min="1"
                   max="5"
                   step="0.1"
+                  data-llm-description="input for the trust badge star rating"
                 />
               </div>
             </div>
@@ -612,6 +630,7 @@ const INTERFACE_ICONS = [
                   formControlName="text"
                   class="field-input"
                   placeholder="Ej: Consultar Cursos por WhatsApp"
+                  data-llm-description="input for the hero CTA button text"
                 />
               </div>
               <div class="flex flex-col gap-1.5 bento-wide">
@@ -621,6 +640,7 @@ const INTERFACE_ICONS = [
                   formControlName="whatsapp"
                   class="field-input"
                   placeholder="Ej: 56912345678"
+                  data-llm-description="input for the hero CTA WhatsApp phone number"
                 />
               </div>
             </div>
@@ -639,8 +659,9 @@ const INTERFACE_ICONS = [
                   <div class="relative w-40 shrink-0 icon-dropdown-container">
                     <button
                       type="button"
-                      class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-[34px]"
+                      class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-8.5"
                       (click)="toggleIconDropdown($index, $event)"
+                      data-llm-action="alternar-selector-icono-pilar"
                     >
                       <div class="flex items-center gap-2">
                         @if (featCtrl.get('icon')?.value) {
@@ -670,11 +691,12 @@ const INTERFACE_ICONS = [
                           <input
                             type="text"
                             placeholder="Buscar icono..."
-                            class="field-input py-1 px-2.5 text-xs w-full pr-7 h-[30px]"
+                            class="field-input py-1 px-2.5 text-xs w-full pr-7 h-7.5"
                             [value]="iconSearchQuery()"
                             (input)="onIconSearch($event)"
                             (click)="$event.stopPropagation()"
                             autofocus
+                            data-llm-description="input for searching an icon by name"
                           />
                           @if (iconSearchQuery()) {
                             <button
@@ -682,6 +704,7 @@ const INTERFACE_ICONS = [
                               class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer border-none bg-transparent"
                               aria-label="Limpiar búsqueda de íconos"
                               (click)="clearIconSearch($event)"
+                              data-llm-action="limpiar-busqueda-icono"
                             >
                               <app-icon name="x" [size]="10" />
                             </button>
@@ -705,6 +728,7 @@ const INTERFACE_ICONS = [
                                   : 'var(--text-muted)'
                               "
                               (click)="selectCategory(cat.id)"
+                              data-llm-action="seleccionar-categoria-icono"
                             >
                               <app-icon [name]="cat.icon" [size]="9" />
                               <span>{{ cat.label }}</span>
@@ -723,6 +747,7 @@ const INTERFACE_ICONS = [
                             (click)="
                               featCtrl.get('icon')?.setValue(''); showIconDropdown[$index] = false
                             "
+                            data-llm-action="quitar-icono-pilar"
                           >
                             <app-icon name="x" [size]="10" />
                             <span>Ocultar Icono</span>
@@ -738,6 +763,7 @@ const INTERFACE_ICONS = [
                                 featCtrl.get('icon')?.setValue(iconName);
                                 showIconDropdown[$index] = false
                               "
+                              data-llm-action="seleccionar-icono-pilar"
                             >
                               <app-icon [name]="iconName" [size]="14" />
                             </button>
@@ -753,6 +779,7 @@ const INTERFACE_ICONS = [
                       formControlName="text"
                       class="w-full bg-transparent border border-transparent rounded-lg py-2 px-3 text-sm text-text-primary outline-none transition-colors hover:bg-base focus:bg-base focus:border-ds-brand"
                       placeholder="Ej: Flota Moderna de Vehículos"
+                      data-llm-description="input for a hero feature pillar text"
                     />
                   </div>
                 </div>
@@ -814,12 +841,12 @@ const INTERFACE_ICONS = [
       grid-template-columns: 1fr;
       gap: 1.5rem;
     }
-    @media (min-width: 768px) {
+    @container layoutmain (min-width: 768px) {
       .studio-controls {
         grid-template-columns: repeat(2, 1fr);
       }
     }
-    @media (min-width: 1200px) {
+    @container layoutmain (min-width: 1200px) {
       .studio-controls {
         grid-template-columns: repeat(3, 1fr);
       }
@@ -846,7 +873,7 @@ const INTERFACE_ICONS = [
     }
     .layout-selector-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 0.75rem;
       width: 100%;
     }
@@ -955,6 +982,7 @@ const INTERFACE_ICONS = [
     }
     .media-type-pills {
       display: flex;
+      flex-wrap: wrap;
       background: var(--bg-subtle);
       border-radius: 10px;
       padding: 3px;
@@ -963,6 +991,8 @@ const INTERFACE_ICONS = [
     }
     .media-pill {
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -979,6 +1009,12 @@ const INTERFACE_ICONS = [
     }
     .media-pill:hover {
       color: var(--text-primary);
+    }
+    .media-pill-label {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
     .media-pill.active {
       background: var(--bg-surface);

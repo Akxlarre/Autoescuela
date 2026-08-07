@@ -68,3 +68,37 @@ describe('resolveLiveClassActionPlan (fix-076)', () => {
     expect(plan.flow).toBe('informativo');
   });
 });
+
+// ─── fix-133-m: propagar vehicleId/vehicleCurrentKm/branchId desde el Dashboard ──
+describe('resolveLiveClassActionPlan propaga vehicleId, vehicleCurrentKm y branchId en el row de iniciar/finalizar (fix-133-m)', () => {
+  it('flow "iniciar" incluye vehicleId, vehicleCurrentKm y branchId de la clase', () => {
+    const plan = resolveLiveClassActionPlan(
+      buildLiveClass({ status: 'pending', vehicleId: 6, vehicleCurrentKm: 6543, branchId: 2 }),
+    );
+
+    expect(plan).toEqual(
+      expect.objectContaining({
+        flow: 'iniciar',
+        row: expect.objectContaining({ vehicleId: 6, vehicleCurrentKm: 6543, branchId: 2 }),
+      }),
+    );
+  });
+
+  it('flow "finalizar" incluye vehicleId, vehicleCurrentKm y branchId de la clase', () => {
+    const plan = resolveLiveClassActionPlan(
+      buildLiveClass({
+        status: 'in_progress',
+        vehicleId: 6,
+        vehicleCurrentKm: 6543,
+        branchId: 2,
+      }),
+    );
+
+    expect(plan).toEqual(
+      expect.objectContaining({
+        flow: 'finalizar',
+        row: expect.objectContaining({ vehicleId: 6, vehicleCurrentKm: 6543, branchId: 2 }),
+      }),
+    );
+  });
+});

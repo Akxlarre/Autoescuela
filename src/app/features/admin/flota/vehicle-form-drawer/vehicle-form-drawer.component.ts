@@ -15,18 +15,17 @@ import {
 } from '@angular/forms';
 
 // PrimeNG
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 // Shared
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
+import type { BranchScopeValue } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
 
 // Facades & Models
 import { FlotaFacade } from '@core/facades/flota.facade';
@@ -35,11 +34,6 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import {
-  isSedeDisabled,
-  isBothBranchesVisible,
-  isBothBranchesDisabled,
-} from '@core/utils/branch-scope-ui.utils';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -52,138 +46,138 @@ import {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    InputTextModule,
     SelectModule,
     ButtonModule,
-    InputNumberModule,
     MessageModule,
-    ToggleSwitchModule,
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     StableWidthDirective,
+    BranchScopeSelectorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-drawer-form>
       <app-drawer-content-loader>
         <ng-template #skeletons>
-          <div class="flex flex-col gap-6 px-6 py-8">
+          <div class="flex flex-col gap-4">
             <!-- Patente -->
             <div class="flex flex-col gap-1.5">
-              <app-skeleton-block variant="text" width="25%" height="12px" />
-              <app-skeleton-block variant="rect" width="100%" height="44px" />
+              <app-skeleton-block variant="text" width="25%" height="13px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
             </div>
             <!-- Marca / Modelo -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="35%" height="12px" />
-                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="text" width="35%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
               </div>
               <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="40%" height="12px" />
-                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="text" width="40%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
               </div>
             </div>
             <!-- Año / KM -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="25%" height="12px" />
-                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="text" width="25%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
               </div>
               <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="45%" height="12px" />
-                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="text" width="45%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
               </div>
             </div>
             <!-- Estado -->
             <div class="flex flex-col gap-1.5">
-              <app-skeleton-block variant="text" width="40%" height="12px" />
-              <app-skeleton-block variant="rect" width="100%" height="44px" />
+              <app-skeleton-block variant="text" width="40%" height="13px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
+            </div>
+            <!-- Sede -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="13px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
             </div>
           </div>
         </ng-template>
         <ng-template #content>
           <form [formGroup]="vehicleForm" (ngSubmit)="onSubmit()">
-            <div class="grid grid-cols-1 gap-6">
+            <div class="flex flex-col gap-4">
               <!-- Patente -->
               <div class="flex flex-col gap-1.5">
-                <label for="vf-plate" class="micro-label">
-                  Patente <span class="text-error">*</span>
-                </label>
+                <label for="vf-plate" class="field-label">Patente *</label>
                 <input
                   id="vf-plate"
-                  pInputText
+                  type="text"
                   formControlName="license_plate"
                   placeholder="ABC-123"
                   aria-required="true"
-                  class="w-full h-11 rounded-xl border-border-subtle hover:border-border-strong focus:border-brand bg-base font-mono uppercase text-lg px-4"
+                  class="field-input"
+                  [class.field-input--error]="
+                    vehicleForm.controls.license_plate.touched &&
+                    vehicleForm.controls.license_plate.invalid
+                  "
                   data-llm-description="input for the vehicle license plate"
                 />
                 @if (
                   vehicleForm.controls.license_plate.touched &&
                   vehicleForm.controls.license_plate.invalid
                 ) {
-                  <small class="text-error text-xs">Formato inválido (Ej: AB1234 o ABCD12)</small>
+                  <span class="field-error">Formato inválido (Ej: AB1234 o ABCD12)</span>
                 }
               </div>
 
               <!-- Marca / Modelo -->
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-brand" class="micro-label">
-                    Marca <span class="text-error">*</span>
-                  </label>
+                  <label for="vf-brand" class="field-label">Marca *</label>
                   <input
                     id="vf-brand"
-                    pInputText
+                    type="text"
                     formControlName="brand"
                     placeholder="Nissan"
                     aria-required="true"
-                    class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                    class="field-input"
                     data-llm-description="input for the vehicle brand"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-model" class="micro-label">
-                    Modelo <span class="text-error">*</span>
-                  </label>
+                  <label for="vf-model" class="field-label">Modelo *</label>
                   <input
                     id="vf-model"
-                    pInputText
+                    type="text"
                     formControlName="model"
                     placeholder="Versa"
                     aria-required="true"
-                    class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                    class="field-input"
                     data-llm-description="input for the vehicle model"
                   />
                 </div>
               </div>
 
               <!-- Año / KM -->
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-year" class="micro-label">
-                    Año <span class="text-error">*</span>
-                  </label>
-                  <p-inputNumber
-                    inputId="vf-year"
+                  <label for="vf-year" class="field-label">Año *</label>
+                  <input
+                    id="vf-year"
+                    type="number"
                     formControlName="year"
-                    [useGrouping]="false"
                     placeholder="2024"
                     aria-required="true"
-                    inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                    class="field-input"
                     data-llm-description="input for the vehicle year"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-km" class="micro-label"> KM Actual </label>
-                  <p-inputNumber
-                    inputId="vf-km"
+                  <label for="vf-km" class="field-label">KM Actual</label>
+                  <input
+                    id="vf-km"
+                    type="number"
                     formControlName="current_km"
                     placeholder="0"
-                    inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                    class="field-input"
                     data-llm-description="input for the vehicle current odometer reading"
                   />
                 </div>
@@ -191,46 +185,28 @@ import {
 
               <!-- Estado -->
               <div class="flex flex-col gap-1.5">
-                <label for="vf-status" class="micro-label"> Estado Actual </label>
+                <label for="vf-status" class="field-label">Estado Actual</label>
                 <p-select
                   inputId="vf-status"
                   formControlName="status"
                   [options]="statusOptions"
                   placeholder="Seleccionar estado"
-                  styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
+                  styleClass="w-full"
+                  appendTo="body"
                   data-llm-description="select for the vehicle status"
                 ></p-select>
               </div>
 
-              <!-- Sede -->
-              <div class="flex flex-col gap-1.5">
-                <label for="vf-sede" class="micro-label">
-                  Sede principal <span class="text-error">*</span>
-                </label>
-                <p-select
-                  inputId="vf-sede"
-                  formControlName="branch_id"
-                  [options]="branchOptions()"
-                  optionLabel="name"
-                  optionValue="id"
-                  placeholder="Seleccione sede"
-                  styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
-                  data-llm-description="select for the vehicle's main branch"
-                ></p-select>
-              </div>
-
-              @if (bothBranchesVisible()) {
-                <div class="flex items-center gap-3">
-                  <p-toggleswitch
-                    inputId="vf-both-branches"
-                    formControlName="both_branches"
-                    data-llm-description="toggle whether this vehicle operates in both branches"
-                  />
-                  <label class="text-sm text-text-secondary" for="vf-both-branches">
-                    Disponible para ambas sedes
-                  </label>
-                </div>
-              }
+              <!-- Sede + Ambas sedes -->
+              <app-branch-scope-selector
+                [branches]="branchOptions()"
+                [branchId]="vehicleForm.controls.branch_id.value"
+                [bothBranches]="vehicleForm.controls.both_branches.value"
+                [role]="authFacade.currentUser()?.role ?? ''"
+                [mode]="isEdit() ? 'editar' : 'crear'"
+                [disabledReason]="sedeDisabledReason()"
+                (valueChange)="onSedeScopeChange($event)"
+              />
 
               <!-- Mensajes -->
               @if (errorMsg()) {
@@ -273,7 +249,7 @@ export class VehicleFormDrawerComponent {
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly authFacade = inject(AuthFacade);
+  protected readonly authFacade = inject(AuthFacade);
 
   // ── Estado ────────────────────────────────────────────────────────────────
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
@@ -281,9 +257,17 @@ export class VehicleFormDrawerComponent {
   readonly isSaving = signal(false);
   readonly errorMsg = signal<string | null>(null);
 
+  /** Si el vehículo tiene instructor activo asignado, la sede no puede tocarse desde acá (fix-119-m). */
+  readonly sedeDisabledReason = computed<string | null>(() => {
+    const id = this.vehicleId();
+    if (!id) return null;
+    const vehicle = this.flotaFacade.vehicles().find((v) => v.id === id);
+    if (!vehicle?.instructorId) return null;
+    return `Este vehículo está asignado a ${vehicle.instructorName ?? 'un instructor'}. Para cambiar la sede, primero desasígnalo desde Editar Instructor.`;
+  });
+
   readonly statusOptions = [
     { label: 'Disponible', value: 'available' },
-    { label: 'En Clase', value: 'in_class' },
     { label: 'Mantenimiento', value: 'maintenance' },
     { label: 'Fuera de Servicio', value: 'out_of_service' },
   ];
@@ -303,18 +287,6 @@ export class VehicleFormDrawerComponent {
   });
 
   readonly branchOptions = this.branchFacade.branches;
-
-  /** Secretaria nunca elige/cambia la sede — spec 0004-m, AC9 (simetría con instructores). */
-  readonly sedeDisabled = computed(() => isSedeDisabled(this.authFacade.currentUser()?.role ?? ''));
-  readonly bothBranchesVisible = computed(() =>
-    isBothBranchesVisible(
-      this.authFacade.currentUser()?.role ?? '',
-      this.isEdit() ? 'editar' : 'crear',
-    ),
-  );
-  readonly bothBranchesDisabled = computed(() =>
-    isBothBranchesDisabled(this.authFacade.currentUser()?.role ?? ''),
-  );
 
   constructor() {
     effect(() => {
@@ -343,20 +315,13 @@ export class VehicleFormDrawerComponent {
         });
       }
     });
+  }
 
-    // Secretaria nunca elige/cambia sede ni "Ambas" (spec 0004-m, AC9) — se usan
-    // disable()/enable() (no [disabled] en el template) porque son reactive forms.
-    effect(() => {
-      if (this.sedeDisabled()) {
-        this.vehicleForm.controls.branch_id.disable();
-      } else {
-        this.vehicleForm.controls.branch_id.enable();
-      }
-      if (this.bothBranchesDisabled()) {
-        this.vehicleForm.controls.both_branches.disable();
-      } else {
-        this.vehicleForm.controls.both_branches.enable();
-      }
+  /** Delegado a app-branch-scope-selector (mismo componente que instructores, spec 0004-m). */
+  onSedeScopeChange(value: BranchScopeValue): void {
+    this.vehicleForm.patchValue({
+      branch_id: value.branchId,
+      both_branches: value.bothBranches,
     });
   }
 

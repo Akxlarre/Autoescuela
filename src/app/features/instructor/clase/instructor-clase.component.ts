@@ -374,8 +374,9 @@ export class InstructorClaseComponent implements OnInit {
       const kmStart = this.startForm.value.kmStart;
       await this.clasesFacade.startClass(sessionId, kmStart);
       this.router.navigate(['/app/instructor/clase', sessionId]);
-    } catch {
-      this.clasesFacade.showError('Error al iniciar la clase', 'Por favor, intenta de nuevo.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Por favor, intenta de nuevo.';
+      this.clasesFacade.showError('Error al iniciar la clase', message);
     } finally {
       this.isSubmitting.set(false);
     }

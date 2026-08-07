@@ -125,8 +125,8 @@ describe('CuadraturaFacade', () => {
 
   // ── Estado inicial ──────────────────────────────────────────────────────────
 
-  it('debe inicializar con fondoInicial = 50.000', () => {
-    expect(facade.fondoInicial()).toBe(50_000);
+  it('debe inicializar con fondoInicial = 0 (hotfix-002-i, sin asunción de $50.000)', () => {
+    expect(facade.fondoInicial()).toBe(0);
   });
 
   it('debe inicializar con pagosHoy vacío', () => {
@@ -159,8 +159,8 @@ describe('CuadraturaFacade', () => {
     expect(facade.totalEgresosHoy()).toBe(0);
   });
 
-  it('saldoTeoricoEfectivo debe ser fondoInicial cuando no hay movimientos', () => {
-    expect(facade.saldoTeoricoEfectivo()).toBe(50_000);
+  it('saldoTeoricoEfectivo debe ser fondoInicial (0) cuando no hay movimientos', () => {
+    expect(facade.saldoTeoricoEfectivo()).toBe(0);
   });
 
   // ── Computed: lógica de negocio ─────────────────────────────────────────────
@@ -185,8 +185,8 @@ describe('CuadraturaFacade', () => {
       { id: 1, tipo: 'expense', descripcion: 'Insumos', monto: 10_000 },
     ]);
 
-    // saldo = 50.000 + 150.000 - 10.000 = 190.000
-    expect(facade.saldoTeoricoEfectivo()).toBe(190_000);
+    // saldo = 0 (fondoInicial) + 150.000 - 10.000 = 140.000
+    expect(facade.saldoTeoricoEfectivo()).toBe(140_000);
   });
 
   it('otrosIngresosHoy suma claseA + otros correctamente', () => {

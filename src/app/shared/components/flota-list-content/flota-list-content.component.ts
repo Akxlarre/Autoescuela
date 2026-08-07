@@ -117,6 +117,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 class="w-full pl-10! h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
                 [(ngModel)]="searchTerm"
                 (ngModelChange)="onSearchChange($event)"
+                data-llm-description="input for searching vehicles by plate, brand or model"
               />
             </div>
             <div class="toolbar-dropdowns">
@@ -126,6 +127,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 placeholder="Tipo"
                 styleClass="h-10 w-full"
                 (ngModelChange)="onTypeChange($event)"
+                data-llm-action="filtrar-flota-por-tipo"
               />
               <p-select
                 [options]="statusOptions"
@@ -133,6 +135,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 placeholder="Estado"
                 styleClass="h-10 w-full toolbar-dropdown--full"
                 (ngModelChange)="onStatusChange($event)"
+                data-llm-action="filtrar-flota-por-estado"
               />
             </div>
           </div>
@@ -143,6 +146,7 @@ import { formatCLP } from '@core/utils/date.utils';
               class="p-button-outlined p-button-sm h-10 px-4"
               [loading]="isLoading()"
               (click)="refreshRequested.emit()"
+              data-llm-action="actualizar-lista-flota"
             >
               <app-icon name="refresh-cw" [size]="14" class="mr-2" />
             </button>
@@ -277,6 +281,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Agenda"
                           (click)="viewAgenda.emit(v.id)"
+                          data-llm-action="ver-agenda-vehiculo"
                         >
                           <app-icon name="calendar" [size]="16" />
                         </button>
@@ -286,6 +291,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Documentos"
                           (click)="manageDocuments.emit(v.id)"
+                          data-llm-action="gestionar-documentos-vehiculo"
                         >
                           <app-icon name="file-text" [size]="16" />
                         </button>
@@ -295,6 +301,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                           pTooltip="Editar"
                           (click)="editVehicle.emit(v.id)"
+                          data-llm-action="editar-vehiculo"
                         >
                           <app-icon name="pencil" [size]="16" />
                         </button>
@@ -303,6 +310,7 @@ import { formatCLP } from '@core/utils/date.utils';
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                           [routerLink]="[basePath(), 'flota', v.id, 'mantenimientos']"
                           pTooltip="Mantenimientos"
+                          data-llm-nav="mantenimientos-vehiculo"
                         >
                           <app-icon name="wrench" [size]="16" />
                         </a>
@@ -380,6 +388,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="viewAgenda.emit(v.id)"
+                      data-llm-action="ver-agenda-vehiculo"
                     >
                       <app-icon name="calendar" [size]="14" />
                     </button>
@@ -388,6 +397,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="manageDocuments.emit(v.id)"
+                      data-llm-action="gestionar-documentos-vehiculo"
                     >
                       <app-icon name="file-text" [size]="14" />
                     </button>
@@ -396,6 +406,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
                       (click)="editVehicle.emit(v.id)"
+                      data-llm-action="editar-vehiculo"
                     >
                       <app-icon name="pencil" [size]="14" />
                     </button>
@@ -403,6 +414,7 @@ import { formatCLP } from '@core/utils/date.utils';
                       pButton
                       class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                       [routerLink]="[basePath(), 'flota', v.id, 'mantenimientos']"
+                      data-llm-nav="mantenimientos-vehiculo"
                       ><app-icon name="wrench" [size]="14"
                     /></a>
                   </div>
@@ -505,7 +517,7 @@ import { formatCLP } from '@core/utils/date.utils';
 })
 export class FlotaListContentComponent {
   readonly vehicles = input<VehicleTableRow[]>([]);
-  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, inClass: 0, maintenance: 0 });
+  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0 });
   readonly isLoading = input(false);
   readonly basePath = input<string>('/app/admin');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
@@ -541,7 +553,6 @@ export class FlotaListContentComponent {
   ];
   readonly statusOptions = [
     { label: 'Disponible', value: 'available' as VehicleStatus },
-    { label: 'En Clase', value: 'in_class' as VehicleStatus },
     { label: 'Mantenimiento', value: 'maintenance' as VehicleStatus },
     { label: 'Fuera de Servicio', value: 'out_of_service' as VehicleStatus },
   ];
@@ -559,7 +570,6 @@ export class FlotaListContentComponent {
       icon: 'circle-check',
       color: 'success',
     },
-    { id: 'en-clase', label: 'En Clase', value: this.kpis().inClass, icon: 'graduation-cap' },
     {
       id: 'en-taller',
       label: 'En Taller',
@@ -609,7 +619,6 @@ export class FlotaListContentComponent {
     return (
       {
         available: 'Disponible',
-        in_class: 'En Clase',
         maintenance: 'Taller',
         out_of_service: 'Baja',
       }[status] || status
@@ -617,9 +626,8 @@ export class FlotaListContentComponent {
   }
   statusSeverity(status: string): 'success' | 'warn' | 'danger' | 'info' {
     return (
-      ({ available: 'success', in_class: 'info', maintenance: 'warn', out_of_service: 'danger' }[
-        status
-      ] as any) || 'info'
+      ({ available: 'success', maintenance: 'warn', out_of_service: 'danger' }[status] as any) ||
+      'info'
     );
   }
 }

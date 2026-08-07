@@ -60,7 +60,10 @@ import type { AnyPdfImage } from './pdf-utils.ts';
 /**
  * Builds a structured, well-formatted contract PDF directly from enrollment data.
  */
-export function buildStructuredPdf(data: EnrollmentData, signature?: AnyPdfImage | null): Uint8Array {
+export function buildStructuredPdf(
+  data: EnrollmentData,
+  signature?: AnyPdfImage | null,
+): Uint8Array {
   const u = data.student.user;
   const fullName =
     `${u.first_names} ${u.paternal_last_name}${u.maternal_last_name ? ' ' + u.maternal_last_name : ''}`.trim();
@@ -215,6 +218,13 @@ export function buildStructuredPdf(data: EnrollmentData, signature?: AnyPdfImage
     );
   }
 
+  if (data.course.license_class !== 'B') {
+    clause(
+      'OCTAVA: Evaluaciones y examen final.',
+      'El/la alumno/a deber\xE1 rendir las evaluaciones parciales del curso y el examen final te\xF3rico y pr\xE1ctico exigidos por la normativa vigente para la clase profesional contratada. La aprobaci\xF3n de dichas evaluaciones es requisito para la obtenci\xF3n del certificado del curso.',
+    );
+  }
+
   section('V', 'FIRMAS');
   T(ML, y, `En ${data.branch.address ?? 'la ciudad'}, a ${today}.`, 'F1', 10);
   y -= 55;
@@ -226,7 +236,7 @@ export function buildStructuredPdf(data: EnrollmentData, signature?: AnyPdfImage
   y -= 13;
   T(ML, y, 'Representante de la Escuela', 'F1', 9);
   T(col2X, y, fullName, 'F1', 9);
-  
+
   if (signature) {
     // Stamp the signature image above the student's line
     // The signature area is at `col2X` with a width of 180.
@@ -237,7 +247,7 @@ export function buildStructuredPdf(data: EnrollmentData, signature?: AnyPdfImage
     const sigY = y + 5;
     ops += `q ${sigW} 0 0 ${sigH} ${sigX} ${Math.round(sigY)} cm /Im2 Do Q\n`;
   }
-  
+
   y -= 12;
   T(ML, y, data.branch.name, 'F1', 9);
   T(col2X, y, `RUT: ${u.rut}`, 'F1', 9);

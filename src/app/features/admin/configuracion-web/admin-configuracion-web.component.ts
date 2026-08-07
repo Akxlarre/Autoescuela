@@ -55,7 +55,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     StableWidthDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid" appBentoGridLayout>
+    <div #bentoGrid class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
       <!-- Hero Section -->
       <app-section-hero
         density="slim"
@@ -71,9 +71,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
       <!-- Main Editor Bento Card -->
       <div
-        class="bento-banner card p-0 overflow-hidden"
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col h-full"
         appCardHover
-        style="min-height: 500px; display: flex; flex-direction: column;"
       >
         <!-- Header with branch selection for Admin and Tabs Switcher -->
         <div class="flex flex-col border-b border-border-default bg-base z-10">
@@ -279,12 +278,32 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
 
   // Tab definitions
   protected readonly tabs = [
-    { id: 'general' as ConfigTab, label: 'General & Redes', icon: 'settings' },
-    { id: 'hero' as ConfigTab, label: 'Sección Hero', icon: 'layout' },
-    { id: 'cursos' as ConfigTab, label: 'Cursos & Precios', icon: 'book-open' },
-    { id: 'promo' as ConfigTab, label: 'Campaña Promo', icon: 'tag' },
-    { id: 'contacto' as ConfigTab, label: 'Contacto & Horas', icon: 'map-pin' },
-    { id: 'faqs' as ConfigTab, label: 'Preguntas FAQs', icon: 'help-circle' },
+    {
+      id: 'general' as ConfigTab,
+      label: 'General & Redes',
+      shortLabel: 'General',
+      icon: 'settings',
+    },
+    { id: 'hero' as ConfigTab, label: 'Sección Hero', shortLabel: 'Hero', icon: 'layout' },
+    {
+      id: 'cursos' as ConfigTab,
+      label: 'Cursos & Precios',
+      shortLabel: 'Cursos',
+      icon: 'book-open',
+    },
+    { id: 'promo' as ConfigTab, label: 'Campaña Promo', shortLabel: 'Promo', icon: 'tag' },
+    {
+      id: 'contacto' as ConfigTab,
+      label: 'Contacto & Horas',
+      shortLabel: 'Contacto',
+      icon: 'map-pin',
+    },
+    {
+      id: 'faqs' as ConfigTab,
+      label: 'Preguntas FAQs',
+      shortLabel: 'FAQs',
+      icon: 'help-circle',
+    },
   ];
 
   // Role Checks

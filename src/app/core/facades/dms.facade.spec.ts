@@ -420,3 +420,118 @@ describe('DmsFacade', () => {
     });
   });
 });
+
+// ─── spec 0005-m: guard de requestId contra respuestas stale ─────────────────
+describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
+  /**
+   * fetchAllData() dispara exactamente 6 queries `.from(...)` por invocación (todas
+   * construidas sincrónicamente antes del único `await Promise.all(...)`), así que cada
+   * tanda de 6 llamadas a `.from()` pertenece a una sola invocación — agrupamos por eso.
+   */
+  function makeRaceableSupabaseMock() {
+    const deferreds: {
+      promise: Promise<any>;
+      resolve: (v: any) => void;
+      reject: (e: any) => void;
+    }[] = [];
+    let fromCallCount = 0;
+
+    function deferredForBatch(batchIndex: number) {
+      if (!deferreds[batchIndex]) {
+        let resolve!: (v: any) => void;
+        let reject!: (e: any) => void;
+        const promise = new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        deferreds[batchIndex] = { promise, resolve, reject };
+      }
+      return deferreds[batchIndex];
+    }
+
+    const client = {
+      from: vi.fn(() => {
+        const idx = fromCallCount++;
+        const batchIndex = Math.floor(idx / 6);
+        const builder: any = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          order: vi.fn(() => builder),
+          limit: vi.fn(() => builder),
+          then: (resolve: any, reject: any) =>
+            deferredForBatch(batchIndex).promise.then(resolve, reject),
+        };
+        return builder;
+      }),
+    };
+
+    return {
+      client,
+      resolveBatch: (i: number, schoolDocs: any[]) =>
+        deferredForBatch(i).resolve({ data: schoolDocs, error: null }),
+      rejectBatch: (i: number, err: Error) => deferredForBatch(i).reject(err),
+    };
+  }
+
+  it('AC1/AC-E1: solo aplica el resultado de la fetch MÁS RECIENTE, aunque la vieja resuelva después', async () => {
+    const mock = makeRaceableSupabaseMock();
+
+    TestBed.configureTestingModule({
+      providers: [
+        DmsFacade,
+        { provide: SupabaseService, useValue: mock },
+        { provide: LayoutDrawerService, useValue: {} },
+        { provide: ConfirmModalService, useValue: {} },
+        { provide: ToastService, useValue: {} },
+        { provide: DmsViewerService, useValue: {} },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+      ],
+    });
+    const facade = TestBed.inject(DmsFacade);
+
+    const oldCall = facade.initialize(); // batch 0 (vieja)
+    const newCall = facade.initialize(); // batch 1 (vigente) — dispara antes de que la vieja resuelva
+
+    // Orden de llegada invertido: la vigente resuelve primero. Todas las queries del batch
+    // resuelven con el mismo array — usamos school_documents (mapea 1:1, sin joins) como marcador.
+    mock.resolveBatch(1, [{ id: 200, type: 'contrato', file_name: 'new.pdf', storage_url: 'x' }]);
+    await newCall;
+    mock.resolveBatch(0, [{ id: 100, type: 'contrato', file_name: 'old.pdf', storage_url: 'x' }]);
+    await oldCall;
+
+    expect(facade.schoolDocs().map((d: any) => d.id)).toEqual([200]);
+  });
+
+  it('AC-E2: si la fetch vigente falla, el error se setea igual — el guard no enmascara errores reales', async () => {
+    const mock = makeRaceableSupabaseMock();
+
+    TestBed.configureTestingModule({
+      providers: [
+        DmsFacade,
+        { provide: SupabaseService, useValue: mock },
+        { provide: LayoutDrawerService, useValue: {} },
+        { provide: ConfirmModalService, useValue: {} },
+        { provide: ToastService, useValue: {} },
+        { provide: DmsViewerService, useValue: {} },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+      ],
+    });
+    const facade = TestBed.inject(DmsFacade);
+
+    const oldCall = facade.initialize(); // batch 0 (vieja)
+    // DmsFacade marca `_initialized = true` de forma SÍNCRONA antes del await (a diferencia
+    // de los otros 3 Facades), así que un segundo initialize() concurrente toma el camino SWR
+    // (refreshSilently, fire-and-forget). Llamamos refreshSilently() directo para tener una
+    // promesa awaitable y determinista para la fetch "vigente".
+    const newCall = (facade as any).refreshSilently(); // batch 1 (vigente)
+
+    mock.resolveBatch(0, [{ id: 100, type: 'contrato', file_name: 'old.pdf', storage_url: 'x' }]);
+    await oldCall;
+    mock.rejectBatch(1, new Error('network fail'));
+    await newCall;
+
+    expect(facade.error()).toBeTruthy();
+  });
+});

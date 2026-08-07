@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import type {
@@ -251,6 +252,8 @@ export class DmsFacade {
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** Descarta respuestas de fetchAllData() fuera de orden (spec 0005-m). */
+  private readonly dmsGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{ name: string; rut: string; studentId: number } | null>(
@@ -806,6 +809,7 @@ export class DmsFacade {
   // ── Helpers Privados ─────────────────────────────────────────────────────────
 
   private async fetchAllData(): Promise<void> {
+    const requestToken = this.dmsGuard.next();
     const branchId = this.getActiveBranchId();
 
     try {
@@ -1025,6 +1029,9 @@ export class DmsFacade {
         categoryLabel: LABELS_CATEGORIA_PLANTILLA[t.category] ?? t.category,
         formatColor: this.resolveFormatColor(t.format),
       }));
+
+      // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+      if (!this.dmsGuard.isCurrent(requestToken)) return;
 
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);

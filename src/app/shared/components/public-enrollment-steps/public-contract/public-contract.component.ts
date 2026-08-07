@@ -101,6 +101,7 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
             [checked]="termsAccepted()"
             (change)="toggleTerms($event)"
             style="accent-color: var(--ds-brand); width: 1.1rem; height: 1.1rem;"
+            data-llm-action="aceptar-terminos-contrato-publico"
           />
           <span class="text-sm font-medium" style="color: var(--text-primary);">
             He leído y acepto los términos y condiciones de mi matrícula.
@@ -120,6 +121,7 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
               class="text-xs font-medium hover:underline"
               style="color: var(--ds-brand);"
               (click)="clearSignature()"
+              data-llm-action="limpiar-firma-contrato-publico"
             >
               Limpiar firma
             </button>
@@ -155,10 +157,16 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
           class="btn-primary w-full rounded-xl py-3.5"
           [disabled]="!data().isMinor && !termsAccepted()"
           (click)="handleConfirm()"
+          data-llm-action="confirmar-contrato-publico"
         >
           {{ data().isMinor ? 'Continuar' : 'Firmar y Continuar' }}
         </button>
-        <button type="button" class="btn-secondary w-full rounded-xl py-3" (click)="goBack.emit()">
+        <button
+          type="button"
+          class="btn-secondary w-full rounded-xl py-3"
+          (click)="goBack.emit()"
+          data-llm-action="volver-paso-anterior-contrato-publico"
+        >
           Volver atrás
         </button>
       </div>

@@ -266,8 +266,10 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
       await this.facade.startClass(cls.id, this.form.value.kmStart, vehicleId);
       void this.dashboardFacade.refreshLiveClassesOnly();
       this.layoutDrawer.close();
-    } catch {
-      this.error.set('No se pudo iniciar la clase. Intenta de nuevo.');
+    } catch (err) {
+      this.error.set(
+        err instanceof Error ? err.message : 'No se pudo iniciar la clase. Intenta de nuevo.',
+      );
     } finally {
       this.isSubmitting.set(false);
     }

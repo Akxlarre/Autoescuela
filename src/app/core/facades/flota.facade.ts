@@ -1,8 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { toISODate } from '@core/utils/date.utils';
 import type {
@@ -20,6 +22,7 @@ const EXPIRY_SOON_DAYS = 30;
 @Injectable({ providedIn: 'root' })
 export class FlotaFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -36,6 +39,8 @@ export class FlotaFacade {
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
+  /** Descarta respuestas de fetchVehiclesData() fuera de orden (spec 0005-m). */
+  private readonly vehiclesGuard = createRequestGuard();
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
   readonly vehicles = this._vehicles.asReadonly();
@@ -53,7 +58,6 @@ export class FlotaFacade {
     return {
       total: vs.length,
       available: statuses.filter((s) => s === 'available').length,
-      inClass: statuses.filter((s) => s === 'in_class').length,
       maintenance: statuses.filter((s) => s === 'maintenance').length,
     };
   });
@@ -142,6 +146,7 @@ export class FlotaFacade {
   }
 
   private async fetchVehiclesData(): Promise<void> {
+    const requestToken = this.vehiclesGuard.next();
     const branchId = this.getActiveBranchId();
     let query: any = this.supabase.client
       .from('vehicles')
@@ -165,6 +170,8 @@ export class FlotaFacade {
     if (error) throw error;
 
     const combustibleByVehicle = await this.fetchCombustibleMesPorVehiculo(branchId);
+    // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+    if (!this.vehiclesGuard.isCurrent(requestToken)) return;
     this._vehicles.set((data ?? []).map((v: any) => this.mapToTableRow(v, combustibleByVehicle)));
   }
 
@@ -243,12 +250,14 @@ export class FlotaFacade {
   async createVehicle(payload: any): Promise<void> {
     const { error } = await this.supabase.client.from('vehicles').insert(payload);
     if (error) throw error;
+    this.toast.success('Vehículo creado', 'El vehículo ha sido registrado correctamente.');
     void this.refreshSilently();
   }
 
   async updateVehicle(id: number, payload: any): Promise<void> {
     const { error } = await this.supabase.client.from('vehicles').update(payload).eq('id', id);
     if (error) throw error;
+    this.toast.success('Vehículo actualizado', 'Los datos han sido actualizados correctamente.');
     void this.refreshSilently();
   }
 

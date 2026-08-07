@@ -1,7 +1,7 @@
 # Asignación ASG-b-046 — Integración con Zoom API para clases teóricas Profesional
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P3
 > **created:** 2026-07-28

@@ -134,6 +134,7 @@
 | `recalc_instructor_monthly_hours(p_instructor_id, p_period)` | `20260509000001` | Llamada desde trigger `trg_class_b_sessions_monthly_hours` | Recuenta desde cero las `class_b_sessions` con `status='completed'` para el instructor+periodo dado (zona `America/Santiago`) y hace UPSERT en `instructor_monthly_hours`. Fórmula: `total_equivalent = practical_sessions × 0.75` (45 min/sesión). Si el recuento es 0, elimina la fila. `SECURITY DEFINER` para bypassear RLS de la tabla destino. |
 | `trg_class_b_sessions_update_monthly_hours()` | `20260509000001` | Trigger `trg_class_b_sessions_monthly_hours` — AFTER INSERT OR UPDATE OR DELETE en `class_b_sessions` (FOR EACH ROW) | Detecta transiciones de/hacia `status='completed'` y llama `recalc_instructor_monthly_hours()`. En UPDATE también recalcula el instructor/periodo anterior si cambiaron. En DELETE recalcula si la sesión eliminada era `completed`. |
 | `set_updated_at()` | `20260415000001` (creada) → reutilizada por `20260709003142` | Trigger `trg_class_b_sessions_updated_at` — BEFORE UPDATE en `class_b_sessions` (FOR EACH ROW) | Setea `NEW.updated_at = now()` en cada UPDATE. **Fix hotfix-012-m**: la tabla tenía `updated_at DEFAULT NOW()` pero ningún trigger la refrescaba — quedaba congelada en el valor del INSERT. Misma función ya usada por `professional_promotions` y `website_config`. |
+| `prevent_concurrent_in_progress_class_b_sessions()` | `20260804120000` | Trigger `trg_prevent_concurrent_in_progress` — BEFORE UPDATE en `class_b_sessions` (FOR EACH ROW) | **Spec 0001-i (AC1, AC-E1).** Exclusión mutua: cuando `NEW.status='in_progress'` y `OLD.status` no lo era, rechaza el `UPDATE` (`RAISE EXCEPTION ... ERRCODE='P0001'`) si el mismo `instructor_id` ya tiene otra fila `in_progress` (excluyendo la propia). Global por instructor, sin filtro de sede — un instructor es una sola persona física. Cubre los 2 puntos de entrada existentes (`InstructorClasesFacade.startClass()` y `AsistenciaClaseBFacade.startClass()`) sin duplicar la validación en cada Facade — es la única garantía real, ya que un Facade no puede saber si el otro ya inició una clase para el mismo instructor. `SECURITY DEFINER`. |
 | `validate_website_config_courses_fk()` | `20260523000000` | Trigger `trg_validate_website_config_courses_fk` — BEFORE INSERT OR UPDATE en `website_config` (FOR EACH ROW) | **Spec 0004.** Itera `config->'courses'` y valida por cada card: (a) `course_id` no null, (b) existe en `courses`, (c) `courses.branch_id = website_config.branch_id`, (d) `course_id` único dentro del array. Lanza `RAISE EXCEPTION` con mensaje específico en cada violación. `SECURITY DEFINER`. |
 | `prevent_courses_delete_when_in_website_config()` | `20260523000000` | Trigger `trg_prevent_courses_delete_when_in_website_config` — BEFORE DELETE en `courses` (FOR EACH ROW) | **Spec 0004.** Cuenta refs a `OLD.id` en `website_config.config->'courses'`. Si hay ≥1, bloquea el DELETE con mensaje "No se puede eliminar: N card(s) de website_config referencian este curso. Quitá esas cards desde Configuración Web antes de eliminar el curso del catálogo." `SECURITY DEFINER`. |
 | `ensure_theory_cycle(p_branch_id INT, p_ref_date DATE)` | `20260630000000` | Llamada por el trigger `trg_assign_theory_cycle` y por el backfill | **Spec 0001-m.** Devuelve (creando si no existe) el ciclo teórico de la sede para la fecha dada: calcula el lunes objetivo (RF-04: Lun–Mié → semana en curso; RF-05: Jue–Dom → semana siguiente) y, al crear, genera las **6 clases** en `class_b_theory_sessions` (`class_number` 1–6, `class_date` = lunes + [0,2,4,7,9,11]). `SECURITY DEFINER`, TZ implícita por `p_ref_date`. |
@@ -185,7 +186,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (77 tablas, acumulado de las migraciones)
+## Esquema efectivo (78 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -711,6 +712,29 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_courses | DELETE | `auth_user_role() = 'admin'` | — |
 | select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE)` | — |
 
+### `cuadratura_adjustments` — 🔒 RLS
+
+> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). '
+  'Inmutable: sin UPDATE ni DELETE -- una corrección mal hecha se compensa con OTRO ajuste.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
+| `tipo` | TEXT | NO | — | — |
+| `monto` | INTEGER | NO | — | — |
+| `motivo` | TEXT | NO | — | — |
+| `expense_id` | INT | sí | — | → `expenses.id` |
+| `registered_by` | INT | NO | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
+
 ### `digital_contracts` — 🔒 RLS
 
 > Contrato digital firmado por el alumno, con PDF para el DMS (RF-083)
@@ -895,6 +919,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `receipt_url` | TEXT | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `vehicle_id` | INT | sí | — | → `vehicles.id` |
 
 **Policies:**
 
@@ -2210,6 +2235,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |---------|-----------|
 | `apply_class_b_absence_penalty` | `(p_enrollment_id INT)` |
 | `assign_theory_cycle` | `()` |
+| `audit_format_evaluation_checklist` | `(p_value TEXT)` |
+| `audit_format_timestamp_value` | `(p_value TEXT)` |
 | `audit_humanize_column` | `(p_key TEXT)` |
 | `audit_humanize_enum_value` | `(p_value TEXT)` |
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
@@ -2247,6 +2274,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `notify_task_completed` | `()` |
 | `notify_task_reply` | `()` |
 | `notify_vehicle_document_expiry` | `()` |
+| `prevent_concurrent_in_progress_class_b_sessions` | `()` |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |

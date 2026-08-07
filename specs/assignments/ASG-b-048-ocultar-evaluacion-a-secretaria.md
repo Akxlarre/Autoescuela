@@ -1,11 +1,14 @@
 # Asignación ASG-b-048 — Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase
 
-> **status:** pendiente
-> **owner:** cualquiera
+> **status:** completada
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** m
+> **claimed_at:** 2026-08-05
+> **resulting_track:** fix-115-m-ocultar-evaluacion-secretaria-admin
 
 ---
 
@@ -57,3 +60,13 @@ Vale una pregunta.
 
 - ⚠️ **Se solapa con ASG-b-036** (ciclo de vida de la clase), que toca la misma pantalla y el
   mismo facade. Coordinar o tomarlas juntas.
+- **2026-08-05 (al reclamar):** el dueño confirmó que el alcance no es solo secretaría — admin
+  tampoco debe ver ni completar evaluación en Iniciar/Finalizar Clase (usan el mismo
+  componente, `AdminFinalizarClaseDrawerComponent`). Además, la evaluación nunca debe ser
+  requisito para cerrar una clase para ninguno de los 3 roles — solo el kilometraje. Ver
+  `fix-115-m-ocultar-evaluacion-secretaria-admin/fix.md`.
+- **2026-08-05: `fix-115-m-ocultar-evaluacion-secretaria-admin` cerrado (`status: done`).**
+  Se sacaron nota/checklist/observaciones del drawer compartido admin/secretaría y dejaron de
+  ser requisito para cerrar clase en los 3 roles. De paso se corrigió que el cierre de
+  admin/secretaría pisaba con `null` una evaluación ya cargada por el instructor. Detalle
+  completo de cambios y tests en el `fix.md`.

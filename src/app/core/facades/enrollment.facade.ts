@@ -1257,6 +1257,8 @@ export class EnrollmentFacade {
    * y confirma sesiones reservadas.
    */
   async confirmEnrollment(): Promise<string | null> {
+    if (this._isSubmitting()) return null;
+
     const draft = this._draft();
     if (!draft.enrollmentId) return null;
 
@@ -1325,6 +1327,8 @@ export class EnrollmentFacade {
    * Retorna el número de matrícula generado, o null si falló.
    */
   async confirmWithPayment(): Promise<string | null> {
+    if (this._isSubmitting()) return null;
+
     const draft = this._draft();
     if (!draft.enrollmentId) return null;
 

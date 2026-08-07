@@ -1,7 +1,7 @@
 # Asignación ASG-b-065 — App-like: `/secretaria/dashboard` (portar `--fill-screen-2` desde admin)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03

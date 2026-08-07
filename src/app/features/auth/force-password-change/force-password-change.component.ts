@@ -76,6 +76,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
                 placeholder="Mínimo 8 caracteres"
                 required
+                data-llm-description="input for the new account password"
               />
             </div>
 
@@ -83,6 +84,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               type="submit"
               class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
               [disabled]="form.invalid || loading()"
+              data-llm-action="actualizar-contrasena-forzada"
             >
               @if (loading()) {
                 <span

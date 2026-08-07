@@ -13,17 +13,17 @@ import {
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
-import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DialogModule } from 'primeng/dialog';
@@ -31,7 +31,8 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
-import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
+import { PagosRecientesDrawerComponent } from './pagos-recientes-drawer.component';
+import { formatCLP, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -43,8 +44,6 @@ function toCompact(amount: number): { value: number; suffix: string } {
   return { value: amount, suffix: '' };
 }
 
-const POR_PAGINA = 5;
-
 @Component({
   selector: 'app-admin-pagos',
   standalone: true,
@@ -52,20 +51,18 @@ const POR_PAGINA = 5;
   imports: [
     FormsModule,
     DatePipe,
-    SelectModule,
     DatePickerModule,
     DateInputComponent,
     DialogModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
-    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
     StableWidthDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -80,435 +77,206 @@ const POR_PAGINA = 5;
         (actionClick)="onHeroAction($event)"
       />
 
-      <!-- ── Contenido principal ─────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <div class="flex flex-col gap-6">
-          <!-- ── Alumnos con saldo pendiente ────────────────────────────────────── -->
-          <div
-            class="card p-0 overflow-hidden"
-            [class.deudores-compact]="layoutDrawer.isOpen()"
-            appCardHover
-          >
-            <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
-              <div>
-                <h2 class="font-semibold text-text-primary">Alumnos con saldo pendiente</h2>
-                <p class="text-xs mt-0.5 text-text-muted">
-                  Alumnos con saldo por pagar. Registrar abonos para actualizar el saldo y habilitar
-                  clase 7 cuando corresponda.
-                </p>
-              </div>
-              <span class="text-xs text-text-muted">
-                {{ rangoDeudoresMostrando() }}
-              </span>
-            </div>
+      <!-- ── Alumnos con saldo pendiente (único bloque de contenido — Pagos Recientes
+           y Métodos de Pago viven en un drawer, ver PagosRecientesDrawerComponent) ── -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col h-full"
+        [class.deudores-compact]="layoutDrawer.isOpen()"
+        appCardHover
+      >
+        <div
+          class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border-muted"
+        >
+          <div>
+            <h2 class="font-semibold text-text-primary">Alumnos con saldo pendiente</h2>
+            <p class="text-xs mt-0.5 text-text-muted">
+              Alumnos con saldo por pagar. Registrar abonos para actualizar el saldo y habilitar
+              clase 7 cuando corresponda.
+            </p>
+          </div>
+          <span class="text-xs text-text-muted">
+            {{ facade.alumnosConDeuda().length }} alumnos
+          </span>
+        </div>
 
-            @if (facade.isLoading()) {
-              <div class="rows-divider">
-                @for (row of [1, 2, 3, 4]; track row) {
-                  <div
-                    class="p-4 lg:px-6 lg:py-4 flex flex-col gap-3 lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center"
-                  >
-                    <div class="lg:col-span-2 flex flex-col gap-1">
-                      <app-skeleton-block variant="text" width="80%" height="14px" />
-                      <app-skeleton-block
-                        variant="text"
-                        width="50%"
-                        height="10px"
-                        class="lg:hidden"
-                      />
-                    </div>
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          @if (facade.isLoading()) {
+            <div class="rows-divider">
+              @for (row of [1, 2, 3, 4]; track row) {
+                <div
+                  class="p-4 lg:px-6 lg:py-4 flex flex-col gap-3 lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center"
+                >
+                  <div class="lg:col-span-2 flex flex-col gap-1">
+                    <app-skeleton-block variant="text" width="80%" height="14px" />
                     <app-skeleton-block
                       variant="text"
-                      width="60%"
-                      height="14px"
-                      class="hidden lg:block"
+                      width="50%"
+                      height="10px"
+                      class="lg:hidden"
                     />
-                    <div class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0">
-                      <app-skeleton-block variant="text" width="60%" height="14px" />
-                      <app-skeleton-block variant="text" width="60%" height="14px" />
-                      <app-skeleton-block variant="text" width="60%" height="14px" />
-                    </div>
-                    <div class="flex gap-2 justify-end mt-2 lg:mt-0">
-                      <app-skeleton-block variant="rect" width="80px" height="28px" />
-                      <app-skeleton-block variant="rect" width="100px" height="28px" />
-                    </div>
                   </div>
-                }
-              </div>
-            } @else if (facade.alumnosConDeuda().length === 0) {
-              <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
-                <app-icon name="check-circle" [size]="32" color="var(--state-success)" />
-                <p class="text-sm font-medium text-text-primary">¡Sin saldos pendientes!</p>
-                <p class="text-xs text-text-muted">Todos los alumnos están al día con sus pagos.</p>
-              </div>
-            } @else {
-              <div>
+                  <app-skeleton-block
+                    variant="text"
+                    width="60%"
+                    height="14px"
+                    class="hidden lg:block"
+                  />
+                  <div class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                  </div>
+                  <div class="flex gap-2 justify-end mt-2 lg:mt-0">
+                    <app-skeleton-block variant="rect" width="80px" height="28px" />
+                    <app-skeleton-block variant="rect" width="100px" height="28px" />
+                  </div>
+                </div>
+              }
+            </div>
+          } @else if (facade.alumnosConDeuda().length === 0) {
+            <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
+              <app-icon name="check-circle" [size]="32" color="var(--state-success)" />
+              <p class="text-sm font-medium text-text-primary">¡Sin saldos pendientes!</p>
+              <p class="text-xs text-text-muted">Todos los alumnos están al día con sus pagos.</p>
+            </div>
+          } @else {
+            <div
+              class="micro-label deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
+            >
+              <span>Alumno</span>
+              <span class="dc-rut">RUT</span>
+              <span class="text-right dc-total">Total a Pagar</span>
+              <span class="text-right dc-pagado">Pagado</span>
+              <span class="text-right">Saldo</span>
+              <span class="text-right">Acciones</span>
+            </div>
+            <div class="rows-divider">
+              @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
                 <div
-                  class="micro-label deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
+                  class="deudores-row deudores-grid-cols p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
                 >
-                  <span>Alumno</span>
-                  <span class="dc-rut">RUT</span>
-                  <span class="text-right dc-total">Total a Pagar</span>
-                  <span class="text-right dc-pagado">Pagado</span>
-                  <span class="text-right">Saldo</span>
-                  <span class="text-right">Acciones</span>
-                </div>
-                <div class="rows-divider">
-                  @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
-                    <div
-                      class="deudores-row deudores-grid-cols p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
-                    >
-                      <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
-                      <div class="flex flex-col min-w-0">
-                        <span class="item-title truncate" [title]="alumno.alumno">
-                          {{ alumno.alumno }}
-                        </span>
-                        <!-- RUT Mobile only -->
-                        <span class="text-xs lg:hidden mt-0.5 text-text-secondary">
-                          RUT: {{ alumno.rut }}
-                        </span>
-                      </div>
-
-                      <!-- RUT Desktop only -->
-                      <span class="hidden lg:block text-sm text-text-secondary dc-rut">
-                        {{ alumno.rut }}
-                      </span>
-
-                      <!-- Finanzas -->
-                      <div
-                        class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
-                      >
-                        <div class="flex flex-col lg:block text-center lg:text-right dc-total">
-                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
-                            >Total</span
-                          >
-                          <span class="text-sm text-text-primary">{{
-                            clp(alumno.totalAPagar)
-                          }}</span>
-                        </div>
-                        <div class="flex flex-col lg:block text-center lg:text-right dc-pagado">
-                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
-                            >Pagado</span
-                          >
-                          <span
-                            class="text-sm font-medium"
-                            [style.color]="
-                              alumno.pagado > 0 ? 'var(--state-success)' : 'var(--text-muted)'
-                            "
-                            >{{ clp(alumno.pagado) }}</span
-                          >
-                        </div>
-                        <div class="flex flex-col lg:block text-center lg:text-right">
-                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
-                            >Saldo</span
-                          >
-                          <span class="text-sm font-bold text-warning">{{
-                            clp(alumno.saldo)
-                          }}</span>
-                        </div>
-                      </div>
-
-                      <!-- Acciones -->
-                      <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
-                        <button
-                          class="btn-ghost text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
-                          data-llm-action="view-student-payment-detail"
-                          (click)="openDetalle(alumno.enrollmentId)"
-                        >
-                          Ver detalle
-                        </button>
-                        <button
-                          class="btn-primary text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
-                          data-llm-action="register-student-payment"
-                          (click)="openDrawer(alumno.enrollmentId)"
-                        >
-                          Registrar pago
-                        </button>
-                      </div>
-                    </div>
-                  }
-                </div>
-                @if (totalPaginasDeudores() > 1) {
-                  <div
-                    class="px-6 py-3 flex items-center justify-between border-t border-border-muted"
-                  >
-                    <span class="text-xs text-text-muted">
-                      {{ rangoDeudoresMostrando() }} alumnos
+                  <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
+                  <div class="flex flex-col min-w-0">
+                    <span class="item-title truncate" [title]="alumno.alumno">
+                      {{ alumno.alumno }}
                     </span>
-                    <div class="flex gap-2">
-                      <button
-                        class="btn-secondary text-sm"
-                        [disabled]="paginaDeudoresActual() <= 1"
-                        (click)="paginaDeudoresAnterior()"
-                      >
-                        Anterior
-                      </button>
-                      <button
-                        class="btn-secondary text-sm"
-                        [disabled]="paginaDeudoresActual() >= totalPaginasDeudores()"
-                        (click)="paginaDeudoresSiguiente()"
-                      >
-                        Siguiente
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- ── Layout: Pagos Recientes | Sidebar ────────────────── -->
-          <div
-            class="pagos-recientes-layout grid grid-cols-1 lg:grid-cols-12 gap-6 lg:col-span-12 items-start"
-            [class.force-compact]="layoutDrawer.isOpen()"
-          >
-            <!-- ─ Pagos Recientes (lg:col-span-8) ─────────────────────────────────────────── -->
-            <div class="lg:col-span-8 card p-0 overflow-hidden" appCardHover>
-              <div
-                class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
-              >
-                <h2 class="font-semibold text-text-primary">Pagos Recientes</h2>
-
-                <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
-                <div class="flex flex-col xl:flex-row gap-3 w-full">
-                  <!-- Input de búsqueda -->
-                  <div class="relative flex-1">
-                    <div
-                      class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-                    >
-                      <app-icon name="search" [size]="16" color="var(--text-muted)" />
-                    </div>
-                    <input
-                      type="search"
-                      placeholder="Buscar por alumno o N° boleta..."
-                      class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
-                      (input)="onSearch($event)"
-                    />
+                    <!-- RUT Mobile only -->
+                    <span class="text-xs lg:hidden mt-0.5 text-text-secondary">
+                      RUT: {{ alumno.rut }}
+                    </span>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row gap-3">
-                    <p-select
-                      [options]="estadoOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Todos los estados"
-                      [ngModel]="filtroEstado()"
-                      (ngModelChange)="filtroEstado.set($event)"
-                      styleClass="w-full sm:w-44"
-                      data-llm-description="filter payments by status"
-                    />
-                    <p-select
-                      [options]="metodoOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Todos los métodos"
-                      [ngModel]="filtroMetodo()"
-                      (ngModelChange)="filtroMetodo.set($event)"
-                      styleClass="w-full sm:w-48"
-                      data-llm-description="filter payments by payment method"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              @if (facade.isLoading()) {
-                <div class="rows-divider">
-                  @for (row of [1, 2, 3, 4, 5]; track row) {
-                    <div
-                      class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center"
-                    >
-                      <div class="flex justify-between items-center lg:contents">
-                        <app-skeleton-block variant="text" width="60%" height="14px" />
-                        <app-skeleton-block
-                          variant="rect"
-                          width="60px"
-                          height="20px"
-                          class="lg:hidden"
-                        />
-                      </div>
-                      <div class="flex flex-col lg:contents gap-1 lg:gap-0">
-                        <app-skeleton-block variant="text" width="90%" height="14px" />
-                        <app-skeleton-block variant="text" width="70%" height="12px" />
-                      </div>
-                      <div
-                        class="grid grid-cols-2 lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
-                      >
-                        <app-skeleton-block variant="text" width="70%" height="12px" />
-                        <app-skeleton-block variant="text" width="80%" height="12px" />
-                        <app-skeleton-block
-                          variant="text"
-                          width="80%"
-                          height="12px"
-                          class="col-span-2 lg:col-span-1 mt-1 lg:mt-0 lg:justify-self-center"
-                        />
-                      </div>
-                      <app-skeleton-block
-                        variant="rect"
-                        width="80px"
-                        height="22px"
-                        class="hidden lg:block justify-self-center"
-                      />
-                    </div>
-                  }
-                </div>
-              } @else if (pagosVisibles().length === 0) {
-                <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
-                  <app-icon name="search" [size]="28" color="var(--text-muted)" />
-                  <p class="text-sm text-text-muted">
-                    No se encontraron pagos con los filtros seleccionados.
-                  </p>
-                </div>
-              } @else {
-                <div
-                  class="micro-label pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 border-b bg-surface border-border-muted"
-                >
-                  <span>Fecha</span>
-                  <span>Alumno</span>
-                  <span>Concepto</span>
-                  <span class="text-right">Monto</span>
-                  <span>Método</span>
-                  <span>N° Documento</span>
-                  <span class="text-center">Estado</span>
-                </div>
-
-                <div class="rows-divider">
-                  @for (pago of pagosVisibles(); track pago.id) {
-                    <div
-                      class="pagos-grid-cols p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
-                    >
-                      <div class="flex items-center justify-between lg:contents">
-                        <span class="text-xs font-medium text-brand">
-                          {{ fechaCorta(pago.fecha) }}
-                        </span>
-                        <app-badge [variant]="estadoVariant(pago.estado)" class="lg:hidden">
-                          @if (pago.estado === 'completado') {
-                            <app-icon name="check" [size]="10" />
-                          }
-                          {{ estadoLabel(pago.estado) }}
-                        </app-badge>
-                      </div>
-                      <div class="flex flex-col lg:contents min-w-0">
-                        <span class="item-title truncate" [title]="pago.alumno">
-                          {{ pago.alumno }}
-                        </span>
-                        <span
-                          class="text-xs truncate lg:text-text-secondary mt-0.5 lg:mt-0 text-text-muted"
-                        >
-                          {{ pago.concepto ?? '—' }}
-                        </span>
-                      </div>
-                      <div
-                        class="fin-group flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
-                      >
-                        <div class="flex justify-between items-center lg:contents">
-                          <span class="micro-label lg:hidden">Monto</span>
-                          <span class="item-title lg:text-right">
-                            {{ clp(pago.monto) }}
-                          </span>
-                        </div>
-                        <div class="flex items-center justify-between lg:contents mt-2 lg:mt-0">
-                          <span class="flex items-center gap-1.5 text-xs text-text-secondary">
-                            <app-icon [name]="pago.metodoIcono" [size]="13" />
-                            {{ pago.metodo }}
-                          </span>
-                          <span
-                            class="text-2xs lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
-                          >
-                            {{ pago.nroDocumento ?? '—' }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="hidden lg:flex justify-center">
-                        <app-badge [variant]="estadoVariant(pago.estado)">
-                          @if (pago.estado === 'completado') {
-                            <app-icon name="check" [size]="10" />
-                          }
-                          {{ estadoLabel(pago.estado) }}
-                        </app-badge>
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <div
-                  class="px-6 py-3 flex items-center justify-between border-t border-border-muted"
-                >
-                  <span class="text-xs text-brand">
-                    {{ rangoMostrando() }}
+                  <!-- RUT Desktop only -->
+                  <span class="hidden lg:block text-sm text-text-secondary dc-rut">
+                    {{ alumno.rut }}
                   </span>
-                  <div class="flex gap-2">
+
+                  <!-- Finanzas -->
+                  <div
+                    class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
+                  >
+                    <div class="flex flex-col lg:block text-center lg:text-right dc-total">
+                      <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
+                        >Total</span
+                      >
+                      <span class="text-sm text-text-primary">{{ clp(alumno.totalAPagar) }}</span>
+                    </div>
+                    <div class="flex flex-col lg:block text-center lg:text-right dc-pagado">
+                      <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
+                        >Pagado</span
+                      >
+                      <span
+                        class="text-sm font-medium"
+                        [style.color]="
+                          alumno.pagado > 0 ? 'var(--state-success)' : 'var(--text-muted)'
+                        "
+                        >{{ clp(alumno.pagado) }}</span
+                      >
+                    </div>
+                    <div class="flex flex-col lg:block text-center lg:text-right">
+                      <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
+                        >Saldo</span
+                      >
+                      <span class="text-sm font-bold text-warning">{{ clp(alumno.saldo) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Acciones -->
+                  <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
                     <button
-                      class="btn-outline"
-                      [disabled]="paginaActual() <= 1"
-                      (click)="paginaAnterior()"
+                      class="btn-ghost text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
+                      data-llm-action="view-student-payment-detail"
+                      (click)="openDetalle(alumno.enrollmentId)"
                     >
-                      Anterior
+                      Ver detalle
                     </button>
                     <button
-                      class="btn-outline"
-                      [disabled]="paginaActual() >= totalPaginas()"
-                      (click)="paginaSiguiente()"
+                      class="btn-primary text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
+                      data-llm-action="register-student-payment"
+                      (click)="openDrawer(alumno.enrollmentId)"
                     >
-                      Siguiente
+                      Registrar pago
                     </button>
                   </div>
                 </div>
               }
             </div>
-
-            <div class="lg:col-span-4 flex flex-col gap-4">
-              <div class="card p-5 flex flex-col gap-4" appCardHover>
-                <h3 class="item-title">Métodos de Pago ({{ mesActual() }})</h3>
-
-                @if (facade.isLoading()) {
-                  @for (i of [1, 2, 3]; track i) {
-                    <div class="flex flex-col gap-1.5">
-                      <app-skeleton-block variant="text" width="60%" height="12px" />
-                      <app-skeleton-block variant="rect" width="100%" height="6px" />
-                    </div>
-                  }
-                } @else {
-                  @for (metodo of facade.metodosPagoMes(); track metodo.metodo) {
-                    <div class="flex flex-col gap-1.5">
-                      <div class="flex items-center justify-between">
-                        <span
-                          class="flex items-center gap-1.5 text-xs font-medium"
-                          [style.color]="metodo.color"
-                        >
-                          <app-icon [name]="metodo.icono" [size]="12" />
-                          {{ metodo.metodo }}
-                        </span>
-                        <span class="text-xs font-semibold text-text-primary"
-                          >{{ metodo.porcentaje }}%</span
-                        >
-                      </div>
-                      <div class="h-1.5 rounded-full overflow-hidden bg-border-muted">
-                        <div
-                          class="h-full rounded-full"
-                          [style.width.%]="metodo.porcentaje"
-                          [style.background]="metodo.color"
-                        ></div>
-                      </div>
-                    </div>
-                  } @empty {
-                    <div class="flex flex-col items-center gap-1.5 py-4 text-center">
-                      <app-icon name="pie-chart" [size]="22" color="var(--text-muted)" />
-                      <p class="text-xs text-text-muted">Sin pagos registrados este mes.</p>
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          </div>
-
-          @if (facade.error()) {
-            <div class="card p-4 flex items-center gap-3 border-error bg-error/8" appCardHover>
-              <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
-              <p class="text-sm text-error">{{ facade.error() }}</p>
-            </div>
           }
         </div>
+
+        <!-- Desktop: paginador real (mismo patrón que alumnos-list-content, 10/página).
+             Mobile/tablet: "Cargar más" (maxVisibleDeudores() no-null). -->
+        @if (isDesktopTier()) {
+          @if (totalPaginasDeudores() > 1) {
+            <div
+              class="shrink-0 px-6 py-3 flex items-center justify-between border-t border-border-muted"
+            >
+              <span class="text-xs text-text-muted">{{ rangoDeudoresMostrando() }}</span>
+              <div class="flex gap-2">
+                <button
+                  class="btn-secondary text-sm"
+                  [disabled]="paginaDeudoresActual() <= 1"
+                  (click)="paginaDeudoresAnterior()"
+                  data-llm-action="pagina-anterior-deudores"
+                >
+                  Anterior
+                </button>
+                <button
+                  class="btn-secondary text-sm"
+                  [disabled]="paginaDeudoresActual() >= totalPaginasDeudores()"
+                  (click)="paginaDeudoresSiguiente()"
+                  data-llm-action="pagina-siguiente-deudores"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          }
+        } @else if (remainingDeudores() > 0) {
+          <div
+            class="shrink-0 px-6 py-3 flex items-center justify-center border-t border-border-muted"
+          >
+            <button
+              type="button"
+              class="pagination-btn"
+              (click)="loadMoreDeudores()"
+              data-llm-action="cargar-mas-deudores"
+            >
+              Cargar más ({{ remainingDeudores() }} restantes)
+            </button>
+          </div>
+        }
       </div>
+
+      @if (facade.error()) {
+        <div
+          class="bento-banner card p-4 flex items-center gap-3 border-error bg-error/8"
+          appCardHover
+        >
+          <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
+          <p class="text-sm text-error">{{ facade.error() }}</p>
+        </div>
+      }
     </div>
 
     <!-- ── Modal: Configurar Reporte de Pagos ─────────────────────────────────── -->
@@ -633,53 +401,6 @@ const POR_PAGINA = 5;
           background: transparent;
         }
       }
-      .force-compact .hidden.lg\\:grid,
-      .force-compact .hidden.lg\\:flex,
-      .force-compact .hidden.lg\\:block {
-        display: none !important;
-      }
-      .force-compact .lg\\:hidden {
-        display: block !important;
-      }
-      .force-compact .lg\\:grid-cols-6,
-      .force-compact .lg\\:grid-cols-7,
-      .force-compact .lg\\:grid-cols-12 {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 1rem !important;
-      }
-      .force-compact .lg\\:contents {
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        border-top: 1px solid var(--border-muted) !important;
-        padding-top: 0.5rem !important;
-        width: 100% !important;
-      }
-      /* El wrapper "Finanzas" agrupa 2 sub-filas (Monto / Método+Documento) que deben
-         apilarse verticalmente, no aplastarse en fila como el resto de .lg\\:contents. */
-      .force-compact .fin-group.lg\\:contents {
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-      }
-      .force-compact .lg\\:text-right,
-      .force-compact .lg\\:text-center {
-        text-align: left !important;
-      }
-      /* El wrapper raíz "Pagos Recientes | Métodos de Pago" tiene la clase
-         .force-compact en sí mismo (no en un ancestro), así que las reglas
-         ".force-compact .lg\\:grid-cols-*" (combinador descendiente) no lo
-         alcanzan. Lo colapsamos explícitamente para que ambas cards se apilen
-         a ancho completo en vez de compartir la fila de 12 columnas. */
-      .pagos-recientes-layout.force-compact {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: stretch !important;
-      }
-      .pagos-recientes-layout.force-compact > * {
-        width: 100% !important;
-      }
       .deudores-compact .hidden.lg\\:grid {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) auto auto !important;
@@ -696,13 +417,6 @@ const POR_PAGINA = 5;
       .deudores-grid-cols {
         grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1.2fr;
       }
-      /* Da más espacio a Alumno y menos a Concepto (valores cortos y fijos).
-         Selector de doble clase (sin !important) para ganarle a la utility de Tailwind
-         sin pisar el !important de .force-compact cuando el drawer está abierto. */
-      .pagos-grid-cols.grid-cols-7,
-      .pagos-grid-cols.lg\\:grid-cols-7 {
-        grid-template-columns: 0.9fr 1.6fr 0.8fr 1fr 1fr 1fr 1fr;
-      }
     `,
   ],
 })
@@ -710,12 +424,19 @@ export class AdminPagosComponent implements AfterViewInit {
   protected readonly facade = inject(PagosFacade);
   protected readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly layoutService = inject(LayoutService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroActions: SectionHeroAction[] = [
+    {
+      id: 'view-pagos-recientes',
+      label: 'Pagos Recientes',
+      icon: 'receipt',
+      primary: false,
+    },
     {
       id: 'generate-report',
       label: 'Generar Reporte',
@@ -807,85 +528,66 @@ export class AdminPagosComponent implements AfterViewInit {
   }
   protected readonly today = new Date();
 
-  // ── Estado local: búsqueda / filtros / paginación ────────────────────────────
-  protected readonly searchQuery = signal('');
-  protected readonly filtroEstado = signal<string | null>(null);
-  protected readonly filtroMetodo = signal<string | null>(null);
+  // ── Densidad adaptativa: Deudores (fix-132-m / ASG-b-076) ────────────────────
+  // Desktop: paginador real (10/página, mismo patrón que alumnos-list-content).
+  // Tablet/mobile: presupuesto + "Cargar más" — mismo patrón que admin-secretarias.
+  protected readonly isDesktopTier = computed(() => this.layoutService.tier() === 'desktop');
 
-  readonly estadoOptions = [
-    { label: 'Completado', value: 'completado' },
-    { label: 'Pendiente', value: 'pendiente' },
-  ];
+  private static readonly DEUDORES_STEP = 5;
+  protected readonly mobileShownDeudores = signal(AdminPagosComponent.DEUDORES_STEP);
 
-  readonly metodoOptions = [
-    { label: 'Transferencia', value: 'Transferencia' },
-    { label: 'Efectivo', value: 'Efectivo' },
-    { label: 'Débito/Crédito', value: 'Débito/Crédito' },
-    { label: 'WebPay', value: 'WebPay' },
-    { label: 'Mixto', value: 'Mixto' },
-  ];
+  protected readonly maxVisibleDeudores = computed(() =>
+    this.isDesktopTier() ? null : this.mobileShownDeudores(),
+  );
+
+  private static readonly DEUDORES_PAGE_SIZE = 10;
   protected readonly paginaDeudoresActual = signal(1);
 
-  protected readonly deudoresVisibles = computed(() => {
-    const start = (this.paginaDeudoresActual() - 1) * POR_PAGINA;
-    return this.facade.alumnosConDeuda().slice(start, start + POR_PAGINA);
-  });
-
   protected readonly totalPaginasDeudores = computed(() =>
-    Math.max(1, Math.ceil(this.facade.alumnosConDeuda().length / POR_PAGINA)),
+    Math.max(
+      1,
+      Math.ceil(this.facade.alumnosConDeuda().length / AdminPagosComponent.DEUDORES_PAGE_SIZE),
+    ),
   );
 
   protected readonly rangoDeudoresMostrando = computed(() => {
     const total = this.facade.alumnosConDeuda().length;
     if (total === 0) return '';
-    const start = (this.paginaDeudoresActual() - 1) * POR_PAGINA + 1;
-    const end = Math.min(this.paginaDeudoresActual() * POR_PAGINA, total);
-    return `${start}-${end} de ${total}`;
+    const start = (this.paginaDeudoresActual() - 1) * AdminPagosComponent.DEUDORES_PAGE_SIZE + 1;
+    const end = Math.min(
+      this.paginaDeudoresActual() * AdminPagosComponent.DEUDORES_PAGE_SIZE,
+      total,
+    );
+    return `Mostrando ${start}-${end} de ${total} alumnos`;
   });
 
-  protected readonly paginaActual = signal(1);
-
-  // ── Computed: tabla filtrada y paginada ──────────────────────────────────────
-  protected readonly pagosFiltrados = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
-    const estado = this.filtroEstado();
-    const metodo = this.filtroMetodo();
-
-    return this.facade.pagosRecientes().filter((p) => {
-      const matchSearch =
-        !q ||
-        p.alumno.toLowerCase().includes(q) ||
-        (p.nroDocumento ?? '').toLowerCase().includes(q);
-      const matchEstado = !estado || p.estado === estado;
-      const matchMetodo = !metodo || p.metodo === metodo;
-      return matchSearch && matchEstado && matchMetodo;
-    });
+  protected readonly deudoresVisibles = computed<AlumnoDeudor[]>(() => {
+    const todos = this.facade.alumnosConDeuda();
+    if (this.isDesktopTier()) {
+      const start = (this.paginaDeudoresActual() - 1) * AdminPagosComponent.DEUDORES_PAGE_SIZE;
+      return todos.slice(start, start + AdminPagosComponent.DEUDORES_PAGE_SIZE);
+    }
+    return sliceByBudget(todos, this.maxVisibleDeudores());
   });
 
-  protected readonly totalFiltrados = computed(() => this.pagosFiltrados().length);
-
-  protected readonly totalPaginas = computed(() =>
-    Math.max(1, Math.ceil(this.totalFiltrados() / POR_PAGINA)),
-  );
-
-  protected readonly pagosVisibles = computed(() => {
-    const start = (this.paginaActual() - 1) * POR_PAGINA;
-    return this.pagosFiltrados().slice(start, start + POR_PAGINA);
+  protected readonly remainingDeudores = computed(() => {
+    const max = this.maxVisibleDeudores();
+    if (max === null) return 0;
+    return Math.max(0, this.facade.alumnosConDeuda().length - max);
   });
 
-  protected readonly rangoMostrando = computed(() => {
-    const total = this.totalFiltrados();
-    if (total === 0) return 'Sin resultados';
-    const start = (this.paginaActual() - 1) * POR_PAGINA + 1;
-    const end = Math.min(this.paginaActual() * POR_PAGINA, total);
-    return `Mostrando ${start}-${end} de ${total} pagos`;
-  });
+  protected loadMoreDeudores(): void {
+    this.mobileShownDeudores.update((n) => n + AdminPagosComponent.DEUDORES_STEP);
+  }
 
-  protected readonly mesActual = computed(() => {
-    const now = new Date();
-    const mes = now.toLocaleDateString('es-Cl', { month: 'long' });
-    return mes.charAt(0).toUpperCase() + mes.slice(1);
-  });
+  protected paginaDeudoresAnterior(): void {
+    if (this.paginaDeudoresActual() > 1) this.paginaDeudoresActual.update((p) => p - 1);
+  }
+
+  protected paginaDeudoresSiguiente(): void {
+    if (this.paginaDeudoresActual() < this.totalPaginasDeudores())
+      this.paginaDeudoresActual.update((p) => p + 1);
+  }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -908,6 +610,8 @@ export class AdminPagosComponent implements AfterViewInit {
       this.openDrawer(null);
     } else if (actionId === 'generate-report') {
       this.showReportModal.set(true);
+    } else if (actionId === 'view-pagos-recientes') {
+      this.layoutDrawer.open(PagosRecientesDrawerComponent, 'Pagos Recientes', 'receipt');
     }
   }
 
@@ -918,61 +622,6 @@ export class AdminPagosComponent implements AfterViewInit {
       branchId: this.branchFacade.selectedBranchId(),
     });
     this.showReportModal.set(false);
-  }
-
-  // ── Handlers de búsqueda / filtros ───────────────────────────────────────────
-
-  protected onSearch(event: Event): void {
-    this.searchQuery.set((event.target as HTMLInputElement).value);
-    this.paginaActual.set(1);
-  }
-
-  // ── Paginación ───────────────────────────────────────────────────────────────
-
-  protected paginaDeudoresAnterior(): void {
-    if (this.paginaDeudoresActual() > 1) this.paginaDeudoresActual.update((p) => p - 1);
-  }
-
-  protected paginaDeudoresSiguiente(): void {
-    if (this.paginaDeudoresActual() < this.totalPaginasDeudores())
-      this.paginaDeudoresActual.update((p) => p + 1);
-  }
-
-  protected paginaAnterior(): void {
-    if (this.paginaActual() > 1) this.paginaActual.update((p) => p - 1);
-  }
-
-  protected paginaSiguiente(): void {
-    if (this.paginaActual() < this.totalPaginas()) this.paginaActual.update((p) => p + 1);
-  }
-
-  // ── Helpers de display ───────────────────────────────────────────────────────
-
-  protected fechaCorta(fecha: string | null): string {
-    if (!fecha) return '—';
-    return formatChileanDate(fecha, { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
-
-  protected estadoVariant(estado: string | null): 'success' | 'warning' | 'neutral' {
-    switch (estado) {
-      case 'completado':
-        return 'success';
-      case 'pendiente':
-        return 'warning';
-      default:
-        return 'neutral';
-    }
-  }
-
-  protected estadoLabel(estado: string | null): string {
-    switch (estado) {
-      case 'completado':
-        return 'Completado';
-      case 'pendiente':
-        return 'Pendiente';
-      default:
-        return estado ?? '—';
-    }
   }
 
   // ── Drawer: abrir / guardar ───────────────────────────────────────────────────

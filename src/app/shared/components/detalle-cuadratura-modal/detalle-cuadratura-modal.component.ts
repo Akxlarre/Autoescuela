@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
 import { formatCLP } from '@core/utils/date.utils';
@@ -20,7 +21,7 @@ interface DenominacionRow {
   selector: 'app-detalle-cuadratura-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, KpiCardVariantComponent, StableWidthDirective],
+  imports: [IconComponent, BadgeComponent, KpiCardVariantComponent, StableWidthDirective],
   template: `
     <div class="flex flex-col gap-6 p-1">
       @if (facade.cierreSeleccionado(); as d) {
@@ -62,15 +63,9 @@ interface DenominacionRow {
           </div>
         </div>
 
-        <!-- 2. Numeric KPIs -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <app-kpi-card-variant
-            label="Saldo Sistema"
-            [value]="d.saldoSistema"
-            prefix="$"
-            icon="monitor"
-            color="default"
-          />
+        <!-- 2. Numeric KPI (hotfix-002-i: Saldo Sistema/Diferencia quitados — dependían de un
+             fondo inicial que no se persiste por cierre, mostraban cifras engañosas) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <app-kpi-card-variant
             label="Saldo Físico"
             [value]="d.saldoFisico"
@@ -78,20 +73,6 @@ interface DenominacionRow {
             icon="banknote"
             color="default"
           />
-          <app-kpi-card-variant
-            label="Diferencia"
-            [value]="abs(d.diferencia)"
-            [prefix]="d.diferencia >= 0 ? '$' : '-$'"
-            [icon]="d.estadoDiferencia === 'balanced' ? 'check-circle' : 'alert-circle'"
-            [color]="
-              d.estadoDiferencia === 'balanced'
-                ? 'success'
-                : d.estadoDiferencia === 'surplus'
-                  ? 'warning'
-                  : 'error'
-            "
-          />
-          <app-kpi-card-variant label="Reg ID" [value]="d.id" icon="hash" color="default" />
         </div>
 
         <!-- 3. Arqueo Details (Bento Feature) -->
@@ -115,17 +96,7 @@ interface DenominacionRow {
                   >
                 </div>
 
-                <div class="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div class="flex flex-col">
-                    <span
-                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
-                      >Fondo Inicial</span
-                    >
-                    <span
-                      class="text-lg font-black tabular-nums tracking-tight text-text-primary"
-                      >{{ formatAmt(d.fondoInicial) }}</span
-                    >
-                  </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4">
                   <div class="flex flex-col">
                     <span
                       class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
@@ -159,6 +130,11 @@ interface DenominacionRow {
                     >
                       {{ formatAmt(d.saldoFisico) }}
                     </span>
+                    @if (facade.ajustesCierre().length > 0) {
+                      <span class="text-2xs font-semibold tabular-nums text-text-muted mt-1">
+                        Vigente: {{ formatAmt(facade.totalVigente()) }}
+                      </span>
+                    }
                   </div>
                 </div>
               </div>
@@ -221,7 +197,70 @@ interface DenominacionRow {
           </div>
         </div>
 
-        <!-- 4. Footer con exportación -->
+        <!-- 4. Ajustes de cuadratura (spec 0002-i) -->
+        <div class="card p-0 overflow-hidden border-border-muted shadow-sm">
+          <div
+            class="px-4 py-3 bg-subtle border-b border-border-muted flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2">
+              <app-icon name="wrench" [size]="13" class="text-text-muted" />
+              <span class="text-2xs font-bold text-text-primary uppercase tracking-widest"
+                >Ajustes</span
+              >
+            </div>
+            @if (facade.isAdmin()) {
+              <button
+                type="button"
+                class="flex items-center gap-1.5 text-2xs font-bold text-brand cursor-pointer"
+                data-llm-action="registrar-ajuste-cuadratura"
+                (click)="facade.abrirRegistrarAjusteDrawer()"
+              >
+                <app-icon name="plus" [size]="12" />
+                Registrar ajuste
+              </button>
+            }
+          </div>
+
+          @if (facade.isLoadingAjustes()) {
+            <div class="px-4 py-6 flex items-center justify-center">
+              <app-icon name="loader-circle" [size]="16" class="animate-spin text-text-muted" />
+            </div>
+          } @else if (facade.ajustesCierre().length === 0) {
+            <div class="px-4 py-6 text-center">
+              <p class="text-2xs text-text-muted">Sin ajustes registrados sobre esta cuadratura.</p>
+            </div>
+          } @else {
+            <div class="divide-y divide-border-muted/30">
+              @for (ajuste of facade.ajustesCierre(); track ajuste.id) {
+                <div class="px-4 py-3 flex items-start justify-between gap-3">
+                  <div class="flex flex-col gap-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <app-badge
+                        [variant]="ajuste.tipo === 'gasto_olvidado' ? 'warning' : 'neutral'"
+                      >
+                        {{ ajuste.tipoLabel }}
+                      </app-badge>
+                      <span class="text-2xs text-text-muted">{{ ajuste.fecha }}</span>
+                    </div>
+                    <span class="text-xs text-text-secondary truncate">{{ ajuste.motivo }}</span>
+                    <span class="text-2xs text-text-muted"
+                      >Registrado por {{ ajuste.autorNombre }}</span
+                    >
+                  </div>
+                  <span
+                    class="text-sm font-bold tabular-nums shrink-0"
+                    [class.text-error]="ajuste.monto < 0"
+                    [class.text-success]="ajuste.monto > 0"
+                  >
+                    {{ ajuste.monto >= 0 ? '+' : '' }}{{ formatAmt(ajuste.monto) }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- 5. Footer con exportación -->
         <div
           class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-6 border-t border-border-muted mt-2"
         >

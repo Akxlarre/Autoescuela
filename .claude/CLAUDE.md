@@ -13,6 +13,7 @@ Este proyecto tiene guardrails automáticos que se ejecutan sin intervención hu
 - **Plan Injector** — Al editar código de producción, inyecta automáticamente el `plan.md` del track activo como contexto.
 - **AC Verifier** — Al terminar el turno, verifica que los Acceptance Criteria del track activo hayan sido cumplidos. Bloquea si quedan ACs abiertos.
 - **File Protector** — No puedes modificar los archivos del sistema de hooks (`.claude/hooks/`, `settings.json`, `architect.js`).
+- **Harness Gate** — Cada edición a `.claude/rules/`, `indices/ANTI-PATTERNS.md`, `indices/DOMAIN-GOTCHAS.md`, `CLAUDE.md` o `scripts/*.js` se valida contra el Generalization Gate: bloquea lecciones que citan un track (fix-/spec-/hotfix-NNN) sin criterio de aplicabilidad, snippets de despacho por keyword-matching, código ejecutable colado en un archivo de guía, o consejos sin mecanismo colados en un script. No aplica a `specs/**`, donde el track ID es el contenido legítimo. Skill asociado: `/harness-feedback`.
 - **Bash Guard** — No puedes crear archivos `.ts/.html/.scss` via Bash. Usa Edit/Write.
 - **Compact Recovery** — Si el contexto se compacta, los índices se re-inyectan automáticamente.
 - **Sync Check** — Al terminar de responder, se verifica si los índices necesitan actualización.

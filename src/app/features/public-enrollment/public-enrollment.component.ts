@@ -706,6 +706,7 @@ export class PublicEnrollmentComponent {
       },
       signedContract: null,
       isMinor: minor,
+      isProfessional: pd?.courseCategory === 'professional',
       canAdvance: minor || !!this.facade.contractSignatureBase64(),
     };
   });

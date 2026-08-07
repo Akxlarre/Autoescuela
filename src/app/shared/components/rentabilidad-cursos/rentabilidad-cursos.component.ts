@@ -20,7 +20,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
         <app-icon name="bar-chart-2" [size]="18" color="var(--text-primary)" />
-        <h2 class="text-base font-semibold">Rentabilidad Estimada por Tipo de Curso</h2>
+        <h2 class="text-text-primary font-semibold">Rentabilidad Estimada por Tipo de Curso</h2>
       </div>
       <span class="text-sm font-medium text-brand">
         {{ mesActual() }}

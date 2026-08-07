@@ -200,7 +200,7 @@ import {
                 </div>
                 <div class="flex-1 min-w-0">
                   <h2
-                    class="text-lg sm:text-xl font-display font-bold text-text-primary leading-tight break-words"
+                    class="text-lg sm:text-xl font-display font-bold text-text-primary leading-tight wrap-break-word"
                   >
                     {{ cls.studentName }}
                   </h2>
@@ -294,6 +294,7 @@ import {
                         rows="4"
                         class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
                         placeholder="Documenta áreas de mejora, destrezas adquiridas o tareas pendientes para la próxima sesión..."
+                        data-llm-description="input for class observations and corrections"
                       ></textarea>
                     </div>
                   </div>
@@ -302,6 +303,7 @@ import {
                     <button
                       class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center sm:ml-auto group hover:-translate-y-0.5 transition-all"
                       (click)="showFinalStep.set(true)"
+                      data-llm-action="avanzar-a-registrar-retorno"
                     >
                       <app-icon
                         name="flag"
@@ -331,8 +333,9 @@ import {
                         type="number"
                         [(ngModel)]="kmEnd"
                         max="999999"
-                        class="!bg-transparent !border-none !outline-none !shadow-none !ring-0 text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:!bg-transparent"
+                        class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
                         placeholder="0"
+                        data-llm-description="input for the odometer reading at class return"
                       />
                       <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2"
                         >km</span
@@ -363,6 +366,7 @@ import {
                       class="font-bold text-text-primary uppercase tracking-widest text-sm text-center"
                     >
                       Calificación General
+                      <span class="font-normal normal-case text-text-muted">(opcional)</span>
                     </h3>
                     <div
                       class="flex gap-2 sm:gap-4 p-2 bg-subtle rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
@@ -378,6 +382,7 @@ import {
                           [class.text-text-muted]="selectedGrade() !== grade"
                           [class.hover:bg-subtle]="selectedGrade() !== grade"
                           (click)="selectedGrade.set(grade)"
+                          data-llm-action="seleccionar-calificacion-clase"
                         >
                           <span class="leading-none">{{ grade }}</span>
                         </button>
@@ -405,6 +410,7 @@ import {
                     class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
                     [disabled]="!canFinalize() || isSubmitting()"
                     (click)="onFinalize(cls)"
+                    data-llm-action="cerrar-clase-definitivamente"
                   >
                     @if (isSubmitting()) {
                       <app-icon name="loader-2" [size]="20" class="animate-spin mr-2" />
@@ -528,9 +534,7 @@ export class InstructorClaseDetailComponent implements OnInit {
 
   canFinalize(): boolean {
     const cls = this.clasesFacade.selectedClass();
-    const kmValid = this.kmEnd !== null && this.kmEnd > (cls?.kmStart || 0);
-    const gradeValid = this.selectedGrade() !== null;
-    return !!kmValid && !!gradeValid;
+    return this.kmEnd !== null && this.kmEnd > (cls?.kmStart || 0);
   }
 
   async onFinalize(cls: any) {
@@ -538,28 +542,28 @@ export class InstructorClaseDetailComponent implements OnInit {
 
     this.isSubmitting.set(true);
     try {
-      // 1. Guardar Evaluación
-      const evalData: EvaluationFormData = {
-        sessionId: cls.sessionId,
-        classNumber: cls.classNumber,
-        studentName: cls.studentName,
-        kmStart: cls.kmStart,
-        kmEnd: this.kmEnd,
-        grade: this.selectedGrade()!,
-        observations: this.observations,
-        checklist: this.checklistItems,
-        studentSignature: this.studentSignature,
-        instructorSignature: this.instructorSignature,
-      };
-
-      // 2. Finalizar clase (status + km_end)
+      // 1. Finalizar clase (status + km_end) — la evaluación NUNCA es requisito para cerrar.
       await this.clasesFacade.finishClass(cls.sessionId, this.kmEnd!);
-      await this.clasesFacade.saveEvaluation(evalData);
 
-      this.clasesFacade.showSuccess(
-        'Clase Finalizada',
-        'La sesión y evaluación se han guardado con éxito.',
-      );
+      // 2. Guardar evaluación solo si el instructor alcanzó a calificarla ahora mismo;
+      // si no, la completa después desde su propio portal (fix-115-m).
+      if (this.selectedGrade() !== null) {
+        const evalData: EvaluationFormData = {
+          sessionId: cls.sessionId,
+          classNumber: cls.classNumber,
+          studentName: cls.studentName,
+          kmStart: cls.kmStart,
+          kmEnd: this.kmEnd,
+          grade: this.selectedGrade()!,
+          observations: this.observations,
+          checklist: this.checklistItems,
+          studentSignature: this.studentSignature,
+          instructorSignature: this.instructorSignature,
+        };
+        await this.clasesFacade.saveEvaluation(evalData);
+      }
+
+      this.clasesFacade.showSuccess('Clase Finalizada', 'La sesión se ha guardado con éxito.');
       this.router.navigate(['/app/instructor/dashboard']);
     } catch {
       this.clasesFacade.showError('Error al finalizar', 'Hubo un problema al guardar los datos.');

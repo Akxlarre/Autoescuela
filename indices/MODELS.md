@@ -83,6 +83,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
 | `ClassBook` | `dto` | `src/app/core/models/dto/class-book.model.ts` |
 | `Course` | `dto` | `src/app/core/models/dto/course.model.ts` |
+| `CuadraturaAdjustment` | `dto` | `src/app/core/models/dto/cuadratura-adjustment.model.ts` |
 | `DigitalContract` | `dto` | `src/app/core/models/dto/digital-contract.model.ts` |
 | `DisciplinaryNote` | `dto` | `src/app/core/models/dto/disciplinary-note.model.ts` |
 | `DiscountApplication` | `dto` | `src/app/core/models/dto/discount-application.model.ts` |
@@ -152,6 +153,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
 | `CicloStatus`, `CicloOption`, `CicloClaseRow`, `CicloAlumno`, `CicloAlumnoMovible`, `ZoomEmailResult` | `ui` | `src/app/core/models/ui/ciclos-teoricos.model.ts` |
+| `CuadraturaAdjustmentRow`, `AjusteFormData` | `ui` | `src/app/core/models/ui/cuadratura-adjustment.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
 | `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
 | `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertActionType`, `AlertAction`, `AlertModel`, `QuickActionModel`, `SystemStatusModel`, `LiveClassModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |

@@ -49,7 +49,7 @@ const ACTION_OPTIONS = [
     StableWidthDirective,
   ],
   template: `
-    <div class="bento-grid bento-grid--hero-fit" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -62,7 +62,10 @@ const ACTION_OPTIONS = [
       />
 
       <!-- ── Filtros + Tabla (una sola card, consistente con Base Alumnos B) ── -->
-      <div class="bento-banner card card-accent p-0 overflow-hidden" appCardHover>
+      <div
+        class="bento-banner bento-fill card card-accent p-0 overflow-hidden flex flex-col h-full"
+        appCardHover
+      >
         <!-- Toolbar de filtros -->
         <div class="p-5 border-b border-border-default">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
@@ -188,8 +191,8 @@ const ACTION_OPTIONS = [
         </div>
 
         <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
-        <!-- Scroll wrapper: habilita scroll horizontal en pantallas chicas -->
-        <div class="overflow-x-auto">
+        <!-- Scroll wrapper: horizontal en pantallas chicas + vertical interno (fill-screen) -->
+        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
           <!-- Header tabla -->
           <div
             class="micro-label audit-grid px-6 py-3 audit-header"
@@ -298,7 +301,7 @@ const ACTION_OPTIONS = [
              Sin borde propio: la última fila ya aporta la línea separadora
              (.audit-row-border) — igual que entre cualquier par de filas. -->
         @if (!facade.isLoading() && facade.totalCount() > 0) {
-          <div>
+          <div class="shrink-0">
             <p-paginator
               [rows]="pageSize"
               [totalRecords]="facade.totalCount()"
@@ -309,24 +312,41 @@ const ACTION_OPTIONS = [
             />
           </div>
         }
-      </div>
 
-      <!-- ── Banner informativo ─────────────────────────────────────────────── -->
-      <div
-        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm text-text-secondary warning-banner"
-      >
-        <app-icon name="info" [size]="16" color="var(--state-warning)" class="mt-0.5 shrink-0" />
-        <p>
-          <strong>Política de correos:</strong> El log registra el
-          <strong>correo personal</strong> de cada secretaria (no el alias institucional) para
-          garantizar trazabilidad inequívoca. El alias público (ej.
-          <span class="font-semibold text-brand"> secretaria&#64;autoescuela-chillan.cl </span>
-          ) puede ser compartido; el correo personal identifica a la persona real.
-        </p>
+        <!-- ── Banner informativo ───────────────────────────────────────────── -->
+        <div
+          class="shrink-0 flex items-start gap-3 p-4 rounded-lg text-sm text-text-secondary warning-banner"
+        >
+          <app-icon name="info" [size]="16" color="var(--state-warning)" class="mt-0.5 shrink-0" />
+          <p>
+            <strong>Política de correos:</strong> El log registra el
+            <strong>correo personal</strong> de cada secretaria (no el alias institucional) para
+            garantizar trazabilidad inequívoca. El alias público (ej.
+            <span class="font-semibold text-brand"> secretaria&#64;autoescuela-chillan.cl </span>
+            ) puede ser compartido; el correo personal identifica a la persona real.
+          </p>
+        </div>
       </div>
     </div>
   `,
   styles: `
+    /* .bento-grid--fill-screen (@layer bento.grid) solo fija grid-template-rows
+       ("auto minmax(0,1fr)") dentro de @container layoutmain >= 1024px. Por debajo
+       de eso (drawer abierto angostando <main>, típico en 1440px con un drawer de
+       ~450px), cae al default de .bento-grid: grid-auto-rows: minmax(120px, auto).
+       El hero (density="slim", sin kpis/actions) mide ~64-70px reales pero
+       align-items:stretch lo estira a 120px, dejando un hueco visible antes de la
+       card de tabla. Mismo bug ya documentado y resuelto en
+       admin-alumno-detalle.component.ts con la misma técnica: un bloque styles de
+       Angular no vive dentro de ningún @layer, así que gana por cascada sobre la
+       regla base sin !important. Gateado a max-width:1023px para no pisar el
+       minmax(0,1fr) que ya aplica en lg+ (fix-123). */
+    @container layoutmain (max-width: 1023px) {
+      .bento-grid.bento-grid--fill-screen {
+        grid-template-rows: auto auto;
+      }
+    }
+
     .filter-input {
       width: 100%;
       height: 38px;
@@ -356,16 +376,21 @@ const ACTION_OPTIONS = [
       text-decoration: none;
     }
 
-    /* Tabla — el min-width garantiza scroll horizontal antes de colapsar */
+    /* Tabla — el min-width garantiza scroll horizontal antes de colapsar.
+       "Detalles" usa minmax(200px, 1fr): un 1fr sin piso se aprieta a su
+       min-content (ancho de la palabra más larga) cuando el contenedor se
+       angosta (ej. drawer abierto), partiendo el texto en columnas
+       ilegibles. min-width = suma de columnas fijas + gaps + el piso de
+       Detalles, para que el 1fr nunca reciba menos que su mínimo real. */
     .audit-grid {
       display: grid;
-      grid-template-columns: 148px 220px 130px 110px 130px 1fr 120px;
+      grid-template-columns: 148px 220px 130px 110px 130px minmax(200px, 1fr) 120px;
       gap: 16px;
-      min-width: 900px;
+      min-width: 1160px;
     }
     .audit-grid--no-sede {
-      grid-template-columns: 148px 220px 110px 130px 1fr 120px;
-      min-width: 780px;
+      grid-template-columns: 148px 220px 110px 130px minmax(200px, 1fr) 120px;
+      min-width: 1010px;
     }
 
     .audit-header {

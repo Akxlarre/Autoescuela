@@ -86,7 +86,12 @@ export interface LiveClassModel {
   vehiclePlate?: string;
   vehicleBrand?: string;
   vehicleModel?: string;
+  vehicleId?: number | null;
+  /** Kilometraje actual del vehículo (vehicles.current_km) al momento de cargar la sesión. */
+  vehicleCurrentKm?: number | null;
+  branchId?: number | null;
   scheduledAt: string; // ISO date string
+  durationMin: number;
   studentId: number | null;
   kmStart: number | null;
 }

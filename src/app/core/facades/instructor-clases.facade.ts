@@ -231,7 +231,8 @@ export class InstructorClasesFacade {
       await this.refreshSilently();
     } catch (err: any) {
       console.error('Error starting class:', err);
-      throw err;
+      const sanitized = this.sanitizer.sanitize(err);
+      throw new Error(sanitized.message);
     }
   }
 

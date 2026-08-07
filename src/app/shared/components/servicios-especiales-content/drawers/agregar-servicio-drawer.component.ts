@@ -27,6 +27,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             formControlName="nombre"
             placeholder="Ej. Uso de Simulador"
             class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
+            data-llm-description="input for the special service name"
           />
         </div>
 
@@ -40,6 +41,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             rows="4"
             placeholder="Describe brevemente en qué consiste el servicio..."
             class="w-full px-3 py-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all resize-none"
+            data-llm-description="input for the special service description"
           ></textarea>
         </div>
 
@@ -55,6 +57,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               formControlName="precio"
               placeholder="Ej. 25000"
               class="w-full h-11 pl-7 pr-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
+              data-llm-description="input for the special service base price"
             />
           </div>
         </div>
@@ -62,13 +65,21 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
       <!-- Botones -->
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="drawer.close()"
+          data-llm-action="cancelar-agregar-servicio-especial"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2"
           [disabled]="servicioForm.invalid || isSaving()"
           [appStableWidth]="isSaving()"
           (click)="submitServicio()"
+          data-llm-action="guardar-servicio-especial"
         >
           @if (isSaving()) {
             <app-icon name="loader-2" [size]="18" class="animate-spin" />

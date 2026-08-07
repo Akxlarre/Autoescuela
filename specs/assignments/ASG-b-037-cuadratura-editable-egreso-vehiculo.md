@@ -1,11 +1,14 @@
 # Asignación ASG-b-037 — Cuadratura editable + egresos de combustible por vehículo
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** i
+> **claimed_at:** 2026-08-05
+> **resulting_track:** 0002-i-cuadratura-editable-ajustes
 
 ---
 

@@ -180,17 +180,6 @@ base** — necesario para ganar la cascada (misma especificidad de clase única)
 mutilando `btn-*` a mano con `text-xs`/`px-*`/`py-*`/`rounded-*` sueltos (ARCH-16/AP-013) — usar
 `btn-sm` para cualquier botón compacto nuevo.
 
-### Hover de fila/item de lista (`list-item-hover`, fix-119-b)
-
-Primitivo único para el hover de filas de tabla e items de lista. Reutiliza
-`var(--btn-ghost-bg-hover)` (= `--bg-subtle`), el mismo token que ya usa `btn-ghost`, para que
-toda la app comparta una sola identidad de hover en vez de elegir a mano entre `hover:bg-subtle`
-y `hover:bg-elevated` para lo mismo (causa del drift encontrado en fix-119-b).
-
-| Clase | Apariencia | Cuándo usar |
-|-------|-----------|-------------|
-| `list-item-hover` | `&:hover { background: var(--btn-ghost-bg-hover) }` | `<tr>` de tabla o item de lista/roster completo (NO botones de ícono dentro de la fila — esos usan `hover:bg-elevated` a propósito como target más chico y destacado) |
-
 ### Badge de estado (`badge-*`)
 
 Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS — dark-mode aware. Padding compacto `py-0.5 px-2`, `border-radius: var(--radius-md)`, `font-size: 0.75rem`.
@@ -236,8 +225,8 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | Clase | Propósito | Cuándo usar |
 |-------|-----------|-------------|
 | `.kpi-value` | Número KPI principal — `font-display`, clamp 2xl→4xl, tabular-nums | Métricas numéricas en dashboards y cards |
-| `.micro-label` | Micro-label uppercase — `text-xs`, `font-semibold`, `letter-spacing: 0.06em`, muted | **Cualquier** micro-label en mayúsculas: label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura |
-| `.kpi-label` | ⚠️ **Alias deprecado de `.micro-label`** (fix-078-b) | Sigue funcionando por compatibilidad. No usar en código nuevo |
+| `.overline` | Micro-label uppercase — `text-xs`, `font-semibold`, `letter-spacing: 0.06em`, muted | **Cualquier** micro-label en mayúsculas: label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura |
+| `.kpi-label` | ⚠️ **Alias deprecado de `.overline`** (fix-078-b) | Sigue funcionando por compatibilidad. No usar en código nuevo |
 | `.item-title` | Título de fila/card/ítem — `text-sm`, `font-semibold`, `text-primary`, `leading-snug` | Título de una fila de tabla, card o ítem de lista |
 | `.section-eyebrow` | Línea de contexto pre-título — `text-sm`, `font-medium`, color secondary, sin uppercase | `contextLine` en `app-section-hero`, cabeceras de sección, breadcrumb textual |
 | `.surface-hero` | Superficie gradient (sky→indigo→violet) con glow overlay | Banners, `app-section-hero` variant full, CTAs de alta jerarquía |
@@ -245,19 +234,13 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `.indicator-live` | Dot verde pulsante — sistema activo / conexión online | Indicadores de estado en tiempo real |
 | `.badge-pulse` | Badge con pulso de atención | Conteos sin leer, alertas nuevas |
 
-> **⚠️ Distinción clave:** `.micro-label` ≠ `.section-eyebrow`. La primera es un micro-label en
+> **⚠️ Distinción clave:** `.overline` ≠ `.section-eyebrow`. La primera es un micro-label en
 > mayúsculas que **etiqueta** algo (un dato, una columna, un grupo). La segunda es texto de
 > contexto **legible** antes de un título (`text-sm`, sin uppercase, `text-secondary`).
 >
 > Antes esta nota separaba `.kpi-label` de `.section-eyebrow` y la regla era "kpi-label solo para
 > datos numéricos". Esa restricción de alcance fue la causa raíz de 221 overlines ad-hoc en 25
 > variantes (fix-078-b) — quien necesitaba un micro-label fuera de un KPI lo recomponía a mano.
->
-> ⚠️ **Se llamó `.overline` hasta fix-115-b.** Colisionaba con la utilidad nativa de Tailwind
-> `overline` (`text-decoration-line: overline`) — Tailwind generaba su propia regla en `@layer
-> utilities` que se sumaba silenciosamente al estilo del DS, dibujando una línea física encima
-> del texto en 141 lugares (bug visible en Base de Alumnos y otras tablas). Renombrado para
-> eliminar la colisión de raíz. Guardrail nuevo: ARCH-22 en `scripts/architect.js`.
 
 ## Campos de Formulario (`styles/components/_form-fields.scss`)
 
@@ -305,29 +288,29 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 436 | `#38bdf8` |
-| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 264 | `var(--color-primary-text)` |
-| `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 208 | `#f87171` |
-| `--bg-surface` | 199 | `#18181b` |
-| `--state-success` | 173 | `#4ade80` |
+| `--ds-brand` | 439 | `#38bdf8` |
+| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 265 | `var(--color-primary-text)` |
+| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
+| `--border-subtle` | 218 | `rgba(255, 255, 255, 0.18)` |
+| `--state-error` | 215 | `#f87171` |
+| `--bg-surface` | 195 | `#18181b` |
+| `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 147 | `#38bdf8` |
-| `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 124 | `#fbbf24` |
+| `--border-default` | 133 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 128 | `#fbbf24` |
 | `--bg-elevated` | 80 | `#27272a` |
+| `--text-sm` | 66 | `0.875rem` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
-| `--text-sm` | 62 | `0.875rem` |
-| `--duration-fast` | 56 | `200ms` |
-| `--radius-md` | 56 | `10px` |
+| `--duration-fast` | 59 | `200ms` |
+| `--radius-md` | 58 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--border-muted` | 51 | `var(--border-subtle)` |
-| `--color-primary-muted` | 45 | `rgba(56, 189, 248, 0.15)` |
-| `--text-xs` | 45 | `0.75rem` |
+| `--border-muted` | 50 | `var(--border-subtle)` |
+| `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
+| `--text-xs` | 47 | `0.75rem` |
 | `--color-primary-text` | 41 | `#ffffff` |
 | `--color-success` | 39 | `—` |
-| `--bg-base` | 30 | `#09090b` |
+| `--bg-base` | 32 | `#09090b` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
 | `--state-success-bg` | 25 | `rgba(74, 222, 128, 0.1)` |
 
@@ -335,9 +318,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 235 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 168 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 141 | `src/styles/tokens/_variables.scss` |
+| `.card` | 234 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 165 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 130 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
@@ -345,8 +328,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 4 | `src/styles/tokens/_variables.scss` |
+| `.badge-pulse` | 3 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
-| `.badge-pulse` | 1 | `src/styles/tokens/_variables.scss` |
 
 ## Bento Grid — Clases de celda disponibles
 
@@ -399,7 +382,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **checkbox** | `.p-checkbox` · `.p-checkbox-box` |
 | **colorpicker** | `.p-colorpicker` · `.p-colorpicker-panel` |
 | **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-table` · `.p-datatable-table-wrapper` +3 |
-| **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-next` +5 |
+| **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-input` +6 |
 | **dialog** | `.p-dialog` · `.p-dialog-close-button` · `.p-dialog-content` · `.p-dialog-footer` · `.p-dialog-header` +3 |
 | **disabled** | `.p-disabled` |
 | **dropdown** | `.p-dropdown-item` · `.p-dropdown-items` |
@@ -420,9 +403,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **sortable** | `.p-sortable-column` |
 | **step** | `.p-step` · `.p-step-header` · `.p-step-number` · `.p-step-title` |
 | **steplist** | `.p-steplist` |
-| **steppanel** | `.p-steppanel` · `.p-steppanel-content` |
+| **steppanel** | `.p-steppanel` · `.p-steppanel-content` · `.p-steppanel-content-wrapper` |
 | **steppanels** | `.p-steppanels` |
-| **stepper** | `.p-stepper` · `.p-stepper-nav` · `.p-stepper-panels` · `.p-stepper-separator` |
+| **stepper** | `.p-stepper` · `.p-stepper-nav` · `.p-stepper-separator` |
 | **tab** | `.p-tab` · `.p-tab-active` |
 | **tablist** | `.p-tablist` |
 | **tabpanel** | `.p-tabpanel` |
@@ -440,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 53 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 922 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 923 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -450,7 +433,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 |--------------|---------|
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 13 | `font-bold text-lg text-text-primary` |
-| 13 | `text-xs font-semibold text-text-primary` |
+| 12 | `text-xs font-semibold text-text-primary` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 12 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 11 | `text-2xl font-semibold text-text-primary` |

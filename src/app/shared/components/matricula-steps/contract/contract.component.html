@@ -161,7 +161,7 @@
         class="bg-base border border-border-default rounded-xl p-6 h-64 overflow-y-auto prose prose-sm max-w-none shadow-inner scrollbar-thin"
       >
         <h3 class="text-center font-bold text-text-primary uppercase font-display text-sm">
-          Contrato de Prestación de Servicios de Enseñanza de Conducción
+          Contrato de Prestación de Servicios Educacionales
         </h3>
         <p class="text-xs text-justify leading-relaxed text-text-secondary">
           En Chillán, a {{ data().contractGeneration.generatedAt | date: 'dd/MM/yyyy' }}, entre
@@ -196,6 +196,17 @@
           devoluciones de dinero bajo ninguna circunstancia, salvo fuerza mayor debidamente
           acreditada.
         </p>
+        @if (data().isProfessional) {
+          <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
+            Cuarta: Evaluaciones y Examen Final
+          </p>
+          <p class="text-xs text-justify leading-relaxed text-text-secondary">
+            El Alumno deberá rendir las evaluaciones parciales del curso y el examen final teórico y
+            práctico exigidos por la normativa vigente para la clase profesional contratada. La
+            aprobación de dichas evaluaciones es requisito para la obtención del certificado del
+            curso.
+          </p>
+        }
         <p class="mt-6 italic text-xs text-text-muted text-center">
           — Vista previa. El PDF descargable es el documento oficial. —
         </p>
@@ -203,9 +214,7 @@
 
       <!-- ── Admin: Instrucciones + Subida (solo cuando PDF generado) ── -->
       @if (!isPublic() && data().contractGeneration.status === 'generated') {
-        <div
-          class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info"
-        >
+        <div class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info">
           <app-icon name="printer" [size]="20" class="mt-0.5 shrink-0" />
           <div class="space-y-1">
             <p class="text-sm font-bold">Firma física requerida</p>

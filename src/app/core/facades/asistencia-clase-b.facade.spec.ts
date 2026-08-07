@@ -13,8 +13,12 @@ import type {
 /** Builder Supabase encadenable y awaitable, con resultado por tabla. */
 function makeSupabaseMock() {
   const results = new Map<string, { data: any; error: any }>();
+  const builders = new Map<string, any>();
 
   function builder(table: string): any {
+    const cached = builders.get(table);
+    if (cached) return cached;
+
     const b: any = {
       select: vi.fn(() => b),
       eq: vi.fn(() => b),
@@ -28,6 +32,7 @@ function makeSupabaseMock() {
       single: () => Promise.resolve(results.get(`${table}:single`) ?? { data: null, error: null }),
       then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
     };
+    builders.set(table, b);
     return b;
   }
 
@@ -40,6 +45,7 @@ function makeSupabaseMock() {
     },
     setResult: (table: string, data: any, error: any = null) => results.set(table, { data, error }),
     setRpcResult: (fn: string, data: any, error: any = null) => rpcResults.set(fn, { data, error }),
+    builderFor: (table: string) => builder(table),
   };
 }
 
@@ -124,6 +130,22 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis).not.toBeNull();
     expect(kpis?.totalClasesHoy).toBe(0);
     expect(kpis?.tasaAsistencia).toBe(100);
+  });
+
+  it('fetchPracticas no incluye sesiones reserved de enrollments draft (fix-110)', async () => {
+    mock.setResult('class_b_sessions', []);
+    mock.setResult('class_b_practice_attendance', []);
+
+    await facade.initialize();
+
+    const sessionsBuilder = mock.builderFor('class_b_sessions');
+    expect(sessionsBuilder.in).toHaveBeenCalledWith('status', [
+      'scheduled',
+      'in_progress',
+      'completed',
+      'no_show',
+    ]);
+    expect(sessionsBuilder.eq).toHaveBeenCalledWith('enrollments.status', 'active');
   });
 
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {
@@ -240,5 +262,33 @@ describe('AsistenciaClaseBFacade', () => {
 
     expect(notifications.notifyUsers).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  // ── startClass (spec 0001-i) ──────────────────────────────────────────────
+
+  describe('startClass', () => {
+    it('actualiza la sesión y muestra toast de éxito', async () => {
+      mock.setResult('class_b_sessions', null, null);
+
+      await facade.startClass(1, 12000);
+
+      expect(toast.success).toHaveBeenCalledWith('Clase iniciada');
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('propaga el mensaje legible del trigger de exclusión mutua (P0001, spec 0001-i)', async () => {
+      mock.setResult('class_b_sessions', null, {
+        code: 'P0001',
+        message: 'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      });
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow(
+        'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      );
+      expect(toast.error).toHaveBeenCalledWith(
+        'Error al iniciar la clase',
+        'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
+      );
+    });
   });
 });

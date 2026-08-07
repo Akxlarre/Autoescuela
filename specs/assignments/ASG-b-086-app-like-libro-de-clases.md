@@ -1,7 +1,7 @@
 # Asignación ASG-b-086 — App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases`
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-03

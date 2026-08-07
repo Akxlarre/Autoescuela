@@ -1,14 +1,14 @@
 # Asignación ASG-b-069 — App-like: `/admin/auditoria`
 
-> **status:** pendiente
-> **owner:** cualquiera
+> **status:** completada
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-05
+> **resulting_track:** fix-122-m-app-like-admin-auditoria
 
 ---
 

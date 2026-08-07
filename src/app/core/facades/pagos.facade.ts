@@ -20,15 +20,16 @@ import { mapConcepto } from '@core/utils/payment-concept.utils';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
-function mapEstado(status: string | null): string | null {
+export function mapEstado(status: string | null): string | null {
   if (!status) return null;
   switch (status.toLowerCase()) {
     case 'paid':
       return 'completado';
     case 'partial':
+    case 'pending':
       return 'pendiente';
     default:
-      return status;
+      return 'pendiente';
   }
 }
 
@@ -293,6 +294,10 @@ export class PagosFacade {
       .select(
         'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments!inner(branch_id, students(users(first_names, paternal_last_name, maternal_last_name)))',
       )
+      // Excluye matrículas confirmadas con pago pendiente (fix-135-m): son placeholders con
+      // $0 recibido para registrar la deuda, no pagos reales. Esos alumnos ya aparecen en
+      // la lista de deudores vía fetchAlumnosConDeuda().
+      .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
@@ -354,11 +359,16 @@ export class PagosFacade {
     );
   }
 
-  async registrarNuevoPago(
-    enrollmentId: number | null,
-    payload: any,
-    montosActuales: any,
-  ): Promise<void> {
+  /**
+   * `enrollments.total_paid`/`pending_balance`/`payment_status` NO se escriben acá:
+   * el trigger `trg_update_balance` (`recalculate_enrollment_balance()`) los recalcula
+   * de forma atómica desde `SUM(payments.total_amount)` en cuanto el INSERT de abajo
+   * confirma. Calcularlos en el cliente a partir de un snapshot pasado por parámetro
+   * era la causa de un lost-update: doble submit o dos pestañas pisaban el saldo del
+   * primer pago porque ambas escrituras partían del mismo snapshot desactualizado
+   * (fix-114-m, ASG-b-063).
+   */
+  async registrarNuevoPago(enrollmentId: number | null, payload: any): Promise<void> {
     const { error: insertError } = await this.supabase.client.from('payments').insert({
       enrollment_id: enrollmentId,
       type: payload.type,
@@ -373,17 +383,7 @@ export class PagosFacade {
     });
     if (insertError) throw insertError;
 
-    if (enrollmentId !== null && montosActuales !== null) {
-      await this.supabase.client
-        .from('enrollments')
-        .update({
-          total_paid: montosActuales.total_paid + payload.total_amount,
-          pending_balance: Math.max(0, montosActuales.pending_balance - payload.total_amount),
-          payment_status:
-            montosActuales.pending_balance - payload.total_amount <= 0 ? 'paid' : 'partial',
-        })
-        .eq('id', enrollmentId);
-
+    if (enrollmentId !== null) {
       // Refrescamos los detalles del estado de cuenta específicos para este enrollment
       void this.cargarEstadoCuenta(enrollmentId);
 

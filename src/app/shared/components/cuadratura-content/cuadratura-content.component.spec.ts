@@ -42,3 +42,43 @@ describe('CuadraturaContentComponent.categoryLabel', () => {
     expect(component['categoryLabel'](mkEgreso('otros'))).toBe('otros');
   });
 });
+
+// ─── hotfix-001-i: categoryIcon() — ícono del chip de categoría en MOTIVO ─────
+
+describe('CuadraturaContentComponent.categoryIcon', () => {
+  function createComponent() {
+    TestBed.configureTestingModule({
+      providers: [{ provide: GsapAnimationsService, useValue: { createShimmer: () => {} } }],
+    });
+    const fixture = TestBed.createComponent(CuadraturaContentComponent);
+    return fixture.componentInstance;
+  }
+
+  const mkEgreso = (category: string | null): EgresoRow => ({
+    id: 1,
+    tipo: 'expense',
+    category,
+    descripcion: 'crn',
+    monto: 25_000,
+  });
+
+  it('mapea "combustible" al ícono "fuel"', () => {
+    const component = createComponent();
+    expect(component['categoryIcon'](mkEgreso('combustible'))).toBe('fuel');
+  });
+
+  it('mapea "gasto" al ícono "receipt"', () => {
+    const component = createComponent();
+    expect(component['categoryIcon'](mkEgreso('gasto'))).toBe('receipt');
+  });
+
+  it('devuelve null cuando category es null (ej. anticipos)', () => {
+    const component = createComponent();
+    expect(component['categoryIcon'](mkEgreso(null))).toBeNull();
+  });
+
+  it('devuelve el ícono genérico "tag" si la categoría no está en el mapa conocido', () => {
+    const component = createComponent();
+    expect(component['categoryIcon'](mkEgreso('otros'))).toBe('tag');
+  });
+});

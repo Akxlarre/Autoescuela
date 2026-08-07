@@ -1,7 +1,7 @@
 # Asignación ASG-b-089 — Facade inyectado directamente en Dumb Components (`shared/components/**`)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** Media
 > **created:** 2026-08-03

@@ -1,11 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { todayIso } from '@core/utils/date.utils';
+import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
   AlertaFaltaConsecutiva,
@@ -46,6 +48,7 @@ function toHHmm(val: string | null): string {
 @Injectable({ providedIn: 'root' })
 export class AsistenciaClaseBFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly toast = inject(ToastService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
@@ -400,15 +403,20 @@ export class AsistenciaClaseBFacade {
         });
       }
       this.toast.success('Clase iniciada');
-    } catch {
-      this.toast.error('Error al iniciar la clase');
-      throw new Error('startClass failed');
+    } catch (err) {
+      const sanitized = this.sanitizer.sanitize(err);
+      this.toast.error('Error al iniciar la clase', sanitized.message);
+      throw new Error(sanitized.message);
     } finally {
       this._isSaving.set(false);
     }
   }
 
-  /** Finaliza una clase práctica: km_end + grade + checklist + asistencia + firmas opcionales. */
+  /**
+   * Finaliza una clase práctica desde admin/secretaria: km_end + asistencia + firmas
+   * opcionales. No toca evaluación (grade/checklist/notes) — es materia exclusiva del
+   * instructor, que la completa por separado (fix-115-m).
+   */
   async finishClass(payload: FinishClassPayload): Promise<void> {
     this._isSaving.set(true);
     try {
@@ -421,9 +429,6 @@ export class AsistenciaClaseBFacade {
           end_time: new Date().toTimeString().split(' ')[0],
           km_end: payload.kmEnd,
           completed_at: new Date().toISOString(),
-          evaluation_grade: payload.grade,
-          notes: payload.observations ?? null,
-          evaluation_checklist: payload.checklist ?? null,
           signature_timestamp:
             payload.studentSignature || payload.instructorSignature
               ? new Date().toISOString()
@@ -582,7 +587,8 @@ export class AsistenciaClaseBFacade {
       )
       .gte('scheduled_at', start)
       .lte('scheduled_at', end)
-      .or('status.neq.cancelled,status.is.null')
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active')
       .order('start_time', { ascending: true });
 
     if (branchId !== null) {
@@ -672,6 +678,7 @@ export class AsistenciaClaseBFacade {
       )
       .in('status', ['absent', 'no_show'])
       .eq('class_b_sessions.enrollments.status', 'active')
+      .in('class_b_sessions.status', VALID_CLASS_B_SESSION_STATUSES)
       .order('recorded_at', { ascending: false });
 
     if (branchId !== null) {

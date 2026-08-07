@@ -463,6 +463,168 @@
   de dar el fix por cerrado.
 - **Fuente:** `specs/fixes/fix-108-m-log-change-jwt-guc-inexistente`
 
+### DG-050 — `class_b_sessions` con `status='reserved'` de un `enrollment` en `draft` quedan visibles horas antes de que el cron las limpie
+- **Trampa:** asumir que el wizard de matrícula (`EnrollmentFacade`) guarda de forma
+  transaccional, y que por lo tanto cualquier `class_b_sessions` visible en BD pertenece a
+  una matrícula confirmada. Cualquier query nueva sobre `class_b_sessions` que solo excluya
+  `status='cancelled'` (patrón copiado de `dashboard.facade.ts`) hereda el mismo bug.
+- **Realidad:** el wizard es auto-save incremental por paso, no transaccional. El Paso 1
+  (`savePersonalData()`) crea el `enrollment` en `status='draft'`. El Paso 2
+  (`saveAssignment()`) ya inserta filas reales en `class_b_sessions` con
+  `status='reserved'` — mucho antes del Paso 6 (`confirmEnrollment()`), donde recién
+  `enrollments.status` pasa a `'active'` y las sesiones a `'scheduled'`. Si el usuario
+  abandona el wizard entre el Paso 2 y el Paso 6, esas filas `reserved` quedan huérfanas en
+  la base: un cron diario (`cleanup_expired_drafts`, 3am) las limpia, pero solo después de
+  `expires_at` (14h) — ventana real de exposición de hasta ~38h. Durante esa ventana,
+  aparecían como clases legítimas "por iniciar" en el Dashboard ("Clases Actuales") y en
+  Asistencia B (tab Prácticas + alertas de inasistencia), porque ninguna de esas tres
+  queries filtraba `enrollments.status` ni excluía `status='reserved'`. Reportado por el
+  dueño con captura real: dos matrículas ("Bruno", "Pedro") que nunca completaron el Paso 4
+  del wizard igual mostraban sus clases seleccionadas en el dashboard. Corregido en
+  `fix-110-m`: nuevo util `VALID_CLASS_B_SESSION_STATUSES`
+  (`core/utils/class-b-session.utils.ts`, excluye `'reserved'` y `'cancelled'`) aplicado en
+  los tres call sites (`dashboard.facade.ts::fetchLiveClasses()`,
+  `asistencia-clase-b.facade.ts::fetchPracticas()` y `::fetchAlertas()`), sumado a
+  `.eq('enrollments.status', 'active')` donde faltaba. **Lección:** cualquier query nueva
+  contra `class_b_sessions` debe usar `VALID_CLASS_B_SESSION_STATUSES` + filtro de
+  `enrollments.status='active'` — no basta con excluir `'cancelled'`, porque `'reserved'`
+  es un estado transitorio de matrícula en curso, no un estado final.
+- **Fuente:** `specs/fixes/fix-110-m-clases-fantasma-matricula-draft`
+
+### DG-051 — Un error sin capturar en `cleanup_expired_drafts()` aborta TODA la corrida del cron, no solo el último `DELETE`
+- **Trampa:** asumir que si el log de Postgres muestra un solo `ERROR` (ej. una FK violation
+  en el último `DELETE` de la función), solo esa sub-operación falló y el resto de la limpieza
+  de esa noche sí se aplicó.
+- **Realidad:** `cleanup_expired_drafts()` no tiene bloque `EXCEPTION`, así que cualquier error
+  sin capturar en PL/pgSQL revierte **toda la transacción de esa invocación** — todos los
+  `DELETE` anteriores (enrollments, class_b_sessions, payments, student_documents, etc.)
+  también se revierten, aunque el log solo muestre el statement donde reventó. Ocurrió porque
+  al agregar la limpieza de `users` huérfanos (`fix` del 2026-06-18) no se consideró que ese
+  `user` podía tener una fila propia en `notifications.recipient_id` (`REFERENCES users(id)`
+  sin `ON DELETE`, default `NO ACTION`) — el `DELETE FROM users` fallaba con FK violation,
+  y como consecuencia el cron completo de esa noche (y de cada noche siguiente, mientras el
+  mismo `user` bloqueado siguiera ahí) dejaba de limpiar cualquier draft expirado nuevo,
+  acumulando backlog silencioso. Corregido en `fix-113-m`: se borra
+  `notifications` del `user` huérfano antes del `DELETE FROM users`. **Lección:** cualquier
+  tabla nueva que agregue `REFERENCES users(id)` sin `ON DELETE` es un candidato a romper este
+  cron si algún día un `user` creado por el wizard de matrícula llega a tener una fila ahí antes
+  de expirar como draft — revisar `cleanup_expired_drafts()` al agregar ese tipo de FK. Además,
+  al editar esta función, verificar contra la migración más reciente que la toca (no contra un
+  fix intermedio) — `fix-113-m` casi reintrodujo una referencia a `biometric_records`, tabla
+  eliminada por una migración posterior a la que se usó como base.
+- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`
+
+### DG-052 — `enrollments.pending_balance`/`total_paid` ya se recalculan atómicamente vía trigger; escribirlos manualmente desde el cliente causa lost-update
+- **Trampa:** después de insertar un `payment`, hacer un segundo `UPDATE` manual sobre
+  `enrollments` para "sincronizar" `total_paid`/`pending_balance`/`payment_status` a partir de
+  un snapshot leído antes del insert (patrón que parece razonable: "calculo el nuevo saldo y lo
+  guardo").
+- **Realidad:** el trigger `trg_update_balance` (`recalculate_enrollment_balance()`,
+  `20260301000008_08_misc_and_triggers.sql:170-202`) ya corre `AFTER INSERT OR UPDATE ON
+  payments` y recalcula esos tres campos **siempre desde `SUM(payments.total_amount WHERE
+  status='paid')`** — nunca desde un snapshot. Al ser un `UPDATE ... WHERE id =
+  enrollment_id`, Postgres serializa triggers concurrentes vía row lock: dos inserts de pago
+  al mismo enrollment (doble submit, dos pestañas) quedan correctamente sumados porque el
+  segundo trigger espera al primero y su `SUM` ve ambos pagos. Un `UPDATE` manual posterior
+  desde el cliente, calculado con un snapshot pasado por parámetro (leído *antes* de que
+  cualquiera de los dos inserts corriera), **pisa** ese valor ya correcto — exactamente el
+  lost-update que el trigger existe para evitar. `PagosFacade.registrarNuevoPago()` tenía este
+  segundo `UPDATE` redundante; el alumno quedaba con saldo pendiente incorrecto tras doble
+  submit, sin error visible. Corregido en `fix-114-m`: se eliminó el `UPDATE` manual — el
+  trigger es la única fuente de verdad. **Lección:** antes de escribir cualquier `UPDATE`
+  manual sobre `enrollments.total_paid`/`pending_balance`/`payment_status` tras un insert en
+  `payments`, verificar si el trigger ya lo resuelve — casi siempre sí, y agregar una segunda
+  escritura solo introduce una carrera nueva.
+- **Fuente:** `specs/fixes/fix-114-m-race-condition-pending-balance-pagos`
+
+### DG-053 — Componentes con prefijo `Admin*` en `features/admin/` pueden ser compartidos con secretaría, no exclusivos de admin
+- **Trampa:** asumir que un componente en `src/app/features/admin/` y con nombre
+  `Admin<Algo>Component` solo lo ve/usa el rol admin — y que por lo tanto una regla de
+  negocio que dice "secretaría no debe ver X" no aplica a ese archivo porque "es de admin".
+- **Realidad:** `SecretariaAsistenciaComponent` importa e instancia directamente
+  `AdminIniciarClaseDrawerComponent` y `AdminFinalizarClaseDrawerComponent` (ver
+  `secretaria-asistencia.component.ts`) — son literalmente el mismo componente para ambos
+  roles, no una copia paralela. El prefijo `Admin` es un accidente de cuándo se creó el
+  componente, no una declaración de scope de rol. Un pedido de negocio de "ocultar X a
+  secretaría" que toque estas pantallas casi siempre es "ocultar X a admin también", porque
+  no hay forma de diferenciar el rol dentro del componente sin agregarla explícitamente.
+  Antes de asumir el alcance de un pedido de "el rol Y no debe ver Z", grepear quién más
+  importa ese componente (`grep -rn "Admin<Nombre>Component" src/app/features/`) en vez de
+  confiar en el nombre del archivo.
+- **Fuente:** `specs/fixes/fix-115-m-ocultar-evaluacion-secretaria-admin`
+
+### DG-054 — `class_b_sessions.status='in_progress'` no tiene límite de vida: sigue bloqueando `startClass()` aunque desaparezca de todos los dashboards de "hoy"
+- **Trampa:** filtrar cualquier vista de "clases actuales/en curso" por `scheduled_at` acotado al
+  día de hoy (`.gte(hoy 00:00).lte(hoy 23:59)`) asumiendo que eso cubre todas las sesiones
+  `in_progress` relevantes — patrón usado en `dashboard.facade.ts`, `instructor-clases.facade.ts`
+  y `asistencia-clase-b.facade.ts` (`fetchPracticas` con `_selectedDate` por defecto hoy).
+- **Realidad:** la spec 0001-i decidió explícitamente que una sesión `in_progress` **nunca se
+  cierra sola** — solo un humano apretando "Finalizar" la mueve a estado terminal. Si eso no pasa
+  el mismo día, la fila sigue en `in_progress` indefinidamente, con `scheduled_at` de un día
+  pasado. Cualquier query acotada a "hoy" deja de verla al día siguiente — pero
+  `trg_prevent_concurrent_in_progress` (`supabase/migrations/20260804120000_...`) no tiene ningún
+  filtro de fecha: sigue bloqueando `startClass()` para ese instructor sin importar cuántos días
+  hayan pasado. Resultado antes de `fix-131-m`: la sesión colgada se volvía invisible en todo el
+  dashboard justo cuando más hacía falta verla, y el instructor quedaba bloqueado sin ninguna
+  pista visual de la causa. Corregido parcialmente en `fix-131-m` (solo para el panel
+  `app-live-classes-panel` del dashboard, vía una segunda query sin límite inferior de fecha +
+  marca visual "Día Anterior") — **`instructor-clases.facade.ts` y
+  `asistencia-clase-b.facade.ts::fetchPracticas` siguen con el mismo gap sin resolver.**
+  **Lección:** cualquier vista nueva (o ya existente) que liste sesiones `in_progress` filtrando
+  por fecha de hoy necesita el mismo tratamiento — traer también `in_progress` con
+  `scheduled_at` anterior, sin límite inferior, y marcarlas visualmente distintas de una clase de
+  hoy a la misma hora con el mismo alumno.
+- **Fuente:** `specs/fixes/fix-131-m-live-classes-panel-sesiones-dia-anterior`,
+  `specs/specs/0001-i-ciclo-vida-clase-exclusion-cierre`
+
+### DG-055 — El panel "Clases Actuales" del Dashboard alimenta `AsistenciaClaseBFacade.selectPractica()` con una fila recortada — un campo ausente ahí rompe silenciosamente lógica que asume el modelo completo
+- **Trampa:** agregar/leer un campo nuevo en `ClasePracticaRow` (el modelo completo que usan las
+  páginas dedicadas `admin-asistencia`/`secretaria-asistencia`) y asumir que también está
+  disponible cuando la misma acción (`startClass`/`finishClass` sobre `AsistenciaClaseBFacade`)
+  se dispara desde el panel "Clases Actuales" del Dashboard.
+- **Realidad:** `dashboard.component.ts::handleLiveClassAction()` construye la fila con
+  `resolveLiveClassActionPlan()` (`core/utils/live-class-action.utils.ts`), que arma un
+  `ClasePracticaActionRow` — un **subconjunto** de `ClasePracticaRow` mapeado desde
+  `LiveClassModel`/`DashboardFacade.mapPracticaRow()`, con su propio `PRACTICA_SELECT` de
+  Supabase. Y la llamada es `selectPractica(plan.row as any)`: el cast se salta el chequeo de
+  tipos, así que un campo que falte en `ClasePracticaActionRow` no produce ningún error de
+  compilación — solo un `undefined` silencioso en runtime. Pasó con `vehicleId`: `finishClass()`
+  lee `this._selectedPractica()?.vehicleId` para propagar `km_end` a `vehicles.current_km`; al
+  ser `undefined` el `if (vehicleId)` nunca entra y el update se salta sin error ni toast — la
+  sesión queda con `km_start`/`km_end` correctos pero el vehículo se queda con su `current_km`
+  desactualizado. El mismo hueco existía para `vehicleCurrentKm` (precarga del odómetro al
+  iniciar) y `branchId` (poblar el selector de vehículo).
+- **Lección:** cualquier campo que una acción sobre `AsistenciaClaseBFacade` necesite leer de
+  `_selectedPractica()` debe existir en **ambos** orígenes — `ClasePracticaRow` (Asistencia) y
+  `ClasePracticaActionRow` (Dashboard) — y el `PRACTICA_SELECT`/`mapPracticaRow()` de
+  `DashboardFacade` debe traerlo desde Supabase. Verificar los dos flujos, no solo el de
+  Asistencia (que suele ser el que se prueba primero).
+- **Fuente:** `specs/fixes/fix-133-m-vehicleid-faltante-dashboard-km`
+
+---
+
+### DG-056 — `payments.status = 'pending'` no es "un pago que está por cobrarse", es un placeholder con $0 recibido
+- **Trampa:** asumir que una fila de `payments` con `status = 'pending'` representa una
+  transacción real en curso (ej. cheque a fecha, transferencia por confirmar) y listarla en
+  cualquier vista tipo "Pagos recientes"/historial de cobros mostrando su `total_amount` como
+  si fuera dinero recibido.
+- **Realidad:** la única forma de producir `payments.status = 'pending'` es la RPC
+  `confirm_enrollment_with_payment` cuando `p_payment_method = 'pendiente'`
+  (`20260618130000_rpc_confirm_enrollment_with_payment.sql:59-98`) — el flujo de "matricular
+  ahora, cobrar después". Esa fila se inserta con `cash_amount`/`transfer_amount`/`card_amount`
+  en **$0** y `payment_date = NULL`; existe solo para dejar registrada la deuda junto al
+  enrollment. La inserción manual desde la UI (`registrarNuevoPago()` en `pagos.facade.ts`)
+  siempre usa `status: 'paid'` — no hay ningún camino que inserte un pago parcial real con
+  `status = 'pending'`.
+- **Lección:** cualquier vista que liste `payments` como "dinero cobrado" debe excluir
+  `status = 'pending'` (`.neq('status', 'pending')`, ver `fetchPagosRecientes()` en
+  `pagos.facade.ts`). El alumno con esa matrícula ya aparece en la lista de deudores vía
+  `fetchAlumnosConDeuda()` (`enrollments.pending_balance > 0`) — no hace falta duplicar la
+  señal desde `payments`. Si en el futuro se agrega un flujo real de pago parcial/en proceso
+  distinto al placeholder de matrícula, debe usar otro valor de `status` para no romper este
+  filtro.
+- **Fuente:** `specs/fixes/fix-135-m-excluir-matriculas-pago-pendiente-de-pagos-recientes`
+
 ---
 
 ## Convención para agregar una entrada nueva

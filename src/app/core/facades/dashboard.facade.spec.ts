@@ -51,18 +51,160 @@ describe('DashboardFacade', () => {
     // Por simplicidad, este test es estructural para cumplir con la regla de arquitectura TDD.
   });
 
-  describe('fetchLiveClasses', () => {
-    /** Builder Supabase encadenable y awaitable, con resultado fijo. */
-    function makeSupabaseMock(rows: any[]) {
-      const b: any = {
-        select: vi.fn(() => b),
-        eq: vi.fn(() => b),
-        gte: vi.fn(() => b),
-        lte: vi.fn(() => b),
-        neq: vi.fn(() => b),
-        then: (resolve: any) => resolve({ data: rows, error: null }),
+  describe('Request guard — respuestas stale (spec 0005-m, AC1, AC4, AC-E1)', () => {
+    /**
+     * fetchRealDashboardData() dispara exactamente 8 queries `.from(...)` por invocación
+     * (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así que
+     * cada tanda de 8 llamadas a `.from()` pertenece a una sola invocación del método —
+     * agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
+     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * 8` es una query
+     * auxiliar (ej. `fetchLiveClasses()`, que se dispara después de aplicar los datos
+     * principales) — se resuelve sola de inmediato, no la necesitamos controlada.
+     */
+    function makeRaceableSupabaseMock(expectedInitializeCalls: number) {
+      const mainCallsTotal = expectedInitializeCalls * 8;
+      const deferreds: {
+        promise: Promise<any>;
+        resolve: (v: any) => void;
+        reject: (e: any) => void;
+      }[] = [];
+      let fromCallCount = 0;
+
+      function deferredForBatch(batchIndex: number) {
+        if (!deferreds[batchIndex]) {
+          let resolve!: (v: any) => void;
+          let reject!: (e: any) => void;
+          const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+          });
+          deferreds[batchIndex] = { promise, resolve, reject };
+        }
+        return deferreds[batchIndex];
+      }
+
+      const client = {
+        from: vi.fn(() => {
+          const idx = fromCallCount++;
+          const isAuxiliaryQuery = idx >= mainCallsTotal;
+          const then = isAuxiliaryQuery
+            ? (resolve: any) => resolve({ data: [], error: null })
+            : (resolve: any, reject: any) =>
+                deferredForBatch(Math.floor(idx / 8)).promise.then(resolve, reject);
+          const builder: any = {
+            select: vi.fn(() => builder),
+            eq: vi.fn(() => builder),
+            gte: vi.fn(() => builder),
+            lte: vi.fn(() => builder),
+            lt: vi.fn(() => builder),
+            or: vi.fn(() => builder),
+            in: vi.fn(() => builder),
+            order: vi.fn(() => builder),
+            limit: vi.fn(() => builder),
+            then,
+          };
+          return builder;
+        }),
+        channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() })),
+        removeChannel: vi.fn(),
       };
-      return { client: { from: vi.fn(() => b) }, builder: b };
+
+      return {
+        client,
+        resolveBatch: (i: number, count: number) =>
+          deferredForBatch(i).resolve({ data: [], count, error: null }),
+        rejectBatch: (i: number, err: Error) => deferredForBatch(i).reject(err),
+      };
+    }
+
+    it('AC-E2: si la fetch vigente falla, el error se setea igual — el guard no enmascara errores reales', async () => {
+      const mock = makeRaceableSupabaseMock(2);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente)
+
+      mock.resolveBatch(0, 100);
+      await oldCall;
+      mock.rejectBatch(1, new Error('network fail'));
+      await newCall;
+
+      expect(dashFacade.error()).toBe('Error al cargar datos del dashboard');
+    });
+
+    it('AC1/AC-E1: solo aplica el resultado de la fetch MÁS RECIENTE, aunque la vieja resuelva después', async () => {
+      const mock = makeRaceableSupabaseMock(2);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente) — dispara antes de que la vieja resuelva
+
+      // Orden de llegada invertido: la vigente resuelve primero.
+      mock.resolveBatch(1, 200);
+      await newCall;
+      mock.resolveBatch(0, 100);
+      await oldCall;
+
+      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+    });
+  });
+
+  describe('fetchLiveClasses', () => {
+    /**
+     * Builder Supabase encadenable y awaitable. fetchLiveClasses() ahora dispara DOS
+     * queries por invocación (hoy + sesiones in_progress colgadas de días anteriores,
+     * fix-131-m) — cada `.from()` devuelve un builder nuevo para no mezclar resultados;
+     * la primera llamada responde `rows` (hoy), la segunda `stuckRows` (colgadas, vacío
+     * por defecto para no romper los tests existentes que solo esperan datos de hoy).
+     */
+    function makeSupabaseMock(rows: any[], stuckRows: any[] = []) {
+      const builders: any[] = [];
+      const from = vi.fn(() => {
+        const data = builders.length === 0 ? rows : stuckRows;
+        const b: any = {
+          select: vi.fn(() => b),
+          eq: vi.fn(() => b),
+          gte: vi.fn(() => b),
+          lte: vi.fn(() => b),
+          lt: vi.fn(() => b),
+          neq: vi.fn(() => b),
+          in: vi.fn(() => b),
+          then: (resolve: any) => resolve({ data, error: null }),
+        };
+        builders.push(b);
+        return b;
+      });
+      return {
+        client: { from },
+        get builder() {
+          return builders[0];
+        },
+        get stuckBuilder() {
+          return builders[1];
+        },
+      };
     }
 
     it('excluye sesiones canceladas del resultado y filtra por query', async () => {
@@ -93,8 +235,33 @@ describe('DashboardFacade', () => {
 
       const result = await dashFacade.fetchLiveClasses(1);
 
-      expect(mock.builder.neq).toHaveBeenCalledWith('status', 'cancelled');
       expect(result.every((c) => c.status !== 'cancelled')).toBe(true);
+    });
+
+    it('no incluye sesiones reserved de enrollments draft (fix-110)', async () => {
+      const mock = makeSupabaseMock([]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      await dashFacade.fetchLiveClasses(1);
+
+      expect(mock.builder.in).toHaveBeenCalledWith('status', [
+        'scheduled',
+        'in_progress',
+        'completed',
+        'no_show',
+      ]);
+      expect(mock.builder.eq).toHaveBeenCalledWith('enrollments.status', 'active');
     });
 
     it('mapea studentId y kmStart desde la fila de class_b_sessions (fix-076)', async () => {
@@ -128,6 +295,96 @@ describe('DashboardFacade', () => {
 
       expect(result.studentId).toBe(42);
       expect(result.kmStart).toBe(12000);
+    });
+
+    it('mapea durationMin desde duration_min, con fallback a 45 si viene null (spec 0001-i)', async () => {
+      const rows = [
+        {
+          id: 6,
+          class_number: 2,
+          scheduled_at: '2026-08-04T09:00:00',
+          duration_min: 60,
+          status: 'in_progress',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+        {
+          id: 7,
+          class_number: 3,
+          scheduled_at: '2026-08-04T10:00:00',
+          duration_min: null,
+          status: 'pending',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [first, second] = await dashFacade.fetchLiveClasses(1);
+
+      expect(first.durationMin).toBe(60);
+      expect(second.durationMin).toBe(45);
+    });
+
+    it('incluye sesiones in_progress colgadas de días anteriores junto con las de hoy (fix-131-m)', async () => {
+      const todayRows = [
+        {
+          id: 10,
+          class_number: 1,
+          scheduled_at: '2026-08-06T18:30:00',
+          duration_min: 45,
+          status: 'pending',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const stuckRows = [
+        {
+          id: 9,
+          class_number: 1,
+          scheduled_at: '2026-08-05T18:30:00',
+          duration_min: 45,
+          status: 'in_progress',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(todayRows, stuckRows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const result = await dashFacade.fetchLiveClasses(1);
+
+      expect(result).toHaveLength(2);
+      expect(result.some((c) => c.originalId === 9 && c.status === 'in_progress')).toBe(true);
+      expect(mock.stuckBuilder.lt).toHaveBeenCalledWith('scheduled_at', expect.any(String));
+      expect(mock.stuckBuilder.eq).toHaveBeenCalledWith('status', 'in_progress');
     });
 
     it('refreshLiveClassesOnly() (fix-079) actualiza solo liveClasses, sin tocar el resto de data()', async () => {

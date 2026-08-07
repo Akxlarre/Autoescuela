@@ -1,7 +1,7 @@
 # Asignación ASG-b-080 — App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-03
