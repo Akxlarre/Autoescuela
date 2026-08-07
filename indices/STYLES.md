@@ -288,27 +288,27 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 436 | `#38bdf8` |
-| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 264 | `var(--color-primary-text)` |
-| `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
+| `--ds-brand` | 439 | `#38bdf8` |
+| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 265 | `var(--color-primary-text)` |
+| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 218 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 208 | `#f87171` |
-| `--bg-surface` | 199 | `#18181b` |
-| `--state-success` | 173 | `#4ade80` |
+| `--state-error` | 215 | `#f87171` |
+| `--bg-surface` | 195 | `#18181b` |
+| `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 148 | `#38bdf8` |
-| `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 124 | `#fbbf24` |
+| `--border-default` | 133 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 128 | `#fbbf24` |
 | `--bg-elevated` | 80 | `#27272a` |
+| `--text-sm` | 66 | `0.875rem` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
-| `--text-sm` | 62 | `0.875rem` |
-| `--duration-fast` | 56 | `200ms` |
-| `--radius-md` | 56 | `10px` |
+| `--duration-fast` | 59 | `200ms` |
+| `--radius-md` | 58 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--border-muted` | 51 | `var(--border-subtle)` |
-| `--color-primary-muted` | 46 | `rgba(56, 189, 248, 0.15)` |
-| `--text-xs` | 45 | `0.75rem` |
-| `--bg-base` | 45 | `#09090b` |
+| `--border-muted` | 50 | `var(--border-subtle)` |
+| `--color-primary-muted` | 48 | `rgba(56, 189, 248, 0.15)` |
+| `--text-xs` | 47 | `0.75rem` |
+| `--bg-base` | 47 | `#09090b` |
 | `--color-primary-text` | 41 | `#ffffff` |
 | `--color-success` | 39 | `—` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
@@ -318,9 +318,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 235 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 168 | `src/styles/tokens/_variables.scss` |
-| `.overline` | 141 | `src/styles/tokens/_variables.scss` |
+| `.card` | 234 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 165 | `src/styles/tokens/_variables.scss` |
+| `.overline` | 130 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
@@ -328,7 +328,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 4 | `src/styles/tokens/_variables.scss` |
-| `.badge-pulse` | 2 | `src/styles/tokens/_variables.scss` |
+| `.badge-pulse` | 3 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
 
 ## Bento Grid — Clases de celda disponibles
@@ -433,7 +433,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 |--------------|---------|
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 13 | `font-bold text-lg text-text-primary` |
-| 13 | `text-xs font-semibold text-text-primary` |
+| 12 | `text-xs font-semibold text-text-primary` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 12 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 11 | `text-2xl font-semibold text-text-primary` |

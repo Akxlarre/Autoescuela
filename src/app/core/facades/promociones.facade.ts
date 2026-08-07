@@ -16,6 +16,7 @@ import type {
   EditarPromocionPayload,
 } from '@core/models/ui/promocion-table.model';
 import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
+import { computePromotionEndDate } from '@core/utils/promotion-end-date.utils';
 
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
@@ -35,6 +36,7 @@ export class PromocionesFacade {
   private readonly _professionalCourses = signal<{ id: number; code: string; name: string }[]>([]);
   private readonly _cursoStudents = signal<Record<number, PromocionAlumno[]>>({});
   private readonly _isLoadingStudents = signal(false);
+  private readonly _holidaysCheckFailed = signal(false);
   private _initialized = false;
 
   // ── Estado público ──────────────────────────────────────────────────────────
@@ -47,6 +49,8 @@ export class PromocionesFacade {
   readonly professionalCourses = this._professionalCourses.asReadonly();
   readonly cursoStudents = this._cursoStudents.asReadonly();
   readonly isLoadingStudents = this._isLoadingStudents.asReadonly();
+  /** true si el último fetch de feriados falló (DNS/red/CORS/5xx) — end_date pudo calcularse sin feriados reales. */
+  readonly holidaysCheckFailed = this._holidaysCheckFailed.asReadonly();
 
   // ── KPIs ────────────────────────────────────────────────────────────────────
   readonly totalPromociones = computed(() => this._promociones().length);
@@ -266,16 +270,31 @@ export class PromocionesFacade {
   }
 
   // ── CRUD ────────────────────────────────────────────────────────────────────
+  /**
+   * Calcula el `end_date` real de una promoción que arrancaría en `startDate`, aplicando
+   * la recuperación de feriados (AC6). Usado por el preview del drawer ANTES de guardar —
+   * `crearPromocion()` recalcula lo mismo internamente, así que el valor coincide siempre.
+   */
+  async previewEndDate(startDate: string): Promise<string> {
+    const holidays = await this.fetchHolidaysForYears(startDate);
+    return computePromotionEndDate(startDate, new Set(holidays));
+  }
+
   async crearPromocion(payload: CrearPromocionPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
-      // 1. Crear la promoción
+      // 1. Fetch feriados (por año, ANTES del insert) y calcular end_date extendido (AC6).
+      //    No se puede filtrar por end_date todavía: aún no existe, depende de este cálculo.
+      const holidays = await this.fetchHolidaysForYears(payload.startDate);
+      const endDate = computePromotionEndDate(payload.startDate, new Set(holidays));
+
+      // 2. Crear la promoción
       const { data: promo, error: promoError } = await this.supabase.client
         .from('professional_promotions')
         .insert({
           name: payload.name,
           start_date: payload.startDate,
-          end_date: payload.endDate,
+          end_date: endDate,
           status: 'planned',
           current_day: 0,
           branch_id: this.getActiveBranchId(),
@@ -284,9 +303,6 @@ export class PromocionesFacade {
         .single();
 
       if (promoError) throw promoError;
-
-      // 2. Fetch feriados chilenos del rango (una sola llamada antes del loop)
-      const holidays = await this.fetchHolidaysInRange(payload.startDate, payload.endDate);
 
       // 3. Crear los cursos
       const createdPcIds: number[] = [];
@@ -319,11 +335,14 @@ export class PromocionesFacade {
         }
       }
 
-      // 5. Cancelar sesiones que caen en feriados (en paralelo por curso)
-      if (holidays.length > 0) {
-        await Promise.all(createdPcIds.map((pcId) => this.cancelHolidaySessions(pcId, holidays)));
+      // 5. Cancelar sesiones que caen en feriados dentro del rango ya extendido
+      const holidaysInRange = holidays.filter((d) => d >= payload.startDate && d <= endDate);
+      if (holidaysInRange.length > 0) {
+        await Promise.all(
+          createdPcIds.map((pcId) => this.cancelHolidaySessions(pcId, holidaysInRange)),
+        );
         this.toast.info(
-          `Se marcaron automáticamente ${holidays.length} feriado(s) como sesiones canceladas.`,
+          `Se marcaron automáticamente ${holidaysInRange.length} feriado(s) como sesiones canceladas.`,
         );
       }
 
@@ -340,32 +359,53 @@ export class PromocionesFacade {
     }
   }
 
-  // ── Feriados chilenos (apis.digital.gob.cl) ──────────────────────────────────
+  // ── Feriados chilenos (apis.digital.gob.cl, con respaldo api.boostr.cl) ───────
   /**
-   * Consulta la API pública del gobierno chileno y devuelve las fechas (YYYY-MM-DD)
-   * de feriados irrenunciables que caen dentro del rango [startDate, endDate].
-   * Si la API falla, retorna [] sin bloquear la creación de la promoción.
+   * Devuelve las fechas (YYYY-MM-DD) de feriados desde `startDate` en adelante, para el/los
+   * año(s) calendario que la promoción podría llegar a cubrir (~35-40 días) — no se puede
+   * acotar por `endDate` porque ese valor todavía no existe, depende de este resultado (AC6).
+   * Marca `holidaysCheckFailed` en true solo si NINGUNA fuente respondió para algún año del
+   * rango (fix-139) — en ese caso, retorna [] sin bloquear la creación de la promoción.
    */
-  private async fetchHolidaysInRange(startDate: string, endDate: string): Promise<string[]> {
-    const startYear = new Date(startDate).getFullYear();
-    const endYear = new Date(endDate).getFullYear();
-    const years: number[] = [];
-    for (let y = startYear; y <= endYear; y++) years.push(y);
+  private async fetchHolidaysForYears(startDate: string): Promise<string[]> {
+    const anchor = new Date(`${startDate}T12:00:00`);
+    const startYear = anchor.getFullYear();
+    // Solo cruza a un 2º año calendario si arranca en diciembre (rango ~35-40 días).
+    const years = anchor.getMonth() === 11 ? [startYear, startYear + 1] : [startYear];
+
+    const perYear = await Promise.all(years.map((year) => this.fetchHolidaysForYear(year)));
+    this._holidaysCheckFailed.set(perYear.some((r) => r === null));
+
+    return perYear.flatMap((r) => r ?? []).filter((d) => d >= startDate);
+  }
+
+  /**
+   * Intenta la API oficial del gobierno (`apis.digital.gob.cl`); si falla (DNS/red/CORS/5xx),
+   * reintenta con `api.boostr.cl` como respaldo. `null` indica que AMBAS fuentes fallaron
+   * para ese año (fix-139 — `apis.digital.gob.cl` quedó inalcanzable en producción).
+   */
+  private async fetchHolidaysForYear(year: number): Promise<string[] | null> {
+    try {
+      const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
+      if (resp.ok) {
+        const data = (await resp.json()) as { fecha: string }[];
+        return data.map((f) => f.fecha);
+      }
+    } catch {
+      // sigue al respaldo
+    }
 
     try {
-      const results = await Promise.all(
-        years.map(async (year) => {
-          const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
-          if (!resp.ok) return [] as string[];
-          const data = (await resp.json()) as { fecha: string }[];
-          return data.map((f) => f.fecha);
-        }),
-      );
-      return results.flat().filter((d) => d >= startDate && d <= endDate);
+      const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
+      if (resp.ok) {
+        const json = (await resp.json()) as { data: { date: string }[] };
+        return json.data.map((f) => f.date);
+      }
     } catch {
-      // API no disponible — continuar sin cancelar sesiones automáticamente
-      return [];
+      // ambas fuentes fallaron
     }
+
+    return null;
   }
 
   /**

@@ -107,6 +107,7 @@
 | `update-secretary` | `supabase/functions/update-secretary/index.ts` | `supabase.functions.invoke('update-secretary', { body: { id, ... } })` | Actualiza secretaria. Detecta cambio de email → `updateUserById` en Auth + UPDATE en `users`. Payload parcial. |
 | `create-instructor` | `supabase/functions/create-instructor/index.ts` | `supabase.functions.invoke('create-instructor', { body: { ... } })` | Crea instructor en Auth + `users` + `instructors`. Valida caller admin/secretary, valida licencia no expirada, crea auth user con password = RUT sin DV, INSERT en `users` (role instructor), INSERT en `instructors` (tipo, licencia), opcionalmente INSERT en `vehicle_assignments`. Rollback cascado: borra instructor → users → auth si falla. |
 | `update-instructor` | `supabase/functions/update-instructor/index.ts` | `supabase.functions.invoke('update-instructor', { body: { id, ... } })` | Actualiza instructor. Detecta cambio de email → Auth sync. UPDATE en `users` + `instructors` (recomputa `license_status`). Gestiona cambio de vehículo: cierra asignación anterior (`end_date=now`), crea nueva en `vehicle_assignments`. |
+| `auto-create-next-promotions` | `supabase/functions/auto-create-next-promotions/index.ts` | pg_cron → `net.http_post` (migración `20260807090000_auto_create_next_promotions_cron.sql`, diario `0 6 * * *`, DESPUÉS de `auto_transition_promotion_status()` en el mismo horario) | 0002-m. Garantiza colchón de 1 `professional_promotions` `in_progress` + 2 `planned` (branch_id=2 fijo) hacia adelante — no solo "la siguiente". Ancla la cadencia (+14 días) en `MAX(start_date)` existente; `code` en `MAX(code::int)+1` (fallback `start_date='2026-07-27'`/`code=275` solo si la tabla está vacía, no se espera en producción). Por cada promoción que falte: fetchea feriados del año vía `_shared/holidays.ts` (`fetchHolidaysForYears`, puerto Deno de `fetchHolidaysForYears` de `promociones.facade.ts`), calcula `end_date` con `computePromotionEndDate()` (puerto de `core/utils/promotion-end-date.utils.ts` — mismo algoritmo, recuperación de feriados AC6), INSERT `professional_promotions`, y por cada curso `type='professional' AND is_convalidation=false`: INSERT `promotion_courses` (dispara `generate_sessions_from_promotion()`, por eso `end_date` debe estar correcto antes) + INSERT `class_book` explícito (`status='draft'`, no depende de los 2 puntos de creación perezosa existentes). Cancela sesiones que caen en feriados del rango extendido. Idempotente por `start_date` (AC-E1): si ya existe, no duplica, la cadena avanza igual. Usa `SUPABASE_SERVICE_ROLE_KEY` (bypassa RLS). |
 | `public-enrollment` | `supabase/functions/public-enrollment/index.ts` | `supabase.functions.invoke('public-enrollment', { body: { action: '...' } })` | Matrícula pública (sin auth). Actions: `load-instructors`, `load-schedule` (filtra `slot_holds` de otras sesiones como ocupados, acepta `sessionToken`), `reserve-slots` (crea/reemplaza holds TTL 20 min), `release-slots` (libera holds al retroceder), `submit-clase-b` (idempotente vía `payment_attempts.session_token`; acepta `carnetStoragePath` opcional para mover foto desde ruta temporal a `students/{id}/id_photo` + registrar en `student_documents`), `submit-pre-inscription`, `initiate-payment` (crea enrollment `pending_payment` + class_b_sessions `reserved` + draft_snapshot en BD incluyendo `carnetStoragePath`; sets `base_price`, `pending_balance`, `total_paid=0`, `payment_status='pending'` en enrollment; inicia transacción Webpay Plus vía REST; retorna `{webpayUrl, webpayToken}`), `confirm-payment` (recibe `tokenWs` del return_url, llama `webpayCommit`, valida `response_code===0 && status==='AUTHORIZED'`, activa enrollment + actualiza `total_paid`/`pending_balance`/`payment_status`, activa sesiones, genera número matrícula, inserta registro en `payments` (type='online', card_amount), mueve foto carnet desde ruta temporal del snapshot, libera slot_holds; retorna respuesta enriquecida con `branchName`, `courseName`, `amountPaid`, `courseBasePrice`, `pendingBalance`, `sessionCount`, `paymentMode`, `studentName`). Usa `SERVICE_ROLE_KEY` para bypass RLS. Transbank: env `TRANSBANK_ENV` (`integration`\|`production`), credenciales en `TRANSBANK_COMMERCE_CODE`/`TRANSBANK_API_KEY`; en integration usa credenciales públicas predefinidas. **Foto carnet (flujo 2 etapas):** cliente anón sube a `documents/public-uploads/carnet/{sessionToken}` (política `20260317140000`); `carnetStoragePath` se guarda en `draft_snapshot` durante `initiate-payment`; la EF mueve vía `storage.move()` a `documents/students/{enrollmentId}/id_photo` e inserta en `student_documents` (tipo `id_photo`, status `approved`) durante `confirm-payment`. |
 
 ## Funciones SQL
@@ -186,7 +187,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (77 tablas, acumulado de las migraciones)
+## Esquema efectivo (78 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -325,34 +326,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
-
-### `cuadratura_adjustments` — 🔒 RLS
-
-> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). La cuadratura cerrada
-> es un arqueo físico inmutable; un ajuste es la única forma de reflejar correcciones (ej. gasto
-> de combustible con fecha pasada) sin borrar la evidencia del snapshot original.
-
-| Columna | Tipo | Null | Default | FK |
-|---------|------|------|---------|----|
-| `id` PK | SERIAL | NO | — | — |
-| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
-| `tipo` | TEXT | NO | — | CHECK IN (`gasto_olvidado`, `correccion_manual`) |
-| `monto` | INTEGER | NO | — | — (con signo: negativo reduce el total vigente) |
-| `motivo` | TEXT | NO | — | — |
-| `expense_id` | INT | sí | — | → `expenses.id` (solo si `tipo = 'gasto_olvidado'`) |
-| `registered_by` | INT | NO | — | → `users.id` |
-| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
-
-**Policies:**
-
-| Policy | Cmd | USING | WITH CHECK |
-|--------|-----|-------|------------|
-| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
-| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
-
-> ⚠️ **Sin policy de UPDATE/DELETE a propósito** — ni siquiera admin puede editar/borrar un
-> ajuste vía API REST normal. Inmutabilidad real a nivel BD, no solo en la UI: una corrección mal
-> hecha se compensa con OTRO ajuste, nunca se edita el original.
 
 ### `certificate_batches` — 🔒 RLS
 
@@ -740,6 +713,29 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_courses | DELETE | `auth_user_role() = 'admin'` | — |
 | select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE)` | — |
 
+### `cuadratura_adjustments` — 🔒 RLS
+
+> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). '
+  'Inmutable: sin UPDATE ni DELETE -- una corrección mal hecha se compensa con OTRO ajuste.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
+| `tipo` | TEXT | NO | — | — |
+| `monto` | INTEGER | NO | — | — |
+| `motivo` | TEXT | NO | — | — |
+| `expense_id` | INT | sí | — | → `expenses.id` |
+| `registered_by` | INT | NO | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
+
 ### `digital_contracts` — 🔒 RLS
 
 > Contrato digital firmado por el alumno, con PDF para el DMS (RF-083)
@@ -925,11 +921,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `vehicle_id` | INT | sí | — | → `vehicles.id` |
-
-> `vehicle_id` (migración `20260806000000_expenses_add_vehicle_id.sql`, fix-006-i /
-> ASG-b-037): vehículo asociado al egreso (ej. carga de combustible). Opcional — la
-> columna ya existía aplicada en producción sin migración versionada; este archivo
-> la documenta y la vuelve reproducible en otros entornos.
 
 **Policies:**
 

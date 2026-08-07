@@ -132,7 +132,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -163,6 +162,7 @@
 | ASG-b-030 | Fix H-023: Caja Diaria muestra glosa cruda del pago | [fix-062-b-glosa-cruda-cuadratura](fixes/fix-062-b-glosa-cruda-cuadratura/fix.md) | 2026-07-28 |
 | ASG-b-031 | Fix H-032: campo Contraseña visible en "Recuperar Contraseña" | [fix-061-b-password-field-inert-reset-mode](fixes/fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
 | ASG-b-032 | Fix H-036: flash de texto incorrecto en Pagos de alumno Clase B | [fix-060-b-flash-texto-pagos-clase-b](fixes/fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
+| ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
 | ASG-b-010 | Fix H-016: Portal Instructor corre sobre datos MOCK | [fix-001-i-portal-instructor-datos-mock](fixes/fix-001-i-portal-instructor-datos-mock/fix.md) | 2026-07-29 |
 | ASG-b-012 | Matrícula pública: overlay, landing sin sede, retry roto, storage huérfano | [fix-069-b-matricula-publica-varios](fixes/fix-069-b-matricula-publica-varios/fix.md) | 2026-07-29 |
 | ASG-b-033 | Portal alumno no muestra matrículas múltiples | [0034-b-portal-alumno-matriculas-multiples](specs/0034-b-portal-alumno-matriculas-multiples/spec.md) | 2026-07-29 |

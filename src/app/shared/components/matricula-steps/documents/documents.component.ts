@@ -38,6 +38,8 @@ export class DocumentsComponent {
   lightboxOpen = output<string | null>();
   /** Emitido al confirmar la reutilización de la foto de una matrícula anterior (fix-020). */
   confirmPhoto = output<void>();
+  /** Emitido al eliminar la foto carnet ya subida (fix-137). */
+  photoRemoved = output<void>();
   next = output<void>();
   back = output<void>();
 
@@ -106,6 +108,10 @@ export class DocumentsComponent {
 
   onConfirmPhoto(): void {
     this.confirmPhoto.emit();
+  }
+
+  onRemovePhoto(): void {
+    this.photoRemoved.emit();
   }
 
   isUploaded(type: DocumentType): boolean {

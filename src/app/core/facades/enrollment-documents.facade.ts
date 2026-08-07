@@ -292,6 +292,44 @@ export class EnrollmentDocumentsFacade {
     }
   }
 
+  /**
+   * Elimina la foto carnet del storage y de student_documents.
+   */
+  async removeCarnetPhoto(enrollmentId: number): Promise<boolean> {
+    this._isUploading.set(true);
+    this._error.set(null);
+
+    try {
+      const persisted = this._persistedDocs().find(
+        (d) => d.type === 'id_photo' && d.enrollment_id === enrollmentId,
+      );
+
+      if (persisted?.storage_url) {
+        await this.supabase.client.storage.from(STORAGE_BUCKET).remove([persisted.storage_url]);
+      }
+
+      const { error } = await this.supabase.client
+        .from('student_documents')
+        .delete()
+        .eq('enrollment_id', enrollmentId)
+        .eq('type', 'id_photo');
+
+      if (error) {
+        this._error.set('Error al eliminar foto carnet: ' + this.sanitizer.sanitize(error).message);
+        return false;
+      }
+
+      this._persistedDocs.set(this._persistedDocs().filter((d) => d.type !== 'id_photo'));
+      this.clearCarnetPhoto();
+      return true;
+    } catch {
+      this._error.set('Error inesperado al eliminar foto carnet');
+      return false;
+    } finally {
+      this._isUploading.set(false);
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════════════
   // 3. MÉTODOS DE ACCIÓN — Document Upload
   // ══════════════════════════════════════════════════════════════════════════════

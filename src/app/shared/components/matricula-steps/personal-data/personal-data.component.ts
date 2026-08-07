@@ -48,6 +48,20 @@ export function earlyLicenseWarningFn(
   return calcLicenseSeniority(licenseDate, todayIso());
 }
 
+/**
+ * En categoría Profesional, "Licencia previa" y "Fecha de obtención licencia B" son
+ * obligatorios (el curso profesional exige acreditar licencia B vigente). En las demás
+ * categorías no aplican.
+ */
+export function hasRequiredProfessionalLicenseFn(
+  category: CourseCategory | null,
+  currentLicense: EnrollmentPersonalData['currentLicense'],
+  licenseDate: string | null,
+): boolean {
+  if (category !== 'professional') return true;
+  return !!currentLicense && currentLicense !== 'none' && !!licenseDate;
+}
+
 @Component({
   selector: 'app-personal-data-step',
   imports: [
@@ -161,7 +175,8 @@ export class PersonalDataComponent {
       this.emailValid() &&
       d.phone.trim().length >= 8 &&
       d.birthDate.length > 0 &&
-      courseIsValid
+      courseIsValid &&
+      hasRequiredProfessionalLicenseFn(d.courseCategory, d.currentLicense, d.licenseDate)
     );
   });
 

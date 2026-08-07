@@ -228,7 +228,7 @@
           <div class="grid md:grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary" for="currentLicense">
-                Licencia previa
+                Licencia previa <span class="text-error">*</span>
               </label>
               <p-select
                 inputId="currentLicense"
@@ -246,6 +246,7 @@
             <div class="flex flex-col gap-1.5">
               <app-date-input
                 label="Fecha de obtención licencia B"
+                [required]="true"
                 [value]="data().licenseDate ?? ''"
                 (valueChange)="emitField('licenseDate', $event)"
                 data-llm-description="Date the student obtained their class B driver's license, used to warn if under 2 years before the professional course starts"
