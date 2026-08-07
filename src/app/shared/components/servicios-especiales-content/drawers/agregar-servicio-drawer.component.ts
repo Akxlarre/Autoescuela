@@ -18,7 +18,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     <app-drawer-form>
       <form [formGroup]="servicioForm" (ngSubmit)="submitServicio()" class="flex flex-col gap-5">
         <div class="flex flex-col gap-1.5">
-          <label class="overline" for="ns-nombre">
+          <label class="micro-label" for="ns-nombre">
             Nombre del servicio <span class="text-error">*</span>
           </label>
           <input
@@ -32,7 +32,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="overline" for="ns-descripcion">
+          <label class="micro-label" for="ns-descripcion">
             Descripción <span class="text-error">*</span>
           </label>
           <textarea
@@ -46,7 +46,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="overline" for="ns-precio">
+          <label class="micro-label" for="ns-precio">
             Precio Base ($) <span class="text-error">*</span>
           </label>
           <div class="relative">

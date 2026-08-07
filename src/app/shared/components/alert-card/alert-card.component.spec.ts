@@ -1,12 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import {
-  LucideAngularModule,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCircle,
-  X,
-} from 'lucide-angular';
+import { LucideAngularModule, AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-angular';
 import { AlertCardComponent, AlertSeverity } from './alert-card.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
@@ -17,13 +10,13 @@ describe.skip('AlertCardComponent', () => {
   let fixture: ComponentFixture<AlertCardComponent>;
   let component: AlertCardComponent;
 
-  const gsapMock = { addPressFeedback: vi.fn() };
+  const gsapMock = { animateSkeletonToContent: vi.fn() };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
         AlertCardComponent,
-        LucideAngularModule.pick({ AlertCircle, AlertTriangle, Info, CheckCircle, X }),
+        LucideAngularModule.pick({ AlertCircle, AlertTriangle, Info, CheckCircle }),
       ],
       providers: [{ provide: GsapAnimationsService, useValue: gsapMock }],
     }).compileComponents();
@@ -51,86 +44,30 @@ describe.skip('AlertCardComponent', () => {
     expect(component.severity()).toBe('info');
   });
 
-  it("should apply .alert-info class when severity is 'info' (default)", () => {
-    expect(fixture.nativeElement.classList).toContain('alert-info');
+  it("should use --state-info tokens for severity 'info' (default), never --color-primary", () => {
+    expect(fixture.nativeElement.style.background).toContain('--state-info-bg');
+    expect(fixture.nativeElement.style.borderLeft).toContain('--state-info');
+    expect(fixture.nativeElement.style.borderLeft).not.toContain('--color-primary');
   });
 
   const severities: AlertSeverity[] = ['error', 'warning', 'info', 'success'];
 
   severities.forEach((sev) => {
-    it(`should apply .alert-${sev} class for severity '${sev}'`, () => {
+    it(`should tint background with --state-${sev}-bg for severity '${sev}'`, () => {
       fixture.componentRef.setInput('severity', sev);
       fixture.detectChanges();
-      expect(fixture.nativeElement.classList).toContain(`alert-${sev}`);
+      expect(fixture.nativeElement.style.background).toContain(`--state-${sev}-bg`);
     });
 
-    it(`should NOT apply other severity classes when severity is '${sev}'`, () => {
+    it(`should apply a real border-left in --state-${sev} for severity '${sev}'`, () => {
       fixture.componentRef.setInput('severity', sev);
       fixture.detectChanges();
-      const others = severities.filter((s) => s !== sev);
-      others.forEach((other) => {
-        expect(fixture.nativeElement.classList).not.toContain(`alert-${other}`);
-      });
+      expect(fixture.nativeElement.style.borderLeft).toContain(`--state-${sev}`);
     });
-  });
-
-  it('should render the accent bar', () => {
-    const bar = fixture.nativeElement.querySelector('.absolute');
-    expect(bar).toBeTruthy();
   });
 
   it('should project content via ng-content', () => {
     const contentDiv = fixture.nativeElement.querySelector('.text-sm.text-text-secondary');
     expect(contentDiv).toBeTruthy();
-  });
-
-  it('should NOT render action button when actionLabel is not provided', () => {
-    const buttons = fixture.nativeElement.querySelectorAll('button');
-    expect(buttons.length).toBe(0);
-  });
-
-  it('should render action button when actionLabel is provided', () => {
-    fixture.componentRef.setInput('actionLabel', 'Reintentar');
-    fixture.detectChanges();
-    const btn = fixture.nativeElement.querySelector('button');
-    expect(btn).toBeTruthy();
-    expect(btn.textContent?.trim()).toBe('Reintentar');
-  });
-
-  it('should emit action when action button is clicked', () => {
-    fixture.componentRef.setInput('actionLabel', 'Reintentar');
-    fixture.detectChanges();
-    const spy = vi.fn();
-    component.action.subscribe(spy);
-    fixture.nativeElement.querySelector('button').click();
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it('should NOT render dismiss button when dismissible is false (default)', () => {
-    const dismissBtn = fixture.nativeElement.querySelector("[aria-label='Cerrar']");
-    expect(dismissBtn).toBeNull();
-  });
-
-  it('should render dismiss button when dismissible is true', () => {
-    fixture.componentRef.setInput('dismissible', true);
-    fixture.detectChanges();
-    const dismissBtn = fixture.nativeElement.querySelector("[aria-label='Cerrar']");
-    expect(dismissBtn).toBeTruthy();
-  });
-
-  it('should emit dismissed when dismiss button is clicked', () => {
-    fixture.componentRef.setInput('dismissible', true);
-    fixture.detectChanges();
-    const spy = vi.fn();
-    component.dismissed.subscribe(spy);
-    fixture.nativeElement.querySelector("[aria-label='Cerrar']").click();
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  it("dismiss button should have aria-label='Cerrar'", () => {
-    fixture.componentRef.setInput('dismissible', true);
-    fixture.detectChanges();
-    const dismissBtn = fixture.nativeElement.querySelector("[aria-label='Cerrar']");
-    expect(dismissBtn.getAttribute('aria-label')).toBe('Cerrar');
   });
 });

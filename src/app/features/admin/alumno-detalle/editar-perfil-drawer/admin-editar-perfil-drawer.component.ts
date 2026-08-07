@@ -204,7 +204,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
       padding: 10px 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-default);
-      background: var(--bg-base);
+      background: var(--input-bg);
       color: var(--text-primary);
       font-size: var(--text-sm);
       outline: none;

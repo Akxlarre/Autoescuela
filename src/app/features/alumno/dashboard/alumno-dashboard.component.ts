@@ -387,11 +387,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
           @if (certificate()?.state === 'locked' && certificate()?.blockingReason) {
             <p class="text-xs text-text-muted m-0">{{ certificate()?.blockingReason }}</p>
           } @else if (certificate()?.state === 'enabled') {
-            <app-alert-card
-              severity="success"
-              title="Tu certificado está listo para ser generado"
-              appAnimateIn
-            >
+            <app-alert-card severity="success" title="Tu certificado está listo para ser generado">
               Solicita a la secretaría que lo emita.
             </app-alert-card>
           } @else if (certificate()?.state === 'issued') {
@@ -472,7 +468,6 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                   ? 'Riesgo de pérdida de avance'
                   : 'Inasistencia reciente'
               "
-              appAnimateIn
             >
               {{
                 (attendance()?.consecutiveAbsences ?? 0) >= 2

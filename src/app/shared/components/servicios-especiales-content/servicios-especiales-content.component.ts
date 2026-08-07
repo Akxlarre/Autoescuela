@@ -193,12 +193,12 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <table class="w-full text-sm">
               <thead>
                 <tr style="border-bottom:1px solid var(--border-subtle)">
-                  <th class="overline text-left py-3 px-4">Cliente</th>
-                  <th class="overline text-left py-3 px-4">Servicio</th>
-                  <th class="overline text-right py-3 px-4">Monto</th>
-                  <th class="overline text-center py-3 px-4">Estado</th>
-                  <th class="overline text-center py-3 px-4">Cobro</th>
-                  <th class="overline text-left py-3 px-4">Fecha</th>
+                  <th class="micro-label text-left py-3 px-4">Cliente</th>
+                  <th class="micro-label text-left py-3 px-4">Servicio</th>
+                  <th class="micro-label text-right py-3 px-4">Monto</th>
+                  <th class="micro-label text-center py-3 px-4">Estado</th>
+                  <th class="micro-label text-center py-3 px-4">Cobro</th>
+                  <th class="micro-label text-left py-3 px-4">Fecha</th>
                 </tr>
               </thead>
               <tbody>

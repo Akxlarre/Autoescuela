@@ -186,7 +186,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (77 tablas, acumulado de las migraciones)
+## Esquema efectivo (78 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -325,34 +325,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
-
-### `cuadratura_adjustments` — 🔒 RLS
-
-> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). La cuadratura cerrada
-> es un arqueo físico inmutable; un ajuste es la única forma de reflejar correcciones (ej. gasto
-> de combustible con fecha pasada) sin borrar la evidencia del snapshot original.
-
-| Columna | Tipo | Null | Default | FK |
-|---------|------|------|---------|----|
-| `id` PK | SERIAL | NO | — | — |
-| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
-| `tipo` | TEXT | NO | — | CHECK IN (`gasto_olvidado`, `correccion_manual`) |
-| `monto` | INTEGER | NO | — | — (con signo: negativo reduce el total vigente) |
-| `motivo` | TEXT | NO | — | — |
-| `expense_id` | INT | sí | — | → `expenses.id` (solo si `tipo = 'gasto_olvidado'`) |
-| `registered_by` | INT | NO | — | → `users.id` |
-| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
-
-**Policies:**
-
-| Policy | Cmd | USING | WITH CHECK |
-|--------|-----|-------|------------|
-| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
-| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
-
-> ⚠️ **Sin policy de UPDATE/DELETE a propósito** — ni siquiera admin puede editar/borrar un
-> ajuste vía API REST normal. Inmutabilidad real a nivel BD, no solo en la UI: una corrección mal
-> hecha se compensa con OTRO ajuste, nunca se edita el original.
 
 ### `certificate_batches` — 🔒 RLS
 
@@ -740,6 +712,29 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_courses | DELETE | `auth_user_role() = 'admin'` | — |
 | select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE)` | — |
 
+### `cuadratura_adjustments` — 🔒 RLS
+
+> Ajustes posteriores sobre cuadraturas cerradas (spec 0002-i / ASG-b-037). '
+  'Inmutable: sin UPDATE ni DELETE -- una corrección mal hecha se compensa con OTRO ajuste.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `cuadratura_id` | INT | NO | — | → `cash_closings.id` |
+| `tipo` | TEXT | NO | — | — |
+| `monto` | INTEGER | NO | — | — |
+| `motivo` | TEXT | NO | — | — |
+| `expense_id` | INT | sí | — | → `expenses.id` |
+| `registered_by` | INT | NO | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
+
 ### `digital_contracts` — 🔒 RLS
 
 > Contrato digital firmado por el alumno, con PDF para el DMS (RF-083)
@@ -925,11 +920,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `vehicle_id` | INT | sí | — | → `vehicles.id` |
-
-> `vehicle_id` (migración `20260806000000_expenses_add_vehicle_id.sql`, fix-006-i /
-> ASG-b-037): vehículo asociado al egreso (ej. carga de combustible). Opcional — la
-> columna ya existía aplicada en producción sin migración versionada; este archivo
-> la documenta y la vuelve reproducible en otros entornos.
 
 **Policies:**
 
@@ -2127,6 +2117,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
 | update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 | select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
+| select_users_via_class_relationship | SELECT | `auth_user_role() = 'instructor' AND public.auth_instructor_can_view_student_u…` | — |
 
 ### `vehicle_assignments` — 🔒 RLS
 
@@ -2251,6 +2242,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
+| `auth_instructor_can_view_student_user` | `(target_user_id integer)` |
 | `auth_instructor_id` | `()` |
 | `auth_student_id` | `()` |
 | `auth_user_branch_id` | `()` |
@@ -2302,7 +2294,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

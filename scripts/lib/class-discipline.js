@@ -148,10 +148,10 @@ export function findAdhocTypography(content) {
   const hits = [];
   for (const attr of extractClassAttributes(content)) {
     // Ya migrado → no es violación
-    if (/(?:^|\s)(?:overline|item-title)(?=\s|$)/.test(attr)) continue;
+    if (/(?:^|\s)(?:micro-label|item-title)(?=\s|$)/.test(attr)) continue;
 
     if (UPPERCASE_RE.test(attr) && MUTED_RE.test(attr) && OVERLINE_SIZE_RE.test(attr)) {
-      hits.push('overline');
+      hits.push('micro-label');
       continue;
     }
     if (

@@ -104,7 +104,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <div class="grid grid-cols-1 gap-6">
               <!-- Tipo de Mantenimiento -->
               <div class="flex flex-col gap-1.5">
-                <label for="mf-type" class="overline">
+                <label for="mf-type" class="micro-label">
                   Tipo de Servicio <span class="text-error">*</span>
                 </label>
                 <p-select
@@ -119,7 +119,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
               <!-- Kilometraje -->
               <div class="flex flex-col gap-1.5">
-                <label for="mf-km" class="overline">
+                <label for="mf-km" class="micro-label">
                   Kilometraje al momento <span class="text-error">*</span>
                 </label>
                 <p-inputNumber
@@ -134,7 +134,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               <!-- Taller / Fecha -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1.5">
-                  <label for="mf-workshop" class="overline"> Taller / Proveedor </label>
+                  <label for="mf-workshop" class="micro-label"> Taller / Proveedor </label>
                   <input
                     id="mf-workshop"
                     pInputText
@@ -159,7 +159,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
               <!-- Costo -->
               <div class="flex flex-col gap-1.5">
-                <label for="mf-cost" class="overline"> Costo Total ($) </label>
+                <label for="mf-cost" class="micro-label"> Costo Total ($) </label>
                 <p-inputNumber
                   inputId="mf-cost"
                   formControlName="cost"
@@ -173,7 +173,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
               <!-- Observaciones -->
               <div class="flex flex-col gap-1.5">
-                <label for="mf-desc" class="overline"> Observaciones / Detalles </label>
+                <label for="mf-desc" class="micro-label"> Observaciones / Detalles </label>
                 <textarea
                   id="mf-desc"
                   pTextarea

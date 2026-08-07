@@ -94,7 +94,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           <h2 class="text-base font-bold">Historial Cronológico</h2>
           <div class="flex items-center gap-2">
             @if (!facade.isLoading()) {
-              <span class="overline"> {{ facade.maintenances().length }} registros </span>
+              <span class="micro-label"> {{ facade.maintenances().length }} registros </span>
             }
             <button
               pButton
@@ -133,18 +133,18 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           >
             <ng-template pTemplate="header">
               <tr class="text-left">
-                <th class="overline pl-6 py-4 bg-subtle">Fecha</th>
-                <th class="overline bg-subtle">Tipo</th>
-                <th class="overline bg-subtle">Kilometraje</th>
-                <th class="overline bg-subtle">Costo</th>
-                <th class="overline bg-subtle">Taller</th>
-                <th class="overline bg-subtle">Estado</th>
-                <th class="overline pr-6 text-right bg-subtle">Acc.</th>
+                <th class="micro-label pl-6 py-4 bg-subtle">Fecha</th>
+                <th class="micro-label bg-subtle">Tipo</th>
+                <th class="micro-label bg-subtle">Kilometraje</th>
+                <th class="micro-label bg-subtle">Costo</th>
+                <th class="micro-label bg-subtle">Taller</th>
+                <th class="micro-label bg-subtle">Estado</th>
+                <th class="micro-label pr-6 text-right bg-subtle">Acc.</th>
               </tr>
             </ng-template>
 
             <ng-template pTemplate="body" let-m>
-              <tr class="group hover:bg-subtle transition-colors border-b border-border-subtle">
+              <tr class="group list-item-hover transition-colors border-b border-border-subtle">
                 <td class="pl-6 py-4 text-sm font-medium text-text-secondary">{{ m.date }}</td>
                 <td>
                   <span class="item-title">{{ m.type }}</span>

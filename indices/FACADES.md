@@ -93,9 +93,9 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `EvaluacionesProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `NotificationsFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
 | `ExAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
 | `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |
-| `FlotaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |
+| `FlotaFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |
 | `GlobalSearchFacade` | `AuthFacade`, `AdminAlumnosFacade`, `InstructorAlumnosFacade`, `InstructoresFacade`, `Router` | — | `src/app/core/facades/global-search.facade.ts` |
-| `HistorialCuadraturasFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/historial-cuadraturas.facade.ts` |
+| `HistorialCuadraturasFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService`, `LayoutDrawerFacadeService` | — | `src/app/core/facades/historial-cuadraturas.facade.ts` |
 | `InstructorAlumnosFacade` | `ErrorSanitizerService`, `InstructorProfileFacade`, `SupabaseService`, `ToastService`, `LayoutDrawerService` | — | `src/app/core/facades/instructor-alumnos.facade.ts` |
 | `InstructorClasesFacade` | `ErrorSanitizerService`, `InstructorProfileFacade`, `SupabaseService`, `ToastService` | — | `src/app/core/facades/instructor-clases.facade.ts` |
 | `InstructorHorasFacade` | `ErrorSanitizerService`, `InstructorProfileFacade`, `SupabaseService` | — | `src/app/core/facades/instructor-horas.facade.ts` |

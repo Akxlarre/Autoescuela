@@ -1,113 +1,52 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
-import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
 /** Tipo de severidad de la alerta. Controla color, ícono y fondo. */
 export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
 
 /**
- * AlertCardComponent — Feedback de estado con jerarquía visual clara.
+ * AlertCardComponent — Nota de estado tintada por severidad.
  *
- * Presenta mensajes de error, advertencia, info o éxito con:
- * - Barra de acento izquierda (color por severidad)
- * - Ícono en contenedor de color suave
- * - Título prominente + contenido proyectado vía ng-content
- * - Acción inline opcional (ej: "Ver detalles", "Reintentar")
- * - Botón de descarte opcional
+ * Superficie completa tintada (`--state-{severity}-bg`) + borde izquierdo real en el color
+ * de estado — mismo idioma visual que el rail de alertas de Asistencia B
+ * (`border-l-[3px]` + color por token). `severity="info"` usa `--state-info`, no el azul de
+ * marca: "info" es un estado, no una promoción de marca (regla 3-2-1).
  *
- * El host tiene `role="alert"` — los lectores de pantalla lo anuncian
- * automáticamente al insertar el elemento en el DOM.
+ * La entrada anima sola vía `AnimateInDirective` (hostDirectives) — no requiere que el
+ * consumidor agregue `appAnimateIn`.
  *
  * @example
- * <!-- Info básica -->
- * <app-alert-card title="Actualización disponible">
- *   Se publicó la versión 2.1 con mejoras de rendimiento.
- * </app-alert-card>
- *
- * <!-- Error con acción -->
- * <app-alert-card
- *   severity="error"
- *   title="No se pudo guardar"
- *   actionLabel="Reintentar"
- *   (action)="saveData()"
- * >
+ * <app-alert-card severity="error" title="No se pudo guardar">
  *   Hubo un problema al conectarse con el servidor.
  * </app-alert-card>
- *
- * <!-- Éxito descartable -->
- * <app-alert-card
- *   severity="success"
- *   title="Cambios guardados"
- *   [dismissible]="true"
- *   (dismissed)="showAlert.set(false)"
- * />
  */
 @Component({
   selector: 'app-alert-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, PressFeedbackDirective],
+  imports: [IconComponent],
+  hostDirectives: [AnimateInDirective],
   host: {
-    class: 'card flex items-start gap-3 relative overflow-hidden pl-4',
-    '[class.alert-error]': 'severity() === "error"',
-    '[class.alert-warning]': 'severity() === "warning"',
-    '[class.alert-info]': 'severity() === "info"',
-    '[class.alert-success]': 'severity() === "success"',
+    class: 'card flex items-start gap-3',
+    '[style.background]': 'tintBg()',
+    '[style.border-left]': 'accentBorder()',
     role: 'alert',
   },
   template: `
-    <!-- Barra de acento izquierda — comunica severidad al instante -->
-    <div
-      class="absolute left-0 top-0 h-full w-0.75"
-      [style.background]="accentColor()"
-      aria-hidden="true"
-    ></div>
+    <app-icon
+      [name]="iconName()"
+      [size]="18"
+      [style.color]="accentColor()"
+      class="shrink-0 mt-0.5"
+    />
 
-    <!-- Ícono en contenedor de color suave -->
-    <div
-      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg mt-0.5"
-      [style.background]="iconBg()"
-      aria-hidden="true"
-    >
-      <app-icon [name]="iconName()" [size]="16" [style.color]="accentColor()" />
-    </div>
-
-    <!-- Contenido principal -->
     <div class="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
       <p class="item-title m-0">{{ title() }}</p>
-
-      <!-- Cuerpo libre — proyectado por el consumidor -->
       <div class="text-sm text-text-secondary leading-relaxed">
         <ng-content />
       </div>
-
-      @if (actionLabel()) {
-        <button
-          type="button"
-          class="self-start mt-0.5 text-xs font-semibold cursor-pointer border-none bg-transparent p-0 underline-offset-2 hover:underline"
-          [style.color]="accentColor()"
-          [appPressFeedback]="'press'"
-          [attr.data-llm-action]="llmAction()"
-          (click)="action.emit()"
-        >
-          {{ actionLabel() }}
-        </button>
-      }
     </div>
-
-    <!-- Botón de descarte (opcional) -->
-    @if (dismissible()) {
-      <button
-        type="button"
-        class="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer border-none bg-transparent p-0 self-start text-text-muted"
-        [appPressFeedback]="'press'"
-        aria-label="Cerrar"
-        data-llm-action="dismiss-alert"
-        (click)="dismissed.emit()"
-      >
-        <app-icon name="x" [size]="14" />
-      </button>
-    }
   `,
 })
 export class AlertCardComponent {
@@ -116,21 +55,6 @@ export class AlertCardComponent {
 
   /** Título de la alerta (requerido — frase corta y accionable). */
   readonly title = input.required<string>();
-
-  /** Texto del botón inline de acción (ej: "Reintentar", "Ver detalles"). */
-  readonly actionLabel = input<string>();
-
-  /** Si true, muestra el botón X de descarte en la esquina superior derecha. */
-  readonly dismissible = input<boolean>(false);
-
-  /** Identificador semántico del botón de acción para agentes IA (data-llm-action). Contextual al uso. */
-  readonly llmAction = input<string | null>(null);
-
-  /** Emitido al hacer clic en el botón de acción. */
-  readonly action = output<void>();
-
-  /** Emitido al hacer clic en el botón de descarte (X). */
-  readonly dismissed = output<void>();
 
   // ── Computed internos — derivados de severity ─────────────────────────────
 
@@ -148,19 +72,21 @@ export class AlertCardComponent {
     const colors: Record<AlertSeverity, string> = {
       error: 'var(--state-error)',
       warning: 'var(--state-warning)',
-      info: 'var(--color-primary)',
+      info: 'var(--state-info)',
       success: 'var(--state-success)',
     };
     return colors[this.severity()];
   });
 
-  protected readonly iconBg = computed<string>(() => {
+  protected readonly tintBg = computed<string>(() => {
     const bgs: Record<AlertSeverity, string> = {
       error: 'var(--state-error-bg)',
       warning: 'var(--state-warning-bg)',
-      info: 'var(--color-primary-muted)',
+      info: 'var(--state-info-bg)',
       success: 'var(--state-success-bg)',
     };
     return bgs[this.severity()];
   });
+
+  protected readonly accentBorder = computed<string>(() => `3px solid ${this.accentColor()}`);
 }

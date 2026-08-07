@@ -3,11 +3,13 @@ name: compliance-cl
 description: >-
   Esta skill se usa cuando el usuario pide "armar el compliance", "cumplir la Ley 21.719",
   "preparar la protección de datos", "auditar datos personales", "generar política de privacidad /
-  DPA / RAT / EIPD / consentimiento", "cumplir la ley de datos en Chile" o "modelo de prevención de
-  delitos (Ley 21.595)". Audita un repo y genera, SIN abogado, toda la documentación de cumplimiento
-  para un SaaS o empresa en Chile, contrastada contra el texto oficial de la ley. Cubre la Ley 21.719
-  (datos personales, vigencia dic-2026) y la 21.595 (delitos económicos, ya vigente), y es extensible
-  a más marcos (packs).
+  DPA / RAT / EIPD / consentimiento", "cumplir la ley de datos en Chile", "modelo de prevención de
+  delitos (Ley 21.595)" o "cumplir la normativa de una escuela de conductores / autoescuela en Chile"
+  (DS 39, DS 251, Ley 18.290). Audita un repo o un negocio y genera, SIN abogado, toda la
+  documentación de cumplimiento para un SaaS o empresa en Chile, contrastada contra el texto oficial
+  de la ley. Cubre la Ley 21.719 (datos personales, vigencia dic-2026), la 21.595 (delitos
+  económicos, ya vigente) y `autoescuela-cl` (normativa sectorial de escuelas de conductores), y es
+  extensible a más marcos (packs).
 license: MIT
 allowed-tools:
   - Read
@@ -34,7 +36,8 @@ en el repo que se re-corre en el tiempo. Objetivo: que un founder cumpla **solo*
 - **Controles** = unidades reutilizables que satisfacen varios marcos a la vez. Catálogo + crosswalk:
   `references/controls.md`.
 - **Packs** = una ley cada uno (`packs/<id>/pack.md`): obligaciones, controles que exige y documentos a
-  generar. Hoy: `ley-21719`, `ley-21595`.
+  generar. Hoy: `ley-21719`, `ley-21595`, `autoescuela-cl` (sectorial, no de datos — activar junto a
+  `ley-21719` si la escuela trata datos sensibles como certificados médicos).
 - **Estado** = el output vive en `<repo>/.compliance/` versionado por git. Formato: `references/output-model.md`.
 - **Fuentes (verdad)** = textos OFICIALES en `sources/` (`FUENTES.md`). Toda afirmación legal cita
   **ley + artículo + archivo**; lo no verificable se marca `[verificar contra fuente oficial]`. NADA
@@ -47,7 +50,8 @@ Mostrar el disclaimer. Luego preguntar al usuario (con `AskUserQuestion` cuando 
 respuestas para rellenar los documentos**. No dejar placeholders salvo que el dato sea genuinamente
 desconocido; en ese caso, proponer un **default sensato** y marcarlo.
 Recoger:
-1. Repo a auditar y **packs** a activar (default: `ley-21595` + `ley-21719`).
+1. Repo o negocio a auditar y **packs** a activar (default: `ley-21595` + `ley-21719`; sumar
+   `autoescuela-cl` si el negocio es una escuela de conductores).
 2. **Empresa:** razón social, RUT, domicilio, correo de contacto, tamaño, representante legal.
 3. **Responsable de datos / encargado de prevención** designado (en micro suele ser el dueño).
 4. Por flujo de datos: rol **responsable** vs **encargado**.
@@ -56,7 +60,13 @@ Recoger:
 Si ya existe `<repo>/.compliance/state.json`, leerlo: esta corrida es una re-evaluación.
 
 ### Fase 1 — Descubrimiento (leer el código, no asumir)
-Recorrer el repo con Grep/Glob para levantar evidencia de cada control:
+Para `autoescuela-cl` la evidencia es mayormente **operativa, no de código** (instructores, flota,
+reconocimiento oficial, currícula) — se levanta en el cuestionario de Fase 0 con la
+`ficha-cumplimiento-ds39-251.md`, no con Grep. Si el repo auditado además modela reglas de negocio
+regulatorias (ej. vencimiento de documentos de flota, control de horas mínimas de clase), sí vale la
+pena cruzarlas contra `pack.md` §2 con Grep/Glob — es la única parte de este pack verificable en código.
+
+Recorrer el repo con Grep/Glob para levantar evidencia de cada control (packs `ley-21719`/`ley-21595`):
 - Datos personales (esquemas/migraciones/modelos/formularios): `email|phone|telefono|rut|address|nombre|name|ip|lat|lng|password`; marcar **datos sensibles** específicos (salud, biométricos, menores).
 - Proveedores externos y transferencias internacionales (`.env*`, `package.json`, configs): AWS, Google, Meta, etc.; marcar los que procesan fuera de Chile.
 - Medidas técnicas: TLS, cifrado en reposo, hashing de password, MFA, logs/auditoría, segregación por tenant, secretos fuera del código, seudonimización, privacy-by-default.
@@ -76,8 +86,10 @@ Por cada pack activo, leer su `pack.md` y generar **todos** sus `templates/`, **
 respuestas de Fase 0 y los hallazgos de Fase 1**. Para `ley-21719`: rat, política, consentimiento,
 canal-derechos, dpa, anexo-transferencias, plan-respuesta-brechas, registro-vulneraciones, y eipd (si el
 test la hace obligatoria). Para `ley-21595`: modelo-prevencion-delitos, código-etica, matriz-riesgos,
-acta-encargado-prevencion, reglamento-canal-denuncias. Reemplazar todos los placeholders; usar
-`[COMPLETAR: ...]` solo para lo realmente desconocido.
+acta-encargado-prevencion, reglamento-canal-denuncias. Para `autoescuela-cl`: reglamento-interno,
+ficha-cumplimiento-ds39-251, contrato-matricula, checklist-fiscalizacion, y nota-tributaria-iva (dejar
+SIEMPRE marcada `[CONTADOR]` — la clasificación de IVA no es self-service, ver `pack.md` §5). Reemplazar
+todos los placeholders; usar `[COMPLETAR: ...]` solo para lo realmente desconocido.
 
 ### Fase 4 — Escribir el estado versionado
 Escribir en `<repo>/.compliance/` según `references/output-model.md`: `state.json` (controles + score por
@@ -117,5 +129,5 @@ re-corridas periódicas** (`references/revisiones-periodicas.md`) para detectar 
   `references/build/index.md`.
 - `references/revisiones-periodicas.md` — automatizar la re-corrida (`/loop`, cron headless `claude -p`,
   `/schedule`) para detectar drift entre corridas.
-- `packs/ley-21719/`, `packs/ley-21595/` — obligaciones + plantillas por marco.
+- `packs/ley-21719/`, `packs/ley-21595/`, `packs/autoescuela-cl/` — obligaciones + plantillas por marco.
 - `sources/` — textos legales oficiales (ley 21.719 PDF/txt, cláusulas modelo, XML) + `FUENTES.md`.

@@ -160,7 +160,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="graduation-cap" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="overline">Curso</span>
+                    <span class="micro-label">Curso</span>
                     <span class="text-sm font-medium text-text-primary">{{
                       enroll.courseName
                     }}</span>
@@ -169,7 +169,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="building-2" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="overline">Sede</span>
+                    <span class="micro-label">Sede</span>
                     <span class="text-sm font-medium text-text-primary">{{
                       enroll.branchName
                     }}</span>
@@ -178,7 +178,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div class="flex items-center gap-3">
                   <app-icon name="hash" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
-                    <span class="overline">Matrícula</span>
+                    <span class="micro-label">Matrícula</span>
                     <span class="text-sm font-medium text-text-primary"
                       >N° {{ enroll.number }}</span
                     >
@@ -197,7 +197,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <app-icon name="calendar-check" [size]="18" class="text-success" />
                   </div>
                   <div>
-                    <p class="overline">Clases agendadas</p>
+                    <p class="micro-label">Clases agendadas</p>
                     <p class="item-title">Todas tus clases ya están reservadas</p>
                   </div>
                 </div>

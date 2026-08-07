@@ -45,7 +45,7 @@
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
 | `app-empty-state` | Estado vacío | `message` (string, req), `subtitle` (string), `icon` (Lucide kebab-case), `actionLabel` (string), `actionIcon` (default 'plus'), `(action)` output | `shared/components/empty-state/empty-state.component.ts` | ✅ Estable |
-| `app-alert-card` | Alerta / Feedback | `title` (string, req), `severity` ('error'|'warning'|'info'|'success', default 'info'), `actionLabel` (string), `dismissible` (boolean), `(action)` output, `(dismissed)` output. Body via `ng-content`. | `shared/components/alert-card/alert-card.component.ts` | ✅ Estable |
+| `app-alert-card` | Alerta / Feedback | `title` (string, req), `severity` ('error'|'warning'|'info'|'success', default 'info'). Superficie tintada + `border-left` real por token `--state-{severity}`/`-bg`/`-border` (fix-120-b). Entrada animada sola vía `hostDirectives: [AnimateInDirective]` — NO agregar `appAnimateIn` manual. Body via `ng-content`. Sin `actionLabel`/`dismissible`/`llmAction` (eliminados en fix-120-b, 0 usos reales). | `shared/components/alert-card/alert-card.component.ts` | ✅ Estable |
 
 ## Moléculas — Shell / Topbar
 *Dropdowns y paneles del shell de la aplicación.*
@@ -343,7 +343,7 @@
 | `app-agenda-semanal` | `weekData`, `filteredDays`, `timeRows`, `isLoading`, `isCurrentWeek`, `instructors`, `selectedInstructorId`, `showKpis`, `showHero`, `maxVisibleDateIso`, `maxVisibleDateLabel` | `weekNext`, `weekPrev`, `weekToday`, `weekJump`, `instructorFilterChange`, `slotClick` | `src/app/shared/components/agenda-semanal/agenda-semanal.component.ts` |
 | `app-agenda-slot` | `slot`, `compact`, `disabled` | `slotClicked` | `src/app/shared/components/agenda-semanal/agenda-slot.component.ts` |
 | `app-ajustes-drawer` | — | — | `src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts` |
-| `app-alert-card` | `severity`, `title`, `actionLabel`, `dismissible`, `llmAction` | `action`, `dismissed` | `src/app/shared/components/alert-card/alert-card.component.ts` |
+| `app-alert-card` | `severity`, `title` | — | `src/app/shared/components/alert-card/alert-card.component.ts` |
 | `app-alumnos-list-content` | `alumnos`, `isLoading`, `isExporting`, `isGeneratingFicha`, `trashView`, `basePath`, `alumnosPorVencer`, `showSedeColumn` | `refreshRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested`, `fichaExportRequested` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
 | `app-alumnos-por-vencer-drawer` | — | — | `src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts` |
 | `app-alumnos-profesional-list-content` | `alumnos`, `isLoading`, `trashView`, `basePath` | `refreshRequested`, `preInscritosRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled` | `src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts` |
@@ -351,7 +351,7 @@
 | `app-async-btn` | `label`, `icon`, `loading`, `success`, `error`, `disabled`, `loadingLabel`, `successLabel`, `errorLabel`, `llmAction` | — | `src/app/shared/components/async-btn/async-btn.component.ts` |
 | `app-badge` | `variant` | — | `src/app/shared/components/badge/badge.component.ts` |
 | `app-branch-gate` | `branches`, `reason`, `professionalOnly` | `branchSelected` | `src/app/shared/components/branch-gate/branch-gate.component.ts` |
-| `app-branch-scope-selector` | `branches`, `branchId`, `bothBranches`, `role`, `mode`, `disabledReason` (opcional, fix-119-m — fuerza bloqueo del selector de sede más allá de la regla por rol, muestra el string como mensaje debajo) | `valueChange` | `src/app/shared/components/branch-scope-selector/branch-scope-selector.component.ts` |
+| `app-branch-scope-selector` | `branches`, `branchId`, `bothBranches`, `role`, `mode`, `disabledReason` | `valueChange` | `src/app/shared/components/branch-scope-selector/branch-scope-selector.component.ts` |
 | `app-branch-selector` | `branches`, `selectedBranchId`, `showAllOption`, `topbarMode`, `disabledBranchIds`, `allOptionDisabled`, `lockReason` | `branchChange` | `src/app/shared/components/branch-selector/branch-selector.component.ts` |
 | `app-certificacion-clase-b-content` | `alumnos`, `kpis`, `isLoading`, `generatingId`, `sendingEmailId`, `sendingMasivo`, `isExporting`, `isGeneratingPendientes`, `isAdmin` | `generarCertificado`, `generarCertificadoForzado`, `verCertificado`, `enviarEmail`, `abrirHistorialDrawer`, `abrirGenerarPendientesDrawer`, `abrirEnviarMasivoDrawer`, `exportar` | `src/app/shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component.ts` |
 | `app-certificacion-profesional-content` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `kpis`, `isLoading`, `isLoadingAlumnos`, `generatingId`, `sendingEmailId`, `sendingMasivo`, `isExporting`, `isGeneratingPendientes` | `promocionSelected`, `cursoSelected`, `generarCertificado`, `verCertificado`, `enviarEmail`, `abrirHistorialDrawer`, `abrirGenerarPendientesDrawer`, `abrirEnviarMasivoDrawer`, `exportar` | `src/app/shared/components/certificacion-profesional-content/certificacion-profesional-content.component.ts` |
@@ -369,7 +369,7 @@
 | `app-eliminar-alumno-modal` | `visible`, `alumnoNombre`, `hasHistory`, `isDeleting` | `confirmado`, `cancelado` | `src/app/shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component.ts` |
 | `app-email-input` | `value`, `id`, `label`, `required`, `placeholder`, `forceDirty` | `valueChange` | `src/app/shared/components/email-input/email-input.component.ts` |
 | `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
-| `app-evaluation-checklist` | `items` | `itemsChange` | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
+| `app-evaluation-checklist` | `items`, `readonly` | `itemsChange` | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
 | `app-ex-alumnos-profesional-content` | `egresados`, `isLoading`, `backRoute`, `basePath` | `reEnroll` | `src/app/shared/components/ex-alumnos-profesional-content/ex-alumnos-profesional-content.component.ts` |
 | `app-flota-list-content` | `vehicles`, `kpis`, `isLoading`, `basePath`, `showSedeColumn`, `branches` | `newVehicle`, `editVehicle`, `viewAgenda`, `viewMaintenances`, `printRouteSheet`, `printAllRouteSheets`, `manageDocuments`, `typeFilterChange`, `statusFilterChange`, `searchChange`, `refreshRequested` | `src/app/shared/components/flota-list-content/flota-list-content.component.ts` |
 | `app-historial-cuadraturas-content` | `cierres`, `isLoading`, `mesActual`, `anioActual`, `backRoute`, `backLabel`, `isExporting` | `mesAnterior`, `mesSiguiente`, `exportarMes`, `cierreClicked` | `src/app/shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component.ts` |

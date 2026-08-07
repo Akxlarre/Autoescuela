@@ -65,7 +65,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
       <!-- ── Error ── -->
       @if (facade.error()) {
         <div class="bento-banner">
-          <app-alert-card title="No se pudo cargar la ficha" severity="error" [dismissible]="false">
+          <app-alert-card title="No se pudo cargar la ficha" severity="error">
             {{ facade.error() }}
           </app-alert-card>
         </div>
@@ -229,7 +229,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 <div class="ficha-table-desktop overflow-x-auto">
                   <table class="w-full text-left border-collapse">
                     <thead>
-                      <tr class="overline border-b bg-subtle border-border-subtle">
+                      <tr class="micro-label border-b bg-subtle border-border-subtle">
                         <th class="p-4 font-semibold">N°</th>
                         <th class="p-4 font-semibold">Fecha</th>
                         <th class="p-4 font-semibold">Hora</th>
@@ -464,11 +464,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 
                 <!-- Nota informativa -->
                 <div class="p-4">
-                  <app-alert-card
-                    title="¿Cómo funciona la ficha?"
-                    severity="info"
-                    [dismissible]="false"
-                  >
+                  <app-alert-card title="¿Cómo funciona la ficha?" severity="info">
                     Puedes evaluar las clases completadas haciendo clic en <strong>Evaluar</strong>.
                     Las clases ya evaluadas se pueden revisar con <strong>Ver Detalles</strong>.
                   </app-alert-card>

@@ -99,7 +99,7 @@ function avatarPalette(name: string) {
 
             <!-- Contacto -->
             <div class="space-y-1">
-              <p class="overline mb-2">Contacto</p>
+              <p class="micro-label mb-2">Contacto</p>
               @if (detail.phone) {
                 <a [href]="'tel:' + detail.phone" class="drawer-contact-link">
                   <span class="drawer-contact-link__icon"
@@ -120,7 +120,7 @@ function avatarPalette(name: string) {
 
             <!-- Progreso -->
             <div>
-              <p class="overline mb-3">Progreso</p>
+              <p class="micro-label mb-3">Progreso</p>
               <div class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle">
                 <div>
                   <span class="block text-xs mb-0.5 text-text-muted">Curso</span>

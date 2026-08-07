@@ -70,7 +70,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
       padding: 8px 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-default);
-      background: var(--bg-base);
+      background: var(--input-bg);
       color: var(--text-primary);
       font-size: var(--text-sm);
       outline: none;
@@ -378,7 +378,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               }
               <div class="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
                 @for (alumno of filteredRoster(); track alumno.enrollmentId) {
-                  <div class="flex items-center gap-2 px-2 py-3 rounded-md hover:bg-elevated">
+                  <div class="flex items-center gap-2 px-2 py-3 rounded-md list-item-hover">
                     <div class="min-w-0 flex-1">
                       <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
                       <p class="text-sm text-text-muted truncate">
@@ -623,7 +623,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 }
                 <div class="flex flex-col gap-1">
                   @for (a of filteredAddableStudents(); track a.enrollmentId) {
-                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-md list-item-hover">
                       <div class="min-w-0 flex-1">
                         <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
                         <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>

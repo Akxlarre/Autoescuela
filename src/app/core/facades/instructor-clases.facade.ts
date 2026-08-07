@@ -165,7 +165,7 @@ export class InstructorClasesFacade {
         .from('class_b_sessions')
         .select(
           `
-          id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, notes,
+          id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, evaluation_checklist, notes, student_signature, instructor_signature,
           enrollments!inner(
             id,
             students!inner(id, users!inner(id, first_names, paternal_last_name, rut))
@@ -571,6 +571,8 @@ export class InstructorClasesFacade {
       evaluationGrade: row.evaluation_grade,
       evaluationChecklist: row.evaluation_checklist || [],
       notes: row.notes,
+      studentSigned: !!row.student_signature,
+      instructorSigned: !!row.instructor_signature,
       timeLabel,
       statusLabel: labelMap[row.status] || row.status,
       statusColor: colorMap[row.status] || 'default',
@@ -602,6 +604,8 @@ export class InstructorClasesFacade {
         evaluationGrade: null,
         evaluationChecklist: [],
         notes: 'Clase de prueba para el flujo de inicio',
+        studentSigned: false,
+        instructorSigned: false,
         timeLabel: '09:00 - 09:45',
         statusLabel: 'Agendada',
         statusColor: 'info',
@@ -628,6 +632,8 @@ export class InstructorClasesFacade {
         evaluationGrade: null,
         evaluationChecklist: [],
         notes: 'Segunda clase del día',
+        studentSigned: false,
+        instructorSigned: false,
         timeLabel: '11:00 - 11:45',
         statusLabel: 'Agendada',
         statusColor: 'info',

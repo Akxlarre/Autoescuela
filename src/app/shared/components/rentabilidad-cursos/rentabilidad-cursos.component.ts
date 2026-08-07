@@ -31,7 +31,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div>
       <!-- Encabezado de columnas -->
       <div
-        class="overline hidden lg:grid gap-4 px-6 py-2 border-b bg-surface border-border-muted"
+        class="micro-label hidden lg:grid gap-4 px-6 py-2 border-b bg-surface border-border-muted"
         style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr"
       >
         <span>Tipo de Curso</span>

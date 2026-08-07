@@ -194,7 +194,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             } @else {
               <!-- Header columnas -->
               <div
-                class="overline px-4 py-2 grid bg-surface"
+                class="micro-label px-4 py-2 grid bg-surface"
                 style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
               >
                 <span>Fecha</span>

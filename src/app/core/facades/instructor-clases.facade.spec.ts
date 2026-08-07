@@ -253,6 +253,71 @@ describe('InstructorClasesFacade', () => {
         expect(facade.error()).toBeTruthy();
         expect(facade.isLoading()).toBe(false);
       });
+
+      it('mapea evaluation_checklist y los booleanos de firma (student_signature/instructor_signature) cuando la clase ya fue evaluada', async () => {
+        const row = {
+          id: 88,
+          scheduled_at: '2026-07-28T11:00:00Z',
+          duration_min: 45,
+          status: 'completed',
+          class_number: 4,
+          evaluation_grade: 6,
+          evaluation_checklist: [{ id: 'frenado', label: 'Frenado', checked: true }],
+          notes: 'Buen desempeño',
+          student_signature: true,
+          instructor_signature: true,
+          enrollments: {
+            id: 11,
+            students: {
+              id: 21,
+              users: { id: 31, first_names: 'Luis', paternal_last_name: 'Rojas', rut: '2-8' },
+            },
+          },
+          vehicles: null,
+        };
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: row, error: null }));
+
+        await facade.loadClassDetail(88);
+
+        expect(facade.selectedClass()?.studentSigned).toBe(true);
+        expect(facade.selectedClass()?.instructorSigned).toBe(true);
+        expect(facade.selectedClass()?.evaluationChecklist).toEqual([
+          { id: 'frenado', label: 'Frenado', checked: true },
+        ]);
+      });
+
+      it('deja las firmas en false si la clase aún no se evalúa', async () => {
+        const row = {
+          id: 89,
+          scheduled_at: '2026-07-28T11:00:00Z',
+          duration_min: 45,
+          status: 'scheduled',
+          class_number: 4,
+          evaluation_grade: null,
+          evaluation_checklist: null,
+          notes: null,
+          student_signature: false,
+          instructor_signature: false,
+          enrollments: {
+            id: 11,
+            students: {
+              id: 21,
+              users: { id: 31, first_names: 'Luis', paternal_last_name: 'Rojas', rut: '2-8' },
+            },
+          },
+          vehicles: null,
+        };
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: row, error: null }));
+
+        await facade.loadClassDetail(89);
+
+        expect(facade.selectedClass()?.studentSigned).toBe(false);
+        expect(facade.selectedClass()?.instructorSigned).toBe(false);
+      });
     });
 
     describe('startClass', () => {

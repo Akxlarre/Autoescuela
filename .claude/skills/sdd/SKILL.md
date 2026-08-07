@@ -74,7 +74,9 @@ track real a partir de ahí, con contexto pre-cargado.
 ```
 /assign-new "título"     → specs/ASSIGNMENTS.md ("Pendientes", visible para todo el equipo)
 /assign-list             → cada dev ve qué le toca a él (o qué está libre para tomar)
-/assign-claim <ASG-ID>   → genera spec/fix/hotfix con SU código de autor, contexto pre-cargado
+/assign-claim <ASG-ID>   → resume la ASG y da a quien reclama una instancia breve para
+                           confirmar u objetar la visión heredada, ANTES de generar el track
+                           → genera spec/fix/hotfix con SU código de autor, contexto pre-cargado
                            → de ahí en más, flujo SDD normal (/spec-plan, /spec-tasks, etc.)
 ```
 

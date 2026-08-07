@@ -3,6 +3,9 @@ import { FlotaFacade } from './flota.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
+import { ToastService } from '@core/services/ui/toast.service';
+
+const toastMock = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
 
 describe('FlotaFacade', () => {
   let service: FlotaFacade;
@@ -24,6 +27,8 @@ describe('FlotaFacade', () => {
         FlotaFacade,
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
 
@@ -132,6 +137,7 @@ describe('FlotaFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
         { provide: SupabaseService, useValue: mock },
         { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -157,6 +163,7 @@ describe('FlotaFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
         { provide: SupabaseService, useValue: mock },
         { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -197,6 +204,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => 1 } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -224,6 +232,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -286,6 +295,7 @@ describe('FlotaFacade — scope multi-sede (spec 0004-m)', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
         { provide: BranchFacade, useValue: { selectedBranchId: () => 1 } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const facade = TestBed.inject(FlotaFacade);
@@ -374,6 +384,7 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
           useValue: { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) },
         },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
       ],
     });
     const flotaFacade = TestBed.inject(FlotaFacade);

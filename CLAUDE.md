@@ -32,7 +32,7 @@ Para cada solicitud que implique escribir código o ensamblar UI:
 
 ## CAPACIDADES DEL AGENTE
 
-- **QA Visual activo (Playwright MCP):** El agente tiene acceso a `mcp__playwright__*`. Puede navegar el browser real, tomar capturas, leer consola y auditar el DOM. Ya **no es ciego a la UI renderizada**. Usar el skill `/verify` tras cualquier cambio visual.
+- **QA Visual activo (Playwright MCP):** El agente tiene acceso a `mcp__playwright__*`. Puede navegar el browser real, tomar capturas, leer consola y auditar el DOM. Ya **no es ciego a la UI renderizada**. Usar el skill `/verify` tras cualquier cambio visual. Setup y política de secretos de los MCP servers: `docs/MCP-SETUP.md`.
 - **Project Knowledge:** Tu contexto de 200k tokens te permite leer este documento y toda la carpeta `docs/` y `skills/` al instante. Usa esto a tu favor. No alucines, consulta los archivos.
 
 ## ESTRUCTURA DE CARPETAS CANÓNICA (Skeleton Architecture)

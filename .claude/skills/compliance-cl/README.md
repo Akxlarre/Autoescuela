@@ -52,6 +52,7 @@ Corres `/compliance-cl` sobre tu repo y:
 |------|-----|--------|-------|
 | `ley-21719` | Protección de Datos Personales | vigencia **1-dic-2026** | consentimiento, derechos ARCO, RAT, DPA, seguridad, brechas, transferencias |
 | `ley-21595` | Delitos Económicos (MPD) | **ya vigente** | modelo de prevención, código de ética, matriz de riesgos |
+| `autoescuela-cl` | Escuelas de Conductores (DS 39/251, Ley 18.290) | **ya vigente** — sectorial | instructores, flota, currícula, contrato de matrícula (Ley 19.496), punto abierto de IVA |
 | _próximos_ | GDPR · ISO 27001 · SOC 2 | extensible | agregar un marco es agregar un `pack` |
 
 ## Quickstart
@@ -100,7 +101,7 @@ references/
   instructivo-situaciones.md      # guías operativas
   mapa-articulos-21719.md         # artículos chequeados contra el texto oficial
 packs/
-  ley-21719/  ley-21595/          # obligaciones + plantillas por marco
+  ley-21719/  ley-21595/  autoescuela-cl/   # obligaciones + plantillas por marco
 sources/                          # textos legales oficiales + FUENTES.md (reproducible)
 ```
 

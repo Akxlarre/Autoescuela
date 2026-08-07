@@ -81,13 +81,13 @@ function clp(n: number): string {
           <table class="w-full text-sm">
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
-                <th class="overline text-left px-5 py-3">Instructor</th>
-                <th class="overline text-left px-4 py-3">Tipo</th>
-                <th class="overline text-right px-4 py-3">Anticipos Totales</th>
-                <th class="overline text-right px-4 py-3">Saldo Pendiente</th>
-                <th class="overline text-center px-4 py-3">Último Anticipo</th>
-                <th class="overline text-center px-4 py-3">Estado</th>
-                <th class="overline text-center px-4 py-3">Acciones</th>
+                <th class="micro-label text-left px-5 py-3">Instructor</th>
+                <th class="micro-label text-left px-4 py-3">Tipo</th>
+                <th class="micro-label text-right px-4 py-3">Anticipos Totales</th>
+                <th class="micro-label text-right px-4 py-3">Saldo Pendiente</th>
+                <th class="micro-label text-center px-4 py-3">Último Anticipo</th>
+                <th class="micro-label text-center px-4 py-3">Estado</th>
+                <th class="micro-label text-center px-4 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -201,11 +201,11 @@ function clp(n: number): string {
           <table class="w-full text-sm">
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
-                <th class="overline text-left px-5 py-3">Fecha</th>
-                <th class="overline text-left px-5 py-3">Instructor</th>
-                <th class="overline text-left px-5 py-3">Motivo</th>
-                <th class="overline text-right px-5 py-3">Monto</th>
-                <th class="overline text-center px-5 py-3">Estado</th>
+                <th class="micro-label text-left px-5 py-3">Fecha</th>
+                <th class="micro-label text-left px-5 py-3">Instructor</th>
+                <th class="micro-label text-left px-5 py-3">Motivo</th>
+                <th class="micro-label text-right px-5 py-3">Monto</th>
+                <th class="micro-label text-center px-5 py-3">Estado</th>
               </tr>
             </thead>
             <tbody>

@@ -128,7 +128,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 </div>
               } @else if (clasesFacade.error()) {
                 <div class="p-6">
-                  <app-alert-card title="Error al cargar clases" severity="error" appAnimateIn>{{
+                  <app-alert-card title="Error al cargar clases" severity="error">{{
                     clasesFacade.error()
                   }}</app-alert-card>
                 </div>
@@ -144,7 +144,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 <div class="divide-y divide-border-default">
                   @for (cls of clasesFacade.todayClasses(); track cls.sessionId) {
                     <div
-                      class="p-4 sm:px-6 hover:bg-elevated transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4"
+                      class="p-4 sm:px-6 list-item-hover transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4"
                       [class.bg-brand-muted]="cls.status === 'in_progress'"
                     >
                       <!-- Hora + tipo + info -->
@@ -271,7 +271,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             </div>
 
             <!-- Recordatorio -->
-            <app-alert-card title="Recordatorio" severity="info" appAnimateIn>
+            <app-alert-card title="Recordatorio" severity="info">
               Recuerda completar las fichas técnicas después de cada clase práctica.
             </app-alert-card>
           </div>

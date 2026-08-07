@@ -195,7 +195,7 @@ const ACTION_OPTIONS = [
         <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
           <!-- Header tabla -->
           <div
-            class="overline audit-grid px-6 py-3 audit-header"
+            class="micro-label audit-grid px-6 py-3 audit-header"
             [class.audit-grid--no-sede]="!showSedeColumn()"
           >
             <span>Fecha/Hora</span>
