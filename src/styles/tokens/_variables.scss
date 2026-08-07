@@ -304,10 +304,13 @@
   --btn-disabled-opacity: 0.5;
 
   /* ── Input ──
-     --input-bg referencia --bg-subtle (visible sobre --bg-elevated
-     en ambos temas). Incluye todos los estados: default, focus,
-     error, success, disabled. */
-  --input-bg: var(--bg-subtle);
+     Light: --bg-base (casi blanco, #f4f4f5) — mismo tono que ya usaban la
+     mayoría de los inputs nativos sueltos con clase Tailwind `bg-base`
+     (ej. admin-curso-singular-crear-drawer). Ajustado en fix-118-b tras
+     feedback visual: --bg-subtle se veía más gris que el resto del form.
+     Dark mantiene --bg-subtle (ver override abajo) — bg-base en dark es
+     casi negro y resucitaría el problema original. */
+  --input-bg: var(--bg-base);
   --input-text: var(--text-primary);
   --input-placeholder: var(--text-muted);
   --input-radius: var(--radius-md);
@@ -596,7 +599,7 @@ body {
   max-width: 100%;
 }
 
-/* ── Overline — Micro-label uppercase (canónica) ──────────────
+/* ── Micro Label — Micro-label uppercase (canónica) ────────────
    Etiqueta corta en mayúsculas sobre cualquier dato o bloque: label de KPI,
    cabecera de grupo, título de columna, etiqueta de campo en modo lectura.
 
@@ -612,10 +615,20 @@ body {
 
    NO confundir con `.section-eyebrow` (text-sm, SIN uppercase, text-secondary):
    esa es una línea de contexto legible antes de un título, no un micro-label.
+
+   ⚠️ Se llamó `.overline` hasta fix-115-b. "overline" es también el nombre de
+   una utilidad NATIVA de Tailwind (`text-decoration-line: overline`) — al usar
+   ese literal como class en 141 lugares, Tailwind generaba su propia regla en
+   `@layer utilities` y, como no comparte propiedades con esta clase, ambas se
+   aplicaban a la vez: el texto quedaba con una línea física encima (el bug
+   visible en Base de Alumnos y otras pantallas). Renombrado a `.micro-label`
+   para eliminar la colisión de raíz. Ver ARCH-22 (scripts/architect.js) para
+   el guardrail que previene que un nombre de clase del DS vuelva a coincidir
+   con una utilidad "bare" reservada de Tailwind.
    ─────────────────────────────────────────────────────────── */
 
-.overline,
-.kpi-label /* alias deprecado — migrar a .overline (fix-078-b) */ {
+.micro-label,
+.kpi-label /* alias deprecado — migrar a .micro-label (fix-078-b, renombrada en fix-115-b) */ {
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);

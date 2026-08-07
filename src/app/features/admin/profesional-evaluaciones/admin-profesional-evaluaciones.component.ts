@@ -355,7 +355,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
 
               <tbody>
                 @for (fila of g.filas; track fila.enrollmentId; let r = $index) {
-                  <tr class="border-b border-border/50 transition-colors hover:bg-subtle">
+                  <tr class="border-b border-border/50 transition-colors list-item-hover">
                     <td class="col-alumno px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div

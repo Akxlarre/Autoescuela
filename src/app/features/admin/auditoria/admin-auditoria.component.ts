@@ -192,7 +192,7 @@ const ACTION_OPTIONS = [
         <div class="overflow-x-auto">
           <!-- Header tabla -->
           <div
-            class="overline audit-grid px-6 py-3 audit-header"
+            class="micro-label audit-grid px-6 py-3 audit-header"
             [class.audit-grid--no-sede]="!showSedeColumn()"
           >
             <span>Fecha/Hora</span>

@@ -129,7 +129,7 @@ const MONTH_NAMES = [
               <tfoot>
                 <tr>
                   <td>
-                    <span class="overline">
+                    <span class="micro-label">
                       Total — {{ facade.horasMensuales().length }}
                       {{ facade.horasMensuales().length === 1 ? 'instructor' : 'instructores' }}
                     </span>

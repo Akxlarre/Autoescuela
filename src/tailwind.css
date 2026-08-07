@@ -456,6 +456,16 @@
   font-size: var(--text-xs);
 }
 
+/* Hover de fila/item de lista — primitivo único (fix-119-b). Reutiliza el mismo token
+   que .btn-ghost (--btn-ghost-bg-hover = --bg-subtle) para que filas de tabla, items de
+   lista y botones ghost compartan una sola identidad de hover. Antes cada componente
+   elegía a mano entre hover:bg-subtle y hover:bg-elevated para lo mismo. */
+@utility list-item-hover {
+  &:hover {
+    background: var(--btn-ghost-bg-hover);
+  }
+}
+
 /* Badges de estado — fuente única (fix-036): consumidas por <app-badge>, reemplazan
    color-mix() inline en componentes. Dark-mode aware vía tokens. Radio/padding desde
    los tokens de Capa 4 (--badge-radius/--badge-padding-*), antes huérfanos. */

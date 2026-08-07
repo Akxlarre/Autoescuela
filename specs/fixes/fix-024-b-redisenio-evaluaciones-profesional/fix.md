@@ -1,8 +1,11 @@
 # Fix: Rediseño completo de evaluaciones profesionales (gradebook)
 > id: fix-024-b-redisenio-evaluaciones-profesional
 > refs: —
-> status: in_progress
+> status: done
 > created: 2026-06-15
+> closed: 2026-08-07 — cierre tardío, quedó huérfano desde la implementación original. Código
+> y tests de `gradebook-stats.spec.ts` / `evaluaciones-profesional.facade.spec.ts` confirmados
+> presentes en el árbol de trabajo actual.
 
 ## Root Cause
 La página `/app/admin/clase-profesional/evaluaciones` se construyó como

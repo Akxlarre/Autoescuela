@@ -88,7 +88,7 @@ const PAGE_SIZE = 10;
           style="border-bottom: 1px solid var(--border-default)"
         >
           <div class="flex flex-col gap-1.5 min-w-55 flex-1">
-            <label class="overline"> Promoción </label>
+            <label class="micro-label"> Promoción </label>
             @if (isLoading()) {
               <app-skeleton-block variant="rect" width="100%" height="38px" />
             } @else {
@@ -268,32 +268,32 @@ const PAGE_SIZE = 10;
               <table class="w-full text-sm">
                 <thead class="sticky top-0 z-10 bg-surface">
                   <tr class="border-b border-(--border-default)">
-                    <th class="overline text-left px-4 py-2">Alumno</th>
-                    <th class="overline text-left px-4 py-2">RUT</th>
-                    <th class="overline text-left px-4 py-2">Promoción</th>
+                    <th class="micro-label text-left px-4 py-2">Alumno</th>
+                    <th class="micro-label text-left px-4 py-2">RUT</th>
+                    <th class="micro-label text-left px-4 py-2">Promoción</th>
                     <th
-                      class="overline text-center px-4 py-2"
+                      class="micro-label text-center px-4 py-2"
                       title="Asistencia a clases teóricas (mínimo 75%)"
                     >
                       Teoría
                     </th>
                     <th
-                      class="overline text-center px-4 py-2"
+                      class="micro-label text-center px-4 py-2"
                       title="Asistencia a clases prácticas (recomendado 100%)"
                     >
                       Práctica
                     </th>
                     <th
-                      class="overline text-center px-4 py-2"
+                      class="micro-label text-center px-4 py-2"
                       title="Promedio de módulos (mínimo 75 en escala MTT)"
                     >
                       Nota Prom.
                     </th>
-                    <th class="overline text-center px-4 py-2" title="Saldo pendiente de pago">
+                    <th class="micro-label text-center px-4 py-2" title="Saldo pendiente de pago">
                       Pago
                     </th>
-                    <th class="overline text-center px-4 py-2">Estado</th>
-                    <th class="overline text-right px-4 py-2">Acciones</th>
+                    <th class="micro-label text-center px-4 py-2">Estado</th>
+                    <th class="micro-label text-right px-4 py-2">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>

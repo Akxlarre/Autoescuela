@@ -29,6 +29,8 @@ export interface InstructorClassRow {
   evaluationGrade: number | null;
   evaluationChecklist: EvaluationChecklistItem[];
   notes: string | null;
+  studentSigned: boolean;
+  instructorSigned: boolean;
   // Campos derivados
   timeLabel: string; // "09:00 - 09:45"
   statusLabel: string;
@@ -120,17 +122,17 @@ export const EVALUATION_CHECKLIST_ITEMS: Omit<EvaluationChecklistItem, 'checked'
 
 // ── Horario ──
 export interface ScheduleBlock {
-  dayOfWeek: number;        // 0=Lun, 6=Dom
-  hour: number;             // 8-20
-  minuteStart: number;      // 0, 15, 30, 45
-  durationMin: number;      // 45 o 90
+  dayOfWeek: number; // 0=Lun, 6=Dom
+  hour: number; // 8-20
+  minuteStart: number; // 0, 15, 30, 45
+  durationMin: number; // 45 o 90
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   studentName: string;
   vehiclePlate: string | null;
   classNumber: number | null;
   sessionId: number | null;
-  startTime: string;        // "HH:MM"
-  endTime: string;          // "HH:MM"
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
 }
 
 export interface WeekScheduleKpis {
@@ -141,18 +143,18 @@ export interface WeekScheduleKpis {
 }
 
 export interface ScheduleDay {
-  name: string;        // "Lun", "Mar", etc.
-  date: string;        // "YYYY-MM-DD"
-  dayNumber: number;   // 1-31
+  name: string; // "Lun", "Mar", etc.
+  date: string; // "YYYY-MM-DD"
+  dayNumber: number; // 1-31
   isToday: boolean;
 }
 
 export interface DaySchedule {
-  date: string;            // "YYYY-MM-DD"
-  dayLabel: string;        // "Lunes"
-  dateLabel: string;       // "1 de Abril, 2026"
+  date: string; // "YYYY-MM-DD"
+  dayLabel: string; // "Lunes"
+  dateLabel: string; // "1 de Abril, 2026"
   blocks: ScheduleBlock[]; // sorted by hour
-  nextBlock: ScheduleBlock | null;  // próxima clase
+  nextBlock: ScheduleBlock | null; // próxima clase
 }
 
 export interface WeekSchedule {

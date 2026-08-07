@@ -68,7 +68,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           @if (pendientesNoElegibles().length > 0) {
             <div>
-              <p class="overline mb-2">No elegibles — no se generará certificado</p>
+              <p class="micro-label mb-2">No elegibles — no se generará certificado</p>
               <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                 @for (alumno of pendientesNoElegibles(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-3 px-4 py-2.5">

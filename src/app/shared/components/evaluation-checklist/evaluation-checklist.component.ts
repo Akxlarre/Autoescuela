@@ -40,13 +40,17 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
         @for (item of items(); track item.id) {
           <button
             type="button"
-            class="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
+            class="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left transition-all duration-300 transform active:scale-[0.98]"
+            [class.cursor-pointer]="!readonly()"
+            [class.cursor-default]="readonly()"
+            [class.opacity-70]="readonly()"
             [class.bg-brand-muted]="item.checked"
             [class.border-brand]="item.checked"
             [class.shadow-sm]="item.checked"
             [class.bg-subtle]="!item.checked"
             [class.border-border-default]="!item.checked"
-            [class.hover:border-border-strong]="!item.checked"
+            [class.hover:border-border-strong]="!item.checked && !readonly()"
+            [disabled]="readonly()"
             (click)="toggleItem(item)"
           >
             <span
@@ -77,6 +81,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
 })
 export class EvaluationChecklistComponent {
   items = input<EvaluationChecklistItem[]>([]);
+  readonly = input<boolean>(false);
   itemsChange = output<EvaluationChecklistItem[]>();
 
   get checkedCount(): number {
@@ -84,6 +89,7 @@ export class EvaluationChecklistComponent {
   }
 
   toggleItem(item: EvaluationChecklistItem) {
+    if (this.readonly()) return;
     const updated = this.items().map((i) => {
       if (i.id === item.id) {
         return { ...i, checked: !i.checked };

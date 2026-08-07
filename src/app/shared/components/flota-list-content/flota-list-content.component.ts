@@ -208,7 +208,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vehículos"
               >
                 <ng-template pTemplate="header">
-                  <tr class="overline bg-subtle text-left">
+                  <tr class="micro-label bg-subtle text-left">
                     <th class="pl-6 py-4">Patente</th>
                     <th>Vehículo</th>
                     <th>Instructor</th>
@@ -223,7 +223,7 @@ import { formatCLP } from '@core/utils/date.utils';
                 </ng-template>
 
                 <ng-template pTemplate="body" let-v>
-                  <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                  <tr class="list-item-hover transition-colors border-b border-border-subtle">
                     <td class="pl-6 py-4">
                       <span
                         class="font-mono font-bold bg-elevated px-2 py-1 rounded border border-border-subtle text-sm uppercase"

@@ -16,8 +16,10 @@
   --p-content-border-color: var(--border-default);
   --p-content-color: var(--text-primary);
 
-  /* Form Inputs */
-  --p-inputtext-background: var(--bg-surface);
+  /* Form Inputs — mismo fondo que .field-input nativo (var(--input-bg), fix-118-b):
+     un input debe distinguirse de la superficie que lo contiene (card/modal en
+     --bg-surface), no fundirse con ella. */
+  --p-inputtext-background: var(--input-bg);
   --p-inputtext-color: var(--text-primary);
   --p-inputtext-border-color: var(--border-default);
   --p-inputtext-hover-border-color: var(--ds-brand);
@@ -112,8 +114,8 @@
   --p-paginator-item-selected-color: var(--ds-brand);
   --p-paginator-border-color: var(--border-default);
 
-  /* Select (Dropdown) */
-  --p-select-background: var(--bg-surface);
+  /* Select (Dropdown) — mismo fondo que .field-input/inputtext (fix-118-b) */
+  --p-select-background: var(--input-bg);
   --p-select-border-color: var(--border-strong);
   --p-select-color: var(--text-primary);
   --p-select-hover-border-color: var(--ds-brand);
@@ -139,8 +141,13 @@
   --p-popover-color: var(--text-primary);
   --p-popover-border-color: var(--border-default);
 
-  /* DatePicker (Calendar) */
-  --p-datepicker-background: var(--bg-surface);
+  /* DatePicker (Calendar) — --p-datepicker-background estiliza el input visible
+     (verificado en vivo: .p-datepicker-input lo usa aunque también tenga la
+     clase .p-inputtext), no el panel — por eso va a --input-bg como el resto
+     de los campos (fix-118-b). El panel flotante del calendario sí usa
+     --p-datepicker-panel-background/--header-background, esos quedan en
+     --bg-surface. */
+  --p-datepicker-background: var(--input-bg);
   --p-datepicker-color: var(--text-primary);
   --p-datepicker-border-color: var(--border-default);
   --p-datepicker-header-background: var(--bg-surface);
@@ -919,6 +926,13 @@ app-main-layout p-toast.p-toast-top-center,
   .p-datatable-tbody > tr > td {
     background: var(--bg-surface) !important;
     color: var(--text-secondary) !important;
+  }
+
+  /* fix-119-b: el fondo opaco de <td> de arriba tapaba el hover:bg-subtle/list-item-hover
+     declarado en el <tr>. :hover sube la especificidad del selector por encima de la regla
+     base (misma cascada, ambas !important), así que gana sin tocar el markup del <tr>. */
+  .p-datatable-tbody > tr:hover > td {
+    background: var(--btn-ghost-bg-hover) !important;
   }
 
   .p-datatable-header {

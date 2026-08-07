@@ -43,14 +43,14 @@ overlines escritos a mano en 25 variantes distintas**, con 14 archivos mezclando
 | Clase | Qué es | Reemplaza a |
 |---|---|---|
 | `.kpi-value` | Número KPI principal | `text-4xl font-bold` |
-| `.overline` | **Micro-label uppercase** — label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura | `text-xs uppercase tracking-* font-* text-text-muted` |
+| `.micro-label` | **Micro-label uppercase** — label de KPI, cabecera de grupo, título de columna, etiqueta de campo en lectura | `text-xs uppercase tracking-* font-* text-text-muted` |
 | `.item-title` | Título de fila / card / ítem de lista | `text-sm font-semibold text-text-primary` |
 | `.section-eyebrow` | Línea de contexto **legible** antes de un título (sin uppercase) | `text-sm text-text-secondary` |
 
 ```html
 <!-- CORRECTO -->
 <div class="card-tinted">
-  <span class="overline">Usuarios activos</span>
+  <span class="micro-label">Usuarios activos</span>
   <span class="kpi-value">24.8K</span>
 </div>
 
@@ -61,16 +61,24 @@ overlines escritos a mano en 25 variantes distintas**, con 14 archivos mezclando
 </div>
 ```
 
-> **`.kpi-label` es alias deprecado de `.overline`** (fix-078-b). Sigue funcionando; no usarla en
+> **`.kpi-label` es alias deprecado de `.micro-label`** (fix-078-b). Sigue funcionando; no usarla en
 > código nuevo.
 >
 > ⚠️ **Hasta fix-078-b esta sección decía que `.kpi-label` era "SOLO para etiquetas de datos
 > numéricos, NUNCA para contexto de sección".** Esa restricción fue la causa raíz de las 221
 > instancias ad-hoc: quien necesitaba un micro-label fuera de un KPI tenía prohibida la única
-> clase que hacía exactamente eso, así que la recomponía a mano. **`.overline` no tiene
+> clase que hacía exactamente eso, así que la recomponía a mano. **`.micro-label` no tiene
 > restricción de alcance** — es para cualquier micro-label en mayúsculas.
 >
-> La distinción que **sí** importa es `.overline` (uppercase, micro, `text-muted`) vs
+> ⚠️ **Se llamó `.overline` hasta fix-115-b.** `overline` es también el nombre de una utilidad
+> nativa de Tailwind (`text-decoration-line: overline`) — usar ese literal como clase generaba
+> una colisión silenciosa: Tailwind creaba su propia regla `.overline { text-decoration-line:
+> overline }` en `@layer utilities`, que se sumaba (no reemplazaba) al estilo del DS, dibujando
+> una línea física encima del texto en 141 lugares. Renombrado a `.micro-label` para eliminar la
+> colisión de raíz. Ver ARCH-22 (`scripts/architect.js`) — guardrail que bloquea nombrar una
+> clase del DS igual a una utilidad "bare" reservada de Tailwind.
+>
+> La distinción que **sí** importa es `.micro-label` (uppercase, micro, `text-muted`) vs
 > `.section-eyebrow` (`text-sm`, natural, `text-secondary`): la primera etiqueta un dato, la
 > segunda da contexto legible antes de un título.
 

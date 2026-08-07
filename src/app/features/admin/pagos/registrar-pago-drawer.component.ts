@@ -168,7 +168,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
                     </div>
                     <div class="flex flex-col gap-0.5 text-right">
-                      <span class="overline"> Saldo Pendiente </span>
+                      <span class="micro-label"> Saldo Pendiente </span>
                       <span class="font-bold text-warning">
                         {{ clp(alumno.saldo) }}
                       </span>
@@ -193,7 +193,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5 text-right">
-                  <span class="overline"> Saldo Pendiente </span>
+                  <span class="micro-label"> Saldo Pendiente </span>
                   <span class="font-bold text-warning">
                     {{ clp(ctx.saldoPendiente) }}
                   </span>
@@ -210,7 +210,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="item-title">{{ alumno.alumno }}</span>
                   </div>
                   <div class="flex flex-col gap-0.5 text-right">
-                    <span class="overline">Saldo Pendiente</span>
+                    <span class="micro-label">Saldo Pendiente</span>
                     <span class="font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
                 </div>
@@ -488,7 +488,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
       padding: 8px 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-default);
-      background: var(--bg-base);
+      background: var(--input-bg);
       color: var(--text-primary);
       font-size: var(--text-sm);
       font-family: inherit;

@@ -22,7 +22,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       <div class="flex flex-col gap-6 flex-1">
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="overline">Aprobación Municipal</span>
+            <span class="micro-label">Aprobación Municipal</span>
             <span class="text-sm font-black text-text-primary">{{ municipalRate() }}%</span>
           </div>
           <div class="progress-bar-track">
@@ -35,7 +35,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="overline">Examen Psicotécnico</span>
+            <span class="micro-label">Examen Psicotécnico</span>
             <span class="text-sm font-black text-info">{{ psychoRate() }}%</span>
           </div>
           <div class="progress-bar-track">
@@ -45,7 +45,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between mb-2">
-            <span class="overline">Licencia Obtenida</span>
+            <span class="micro-label">Licencia Obtenida</span>
             <span class="text-sm font-black text-warning">{{ successRate() }}%</span>
           </div>
           <div class="progress-bar-track">

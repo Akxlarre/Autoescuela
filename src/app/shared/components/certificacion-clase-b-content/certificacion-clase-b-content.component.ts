@@ -208,14 +208,14 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10 bg-surface">
                 <tr class="border-b border-(--border-default)">
-                  <th class="overline text-left px-4 py-2">Alumno</th>
-                  <th class="overline text-left px-4 py-2">RUT</th>
-                  <th class="overline text-left px-4 py-2">Curso</th>
-                  <th class="overline text-center px-4 py-2">Prácticas</th>
-                  <th class="overline text-left px-4 py-2">Fecha Término</th>
-                  <th class="overline text-left px-4 py-2">N° Certificado</th>
-                  <th class="overline text-center px-4 py-2">Estado</th>
-                  <th class="overline text-right px-4 py-2">Acciones</th>
+                  <th class="micro-label text-left px-4 py-2">Alumno</th>
+                  <th class="micro-label text-left px-4 py-2">RUT</th>
+                  <th class="micro-label text-left px-4 py-2">Curso</th>
+                  <th class="micro-label text-center px-4 py-2">Prácticas</th>
+                  <th class="micro-label text-left px-4 py-2">Fecha Término</th>
+                  <th class="micro-label text-left px-4 py-2">N° Certificado</th>
+                  <th class="micro-label text-center px-4 py-2">Estado</th>
+                  <th class="micro-label text-right px-4 py-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>

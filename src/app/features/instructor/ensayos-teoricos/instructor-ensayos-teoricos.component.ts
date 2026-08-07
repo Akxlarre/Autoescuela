@@ -72,7 +72,7 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
-                    <tr class="overline border-b border-border-subtle bg-subtle">
+                    <tr class="micro-label border-b border-border-subtle bg-subtle">
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
                       <th class="p-4 font-semibold">Puntaje</th>
@@ -113,7 +113,7 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
-                    <tr class="overline border-b border-border-subtle bg-subtle">
+                    <tr class="micro-label border-b border-border-subtle bg-subtle">
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
                       <th class="p-4 font-semibold">Puntaje</th>

@@ -152,7 +152,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
               <!-- ── Info general ────────────────────────────────────────── -->
               <div>
-                <h3 class="overline mb-3">Información general</h3>
+                <h3 class="micro-label mb-3">Información general</h3>
                 <div class="grid grid-cols-2 gap-3">
                   <app-stat-box
                     label="Código"
@@ -200,7 +200,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
               <!-- ── Alumnos por categoría ───────────────────────────────── -->
               <div>
-                <h3 class="overline mb-3">Alumnos por categoría</h3>
+                <h3 class="micro-label mb-3">Alumnos por categoría</h3>
                 <div class="grid grid-cols-2 gap-3">
                   @for (curso of p.cursos; track curso.id) {
                     <app-stat-box
@@ -216,7 +216,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
               <!-- ── Cursos de la promoción ──────────────────────────────── -->
               <div>
-                <h3 class="overline mb-3">Cursos de la promoción</h3>
+                <h3 class="micro-label mb-3">Cursos de la promoción</h3>
                 <div class="flex flex-col gap-3">
                   @for (curso of p.cursos; track curso.id) {
                     <div

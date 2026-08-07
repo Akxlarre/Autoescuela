@@ -109,7 +109,7 @@ import {
             <div class="grid grid-cols-1 gap-6">
               <!-- Patente -->
               <div class="flex flex-col gap-1.5">
-                <label for="vf-plate" class="overline">
+                <label for="vf-plate" class="micro-label">
                   Patente <span class="text-error">*</span>
                 </label>
                 <input
@@ -132,7 +132,7 @@ import {
               <!-- Marca / Modelo -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-brand" class="overline">
+                  <label for="vf-brand" class="micro-label">
                     Marca <span class="text-error">*</span>
                   </label>
                   <input
@@ -146,7 +146,7 @@ import {
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-model" class="overline">
+                  <label for="vf-model" class="micro-label">
                     Modelo <span class="text-error">*</span>
                   </label>
                   <input
@@ -164,7 +164,7 @@ import {
               <!-- Año / KM -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-year" class="overline">
+                  <label for="vf-year" class="micro-label">
                     Año <span class="text-error">*</span>
                   </label>
                   <p-inputNumber
@@ -178,7 +178,7 @@ import {
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label for="vf-km" class="overline"> KM Actual </label>
+                  <label for="vf-km" class="micro-label"> KM Actual </label>
                   <p-inputNumber
                     inputId="vf-km"
                     formControlName="current_km"
@@ -191,7 +191,7 @@ import {
 
               <!-- Estado -->
               <div class="flex flex-col gap-1.5">
-                <label for="vf-status" class="overline"> Estado Actual </label>
+                <label for="vf-status" class="micro-label"> Estado Actual </label>
                 <p-select
                   inputId="vf-status"
                   formControlName="status"
@@ -204,7 +204,7 @@ import {
 
               <!-- Sede -->
               <div class="flex flex-col gap-1.5">
-                <label for="vf-sede" class="overline">
+                <label for="vf-sede" class="micro-label">
                   Sede principal <span class="text-error">*</span>
                 </label>
                 <p-select

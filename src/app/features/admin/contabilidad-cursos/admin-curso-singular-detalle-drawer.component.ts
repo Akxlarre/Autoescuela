@@ -167,7 +167,7 @@ const PAYMENT_LABEL: Record<string, string> = {
               <!-- ── Acciones de estado ──────────────────────────────────────────── -->
               @if (curso.estado === 'active' || curso.estado === 'upcoming') {
                 <div class="card p-4 flex flex-col gap-3">
-                  <p class="overline">Cambiar estado</p>
+                  <p class="micro-label">Cambiar estado</p>
 
                   @if (confirmingAction() === null) {
                     <div class="flex gap-2">

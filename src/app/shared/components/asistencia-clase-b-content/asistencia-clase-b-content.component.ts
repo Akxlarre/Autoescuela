@@ -222,7 +222,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                        truncar); línea 2 = conteo + última falta + acción. El title
                        conserva la política como enriquecimiento en hover. -->
                   <div
-                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors hover:bg-elevated"
+                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
                     [style.border-left-color]="
                       alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
                     "
@@ -466,7 +466,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   <tbody>
                     @for (row of visiblePracticas(); track row.id) {
                       <tr
-                        class="border-b transition-colors hover:bg-elevated"
+                        class="border-b transition-colors list-item-hover"
                         [style.border-color]="'var(--border-subtle)'"
                       >
                         <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
