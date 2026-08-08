@@ -289,11 +289,11 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 439 | `#38bdf8` |
-| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 402 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 265 | `var(--color-primary-text)` |
 | `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 218 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 215 | `#f87171` |
+| `--state-error` | 217 | `#f87171` |
 | `--bg-surface` | 195 | `#18181b` |
 | `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 147 | `#38bdf8` |
@@ -323,7 +323,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.micro-label` | 130 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
-| `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
+| `.card-tinted` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |

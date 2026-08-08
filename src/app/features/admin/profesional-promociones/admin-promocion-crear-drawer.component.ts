@@ -17,6 +17,7 @@ import type { RelatorOption } from '@core/models/ui/promocion-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -24,16 +25,6 @@ const COURSE_COLORS: Record<string, string> = {
   A4: '#f59e0b',
   A5: '#10b981',
 };
-
-/**
- * Calcula la fecha de término: sábado de la 5ta semana (30 días clase lun-sáb).
- */
-function computeEndDate(startIso: string): string {
-  if (!startIso) return '';
-  const d = new Date(startIso + 'T12:00:00');
-  d.setDate(d.getDate() + 33);
-  return d.toISOString().split('T')[0];
-}
 
 /** Genera los próximos N lunes disponibles a partir de hoy. */
 function generateAvailableMondays(count: number): { date: string; suggested: boolean }[] {
@@ -183,12 +174,28 @@ function generatePromoName(startIso: string): string {
                 <label class="text-xs font-medium mb-1 block text-text-secondary">
                   Fecha de término
                 </label>
-                <div class="form-input bg-elevated cursor-default">
-                  {{ formatMonday(endDate()) }}
+                <div class="form-input bg-elevated cursor-default flex items-center gap-2">
+                  @if (endDateLoading()) {
+                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                    <span class="text-text-muted">Calculando…</span>
+                  } @else {
+                    {{ formatMonday(endDate()) }}
+                  }
                 </div>
                 <p class="text-2xs mt-1 text-brand">
-                  Calculada automáticamente: sábado de la 5ta semana (30 días de clase, lun-sáb)
+                  30 días de clase (lun-sáb) desde el inicio — se extiende automáticamente si hay
+                  feriados dentro del rango.
                 </p>
+                @if (!endDateLoading() && facade.holidaysCheckFailed()) {
+                  <p
+                    class="text-2xs mt-1.5 flex items-center gap-1.5 text-warning"
+                    data-llm-description="advertencia: no se pudo verificar feriados reales para calcular la fecha de término"
+                  >
+                    <app-icon name="alert-triangle" [size]="12" />
+                    No se pudo verificar feriados reales (sin conexión con la API de gobierno). Esta
+                    fecha no considera feriados — revísala manualmente si corresponde.
+                  </p>
+                }
               </div>
             }
           </section>
@@ -286,7 +293,10 @@ function generatePromoName(startIso: string): string {
               Reglas de negocio
             </h4>
             <ul class="text-2xs flex flex-col gap-1 text-text-muted">
-              <li>Duración fija: <strong>30 días de clase</strong> (lun-sáb = 5 semanas)</li>
+              <li>
+                <strong>30 días de clase</strong> (lun-sáb) — se extiende si hay feriados en el
+                rango
+              </li>
               <li>Inicio solo en <strong>lunes</strong>, cada 2 semanas</li>
               <li>Máximo <strong>100 alumnos</strong> por promoción (25 por curso)</li>
               <li>4 cursos: A2, A3, A4, A5</li>
@@ -395,10 +405,9 @@ export class AdminPromocionCrearDrawerComponent {
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly nombre = signal('');
   protected readonly selectedStartDate = signal<string | null>(null);
-  protected readonly endDate = computed(() => {
-    const start = this.selectedStartDate();
-    return start ? computeEndDate(start) : '';
-  });
+  protected readonly endDate = signal('');
+  protected readonly endDateLoading = signal(false);
+  private readonly endDateGuard = createRequestGuard();
 
   // ── Relatores por curso: Record<courseId, lecturerId[]> ──────────────────────
   protected readonly relatorAssignments = signal<Record<number, number[]>>({});
@@ -427,7 +436,12 @@ export class AdminPromocionCrearDrawerComponent {
 
   // ── Validation ────────────────────────────────────────────────────────────
   protected readonly canSubmit = computed(() => {
-    return this.nombre().trim().length > 0 && !!this.selectedStartDate();
+    return (
+      this.nombre().trim().length > 0 &&
+      !!this.selectedStartDate() &&
+      !!this.endDate() &&
+      !this.endDateLoading()
+    );
   });
 
   constructor() {
@@ -441,6 +455,23 @@ export class AdminPromocionCrearDrawerComponent {
       if (date) {
         this.nombre.set(generatePromoName(date));
       }
+    });
+
+    // Preview async de la fecha de término real (con recuperación de feriados, AC6) —
+    // mismo cálculo que usará crearPromocion(), así el admin ve el valor final antes de guardar.
+    effect(() => {
+      const date = this.selectedStartDate();
+      if (!date) {
+        this.endDate.set('');
+        return;
+      }
+      const token = this.endDateGuard.next();
+      this.endDateLoading.set(true);
+      this.facade.previewEndDate(date).then((end) => {
+        if (!this.endDateGuard.isCurrent(token)) return;
+        this.endDate.set(end);
+        this.endDateLoading.set(false);
+      });
     });
   }
 

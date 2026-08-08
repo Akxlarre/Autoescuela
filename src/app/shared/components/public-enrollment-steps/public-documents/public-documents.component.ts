@@ -141,17 +141,16 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               {{ data().carnetPhoto!.fileName }}
             </p>
           </div>
-          <label
-            class="text-xs font-semibold cursor-pointer rounded-md px-2 py-1 focus-within:outline focus-within:outline-(--ds-brand) focus-within:outline-offset-2"
-            style="color: var(--text-muted);"
-            for="pub-carnet-rechange"
+          <button
+            type="button"
+            (click)="handleClearPhoto()"
+            aria-label="Quitar foto carnet"
+            data-llm-action="remove-carnet-photo"
+            class="text-xs font-semibold cursor-pointer rounded-md px-2 py-1"
+            style="color: var(--state-error);"
           >
-            Cambiar
-            <button type="button" class="sr-only" id="pub-carnet-rechange"></button>
-            <button type="button" (click)="handleClearPhoto()" class="cursor-pointer">
-              Cambiar
-            </button>
-          </label>
+            Quitar
+          </button>
         </div>
       } @else {
         <!-- Photo input methods (Tabs) -->
@@ -351,6 +350,7 @@ export class PublicDocumentsComponent implements OnDestroy {
   readonly data = input.required<EnrollmentDocumentsData>();
   readonly isUploading = input<boolean>(false);
   readonly fileSelected = output<{ type: string; file: File }>();
+  readonly clearPhoto = output<void>();
   readonly next = output<void>();
   readonly back = output<void>();
 
@@ -431,7 +431,7 @@ export class PublicDocumentsComponent implements OnDestroy {
   handleClearPhoto(): void {
     if (this.isUploading()) return;
 
-    this.fileSelected.emit({ type: 'clear', file: null as any });
+    this.clearPhoto.emit();
 
     this.activeTab.set('upload');
     this.stopCamera();

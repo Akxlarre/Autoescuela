@@ -1,6 +1,6 @@
 # Asignación ASG-b-035 — Promociones automáticas: cadencia, convalidaciones y matrícula tardía
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1

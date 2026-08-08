@@ -57,6 +57,9 @@ specs/.active
 # (supabase/.temp/ SÍ se commitea a propósito: project-ref/versiones del equipo)
 supabase/.branches/
 
+# Secrets generados localmente por `supabase start` — nunca commitear (GitHub push protection)
+supabase/.temp/start-secrets/
+
 environments/
 docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx

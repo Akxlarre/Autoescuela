@@ -452,6 +452,36 @@ export class DashboardFacade {
     return (data ?? []).map((log: any) => this.mapAuditLogToActivity(log));
   }
 
+  /**
+   * `audit_log.entity_id` es el PK de la fila afectada en SU PROPIA tabla, no un
+   * `student_id` universal. Resuelve el `students.id` real para navegar al detalle
+   * de alumno desde un evento de actividad reciente.
+   */
+  async resolveStudentIdForActivity(entity: string, entityId: number): Promise<number | null> {
+    switch (entity) {
+      case 'students':
+        return entityId;
+      case 'enrollments': {
+        const { data } = await this.supabase.client
+          .from('enrollments')
+          .select('student_id')
+          .eq('id', entityId)
+          .maybeSingle();
+        return data?.student_id ?? null;
+      }
+      case 'class_b_sessions': {
+        const { data } = await this.supabase.client
+          .from('class_b_sessions')
+          .select('enrollments(student_id)')
+          .eq('id', entityId)
+          .maybeSingle();
+        return (data as any)?.enrollments?.student_id ?? null;
+      }
+      default:
+        return null;
+    }
+  }
+
   private mapAuditLogToActivity(log: any): any {
     const entityNames: Record<string, string> = {
       enrollments: 'Matrícula',

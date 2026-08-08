@@ -1,14 +1,14 @@
 # Asignación ASG-b-074 — App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...`
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-08
+> **resulting_track:** fix-019-i-app-like-liquidaciones
 
 ---
 

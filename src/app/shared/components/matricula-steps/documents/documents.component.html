@@ -107,17 +107,21 @@
                 </div>
               } @else {
                 <!-- Preview si ya capturó -->
-                <div class="relative group">
+                <div class="flex flex-col items-center gap-3">
                   <img
                     [src]="data().carnetPhoto?.capturedDataUrl"
                     class="w-40 h-40 object-cover rounded-xl border-4 border-surface shadow-lg"
                     alt="Foto carnet"
                   />
                   <button
+                    type="button"
+                    (click)="onRemovePhoto()"
                     aria-label="Quitar foto"
-                    class="absolute -top-2 -right-2 bg-error text-surface w-6 h-6 rounded-full shadow-md flex items-center justify-center"
+                    data-llm-action="remove-carnet-photo"
+                    class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5"
                   >
-                    <app-icon name="x" [size]="10" />
+                    <app-icon name="trash-2" [size]="12" />
+                    Quitar foto
                   </button>
                 </div>
               }
@@ -165,14 +169,26 @@
                     class="hidden"
                     (change)="onFileChange($event, 'id_photo')"
                   />
-                  <button
-                    type="button"
-                    (click)="carnetReplaceInput.click()"
-                    class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-text-secondary text-xs font-medium rounded-lg hover:bg-base transition-all flex items-center gap-1.5"
-                  >
-                    <app-icon name="refresh-cw" [size]="12" />
-                    Cambiar foto
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      (click)="carnetReplaceInput.click()"
+                      class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-text-secondary text-xs font-medium rounded-lg hover:bg-base transition-all flex items-center gap-1.5"
+                    >
+                      <app-icon name="refresh-cw" [size]="12" />
+                      Cambiar foto
+                    </button>
+                    <button
+                      type="button"
+                      (click)="onRemovePhoto()"
+                      aria-label="Quitar foto"
+                      data-llm-action="remove-carnet-photo"
+                      class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5"
+                    >
+                      <app-icon name="trash-2" [size]="12" />
+                      Quitar foto
+                    </button>
+                  </div>
                 </div>
               } @else {
                 <div class="text-center space-y-3">

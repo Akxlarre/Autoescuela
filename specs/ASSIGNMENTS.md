@@ -79,15 +79,12 @@
 | ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | `b` | fix | Baja-Media | b | Ninguna de las 2 usa `agenda-semanal`. `alumno/horario` necesita agrupar celdas condicionales. Ver `specs/assignments/ASG-b-070-*.md` |
 | ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`, `dms-list-content`) | `b` | fix | Media | b | Tiene `h-125` hardcodeado que hay que sacar primero. Componente `shared` — verificar ambas rutas. Ver `specs/assignments/ASG-b-071-*.md` |
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | `i` | fix | Media | b | 2 `.bento-banner` apiladas (no 2 columnas), sin paginación que sacar. Ver `specs/assignments/ASG-b-073-*.md` |
-| ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | `i` | fix | Baja-Media | b | `--fill-screen-kpi`, sin paginación que sacar. Ver `specs/assignments/ASG-b-074-*.md` |
-| ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | `i` | fix | Baja | b | Calendario mensual acotado, `--fill-screen-kpi`. Ver `specs/assignments/ASG-b-075-*.md` |
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
 | ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
 | ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | `m` | spec | Alta | b | Modo dual landing/grilla no mapeado en detalle. Necesita diseño previo, no es mecánica. Ver `specs/assignments/ASG-b-080-*.md` |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | `m` | fix | Media | b | Más simple que la matriz de notas — sin modo dual. `sticky-col` ya existe, no romperlo. Ver `specs/assignments/ASG-b-081-*.md` |
 | ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | `i` | spec | Alta | b | 7 secciones (reportes) + CSS custom con contador táctil (cuadratura). Necesita diseño previo. Ver `specs/assignments/ASG-b-082-*.md` |
-| ASG-b-083 | App-like: `/alumno/dashboard` | `b` | spec | Alta | b | ~9 celdas condicionales, no mapeadas en detalle. Base de 2 columnas ya confirmada, resto necesita diseño. Ver `specs/assignments/ASG-b-083-*.md` |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | `i` | fix | Media | b | Va ANTES de ASG-b-085 a propósito — piloto de bajo riesgo para validar el patrón de tabs. Ver `specs/assignments/ASG-b-084-*.md` |
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | spec | Alta | b | 1654 líneas, máximo tráfico. No reclamar sin haber hecho ASG-b-084 antes. QA visual exhaustivo obligatorio. Ver `specs/assignments/ASG-b-085-*.md` |
 | ASG-b-086 | App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases` | `i` | spec | Alta | b | 7 secciones secuenciales. Resolver junto con el bug de skeleton gap (fix-074) en el mismo track. Ver `specs/assignments/ASG-b-086-*.md` |
@@ -132,7 +129,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-083 | App-like: `/alumno/dashboard` | `b` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -163,6 +160,7 @@
 | ASG-b-030 | Fix H-023: Caja Diaria muestra glosa cruda del pago | [fix-062-b-glosa-cruda-cuadratura](fixes/fix-062-b-glosa-cruda-cuadratura/fix.md) | 2026-07-28 |
 | ASG-b-031 | Fix H-032: campo Contraseña visible en "Recuperar Contraseña" | [fix-061-b-password-field-inert-reset-mode](fixes/fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
 | ASG-b-032 | Fix H-036: flash de texto incorrecto en Pagos de alumno Clase B | [fix-060-b-flash-texto-pagos-clase-b](fixes/fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
+| ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
 | ASG-b-010 | Fix H-016: Portal Instructor corre sobre datos MOCK | [fix-001-i-portal-instructor-datos-mock](fixes/fix-001-i-portal-instructor-datos-mock/fix.md) | 2026-07-29 |
 | ASG-b-012 | Matrícula pública: overlay, landing sin sede, retry roto, storage huérfano | [fix-069-b-matricula-publica-varios](fixes/fix-069-b-matricula-publica-varios/fix.md) | 2026-07-29 |
 | ASG-b-033 | Portal alumno no muestra matrículas múltiples | [0034-b-portal-alumno-matriculas-multiples](specs/0034-b-portal-alumno-matriculas-multiples/spec.md) | 2026-07-29 |
@@ -208,6 +206,8 @@
 | ASG-b-069 | App-like: `/admin/auditoria` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-06 |
 | ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | [fix-124-m-app-like-configuracion-web](fixes/fix-124-m-app-like-configuracion-web/fix.md) | 2026-08-06 |
 | ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | [fix-132-m-app-like-familia-pagos](fixes/fix-132-m-app-like-familia-pagos/fix.md) | 2026-08-06 |
+| ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | [fix-019-i-app-like-liquidaciones](fixes/fix-019-i-app-like-liquidaciones/fix.md) | 2026-08-08 |
+| ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | [fix-020-i-app-like-historial-cuadraturas](fixes/fix-020-i-app-like-historial-cuadraturas/fix.md) | 2026-08-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -671,7 +671,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             <div class="flex items-center justify-between">
               <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
               <button
-                class="p-1 rounded-md text-text-muted hover:text-text-primary"
+                class="p-1 rounded-md text-text-muted hover:text-text-primary cursor-pointer"
                 aria-label="Cerrar"
                 (click)="closeJustifyModal()"
               >

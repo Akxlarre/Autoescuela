@@ -625,6 +625,51 @@
   filtro.
 - **Fuente:** `specs/fixes/fix-135-m-excluir-matriculas-pago-pendiente-de-pagos-recientes`
 
+### DG-057 — El `end_date` de una promoción profesional puede calcularse sin feriados reales sin que nadie lo note, si `apis.digital.gob.cl` es inalcanzable
+- **Trampa:** confiar en que el `end_date` mostrado/persistido por `PromocionesFacade` siempre
+  refleja los feriados reales, porque `computePromotionEndDate()` (AC6, spec 0002-m) está
+  correctamente testeado con feriados simulados.
+- **Realidad:** `fetchHolidaysForYears()` hace `fetch('https://apis.digital.gob.cl/fl/feriados/
+  {año}')` desde el navegador del admin. Si esa llamada falla por cualquier motivo (DNS, red,
+  CORS, 5xx), el `catch` devolvía `[]` en silencio — "0 feriados asumidos" — y
+  `computePromotionEndDate()` calculaba `end_date = start + 33` como si no hubiera ningún
+  feriado en el rango. Reproducido en producción real: `net::ERR_NAME_NOT_RESOLVED` al resolver
+  `apis.digital.gob.cl` (confirmado incluso con extensiones de navegador deshabilitadas), lo
+  que hizo que una promoción con `start_date=17 ago 2026` mostrara `end_date=19 sept 2026` sin
+  considerar que el 18 y 19 de septiembre son feriados (Fiestas Patrias). No hay retry ni
+  fuente de feriados alternativa — es una dependencia externa sin fallback de datos, solo con
+  fallback de comportamiento (crear igual, sin feriados).
+- **Lección:** cuando el `catch` de una llamada a una API externa (feriados, geolocalización,
+  cualquier `fetch()` a un dominio fuera del control del proyecto) retorna un valor "vacío" que
+  la lógica de negocio interpreta como una respuesta válida (0 resultados = "confirmado que no
+  hay feriados", en vez de "no se pudo confirmar"), ese `catch` debe exponer una señal de fallo
+  explícita al consumidor — no solo devolver el valor vacío. Quien renderiza el resultado
+  (drawer, reporte, lo que sea) necesita poder distinguir "sin feriados, confirmado" de "no se
+  pudo verificar" para avisar al usuario en el segundo caso, en vez de mostrar un dato
+  incompleto como si fuera definitivo. `fetchHolidaysForYears()` en `PromocionesFacade` es el
+  ejemplo concreto ya corregido — ver la fuente para el patrón exacto (signal
+  `holidaysCheckFailed` + advertencia visible en el drawer).
+- **Actualización (fix-139-m):** además de la señal visible, se agregó una fuente de respaldo
+  real (`api.boostr.cl`) para cuando `apis.digital.gob.cl` falla — verificado que hoy responde
+  correctamente para 2026 (incluyendo el 18/19 de septiembre). Cuando una API pública externa
+  queda inalcanzable, antes de conformarse con solo avisar del fallo, vale la pena verificar si
+  existe una fuente alternativa que cubra el mismo dato — para feriados chilenos, `date.nager.at`
+  es una segunda alternativa ya verificada como reachable pero no usada (queda como opción si
+  `boostr` también falla algún día). El fallback se portó 1:1 a
+  `supabase/functions/_shared/holidays.ts` (usado por el cron `auto-create-next-promotions`).
+  Verificado directamente en el runtime del cron (no solo en el navegador): sin invocar la
+  Edge Function completa (el colchón local ya estaba lleno de una QA anterior, así que nunca
+  llega a llamar `fetchHolidaysForYears`), se montó un servicio Deno efímero dentro del mismo
+  contenedor `supabase_edge_runtime` replicando únicamente las dos llamadas `fetch()` — mismo
+  resultado que en el navegador: `apis.digital.gob.cl` falla por DNS, `api.boostr.cl` responde
+  200 con los feriados reales. **Lección extra:** cuando Deno/Edge Functions no se pueden
+  invocar de punta a punta en el entorno de desarrollo, `docker exec` dentro del contenedor del
+  runtime (si corre localmente vía `supabase start`) permite probar llamadas de red aisladas
+  con el mismo binario y la misma red que usará el cron en producción — más confiable que
+  asumir que el comportamiento del navegador se traslada 1:1 a otro runtime.
+- **Fuente:** `specs/fixes/fix-138-m-fallback-silencioso-fetch-feriados`,
+  `specs/fixes/fix-139-m-fallback-fuente-feriados-alternativa`
+
 ---
 
 ## Convención para agregar una entrada nueva
