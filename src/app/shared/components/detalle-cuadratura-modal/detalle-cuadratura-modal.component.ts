@@ -164,7 +164,11 @@ interface DenominacionRow {
                 <span class="text-2xs font-bold text-text-primary uppercase tracking-widest"
                   >Desglose Físico</span
                 >
-                <app-icon name="coins" [size]="13" class="text-text-muted" />
+                <span
+                  class="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0"
+                >
+                  <app-icon name="coins" [size]="12" class="text-brand" />
+                </span>
               </div>
 
               <div class="divide-y divide-border-muted/30 max-h-85 overflow-y-auto">
@@ -186,10 +190,12 @@ interface DenominacionRow {
               </div>
 
               <div
-                class="p-4 bg-elevated border-t border-border-muted flex justify-between items-center mt-auto"
+                class="card-tinted border-t-2 border-brand/20 p-4 flex justify-between items-center mt-auto"
               >
-                <span class="text-2xs font-black text-text-primary uppercase">Total Efectivo</span>
-                <span class="text-base font-black tabular-nums tracking-tight">{{
+                <span class="text-2xs font-black text-text-primary uppercase tracking-wider"
+                  >Total Efectivo</span
+                >
+                <span class="text-xl font-black tabular-nums tracking-tighter text-brand">{{
                   formatAmt(d.saldoFisico)
                 }}</span>
               </div>
@@ -203,7 +209,11 @@ interface DenominacionRow {
             class="px-4 py-3 bg-subtle border-b border-border-muted flex items-center justify-between"
           >
             <div class="flex items-center gap-2">
-              <app-icon name="wrench" [size]="13" class="text-text-muted" />
+              <span
+                class="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0"
+              >
+                <app-icon name="wrench" [size]="12" class="text-brand" />
+              </span>
               <span class="text-2xs font-bold text-text-primary uppercase tracking-widest"
                 >Ajustes</span
               >

@@ -1,7 +1,8 @@
 # Fix: Mejorar visualmente el flujo de "editar" una cuadratura (ajustes)
 > id: fix-018-i-mejorar-visual-editar-cuadratura
 > refs: —
-> status: open
+> status: done
+> closed: 2026-08-08
 > created: 2026-08-06
 
 ## Root Cause
@@ -48,3 +49,25 @@ componente visual) más mejoras estéticas que surjan de la revisión en vivo.
 ## Archivos involucrados
 - `src/app/features/admin/contabilidad-cuadratura/registrar-ajuste-cuadratura-drawer.component.ts`
 - `src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts`
+
+## Resultado
+Alcance efectivamente cubierto (revisión en vivo con captura real del usuario, 2026-08-08),
+más acotado que el punto de partida original:
+- Sección "Desglose Físico" (`detalle-cuadratura-modal`): el footer "Total Efectivo" pasó de
+  barra plana `bg-elevated` a `.card-tinted` con borde superior en `--ds-brand` — se lee como
+  el resultado final del bloque, no como una fila más.
+- Headers de "Desglose Físico" y "Ajustes": ícono en chip circular tintado (`bg-brand/10`) en
+  vez de ícono gris suelto, mismo tratamiento en ambos para consistencia.
+- Usuario confirmó visualmente el resultado ("quedo bien") sobre capturas reales del modal.
+- `npx ng build --configuration=development` verde tras cada cambio.
+- Test de regresión: los 51 tests relevantes (`cuadratura.facade`, `historial-cuadraturas.facade`,
+  `registrar-ajuste-cuadratura-drawer.component`) verdes.
+
+**No cubierto en esta pasada** (quedó fuera por decisión del usuario al cerrar, no por
+bloqueo técnico) — candidato a fix aparte si se necesita más adelante:
+- Revisión visual del propio drawer `RegistrarAjusteCuadraturaDrawerComponent` (toggle
+  Resta/Suma, preview de signo, campos condicionales de "Gasto olvidado").
+- Golden path funcional (registrar ajuste → aparece en Contabilidad > Gastos), AC-E1, AC-E2,
+  AC7 (secretaria sin botón) y modo oscuro — la lógica ya estaba testeada por la spec 0002-i,
+  esto era solo confirmación visual en navegador real, no ejecutada por falta de Playwright
+  MCP en esta sesión y decisión del usuario de cerrar sin ese paso.
