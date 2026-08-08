@@ -1,7 +1,8 @@
 # Fix: App-like `/admin/contabilidad/liquidaciones` + `/secretaria/...`
 > id: fix-019-i-app-like-liquidaciones
 > refs: ASG-b-074
-> status: active
+> status: done
+> closed: 2026-08-08
 > created: 2026-08-08
 
 ## Root Cause
@@ -35,4 +36,11 @@ Archivo principal:
   768 de alto.
 
 ## Resultado
-_Pendiente._
+- Root del componente → `bento-grid--fill-screen-kpi`.
+- Celda de tabla → `bento-banner bento-fill shadow-sm bg-surface overflow-hidden flex flex-col h-full`;
+  wrapper desktop (`hidden md:block`) → `flex-1 min-h-0 overflow-y-auto` (scroll interno).
+- Vista mobile/adaptativa sin cambios.
+- `npm run lint:arch` y `npx ng build --configuration=development` verdes.
+- QA visual confirmado manualmente por el usuario en ambas rutas (admin + secretaria),
+  390×844, 1440×900 y 768 de alto, con drawer abierto — sin acceso a Playwright MCP en esta
+  sesión para hacerlo vía agente.

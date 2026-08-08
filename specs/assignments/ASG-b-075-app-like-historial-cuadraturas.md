@@ -1,14 +1,14 @@
 # Asignación ASG-b-075 — App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...`
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-08
+> **resulting_track:** fix-020-i-app-like-historial-cuadraturas
 
 ---
 
