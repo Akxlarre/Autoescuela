@@ -263,7 +263,7 @@ function formatCLP(value: number): string {
     `,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout #pageRef>
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoReveal appBentoGridLayout #pageRef>
       <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
       <div class="bento-banner relative overflow-visible">
         <app-section-hero
@@ -376,11 +376,11 @@ function formatCLP(value: number): string {
 
       <div
         style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px); container-type:inline-size; container-name:liq-container"
-        class="bento-banner shadow-sm bg-surface overflow-hidden"
+        class="bento-banner bento-fill shadow-sm bg-surface overflow-hidden flex flex-col h-full"
       >
         <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
         @if (!isDrawerOpen()) {
-          <div class="hidden md:block w-full">
+          <div class="hidden md:block w-full flex-1 min-h-0 overflow-y-auto">
             <table
               class="w-full liq-table"
               [class.compact-mode]="isDrawerOpen()"

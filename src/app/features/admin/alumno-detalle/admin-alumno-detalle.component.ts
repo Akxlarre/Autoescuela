@@ -25,7 +25,6 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { Button } from 'primeng/button';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
@@ -89,11 +88,9 @@ export function resolveListadoLabel(
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TooltipModule,
-    RouterLink,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
-    Button,
     AdminHistorialPagosComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
@@ -115,11 +112,13 @@ export function resolveListadoLabel(
         density="slim"
         [animateOnInit]="false"
         [loading]="facade.isLoading()"
-        [title]="facade.alumno()?.nombre ?? 'Cargando...'"
+        [title]="facade.alumno()?.nombre ?? (facade.error() ? 'Error al cargar' : 'Cargando...')"
         [contextLine]="
           facade.alumno()
             ? facade.alumno()!.curso + ' · Matrícula ' + facade.alumno()!.matricula
-            : 'Obteniendo información...'
+            : facade.error()
+              ? 'No se pudo obtener la información'
+              : 'Obteniendo información...'
         "
         icon="user"
         [backRoute]="listadoRoute()"
@@ -217,20 +216,12 @@ export function resolveListadoLabel(
         <!-- ── Estado de Error ── -->
       } @else if (facade.error()) {
         <div class="bento-banner">
-          <div class="flex flex-col gap-4">
-            <div class="bento-card border-l-4 border-l-error p-5 flex flex-row items-center gap-4">
-              <app-icon name="circle-alert" [size]="24" class="text-error shrink-0" />
-              <div class="flex flex-col gap-1">
-                <p class="font-bold text-lg text-text-primary">Error al cargar la ficha</p>
-                <p class="text-sm text-text-secondary">{{ facade.error() }}</p>
-              </div>
+          <div class="bento-card border-l-4 border-l-error p-5 flex flex-row items-center gap-4">
+            <app-icon name="circle-alert" [size]="24" class="text-error shrink-0" />
+            <div class="flex flex-col gap-1">
+              <p class="font-bold text-lg text-text-primary">Error al cargar la ficha</p>
+              <p class="text-sm text-text-secondary">{{ facade.error() }}</p>
             </div>
-            <p-button
-              label="Volver al Listado"
-              icon="pi pi-arrow-left"
-              [text]="true"
-              [routerLink]="listadoRoute()"
-            />
           </div>
         </div>
 

@@ -327,8 +327,8 @@
         Volver
       </button>
       <app-async-btn
-        [label]="isPublic() ? 'Continuar al Pago' : 'Confirmar y Finalizar'"
-        [icon]="isPublic() ? 'arrow-right' : 'check-circle'"
+        label="Continuar al Pago"
+        icon="arrow-right"
         [loading]="loading()"
         [disabled]="!canProceed()"
         (click)="onNext()"

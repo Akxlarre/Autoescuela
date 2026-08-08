@@ -149,7 +149,7 @@ function formatCLP(value: number): string {
     }
   `,
   template: `
-    <div class="bento-grid" appBentoGridLayout #pageRef>
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout #pageRef>
       <!-- ── Hero (slim, hijo directo del grid) ──────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -165,10 +165,12 @@ function formatCLP(value: number): string {
 
       <!-- ── Barra: navegación de mes + exportación ─────────────────────────── -->
       <div
-        class="bento-banner card px-4 py-2.5 flex items-center justify-between relative overflow-visible"
+        class="bento-banner card px-4 py-2.5 flex items-center justify-between flex-wrap gap-2 relative overflow-visible"
         appCardHover
       >
-        <div class="flex items-center border border-border-subtle rounded-xl overflow-hidden">
+        <div
+          class="flex items-center shrink-0 border border-border-subtle rounded-xl overflow-hidden"
+        >
           <button
             class="px-3 py-2 text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent"
             (click)="mesAnterior.emit()"
@@ -229,7 +231,7 @@ function formatCLP(value: number): string {
 
       <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
       <div
-        class="bento-banner overflow-hidden"
+        class="bento-banner bento-fill overflow-hidden flex flex-col h-full"
         style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
       >
         <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
@@ -246,7 +248,9 @@ function formatCLP(value: number): string {
         </div>
 
         <!-- Grid de celdas | DESKTOP SOLO -->
-        <div class="hidden lg:grid grid-cols-7 gap-px bg-border-muted/30 flex-1">
+        <div
+          class="hidden lg:grid grid-cols-7 gap-px bg-border-muted/30 flex-1 min-h-0 overflow-y-auto"
+        >
           @if (isLoading()) {
             @for (i of skeletonCells; track i) {
               <div class="cal-cell bg-elevated p-2 flex flex-col justify-between">
@@ -391,7 +395,7 @@ function formatCLP(value: number): string {
                         </div>
                       } @else if (celda.isToday) {
                         <div class="flex items-center gap-1.5 mb-1 text-brand">
-                          <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                          <app-icon name="clock" [size]="14" />
                           <span class="text-compact font-bold">Sesión en curso</span>
                         </div>
                         <span class="text-text-muted text-2xs font-semibold"
