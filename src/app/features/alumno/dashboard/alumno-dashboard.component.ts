@@ -1,13 +1,6 @@
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
-import {
-  effect,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  ElementRef,
-  inject,
-} from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -17,12 +10,7 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
-import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
-import { AnimateInDirective } from '@core/directives/animate-in.directive';
-import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { BadgeComponent } from '@shared/components/badge/badge.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
@@ -39,19 +27,24 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
     BentoRevealDirective,
     CardHoverDirective,
     IconComponent,
-    BadgeComponent,
-    KpiCardVariantComponent,
-    AlertCardComponent,
     SectionHeroComponent,
     SkeletonBlockComponent,
-    RouterLink,
-    ScrollRevealDirective,
-    AnimateInDirective,
     TabsComponent,
   ],
   template: `
-    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi progreso">
-      <!-- ── HERO ──────────────────────────────────────────────────────────── -->
+    <section
+      class="bento-grid bento-grid--fill-screen-2"
+      appBentoReveal
+      appBentoGridLayout
+      aria-label="Mi progreso"
+    >
+      <!-- ── HERO — 4 KPIs en el strip (Prácticas, Asist. teoría, Próxima clase,
+           Saldo). Próxima clase/Saldo son clickeables (navegan a horario/pagos) en
+           vez de vivir como cards propias — el detalle completo ya vive en esas
+           páginas (spec 0035, reformulación 2026-08-08): mostrarlo dos veces era
+           redundante. Solo Evaluación/Certificado son datos que NO existen en
+           ninguna otra pantalla del portal alumno; por eso son las únicas que se
+           quedan con espacio protagonista. ── -->
       <app-section-hero
         icon="graduation-cap"
         [title]="heroTitle()"
@@ -62,116 +55,37 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
         density="slim"
         [kpis]="heroKpis()"
         [loading]="loading()"
-        [loadingKpiCount]="2"
+        [loadingKpiCount]="4"
         (actionClick)="onHeroAction($event)"
+        (kpiClick)="onKpiClick($event)"
       />
 
-      <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
-      @if (context.enrollments().length > 1) {
-        <div class="bento-banner p-2">
+      <!-- ── COLUMNA IZQUIERDA — Mi Progreso ──────────────────────────────────
+           .bento-fill, row-span 1 (no 2): antes ocupaba las 2 filas fr enteras
+           y su contenido corto quedaba flotando con vacío abajo (feedback
+           visual del owner, ronda 2). Ahora comparte fila con "Evaluación" y
+           una fila 3 nueva ("Camino al Certificado") toma la otra — reutiliza
+           --fill-screen-2 tal cual su propio comentario lo describe ("Hero +
+           2 FILAS de tarjetas", no 2 columnas altas). ── -->
+      <div
+        class="bento-wide bento-card bento-fill flex flex-col gap-4"
+        appCardHover
+        data-col-span="6"
+        data-col-start="1"
+      >
+        <!-- Selector de matrícula (solo con >1 enrollment) — vive acá porque
+             Progreso/Evaluación son datos por-matrícula; no hay fila propia en
+             el grid para él (mismo criterio que la fusión del selector de ciclo
+             en ciclos-teoricos-content, spec 0031). -->
+        @if (context.enrollments().length > 1) {
           <app-tabs
             [tabs]="enrollmentTabs()"
             [activeId]="activeEnrollmentStr()"
             variant="pill"
             (activeIdChange)="selectEnrollment(+$event)"
           />
-        </div>
-      }
+        }
 
-      <!-- ── KPI 3/4 — Próxima clase y Saldo: quedan fuera del strip [kpis] del
-           hero (AC-F3) porque cada una lleva un routerLink de navegación
-           propio ("Ver horario →", "Pagar"); SectionHeroKpi no soporta ese
-           contenido interactivo, solo label/value/color/icon. KPI 1 y 2
-           (Prácticas, Asist. teoría) sí migraron al strip por ser métricas
-           puras equivalentes a app-kpi-card-variant. ── -->
-
-      <!-- ── KPI 3 — Próxima clase ─────────────────────────────────────────── -->
-      <div class="bento-square">
-        <div class="bento-card card-tinted flex flex-col gap-2 h-full" appCardHover>
-          <div class="flex items-center gap-2">
-            <app-icon name="calendar" [size]="14" class="text-brand" />
-            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
-              >Próxima clase</span
-            >
-          </div>
-          @if (loading()) {
-            <app-skeleton-block variant="text" width="80%" height="14px" />
-          } @else if (side()?.nextClass) {
-            <p class="item-title m-0 leading-snug">
-              {{ side()?.nextClass?.date }}
-            </p>
-            @if (side()?.nextClass?.time) {
-              <p class="text-xs text-text-muted m-0">{{ side()?.nextClass?.time }}</p>
-            }
-          } @else {
-            <p class="text-xs text-text-muted m-0 flex-1 flex items-center">Sin clases agendadas</p>
-          }
-          <a
-            routerLink="/app/alumno/horario"
-            class="text-xs font-medium no-underline mt-auto text-brand"
-            data-llm-nav="alumno-horario"
-          >
-            Ver horario →
-          </a>
-        </div>
-      </div>
-
-      <!-- ── KPI 4 — Saldo ──────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <div
-          class="bento-card flex flex-col gap-2 h-full"
-          appCardHover
-          [class.card-tinted]="(side()?.pendingBalance ?? 0) === 0"
-        >
-          <div class="flex items-center gap-2">
-            <app-icon
-              name="wallet"
-              [size]="14"
-              [style.color]="
-                (side()?.pendingBalance ?? 0) > 0 ? 'var(--state-warning)' : 'var(--state-success)'
-              "
-            />
-            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted">Saldo</span>
-          </div>
-          @if (loading()) {
-            <app-skeleton-block variant="text" width="60%" height="20px" />
-          } @else {
-            <p
-              class="text-lg font-bold m-0"
-              [style.color]="
-                (side()?.pendingBalance ?? 0) > 0 ? 'var(--state-warning)' : 'var(--state-success)'
-              "
-            >
-              @if ((side()?.pendingBalance ?? 0) === 0) {
-                Al día ✓
-              } @else {
-                {{ formatCLP(side()?.pendingBalance ?? 0) }}
-              }
-            </p>
-            <p class="text-xs text-text-muted m-0">
-              Pagado: {{ formatCLP(side()?.totalPaid ?? 0) }}
-            </p>
-          }
-          @if ((side()?.pendingBalance ?? 0) > 0) {
-            <a
-              routerLink="/app/alumno/pagos"
-              class="btn-primary text-xs no-underline text-center mt-auto"
-              data-llm-nav="alumno-pagos"
-            >
-              Pagar
-            </a>
-          }
-        </div>
-      </div>
-
-      <!-- ── PANEL IZQUIERDO — Progreso prácticas (bento-wide × 2 rows) ─────── -->
-      <div
-        class="bento-wide bento-card bento-activity-lg flex flex-col gap-4"
-        appCardHover
-        data-col-span="6"
-        data-col-start="1"
-        data-row-span="2"
-      >
         <div class="flex items-center gap-2">
           <app-icon name="trending-up" [size]="16" class="text-brand" />
           <h2 class="item-title m-0">Mi Progreso</h2>
@@ -200,81 +114,113 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
             </div>
           </div>
         } @else {
-          <!-- Anillo de progreso -->
-          <div class="flex items-center gap-4">
-            <div
-              class="relative shrink-0 w-20 h-20 rounded-full flex items-center justify-center"
-              [style.background]="progressRingBg()"
-              aria-label="Progreso global {{ progress()?.pctOverall }}%"
-            >
+          <!-- Centrado vertical: el contenido (anillo+barras+stepper) es acotado
+               y ahora la celda es la mitad de alta que antes (row-span 1, ver
+               comentario de arriba) — debería alcanzarle sin scroll en el caso
+               normal; overflow-y-auto como red de seguridad en viewports
+               bajos (768px de alto). -->
+          <div class="flex-1 min-h-0 overflow-y-auto flex flex-col justify-center gap-3">
+            <!-- Anillo de progreso -->
+            <div class="flex items-center gap-4">
               <div
-                class="absolute w-14 h-14 rounded-full bg-surface flex items-center justify-center"
+                class="relative shrink-0 w-20 h-20 rounded-full flex items-center justify-center"
+                [style.background]="progressRingBg()"
+                aria-label="Progreso global {{ progress()?.pctOverall }}%"
               >
-                <span class="text-xs font-bold text-text-primary"
-                  >{{ progress()?.pctOverall ?? 0 }}%</span
+                <div
+                  class="absolute w-14 h-14 rounded-full bg-surface flex items-center justify-center"
                 >
+                  <span class="text-xs font-bold text-text-primary"
+                    >{{ progress()?.pctOverall ?? 0 }}%</span
+                  >
+                </div>
+              </div>
+              <div class="flex flex-col gap-1 flex-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-text-muted">Prácticas</span>
+                  <span class="font-semibold text-text-primary">
+                    {{ progress()?.practicesCompleted ?? 0 }}/{{ progress()?.practicesTotal ?? 12 }}
+                  </span>
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
+                  <div
+                    class="h-full rounded-full transition-all bg-brand"
+                    [style.width.%]="practicesPct()"
+                  ></div>
+                </div>
+                <div class="flex items-center justify-between text-xs mt-1">
+                  <span class="text-text-muted">Asistencia teoría</span>
+                  <span class="font-semibold text-text-primary"
+                    >{{ progress()?.pctTheoryAttendance ?? 0 }}%</span
+                  >
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
+                  <div
+                    class="h-full rounded-full transition-all bg-brand"
+                    [style.width.%]="progress()?.pctTheoryAttendance ?? 0"
+                  ></div>
+                </div>
               </div>
             </div>
-            <div class="flex flex-col gap-1 flex-1">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-text-muted">Prácticas</span>
-                <span class="font-semibold text-text-primary">
-                  {{ progress()?.practicesCompleted ?? 0 }}/{{ progress()?.practicesTotal ?? 12 }}
-                </span>
-              </div>
-              <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
-                <div
-                  class="h-full rounded-full transition-all bg-brand"
-                  [style.width.%]="practicesPct()"
-                ></div>
-              </div>
-              <div class="flex items-center justify-between text-xs mt-1">
-                <span class="text-text-muted">Asistencia teoría</span>
-                <span class="font-semibold text-text-primary"
-                  >{{ progress()?.pctTheoryAttendance ?? 0 }}%</span
-                >
-              </div>
-              <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
-                <div
-                  class="h-full rounded-full transition-all bg-brand"
-                  [style.width.%]="progress()?.pctTheoryAttendance ?? 0"
-                ></div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Lista prácticas 1..N -->
-          <div class="grid grid-cols-4 gap-1.5 flex-1">
-            @for (p of practices(); track p.number) {
-              <div
-                class="flex items-center gap-1.5 py-1 px-1.5 rounded-lg text-xs"
-                [style.background]="
-                  p.status === 'completed' ? 'var(--state-success-bg)' : 'var(--bg-subtle)'
-                "
-              >
-                <app-icon
-                  [name]="
-                    p.status === 'completed'
-                      ? 'check-circle'
-                      : p.status === 'scheduled'
-                        ? 'clock'
-                        : 'circle'
+            <!-- Stepper de 12 prácticas — reemplaza la grilla 4×3 anterior (celdas
+               gigantes ~140px solo para un numerito): círculos compactos con
+               tooltip de la fecha real (p.date, dato ya existente, antes sin
+               usar). Verde SÓLIDO para completada, no un tint casi invisible. -->
+            <div class="overline">Prácticas</div>
+            <div class="flex flex-wrap gap-2">
+              @for (p of practices(); track p.number) {
+                <div
+                  class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-bold border-2"
+                  [style.background]="
+                    p.status === 'completed' ? 'var(--state-success)' : 'transparent'
                   "
-                  [size]="12"
-                  [style.color]="
+                  [style.border-color]="
                     p.status === 'completed'
                       ? 'var(--state-success)'
                       : p.status === 'scheduled'
                         ? 'var(--ds-brand)'
+                        : 'var(--border-subtle)'
+                  "
+                  [style.color]="
+                    p.status === 'completed'
+                      ? 'var(--color-primary-text)'
+                      : p.status === 'scheduled'
+                        ? 'var(--ds-brand)'
                         : 'var(--text-muted)'
                   "
-                />
-                <span
-                  [style.color]="
-                    p.status === 'completed' ? 'var(--state-success)' : 'var(--text-muted)'
+                  [pTooltip]="
+                    'Práctica ' +
+                    p.number +
+                    (p.date
+                      ? ' — ' + formatShortDate(p.date)
+                      : p.status === 'completed'
+                        ? ' — completada'
+                        : ' — pendiente')
                   "
+                  tooltipPosition="top"
                 >
-                  {{ p.number }}
+                  @if (p.status === 'completed') {
+                    <app-icon name="check" [size]="14" />
+                  } @else {
+                    {{ p.number }}
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Próxima práctica agendada — usa practices[].date (ya existía en
+               el modelo, sin usar en el dashboard). Distinto de la "Próxima
+               clase" del hero: acá se ve el NÚMERO de práctica en la secuencia,
+               no solo la fecha. -->
+            @if (nextScheduledPractice(); as next) {
+              <div class="flex items-center gap-2 text-xs text-text-secondary mt-1">
+                <app-icon name="clock" [size]="13" class="text-brand" />
+                <span
+                  >Próxima: <strong class="text-text-primary">Práctica {{ next.number }}</strong>
+                  @if (next.date) {
+                    — {{ formatShortDate(next.date) }}
+                  }
                 </span>
               </div>
             }
@@ -282,270 +228,204 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
         }
       </div>
 
-      <!-- ── PANEL DERECHO — Nota & Certificado (bento-wide × 2 rows) ─────────── -->
+      <!-- ── COLUMNA DERECHA — Evaluación y Certificado ───────────────────────
+           Única sección con contenido que no vive en ninguna otra pantalla del
+           portal alumno. row-span 1 (ver comentario de la columna izquierda). ── -->
       <div
-        class="bento-wide bento-card bento-alerts-lg flex flex-col gap-4"
+        class="bento-wide bento-card bento-fill flex flex-col gap-4"
         appCardHover
         data-col-span="6"
         data-col-start="7"
-        data-row-span="2"
       >
+        <!-- El certificado ya NO vive acá — se consolidó en la celda "Camino al
+             Certificado" de abajo (evita mostrar el mismo dato 2 veces y le
+             devuelve a esta columna todo el alto para la lista de módulos,
+             que quedaba muy apretada compartiendo espacio con el bloque de
+             certificado — feedback del owner, ronda 4). -->
         <div class="flex items-center gap-2">
           <app-icon name="star" [size]="16" class="text-warning" />
           <h2 class="item-title m-0">
             @if (licenseGroup() === 'class_b') {
-              Examen y Certificado
+              Examen Final
             } @else {
-              Módulos y Certificado
+              Módulos
             }
           </h2>
         </div>
 
-        @if (loading()) {
-          <div class="flex flex-col gap-3">
-            @for (_ of [1, 2, 3]; track _) {
-              <app-skeleton-block variant="text" width="100%" height="14px" />
-            }
-          </div>
-        } @else if (licenseGroup() === 'class_b') {
-          <!-- Clase B: 1 examen final -->
-          <div class="card-tinted rounded-lg p-3 flex items-center gap-3">
-            <div class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-subtle">
-              @if (grades()?.finalExamGrade !== null) {
-                <span class="text-xl font-bold text-brand">
-                  {{ grades()?.finalExamGrade }}
-                </span>
-              } @else {
-                <app-icon name="star" [size]="20" class="text-text-muted" />
+        <!-- Centrado vertical solo para Clase B (1 tarjeta corta): Profesional
+             ya usa el espacio con su lista de módulos + scroll interno propio
+             (mismo criterio que la columna izquierda). Celda ahora la mitad de
+             alta que antes (row-span 1) — debería alcanzar sin scroll. -->
+        <div
+          class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4"
+          [class.justify-center]="!loading() && licenseGroup() === 'class_b'"
+        >
+          @if (loading()) {
+            <div class="flex flex-col gap-3">
+              @for (_ of [1, 2, 3]; track _) {
+                <app-skeleton-block variant="text" width="100%" height="14px" />
               }
             </div>
-            <div class="flex flex-col gap-0.5">
-              <p class="text-xs font-semibold text-text-primary m-0">Examen Final</p>
-              @if (grades()?.finalExamGrade !== null) {
-                <p class="text-xs text-text-muted m-0">
-                  {{ grades()?.passed ? 'Aprobado ✓' : 'Reprobado' }}
-                </p>
-              } @else {
-                <p class="text-xs text-text-muted m-0">Pendiente</p>
-              }
-            </div>
-          </div>
-        } @else {
-          <!-- Profesional: 7 módulos -->
-          <div class="flex flex-col gap-1.5 flex-1 overflow-auto">
-            @for (mod of grades()?.modules ?? []; track mod.number) {
-              <div class="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-subtle">
-                <span
-                  class="shrink-0 text-2xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
-                  [style.background]="
-                    mod.passed === true ? 'var(--state-success-bg)' : 'var(--bg-surface)'
-                  "
-                  [style.color]="mod.passed === true ? 'var(--state-success)' : 'var(--text-muted)'"
-                >
-                  {{ mod.number }}
-                </span>
-                <span
-                  class="text-xs text-text-secondary flex-1 truncate"
-                  [pTooltip]="mod.name"
-                  tooltipPosition="top"
-                  >{{ mod.name }}</span
-                >
-                @if (mod.grade !== null) {
-                  <span
-                    class="shrink-0 text-xs font-bold"
-                    [style.color]="mod.passed ? 'var(--state-success)' : 'var(--state-error)'"
-                  >
-                    {{ mod.grade }}
+          } @else if (licenseGroup() === 'class_b') {
+            <!-- Clase B: 1 examen final. Círculo de nota más grande (antes w-12,
+               ahora w-16) + fecha rendida (finalExamDate, dato ya existente
+               en el modelo, antes sin usar) — le da más presencia a la única
+               tarjeta de esta columna en vez de dejarla perdida en el vacío. -->
+            <div class="card-tinted rounded-lg p-4 flex items-center gap-4">
+              <div class="flex items-center justify-center w-16 h-16 rounded-xl shrink-0 bg-subtle">
+                @if (grades()?.finalExamGrade !== null) {
+                  <span class="text-2xl font-bold text-brand">
+                    {{ grades()?.finalExamGrade }}
                   </span>
                 } @else {
-                  <span class="shrink-0 text-xs text-text-muted">—</span>
+                  <app-icon name="star" [size]="24" class="text-text-muted" />
                 }
               </div>
-            }
-            @if ((grades()?.averageGrade ?? null) !== null) {
-              <div
-                class="flex items-center justify-between px-2 py-1.5 rounded-lg mt-1 bg-brand-tint"
-              >
-                <span class="text-xs font-semibold text-text-primary">Promedio</span>
-                <span class="text-sm font-bold text-brand">
-                  {{ grades()?.averageGrade }}
-                </span>
+              <div class="flex flex-col gap-0.5">
+                <p class="text-sm font-semibold text-text-primary m-0">Examen Final</p>
+                @if (grades()?.finalExamGrade !== null) {
+                  <p class="text-xs text-text-muted m-0">
+                    {{ grades()?.passed ? 'Aprobado ✓' : 'Reprobado' }}
+                    @if (grades()?.finalExamDate; as examDate) {
+                      · rendido el {{ formatShortDate(examDate) }}
+                    }
+                  </p>
+                } @else {
+                  <p class="text-xs text-text-muted m-0">Pendiente de rendir</p>
+                }
               </div>
-            }
-          </div>
-        }
-
-        <!-- Separador -->
-        <div style="border-top: 1px solid var(--border-subtle)"></div>
-
-        <!-- Bloque certificado -->
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-2">
-            <app-icon [name]="certIcon()" [size]="14" [style.color]="certIconColor()" />
-            <span class="text-xs font-semibold text-text-primary">{{ certStatusLabel() }}</span>
-          </div>
-          @if (certificate()?.state === 'locked' && certificate()?.blockingReason) {
-            <p class="text-xs text-text-muted m-0">{{ certificate()?.blockingReason }}</p>
-          } @else if (certificate()?.state === 'enabled') {
-            <app-alert-card severity="success" title="Tu certificado está listo para ser generado">
-              Solicita a la secretaría que lo emita.
-            </app-alert-card>
-          } @else if (certificate()?.state === 'issued') {
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-text-muted">Folio:</span>
-              <span class="text-xs font-semibold text-text-primary">{{
-                certificate()?.folio ?? '—'
-              }}</span>
             </div>
-            @if (certificate()?.pdfUrl) {
-              <button
-                type="button"
-                class="btn-primary w-full"
-                data-llm-action="download-certificate"
-                (click)="downloadCertificate()"
-              >
-                <app-icon name="download" [size]="14" />
-                Descargar certificado
-              </button>
-            }
-          }
-        </div>
-      </div>
-
-      <!-- ── BANNER ASISTENCIA (full width) ────────────────────────────────── -->
-      <div class="bento-banner bento-card flex flex-col gap-3" appCardHover appScrollReveal>
-        <div class="flex items-center gap-2">
-          <app-icon name="calendar-check" [size]="16" class="text-brand" />
-          <h2 class="item-title m-0">Asistencia reciente</h2>
-          @if (!loading() && attendance()) {
-            <app-badge [variant]="semaphoreVariant()" class="ml-auto">
-              {{ semaphoreLabel() }}
-            </app-badge>
-          }
-        </div>
-
-        @if (loading()) {
-          <div class="flex gap-2">
-            @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track _) {
-              <app-skeleton-block variant="rect" width="48px" height="56px" />
-            }
-          </div>
-        } @else if (recentSessions().length === 0) {
-          <p class="text-xs text-text-muted m-0">Sin sesiones registradas aún.</p>
-        } @else {
-          <div class="flex gap-2 flex-wrap">
-            @for (s of recentSessions(); track s.id) {
-              <div class="flex flex-col items-center gap-1" style="min-width: 48px">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  [style.background]="sessionDotBg(s.status)"
-                  [attr.aria-label]="s.status + ' — ' + s.label"
-                >
-                  <app-icon
-                    [name]="s.status === 'present' ? 'check' : 'x'"
-                    [size]="12"
-                    [style.color]="sessionDotColor(s.status)"
-                  />
+          } @else {
+            <!-- Profesional: 7 módulos -->
+            <div class="flex flex-col gap-1.5 flex-1 overflow-auto">
+              @for (mod of grades()?.modules ?? []; track mod.number) {
+                <div class="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-subtle">
+                  <span
+                    class="shrink-0 text-2xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                    [style.background]="
+                      mod.passed === true ? 'var(--state-success-bg)' : 'var(--bg-surface)'
+                    "
+                    [style.color]="
+                      mod.passed === true ? 'var(--state-success)' : 'var(--text-muted)'
+                    "
+                  >
+                    {{ mod.number }}
+                  </span>
+                  <span
+                    class="text-xs text-text-secondary flex-1 truncate"
+                    [pTooltip]="mod.name"
+                    tooltipPosition="top"
+                    >{{ mod.name }}</span
+                  >
+                  @if (mod.grade !== null) {
+                    <span
+                      class="shrink-0 text-xs font-bold"
+                      [style.color]="mod.passed ? 'var(--state-success)' : 'var(--state-error)'"
+                    >
+                      {{ mod.grade }}
+                    </span>
+                  } @else {
+                    <span class="shrink-0 text-xs text-text-muted">—</span>
+                  }
                 </div>
-                <span class="text-2xs text-text-muted text-center leading-tight">
-                  {{ formatSessionDate(s.date) }}
-                </span>
-                <!-- fix-010-i (H-018): "P"/"T" de una sola letra se confundía con el ícono de
-                     estado (check/x) — parecía decir "Presente" incluso en clases con inasistencia.
-                     Texto completo, sin ambigüedad con el estado de asistencia. -->
-                <span class="text-2xs text-text-muted leading-tight">
-                  {{ s.kind === 'theory' ? 'Teoría' : 'Práctica' }}
-                </span>
-              </div>
-            }
-          </div>
-
-          @if ((attendance()?.consecutiveAbsences ?? 0) >= 1) {
-            <app-alert-card
-              [severity]="(attendance()?.consecutiveAbsences ?? 0) >= 2 ? 'error' : 'warning'"
-              [title]="
-                (attendance()?.consecutiveAbsences ?? 0) >= 2
-                  ? 'Riesgo de pérdida de avance'
-                  : 'Inasistencia reciente'
-              "
-            >
-              {{
-                (attendance()?.consecutiveAbsences ?? 0) >= 2
-                  ? 'Tienes ' +
-                    attendance()?.consecutiveAbsences +
-                    ' faltas consecutivas. Comunícate con la secretaría.'
-                  : 'Tienes 1 falta reciente. Asegúrate de asistir a tu próxima clase.'
-              }}
-            </app-alert-card>
+              }
+              @if ((grades()?.averageGrade ?? null) !== null) {
+                <div
+                  class="flex items-center justify-between px-2 py-1.5 rounded-lg mt-1 bg-brand-tint"
+                >
+                  <span class="text-xs font-semibold text-text-primary">Promedio</span>
+                  <span class="text-sm font-bold text-brand">
+                    {{ grades()?.averageGrade }}
+                  </span>
+                </div>
+              }
+            </div>
           }
-        }
+        </div>
       </div>
 
-      <!-- ── WIDGET FINAL 1 — Módulos / Nota ──────────────────────────────── -->
-      <div class="bento-square" [appScrollReveal]="{ delay: 0.1 }">
-        @if (loading()) {
-          <app-kpi-card-variant label="Nota" [value]="0" icon="star" [loading]="true" />
-        } @else if (hasGrade()) {
-          <app-kpi-card-variant
-            [label]="gradeLabel()"
-            [value]="gradeValue()"
-            [suffix]="licenseGroup() === 'class_b' ? '' : '/100'"
-            icon="star"
-            [color]="gradeColor()"
-            [loading]="false"
-          />
-        } @else {
-          <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
-            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted">{{
-              gradeLabel()
-            }}</span>
-            <div class="flex-1 flex items-center justify-center">
-              <app-icon name="star" [size]="28" class="text-text-muted" />
-            </div>
-            <p class="text-xs text-text-muted text-center m-0">Sin calificación aún</p>
-          </div>
-        }
-      </div>
+      <!-- ── CAMINO AL CERTIFICADO — tercera celda, fila 3 ─────────────────────
+           No inventa datos: son los 3 mismos signals de siempre (progress,
+           grades, certificate) presentados como secuencia en vez de bloques
+           separados. Ocupa la fila que Mi Progreso/Evaluación dejaron libre al
+           pasar de row-span 2 a 1 (feedback del owner: "rellenemos con info,
+           agreguemos un componente más al grid"). ── -->
+      <div class="bento-banner bento-card bento-fill flex flex-col gap-4" appCardHover>
+        <div class="flex items-center gap-2">
+          <app-icon name="milestone" [size]="16" class="text-brand" />
+          <h2 class="item-title m-0">Camino al Certificado</h2>
+        </div>
 
-      <!-- ── WIDGET FINAL 2 — Certificado ──────────────────────────────────── -->
-      <div class="bento-square" [appScrollReveal]="{ delay: 0.2 }">
         @if (loading()) {
-          <app-kpi-card-variant label="Certificado" [value]="0" icon="award" [loading]="true" />
-        } @else {
-          <div
-            class="bento-card flex flex-col gap-3 h-full"
-            appCardHover
-            [attr.data-color-variant]="certCardColor()"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
-                >Certificado</span
-              >
-              <div
-                class="flex items-center justify-center rounded-md w-7 h-7"
-                [style.background]="certIconBg()"
-                [style.color]="certIconColor()"
-              >
-                <app-icon [name]="certIcon()" [size]="14" />
-              </div>
-            </div>
-            <div class="flex-1 flex flex-col justify-center gap-1">
-              <p class="kpi-value text-2xl m-0" [style.color]="certIconColor()">
-                {{ certStatusLabel() }}
-              </p>
-            </div>
-            @if (certificate()?.state === 'issued' && certificate()?.pdfUrl) {
-              <button
-                type="button"
-                class="btn-primary text-xs"
-                data-llm-action="download-certificate"
-                (click)="downloadCertificate()"
-              >
-                <app-icon name="download" [size]="12" />
-                Descargar
-              </button>
+          <div class="flex-1 flex items-center gap-4">
+            @for (_ of [1, 2, 3]; track _) {
+              <app-skeleton-block variant="rect" width="100%" height="56px" />
             }
           </div>
+        } @else {
+          <div class="flex-1 min-h-0 flex items-center">
+            <div class="flex items-center w-full">
+              @for (step of journeySteps(); track step.id; let last = $last) {
+                <div class="flex flex-col items-center gap-2 px-2" style="min-width: 96px">
+                  <div
+                    class="w-12 h-12 rounded-full flex items-center justify-center border-2 shrink-0"
+                    [style.background]="
+                      step.state === 'done' ? 'var(--state-success)' : 'transparent'
+                    "
+                    [style.border-color]="
+                      step.state === 'done'
+                        ? 'var(--state-success)'
+                        : step.state === 'current'
+                          ? 'var(--ds-brand)'
+                          : 'var(--border-subtle)'
+                    "
+                  >
+                    <app-icon
+                      [name]="step.state === 'done' ? 'check' : step.icon"
+                      [size]="20"
+                      [style.color]="
+                        step.state === 'done'
+                          ? 'var(--color-primary-text)'
+                          : step.state === 'current'
+                            ? 'var(--ds-brand)'
+                            : 'var(--text-muted)'
+                      "
+                    />
+                  </div>
+                  <div class="text-center">
+                    <p class="text-xs font-semibold text-text-primary m-0">{{ step.label }}</p>
+                    <p class="text-2xs text-text-muted m-0">{{ step.detail }}</p>
+                  </div>
+                </div>
+                @if (!last) {
+                  <app-icon
+                    name="chevron-right"
+                    [size]="18"
+                    class="shrink-0"
+                    [style.color]="
+                      step.state === 'done' ? 'var(--state-success)' : 'var(--border-subtle)'
+                    "
+                  />
+                  <div
+                    class="h-0.5 flex-1"
+                    [style.background]="
+                      step.state === 'done' ? 'var(--state-success)' : 'var(--border-subtle)'
+                    "
+                  ></div>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- Motivo de bloqueo — única fuente de esta info ahora que se sacó
+               del bloque de certificado de la columna Evaluación. -->
+          @if (certificate()?.state === 'locked' && certificate()?.blockingReason) {
+            <div class="flex items-start gap-2 text-xs text-text-muted">
+              <app-icon name="info" [size]="14" class="text-warning shrink-0 mt-0.5" />
+              <span>{{ certificate()?.blockingReason }}</span>
+            </div>
+          }
         }
       </div>
     </section>
@@ -553,6 +433,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
 })
 export class AlumnoDashboardComponent {
   private readonly facade = inject(StudentHomeFacade);
+  private readonly router = inject(Router);
   readonly context = inject(StudentEnrollmentContextFacade);
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -587,30 +468,78 @@ export class AlumnoDashboardComponent {
   });
   readonly pctTheory = computed(() => this.progress()?.pctTheoryAttendance ?? 0);
   readonly practices = computed(() => this.progress()?.practices ?? []);
+  readonly nextScheduledPractice = computed(
+    () => this.practices().find((p) => p.status === 'scheduled') ?? null,
+  );
 
   /**
-   * KPIs del strip del hero slim (antes: 2 de las 4 celdas `bento-square` de
-   * la fila original — ver comentario en el template sobre por qué las otras
-   * 2 se quedan fuera). Valores pre-formateados: el strip renderiza
-   * `{{ kpi.value }}` crudo y no pasa por `animateCounter`.
+   * "Camino al Certificado" — los mismos 3 signals (progress/grades/certificate)
+   * que ya se muestran en las 2 columnas, presentados como secuencia. No agrega
+   * ninguna regla de negocio nueva: el paso "actual" es simplemente el primero
+   * no completado, en el orden real en que ocurren (prácticas → evaluación →
+   * certificado).
    */
-  readonly heroKpis = computed<SectionHeroKpi[]>(() => [
-    {
-      id: 'practicas',
-      label: 'Clases prácticas',
-      value: formatKpiEsCl(this.practicesCompleted()),
-      suffix: '/' + formatKpiEsCl(this.practicesTotal()),
-      icon: 'car',
-    },
-    {
-      id: 'asist-teoria',
-      label: 'Asist. teoría',
-      value: formatKpiEsCl(this.pctTheory()),
-      suffix: '%',
-      icon: 'clipboard-check',
-      color: this.attendanceColor(),
-    },
-  ]);
+  readonly journeySteps = computed(() => {
+    const prog = this.progress();
+    const gr = this.grades();
+    const cert = this.certificate();
+    const isClassB = this.licenseGroup() === 'class_b';
+
+    const practicesDone = (prog?.practicesCompleted ?? 0) >= (prog?.practicesTotal ?? 12);
+
+    let examDone: boolean;
+    let examDetail: string;
+    if (isClassB) {
+      examDone = gr?.passed === true;
+      examDetail =
+        gr?.finalExamGrade != null ? (gr.passed ? 'Aprobado' : 'Reprobado') : 'Pendiente';
+    } else {
+      const mods = gr?.modules ?? [];
+      examDone = mods.length > 0 && mods.every((m) => m.passed === true);
+      examDetail = gr?.averageGrade != null ? `Promedio ${gr.averageGrade}` : 'Pendiente';
+    }
+
+    const certDone = cert?.state === 'issued';
+    const certDetail =
+      cert?.state === 'issued'
+        ? `Folio ${cert.folio ?? '—'}`
+        : cert?.state === 'enabled'
+          ? 'Listo'
+          : 'Pendiente';
+
+    const steps = [
+      {
+        id: 'practicas',
+        label: 'Prácticas',
+        icon: 'car',
+        done: practicesDone,
+        detail: `${prog?.practicesCompleted ?? 0}/${prog?.practicesTotal ?? 12}`,
+      },
+      {
+        id: 'evaluacion',
+        label: isClassB ? 'Examen Final' : 'Módulos',
+        icon: 'star',
+        done: examDone,
+        detail: examDetail,
+      },
+      {
+        id: 'certificado',
+        label: 'Certificado',
+        icon: 'award',
+        done: certDone,
+        detail: certDetail,
+      },
+    ];
+
+    const firstPendingIdx = steps.findIndex((s) => !s.done);
+    return steps.map((s, i) => ({
+      ...s,
+      state: (s.done ? 'done' : i === firstPendingIdx ? 'current' : 'pending') as
+        | 'done'
+        | 'current'
+        | 'pending',
+    }));
+  });
 
   readonly attendanceColor = computed(() => {
     const s = this.attendance()?.semaphore;
@@ -619,56 +548,47 @@ export class AlumnoDashboardComponent {
     return 'success' as const;
   });
 
-  readonly gradeLabel = computed(() =>
-    this.licenseGroup() === 'class_b' ? 'Examen final' : 'Promedio módulos',
-  );
-  readonly hasGrade = computed(() => {
-    if (this.licenseGroup() === 'class_b') return this.grades()?.finalExamGrade !== null;
-    return this.grades()?.averageGrade !== null;
-  });
-  readonly gradeValue = computed(() => {
-    if (this.licenseGroup() === 'class_b') return this.grades()?.finalExamGrade ?? 0;
-    return this.grades()?.averageGrade ?? 0;
-  });
-  readonly gradeColor = computed(() => {
-    if (this.licenseGroup() === 'class_b') {
-      const g = this.grades()?.finalExamGrade;
-      if (g == null) return 'default' as const;
-      return g >= 4 ? ('success' as const) : ('error' as const);
-    }
-    const avg = this.grades()?.averageGrade;
-    if (avg == null) return 'default' as const;
-    return avg >= 75 ? ('success' as const) : ('error' as const);
-  });
-
-  // ── Certificado KPI computeds ──────────────────────────────────────────────
-
-  readonly certIcon = computed(() => {
-    const s = this.certificate()?.state;
-    if (s === 'issued') return 'award';
-    if (s === 'enabled') return 'check-circle';
-    return 'lock';
-  });
-  readonly certIconColor = computed(() => {
-    const s = this.certificate()?.state;
-    if (s === 'issued' || s === 'enabled') return 'var(--state-success)';
-    return 'var(--text-muted)';
-  });
-  readonly certIconBg = computed(() => {
-    const s = this.certificate()?.state;
-    if (s === 'issued' || s === 'enabled') return 'var(--state-success-bg)';
-    return 'var(--bg-subtle)';
-  });
-  readonly certCardColor = computed(() => {
-    const s = this.certificate()?.state;
-    if (s === 'issued' || s === 'enabled') return 'success';
-    return 'default';
-  });
-  readonly certStatusLabel = computed(() => {
-    const s = this.certificate()?.state;
-    if (s === 'issued') return 'Emitido';
-    if (s === 'enabled') return 'Listo';
-    return 'Pendiente';
+  /**
+   * 4 KPIs del strip del hero. Próxima clase y Saldo son clickeables (navegan
+   * a horario/pagos) en vez de ser cards propias — su detalle completo ya vive
+   * en esas páginas (reformulación spec 0035, 2026-08-08).
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const balance = this.side()?.pendingBalance ?? 0;
+    const nextClass = this.side()?.nextClass;
+    return [
+      {
+        id: 'practicas',
+        label: 'Clases prácticas',
+        value: formatKpiEsCl(this.practicesCompleted()),
+        suffix: '/' + formatKpiEsCl(this.practicesTotal()),
+        icon: 'car',
+      },
+      {
+        id: 'asist-teoria',
+        label: 'Asist. teoría',
+        value: formatKpiEsCl(this.pctTheory()),
+        suffix: '%',
+        icon: 'clipboard-check',
+        color: this.attendanceColor(),
+      },
+      {
+        id: 'proxima-clase',
+        label: 'Próxima clase',
+        value: nextClass?.date ?? 'Sin clases',
+        subValue: nextClass?.time ?? undefined,
+        icon: 'calendar',
+        clickable: true,
+      },
+      {
+        id: 'saldo',
+        label: 'Saldo',
+        value: balance === 0 ? 'Al día' : this.formatCLP(balance),
+        icon: 'wallet',
+        color: balance > 0 ? 'warning' : 'success',
+        clickable: true,
+      },
+    ];
   });
 
   // ── Progress ring ──────────────────────────────────────────────────────────
@@ -722,23 +642,6 @@ export class AlumnoDashboardComponent {
     return [];
   });
 
-  // ── Semáforo ───────────────────────────────────────────────────────────────
-
-  readonly semaphoreLabel = computed(() => {
-    const s = this.attendance()?.semaphore;
-    if (s === 'red') return 'En riesgo';
-    if (s === 'yellow') return 'Atención';
-    return 'Al día';
-  });
-  readonly semaphoreVariant = computed<'error' | 'warning' | 'success'>(() => {
-    const s = this.attendance()?.semaphore;
-    if (s === 'red') return 'error';
-    if (s === 'yellow') return 'warning';
-    return 'success';
-  });
-
-  readonly recentSessions = computed(() => this.attendance()?.recentSessions ?? []);
-
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   constructor() {
@@ -758,6 +661,14 @@ export class AlumnoDashboardComponent {
     }
   }
 
+  onKpiClick(id: string): void {
+    if (id === 'proxima-clase') {
+      void this.router.navigate(['/app/alumno/horario']);
+    } else if (id === 'saldo') {
+      void this.router.navigate(['/app/alumno/pagos']);
+    }
+  }
+
   async downloadCertificate(): Promise<void> {
     // Abre la ventana sincrónicamente (gesto directo del usuario) para evitar
     // que el browser bloquee el popup al llamarla después del await.
@@ -770,26 +681,11 @@ export class AlumnoDashboardComponent {
     }
   }
 
-  // ── Helpers de template ────────────────────────────────────────────────────
-
-  sessionDotBg(status: string): string {
-    if (status === 'present') return 'var(--state-success-bg)';
-    if (status === 'absent') return 'var(--state-error-bg)';
-    return 'var(--state-warning-bg, var(--bg-subtle))';
-  }
-
-  sessionDotColor(status: string): string {
-    if (status === 'present') return 'var(--state-success)';
-    if (status === 'absent') return 'var(--state-error)';
-    return 'var(--state-warning)';
-  }
-
-  formatSessionDate(iso: string): string {
-    if (!iso) return '';
-    return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' });
-  }
-
   formatCLP(amount: number): string {
     return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
+  }
+
+  formatShortDate(iso: string): string {
+    return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' });
   }
 }
