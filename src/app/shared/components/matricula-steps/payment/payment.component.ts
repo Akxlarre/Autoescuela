@@ -20,6 +20,7 @@ export class PaymentComponent {
   readonly paymentMethodOptions = PAYMENT_METHODS;
   data = input.required<EnrollmentPaymentData>();
   loading = input<boolean>(false);
+  stepNumber = input<number>(5);
   dataChange = output<EnrollmentPaymentData>();
   next = output<void>();
   back = output<void>();

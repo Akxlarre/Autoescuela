@@ -118,7 +118,7 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
                     } @else {
                       <button
                         type="button"
-                        class="text-xs font-semibold text-brand hover:underline shrink-0"
+                        class="text-xs font-semibold text-brand hover:underline shrink-0 cursor-pointer"
                         data-llm-action="justificar-inasistencia-clase-b"
                         (click)="openJustificarClaseB(item.id)"
                       >
@@ -179,7 +179,7 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
           <div class="flex items-center justify-between">
             <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
             <button
-              class="p-1 rounded-md text-text-muted hover:text-text-primary"
+              class="p-1 rounded-md text-text-muted hover:text-text-primary cursor-pointer"
               aria-label="Cerrar"
               (click)="closeJustificarClaseB()"
             >
