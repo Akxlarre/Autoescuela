@@ -388,7 +388,7 @@
 | `app-contract-step` | `data`, `loading`, `stepNumber`, `isPublic`, `file` | `dataChange`, `generateContract`, `next`, `back` | `src/app/shared/components/matricula-steps/contract/contract.component.ts` |
 | `app-documents-step` | `data`, `loading`, `stepNumber`, `file` | `fileSelected`, `lightboxOpen`, `confirmPhoto`, `next`, `back` | `src/app/shared/components/matricula-steps/documents/documents.component.ts` |
 | `app-draft-list` | `drafts` | `resume`, `discard`, `startNew` | `src/app/shared/components/matricula-steps/draft-list/draft-list.component.ts` |
-| `app-payment-step` | `data`, `loading` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/payment/payment.component.ts` |
+| `app-payment-step` | `data`, `loading`, `stepNumber` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/payment/payment.component.ts` |
 | `app-personal-data-step` | `data`, `loading`, `hiddenCategories`, `branches`, `selectedBranchId` | `dataChange`, `next`, `cancel`, `branchChange`, `rutBlur` | `src/app/shared/components/matricula-steps/personal-data/personal-data.component.ts` |
 | `app-psych-test` | `answers`, `loading` | `answersChange`, `next`, `back` | `src/app/shared/components/matricula-steps/psych-test/psych-test.component.ts` |
 | `app-public-confirmation` | `type`, `enrollmentNumber`, `message` | — | `src/app/shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` |
