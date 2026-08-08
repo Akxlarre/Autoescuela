@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { AlumnoDashboardComponent } from './alumno-dashboard.component';
@@ -156,18 +156,6 @@ describe('AlumnoDashboardComponent — defaults (Clase B, sin faltas)', () => {
     expect(component.practicesPct()).toBe(67);
   });
 
-  it('gradeColor es "success" cuando la nota es >= 4', () => {
-    expect(component.gradeColor()).toBe('success');
-  });
-
-  it('certIcon es "lock" cuando certificado está bloqueado', () => {
-    expect(component.certIcon()).toBe('lock');
-  });
-
-  it('semaphoreLabel es "Al día" con semaphore green', () => {
-    expect(component.semaphoreLabel()).toBe('Al día');
-  });
-
   it('heroActions no tiene acciones cuando cert está bloqueado', () => {
     const actions = component.heroActions();
     expect(actions.length).toBe(0);
@@ -176,6 +164,95 @@ describe('AlumnoDashboardComponent — defaults (Clase B, sin faltas)', () => {
   it('heroActions NO incluye "Descargar certificado" cuando cert está bloqueado', () => {
     const actions = component.heroActions();
     expect(actions.some((a) => a.id === 'cert')).toBe(false);
+  });
+
+  it('nextScheduledPractice es null cuando ninguna práctica está "scheduled" (completed/pending solamente)', () => {
+    expect(component.nextScheduledPractice()).toBeNull();
+  });
+});
+
+describe('AlumnoDashboardComponent — heroKpis (spec 0035, reformulación)', () => {
+  let component: AlumnoDashboardComponent;
+
+  beforeEach(() => {
+    component = setup();
+  });
+
+  it('expone 4 KPIs: prácticas, asist. teoría, próxima clase, saldo', () => {
+    const kpis = component.heroKpis();
+    expect(kpis.map((k) => k.id)).toEqual(['practicas', 'asist-teoria', 'proxima-clase', 'saldo']);
+  });
+
+  it('KPI "practicas" muestra el conteo completado/total formateado', () => {
+    const kpi = component.heroKpis().find((k) => k.id === 'practicas');
+    expect(kpi?.value).toBe('8');
+    expect(kpi?.suffix).toBe('/12');
+  });
+
+  it('KPI "proxima-clase" y "saldo" son clickeables; "practicas" y "asist-teoria" no', () => {
+    const kpis = component.heroKpis();
+    expect(kpis.find((k) => k.id === 'proxima-clase')?.clickable).toBe(true);
+    expect(kpis.find((k) => k.id === 'saldo')?.clickable).toBe(true);
+    expect(kpis.find((k) => k.id === 'practicas')?.clickable).toBeUndefined();
+    expect(kpis.find((k) => k.id === 'asist-teoria')?.clickable).toBeUndefined();
+  });
+
+  it('KPI "saldo" muestra "Al día" en success cuando pendingBalance es 0', () => {
+    const kpi = component.heroKpis().find((k) => k.id === 'saldo');
+    expect(kpi?.value).toBe('Al día');
+    expect(kpi?.color).toBe('success');
+  });
+
+  it('KPI "saldo" muestra el monto formateado en warning cuando hay deuda', () => {
+    TestBed.resetTestingModule();
+    component = setup(
+      makeClassBSnapshot({
+        side: {
+          ...makeClassBSnapshot().side,
+          pendingBalance: 50000,
+          totalPaid: 100000,
+          nextClass: null,
+        },
+      }),
+    );
+    const kpi = component.heroKpis().find((k) => k.id === 'saldo');
+    expect(kpi?.color).toBe('warning');
+    expect(kpi?.value).toContain('50.000');
+  });
+
+  it('KPI "proxima-clase" muestra "Sin clases" cuando no hay próxima clase agendada', () => {
+    TestBed.resetTestingModule();
+    component = setup(
+      makeClassBSnapshot({ side: { ...makeClassBSnapshot().side, nextClass: null } }),
+    );
+    const kpi = component.heroKpis().find((k) => k.id === 'proxima-clase');
+    expect(kpi?.value).toBe('Sin clases');
+  });
+});
+
+describe('AlumnoDashboardComponent — onKpiClick (navegación, spec 0035)', () => {
+  let component: AlumnoDashboardComponent;
+  let router: Router;
+
+  beforeEach(() => {
+    component = setup();
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+  });
+
+  it('navega a /app/alumno/horario al clickear "proxima-clase"', () => {
+    component.onKpiClick('proxima-clase');
+    expect(router.navigate).toHaveBeenCalledWith(['/app/alumno/horario']);
+  });
+
+  it('navega a /app/alumno/pagos al clickear "saldo"', () => {
+    component.onKpiClick('saldo');
+    expect(router.navigate).toHaveBeenCalledWith(['/app/alumno/pagos']);
+  });
+
+  it('no navega para KPIs no clickeables (ej. "practicas")', () => {
+    component.onKpiClick('practicas');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });
 
@@ -213,28 +290,6 @@ describe('AlumnoDashboardComponent — heroChips con ≥2 faltas', () => {
   });
 });
 
-describe('AlumnoDashboardComponent — gradeColor con nota < 4', () => {
-  let component: AlumnoDashboardComponent;
-
-  beforeEach(() => {
-    component = setup(
-      makeClassBSnapshot({
-        grades: {
-          finalExamGrade: 3,
-          finalExamDate: null,
-          passed: false,
-          modules: [],
-          averageGrade: 3,
-        },
-      }),
-    );
-  });
-
-  it('gradeColor es "error"', () => {
-    expect(component.gradeColor()).toBe('error');
-  });
-});
-
 describe('AlumnoDashboardComponent — certificado emitido', () => {
   let component: AlumnoDashboardComponent;
 
@@ -252,29 +307,9 @@ describe('AlumnoDashboardComponent — certificado emitido', () => {
     );
   });
 
-  it('certIcon es "award"', () => {
-    expect(component.certIcon()).toBe('award');
-  });
-
   it('heroActions incluye "Descargar certificado"', () => {
     const actions = component.heroActions();
     expect(actions.some((a) => a.id === 'cert')).toBe(true);
-  });
-});
-
-describe('AlumnoDashboardComponent — semaphore red', () => {
-  let component: AlumnoDashboardComponent;
-
-  beforeEach(() => {
-    component = setup(
-      makeClassBSnapshot({
-        attendance: { consecutiveAbsences: 2, semaphore: 'red', recentSessions: [] },
-      }),
-    );
-  });
-
-  it('semaphoreLabel es "En riesgo"', () => {
-    expect(component.semaphoreLabel()).toBe('En riesgo');
   });
 });
 
@@ -289,5 +324,110 @@ describe('AlumnoDashboardComponent — licenseGroup professional', () => {
 
   it('licenseGroup es "professional"', () => {
     expect(component.licenseGroup()).toBe('professional');
+  });
+});
+
+describe('AlumnoDashboardComponent — journeySteps / "Camino al Certificado" (spec 0035)', () => {
+  it('Clase B en progreso: prácticas="current" (primer paso no completado), examen ya aprobado="done", certificado="pending"', () => {
+    const component = setup(); // 8/12 prácticas, passed=true, certificado locked
+    const steps = component.journeySteps();
+    expect(steps.map((s) => s.id)).toEqual(['practicas', 'evaluacion', 'certificado']);
+    expect(steps[0]).toMatchObject({ done: false, state: 'current', detail: '8/12' });
+    expect(steps[1]).toMatchObject({ done: true, state: 'done', label: 'Examen Final' });
+    expect(steps[2]).toMatchObject({ done: false, state: 'pending', detail: 'Pendiente' });
+  });
+
+  it('Clase B con todo completado: los 3 pasos quedan "done"', () => {
+    const component = setup(
+      makeClassBSnapshot({
+        progress: {
+          practicesCompleted: 12,
+          practicesTotal: 12,
+          pctTheoryAttendance: 100,
+          pctOverall: 100,
+          practices: [],
+        },
+        certificate: {
+          state: 'issued',
+          folio: 'F-100',
+          issuedDate: '2026-05-01',
+          pdfUrl: 'cert.pdf',
+          blockingReason: null,
+        },
+      }),
+    );
+    const steps = component.journeySteps();
+    expect(steps.every((s) => s.state === 'done')).toBe(true);
+    expect(steps[2].detail).toBe('Folio F-100');
+  });
+
+  it('Clase B sin rendir examen: paso "current" es prácticas si aún faltan, si no pasa a examen', () => {
+    const component = setup(
+      makeClassBSnapshot({
+        progress: {
+          practicesCompleted: 12,
+          practicesTotal: 12,
+          pctTheoryAttendance: 100,
+          pctOverall: 90,
+          practices: [],
+        },
+        grades: {
+          finalExamGrade: null,
+          finalExamDate: null,
+          passed: null,
+          modules: [],
+          averageGrade: null,
+        },
+      }),
+    );
+    const steps = component.journeySteps();
+    expect(steps[0].state).toBe('done');
+    expect(steps[1]).toMatchObject({ state: 'current', detail: 'Pendiente' });
+    expect(steps[2].state).toBe('pending');
+  });
+
+  it('Profesional: paso "Módulos" solo queda "done" si TODOS los módulos tienen passed=true', () => {
+    const profSnapshot = makeClassBSnapshot({
+      progress: {
+        practicesCompleted: 12,
+        practicesTotal: 12,
+        pctTheoryAttendance: 100,
+        pctOverall: 100,
+        practices: [],
+      },
+      grades: {
+        finalExamGrade: null,
+        finalExamDate: null,
+        passed: null,
+        averageGrade: 70,
+        modules: [
+          { number: 1, name: 'Módulo 1', grade: 85, passed: true },
+          { number: 2, name: 'Módulo 2', grade: 55, passed: false },
+        ],
+      },
+    });
+    profSnapshot.hero.licenseGroup = 'professional';
+    const component = setup(profSnapshot);
+    const steps = component.journeySteps();
+    expect(steps[1]).toMatchObject({ label: 'Módulos', done: false, detail: 'Promedio 70' });
+  });
+
+  it('Profesional: paso "Módulos" es "done" cuando todos los módulos pasaron', () => {
+    const profSnapshot = makeClassBSnapshot({
+      grades: {
+        finalExamGrade: null,
+        finalExamDate: null,
+        passed: null,
+        averageGrade: 88,
+        modules: [
+          { number: 1, name: 'Módulo 1', grade: 85, passed: true },
+          { number: 2, name: 'Módulo 2', grade: 90, passed: true },
+        ],
+      },
+    });
+    profSnapshot.hero.licenseGroup = 'professional';
+    const component = setup(profSnapshot);
+    const steps = component.journeySteps();
+    expect(steps[1].done).toBe(true);
   });
 });

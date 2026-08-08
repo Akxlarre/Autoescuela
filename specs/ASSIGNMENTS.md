@@ -129,7 +129,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-083 | App-like: `/alumno/dashboard` | `b` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -208,6 +207,7 @@
 | ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | [fix-132-m-app-like-familia-pagos](fixes/fix-132-m-app-like-familia-pagos/fix.md) | 2026-08-06 |
 | ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | [fix-019-i-app-like-liquidaciones](fixes/fix-019-i-app-like-liquidaciones/fix.md) | 2026-08-08 |
 | ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | [fix-020-i-app-like-historial-cuadraturas](fixes/fix-020-i-app-like-historial-cuadraturas/fix.md) | 2026-08-08 |
+| ASG-b-083 | App-like: `/alumno/dashboard` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -339,9 +339,15 @@ $bp-lg: 1024px;
   }
 
   @container layoutmain (min-width: #{$bp-md}) {
+    /* grid-column-end (no el shorthand grid-column): así no pisa grid-column-start
+       cuando un elemento combina data-col-span-md + data-col-start-md — el shorthand
+       resetea grid-column-end a auto Y sobreescribe grid-column-start, lo que hacía
+       que el orden de estas dos reglas (misma especificidad) decidiera cuál gana
+       en vez de combinarse (spec 0035, bug encontrado en vivo: un elemento con
+       ambos atributos quedaba de 1 columna de ancho en vez del span pedido). */
     @for $i from 1 through 8 {
       [data-col-span-md='#{$i}'] {
-        grid-column: span $i;
+        grid-column-end: span $i;
       }
     }
 
@@ -359,9 +365,13 @@ $bp-lg: 1024px;
   }
 
   @container layoutmain (min-width: #{$bp-lg}) {
+    /* grid-column-end (no el shorthand grid-column): mismo motivo que la versión
+       -md arriba — evita que data-col-start pise el span cuando un elemento usa
+       ambos atributos juntos (bug encontrado en vivo en alumno-dashboard, spec 0035:
+       las columnas quedaban de 1 track de ancho en vez de 6). */
     @for $i from 1 through 12 {
       [data-col-span='#{$i}'] {
-        grid-column: span $i;
+        grid-column-end: span $i;
       }
     }
 
