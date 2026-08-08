@@ -56,7 +56,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <form [formGroup]="form" class="flex flex-col gap-5 px-6 py-5" (ngSubmit)="onSubmit()">
           <!-- Tipo de egreso -->
           <div class="flex flex-col gap-1.5">
-            <label for="egreso-tipo" class="overline">
+            <label for="egreso-tipo" class="micro-label">
               Tipo de Egreso <span class="text-error">*</span>
             </label>
             <p-select
@@ -75,7 +75,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Monto -->
           <div class="flex flex-col gap-1.5">
-            <label for="egreso-monto" class="overline">
+            <label for="egreso-monto" class="micro-label">
               Monto (CLP) <span class="text-error">*</span>
             </label>
             <div class="relative">
@@ -108,7 +108,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Descripción / Motivo -->
           <div class="flex flex-col gap-1.5">
-            <label for="egreso-descripcion" class="overline">
+            <label for="egreso-descripcion" class="micro-label">
               {{ tipoLabel() }} <span class="text-error">*</span>
             </label>
             <input
@@ -131,7 +131,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
           <!-- Fecha (display-only) -->
           <div class="flex flex-col gap-1.5">
-            <label class="overline"> Fecha </label>
+            <label class="micro-label"> Fecha </label>
             <div
               class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
             >

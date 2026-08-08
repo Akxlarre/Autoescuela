@@ -42,7 +42,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             >
               <app-icon name="shield-alert" [size]="32" color="white" />
             </div>
-            <p class="overline m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
+            <p class="micro-label m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
               Actualiza tu contraseña
             </h1>

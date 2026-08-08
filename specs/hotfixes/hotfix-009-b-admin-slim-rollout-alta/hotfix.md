@@ -1,7 +1,10 @@
 # Hotfix: Admin slim rollout — páginas Alta prioridad (sin KPIs separados)
 > id: hotfix-009-b-admin-slim-rollout-alta
-> status: in_progress
+> status: done
 > created: 2026-06-18
+> closed: 2026-08-07 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado
+> `density="slim"` presente en las 5 páginas listadas (una de ellas renombrada desde entonces:
+> `admin-libro-de-clases.component.ts` → `src/app/features/libro-de-clases/libro-de-clases.component.ts`).
 
 ## Problema
 5 páginas admin tienen `app-section-hero` sin `density="slim"` (usan el default "full").

@@ -45,7 +45,7 @@
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
 | `app-empty-state` | Estado vacío | `message` (string, req), `subtitle` (string), `icon` (Lucide kebab-case), `actionLabel` (string), `actionIcon` (default 'plus'), `(action)` output | `shared/components/empty-state/empty-state.component.ts` | ✅ Estable |
-| `app-alert-card` | Alerta / Feedback | `title` (string, req), `severity` ('error'|'warning'|'info'|'success', default 'info'), `actionLabel` (string), `dismissible` (boolean), `(action)` output, `(dismissed)` output. Body via `ng-content`. | `shared/components/alert-card/alert-card.component.ts` | ✅ Estable |
+| `app-alert-card` | Alerta / Feedback | `title` (string, req), `severity` ('error'|'warning'|'info'|'success', default 'info'). Superficie tintada + `border-left` real por token `--state-{severity}`/`-bg`/`-border` (fix-120-b). Entrada animada sola vía `hostDirectives: [AnimateInDirective]` — NO agregar `appAnimateIn` manual. Body via `ng-content`. Sin `actionLabel`/`dismissible`/`llmAction` (eliminados en fix-120-b, 0 usos reales). | `shared/components/alert-card/alert-card.component.ts` | ✅ Estable |
 
 ## Moléculas — Shell / Topbar
 *Dropdowns y paneles del shell de la aplicación.*
@@ -343,7 +343,7 @@
 | `app-agenda-semanal` | `weekData`, `filteredDays`, `timeRows`, `isLoading`, `isCurrentWeek`, `instructors`, `selectedInstructorId`, `showKpis`, `showHero`, `maxVisibleDateIso`, `maxVisibleDateLabel` | `weekNext`, `weekPrev`, `weekToday`, `weekJump`, `instructorFilterChange`, `slotClick` | `src/app/shared/components/agenda-semanal/agenda-semanal.component.ts` |
 | `app-agenda-slot` | `slot`, `compact`, `disabled` | `slotClicked` | `src/app/shared/components/agenda-semanal/agenda-slot.component.ts` |
 | `app-ajustes-drawer` | — | — | `src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts` |
-| `app-alert-card` | `severity`, `title`, `actionLabel`, `dismissible`, `llmAction` | `action`, `dismissed` | `src/app/shared/components/alert-card/alert-card.component.ts` |
+| `app-alert-card` | `severity`, `title` | — | `src/app/shared/components/alert-card/alert-card.component.ts` |
 | `app-alumnos-list-content` | `alumnos`, `isLoading`, `isExporting`, `isGeneratingFicha`, `trashView`, `basePath`, `alumnosPorVencer`, `showSedeColumn` | `refreshRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested`, `fichaExportRequested` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
 | `app-alumnos-por-vencer-drawer` | — | — | `src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts` |
 | `app-alumnos-profesional-list-content` | `alumnos`, `isLoading`, `trashView`, `basePath` | `refreshRequested`, `preInscritosRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled` | `src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts` |
@@ -369,7 +369,7 @@
 | `app-eliminar-alumno-modal` | `visible`, `alumnoNombre`, `hasHistory`, `isDeleting` | `confirmado`, `cancelado` | `src/app/shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component.ts` |
 | `app-email-input` | `value`, `id`, `label`, `required`, `placeholder`, `forceDirty` | `valueChange` | `src/app/shared/components/email-input/email-input.component.ts` |
 | `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
-| `app-evaluation-checklist` | `items` | `itemsChange` | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
+| `app-evaluation-checklist` | `items`, `readonly` | `itemsChange` | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
 | `app-ex-alumnos-profesional-content` | `egresados`, `isLoading`, `backRoute`, `basePath` | `reEnroll` | `src/app/shared/components/ex-alumnos-profesional-content/ex-alumnos-profesional-content.component.ts` |
 | `app-flota-list-content` | `vehicles`, `kpis`, `isLoading`, `basePath`, `showSedeColumn`, `branches` | `newVehicle`, `editVehicle`, `viewAgenda`, `viewMaintenances`, `printRouteSheet`, `printAllRouteSheets`, `manageDocuments`, `typeFilterChange`, `statusFilterChange`, `searchChange`, `refreshRequested` | `src/app/shared/components/flota-list-content/flota-list-content.component.ts` |
 | `app-historial-cuadraturas-content` | `cierres`, `isLoading`, `mesActual`, `anioActual`, `backRoute`, `backLabel`, `isExporting` | `mesAnterior`, `mesSiguiente`, `exportarMes`, `cierreClicked` | `src/app/shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component.ts` |
@@ -386,7 +386,7 @@
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode`, `nextLabel` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
 | `app-confirmation-step` | `data` | `finish`, `downloadReceipt`, `downloadContract` | `src/app/shared/components/matricula-steps/confirmation/confirmation.component.ts` |
 | `app-contract-step` | `data`, `loading`, `stepNumber`, `isPublic`, `file` | `dataChange`, `generateContract`, `next`, `back` | `src/app/shared/components/matricula-steps/contract/contract.component.ts` |
-| `app-documents-step` | `data`, `loading`, `stepNumber`, `file` | `fileSelected`, `lightboxOpen`, `confirmPhoto`, `next`, `back` | `src/app/shared/components/matricula-steps/documents/documents.component.ts` |
+| `app-documents-step` | `data`, `loading`, `stepNumber`, `file` | `fileSelected`, `lightboxOpen`, `confirmPhoto`, `photoRemoved`, `next`, `back` | `src/app/shared/components/matricula-steps/documents/documents.component.ts` |
 | `app-draft-list` | `drafts` | `resume`, `discard`, `startNew` | `src/app/shared/components/matricula-steps/draft-list/draft-list.component.ts` |
 | `app-payment-step` | `data`, `loading`, `stepNumber` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/payment/payment.component.ts` |
 | `app-personal-data-step` | `data`, `loading`, `hiddenCategories`, `branches`, `selectedBranchId` | `dataChange`, `next`, `cancel`, `branchChange`, `rutBlur` | `src/app/shared/components/matricula-steps/personal-data/personal-data.component.ts` |
@@ -399,7 +399,7 @@
 | `app-pre-inscritos-content` | `preInscritos`, `isLoading`, `heroKpis`, `maxVisible`, `showSede`, `title`, `subtitle`, `backRoute`, `backLabel`, `embedded` | `rowSelected`, `closeRequested` | `src/app/shared/components/pre-inscritos-content/pre-inscritos-content.component.ts` |
 | `app-public-context-banner` | `context` | `editRequested` | `src/app/shared/components/public-enrollment-steps/public-context-banner/public-context-banner.component.ts` |
 | `app-public-contract` | `data` | `contractSigned`, `goBack` | `src/app/shared/components/public-enrollment-steps/public-contract/public-contract.component.ts` |
-| `app-public-documents` | `data`, `isUploading` | `fileSelected`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-documents/public-documents.component.ts` |
+| `app-public-documents` | `data`, `isUploading` | `fileSelected`, `clearPhoto`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-documents/public-documents.component.ts` |
 | `app-public-license-type` | `availableFlows`, `currentFlow` | `flowSelect`, `next` | `src/app/shared/components/public-enrollment-steps/public-license-type/public-license-type.component.ts` |
 | `app-public-orientation` | `siteLinks` | — | `src/app/shared/components/public-enrollment-steps/public-orientation/public-orientation.component.ts` |
 | `app-public-payment` | `summary` | `proceed`, `back` | `src/app/shared/components/public-enrollment-steps/public-payment/public-payment.component.ts` |

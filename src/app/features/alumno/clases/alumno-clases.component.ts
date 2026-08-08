@@ -263,7 +263,7 @@ type TabId = 'practice' | 'theory';
       <!-- ── ALERTA SIN MATRÍCULA ────────────────────────────────────────────── -->
       @if (!loading() && !facade.data()) {
         <div class="bento-banner" appScrollReveal>
-          <app-alert-card severity="info" title="Sin matrícula activa" appAnimateIn>
+          <app-alert-card severity="info" title="Sin matrícula activa">
             Aún no tienes un curso activo. Consulta a la secretaría para iniciar tu matrícula.
           </app-alert-card>
         </div>

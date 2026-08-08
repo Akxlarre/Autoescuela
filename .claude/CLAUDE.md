@@ -103,5 +103,6 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 - Stack completo: @docs/TECH-STACK-RULES.md
 - Brand & UI: @docs/BRAND_GUIDELINES.md
 - Sistema de Hooks: @docs/HOOKS-SYSTEM.md
+- Setup de MCP servers: @docs/MCP-SETUP.md
 - Visión del producto: @docs/PRODUCT-VISION.md
 - Guía de usuario: @docs/CLAUDE-USER-GUIDE.md

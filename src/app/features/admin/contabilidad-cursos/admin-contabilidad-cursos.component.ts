@@ -173,13 +173,13 @@ const BILLING_LABEL: Record<string, string> = {
                   <!-- Grid de datos clave (3 cols) -->
                   <div class="grid grid-cols-3 divide-x px-0 border-t border-b border-border-muted">
                     <div class="py-3 px-4 flex flex-col gap-0.5">
-                      <p class="overline">Precio</p>
+                      <p class="micro-label">Precio</p>
                       <p class="item-title">
                         {{ formatCLP(curso.precio) }}
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-center">
-                      <p class="overline">Inscritos</p>
+                      <p class="micro-label">Inscritos</p>
                       <p class="item-title">
                         {{ curso.inscritos
                         }}<span class="text-xs font-normal text-text-muted"
@@ -188,7 +188,7 @@ const BILLING_LABEL: Record<string, string> = {
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-right">
-                      <p class="overline">Cobrado</p>
+                      <p class="micro-label">Cobrado</p>
                       <p
                         class="text-sm font-bold"
                         [style.color]="

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "mcpServers": {
+    "typescript": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ts-lsp-mcp"
+      ]
+    },
+    "angular": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@angular/cli@^21.2.0",
+        "mcp"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--isolated"
+      ]
+    }
+  }
+}

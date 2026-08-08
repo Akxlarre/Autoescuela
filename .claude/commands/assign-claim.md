@@ -67,7 +67,28 @@ Parsea `$ARGUMENTS`:
 Lee `specs/assignments/ASG-X-NNN-slug.md` completo: Contexto/Objetivo, Alcance sugerido, Referencias,
 Archivos involucrados, Notas, y el campo `tipo_sugerido`.
 
-### 6. Chequeo de solape de archivos (best-effort, no bloqueante)
+### 6. Análisis de la asignación (instancia de revisión para quien reclama)
+
+Antes de generar el track, dale a quien reclama una oportunidad real de opinar o ajustar la
+visión heredada de la ASG — no la des por buena en silencio y generes el track directo.
+
+- Resume en 3-5 líneas lo que entendiste de "Contexto/Objetivo" y "Alcance sugerido".
+- Señala explícitamente, si aplica:
+  - La sección "Preguntas abiertas" completa, si la ASG la tiene (son bloqueantes por convención
+    del equipo — no las resuelvas vos, solo asegúrate de que quien reclama las vio).
+  - Supuestos que hiciste vos al leer el Contexto/Objetivo que no están dichos explícitamente ahí.
+  - Riesgos de alcance que veas (ej. "esto suena a que toca 3 pantallas, no 1 como sugiere el
+    Alcance").
+- Pregúntale al usuario: "¿Confirmás esta visión tal cual, o querés ajustar el contexto/alcance
+  antes de que quede grabado en tu spec/fix/hotfix?"
+- Si el usuario ajusta algo, usa SU versión corregida (no la original de la ASG) al pre-cargar el
+  contexto en el paso 9.
+- Este análisis es de **un solo turno** (resumen + señales + pregunta de confirmación), no una
+  interrogación exhaustiva tipo `grill_me` uno-por-uno — el objetivo es dar espacio para objetar
+  la visión heredada, no bloquear el flujo de reclamar. Corre siempre, para toda ASG reclamada,
+  sin excepción por simplicidad aparente.
+
+### 7. Chequeo de solape de archivos (best-effort, no bloqueante)
 
 Si la sección "Archivos involucrados" de la Asignación que vas a reclamar está vacía o dice "Ninguno
 declarado", salta este paso.
@@ -92,13 +113,13 @@ Pregúntale al usuario si quiere continuar igual o prefiere coordinar primero. N
 overlap, si las Asignaciones no declararon archivos, o si el chequeo no puede determinar solape con
 certeza — es una señal de alerta, no un gate duro.
 
-### 7. Determinar el tipo efectivo
+### 8. Determinar el tipo efectivo
 
 - Si `$ARGUMENTS` incluye `--as=spec|fix|hotfix`, ese valor manda.
 - Si no, usa el `tipo_sugerido` del archivo de la Asignación.
 - Si al leer el Contexto te parece que el tipo sugerido no encaja (ej. sugerido como "fix" pero claramente requiere decisiones de diseño y AC nuevos), díselo al usuario y pregúntale si prefiere cambiar el tipo con `--as=`.
 
-### 8. Generar el track, según el tipo efectivo
+### 9. Generar el track, según el tipo efectivo
 
 En los 3 casos: determina el próximo número **bajo tu propio código de autor**, exactamente con la
 misma regla que ya usan `/spec-new`, `/fix-new` y `/hotfix` (listar los tracks existentes de ESE tipo
@@ -108,7 +129,7 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 #### Si es `spec`:
 
 - Crear `specs/specs/NNNN-<mi_codigo>-slug/` con `spec.md`, `plan.md`, `tasks.md`, `acceptance.md` — mismo scaffold que `/spec-new`.
-- En `spec.md`, la sección **"1. Contexto de negocio"** se pre-llena con el Contexto/Objetivo de la Asignación (no la dejes en placeholder — ya tienes contenido real). El resto (User Stories, AC, Out of scope, etc.) queda con placeholders — eso lo escribe quien reclamó, no tú.
+- En `spec.md`, la sección **"1. Contexto de negocio"** se pre-llena con el Contexto/Objetivo confirmado (o ajustado) en el paso 6 — no el texto crudo de la Asignación si el usuario lo corrigió ahí (no la dejes en placeholder — ya tienes contenido real). El resto (User Stories, AC, Out of scope, etc.) queda con placeholders — eso lo escribe quien reclamó, no tú.
 - Agrega al final de "9. Notas / decisiones abiertas": `- Originado de Asignación ASG-X-NNN (specs/assignments/ASG-X-NNN-slug.md)`.
 - Actualiza `specs/ROADMAP.md`: agrega fila a "Backlog" con el owner = quien reclamó.
 - **NO** toques `specs/.active` (igual que `/spec-new`: el usuario revisa antes de activar con `/spec-activate`).
@@ -116,18 +137,18 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 #### Si es `fix`:
 
 - Crear `specs/fixes/fix-NNN-<mi_codigo>-slug/fix.md` (mismo template que `/fix-new`).
-- La sección **"Root Cause"** se pre-llena con el Contexto/Objetivo de la Asignación, marcado explícitamente como hipótesis heredada: prefíjalo con `[Heredado de ASG-X-NNN, a confirmar]:` antes del texto.
+- La sección **"Root Cause"** se pre-llena con el Contexto/Objetivo confirmado (o ajustado) en el paso 6, marcado explícitamente como hipótesis heredada: prefíjalo con `[Heredado de ASG-X-NNN, a confirmar]:` antes del texto.
 - El campo `refs:` del frontmatter apunta a `ASG-X-NNN` si no hay spec relacionada más específica.
 - **Sí** escribes `specs/.active` con el nuevo ID (igual que `/fix-new`).
 
 #### Si es `hotfix`:
 
 - Crear `specs/hotfixes/hotfix-NNN-<mi_codigo>-slug/hotfix.md` (mismo template que `/hotfix`).
-- La sección **"Problema"** se pre-llena igual, con el mismo prefijo `[Heredado de ASG-X-NNN, a confirmar]:`.
+- La sección **"Problema"** se pre-llena con el Contexto/Objetivo confirmado (o ajustado) en el paso 6, con el mismo prefijo `[Heredado de ASG-X-NNN, a confirmar]:`.
 - El campo `refs:` del frontmatter apunta a `ASG-X-NNN`.
 - **Sí** escribes `specs/.active` con el nuevo ID (igual que `/hotfix`).
 
-### 9. Actualizar `specs/ASSIGNMENTS.md`
+### 10. Actualizar `specs/ASSIGNMENTS.md`
 
 - Quita la fila de "Pendientes" (esa tabla sigue siendo manual).
 - Actualiza el frontmatter de `specs/assignments/ASG-X-NNN-slug.md`: `status: reclamada`, `claimed_by`, `claimed_at`, `resulting_track`.
@@ -136,7 +157,7 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
   mano: se sobrescriben en el próximo sync y el script es la fuente de verdad desde `fix-065-b-...`
   (auditoría de integridad de specs/, 2026-07-29).
 
-### 10. Commit + push automático de la reclamación (sin confirmar — decisión explícita del equipo)
+### 11. Commit + push automático de la reclamación (sin confirmar — decisión explícita del equipo)
 
 Este paso corre siempre, sin preguntar, salvo que el paso 2 haya detectado que el fetch falló (sin red/remoto) — en ese caso sáltalo y avisa en el reporte final que quedó pendiente de push manual.
 
@@ -152,7 +173,7 @@ git branch --show-current
   Luego haz commit con `chore(assign): reclamar ASG-X-NNN → <track-id>` y push directo (`git push`), sin pedir confirmación — el usuario ya autorizó este flujo de forma durable. Si el push falla (conflicto con otro push en paralelo), NO fuerces: haz `git pull --rebase` una vez y reintenta; si vuelve a fallar, avisa al usuario en el reporte en vez de insistir.
 - **Si la rama actual NO es la principal:** no intentes pushear a main desde ahí (cambiar de rama con cambios de otro feature en curso es más riesgoso y no fue lo que se autorizó). Haz commit igual de esos mismos paths puntuales en la rama actual como respaldo local, y en el reporte avisa que falta llevar `specs/ASSIGNMENTS.md` + el track nuevo a `main` a mano (ej. cherry-pick o pasar a `main` antes de seguir).
 
-### 11. Reportar al usuario
+### 12. Reportar al usuario
 
 Usa el mismo formato de reporte que ya imprime el comando subyacente (`/spec-new`, `/fix-new` o `/hotfix`), y agrégale al principio:
 
@@ -180,3 +201,4 @@ o, si no se pudo pushear (sin red, conflicto persistente, o no estabas en la ram
 - La numeración del track nuevo SIEMPRE es bajo el código de autor de quien reclama, nunca bajo el de quien creó la Asignación.
 - No bloquees si el chequeo de `git fetch` falla — es best-effort, no un gate duro.
 - Si el usuario no tiene claro qué Asignación reclamar y hay varias candidatas, pregúntale — no elijas por él.
+- El paso 6 (análisis) corre siempre, para toda Asignación, sin excepción por parecer simple — no saltarlo aunque el Contexto/Objetivo parezca claro a primera lectura.

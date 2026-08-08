@@ -18,7 +18,7 @@ import { isoToDate, toISODate } from '@core/utils/date.utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (label()) {
-      <label class="overline block mb-1" [attr.for]="id()">
+      <label class="micro-label block mb-1" [attr.for]="id()">
         {{ label() }}{{ required() ? ' *' : '' }}
       </label>
     }

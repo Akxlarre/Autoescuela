@@ -2118,6 +2118,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
 | update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 | select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
+| select_users_via_class_relationship | SELECT | `auth_user_role() = 'instructor' AND public.auth_instructor_can_view_student_u…` | — |
 
 ### `vehicle_assignments` — 🔒 RLS
 
@@ -2242,6 +2243,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
+| `auth_instructor_can_view_student_user` | `(target_user_id integer)` |
 | `auth_instructor_id` | `()` |
 | `auth_student_id` | `()` |
 | `auth_user_branch_id` | `()` |
@@ -2293,7 +2295,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

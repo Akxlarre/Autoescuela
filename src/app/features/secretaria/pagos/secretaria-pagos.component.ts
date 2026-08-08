@@ -135,7 +135,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
             </div>
           } @else {
             <div
-              class="overline deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
+              class="micro-label deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
             >
               <span>Alumno</span>
               <span>RUT</span>
@@ -277,7 +277,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     >
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
-          <p class="overline">Período del reporte</p>
+          <p class="micro-label">Período del reporte</p>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Desde</label>

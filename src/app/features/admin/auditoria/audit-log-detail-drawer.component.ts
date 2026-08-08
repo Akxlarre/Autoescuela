@@ -14,7 +14,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     @if (facade.selectedLog(); as log) {
       <app-drawer-form [hasFooter]="false">
         <div class="flex flex-col gap-4 mb-6">
-          <h3 class="overline">Información</h3>
+          <h3 class="micro-label">Información</h3>
           <div class="grid grid-cols-2 gap-3">
             <app-stat-box
               label="Fecha/Hora"
@@ -55,7 +55,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         </div>
 
         <div class="flex flex-col gap-2 mb-6">
-          <h3 class="overline">Usuario</h3>
+          <h3 class="micro-label">Usuario</h3>
           <div
             class="flex flex-col gap-0.5 p-3 rounded-xl border border-border-subtle bg-elevated/50"
           >
@@ -67,7 +67,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         </div>
 
         <div class="flex flex-col gap-2">
-          <h3 class="overline">Detalle completo</h3>
+          <h3 class="micro-label">Detalle completo</h3>
           <div
             class="flex items-start gap-2 p-3 rounded-xl border border-border-subtle bg-elevated/50"
           >

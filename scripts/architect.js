@@ -42,7 +42,7 @@ import {
 } from './lib/class-discipline.js';
 import { findIconOnlyButtonsWithoutLabel } from './lib/a11y-guardrails.js';
 import { extractBentoClasses, diffBentoClasses } from './check-bento-classes.js';
-// TypeScript es una dependencia de Angular. Usamos createRequire para importar
+import { findReservedTailwindClassCollisions } from './lib/tailwind-bare-utilities.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -99,7 +99,24 @@ function checkBentoClassAllowlist() {
         );
     }
 }
-
+// ── ARCH-22 (fix-115-b): colisión de nombre con utilidad bare de Tailwind.
+// Corre UNA vez contra _variables.scss (no es un check por-archivo), igual que ARCH-18/21. ──
+function checkTailwindBareCollisions() {
+    const scssPath = path.join(process.cwd(), 'src', 'styles', 'tokens', '_variables.scss');
+    let content;
+    try {
+        content = fs.readFileSync(scssPath, 'utf-8');
+    } catch {
+        return; // fail-open: si el archivo no existe, otro check ya lo habrá señalado
+    }
+    const collisions = findReservedTailwindClassCollisions(content);
+    for (const cls of collisions) {
+        reportError(
+            'ARCH-22', scssPath,
+            `Clase .${cls} coincide con una utilidad bare reservada de Tailwind — Tailwind generará su propia regla en @layer utilities que se sumará silenciosamente al estilo del DS.`,
+        );
+    }
+}
 
 function reportDeadTokenClasses(filePath, content) {
     if (!THEME) return;
@@ -228,10 +245,10 @@ const RULES = {
         doc: 'indices/ANTI-PATTERNS.md (AP-015)',
         fix: 'Si una clase text-X no renderiza, migra los USOS a la forma canónica text-text-X (fix-030). NUNCA agregues un alias --color-X bare al @theme para resucitar la forma corta — eso vuelve a abrir la ambigüedad que fix-030/fix-033 cerraron y deja ciego a ARCH-11.',
     },
-    'ARCH-19': {
+     'ARCH-19': {
         name: 'Cluster tipográfico ad-hoc (ratchet)',
         doc: 'indices/STYLES.md (§Vocabulario tipográfico) + fix-078-b',
-        fix: 'Usa .overline (micro-label uppercase) o .item-title (título de fila/card) en vez de recomponer text-xs/text-sm + font-* + uppercase + tracking-* a mano.',
+        fix: 'Usa .micro-label (micro-label uppercase) o .item-title (título de fila/card) en vez de recomponer text-xs/text-sm + font-* + uppercase + tracking-* a mano.',
     },
      'ARCH-20': {
         name: 'Botón icon-only sin nombre accesible',
@@ -242,6 +259,11 @@ const RULES = {
         name: 'Clase .bento-* nueva sin revisar',
         doc: 'indices/STYLES.md (§Cómo elegir: bento + botones) + fix-084-b (ASG-b-057)',
         fix: 'Antes de agregar una clase .bento-* nueva a _bento-grid.scss, revisá si alguna de las 34 existentes ya resuelve el caso (ver tabla de decisión). Si es legítima, sumala a scripts/lib/bento-classes.allowlist.json con la justificación.',
+    },
+    'ARCH-22': {
+        name: 'Clase del DS colisiona con utilidad bare de Tailwind',
+        doc: 'indices/STYLES.md (§Clases Semánticas Globales) + fix-115-b',
+        fix: 'El nombre de clase coincide EXACTAMENTE con una utilidad nativa de Tailwind sin sufijo (ej. overline, flex, truncate, container — ver scripts/lib/tailwind-bare-utilities.js). Tailwind genera su propia regla en @layer utilities que se SUMA silenciosamente al estilo del DS (no lo reemplaza), como pasó con .overline → .micro-label. Elegí un nombre compuesto con guion.',
     },
 };
 
@@ -769,6 +791,7 @@ for (const dir of targetDirs) {
 // ── ARCH-18: auditoría del bridge @theme (una sola vez, no por-archivo) ──────
 checkForbiddenThemeAliases();
 checkBentoClassAllowlist();
+checkTailwindBareCollisions();
 
 // ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
 checkIconRegistry();

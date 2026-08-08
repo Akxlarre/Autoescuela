@@ -364,7 +364,7 @@ interface ExpedienteStatus {
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
               >
                 <ng-template pTemplate="header">
-                  <tr class="overline bg-subtle text-left">
+                  <tr class="micro-label bg-subtle text-left">
                     <th class="pl-6 py-4">Alumno</th>
                     <th>RUT</th>
                     <th>Nº Exp.</th>
@@ -379,7 +379,7 @@ interface ExpedienteStatus {
                   </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-alumno>
-                  <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                  <tr class="list-item-hover transition-colors border-b border-border-subtle">
                     <!-- Alumno -->
                     <td class="pl-6 py-4">
                       <div class="flex items-center gap-3">

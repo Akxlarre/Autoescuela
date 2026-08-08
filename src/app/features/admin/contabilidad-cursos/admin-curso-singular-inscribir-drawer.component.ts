@@ -137,7 +137,7 @@ const PAYMENT_METHODS: {
           <div class="flex flex-col gap-5">
             <!-- Búsqueda por RUT -->
             <div class="flex flex-col gap-1.5">
-              <label class="overline"> RUT del alumno * </label>
+              <label class="micro-label"> RUT del alumno * </label>
               <p class="text-xs leading-relaxed text-text-secondary">
                 Puedes inscribir a cualquier persona, sea alumno nuevo o ya registrado. Al buscar el
                 RUT, si ya existe en la escuela (Clase B o Profesional) sus datos se pre-cargarán
@@ -228,7 +228,7 @@ const PAYMENT_METHODS: {
               <div class="flex flex-col gap-4">
                 <div class="grid grid-cols-2 gap-3">
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="overline">Nombres *</label>
+                    <label class="micro-label">Nombres *</label>
                     <input
                       type="text"
                       [(ngModel)]="form().firstNames"
@@ -240,7 +240,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="overline">Ap. Paterno *</label>
+                    <label class="micro-label">Ap. Paterno *</label>
                     <input
                       type="text"
                       [(ngModel)]="form().paternalLastName"
@@ -252,7 +252,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="overline">Ap. Materno</label>
+                    <label class="micro-label">Ap. Materno</label>
                     <input
                       type="text"
                       [(ngModel)]="form().maternalLastName"
@@ -263,7 +263,7 @@ const PAYMENT_METHODS: {
                     />
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                    <label class="overline">Teléfono</label>
+                    <label class="micro-label">Teléfono</label>
                     <input
                       type="tel"
                       [(ngModel)]="form().phone"
@@ -275,7 +275,7 @@ const PAYMENT_METHODS: {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <label class="overline">Email *</label>
+                  <label class="micro-label">Email *</label>
                   <input
                     type="email"
                     [(ngModel)]="form().email"
@@ -301,7 +301,7 @@ const PAYMENT_METHODS: {
                     }
                   </div>
                   <div class="flex flex-col gap-1">
-                    <label class="overline">Género</label>
+                    <label class="micro-label">Género</label>
                     <div
                       class="flex rounded-lg overflow-hidden"
                       [style.border]="'1.5px solid var(--border-default)'"
@@ -335,7 +335,7 @@ const PAYMENT_METHODS: {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <label class="overline">Dirección</label>
+                  <label class="micro-label">Dirección</label>
                   <input
                     type="text"
                     [(ngModel)]="form().address"
@@ -371,7 +371,7 @@ const PAYMENT_METHODS: {
           <div class="flex flex-col gap-5">
             <!-- Resumen del alumno -->
             <div class="p-3 rounded-xl border bg-surface border-border-muted">
-              <p class="overline mb-1">Alumno</p>
+              <p class="micro-label mb-1">Alumno</p>
               <p class="item-title">
                 {{ nombreAlumnoResumen() }}
               </p>
@@ -441,7 +441,7 @@ const PAYMENT_METHODS: {
               </div>
             } @else {
               <div class="flex flex-col gap-2">
-                <label class="overline">Descuento (opcional)</label>
+                <label class="micro-label">Descuento (opcional)</label>
                 <div class="grid grid-cols-2 gap-2">
                   <input
                     type="number"
@@ -475,7 +475,7 @@ const PAYMENT_METHODS: {
 
             <!-- Método de pago (2x2) -->
             <div class="flex flex-col gap-2">
-              <label class="overline">Método de pago *</label>
+              <label class="micro-label">Método de pago *</label>
               <div class="grid grid-cols-2 gap-2">
                 @for (method of paymentMethods; track method.value) {
                   <button

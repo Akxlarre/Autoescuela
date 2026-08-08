@@ -181,8 +181,8 @@ check(
     .length === 1,
 );
 check(
-  'ya migrado a .overline → NO es violación (idempotencia del ratchet)',
-  findAdhocTypography(`<p class="overline mb-1">`).length === 0,
+  'ya migrado a .micro-label → NO es violación (idempotencia del ratchet)',
+  findAdhocTypography(`<p class="micro-label mb-1">`).length === 0,
 );
 check(
   'item-title ad-hoc detectado (semibold)',

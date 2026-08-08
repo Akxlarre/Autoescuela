@@ -103,7 +103,7 @@ type StatusConfig = {
               <!-- ── Alumno ────────────────────────────────────────── -->
               @if (s.studentName) {
                 <div class="card p-4 flex flex-col gap-3">
-                  <span class="overline">Alumno asignado</span>
+                  <span class="micro-label">Alumno asignado</span>
                   <div class="flex flex-col gap-1">
                     <span class="student-name">{{ s.studentName }}</span>
                     @if (s.classNumber) {
