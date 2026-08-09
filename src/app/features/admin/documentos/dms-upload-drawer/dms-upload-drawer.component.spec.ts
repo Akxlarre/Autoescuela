@@ -4,11 +4,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DmsUploadDrawerComponent } from './dms-upload-drawer.component';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import type { StudentEnrollmentOption } from '@core/models/ui/dms.model';
 
 describe('DmsUploadDrawerComponent', () => {
   let currentUploadMode: WritableSignal<'student' | 'school' | 'instructor'>;
-  let studentDetail: WritableSignal<{ name: string; rut: string; studentId: number } | null>;
+  let studentDetail: WritableSignal<{
+    name: string;
+    rut: string;
+    studentId: number;
+    enrollmentId: number | null;
+  } | null>;
   let studentDocs: WritableSignal<{ type: string }[]>;
+  let studentEnrollmentOptions: WritableSignal<StudentEnrollmentOption[]>;
+  let preselectedEnrollmentId: WritableSignal<number | null>;
   let instructorDetail: WritableSignal<{
     name: string;
     licenseNumber: string;
@@ -16,6 +24,7 @@ describe('DmsUploadDrawerComponent', () => {
   } | null>;
   let instructorDocs: WritableSignal<{ type: string }[]>;
   let loadStudentDocuments: ReturnType<typeof vi.fn>;
+  let loadStudentEnrollmentOptions: ReturnType<typeof vi.fn>;
   let loadInstructorDocuments: ReturnType<typeof vi.fn>;
   let facadeMock: DmsFacade;
 
@@ -23,14 +32,28 @@ describe('DmsUploadDrawerComponent', () => {
     currentUploadMode = signal('student');
     studentDetail = signal(null);
     studentDocs = signal([]);
+    studentEnrollmentOptions = signal([]);
+    preselectedEnrollmentId = signal(null);
     instructorDetail = signal(null);
     instructorDocs = signal([]);
 
     // Simula loadStudentDocuments()/loadInstructorDocuments() del facade real: pobla
     // studentDetail/studentDocs (o instructorDetail/instructorDocs) para el id pedido.
-    loadStudentDocuments = vi.fn(async (id: number) => {
-      studentDetail.set({ name: 'Alumno Test', rut: '11.111.111-1', studentId: id });
+    loadStudentDocuments = vi.fn(async (studentId: number, enrollmentId?: number) => {
+      studentDetail.set({
+        name: 'Alumno Test',
+        rut: '11.111.111-1',
+        studentId,
+        enrollmentId: enrollmentId ?? null,
+      });
       studentDocs.set([{ type: 'contrato' }, { type: 'id_photo' }]);
+    });
+    // Por defecto simula un alumno con 1 sola matrícula (caso más común) — los tests que
+    // necesitan 2+ matrículas la sobreescriben.
+    loadStudentEnrollmentOptions = vi.fn(async () => {
+      studentEnrollmentOptions.set([
+        { enrollmentId: 100, label: 'Clase B · #0001', branchName: null },
+      ]);
     });
     loadInstructorDocuments = vi.fn(async (id: number) => {
       instructorDetail.set({ name: 'Instructor Test', licenseNumber: 'X1', instructorId: id });
@@ -43,11 +66,14 @@ describe('DmsUploadDrawerComponent', () => {
       instructorsWithDocs: signal([]),
       studentDetail,
       studentDocs,
+      studentEnrollmentOptions,
+      preselectedEnrollmentId,
       instructorDetail,
       instructorDocs,
       preselectedStudentId: signal(null),
       preselectedInstructorId: signal(null),
       loadStudentDocuments,
+      loadStudentEnrollmentOptions,
       loadInstructorDocuments,
       showSuccess: vi.fn(),
       notifyUploadSaved: vi.fn(),
@@ -76,7 +102,7 @@ describe('DmsUploadDrawerComponent', () => {
       .compileComponents();
   });
 
-  it('filtra los tipos ya subidos cuando el alumno se selecciona desde el dropdown genérico (sin preselectedId)', () => {
+  it('filtra los tipos ya subidos cuando el alumno (1 sola matrícula) se selecciona desde el dropdown genérico', () => {
     const fixture = TestBed.createComponent(DmsUploadDrawerComponent);
     const component = fixture.componentInstance;
     TestBed.flushEffects();
@@ -84,10 +110,54 @@ describe('DmsUploadDrawerComponent', () => {
     component.selectedStudentId.set(42);
     TestBed.flushEffects();
 
-    expect(loadStudentDocuments).toHaveBeenCalledWith(42);
+    expect(loadStudentEnrollmentOptions).toHaveBeenCalledWith(42);
+    // 1 sola matrícula → auto-selección sin mostrar el segundo selector (AC4/AC-E1).
+    expect(component.selectedEnrollmentId()).toBe(100);
+    expect(component.showEnrollmentSelector()).toBe(false);
+    expect(loadStudentDocuments).toHaveBeenCalledWith(42, 100);
     const values = component.currentDocTypes().map((t) => t.value);
     expect(values).not.toContain('contrato');
     expect(values).not.toContain('id_photo');
+  });
+
+  it('AC-E2: alumno con 2+ matrículas muestra el segundo selector y no carga documentos hasta elegir una', () => {
+    loadStudentEnrollmentOptions.mockImplementation(async () => {
+      studentEnrollmentOptions.set([
+        { enrollmentId: 100, label: 'Clase B · #0001', branchName: 'Sede Centro' },
+        { enrollmentId: 200, label: 'Clase B · #0002', branchName: 'Sede Norte' },
+      ]);
+    });
+
+    const fixture = TestBed.createComponent(DmsUploadDrawerComponent);
+    const component = fixture.componentInstance;
+    TestBed.flushEffects();
+
+    component.selectedStudentId.set(42);
+    TestBed.flushEffects();
+
+    expect(component.showEnrollmentSelector()).toBe(true);
+    expect(component.selectedEnrollmentId()).toBeNull();
+    expect(loadStudentDocuments).not.toHaveBeenCalled();
+
+    component.selectedEnrollmentId.set(200);
+    TestBed.flushEffects();
+
+    expect(loadStudentDocuments).toHaveBeenCalledWith(42, 200);
+  });
+
+  it('AC3: con preselectedEnrollmentId, no muestra el segundo selector y usa ese id directo', () => {
+    preselectedEnrollmentId.set(300);
+    studentEnrollmentOptions.set([
+      { enrollmentId: 100, label: 'Clase B · #0001', branchName: null },
+      { enrollmentId: 300, label: 'Clase B · #0003', branchName: null },
+    ]);
+
+    const fixture = TestBed.createComponent(DmsUploadDrawerComponent);
+    const component = fixture.componentInstance;
+    TestBed.flushEffects();
+
+    expect(component.showEnrollmentSelector()).toBe(false);
+    expect(component.selectedEnrollmentId()).toBe(300);
   });
 
   it('filtra los tipos ya subidos de instructor cuando se selecciona desde el dropdown genérico', () => {
@@ -105,12 +175,21 @@ describe('DmsUploadDrawerComponent', () => {
   });
 
   it('no vuelve a cargar cuando el seleccionado ya coincide con la entidad cargada en el facade', () => {
-    studentDetail.set({ name: 'Alumno Test', rut: '11.111.111-1', studentId: 42 });
+    studentDetail.set({
+      name: 'Alumno Test',
+      rut: '11.111.111-1',
+      studentId: 42,
+      enrollmentId: 100,
+    });
     studentDocs.set([{ type: 'contrato' }]);
+    studentEnrollmentOptions.set([
+      { enrollmentId: 100, label: 'Clase B · #0001', branchName: null },
+    ]);
 
     const fixture = TestBed.createComponent(DmsUploadDrawerComponent);
     const component = fixture.componentInstance;
     component.selectedStudentId.set(42);
+    component.selectedEnrollmentId.set(100);
     TestBed.flushEffects();
 
     expect(loadStudentDocuments).not.toHaveBeenCalled();

@@ -670,6 +670,42 @@
 - **Fuente:** `specs/fixes/fix-138-m-fallback-silencioso-fetch-feriados`,
   `specs/fixes/fix-139-m-fallback-fuente-feriados-alternativa`
 
+### DG-058 — Una función `SECURITY DEFINER` sin `SET search_path` propio hereda el search_path del caller que la invoca anidada, no el de quien finalmente disparó la transacción
+- **Trampa:** asumir que porque `log_change()` (trigger de auditoría) es `SECURITY DEFINER` y
+  usa `to_jsonb(NEW)`/`to_jsonb(OLD)` con nombres de tabla sin calificar (`FROM students s JOIN
+  users u ...`), va a resolver esas tablas igual sin importar desde dónde se dispare. `SECURITY
+  DEFINER` solo cambia el ROL con el que corre la función — el `search_path` NO viaja con el
+  rol, viaja con la sesión/función que lo declaró, salvo que la función tenga su propio `SET
+  search_path`.
+- **Realidad:** `recalculate_enrollment_balance()` (trigger `trg_update_balance` AFTER en
+  `payments`, `20260301000008`) declara `SET search_path = ''`. Cuando ese trigger hace `UPDATE
+  enrollments`, dispara `trg_audit_enrollments` → `log_change()` **anidado dentro de la
+  ejecución de `recalculate_enrollment_balance()`** — y como `log_change()` no tenía su propio
+  `SET search_path` (regresión de fix-097-m/`20260801120000`, que reescribió la función con ~15
+  ramas de tablas sin calificar y sin recuperar el `SET search_path=''` + `public.` que sí tenía
+  la versión original de `20260323100000`), hereda el search_path vacío del caller. Cualquier
+  tabla sin `public.` explícito rompe: `WARNING: audit_log error: relation "students" does not
+  exist"`. La entrada de auditoría de ESE `UPDATE enrollments` (el recálculo de saldo) se pierde
+  en silencio — el `EXCEPTION WHEN OTHERS` de `log_change()` solo emite el `WARNING`, nunca
+  revierte la transacción principal ni deja rastro visible para el usuario. Reproducido y
+  confirmado contra Supabase local: `confirm_enrollment_with_payment()` → INSERT `payments` →
+  `trg_update_balance` → `recalculate_enrollment_balance()` → `UPDATE enrollments` →
+  `log_change()` anidado → warning + audit_log sin esa fila. Ocurre en **cualquier** pago que
+  dispare un recálculo de saldo, no es específico de ningún flujo particular (matrícula de
+  refuerzo, matrícula regular, da igual).
+- **Lección:** al escribir o revisar una función `SECURITY DEFINER` que hace queries a tablas
+  sin calificar, no basta con verificarla invocándola directo — hay que verificar también los
+  casos donde otra función `SECURITY DEFINER` con `SET search_path` restringido (`''` o
+  cualquier valor sin `public`) la dispara ANIDADA (vía trigger, vía llamada directa). El bug es
+  invisible probando la función aislada porque el search_path por defecto de la sesión sí
+  incluye `public`. Todo trigger de auditoría/logging genérico que se dispara sobre múltiples
+  tablas (como `log_change()`) es especialmente vulnerable porque casi seguro alguna de esas
+  tablas también tiene otro trigger `SECURITY DEFINER` con `search_path` restringido delante o
+  detrás en el mismo evento. Fix aplicado: `SET search_path = public, pg_temp` explícito en
+  `log_change()` y `audit_resolve_display_value()` — el `SET` de una función crea su propio
+  contexto de search_path para ESA invocación puntual, sin importar el del caller.
+- **Fuente:** `specs/fixes/fix-145-m-bugs-audit-log-qa-0006-m`
+
 ---
 
 ## Convención para agregar una entrada nueva

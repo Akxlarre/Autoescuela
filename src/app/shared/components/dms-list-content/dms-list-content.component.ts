@@ -236,7 +236,12 @@ import type {
                             type="button"
                             class="text-sm font-medium cursor-pointer bg-transparent border-0 transition-colors duration-150 text-brand hover:text-brand-hover"
                             data-llm-action="view-student-documents"
-                            (click)="viewStudentDocs.emit(row.studentId)"
+                            (click)="
+                              viewStudentDocs.emit({
+                                studentId: row.studentId,
+                                enrollmentId: row.enrollmentId,
+                              })
+                            "
                           >
                             Ver →
                           </button>
@@ -675,7 +680,7 @@ export class DmsListContentComponent {
   readonly uploadInstructorDoc = output<void>();
   readonly uploadSchoolDoc = output<void>();
   readonly uploadTemplate = output<void>();
-  readonly viewStudentDocs = output<number>();
+  readonly viewStudentDocs = output<{ studentId: number; enrollmentId: number }>();
   readonly viewInstructorDocs = output<number>();
   readonly viewDocument = output<{ url: string; fileName: string }>();
   readonly deleteStudentDoc = output<{ id: string; source: string }>();
