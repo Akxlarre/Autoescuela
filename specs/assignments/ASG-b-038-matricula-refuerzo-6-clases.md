@@ -1,11 +1,14 @@
 # Asignación ASG-b-038 — Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** m
+> **claimed_at:** 2026-08-08
+> **resulting_track:** 0006-m-matricula-refuerzo-clase-b
 
 ---
 

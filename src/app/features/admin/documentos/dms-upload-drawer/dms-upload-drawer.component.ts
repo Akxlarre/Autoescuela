@@ -222,11 +222,11 @@ export class DmsUploadDrawerComponent {
   readonly instructorOptions = computed(() => this.facade.instructorsWithDocs());
 
   /**
-   * Tipos ya subidos para el alumno/instructor seleccionado — solo se puede calcular cuando
-   * el seleccionado coincide con la entidad cuya lista de documentos ya está cargada en el
-   * facade (caso típico: se abrió "Subir documento" desde el propio drawer de lista de esa
-   * entidad). Si se abrió desde el selector genérico con otra entidad, no hay forma de saberlo
-   * sin una query aparte — en ese caso no se filtra nada.
+   * Tipos ya subidos para el alumno/instructor seleccionado. Se apoya en
+   * `facade.studentDetail()`/`studentDocs()` — si el seleccionado no coincide con la entidad ya
+   * cargada ahí (caso del selector genérico, sin entrar desde el drawer de lista de esa
+   * entidad), el effect del constructor dispara `loadStudentDocuments()`/`loadInstructorDocuments()`
+   * para esa entidad, y este computed se re-evalúa cuando la carga resuelve.
    */
   private readonly usedStudentTypes = computed(() => {
     const id = this.selectedStudentId();
@@ -305,6 +305,24 @@ export class DmsUploadDrawerComponent {
     effect(() => {
       const id = this.facade.preselectedInstructorId();
       if (id) this.selectedInstructorId.set(id);
+    });
+
+    // Cargar los documentos del alumno elegido si no coinciden con los ya cargados en el
+    // facade — cubre el selector genérico (sin preselectedId), donde studentDetail()/studentDocs()
+    // todavía no tienen la entidad que el usuario acaba de elegir en el dropdown.
+    effect(() => {
+      const id = this.selectedStudentId();
+      if (this.facade.currentUploadMode() !== 'student' || !id) return;
+      if (id === this.facade.studentDetail()?.studentId) return;
+      void this.facade.loadStudentDocuments(id);
+    });
+
+    // Análogo para instructor.
+    effect(() => {
+      const id = this.selectedInstructorId();
+      if (this.facade.currentUploadMode() !== 'instructor' || !id) return;
+      if (id === this.facade.instructorDetail()?.instructorId) return;
+      void this.facade.loadInstructorDocuments(id);
     });
 
     // Si el tipo elegido deja de estar disponible (ya se subió, o cambió la entidad

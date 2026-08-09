@@ -12,6 +12,8 @@ export interface Course {
   active: boolean;
   /** true = curso CONV A3/A4. No seleccionable en wizard; solo contenedor de sesiones. */
   is_convalidation?: boolean | null;
+  /** true = curso de refuerzo Clase B (6 clases, no candidato a certificado). Ver spec 0006-m. */
+  is_reinforcement?: boolean | null;
   schedule_days?: number[] | null;
   schedule_blocks?: { from: string; to: string }[] | null;
 }

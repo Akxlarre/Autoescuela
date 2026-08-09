@@ -332,7 +332,7 @@ export class AlumnoClasesComponent {
         id: 'practicas',
         label: group === 'class_b' ? 'Prácticas completadas' : 'Prácticas',
         value: formatKpiEsCl(k?.completedPractices ?? 0),
-        suffix: group === 'class_b' ? '/12' : '',
+        suffix: group === 'class_b' && k?.totalPractices ? `/${k.totalPractices}` : '',
       },
     ];
     if (group !== 'class_b') {

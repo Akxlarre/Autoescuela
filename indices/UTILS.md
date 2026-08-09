@@ -18,11 +18,12 @@
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope` |
-| `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
+| `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` (opción `isReinforcement` — omite la sección de carnet 12 clases, spec 0006-m) |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
-| `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
+| `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` — convierte `courses.practical_hours` a cantidad de clases (45 min/sesión). Único punto de esta fórmula, usado en el gate del certificado, KPIs de progreso (admin/secretaría/portal alumno) y `EnrollmentFacade` — spec 0006-m |
+| `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` (opciones `isSence`, `isReinforcement` — desambigua Clase B estándar / SENCE / Refuerzo en la misma sede) |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |

@@ -179,7 +179,7 @@
               (click)="applyManualDiscount()"
               [disabled]="!discountAmountInput() || !discountReason()"
               data-llm-action="apply-discount"
-              class="w-full h-10 bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-base border border-border-default transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+              class="w-full h-10 bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-base border border-border-default transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
             >
               <app-icon name="tag" [size]="14" />
               Aplicar Descuento
@@ -199,7 +199,7 @@
               type="button"
               (click)="setPaymentMethod(option.value)"
               [disabled]="option.value === 'pendiente' && data().isSingularCourse"
-              class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group disabled:opacity-40 disabled:cursor-not-allowed"
+              class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               [class.border-brand]="data().paymentMethod === option.value"
               [class.bg-brand-muted]="data().paymentMethod === option.value"
               [class.border-border-default]="data().paymentMethod !== option.value"

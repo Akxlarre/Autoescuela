@@ -7,6 +7,7 @@ export type CourseCategory = 'non-professional' | 'professional' | 'singular';
 export type CourseType =
   | 'class_b'
   | 'class_b_sence'
+  | 'class_b_reinforcement'
   | 'professional_a2'
   | 'professional_a3'
   | 'professional_a4'

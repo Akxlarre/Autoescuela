@@ -19,6 +19,7 @@ import type {
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
   InstructorOption,
@@ -372,13 +373,14 @@ export class AdminAlumnoDetalleFacade {
       totalPagado: summary.totalPagado,
       saldoPendiente: summary.saldoPendiente,
       certificateEmailSent: summary.certificateEmailSent,
+      isReinforcement: summary.isReinforcement,
     });
 
     // Re-cargar progreso para el enrollment seleccionado
     if (summary.licenseGroup === 'professional') {
       await this.fetchProfessionalProgress(id, summary.promotionCourseId);
     } else {
-      await this.fetchClassBProgress(id, alumno.id);
+      await this.fetchClassBProgress(id, alumno.id, summary.practicalHours);
     }
   }
 
@@ -396,7 +398,7 @@ export class AdminAlumnoDetalleFacade {
             license_group, promotion_course_id, registration_channel,
             certificate_b_pdf_url, certificate_professional_pdf_url,
             license_initial_url, license_full_url,
-            courses!inner(name),
+            courses!inner(name, practical_hours, is_reinforcement),
             digital_contracts(file_url, signed_contract_url)
           )
         `,
@@ -413,9 +415,12 @@ export class AdminAlumnoDetalleFacade {
       );
       const lastEnrollment = sorted[0] ?? null;
 
-      const courseName = Array.isArray(lastEnrollment?.courses)
-        ? lastEnrollment.courses[0]?.name
-        : lastEnrollment?.courses?.name;
+      const lastEnrollmentCourse = Array.isArray(lastEnrollment?.courses)
+        ? lastEnrollment.courses[0]
+        : lastEnrollment?.courses;
+      const courseName = lastEnrollmentCourse?.name;
+      const coursePracticalHours = (lastEnrollmentCourse?.practical_hours as number | null) ?? null;
+      const courseIsReinforcement = lastEnrollmentCourse?.is_reinforcement ?? false;
 
       const enrollmentId = lastEnrollment?.id ?? null;
       const licenseGroup: 'class_b' | 'professional' =
@@ -426,7 +431,8 @@ export class AdminAlumnoDetalleFacade {
       const summaries: EnrollmentSummary[] = sorted
         .filter((e: any) => e.status !== 'draft')
         .map((e: any) => {
-          const cName = Array.isArray(e.courses) ? e.courses[0]?.name : e.courses?.name;
+          const eCourse = Array.isArray(e.courses) ? e.courses[0] : e.courses;
+          const cName = eCourse?.name;
           const lg: 'class_b' | 'professional' =
             e.license_group === 'professional' ? 'professional' : 'class_b';
           const dcRaw = e.digital_contracts;
@@ -454,6 +460,8 @@ export class AdminAlumnoDetalleFacade {
             registrationChannel: ch,
             totalPagado: e.total_paid ?? 0,
             saldoPendiente: e.pending_balance ?? 0,
+            practicalHours: (eCourse?.practical_hours as number | null) ?? null,
+            isReinforcement: eCourse?.is_reinforcement ?? false,
             // Se completa más abajo, tras resolver fetchCertificateEmailSent() (fix-012-i).
             certificateEmailSent: false,
           };
@@ -512,6 +520,7 @@ export class AdminAlumnoDetalleFacade {
         totalPagado: lastEnrollment?.total_paid ?? 0,
         saldoPendiente: lastEnrollment?.pending_balance ?? 0,
         certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
+        isReinforcement: courseIsReinforcement,
       });
 
       // ── Step 2: Queries según tipo de licencia ──
@@ -521,7 +530,7 @@ export class AdminAlumnoDetalleFacade {
       }
 
       // ── Clase B: delegar al método reutilizable ──
-      await this.fetchClassBProgress(enrollmentId, studentId);
+      await this.fetchClassBProgress(enrollmentId, studentId, coursePracticalHours);
     } catch (err) {
       this._error.set(
         err instanceof Error
@@ -532,7 +541,14 @@ export class AdminAlumnoDetalleFacade {
     }
   }
 
-  private async fetchClassBProgress(enrollmentId: number | null, studentId: number): Promise<void> {
+  private async fetchClassBProgress(
+    enrollmentId: number | null,
+    studentId: number,
+    practicalHours: number | null = null,
+  ): Promise<void> {
+    // Cantidad de clases requeridas se deriva del curso de la matrícula (spec 0006-m) —
+    // ya no asume 12 fijo. Fallback a 12 si no hay dato (regresión Clase B estándar, AC-E1).
+    const clasesRequeridas = classCountFromPracticalHours(practicalHours) || PRACTICAS_REQUERIDAS_B;
     const [attendanceResult, evidenceResult, sessionResult, paymentsResult] = await Promise.all([
       enrollmentId
         ? this.supabase.client
@@ -578,7 +594,7 @@ export class AdminAlumnoDetalleFacade {
 
     this._progresoPractico.set({
       completadas: attendanceRows.filter((r) => r.status === STATUS_PRESENTE).length,
-      requeridas: PRACTICAS_REQUERIDAS_B,
+      requeridas: clasesRequeridas,
     });
 
     this._inasistencias.set(
@@ -639,7 +655,7 @@ export class AdminAlumnoDetalleFacade {
       (sessionResult.data ?? []).map((s: any) => [Number(s.class_number), s]),
     );
     this._clasesPracticas.set(
-      Array.from({ length: PRACTICAS_REQUERIDAS_B }, (_, i) => {
+      Array.from({ length: clasesRequeridas }, (_, i) => {
         const num = i + 1;
         const ses = sessionMap.get(num);
         if (!ses)

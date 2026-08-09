@@ -10,6 +10,7 @@ import {
   computeSemaphore,
   deriveCertificateState,
 } from '@core/utils/student-home';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   StudentHomeAttendance,
   StudentHomeCertificate,
@@ -116,7 +117,7 @@ export class StudentHomeFacade {
          certificate_enabled, certificate_b_pdf_url, certificate_professional_pdf_url,
          created_at, student_id, promotion_course_id,
          students!inner(id, users!inner(first_names, paternal_last_name)),
-         courses!inner(code),
+         courses!inner(code, practical_hours),
          branches!inner(name)`,
       )
       .eq('id', activeId)
@@ -153,6 +154,10 @@ export class StudentHomeFacade {
     studentId: number,
     firstName: string,
   ): Promise<StudentHomeSnapshot> {
+    // Cantidad de prácticas requeridas se deriva del curso de la matrícula (spec 0006-m) —
+    // ya no asume 12 fijo (Refuerzo Clase B: 6). Fallback a 12 si falta el dato.
+    const PRACTICES_TOTAL = classCountFromPracticalHours(e.courses?.practical_hours ?? null) || 12;
+
     const [progressResult, sessionsResult, examResult, certResult, nextClassResult] =
       await Promise.all([
         // Vista progreso
@@ -167,7 +172,7 @@ export class StudentHomeFacade {
           .select('id, scheduled_at, class_b_practice_attendance(status)')
           .eq('enrollment_id', enrollmentId)
           .order('scheduled_at', { ascending: false })
-          .limit(12),
+          .limit(PRACTICES_TOTAL),
         // Nota examen final
         this.supabase.client
           .from('class_b_exam_scores')
@@ -193,7 +198,6 @@ export class StudentHomeFacade {
           .maybeSingle(),
       ]);
 
-    const PRACTICES_TOTAL = 12;
     const completedPractices: number = progressResult.data?.completed_practices ?? 0;
     const pctOverall = computeOverallProgress(completedPractices, PRACTICES_TOTAL);
 

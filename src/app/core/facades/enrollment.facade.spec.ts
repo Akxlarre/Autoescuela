@@ -438,6 +438,82 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // ── courseOptions() / mapCourseToOption() — spec 0006-m ──
+
+  describe('courseOptions — mapeo de Refuerzo Clase B', () => {
+    it('mapea is_reinforcement=true a type=class_b_reinforcement', async () => {
+      const mockCourses = [
+        {
+          id: 5,
+          code: 'refuerzo_b_1',
+          name: 'Refuerzo Clase B',
+          license_class: 'B',
+          branch_id: 1,
+          practical_hours: 4.5,
+          base_price: 90000,
+          active: true,
+          is_reinforcement: true,
+        },
+      ];
+      const builder = createMockQueryBuilder(mockCourses, null);
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      await facade.loadCourses(1);
+
+      const options = facade.courseOptions();
+      expect(options).toHaveLength(1);
+      expect(options[0].type).toBe('class_b_reinforcement');
+      expect(options[0].category).toBe('non-professional');
+    });
+
+    it('no confunde Clase B estándar con Refuerzo ni SENCE en la misma sede (AC-E1)', async () => {
+      const mockCourses = [
+        {
+          id: 1,
+          code: 'class_b',
+          name: 'Clase B',
+          license_class: 'B',
+          branch_id: 1,
+          practical_hours: 9.0,
+          base_price: 180000,
+          active: true,
+          is_reinforcement: false,
+        },
+        {
+          id: 4,
+          code: 'class_b_sence',
+          name: 'Clase B SENCE',
+          license_class: 'B',
+          branch_id: 1,
+          practical_hours: 9.0,
+          base_price: 180000,
+          active: true,
+          is_reinforcement: false,
+        },
+        {
+          id: 5,
+          code: 'refuerzo_b_1',
+          name: 'Refuerzo Clase B',
+          license_class: 'B',
+          branch_id: 1,
+          practical_hours: 4.5,
+          base_price: 90000,
+          active: true,
+          is_reinforcement: true,
+        },
+      ];
+      const builder = createMockQueryBuilder(mockCourses, null);
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      await facade.loadCourses(1);
+
+      const options = facade.courseOptions();
+      expect(options).toHaveLength(3);
+      const types = options.map((o) => o.type).sort();
+      expect(types).toEqual(['class_b', 'class_b_reinforcement', 'class_b_sence']);
+    });
+  });
+
   // ── Find User by RUT ──
 
   describe('findUserByRut', () => {
@@ -911,6 +987,30 @@ describe('EnrollmentFacade', () => {
       ).toBe('available');
 
       vi.useRealTimers();
+    });
+  });
+
+  describe('saveAssignment — Refuerzo Clase B (spec 0006-m, regresión visual real)', () => {
+    it('courseType=class_b_reinforcement SÍ inserta en class_b_sessions (no se salta el bloque isClassB)', async () => {
+      const builder = createMockQueryBuilder({ vehicle_id: 9 }, null);
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      (facade as any)._draft.set({ enrollmentId: 42, studentId: 1, userId: 1 });
+      (facade as any)._personalData.set({
+        courseCategory: 'non-professional',
+        courseType: 'class_b_reinforcement',
+      });
+      (facade as any)._selectedInstructorId.set(7);
+      (facade as any)._selectedSlotIds.set([
+        '2026-03-16T09:00:00-03:00',
+        '2026-03-16T09:45:00-03:00',
+      ]);
+
+      const saved = await facade.saveAssignment();
+
+      expect(saved).toBe(true);
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('class_b_sessions');
+      expect(facade.error()).toBeNull();
     });
   });
 });

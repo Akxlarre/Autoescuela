@@ -18,6 +18,7 @@ import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
 import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
   EnrollmentPersonalData,
@@ -142,8 +143,9 @@ export class EnrollmentFacade {
     const pd = this._personalData();
     if (!pd || pd.courseCategory !== 'non-professional') return 0;
     const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
-    const course = findCourseByLicenseClass(this._courses(), licenseClass);
-    return course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
+    const isReinforcement = pd.courseType === 'class_b_reinforcement';
+    const course = findCourseByLicenseClass(this._courses(), licenseClass, { isReinforcement });
+    return course?.practical_hours ? classCountFromPracticalHours(course.practical_hours) : 12;
   });
 
   // ── Enrollment record ──
@@ -251,6 +253,7 @@ export class EnrollmentFacade {
     const course = findCourseByLicenseClass(
       this._courses(),
       this.courseTypeToLicenseClass(pd.courseType),
+      { isReinforcement: pd.courseType === 'class_b_reinforcement' },
     );
     const baseName = course?.name ?? this.courseTypeToLicenseClass(pd.courseType);
     const convSuffix = pd.convalidatesSimultaneously
@@ -270,8 +273,10 @@ export class EnrollmentFacade {
 
     let course: CourseSummary | null = null;
     if (pd) {
-      const c = this._courses().find(
-        (co) => co.license_class === this.courseTypeToLicenseClass(pd.courseType),
+      const c = findCourseByLicenseClass(
+        this._courses(),
+        this.courseTypeToLicenseClass(pd.courseType),
+        { isReinforcement: pd.courseType === 'class_b_reinforcement' },
       );
       if (c) {
         course = {
@@ -545,7 +550,10 @@ export class EnrollmentFacade {
           const fullName =
             `${existing.firstNames} ${existing.paternalLastName} ${existing.maternalLastName}`.trim();
           const licenseClass = this.courseTypeToLicenseClass(data.courseType);
-          const course = findCourseByLicenseClass(this._courses(), licenseClass, { branchId });
+          const course = findCourseByLicenseClass(this._courses(), licenseClass, {
+            branchId,
+            isReinforcement: data.courseType === 'class_b_reinforcement',
+          });
           const courseName = course?.name ?? licenseClass;
 
           // Veredicto de re-matrícula en el MISMO curso (fix-020).
@@ -981,7 +989,9 @@ export class EnrollmentFacade {
 
       const isClassB =
         pd.courseCategory === 'non-professional' &&
-        (pd.courseType === 'class_b' || pd.courseType === 'class_b_sence');
+        (pd.courseType === 'class_b' ||
+          pd.courseType === 'class_b_sence' ||
+          pd.courseType === 'class_b_reinforcement');
 
       if (isClassB) {
         // Save reserved sessions for Class B
@@ -2101,10 +2111,16 @@ export class EnrollmentFacade {
     if (option) return option.id;
 
     // Fallback: buscar en _courses por licencia y sede
-    // Para SENCE vs no-SENCE, filtrar por si el código incluye 'sence'
+    // Para SENCE vs no-SENCE, filtrar por si el código incluye 'sence'; Refuerzo vs
+    // estándar, por si el courseType es 'class_b_reinforcement'
     const licenseClass = this.courseTypeToLicenseClass(data.courseType);
     const isSence = data.courseType.includes('sence');
-    const course = findCourseByLicenseClass(this._courses(), licenseClass, { branchId, isSence });
+    const isReinforcement = data.courseType === 'class_b_reinforcement';
+    const course = findCourseByLicenseClass(this._courses(), licenseClass, {
+      branchId,
+      isSence,
+      isReinforcement,
+    });
 
     if (!course) {
       this._error.set(`No se encontró un curso activo para la clase ${licenseClass} en esta sede`);
@@ -2164,10 +2180,11 @@ export class EnrollmentFacade {
       course.code?.toUpperCase().includes('SENCE') ||
       course.name?.toUpperCase().includes('SENCE') ||
       course.type?.includes('sence');
+    const isReinforcement = course.is_reinforcement ?? false;
 
     let type: CourseType;
     if (lc === 'B') {
-      type = isSence ? 'class_b_sence' : 'class_b';
+      type = isReinforcement ? 'class_b_reinforcement' : isSence ? 'class_b_sence' : 'class_b';
     } else if (lc === 'A2') {
       type = 'professional_a2';
     } else if (lc === 'A3') {
@@ -2186,6 +2203,7 @@ export class EnrollmentFacade {
     const iconMap: Record<string, string> = {
       class_b: 'car',
       class_b_sence: 'briefcase',
+      class_b_reinforcement: 'car',
       professional_a2: 'car',
       professional_a3: 'truck',
       professional_a4: 'bus',
@@ -2196,6 +2214,7 @@ export class EnrollmentFacade {
     const colorMap: Record<string, CourseOption['color']> = {
       class_b: 'brand',
       class_b_sence: 'info',
+      class_b_reinforcement: 'info',
       professional_a2: 'warning',
       professional_a3: 'warning',
       professional_a4: 'warning',
@@ -2222,6 +2241,7 @@ export class EnrollmentFacade {
     const map: Record<string, string> = {
       class_b: 'B',
       class_b_sence: 'B',
+      class_b_reinforcement: 'B',
       professional_a2: 'A2',
       professional_a3: 'A3',
       professional_a4: 'A4',
