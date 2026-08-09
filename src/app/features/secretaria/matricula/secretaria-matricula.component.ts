@@ -704,7 +704,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   onStep4DataChange(data: EnrollmentContractData): void {
-    if (data.signedContract) this._signedContractUpload.set(data.signedContract);
+    this._signedContractUpload.set(data.signedContract);
   }
 
   async onStep4Next(): Promise<void> {
