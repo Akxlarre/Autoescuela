@@ -18,7 +18,7 @@ function makeBuilder(result: { data: any; error: any }): any {
   b.update = vi.fn(() => b);
   b.single = vi.fn(() => Promise.resolve(result));
   b.maybeSingle = vi.fn(() => Promise.resolve(result));
-  b.limit = vi.fn(() => Promise.resolve(result));
+  b.limit = vi.fn(() => b);
   b.insert = vi.fn(() => Promise.resolve(result));
   b.then = (resolve: any, reject?: any) => Promise.resolve(result).then(resolve, reject);
   return b;
@@ -357,7 +357,7 @@ describe('DmsFacade', () => {
       expect(instructorsBuilder.eq).not.toHaveBeenCalled();
     });
 
-    it('fetchAllData(): arma name en orden paterno-materno-nombre, matriculaNumber del último enrollment y branchName', async () => {
+    it('fetchAllData(): arma name en orden paterno-materno-nombre — alumno con 1 sola matrícula (AC-E1, sin regresión)', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const studentsBuilder = makeBuilder({
         data: [
@@ -373,8 +373,13 @@ describe('DmsFacade', () => {
               branches: { name: 'Sede Centro' },
             },
             enrollments: [
-              { number: '0005', created_at: '2026-01-01T00:00:00Z' },
-              { number: '0012', created_at: '2026-06-01T00:00:00Z' },
+              {
+                id: 100,
+                number: '0012',
+                created_at: '2026-06-01T00:00:00Z',
+                branch_id: 2,
+                branches: { name: 'Sede Centro' },
+              },
             ],
           },
         ],
@@ -386,10 +391,10 @@ describe('DmsFacade', () => {
             id: '1',
             source: 'student_document',
             student_id: 1,
-            enrollment_id: 1,
+            enrollment_id: 100,
             type: 'contrato',
             file_name: 'contrato.pdf',
-            file_url: 'students/1/contrato.pdf',
+            file_url: 'students/100/contrato.pdf',
             status: 'approved',
             document_at: '2026-06-01T00:00:00Z',
             managed_by: null,
@@ -410,6 +415,7 @@ describe('DmsFacade', () => {
       expect(localFacade.studentsWithDocs()).toEqual([
         {
           studentId: 1,
+          enrollmentId: 100,
           name: 'Soto Rojas Ana',
           rut: '11.111.111-1',
           matriculaNumber: '#0012',
@@ -417,6 +423,223 @@ describe('DmsFacade', () => {
           docCount: 1,
         },
       ]);
+    });
+
+    it('fetchAllData() (spec 0007-m, AC1): alumno con 2 matrículas produce 2 filas, cada una con su propia sede/N° y docCount solo de su enrollment', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const studentsBuilder = makeBuilder({
+        data: [
+          {
+            id: 1,
+            users: {
+              id: 10,
+              rut: '11.111.111-1',
+              first_names: 'Ana',
+              paternal_last_name: 'Soto',
+              maternal_last_name: 'Rojas',
+              branch_id: 2,
+              branches: { name: 'Sede Centro' },
+            },
+            enrollments: [
+              {
+                id: 100,
+                number: '0005',
+                created_at: '2026-01-01T00:00:00Z',
+                branch_id: 2,
+                branches: { name: 'Sede Centro' },
+              },
+              {
+                id: 200,
+                number: '0012',
+                created_at: '2026-06-01T00:00:00Z',
+                // Matrícula posterior en OTRA sede — debe resolverse desde enrollments.branch_id,
+                // no desde users.branch_id (que sigue en Sede Centro).
+                branch_id: 3,
+                branches: { name: 'Sede Norte' },
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+      const vDocsBuilder = makeBuilder({
+        data: [
+          {
+            id: '1',
+            source: 'student_document',
+            student_id: 1,
+            enrollment_id: 100,
+            type: 'contrato',
+            file_name: 'contrato-antiguo.pdf',
+            file_url: 'students/100/contrato.pdf',
+            status: 'approved',
+            document_at: '2026-01-01T00:00:00Z',
+            managed_by: null,
+          },
+          {
+            id: '2',
+            source: 'student_document',
+            student_id: 1,
+            enrollment_id: 200,
+            type: 'contrato',
+            file_name: 'contrato-nuevo.pdf',
+            file_url: 'students/200/contrato.pdf',
+            status: 'approved',
+            document_at: '2026-06-01T00:00:00Z',
+            managed_by: null,
+          },
+          {
+            id: '3',
+            source: 'student_document',
+            student_id: 1,
+            enrollment_id: 200,
+            type: 'id_photo',
+            file_name: 'foto.jpg',
+            file_url: 'students/200/foto.jpg',
+            status: 'approved',
+            document_at: '2026-06-02T00:00:00Z',
+            managed_by: null,
+          },
+        ],
+        error: null,
+      });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'students'
+          ? studentsBuilder
+          : table === 'v_dms_student_documents'
+            ? vDocsBuilder
+            : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      const rows = localFacade.studentsWithDocs();
+      expect(rows).toHaveLength(2);
+      expect(rows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            studentId: 1,
+            enrollmentId: 100,
+            matriculaNumber: '#0005',
+            branchName: 'Sede Centro',
+            docCount: 1,
+          }),
+          expect.objectContaining({
+            studentId: 1,
+            enrollmentId: 200,
+            matriculaNumber: '#0012',
+            branchName: 'Sede Norte',
+            docCount: 2,
+          }),
+        ]),
+      );
+    });
+
+    it('loadStudentDocuments(studentId, enrollmentId) (AC2): filtra v_dms_student_documents por enrollment_id además de student_id', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const vDocsBuilder = makeBuilder({ data: [], error: null });
+      const studentBuilder = makeBuilder({
+        data: {
+          id: 1,
+          users: { id: 10, rut: '11.111.111-1', first_names: 'Ana', paternal_last_name: 'Soto' },
+        },
+        error: null,
+      });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'v_dms_student_documents'
+          ? vDocsBuilder
+          : table === 'students'
+            ? studentBuilder
+            : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.loadStudentDocuments(1, 200);
+
+      expect(vDocsBuilder.eq).toHaveBeenCalledWith('student_id', 1);
+      expect(vDocsBuilder.eq).toHaveBeenCalledWith('enrollment_id', 200);
+      expect(localFacade.studentDetail()).toEqual(
+        expect.objectContaining({ studentId: 1, enrollmentId: 200 }),
+      );
+    });
+
+    it('loadStudentEnrollmentOptions(studentId) (AC-E2): devuelve TODAS las matrículas del alumno, no solo las que ya tienen documentos', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const enrollmentsBuilder = makeBuilder({
+        data: [
+          {
+            id: 100,
+            number: '0005',
+            branch_id: 2,
+            branches: { name: 'Sede Centro' },
+            courses: { name: 'Clase B' },
+          },
+          {
+            id: 200,
+            number: '0012',
+            branch_id: 3,
+            branches: { name: 'Sede Norte' },
+            courses: { name: 'Clase B' },
+          },
+        ],
+        error: null,
+      });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'enrollments' ? enrollmentsBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.loadStudentEnrollmentOptions(1);
+
+      expect(enrollmentsBuilder.eq).toHaveBeenCalledWith('student_id', 1);
+      expect(localFacade.studentEnrollmentOptions()).toEqual([
+        { enrollmentId: 100, label: 'Clase B · #0005', branchName: 'Sede Centro' },
+        { enrollmentId: 200, label: 'Clase B · #0012', branchName: 'Sede Norte' },
+      ]);
+    });
+
+    it('uploadStudentDocument() (AC3): sube al path students/{enrollmentId}/... cuando viene enrollmentId', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const docsBuilder = makeBuilder({ data: [], error: null });
+      const uploadFn = vi.fn().mockResolvedValue({ error: null });
+      localSupabaseSpy.client.storage.from = vi.fn().mockReturnValue({ upload: uploadFn });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'student_documents' ? docsBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      const file = new File(['contenido'], 'contrato.pdf', { type: 'application/pdf' });
+      await localFacade.uploadStudentDocument({
+        file,
+        type: 'contrato',
+        studentId: 1,
+        enrollmentId: 200,
+      });
+
+      expect(uploadFn.mock.calls[0][0]).toMatch(/^students\/200\//);
+      expect(docsBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ enrollment_id: 200, type: 'contrato' }),
+      );
+    });
+
+    it('uploadStudentDocument() (AC4): sin enrollmentId, cae al fallback de la última matrícula del alumno', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const docsBuilder = makeBuilder({ data: [], error: null });
+      const enrollmentFallbackBuilder = makeBuilder({ data: { id: 777 }, error: null });
+      const uploadFn = vi.fn().mockResolvedValue({ error: null });
+      localSupabaseSpy.client.storage.from = vi.fn().mockReturnValue({ upload: uploadFn });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'student_documents'
+          ? docsBuilder
+          : table === 'enrollments'
+            ? enrollmentFallbackBuilder
+            : makeBuilder({ data: [], error: null }),
+      );
+
+      const file = new File(['contenido'], 'contrato.pdf', { type: 'application/pdf' });
+      await localFacade.uploadStudentDocument({ file, type: 'contrato', studentId: 1 });
+
+      expect(uploadFn.mock.calls[0][0]).toMatch(/^students\/777\//);
+      expect(docsBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ enrollment_id: 777 }),
+      );
     });
   });
 });

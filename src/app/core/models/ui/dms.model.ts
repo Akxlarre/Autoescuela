@@ -9,14 +9,24 @@ export type TemplateCategoryFilter = 'all' | TemplateCategory;
 
 export interface StudentWithDocsRow {
   studentId: number;
+  /** Matrícula a la que pertenece esta fila (spec 0007-m: 1 fila por matrícula, no por alumno). */
+  enrollmentId: number;
   /** Orden paterno - materno - nombre (buildStudentDisplayName), igual que Base de Alumnos */
   name: string;
   rut: string;
-  /** Formateado '#NNNN' (último enrollment) o '—' si no tiene ninguno */
+  /** Formateado '#NNNN' (de esta matrícula, no de la última del alumno) */
   matriculaNumber: string;
-  /** Nombre de la sede (users.branch_id → branches.name). Null si no tiene sede asignada. */
+  /** Nombre de la sede de esta matrícula (enrollments.branch_id → branches.name). Null si no tiene sede asignada. */
   branchName: string | null;
   docCount: number;
+}
+
+/** Opción del segundo selector de "Subir documento" (AC-E2) — todas las matrículas del alumno, no solo las que ya tienen documentos. */
+export interface StudentEnrollmentOption {
+  enrollmentId: number;
+  /** `"{course.name} · #{number}"` */
+  label: string;
+  branchName: string | null;
 }
 
 export interface DmsStudentDocRow {

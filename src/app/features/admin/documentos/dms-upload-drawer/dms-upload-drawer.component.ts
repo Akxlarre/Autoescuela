@@ -82,6 +82,24 @@ type UploadMode = 'student' | 'school' | 'instructor';
               </div>
             }
 
+            <!-- ── Selector matrícula (AC-E2: alumno con 2+ matrículas, elegido desde el dropdown genérico) ── -->
+            @if (facade.currentUploadMode() === 'student' && showEnrollmentSelector()) {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-text-primary">Matrícula *</label>
+                <p-select
+                  [ngModel]="selectedEnrollmentId()"
+                  (ngModelChange)="selectedEnrollmentId.set($event)"
+                  [options]="enrollmentOptions()"
+                  optionLabel="label"
+                  optionValue="enrollmentId"
+                  placeholder="Seleccionar matrícula..."
+                  styleClass="w-full"
+                  appendTo="body"
+                  data-llm-description="select which enrollment (matrícula) the document belongs to"
+                ></p-select>
+              </div>
+            }
+
             <!-- ── Selector instructor (modo instructor) ── -->
             @if (facade.currentUploadMode() === 'instructor') {
               <div class="flex flex-col gap-1.5">
@@ -209,6 +227,8 @@ export class DmsUploadDrawerComponent {
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
+  /** Matrícula elegida (o auto-resuelta) para la subida — spec 0007-m, AC3/AC-E2. */
+  readonly selectedEnrollmentId = signal<number | null>(null);
   readonly selectedInstructorId = signal<number | null>(null);
   readonly selectedType = signal<string>('');
   readonly description = signal<string>('');
@@ -218,19 +238,48 @@ export class DmsUploadDrawerComponent {
   readonly isDragOver = signal(false);
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  readonly studentOptions = computed(() => this.facade.studentsWithDocs());
+
+  /** Dropdown de alumnos deduplicado por studentId (studentsWithDocs() ahora es 1 fila por matrícula, AC-E2). */
+  readonly studentOptions = computed(() => {
+    const seen = new Set<number>();
+    const unique: { studentId: number; name: string }[] = [];
+    for (const row of this.facade.studentsWithDocs()) {
+      if (seen.has(row.studentId)) continue;
+      seen.add(row.studentId);
+      unique.push({ studentId: row.studentId, name: row.name });
+    }
+    return unique;
+  });
+
   readonly instructorOptions = computed(() => this.facade.instructorsWithDocs());
 
+  /** Todas las matrículas del alumno elegido (AC-E2) — poblado por loadStudentEnrollmentOptions(). */
+  readonly enrollmentOptions = computed(() => this.facade.studentEnrollmentOptions());
+
+  /** Segundo selector visible solo cuando hace falta desambiguar (sin preselección, 2+ matrículas). */
+  readonly showEnrollmentSelector = computed(
+    () => !this.facade.preselectedEnrollmentId() && this.enrollmentOptions().length > 1,
+  );
+
   /**
-   * Tipos ya subidos para el alumno/instructor seleccionado. Se apoya en
+   * Tipos ya subidos para la matrícula/instructor seleccionado. Se apoya en
    * `facade.studentDetail()`/`studentDocs()` — si el seleccionado no coincide con la entidad ya
    * cargada ahí (caso del selector genérico, sin entrar desde el drawer de lista de esa
    * entidad), el effect del constructor dispara `loadStudentDocuments()`/`loadInstructorDocuments()`
    * para esa entidad, y este computed se re-evalúa cuando la carga resuelve.
    */
   private readonly usedStudentTypes = computed(() => {
-    const id = this.selectedStudentId();
-    if (!id || id !== this.facade.studentDetail()?.studentId) return new Set<string>();
+    const studentId = this.selectedStudentId();
+    const enrollmentId = this.selectedEnrollmentId();
+    const detail = this.facade.studentDetail();
+    if (
+      !studentId ||
+      !enrollmentId ||
+      detail?.studentId !== studentId ||
+      detail?.enrollmentId !== enrollmentId
+    ) {
+      return new Set<string>();
+    }
     // 'contract' es el type que fija v_dms_student_documents para las filas que vienen de
     // digital_contracts (contrato firmado online/presencial) — no de student_documents. Es el
     // mismo concepto de negocio que la opción "Contrato" del selector (value: 'contrato'), así
@@ -262,7 +311,9 @@ export class DmsUploadDrawerComponent {
   readonly canSubmit = computed(() => {
     if (!this.selectedFile() || !this.selectedType()) return false;
     const mode = this.facade.currentUploadMode();
-    if (mode === 'student' && !this.selectedStudentId()) return false;
+    if (mode === 'student' && (!this.selectedStudentId() || !this.selectedEnrollmentId())) {
+      return false;
+    }
     if (mode === 'instructor' && !this.selectedInstructorId()) return false;
     return true;
   });
@@ -295,10 +346,15 @@ export class DmsUploadDrawerComponent {
   constructor() {
     this.resetForm();
 
-    // Pre-seleccionar alumno si se recibe desde el facade
+    // Pre-seleccionar alumno + matrícula si se reciben desde el facade (AC3 — abierto desde el
+    // detalle de una matrícula específica; ambos selectores quedan resueltos sin mostrarse).
     effect(() => {
       const id = this.facade.preselectedStudentId();
       if (id) this.selectedStudentId.set(id);
+    });
+    effect(() => {
+      const id = this.facade.preselectedEnrollmentId();
+      if (id) this.selectedEnrollmentId.set(id);
     });
 
     // Pre-seleccionar instructor si se recibe desde el facade
@@ -307,14 +363,34 @@ export class DmsUploadDrawerComponent {
       if (id) this.selectedInstructorId.set(id);
     });
 
-    // Cargar los documentos del alumno elegido si no coinciden con los ya cargados en el
-    // facade — cubre el selector genérico (sin preselectedId), donde studentDetail()/studentDocs()
-    // todavía no tienen la entidad que el usuario acaba de elegir en el dropdown.
+    // Selector genérico (sin preselección): al elegir alumno, cargar TODAS sus matrículas
+    // (AC-E2) para el segundo selector, y limpiar la matrícula elegida previamente.
     effect(() => {
       const id = this.selectedStudentId();
       if (this.facade.currentUploadMode() !== 'student' || !id) return;
-      if (id === this.facade.studentDetail()?.studentId) return;
-      void this.facade.loadStudentDocuments(id);
+      if (this.facade.preselectedEnrollmentId()) return;
+      this.selectedEnrollmentId.set(null);
+      void this.facade.loadStudentEnrollmentOptions(id);
+    });
+
+    // Alumno con 1 sola matrícula → se auto-selecciona sin mostrar el segundo selector (AC4/AC-E1).
+    effect(() => {
+      const options = this.enrollmentOptions();
+      if (options.length === 1 && !this.selectedEnrollmentId()) {
+        this.selectedEnrollmentId.set(options[0].enrollmentId);
+      }
+    });
+
+    // Cargar los documentos de la matrícula elegida si no coinciden con los ya cargados en el
+    // facade — cubre el selector genérico (sin preselectedId), donde studentDetail()/studentDocs()
+    // todavía no tienen la entidad que el usuario acaba de elegir en el dropdown.
+    effect(() => {
+      const studentId = this.selectedStudentId();
+      const enrollmentId = this.selectedEnrollmentId();
+      if (this.facade.currentUploadMode() !== 'student' || !studentId || !enrollmentId) return;
+      const detail = this.facade.studentDetail();
+      if (detail?.studentId === studentId && detail?.enrollmentId === enrollmentId) return;
+      void this.facade.loadStudentDocuments(studentId, enrollmentId);
     });
 
     // Análogo para instructor.
@@ -371,6 +447,7 @@ export class DmsUploadDrawerComponent {
           file: this.selectedFile()!,
           type: this.selectedType(),
           studentId: this.selectedStudentId()!,
+          enrollmentId: this.selectedEnrollmentId()!,
         });
       } else if (mode === 'instructor') {
         await this.facade.uploadInstructorDocument({
@@ -403,6 +480,7 @@ export class DmsUploadDrawerComponent {
 
   private resetForm(): void {
     this.selectedStudentId.set(null);
+    this.selectedEnrollmentId.set(null);
     this.selectedInstructorId.set(null);
     this.selectedType.set('');
     this.description.set('');

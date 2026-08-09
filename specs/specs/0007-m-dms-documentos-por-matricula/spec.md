@@ -1,6 +1,6 @@
 # Spec 0007-m — DMS: documentos por matrícula (no por alumno) + unificación de carpetas de Storage
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-08-09
 > **Owner:** Matías
 > **Priority:** P2
@@ -67,9 +67,10 @@ convenciones de carpeta paralelas en Storage.
   se corre el script de migración una vez contra Supabase local, Then cada objeto queda movido a
   `students/{enrollmentId}/...` (mismo contenido, resuelto vía `student_documents.enrollment_id`)
   y `student_documents.storage_url` queda actualizado a la nueva ruta.
-- **AC6**: Given que la migración de datos ya corrió, When se aplica la migración SQL de limpieza,
-  Then no quedan filas de `storage.objects` bajo el prefijo `student-docs/%` en el bucket
-  `documents`.
+- **AC6**: Given que la migración de datos ya corrió, When termina el barrido final del mismo
+  script (vía Storage API — Supabase bloquea el `DELETE` directo sobre `storage.objects`,
+  confirmado contra Supabase local), Then no quedan objetos bajo el prefijo `student-docs/` en
+  el bucket `documents`.
 
 ### Edge cases obligatorios
 
@@ -171,3 +172,7 @@ convenciones de carpeta paralelas en Storage.
 
 - 2026-08-09 — draft inicial por Matías (a partir de fix-146-m, convertido a spec por exceder
   alcance de un fix)
+- 2026-08-09 — AC6 corregido durante implementación: Supabase bloquea `DELETE` directo sobre
+  `storage.objects` ("Direct deletion from storage tables is not allowed", confirmado contra
+  Supabase local vía `npx supabase migration up`) — la limpieza pasa a ser un paso final del
+  mismo script `.mjs` (Storage API `.remove()`), no una migración SQL separada.

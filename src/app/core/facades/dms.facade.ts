@@ -8,6 +8,7 @@ import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import type {
   StudentWithDocsRow,
+  StudentEnrollmentOption,
   DmsStudentDocRow,
   InstructorWithDocsRow,
   DmsInstructorDocRow,
@@ -98,8 +99,20 @@ interface RawStudentUser {
 }
 
 interface RawStudentEnrollment {
+  id: number;
   number: string | null;
   created_at: string;
+  /** Sede de ESTA matrícula (spec 0007-m) — puede diferir de users.branch_id en re-matrículas. */
+  branch_id: number | null;
+  branches: RawBranch | RawBranch[] | null;
+}
+
+interface RawEnrollmentOption {
+  id: number;
+  number: string | null;
+  branch_id: number | null;
+  branches: RawBranch | RawBranch[] | null;
+  courses: { name: string } | { name: string }[] | null;
 }
 
 interface RawStudent {
@@ -256,11 +269,17 @@ export class DmsFacade {
   private readonly dmsGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
-  private readonly _studentDetail = signal<{ name: string; rut: string; studentId: number } | null>(
-    null,
-  );
+  private readonly _studentDetail = signal<{
+    name: string;
+    rut: string;
+    studentId: number;
+    /** Matrícula que se está viendo/subiendo (spec 0007-m). `null` = sin matrícula específica. */
+    enrollmentId: number | null;
+  } | null>(null);
   private readonly _studentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _studentDocsLoading = signal(false);
+  /** Opciones del segundo selector de "Subir documento" (AC-E2) — todas las matrículas del alumno elegido. */
+  private readonly _studentEnrollmentOptions = signal<StudentEnrollmentOption[]>([]);
 
   // Sub-ruta: detalle de instructor
   private readonly _instructorsWithDocs = signal<InstructorWithDocsRow[]>([]);
@@ -275,6 +294,8 @@ export class DmsFacade {
   // Estado para el Drawer dinámico
   private readonly _currentUploadMode = signal<'student' | 'school' | 'instructor'>('student');
   private readonly _preselectedStudentId = signal<number | null>(null);
+  /** Matrícula preseleccionada al abrir "Subir documento" desde el detalle de una matrícula específica (AC3). */
+  private readonly _preselectedEnrollmentId = signal<number | null>(null);
   private readonly _preselectedInstructorId = signal<number | null>(null);
   private readonly _uploadSaved = signal<boolean>(false);
 
@@ -297,6 +318,7 @@ export class DmsFacade {
   readonly studentDetail = this._studentDetail.asReadonly();
   readonly studentDocs = this._studentDocs.asReadonly();
   readonly studentDocsLoading = this._studentDocsLoading.asReadonly();
+  readonly studentEnrollmentOptions = this._studentEnrollmentOptions.asReadonly();
 
   readonly instructorsWithDocs = this._instructorsWithDocs.asReadonly();
   readonly instructorDetail = this._instructorDetail.asReadonly();
@@ -305,6 +327,7 @@ export class DmsFacade {
 
   readonly currentUploadMode = this._currentUploadMode.asReadonly();
   readonly preselectedStudentId = this._preselectedStudentId.asReadonly();
+  readonly preselectedEnrollmentId = this._preselectedEnrollmentId.asReadonly();
   readonly preselectedInstructorId = this._preselectedInstructorId.asReadonly();
   readonly uploadSaved = this._uploadSaved.asReadonly();
 
@@ -359,9 +382,14 @@ export class DmsFacade {
   /**
    * Abre el drawer de subida de documentos integrado en el layout.
    */
-  openUpload(mode: 'student' | 'school' | 'instructor', preselectedId: number | null = null): void {
+  openUpload(
+    mode: 'student' | 'school' | 'instructor',
+    preselectedId: number | null = null,
+    preselectedEnrollmentId: number | null = null,
+  ): void {
     this._currentUploadMode.set(mode);
     this._preselectedStudentId.set(mode === 'student' ? preselectedId : null);
+    this._preselectedEnrollmentId.set(mode === 'student' ? preselectedEnrollmentId : null);
     this._preselectedInstructorId.set(mode === 'instructor' ? preselectedId : null);
     this._uploadSaved.set(false);
 
@@ -406,8 +434,8 @@ export class DmsFacade {
    * abierto (ej. Ver/Editar Alumno), se apila encima y el back button del header regresa a
    * él; si no hay nada abierto, push() degrada a open() (entrada directa desde DMS).
    */
-  openStudentDocsDrawer(studentId: number, name: string): void {
-    void this.loadStudentDocuments(studentId);
+  openStudentDocsDrawer(studentId: number, enrollmentId: number, name: string): void {
+    void this.loadStudentDocuments(studentId, enrollmentId);
     import('../../features/admin/documentos/dms-student-docs-drawer/dms-student-docs-drawer.component').then(
       (m) => {
         this.layoutDrawer.push(m.DmsStudentDocsDrawerComponent, name, 'user');
@@ -471,11 +499,12 @@ export class DmsFacade {
    */
   notifyUploadSaved(): void {
     const studentId = this._preselectedStudentId();
+    const enrollmentId = this._preselectedEnrollmentId();
     const instructorId = this._preselectedInstructorId();
     this._uploadSaved.set(true);
     void this.initialize();
     if (studentId) {
-      void this.loadStudentDocuments(studentId);
+      void this.loadStudentDocuments(studentId, enrollmentId ?? undefined);
     }
     if (instructorId) {
       void this.loadInstructorDocuments(instructorId);
@@ -484,14 +513,15 @@ export class DmsFacade {
 
   // ── Tab 1 — Documentos del Alumno ───────────────────────────────────────────
 
-  async loadStudentDocuments(studentId: number): Promise<void> {
+  async loadStudentDocuments(studentId: number, enrollmentId?: number): Promise<void> {
     this._studentDocsLoading.set(true);
     try {
-      const { data, error } = await this.supabase.client
+      let vDocsQuery: any = this.supabase.client
         .from('v_dms_student_documents')
         .select('*')
-        .eq('student_id', studentId)
-        .order('document_at', { ascending: false });
+        .eq('student_id', studentId);
+      if (enrollmentId) vDocsQuery = vDocsQuery.eq('enrollment_id', enrollmentId);
+      const { data, error } = await vDocsQuery.order('document_at', { ascending: false });
 
       if (error) throw error;
 
@@ -519,6 +549,7 @@ export class DmsFacade {
             }),
             rut: user.rut,
             studentId,
+            enrollmentId: enrollmentId ?? null,
           });
         }
         this._studentDocs.set(docs.map((d) => this.mapVDocToStudentDocRow(d, user)));
@@ -544,6 +575,7 @@ export class DmsFacade {
             }),
             rut: user.rut,
             studentId,
+            enrollmentId: enrollmentId ?? null,
           });
         }
         this._studentDocs.set([]);
@@ -559,18 +591,44 @@ export class DmsFacade {
     }
   }
 
+  /**
+   * Carga TODAS las matrículas del alumno (no solo las que ya tienen documentos) para el
+   * segundo selector de "Subir documento" desde el dropdown genérico (AC-E2).
+   */
+  async loadStudentEnrollmentOptions(studentId: number): Promise<void> {
+    try {
+      const { data, error } = await this.supabase.client
+        .from('enrollments')
+        .select('id, number, branch_id, branches(name), courses(name)')
+        .eq('student_id', studentId);
+
+      if (error) throw error;
+
+      const rawEnrollments = (data ?? []) as unknown as RawEnrollmentOption[];
+      const options: StudentEnrollmentOption[] = rawEnrollments.map((e) => {
+        const branch = Array.isArray(e.branches) ? e.branches[0] : e.branches;
+        const course = Array.isArray(e.courses) ? e.courses[0] : e.courses;
+        return {
+          enrollmentId: e.id,
+          label: `${course?.name ?? 'Curso'} · #${e.number ?? '—'}`,
+          branchName: branch?.name ?? null,
+        };
+      });
+      this._studentEnrollmentOptions.set(options);
+    } catch (err) {
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar las matrículas del alumno',
+      );
+    }
+  }
+
   async uploadStudentDocument(payload: UploadStudentDocPayload): Promise<void> {
-    const ext = payload.file.name.split('.').pop() ?? 'pdf';
-    const path = `student-docs/${payload.studentId}/${Date.now()}_${payload.type}.${ext}`;
-
-    const { error: uploadError } = await this.supabase.client.storage
-      .from('documents')
-      .upload(path, payload.file, { upsert: true });
-    if (uploadError) throw uploadError;
-
     let enrollmentId = payload.enrollmentId;
 
-    // Si no viene enrollmentId (o es dummy 0), buscamos el último del alumno
+    // Si no viene enrollmentId (o es dummy 0), buscamos el último del alumno (AC4 — fallback
+    // legacy, cubre callers que aún no pasan la matrícula específica).
     if (!enrollmentId || enrollmentId <= 0) {
       const { data: enrollmentData, error: enrollmentError } = await this.supabase.client
         .from('enrollments')
@@ -586,6 +644,15 @@ export class DmsFacade {
       }
       enrollmentId = enrollmentData.id;
     }
+
+    // Unificado con la convención de matrícula (spec 0007-m) — antes `student-docs/{studentId}/...`.
+    const ext = payload.file.name.split('.').pop() ?? 'pdf';
+    const path = `students/${enrollmentId}/${Date.now()}_${payload.type}.${ext}`;
+
+    const { error: uploadError } = await this.supabase.client.storage
+      .from('documents')
+      .upload(path, payload.file, { upsert: true });
+    if (uploadError) throw uploadError;
 
     const { error: insertError } = await this.supabase.client.from('student_documents').insert({
       enrollment_id: enrollmentId,
@@ -829,7 +896,7 @@ export class DmsFacade {
         `
           id,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
-          enrollments(number, created_at)
+          enrollments(id, number, created_at, branch_id, branches(name))
         `,
       );
       if (branchId !== null) studentsQuery = studentsQuery.eq('users.branch_id', branchId);
@@ -875,32 +942,31 @@ export class DmsFacade {
           .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
       ]);
 
-      // Construir mapa studentId → info
-      const studentMap = new Map<
+      // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
+      // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
+      const studentUserMap = new Map<number, { name: string; rut: string }>();
+      const enrollmentInfoMap = new Map<
         number,
-        { name: string; rut: string; matriculaNumber: string; branchName: string | null }
+        { studentId: number; matriculaNumber: string; branchName: string | null }
       >();
       const rawStudents = (studentsRes.data ?? []) as unknown as RawStudent[];
       for (const s of rawStudents) {
         const user = Array.isArray(s.users) ? s.users[0] : s.users;
-        if (user) {
-          const branch = Array.isArray(user.branches) ? user.branches[0] : user.branches;
-          const enrollments = s.enrollments ?? [];
-          const latestEnrollment =
-            enrollments.length > 0
-              ? [...enrollments].sort((a, b) =>
-                  (b.created_at ?? '').localeCompare(a.created_at ?? ''),
-                )[0]
-              : null;
-          studentMap.set(s.id, {
-            name: buildStudentDisplayName({
-              firstNames: user.first_names,
-              paternalLastName: user.paternal_last_name,
-              maternalLastName: user.maternal_last_name,
-            }),
-            rut: user.rut,
-            matriculaNumber: latestEnrollment?.number ? `#${latestEnrollment.number}` : '—',
-            branchName: branch?.name ?? null,
+        if (!user) continue;
+        studentUserMap.set(s.id, {
+          name: buildStudentDisplayName({
+            firstNames: user.first_names,
+            paternalLastName: user.paternal_last_name,
+            maternalLastName: user.maternal_last_name,
+          }),
+          rut: user.rut,
+        });
+        for (const e of s.enrollments ?? []) {
+          const enrollmentBranch = Array.isArray(e.branches) ? e.branches[0] : e.branches;
+          enrollmentInfoMap.set(e.id, {
+            studentId: s.id,
+            matriculaNumber: e.number ? `#${e.number}` : '—',
+            branchName: enrollmentBranch?.name ?? null,
           });
         }
       }
@@ -908,10 +974,12 @@ export class DmsFacade {
       // Procesar docs de alumnos — filtrar por sede si aplica
       const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
       const allVDocs =
-        branchId !== null ? allVDocsRaw.filter((d) => studentMap.has(d.student_id)) : allVDocsRaw;
+        branchId !== null
+          ? allVDocsRaw.filter((d) => studentUserMap.has(d.student_id))
+          : allVDocsRaw;
 
       const recentDocs = allVDocs.slice(0, 5).map((d) => {
-        const student = studentMap.get(d.student_id);
+        const student = studentUserMap.get(d.student_id);
         return this.mapVDocToStudentDocRow(
           d,
           student
@@ -926,21 +994,24 @@ export class DmsFacade {
         );
       });
 
-      // Agrupar por alumno para studentsWithDocs
-      const studentDocCount = new Map<number, number>();
+      // Agrupar por matrícula (spec 0007-m: 1 fila por enrollment, no por alumno) para
+      // studentsWithDocs — un alumno con 2+ matrículas produce 2+ filas.
+      const enrollmentDocCount = new Map<number, number>();
       for (const d of allVDocs) {
-        studentDocCount.set(d.student_id, (studentDocCount.get(d.student_id) ?? 0) + 1);
+        enrollmentDocCount.set(d.enrollment_id, (enrollmentDocCount.get(d.enrollment_id) ?? 0) + 1);
       }
       const studentsWithDocsUnsorted: StudentWithDocsRow[] = [];
-      for (const [studentId, docCount] of studentDocCount) {
-        const student = studentMap.get(studentId);
-        if (student) {
+      for (const [enrollmentId, docCount] of enrollmentDocCount) {
+        const info = enrollmentInfoMap.get(enrollmentId);
+        const user = info ? studentUserMap.get(info.studentId) : undefined;
+        if (info && user) {
           studentsWithDocsUnsorted.push({
-            studentId,
-            name: student.name,
-            rut: student.rut,
-            matriculaNumber: student.matriculaNumber,
-            branchName: student.branchName,
+            studentId: info.studentId,
+            enrollmentId,
+            name: user.name,
+            rut: user.rut,
+            matriculaNumber: info.matriculaNumber,
+            branchName: info.branchName,
             docCount,
           });
         }
