@@ -24,6 +24,10 @@ export interface EnrollmentSummary {
   saldoPendiente: number;
   /** true si `certificate_issuance_log` registra un evento `action='email_sent'` para este enrollment (fix-012-i). */
   certificateEmailSent: boolean;
+  /** `courses.practical_hours` de este enrollment — deriva la cantidad de clases requeridas (spec 0006-m). */
+  practicalHours: number | null;
+  /** true = curso "Refuerzo Clase B" (6 clases, sin certificado ni carnet "full"). Spec 0006-m. */
+  isReinforcement: boolean;
 }
 
 export interface AlumnoDetalleUI {
@@ -57,6 +61,8 @@ export interface AlumnoDetalleUI {
   saldoPendiente: number;
   /** true si el certificado de Clase B del enrollment activo ya fue enviado por email (fix-012-i). */
   certificateEmailSent: boolean;
+  /** true = curso "Refuerzo Clase B" (6 clases, sin certificado ni carnet "full"). Spec 0006-m. */
+  isReinforcement: boolean;
 }
 
 /** Progreso de asistencia para alumnos profesionales (teoría o práctica). */

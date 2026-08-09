@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 1. Enrollment + student + user
+    // 1. Enrollment + student + user + curso (para el gate dinámico de clases requeridas)
     const { data: enrollment, error: enrollmentErr } = await supabase
       .from('enrollments')
       .select(
@@ -95,7 +95,8 @@ Deno.serve(async (req: Request) => {
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
-        )
+        ),
+        courses!inner(practical_hours)
       `,
       )
       .eq('id', enrollment_id)
@@ -105,7 +106,7 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: `Enrollment ${enrollment_id} no encontrado` }, 404);
     }
 
-    // 1.5 Gate H-025: exigir 12 prácticas completadas antes de emitir el certificado.
+    // 1.5 Gate H-025: exigir las prácticas completas del curso antes de emitir el certificado.
     //     Mismo criterio que certificacion-clase-b.facade.ts (evaluation_grade IS NOT NULL) —
     //     NO usar status='completed' (eso es solo para las fechas del texto del certificado).
     //     Un admin puede saltarse el gate explícitamente con `force: true` (mismo bypass que
@@ -120,7 +121,12 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: `Error al validar prácticas: ${countErr.message}` }, 500);
     }
 
-    const REQUIRED_PRACTICAS = 12;
+    // Cantidad de clases requeridas se deriva de courses.practical_hours (45 min/sesión),
+    // misma fórmula que classCountFromPracticalHours() en Angular (core/utils/class-count.utils.ts)
+    // — reimplementada acá porque el runtime Deno no puede importar código de la app. Fallback a
+    // 12 si el join no trae practical_hours (dato faltante), mismo default que existía antes.
+    const practicalHours = enrollment.courses?.practical_hours ?? null;
+    const REQUIRED_PRACTICAS = practicalHours ? Math.round((practicalHours * 60) / 45) : 12;
     const isEligible = (clasesCompletadas ?? 0) >= REQUIRED_PRACTICAS;
     const isAdminBypass = force === true && callerRole === 'admin';
 

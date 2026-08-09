@@ -702,6 +702,15 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
   ]'::JSONB` | — |
 | `is_convalidation` | BOOLEAN | NO | `false` | — |
 | `max_classes_per_day` | INTEGER | NO | `1` | — |
+| `is_reinforcement` | BOOLEAN | NO | `false` | — |
+
+> **`is_reinforcement`** (spec 0006-m, `20260808120000`): true = curso "Refuerzo Clase B" (6
+> clases prácticas, `practical_hours=4.5`, `license_class='B'` compartido con Clase B estándar
+> para heredar numeración de matrícula y `license_group='class_b'` sin tocar triggers/RLS —
+> se distingue solo por esta columna, mismo patrón que SENCE vía `code`). Nunca candidato a
+> certificado Clase B (excluido explícitamente en `certificacion-clase-b.facade.ts`). Precio =
+> mitad del `base_price` del Clase B estándar de la misma sede al momento de crear el curso
+> (`20260808120000`), no recalculado dinámicamente.
 
 **Policies:**
 
@@ -711,7 +720,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_courses | INSERT | — | `auth_user_role() = 'admin'` |
 | update_courses | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_courses | DELETE | `auth_user_role() = 'admin'` | — |
-| select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE)` | — |
+| select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE) AND (is_reinforcement IS NOT TRUE)` | — |
+
+> `select_courses_anon` actualizada en `20260808130000` (spec 0006-m): "Refuerzo Clase B" nunca
+> se ofrece por el flujo público de auto-inscripción (dirigido a alumnos ya conocidos por la
+> autoescuela, no a leads externos).
 
 ### `cuadratura_adjustments` — 🔒 RLS
 

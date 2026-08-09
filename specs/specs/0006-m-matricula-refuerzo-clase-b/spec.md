@@ -1,7 +1,8 @@
 # Spec 0006 — Matrícula de refuerzo Clase B (6 clases) sin romper el modelo de 12 prácticas
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-08-08
+> **Closed:** 2026-08-09
 > **Owner:** m
 > **Priority:** P2
 
@@ -38,11 +39,25 @@ gate y los KPIs deben generalizarse a leer la cantidad de clases desde el curso 
 12 — no alcanza con "no tocar" ese código, porque un alumno de refuerzo no debe poder disparar
 el flujo de certificación pensado para 12/12.
 
-**Preguntas abiertas sin bloquear el diseño (confirmar con el cliente antes de cerrar el
-detalle del curso):**
-1. ¿El curso de refuerzo emite certificado o constancia propia, o ninguna?
-2. ¿Elegibilidad de alumnos externos (que no se matricularon antes en la autoescuela)?
-3. ¿Precio por clase suelta o paquete cerrado de 6?
+**Preguntas abiertas — resueltas (2026-08-08):**
+1. ¿Emite certificado/constancia? → **Ninguno.** El curso de refuerzo no emite ningún
+   documento al completarse — sin gate ni PDF nuevo que construir.
+2. ¿Elegibilidad de alumnos externos? → **Cualquiera.** Cualquier alumno, nuevo o externo,
+   puede matricularse directo en "Refuerzo Clase B" sin haber pasado antes por la autoescuela
+   — el wizard no necesita ningún chequeo de elegibilidad nuevo.
+3. ¿Precio? → **Paquete cerrado de 6 clases**, mismo modelo de precio fijo que el resto del
+   catálogo de `courses`.
+
+**Flujo de agenda y pago (2026-08-08, aclarado por el usuario):** el flujo de matrícula de
+Refuerzo es el mismo wizard de Clase B estándar, con dos diferencias puntuales: (a) se agendan 6
+clases en vez de 12 (ya resuelto por diseño — el wizard deriva la cantidad de sesiones desde
+`practical_hours` del curso, sin lógica nueva); (b) **no se ofrece pago parcial** — siempre se
+agendan y pagan las 6 clases completas, nunca la mitad. El precio inicial es **la mitad del
+precio vigente de Clase B estándar** de la misma sede (ej. si Clase B cuesta $180.000, Refuerzo
+cuesta $90.000) — valor fijado al crear el curso, no recalculado dinámicamente si el precio de
+Clase B cambia después. **Eventualmente** (fuera de esta spec) se agregará una pestaña en
+Configuración (admin) para ajustar precios de todos los cursos de todas las sedes — ver §4 Out
+of scope.
 
 **Hipótesis de valor:**
 Ofrecer un curso de refuerzo de 6 clases sin comprometer la integridad del gate de
@@ -52,9 +67,20 @@ certificación Clase B ni descuadrar los KPIs de avance de las matrículas de 12
 
 ## 2. User Stories
 
-- **US1**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US2**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US3**: …
+- **US1**: Como Secretaria, quiero poder ofrecer el curso "Refuerzo Clase B" en el paso 1 del
+  wizard de nueva matrícula, para matricular alumnos que solo necesitan reforzar ciertas
+  materias sin forzarlos al producto de 12 prácticas.
+- **US2**: Como Admin/dueño, quiero que un alumno de "Refuerzo Clase B" nunca aparezca como
+  candidato al certificado Clase B ni descuadre los KPIs de avance "N/12", para no comprometer
+  la integridad del gate de certificación ni los indicadores de progreso de las matrículas
+  estándar.
+- **US3**: Como desarrollador que mantiene el gate del certificado (Edge Function
+  `generate-certificate-b-pdf`) y `certificacion-clase-b.facade.ts`, quiero que la cantidad de
+  clases requerida se lea desde el curso de la matrícula en vez de estar hardcodeada en 12,
+  para que un tercer tipo de curso futuro no repita el mismo problema.
+- **US4**: Como Secretaria matriculando a un alumno en "Refuerzo Clase B", quiero que el wizard
+  no me ofrezca la opción de pago parcial, para que el alumno siempre agende y pague las 6
+  clases completas (a diferencia de Clase B estándar, que sí permite pago parcial).
 
 ---
 
@@ -63,14 +89,41 @@ certificación Clase B ni descuadrar los KPIs de avance de las matrículas de 12
 > Cada AC debe ser verificable empíricamente. Si no puedes escribir un test o un check
 > manual reproducible, el AC está mal formulado.
 
-- **AC1**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC2**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC3**: …
+- **AC1**: Given el paso 1 (selección de curso) del wizard de nueva matrícula, When la
+  secretaria/admin lo abre, Then el curso **"Refuerzo Clase B"** aparece en la lista, con su
+  propio precio, junto a los demás cursos.
+- **AC2**: Given un alumno matriculado en "Refuerzo Clase B", When se consulta su avance
+  (dashboard/portal alumno), Then el KPI de progreso muestra el total real del curso (ej. "N/6"),
+  nunca "N/12".
+- **AC3**: Given un alumno matriculado en "Refuerzo Clase B" con sus 6 clases completadas, When
+  se evalúa su elegibilidad en `certificacion-clase-b.facade.ts` y en el gate server-side de
+  `generate-certificate-b-pdf`, Then el criterio de elegibilidad usa la cantidad de clases del
+  curso de la matrícula (leída desde `courses`), no el literal `12`.
+- **AC4**: Given el listado/certificación Clase B (admin y secretaría), When se lista a un
+  alumno de "Refuerzo Clase B", Then **no aparece en el listado de certificación** (no es
+  candidato al certificado ni a ninguna constancia — el curso no emite documento alguno) y no
+  puede disparar el flujo de generación del certificado Clase B pensado para 12/12.
+- **AC5**: Given el wizard de nueva matrícula con "Refuerzo Clase B" seleccionado, When la
+  secretaria llega al paso de asignación/pago, Then **no se muestra el selector de modalidad de
+  pago** (Total Adelantado / Pago Parcial) — el flujo fuerza pago total de las 6 clases, sin
+  opción de pago parcial.
+- **AC6**: Given el curso "Refuerzo Clase B" recién creado, When se consulta su precio, Then es
+  exactamente **la mitad del `base_price` vigente de Clase B estándar** de la misma sede al
+  momento de crear el curso (valor fijo, no recalculado si el precio de Clase B cambia después).
 
 ### Edge cases obligatorios
 
-- **AC-E1**: Given {{caso límite}}, When …, Then …
-- **AC-E2**: …
+- **AC-E1**: Given un alumno matriculado en un curso Clase B estándar (12 prácticas), When se
+  aplica la generalización del gate/KPIs (AC2, AC3), Then el comportamiento es **idéntico al
+  actual** — cero regresión funcional ni visual para las matrículas de 12 prácticas.
+- **AC-E2**: Given el constraint SQL `chk_class_b_sessions_class_number_range` (`CHECK
+  class_number BETWEEN 1 AND 12`) y `UNIQUE (enrollment_id, class_number)` en
+  `class_b_sessions`, When se registra una sesión de un alumno de "Refuerzo Clase B" (6
+  clases), Then el registro no viola el constraint existente — el mecanismo exacto (numeración
+  1-6 dentro del mismo rango, o tabla/criterio separado) se define en `plan.md`.
+- **AC-E3**: Given un alumno de "Refuerzo Clase B", When se cuentan sus sesiones para cualquier
+  reporte/KPI que hoy asuma "de 12", Then el reporte no lo cuenta como matrícula Clase B
+  incompleta (evita descuadre en indicadores agregados de avance Clase B).
 
 ---
 
@@ -79,8 +132,21 @@ certificación Clase B ni descuadrar los KPIs de avance de las matrículas de 12
 > Explícito. Lo que NO entra en esta spec, aunque podría parecer relacionado.
 > Si surge durante la implementación, crear spec nueva — NO extender ésta.
 
-- ❌ {{cosa que NO va}}
-- ❌ {{otra cosa que NO va}}
+- ❌ Emitir cualquier certificado o constancia para "Refuerzo Clase B" — confirmado que no
+  emite ninguno.
+- ❌ Cualquier chequeo de elegibilidad/historial previo en el wizard para matricular en
+  "Refuerzo Clase B" — confirmado que cualquier alumno puede matricularse directo.
+- ❌ Precio por clase suelta — confirmado paquete cerrado de 6, mismo modelo que el resto del
+  catálogo.
+- ❌ Pestaña de Configuración (admin) para ajustar precios de todos los cursos de todas las
+  sedes — el usuario confirmó que es un requerimiento futuro real, pero **no entra en esta
+  spec**. El precio de Refuerzo se fija una sola vez al crear el curso (mitad del precio vigente
+  de Clase B); ajustarlo después requiere edición manual de BD hasta que exista esa pestaña.
+- ❌ Generalizar el gate/KPIs para **todos** los cursos del catálogo — el alcance se acota a que
+  Clase B estándar (12) y "Refuerzo Clase B" (6) convivan sin romperse; extender a Profesional u
+  otros dominios queda para spec aparte si aplica.
+- ❌ Migración retroactiva de matrículas ya existentes, o cambios al wizard más allá de listar
+  el curso nuevo en el paso 1.
 
 ---
 
@@ -136,8 +202,8 @@ certificación Clase B ni descuadrar los KPIs de avance de las matrículas de 12
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] Confirmar con el cliente las preguntas 1-3 (certificado/constancia, elegibilidad de
-  externos, precio por clase suelta vs. paquete cerrado) antes de cerrar el detalle del curso.
+- [x] Preguntas 1-3 resueltas (2026-08-08): sin certificado/constancia, elegibilidad abierta a
+  cualquier alumno, precio de paquete cerrado. Ver §1.
 - [ ] El nombre del curso es **"Refuerzo Clase B"** — debe aparecer así, tal cual, en el paso 1
   del wizard de nueva matrícula.
 - [ ] Definir si el rango de `class_number` de `class_b_sessions` necesita variar por curso o si
@@ -152,3 +218,24 @@ certificación Clase B ni descuadrar los KPIs de avance de las matrículas de 12
   confirmado por el usuario: incluye generalizar el gate del certificado y los KPIs (hereda el
   hardcodeo de 12 dejado por fix-011-i / ASG-b-014, cerrado antes de esta spec). Nombre del
   curso fijado como "Refuerzo Clase B".
+- 2026-08-08 — User Stories (3), AC (4) y edge cases (3) redactados por Claude a partir del
+  contexto ya confirmado; Out of scope acota explícitamente lo que depende de las preguntas
+  abiertas 1-3 (certificado/constancia, externos, precio). Pendiente de revisión y approval del
+  usuario.
+- 2026-08-08 — Preguntas abiertas 1-3 resueltas por el usuario: sin certificado/constancia
+  (ninguno), elegibilidad abierta a cualquier alumno, precio de paquete cerrado. AC4 y Out of
+  scope actualizados en consecuencia (ya no dependen de decisiones pendientes).
+- 2026-08-08 — approved por m.
+- 2026-08-08 — Aclaraciones del usuario tras `/spec-plan`: (a) el flujo de Refuerzo es el mismo
+  wizard de Clase B, sin pago parcial (siempre 6 clases completas) → US4 + AC5 nuevos; (b)
+  precio inicial = mitad del `base_price` vigente de Clase B por sede ($90.000 si Clase B es
+  $180.000) → AC6 nuevo, ya no queda pendiente; (c) tab de admin para editar precios de todos
+  los cursos es un requerimiento futuro confirmado pero explícitamente fuera de esta spec (Out
+  of scope). `plan.md` actualizado en consecuencia.
+- 2026-08-09 — done: 9/9 AC ✅ PASA, verificado por el owner en producción (wizard, ficha de
+  alumno, portal alumno, certificación, RLS pública, numeración de matrícula compartida). Bug
+  real encontrado y corregido durante el QA: `saveAssignment()` tenía una whitelist de
+  `courseType` que no incluía `'class_b_reinforcement'`, saltando en silencio el guardado de
+  `class_b_sessions` — corregido con test de regresión, re-verificado en vivo. ASG-m-001 creada
+  para 3 bugs de `audit_log` detectados en el camino, fuera de alcance de esta spec. 1896/1896
+  test:ci, `lint:arch` limpio. Ver acceptance.md.

@@ -128,7 +128,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `m` | [0006-m-matricula-refuerzo-clase-b](specs/0006-m-matricula-refuerzo-clase-b/spec.md) | 2026-08-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -208,6 +207,7 @@
 | ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | [fix-019-i-app-like-liquidaciones](fixes/fix-019-i-app-like-liquidaciones/fix.md) | 2026-08-08 |
 | ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | [fix-020-i-app-like-historial-cuadraturas](fixes/fix-020-i-app-like-historial-cuadraturas/fix.md) | 2026-08-08 |
 | ASG-b-083 | App-like: `/alumno/dashboard` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-08 |
+| ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | [0006-m-matricula-refuerzo-clase-b](specs/0006-m-matricula-refuerzo-clase-b/spec.md) | 2026-08-09 |
 <!-- AUTO-GENERATED:END -->
 
 ---

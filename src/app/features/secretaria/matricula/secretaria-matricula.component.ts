@@ -165,6 +165,14 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         }
       }
 
+      // Refuerzo Clase B (6 clases) nunca ofrece pago parcial — siempre las 6 completas
+      // (spec 0006-m, AC5). Fuerza el signal del facade, no solo oculta el selector: si
+      // quedó 'partial' de un curso previo seleccionado antes de cambiar a Refuerzo, se
+      // corrige apenas se detecta el curso reforzado.
+      if (pd?.courseType === 'class_b_reinforcement' && this.enrollment.paymentMode() !== 'total') {
+        this.enrollment.setPaymentMode('total');
+      }
+
       // Paso 5: recalcula pricing (reactivo a cambio de paymentMode)
       if (step === 5 && pd) {
         const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
@@ -222,6 +230,11 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     ...this._step1Form(),
     courses: this.enrollment.courseOptions(),
   }));
+
+  // Refuerzo Clase B (6 clases) nunca ofrece pago parcial — spec 0006-m, AC5.
+  readonly isReinforcementCourse = computed<boolean>(
+    () => this.enrollment.personalData()?.courseType === 'class_b_reinforcement',
+  );
 
   readonly step2Data = computed<EnrollmentAssignmentData>(() => {
     const pd = this.enrollment.personalData();

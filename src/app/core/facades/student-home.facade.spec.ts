@@ -180,6 +180,41 @@ describe('StudentHomeFacade', () => {
   });
 });
 
+describe('StudentHomeFacade — Refuerzo Clase B (spec 0006-m, AC2)', () => {
+  function setupWith(enrollmentRow: unknown) {
+    const supabaseMock = buildSupabaseMock(enrollmentRow);
+    TestBed.configureTestingModule({
+      providers: [
+        StudentHomeFacade,
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ dbId: 1, name: 'Benjamín', role: 'alumno' }),
+          },
+        },
+        { provide: SupabaseService, useValue: supabaseMock },
+        { provide: ToastService, useValue: toastMock },
+        { provide: StudentEnrollmentContextFacade, useValue: contextMock },
+      ],
+    });
+    return TestBed.inject(StudentHomeFacade);
+  }
+
+  it('practicesTotal deriva de courses.practical_hours (4.5h → 6), no queda hardcodeado en 12', async () => {
+    const facade = setupWith(
+      mockEnrollmentRow({ courses: { code: 'refuerzo_b_1', practical_hours: 4.5 } }),
+    );
+    await facade.initialize();
+    expect(facade.progress()?.practicesTotal).toBe(6);
+  });
+
+  it('regresión AC-E1: sin practical_hours en el fixture, sigue usando 12', async () => {
+    const facade = setupWith(mockEnrollmentRow({ courses: { code: 'class_b' } }));
+    await facade.initialize();
+    expect(facade.progress()?.practicesTotal).toBe(12);
+  });
+});
+
 describe('StudentHomeFacade — sin enrollment activo', () => {
   it('setea snapshot=null y error=null cuando no hay enrollment', async () => {
     const supabaseMock = buildSupabaseMock(null);

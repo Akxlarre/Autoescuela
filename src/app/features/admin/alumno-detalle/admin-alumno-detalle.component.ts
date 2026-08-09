@@ -1213,6 +1213,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           initialPath: this.facade.licenseInitialPath(),
           fullPath: this.facade.licenseFullPath(),
           primeras6Completadas: this.primeras6Completadas(),
+          isReinforcement: alumno.isReinforcement,
         }),
       });
     } else {

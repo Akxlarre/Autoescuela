@@ -7,6 +7,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -415,7 +416,7 @@ export class CertificacionClaseBFacade {
         id,
         branch_id,
         certificate_b_pdf_url,
-        courses!inner(name, type),
+        courses!inner(name, type, practical_hours, is_reinforcement),
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut, email)
@@ -424,7 +425,9 @@ export class CertificacionClaseBFacade {
       `,
       )
       .eq('license_group', 'class_b')
-      .in('status', ['active', 'completed']);
+      .in('status', ['active', 'completed'])
+      // Refuerzo Clase B (6 clases) nunca es candidato a certificado — spec 0006-m.
+      .eq('courses.is_reinforcement', false);
 
     if (!isAdmin) {
       enrollmentQuery = enrollmentQuery.eq('certificate_enabled', true);
@@ -499,14 +502,20 @@ export class CertificacionClaseBFacade {
       const hasPdf = !!e.certificate_b_pdf_url;
       const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
 
+      // Cantidad de clases requeridas se deriva del curso de la matrícula (spec 0006-m) —
+      // ya no asume 12 fijo. `is_reinforcement=false` fue filtrado en la query, así que este
+      // total siempre corresponde a un curso Clase B estándar (12 hoy, o el que corresponda
+      // a futuro si aparece otra variante no-reforzada).
+      const clasesTotales = classCountFromPracticalHours(e.courses?.practical_hours ?? null) || 12;
+
       return {
         enrollmentId: e.id,
         studentId: student.id,
         nombre,
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name || 'Clase B',
-        clasesCompletadas: Math.min(practiceCountMap.get(e.id) ?? 0, 12),
-        clasesTotales: 12,
+        clasesCompletadas: Math.min(practiceCountMap.get(e.id) ?? 0, clasesTotales),
+        clasesTotales,
         fechaTermino: progress?.last_practice_session
           ? new Date(progress.last_practice_session).toISOString().split('T')[0]
           : null,

@@ -212,6 +212,33 @@ describe('StudentClasesFacade', () => {
       expect(facade.practiceSessions()[0].classNumber).toBe(1);
       expect(facade.practiceSessions()[0].durationMin).toBe(45);
     });
+
+    it('Refuerzo Clase B (spec 0006-m, AC2): totalPractices deriva de courses.practical_hours (4.5h → 6)', async () => {
+      const { facade } = setup({
+        tables: {
+          enrollments: {
+            data: {
+              id: 100,
+              license_group: 'class_b',
+              student_id: 5,
+              promotion_course_id: null,
+              courses: { practical_hours: 4.5 },
+            },
+            error: null,
+          },
+          class_b_sessions: { data: [], error: null },
+          v_student_progress_b: { data: { completed_practices: 3 }, error: null },
+        },
+      });
+      await facade.initialize();
+      expect(facade.kpis()?.totalPractices).toBe(6);
+    });
+
+    it('regresión AC-E1: sin practical_hours en el fixture, sigue usando 12', async () => {
+      const { facade } = setup({ tables: classBTables([]) });
+      await facade.initialize();
+      expect(facade.kpis()?.totalPractices).toBe(12);
+    });
   });
 
   describe('Profesional', () => {

@@ -56,6 +56,20 @@ describe('CertificacionClaseBFacade', () => {
     });
   }
 
+  /** Builder awaitable (chain termina con `await query`, sin `.limit()` explícito) — usado
+   * por `fetchAlumnos()` para el query de `enrollments` y sus joins auxiliares. */
+  function makeAwaitableQuery(resolvedValue: any) {
+    const builder: any = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      then: (resolve: any, reject: any) => Promise.resolve(resolvedValue).then(resolve, reject),
+    };
+    return builder;
+  }
+
   beforeEach(() => {
     supabaseSpy = {
       client: {
@@ -142,6 +156,85 @@ describe('CertificacionClaseBFacade', () => {
       await facade.initialize();
       await facade.initialize();
       expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  describe('fetchAlumnos — Refuerzo Clase B (spec 0006-m)', () => {
+    function mockEnrollments(enrollments: any[]) {
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: makeAwaitableQuery({ data: enrollments, error: null }),
+        v_student_progress_b: makeAwaitableQuery({ data: [], error: null }),
+        class_b_sessions: makeAwaitableQuery({ data: [], error: null }),
+        certificate_issuance_log: makeAwaitableQuery({ data: [], error: null }),
+      });
+    }
+
+    it('filtra courses.is_reinforcement=false en la query de enrollments', async () => {
+      const enrollmentsQuery = makeAwaitableQuery({ data: [], error: null });
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: enrollmentsQuery,
+        v_student_progress_b: makeAwaitableQuery({ data: [], error: null }),
+        class_b_sessions: makeAwaitableQuery({ data: [], error: null }),
+        certificate_issuance_log: makeAwaitableQuery({ data: [], error: null }),
+      });
+
+      await facade.initialize();
+
+      expect(enrollmentsQuery.eq).toHaveBeenCalledWith('courses.is_reinforcement', false);
+    });
+
+    it('clasesTotales deriva de practical_hours del curso, no queda hardcodeado en 12 (AC3)', async () => {
+      mockEnrollments([
+        {
+          id: 1,
+          branch_id: 1,
+          certificate_b_pdf_url: null,
+          courses: { name: 'Clase B', type: 'class_b', practical_hours: 9.0 },
+          students: {
+            id: 5,
+            users: {
+              first_names: 'Juan',
+              paternal_last_name: 'López',
+              maternal_last_name: '',
+              rut: '11111111-1',
+              email: 'juan@test.com',
+            },
+          },
+          certificates: [],
+        },
+      ]);
+
+      await facade.initialize();
+
+      expect(facade.alumnos()).toHaveLength(1);
+      expect(facade.alumnos()[0].clasesTotales).toBe(12);
+    });
+
+    it('regresión AC-E1: un curso Clase B estándar de 9.0h sigue dando clasesTotales=12', async () => {
+      mockEnrollments([
+        {
+          id: 2,
+          branch_id: 1,
+          certificate_b_pdf_url: null,
+          courses: { name: 'Clase B', type: 'class_b', practical_hours: 9.0 },
+          students: {
+            id: 6,
+            users: {
+              first_names: 'Ana',
+              paternal_last_name: 'Soto',
+              maternal_last_name: '',
+              rut: '22222222-2',
+              email: 'ana@test.com',
+            },
+          },
+          certificates: [],
+        },
+      ]);
+
+      await facade.initialize();
+
+      expect(facade.alumnos()[0].clasesTotales).toBe(12);
+      expect(facade.alumnos()[0].clasesCompletadas).toBeLessThanOrEqual(12);
     });
   });
 
