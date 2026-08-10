@@ -1,14 +1,14 @@
 # Asignación ASG-b-073 — App-like: familia "servicios especiales" (`admin` + `secretaria`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-08
+> **resulting_track:** fix-021-i-app-like-servicios-especiales
 
 ---
 
