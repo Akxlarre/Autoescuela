@@ -80,7 +80,6 @@
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
 | ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
-| ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | `m` | spec | Alta | b | Modo dual landing/grilla no mapeado en detalle. Necesita diseño previo, no es mecánica. Ver `specs/assignments/ASG-b-080-*.md` |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | `m` | fix | Media | b | Más simple que la matriz de notas — sin modo dual. `sticky-col` ya existe, no romperlo. Ver `specs/assignments/ASG-b-081-*.md` |
 | ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | `i` | spec | Alta | b | 7 secciones (reportes) + CSS custom con contador táctil (cuadratura). Necesita diseño previo. Ver `specs/assignments/ASG-b-082-*.md` |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | `i` | fix | Media | b | Va ANTES de ASG-b-085 a propósito — piloto de bajo riesgo para validar el patrón de tabs. Ver `specs/assignments/ASG-b-084-*.md` |
@@ -127,6 +126,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | `m` | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---

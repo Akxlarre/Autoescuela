@@ -19,6 +19,7 @@
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
+| [0008-m](./specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | App-like: matriz de notas (Evaluaciones profesional) — convergencia total admin/secretaria + unificación de nombre y rutas | P2 | m | Draft. Originada de ASG-b-080. Owner confirmó: componentes deben quedar idénticos (no solo paridad app-like), nombre canónico "Evaluaciones" (libro de clases oficial), y se unifican también rutas/URLs, no solo labels. |
 
 ---
 
