@@ -455,8 +455,7 @@ import type {
                     <li class="flex items-center justify-between px-5 py-4 gap-3">
                       <div class="flex items-center gap-3 min-w-0">
                         <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                          class="bg-error-subtle text-error"
+                          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-error-subtle text-error"
                         >
                           <app-icon name="file-text" [size]="18" />
                         </div>
