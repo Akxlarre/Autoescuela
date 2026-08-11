@@ -467,8 +467,12 @@ import type {
               </div>
             </div>
 
-            <!-- RIGHT: ng-content | chips | acciones (siempre visibles, flex-wrap en overflow) -->
-            <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- RIGHT: ng-content | chips | acciones (siempre visibles, flex-wrap en overflow).
+                 shrink + min-w-0 (no shrink-0): cuando el título empuja este bloque a su propia
+                 línea, debe encogerse al ancho disponible de la fila para que SU propio
+                 flex-wrap interno (chips/acciones) se active — si no, toma su ancho natural
+                 completo y el overflow-hidden del wrapper ancestro lo recorta (hotfix-001-b). -->
+            <div class="flex items-center gap-2 flex-wrap shrink min-w-0">
               <ng-content />
 
               @if (chips().length) {
