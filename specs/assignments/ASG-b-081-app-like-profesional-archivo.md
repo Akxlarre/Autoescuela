@@ -1,14 +1,14 @@
 # Asignación ASG-b-081 — App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo`
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-10
+> **resulting_track:** fix-150-m-app-like-profesional-archivo
 
 ---
 
