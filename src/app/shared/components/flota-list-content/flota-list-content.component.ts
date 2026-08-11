@@ -544,8 +544,6 @@ export class FlotaListContentComponent {
   readonly editVehicle = output<number>();
   readonly viewAgenda = output<number>();
   readonly viewMaintenances = output<number>();
-  readonly printRouteSheet = output<number>();
-  readonly printAllRouteSheets = output<void>();
   readonly manageDocuments = output<number>();
   readonly typeFilterChange = output<VehicleType | null>();
   readonly statusFilterChange = output<VehicleStatus | null>();
@@ -601,7 +599,6 @@ export class FlotaListContentComponent {
 
   handleHeroAction(actionId: string): void {
     if (actionId === 'new-vehicle') this.newVehicle.emit();
-    if (actionId === 'print-all') this.printAllRouteSheets.emit();
   }
 
   onSearchChange(v: string): void {
