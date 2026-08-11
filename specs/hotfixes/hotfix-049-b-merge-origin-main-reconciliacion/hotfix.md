@@ -1,7 +1,15 @@
 # Hotfix: Reconciliar rama claude/app-like-rollout-b-batch con origin/main (merge)
 > id: hotfix-049-b-merge-origin-main-reconciliacion
-> status: in_progress
+> status: done
+> closed: 2026-08-11
 > created: 2026-08-10
+
+## Verificación
+
+- `npx tsc --noEmit`: sin errores.
+- `npx ng build --configuration development`: build completo sin errores (171s).
+- `npm run lint:arch`: exit 0, 0 errores.
+- `npm run test:ci`: 1975/1975 tests en verde (155 archivos, 5 skipped pre-existentes).
 
 ## Problema
 
