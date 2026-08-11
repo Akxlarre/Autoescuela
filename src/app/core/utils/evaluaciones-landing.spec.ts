@@ -100,6 +100,24 @@ describe('buildLanding', () => {
     expect(landing[1].cursos.map((c) => c.courseCode)).toEqual(['A2']);
   });
 
+  it('ordena los cursos por código alfabético aunque lleguen desordenados de Supabase', () => {
+    // Supabase no garantiza orden de inserción en `promotion_courses` — A3 antes que A2
+    // reproduce el bug real encontrado en QA visual (spec 0008-m).
+    const unordered: CourseLite[] = [
+      course(1, 9, 'A3'),
+      course(2, 9, 'A2'),
+      course(3, 9, 'A5'),
+      course(4, 9, 'A4'),
+    ];
+    const landing = buildLanding(
+      [{ id: 9, name: 'Promo', code: 'P9', status: 'in_progress' }],
+      unordered,
+      [],
+      [],
+    );
+    expect(landing[0].cursos.map((c) => c.courseCode)).toEqual(['A2', 'A3', 'A4', 'A5']);
+  });
+
   it('calcula totales de la promoción (alumnos + cursos confirmados)', () => {
     const landing = buildLanding(promos, courses, enrollments, grades);
     // Promo 9: curso1 (2 alumnos) + curso2 (1) = 3 alumnos, 1 confirmado
@@ -123,6 +141,17 @@ describe('buildLanding', () => {
 
   it('cero promociones → aterrizaje vacío', () => {
     expect(buildLanding([], courses, enrollments, grades)).toEqual([]);
+  });
+
+  it('promociones activas (in_progress) siempre primero, aunque lleguen después en la query', () => {
+    const reordered: PromotionLite[] = [
+      { id: 20, name: 'Planificada más reciente', code: 'P20', status: 'planned' },
+      { id: 21, name: 'Planificada anterior', code: 'P21', status: 'planned' },
+      { id: 22, name: 'En curso más antigua', code: 'P22', status: 'in_progress' },
+      { id: 23, name: 'En curso más reciente', code: 'P23', status: 'in_progress' },
+    ];
+    const landing = buildLanding(reordered, [], [], []);
+    expect(landing.map((p) => p.id)).toEqual([22, 23, 20, 21]);
   });
 });
 

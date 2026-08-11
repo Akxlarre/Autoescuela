@@ -521,7 +521,7 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'profesional/notas',
+            path: 'profesional/evaluaciones',
             canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-notas/secretaria-profesional-notas.component').then(

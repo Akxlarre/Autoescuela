@@ -220,9 +220,9 @@ const SECRETARIA_NAV: NavGroup[] = [
         requiresProfessional: true,
       },
       {
-        label: 'Calificaciones',
+        label: 'Evaluaciones',
         icon: 'star',
-        routerLink: '/app/secretaria/profesional/notas',
+        routerLink: '/app/secretaria/profesional/evaluaciones',
         requiresProfessional: true,
       },
       {
