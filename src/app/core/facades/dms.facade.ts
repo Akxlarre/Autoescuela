@@ -919,8 +919,7 @@ export class DmsFacade {
         this.supabase.client
           .from('v_dms_student_documents')
           .select('*')
-          .order('document_at', { ascending: false })
-          .limit(100),
+          .order('document_at', { ascending: false }),
 
         schoolDocsQuery,
 

@@ -535,6 +535,83 @@ describe('DmsFacade', () => {
       );
     });
 
+    it('fetchAllData() (fix-132-b): v_dms_student_documents NO se limita a un tope fijo — el mismo pool alimenta "Últimos subidos" y el docCount/listado completo, un límite artificial haría perder filas y subcontar docCount pasado ese tope', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const studentsBuilder = makeBuilder({
+        data: [
+          {
+            id: 1,
+            users: {
+              id: 10,
+              rut: '11.111.111-1',
+              first_names: 'Ana',
+              paternal_last_name: 'Soto',
+              maternal_last_name: 'Rojas',
+              branch_id: 2,
+              branches: { name: 'Sede Centro' },
+            },
+            enrollments: [
+              {
+                id: 100,
+                number: '0005',
+                created_at: '2020-01-01T00:00:00Z',
+                branch_id: 2,
+                branches: { name: 'Sede Centro' },
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+      // Matrícula con documento MUY antiguo — con un límite artificial ordenado por
+      // document_at desc, quedaría fuera del pool y desaparecería de la tabla.
+      const oldDoc = {
+        id: '1',
+        source: 'student_document',
+        student_id: 1,
+        enrollment_id: 100,
+        type: 'contrato',
+        file_name: 'contrato-viejo.pdf',
+        file_url: 'students/100/contrato.pdf',
+        status: 'approved',
+        document_at: '2020-01-01T00:00:00Z',
+        managed_by: null,
+      };
+      // 100 documentos "de relleno" más recientes que oldDoc, de otro alumno/matrícula no
+      // presente en `studentsBuilder` — simula que la escuela ya acumuló > 100 documentos.
+      const fillerDocs = Array.from({ length: 100 }, (_, i) => ({
+        id: `filler-${i}`,
+        source: 'student_document',
+        student_id: 999,
+        enrollment_id: 999,
+        type: 'contrato',
+        file_name: `relleno-${i}.pdf`,
+        file_url: `students/999/relleno-${i}.pdf`,
+        status: 'approved',
+        document_at: '2026-01-01T00:00:00Z',
+        managed_by: null,
+      }));
+      const vDocsBuilder = makeBuilder({ data: [...fillerDocs, oldDoc], error: null });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'students'
+          ? studentsBuilder
+          : table === 'v_dms_student_documents'
+            ? vDocsBuilder
+            : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      // La query real no debe llevar un tope artificial — si alguien reintroduce
+      // `.limit(N)` acá, este assert lo detecta.
+      expect(vDocsBuilder.limit).not.toHaveBeenCalled();
+
+      // La matrícula 100 sigue apareciendo con su docCount correcto pese a que su único
+      // documento es más viejo que los 100 "de relleno".
+      const rows = localFacade.studentsWithDocs();
+      expect(rows).toContainEqual(expect.objectContaining({ enrollmentId: 100, docCount: 1 }));
+    });
+
     it('loadStudentDocuments(studentId, enrollmentId) (AC2): filtra v_dms_student_documents por enrollment_id además de student_id', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const vDocsBuilder = makeBuilder({ data: [], error: null });
