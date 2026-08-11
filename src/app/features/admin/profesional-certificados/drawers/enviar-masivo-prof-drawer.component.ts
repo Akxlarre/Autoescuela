@@ -40,7 +40,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             subtitle="Todos los certificados generados ya fueron enviados por correo"
           />
         } @else {
-          <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
+          <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
             @for (alumno of destinatarios(); track alumno.enrollmentId) {
               <div class="flex items-center gap-3 px-4 py-2.5">
                 <app-icon name="user" [size]="14" class="text-text-muted shrink-0" />

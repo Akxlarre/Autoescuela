@@ -119,7 +119,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | b | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
+| ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
 <!-- AUTO-GENERATED:END -->
 
 ---

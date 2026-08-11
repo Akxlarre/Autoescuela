@@ -117,7 +117,7 @@ type TabId = 'practice' | 'theory';
                 </p>
               </div>
             } @else {
-              <div class="flex flex-col divide-y" style="--tw-divide-opacity:1">
+              <div class="flex flex-col divide-y divide-border-subtle">
                 @for (session of practiceSessions(); track session.id) {
                   <div
                     class="flex items-center gap-3 py-3 first:pt-0"
@@ -165,7 +165,7 @@ type TabId = 'practice' | 'theory';
                 <p class="text-sm text-text-muted m-0">Sin prácticas registradas aún</p>
               </div>
             } @else {
-              <div class="flex flex-col divide-y">
+              <div class="flex flex-col divide-y divide-border-subtle">
                 @for (s of profPracticeSessions(); track s.id) {
                   <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
                     <div
@@ -199,7 +199,7 @@ type TabId = 'practice' | 'theory';
                 <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
               </div>
             } @else {
-              <div class="flex flex-col divide-y">
+              <div class="flex flex-col divide-y divide-border-subtle">
                 @for (s of theorySessions(); track s.id) {
                   <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
                     <div
@@ -233,7 +233,7 @@ type TabId = 'practice' | 'theory';
                 <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
               </div>
             } @else {
-              <div class="flex flex-col divide-y">
+              <div class="flex flex-col divide-y divide-border-subtle">
                 @for (s of profTheorySessions(); track s.id) {
                   <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
                     <div

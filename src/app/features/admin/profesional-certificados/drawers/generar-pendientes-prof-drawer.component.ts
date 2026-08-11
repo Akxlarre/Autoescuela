@@ -46,7 +46,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           />
         } @else {
           @if (pendientesElegibles().length > 0) {
-            <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
+            <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
               @for (alumno of pendientesElegibles(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
                   <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
@@ -69,7 +69,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           @if (pendientesNoElegibles().length > 0) {
             <div>
               <p class="micro-label mb-2">No elegibles — no se generará certificado</p>
-              <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
+              <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
                 @for (alumno of pendientesNoElegibles(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-3 px-4 py-2.5">
                     <app-icon name="x-circle" [size]="14" class="text-warning shrink-0" />
