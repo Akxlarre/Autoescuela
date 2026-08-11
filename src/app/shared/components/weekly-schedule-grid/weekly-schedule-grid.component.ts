@@ -12,6 +12,11 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
+      :host {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
       .schedule-grid {
         display: grid;
         grid-template-columns: 72px repeat(var(--days, 5), 1fr);

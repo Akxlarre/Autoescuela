@@ -288,29 +288,29 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 443 | `#38bdf8` |
+| `--ds-brand` | 439 | `#38bdf8` |
 | `--text-muted` | 397 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 265 | `var(--color-primary-text)` |
-| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 224 | `rgba(255, 255, 255, 0.18)` |
+| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
+| `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 216 | `#f87171` |
 | `--bg-surface` | 194 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
 | `--color-primary` | 147 | `#38bdf8` |
-| `--border-default` | 133 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 123 | `#fbbf24` |
+| `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 125 | `#fbbf24` |
 | `--bg-elevated` | 78 | `#27272a` |
-| `--text-sm` | 66 | `0.875rem` |
-| `--duration-fast` | 59 | `200ms` |
+| `--text-sm` | 64 | `0.875rem` |
 | `--bg-subtle` | 58 | `rgba(255, 255, 255, 0.1)` |
-| `--radius-md` | 58 | `10px` |
+| `--duration-fast` | 57 | `200ms` |
+| `--radius-md` | 56 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 50 | `var(--border-subtle)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
 | `--text-xs` | 47 | `0.75rem` |
 | `--color-primary-text` | 45 | `#ffffff` |
 | `--color-success` | 39 | `—` |
-| `--bg-base` | 32 | `#09090b` |
+| `--bg-base` | 30 | `#09090b` |
 | `--state-error-bg` | 24 | `rgba(248, 113, 113, 0.1)` |
 | `--radius-full` | 24 | `9999px` |
 
@@ -318,7 +318,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 238 | `src/styles/tokens/_variables.scss` |
+| `.card` | 240 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 163 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 130 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
@@ -381,7 +381,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **card** | `.p-card` |
 | **checkbox** | `.p-checkbox` · `.p-checkbox-box` |
 | **colorpicker** | `.p-colorpicker` · `.p-colorpicker-panel` |
-| **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-table` · `.p-datatable-table-wrapper` +3 |
+| **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-striped` · `.p-datatable-table` +4 |
 | **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-input` +6 |
 | **dialog** | `.p-dialog` · `.p-dialog-close-button` · `.p-dialog-content` · `.p-dialog-footer` · `.p-dialog-header` +3 |
 | **disabled** | `.p-disabled` |
@@ -423,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 53 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 897 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 896 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

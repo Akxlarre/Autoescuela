@@ -1,14 +1,14 @@
 # Asignación ASG-b-067 — App-like: `/admin/flota` (`flota-list-content`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-09
+> **resulting_track:** fix-126-b-app-like-admin-flota
 
 ---
 

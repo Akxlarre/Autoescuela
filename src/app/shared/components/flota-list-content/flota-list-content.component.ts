@@ -81,7 +81,12 @@ import { formatCLP } from '@core/utils/date.utils';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de flota">
+    <div
+      class="bento-grid bento-grid--fill-screen"
+      appBentoGridLayout
+      #bentoGrid
+      aria-label="Panel de flota"
+    >
       <!-- HERO -->
       <app-section-hero
         density="slim"
@@ -97,7 +102,7 @@ import { formatCLP } from '@core/utils/date.utils';
 
       <!-- TABLA CARD (Dual-Viewport) -->
       <div
-        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
         appAnimateIn
         appCardHover
       >
@@ -155,7 +160,7 @@ import { formatCLP } from '@core/utils/date.utils';
 
         <!-- ─────────────── LOADING ─────────────── -->
         @if (isLoading()) {
-          <div class="viewport-content bg-surface">
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
             <!-- VISTA Desktop Skeleton -->
             <div class="desktop-view hide-on-squeeze p-4">
               <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
@@ -199,15 +204,17 @@ import { formatCLP } from '@core/utils/date.utils';
           </div>
         } @else {
           <!-- ─────────────── CONTENIDO REAL ─────────────── -->
-          <div class="viewport-content bg-surface">
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
             <!-- VISTA 1: TABLA Desktop -->
-            <div class="desktop-view hide-on-squeeze">
+            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
               <p-table
                 [value]="vehicles()"
                 [rows]="10"
                 [paginator]="true"
+                [scrollable]="true"
+                scrollHeight="flex"
                 responsiveLayout="scroll"
-                styleClass="p-datatable-sm p-datatable-striped"
+                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
                 [showCurrentPageReport]="true"
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} vehículos"
               >
@@ -437,7 +444,11 @@ import { formatCLP } from '@core/utils/date.utils';
       .show-on-squeeze {
         display: none;
       }
-      @container flotaContainer (max-width: 850px) {
+      /* 1050px (no 850px): la tabla scrollable de PrimeNG mide ~974px de ancho natural
+         (7 columnas sin anchos explícitos) — con el breakpoint en 850px la vista tabla se
+         activaba antes de tener espacio real, forzando scroll horizontal interno que dejaba
+         botones de acción fuera de vista sin pista visual (hotfix-039-b). */
+      @container flotaContainer (max-width: 1050px) {
         .hide-on-squeeze {
           display: none !important;
         }
@@ -481,7 +492,7 @@ import { formatCLP } from '@core/utils/date.utils';
         justify-content: center;
       }
 
-      @container flotaContainer (min-width: 850px) {
+      @container flotaContainer (min-width: 1050px) {
         .toolbar-wrapper {
           flex-direction: row;
           align-items: center;

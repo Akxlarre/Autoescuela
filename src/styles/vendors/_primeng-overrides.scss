@@ -66,6 +66,9 @@
   --p-datatable-header-color: var(--text-primary);
   --p-datatable-row-background: var(--bg-surface);
   --p-datatable-row-hover-background: var(--bg-elevated);
+  /* Sin esto, .p-datatable-striped usa el default del preset Aura (#f8fafc, hardcodeado,
+     no se adapta a dark mode) — hotfix-040-b. */
+  --p-datatable-row-striped-background: var(--bg-subtle);
   --p-datatable-row-color: var(--text-secondary);
   --p-datatable-header-cell-padding: var(--space-4);
   --p-datatable-body-cell-padding: var(--space-4);

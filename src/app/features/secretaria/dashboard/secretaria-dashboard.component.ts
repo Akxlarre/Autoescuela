@@ -23,8 +23,11 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -63,9 +66,30 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
     .custom-scrollbar:hover::-webkit-scrollbar-thumb {
       background-color: var(--text-muted);
     }
+
+    /* Fade inferior: insinúa que la lista tiene más contenido para scrollear */
+    .scroll-fade {
+      position: relative;
+    }
+    .scroll-fade::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 28px;
+      background: linear-gradient(to bottom, transparent, var(--card-bg));
+      pointer-events: none;
+    }
   `,
   template: `
-    <section class="bento-grid w-full" appBentoGridLayout #bentoGrid aria-label="Panel de control">
+    <section
+      class="bento-grid bento-grid--fill-screen-2 w-full"
+      [class.force-compact]="isDrawerOpen()"
+      appBentoGridLayout
+      #bentoGrid
+      aria-label="Panel de control"
+    >
       <app-section-hero
         [title]="heroSectionTitle()"
         [contextLine]="heroContextLine()"
@@ -79,19 +103,21 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
       />
 
       <app-live-classes-panel
-        class="bento-wide bento-card w-full"
+        class="bento-wide bento-card bento-fill w-full"
         appCardHover
         appScrollReveal
         data-row-span-md="2"
         data-row-span="2"
         [classes]="liveClasses()"
         [loading]="loading()"
+        [maxItems]="liveClassesBudget()"
         (actionClick)="handleLiveClassAction($event)"
+        (viewAllClick)="openAgenda()"
       />
 
       <!-- Actividad reciente -->
       <div
-        class="bento-wide bento-card flex flex-col w-full"
+        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
         appCardHover
         [appScrollReveal]="{ delay: 0.1 }"
       >
@@ -100,13 +126,6 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             <app-icon name="activity" [size]="16" class="text-brand" />
             <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
           </div>
-          <button
-            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand transition-colors hover:text-brand-hover"
-            (click)="openRecentActivity()"
-            data-llm-action="view-all-activity"
-          >
-            Ver todo
-          </button>
         </div>
 
         @if (loading()) {
@@ -124,55 +143,67 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             }
           </ul>
         } @else {
-          <ul
-            class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
-          >
-            @for (item of activities().slice(0, 4); track item.id; let i = $index) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
-              >
-                <div
-                  class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                  [style.background]="item.iconBg"
-                  [style.color]="item.iconColor"
+          <div class="scroll-fade flex-1 min-h-0">
+            <ul
+              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+            >
+              @for (item of visibleActivities(); track item.id; let i = $index) {
+                <li
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                  [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
                 >
-                  <app-icon [name]="item.icon" [size]="14" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p
-                    class="m-0 text-sm font-medium text-text-primary truncate"
-                    [pTooltip]="item.title"
-                    tooltipPosition="top"
+                  <div
+                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                    [style.background]="item.iconBg"
+                    [style.color]="item.iconColor"
                   >
-                    {{ item.title }}
-                  </p>
-                  <p
-                    class="m-0 text-xs text-text-muted truncate"
-                    [pTooltip]="item.description"
-                    tooltipPosition="bottom"
-                  >
-                    {{ item.description }}
-                  </p>
-                </div>
-                <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
-              </li>
-            } @empty {
-              <li class="flex-1 flex flex-col justify-center py-6">
-                <app-empty-state
-                  icon="activity"
-                  message="Sin actividad reciente"
-                  subtitle="Aún no hay registros en la escuela."
-                />
-              </li>
-            }
-          </ul>
+                    <app-icon [name]="item.icon" [size]="14" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="m-0 text-sm font-medium text-text-primary truncate"
+                      [pTooltip]="item.title"
+                      tooltipPosition="top"
+                    >
+                      {{ item.title }}
+                    </p>
+                    <p
+                      class="m-0 text-xs text-text-muted truncate"
+                      [pTooltip]="item.description"
+                      tooltipPosition="bottom"
+                    >
+                      {{ item.description }}
+                    </p>
+                  </div>
+                  <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
+                </li>
+              } @empty {
+                <li class="flex-1 flex flex-col justify-center py-6">
+                  <app-empty-state
+                    icon="activity"
+                    message="Sin actividad reciente"
+                    subtitle="Aún no hay registros en la escuela."
+                  />
+                </li>
+              }
+            </ul>
+          </div>
+          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+            <button
+              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+              (click)="openRecentActivity()"
+              data-llm-action="view-all-activity"
+            >
+              Ver toda la actividad
+            </button>
+          </div>
         }
       </div>
 
       <!-- Alertas Importantes -->
       <div
-        class="bento-wide bento-card flex flex-col w-full"
+        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
         appCardHover
         [appScrollReveal]="{ delay: 0.2 }"
       >
@@ -181,13 +212,6 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             <app-icon name="bell" [size]="16" class="text-warning" />
             <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
           </div>
-          <button
-            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand transition-colors hover:text-brand-hover"
-            (click)="openAlerts()"
-            data-llm-action="view-all-alerts"
-          >
-            Ver todo
-          </button>
         </div>
 
         @if (loading()) {
@@ -205,56 +229,68 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
             }
           </ul>
         } @else {
-          <ul
-            class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
-          >
-            @for (alert of alerts().slice(0, 3); track alert.id; let i = $index) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
-              >
-                <div
-                  class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                  [style.background]="getAlertBg(alert.severity)"
-                  [style.color]="getAlertColor(alert.severity)"
+          <div class="scroll-fade flex-1 min-h-0">
+            <ul
+              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+            >
+              @for (alert of visibleAlerts(); track alert.id; let i = $index) {
+                <li
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                  [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
                 >
-                  <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p
-                    class="m-0 text-sm font-medium text-text-primary truncate"
-                    [pTooltip]="alert.title"
-                    tooltipPosition="top"
+                  <div
+                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                    [style.background]="getAlertBg(alert.severity)"
+                    [style.color]="getAlertColor(alert.severity)"
                   >
-                    {{ alert.title }}
-                  </p>
-                  <p
-                    class="m-0 text-xs text-text-muted truncate"
-                    [pTooltip]="alert.description"
-                    tooltipPosition="bottom"
+                    <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="m-0 text-sm font-medium text-text-primary truncate"
+                      [pTooltip]="alert.title"
+                      tooltipPosition="top"
+                    >
+                      {{ alert.title }}
+                    </p>
+                    <p
+                      class="m-0 text-xs text-text-muted truncate"
+                      [pTooltip]="alert.description"
+                      tooltipPosition="bottom"
+                    >
+                      {{ alert.description }}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Descartar"
+                    class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
+                    (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
+                    pTooltip="Descartar"
                   >
-                    {{ alert.description }}
-                  </p>
-                </div>
-                <button
-                  aria-label="Descartar"
-                  class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
-                  (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
-                  pTooltip="Descartar"
-                >
-                  <app-icon name="x" [size]="12" />
-                </button>
-              </li>
-            } @empty {
-              <li class="flex-1 flex flex-col justify-center py-6">
-                <app-empty-state
-                  icon="bell"
-                  message="Todo en orden"
-                  subtitle="No hay alertas importantes por revisar."
-                />
-              </li>
-            }
-          </ul>
+                    <app-icon name="x" [size]="12" />
+                  </button>
+                </li>
+              } @empty {
+                <li class="flex-1 flex flex-col justify-center py-6">
+                  <app-empty-state
+                    icon="bell"
+                    message="Todo en orden"
+                    subtitle="No hay alertas importantes por revisar."
+                  />
+                </li>
+              }
+            </ul>
+          </div>
+          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+            <button
+              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+              (click)="openAlerts()"
+              data-llm-action="view-all-alerts"
+            >
+              Ver todas las alertas
+            </button>
+          </div>
         }
       </div>
     </section>
@@ -269,16 +305,30 @@ export class SecretariaDashboardComponent implements OnInit {
   private readonly agendaFacade = inject(AgendaFacade);
   private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
   private readonly pagosFacade = inject(PagosFacade);
+  private readonly cuadraturaFacade = inject(CuadraturaFacade);
+  private readonly layoutService = inject(LayoutService);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly loading = computed(() => this.dashboardFacade.loading());
+  protected readonly isDrawerOpen = computed(() => this.layoutDrawer.isOpen());
   readonly hero = computed(() => this.dashboardFacade.data()?.hero);
   readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
   readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
   readonly liveClasses = computed(() => this.dashboardFacade.data()?.liveClasses ?? []);
+
+  // ── Densidad adaptativa (spec 0028, portado de dashboard.component.ts): ──
+  // desktop = sin límite (scroll interno); tablet/mobile = resumen + "Ver todas".
+  private readonly isDesktopTier = computed(() => this.layoutService.tier() === 'desktop');
+  readonly liveClassesBudget = computed(() => (this.isDesktopTier() ? null : 4));
+  readonly visibleActivities = computed(() =>
+    sliceByBudget(this.activities(), this.isDesktopTier() ? null : 3),
+  );
+  readonly visibleAlerts = computed(() =>
+    sliceByBudget(this.alerts(), this.isDesktopTier() ? null : 3),
+  );
 
   readonly heroSectionTitle = computed(
     () => `¡Bienvenido, ${this.hero()?.userName ?? this.authFacade.currentUser()?.name ?? ''}!`,
@@ -360,6 +410,13 @@ export class SecretariaDashboardComponent implements OnInit {
           this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
         },
       );
+    } else if (actionId === 'qa4') {
+      this.cuadraturaFacade.egresoTipoPreset.set('combustible');
+      void import('../../admin/contabilidad-cuadratura/registrar-egreso-drawer.component').then(
+        ({ RegistrarEgresoDrawerComponent }) => {
+          this.layoutDrawer.open(RegistrarEgresoDrawerComponent, 'Registrar Egreso', 'wallet');
+        },
+      );
     }
   }
 
@@ -409,6 +466,12 @@ export class SecretariaDashboardComponent implements OnInit {
     const { AlertsDrawerComponent } =
       await import('../../dashboard/alerts-drawer/alerts-drawer.component');
     this.layoutDrawer.open(AlertsDrawerComponent, 'Todas las Alertas', 'bell');
+  }
+
+  async openAgenda(): Promise<void> {
+    const { DailyAgendaDrawerComponent } =
+      await import('../../dashboard/daily-agenda-drawer/daily-agenda-drawer.component');
+    this.layoutDrawer.open(DailyAgendaDrawerComponent, 'Agenda de Hoy', 'calendar-clock');
   }
 
   getAlertIcon(severity: string): string {

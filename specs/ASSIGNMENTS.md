@@ -72,11 +72,6 @@
 > clases (086, mismo patrón de tabs que 084/085) + fillers (068, 073). Reasignar solo si alguien
 > queda bloqueado — no reordenar sin avisar al resto por el solape ya armado.
 
-| ASG-b-065 | App-like: `/secretaria/dashboard` — portar `--fill-screen-2` desde admin/dashboard | `b` | fix | Baja | b | 4 cambios reales (no 1 línea): shell, `bento-fill` en live-classes-panel, densidad adaptativa de Actividad/Alertas. Ver `specs/assignments/ASG-b-065-*.md` |
-| ASG-b-066 | App-like: familia "instructores" (`admin` + `secretaria`) | `b` | fix | Baja | b | Sacar paginación Anterior/Siguiente hand-rolled → patrón `sliceByBudget`+"Cargar más" mobile / todo+scroll desktop, copiado de `alumnos-list-content`. Mismo cambio en 2 archivos independientes. Ver `specs/assignments/ASG-b-066-*.md` |
-| ASG-b-067 | App-like: `/admin/flota` (`flota-list-content`) | `b` | fix | Baja | b | `p-table` MANTIENE el paginador nativo (a diferencia de instructores) — agregar `scrollable`+`scrollHeight=flex`, patrón ya probado en 6 páginas hermanas. Ver `specs/assignments/ASG-b-067-*.md` |
-| ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | `b` | fix | Baja-Media | b | Ninguna de las 2 usa `agenda-semanal`. `alumno/horario` necesita agrupar celdas condicionales. Ver `specs/assignments/ASG-b-070-*.md` |
-| ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`, `dms-list-content`) | `b` | fix | Media | b | Tiene `h-125` hardcodeado que hay que sacar primero. Componente `shared` — verificar ambas rutas. Ver `specs/assignments/ASG-b-071-*.md` |
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
 | ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
@@ -201,12 +196,18 @@
 | ASG-b-069 | App-like: `/admin/auditoria` | [fix-122-m-app-like-admin-auditoria](fixes/fix-122-m-app-like-admin-auditoria/fix.md) | 2026-08-06 |
 | ASG-b-072 | App-like: `/admin/configuracion-web` + `/secretaria/configuracion-web` | [fix-124-m-app-like-configuracion-web](fixes/fix-124-m-app-like-configuracion-web/fix.md) | 2026-08-06 |
 | ASG-b-076 | App-like: familia "pagos" (`admin` + `secretaria`) | [fix-132-m-app-like-familia-pagos](fixes/fix-132-m-app-like-familia-pagos/fix.md) | 2026-08-06 |
+| ASG-b-065 | App-like: `/secretaria/dashboard` (portar `--fill-screen-2` desde admin) | [fix-123-b-app-like-secretaria-dashboard](fixes/fix-123-b-app-like-secretaria-dashboard/fix.md) | 2026-08-08 |
+| ASG-b-066 | App-like: familia "instructores" (`admin` + `secretaria`) | [fix-125-b-app-like-familia-instructores](fixes/fix-125-b-app-like-familia-instructores/fix.md) | 2026-08-08 |
 | ASG-b-074 | App-like: `/admin/contabilidad/liquidaciones` + `/secretaria/...` | [fix-019-i-app-like-liquidaciones](fixes/fix-019-i-app-like-liquidaciones/fix.md) | 2026-08-08 |
 | ASG-b-075 | App-like: `/admin/contabilidad/historial-cuadraturas` + `/secretaria/...` | [fix-020-i-app-like-historial-cuadraturas](fixes/fix-020-i-app-like-historial-cuadraturas/fix.md) | 2026-08-08 |
 | ASG-b-083 | App-like: `/alumno/dashboard` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-08 |
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | [0006-m-matricula-refuerzo-clase-b](specs/0006-m-matricula-refuerzo-clase-b/spec.md) | 2026-08-09 |
+| ASG-b-067 | App-like: `/admin/flota` (`flota-list-content`) | [fix-126-b-app-like-admin-flota](fixes/fix-126-b-app-like-admin-flota/fix.md) | 2026-08-09 |
+| ASG-b-070 | App-like: familia "horario" (`instructor` + `alumno`) | [fix-127-b-app-like-familia-horario](fixes/fix-127-b-app-like-familia-horario/fix.md) | 2026-08-09 |
+| ASG-b-071 | App-like: familia "documentos" (`admin` + `secretaria`) | [fix-129-b-app-like-familia-documentos](fixes/fix-129-b-app-like-familia-documentos/fix.md) | 2026-08-10 |
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | [fix-021-i-app-like-servicios-especiales](fixes/fix-021-i-app-like-servicios-especiales/fix.md) | 2026-08-10 |
 | ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
+| ASG-b-091 | Alumno con matrícula solo `completed` ve horario histórico sin aviso | [fix-128-b-alumno-matricula-completada-sin-aviso](fixes/fix-128-b-alumno-matricula-completada-sin-aviso/fix.md) | 2026-08-10 |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 <!-- AUTO-GENERATED:END -->
 

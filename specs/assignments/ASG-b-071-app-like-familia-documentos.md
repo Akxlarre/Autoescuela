@@ -1,14 +1,14 @@
 # Asignación ASG-b-071 — App-like: familia "documentos" (`admin` + `secretaria`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-10
+> **resulting_track:** fix-129-b-app-like-familia-documentos
 
 ---
 

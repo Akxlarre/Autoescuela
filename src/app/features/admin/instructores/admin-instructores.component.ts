@@ -16,6 +16,7 @@ import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -43,7 +44,12 @@ type FilterTab = 'all' | 'active' | 'expiring';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid bento-grid--hero-fit" appBentoGridLayout #bentoGrid>
+    <div
+      class="bento-grid bento-grid--fill-screen"
+      [class.force-compact]="layoutDrawer.isOpen()"
+      appBentoGridLayout
+      #bentoGrid
+    >
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -57,7 +63,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
       <div
-        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
         #listCard
         appCardHover
       >
@@ -69,7 +75,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
           <button
             class="filter-pill whitespace-nowrap"
             [class.filter-pill--active]="activeFilter() === 'all'"
-            (click)="activeFilter.set('all')"
+            (click)="setFilter('all')"
             data-llm-action="filtro-todos"
           >
             Todos ({{ facade.totalInstructores() }})
@@ -77,7 +83,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
           <button
             class="filter-pill whitespace-nowrap"
             [class.filter-pill--active]="activeFilter() === 'active'"
-            (click)="activeFilter.set('active')"
+            (click)="setFilter('active')"
             data-llm-action="filtro-activos"
           >
             Activos ({{ facade.activos() }})
@@ -93,16 +99,16 @@ type FilterTab = 'all' | 'active' | 'expiring';
             [class.filter-pill--active]="
               activeFilter() === 'expiring' && facade.licenciasPorVencer() === 0
             "
-            (click)="activeFilter.set('expiring')"
+            (click)="setFilter('expiring')"
             data-llm-action="filtro-licencia-por-vencer"
           >
             <app-icon name="alert-triangle" [size]="13" />
             Licencia por vencer ({{ facade.licenciasPorVencer() }})
           </button>
         </div>
-        <div class="viewport-content bg-surface">
+        <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
           <!-- VISTA Desktop: Tabla clásica -->
-          <div class="desktop-view hide-on-squeeze overflow-x-auto">
+          <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-auto">
             <table class="instructor-table">
               <thead>
                 <tr>
@@ -165,7 +171,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                     </td>
                   </tr>
                 } @else {
-                  @for (inst of paginatedInstructores(); track inst.id) {
+                  @for (inst of filteredInstructores(); track inst.id) {
                     <tr class="instructor-row">
                       <!-- Nombre + email -->
                       <td>
@@ -291,7 +297,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                 </div>
               }
             } @else {
-              @for (inst of paginatedInstructores(); track inst.id) {
+              @for (inst of visibleCards(); track inst.id) {
                 <div
                   class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
                 >
@@ -367,38 +373,22 @@ type FilterTab = 'all' | 'active' | 'expiring';
                   </div>
                 </div>
               }
+
+              <!-- Cargar más: densidad incremental de la vista tarjetas -->
+              @if (remainingCards() > 0) {
+                <button
+                  type="button"
+                  class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                  (click)="loadMoreCards()"
+                  data-llm-action="load-more-instructores"
+                >
+                  <app-icon name="chevron-down" [size]="16" />
+                  Cargar más ({{ remainingCards() }} restantes)
+                </button>
+              }
             }
           </div>
         </div>
-
-        <!-- Paginación Global -->
-        @if (!facade.isLoading() && filteredInstructores().length > 0) {
-          <div
-            class="flex items-center justify-between px-6 py-4"
-            style="border-top: 1px solid var(--border-subtle);"
-          >
-            <p class="text-xs text-text-muted">
-              Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
-              {{ filteredInstructores().length }}
-            </p>
-            <div class="flex items-center gap-2">
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage() === 1"
-                (click)="currentPage.set(currentPage() - 1)"
-              >
-                Anterior
-              </button>
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage() >= totalPages()"
-                (click)="currentPage.set(currentPage() + 1)"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        }
       </div>
     </div>
   `,
@@ -527,26 +517,6 @@ type FilterTab = 'all' | 'active' | 'expiring';
       color: var(--text-primary);
     }
 
-    .pagination-btn {
-      padding: 6px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .pagination-btn:hover:not(:disabled) {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-    }
-    .pagination-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
     /* Container Queries para Dual-Viewport Render */
     .dual-viewport-container {
       container-type: inline-size;
@@ -629,8 +599,6 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
 
   // ── Filtros ────────────────────────────────────────────────────────────────
   protected readonly activeFilter = signal<FilterTab>('all');
-  protected readonly currentPage = signal(1);
-  private readonly pageSize = 10;
 
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
 
@@ -648,21 +616,25 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
     return results;
   });
 
-  // ── Paginación ─────────────────────────────────────────────────────────────
-  protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredInstructores().length / this.pageSize)),
+  /** Densidad incremental de la vista tarjetas (spec 0028, patrón alumnos-list-content). */
+  private static readonly CARDS_STEP = 6;
+  protected readonly mobileShown = signal(AdminInstructoresComponent.CARDS_STEP);
+  protected readonly visibleCards = computed(() =>
+    sliceByBudget(this.filteredInstructores(), this.mobileShown()),
+  );
+  protected readonly remainingCards = computed(() =>
+    Math.max(0, this.filteredInstructores().length - this.mobileShown()),
   );
 
-  protected readonly paginatedInstructores = computed<InstructorTableRow[]>(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredInstructores().slice(start, start + this.pageSize);
-  });
+  /** Cambia el filtro activo y resetea la densidad de tarjetas (mismo criterio que alumnos-list-content). */
+  protected setFilter(filter: FilterTab): void {
+    this.activeFilter.set(filter);
+    this.mobileShown.set(AdminInstructoresComponent.CARDS_STEP);
+  }
 
-  protected readonly paginationStart = computed(() => (this.currentPage() - 1) * this.pageSize + 1);
-
-  protected readonly paginationEnd = computed(() =>
-    Math.min(this.currentPage() * this.pageSize, this.filteredInstructores().length),
-  );
+  protected loadMoreCards(): void {
+    this.mobileShown.update((n) => n + AdminInstructoresComponent.CARDS_STEP);
+  }
 
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
