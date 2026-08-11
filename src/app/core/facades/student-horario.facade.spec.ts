@@ -131,6 +131,27 @@ describe('StudentHorarioFacade', () => {
       await facade.initialize();
       expect(facade.hasRemainingToSchedule()).toBe(false);
     });
+
+    it('Refuerzo Clase B (spec 0006-m): hasRemainingToSchedule=false al llegar a 6, no a 12', async () => {
+      const sessions = Array.from({ length: 6 }, (_, i) =>
+        rawSession(i + 1, '2099-01-20T10:00:00', 'scheduled'),
+      );
+      const { facade } = setup({
+        enrollments: {
+          data: {
+            id: 100,
+            license_group: 'class_b',
+            student_id: 5,
+            promotion_course_id: null,
+            courses: { practical_hours: 4.5 },
+          },
+          error: null,
+        },
+        class_b_sessions: { data: sessions, error: null },
+      });
+      await facade.initialize();
+      expect(facade.hasRemainingToSchedule()).toBe(false);
+    });
   });
 
   describe('Profesional — asistencia por enrollment', () => {

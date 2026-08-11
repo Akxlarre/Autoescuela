@@ -230,7 +230,12 @@ import type {
                                   type="button"
                                   class="text-sm font-medium cursor-pointer bg-transparent border-0 transition-colors duration-150 text-brand hover:text-brand-hover"
                                   data-llm-action="view-student-documents"
-                                  (click)="viewStudentDocs.emit(row.studentId)"
+                                  (click)="
+                                    viewStudentDocs.emit({
+                                      studentId: row.studentId,
+                                      enrollmentId: row.enrollmentId,
+                                    })
+                                  "
                                 >
                                   Ver →
                                 </button>
@@ -466,8 +471,7 @@ import type {
                         >
                           <div class="flex items-center gap-3 min-w-0">
                             <div
-                              class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                              class="bg-error-subtle text-error"
+                              class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-error-subtle text-error"
                             >
                               <app-icon name="file-text" [size]="18" />
                             </div>
@@ -739,7 +743,7 @@ export class DmsListContentComponent {
   readonly uploadInstructorDoc = output<void>();
   readonly uploadSchoolDoc = output<void>();
   readonly uploadTemplate = output<void>();
-  readonly viewStudentDocs = output<number>();
+  readonly viewStudentDocs = output<{ studentId: number; enrollmentId: number }>();
   readonly viewInstructorDocs = output<number>();
   readonly viewDocument = output<{ url: string; fileName: string }>();
   readonly deleteStudentDoc = output<{ id: string; source: string }>();

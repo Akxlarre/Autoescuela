@@ -3,6 +3,7 @@ import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { toISODate, to24hTime, buildDayLabel, capitalize } from '@core/utils/date.utils';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   StudentHorarioDay,
   StudentHorarioSessionItem,
@@ -93,6 +94,8 @@ export class StudentHorarioFacade {
   private readonly _allSessions = signal<StudentHorarioSessionItem[]>([]);
   private readonly _weekStart = signal<string>(getMondayOfWeek());
   private readonly _licenseGroup = signal<'class_b' | 'professional' | null>(null);
+  /** Cantidad de prácticas requeridas por el curso de la matrícula (spec 0006-m). */
+  private readonly _practicesRequired = signal<number>(12);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
 
@@ -146,7 +149,7 @@ export class StudentHorarioFacade {
       (s) => s.status === 'scheduled' || s.status === 'in_progress',
     ).length;
     const completed = this._allSessions().filter((s) => s.status === 'completed').length;
-    return completed + scheduled < 12;
+    return completed + scheduled < this._practicesRequired();
   });
 
   // ─── Navegación ───────────────────────────────────────────────────────────
@@ -205,7 +208,9 @@ export class StudentHorarioFacade {
 
     const { data: enrollment, error: enrollmentError } = await this.supabase.client
       .from('enrollments')
-      .select('id, license_group, student_id, promotion_course_id, students!inner(id)')
+      .select(
+        'id, license_group, student_id, promotion_course_id, students!inner(id), courses!inner(practical_hours)',
+      )
       .eq('id', activeId)
       .maybeSingle();
 
@@ -218,8 +223,12 @@ export class StudentHorarioFacade {
     const enrollmentId: number = (enrollment as any).id;
     const licenseGroup: 'class_b' | 'professional' = (enrollment as any).license_group;
     const promotionCourseId: number | null = (enrollment as any).promotion_course_id;
+    const practicalHours: number | null = (enrollment as any).courses?.practical_hours ?? null;
 
     this._licenseGroup.set(licenseGroup);
+    // Cantidad de prácticas requeridas se deriva del curso de la matrícula (spec 0006-m) —
+    // ya no asume 12 fijo. Fallback a 12 si falta el dato (regresión Clase B estándar, AC-E1).
+    this._practicesRequired.set(classCountFromPracticalHours(practicalHours) || 12);
 
     if (licenseGroup === 'class_b') {
       await this.fetchClassBSessions(enrollmentId);

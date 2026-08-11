@@ -1,14 +1,14 @@
 # Asignación ASG-b-080 — App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-10
+> **resulting_track:** 0008-m-app-like-matriz-notas-evaluaciones
 
 ---
 

@@ -473,6 +473,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--state-warning-bg);
   color: var(--state-warning);
   border: 1px solid var(--state-warning-border);
@@ -487,6 +488,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--state-success-bg);
   color: var(--state-success);
   border: 1px solid var(--state-success-border);
@@ -501,6 +503,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--state-error-bg);
   color: var(--state-error);
   border: 1px solid var(--state-error-border);
@@ -515,6 +518,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--state-info-bg);
   color: var(--state-info);
   border: 1px solid var(--state-info-border);
@@ -529,6 +533,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--bg-subtle);
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
@@ -543,6 +548,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--badge-gap);
   background: var(--color-primary-muted);
   color: var(--ds-brand);
   border: 1px solid var(--accent-border);

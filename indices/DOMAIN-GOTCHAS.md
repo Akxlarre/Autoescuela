@@ -670,6 +670,66 @@
 - **Fuente:** `specs/fixes/fix-138-m-fallback-silencioso-fetch-feriados`,
   `specs/fixes/fix-139-m-fallback-fuente-feriados-alternativa`
 
+### DG-058 — Una función `SECURITY DEFINER` sin `SET search_path` propio hereda el search_path del caller que la invoca anidada, no el de quien finalmente disparó la transacción
+- **Trampa:** asumir que porque `log_change()` (trigger de auditoría) es `SECURITY DEFINER` y
+  usa `to_jsonb(NEW)`/`to_jsonb(OLD)` con nombres de tabla sin calificar (`FROM students s JOIN
+  users u ...`), va a resolver esas tablas igual sin importar desde dónde se dispare. `SECURITY
+  DEFINER` solo cambia el ROL con el que corre la función — el `search_path` NO viaja con el
+  rol, viaja con la sesión/función que lo declaró, salvo que la función tenga su propio `SET
+  search_path`.
+- **Realidad:** `recalculate_enrollment_balance()` (trigger `trg_update_balance` AFTER en
+  `payments`, `20260301000008`) declara `SET search_path = ''`. Cuando ese trigger hace `UPDATE
+  enrollments`, dispara `trg_audit_enrollments` → `log_change()` **anidado dentro de la
+  ejecución de `recalculate_enrollment_balance()`** — y como `log_change()` no tenía su propio
+  `SET search_path` (regresión de fix-097-m/`20260801120000`, que reescribió la función con ~15
+  ramas de tablas sin calificar y sin recuperar el `SET search_path=''` + `public.` que sí tenía
+  la versión original de `20260323100000`), hereda el search_path vacío del caller. Cualquier
+  tabla sin `public.` explícito rompe: `WARNING: audit_log error: relation "students" does not
+  exist"`. La entrada de auditoría de ESE `UPDATE enrollments` (el recálculo de saldo) se pierde
+  en silencio — el `EXCEPTION WHEN OTHERS` de `log_change()` solo emite el `WARNING`, nunca
+  revierte la transacción principal ni deja rastro visible para el usuario. Reproducido y
+  confirmado contra Supabase local: `confirm_enrollment_with_payment()` → INSERT `payments` →
+  `trg_update_balance` → `recalculate_enrollment_balance()` → `UPDATE enrollments` →
+  `log_change()` anidado → warning + audit_log sin esa fila. Ocurre en **cualquier** pago que
+  dispare un recálculo de saldo, no es específico de ningún flujo particular (matrícula de
+  refuerzo, matrícula regular, da igual).
+- **Lección:** al escribir o revisar una función `SECURITY DEFINER` que hace queries a tablas
+  sin calificar, no basta con verificarla invocándola directo — hay que verificar también los
+  casos donde otra función `SECURITY DEFINER` con `SET search_path` restringido (`''` o
+  cualquier valor sin `public`) la dispara ANIDADA (vía trigger, vía llamada directa). El bug es
+  invisible probando la función aislada porque el search_path por defecto de la sesión sí
+  incluye `public`. Todo trigger de auditoría/logging genérico que se dispara sobre múltiples
+  tablas (como `log_change()`) es especialmente vulnerable porque casi seguro alguna de esas
+  tablas también tiene otro trigger `SECURITY DEFINER` con `search_path` restringido delante o
+  detrás en el mismo evento. Fix aplicado: `SET search_path = public, pg_temp` explícito en
+  `log_change()` y `audit_resolve_display_value()` — el `SET` de una función crea su propio
+  contexto de search_path para ESA invocación puntual, sin importar el del caller.
+- **Fuente:** `specs/fixes/fix-145-m-bugs-audit-log-qa-0006-m`
+
+### DG-059 — Un trigger `AFTER UPDATE` no sabe quién hizo el UPDATE a menos que lo pidas explícitamente con `auth_user_role()`/`auth.uid()`
+- **Trampa:** asumir que un trigger de notificación instalado para un flujo de un solo rol
+  (ej. "el instructor cierra la clase") solo se dispara desde ese rol, porque el nombre de la
+  notificación lo dice ("Clase cerrada **por el instructor**"). Un trigger `AFTER UPDATE OF
+  status ON class_b_sessions` se dispara igual sin importar qué código/rol ejecutó el
+  `UPDATE` — y en este proyecto varios facades comparten la misma transición de estado
+  (`AsistenciaClaseBFacade.finalizarClase()`, usado tanto por `secretaria-asistencia` como por
+  `admin-asistencia`, deja `class_b_sessions.status='completed'` igual que
+  `InstructorClasesFacade.finishClass()`).
+- **Realidad:** `notify_class_b_completed()` (`20260801100000`) notificaba a secretaría con
+  texto fijo "completada por el instructor" incluso cuando quien cerraba la clase era la propia
+  secretaría o un admin — autonotificándose con un mensaje falso. `SECURITY DEFINER` no ayuda
+  acá: solo eleva el rol de EJECUCIÓN de la función, no oculta quién disparó la transacción.
+  `auth_user_role()`/`auth.uid()` siguen leyendo el JWT de la sesión que originó el `UPDATE`
+  (viaja con la request, no con el rol de ejecución), así que sirven dentro del trigger para
+  distinguir el actor real. Fix: filtrar el bloque de notificación a secretaría con
+  `WHERE public.auth_user_role() = 'instructor'`.
+- **Lección:** cualquier trigger de notificación que redacte el mensaje asumiendo un actor fijo
+  (rol único) debe verificar primero si la tabla/columna que dispara el trigger puede ser
+  mutada por más de un flujo/rol — buscar todos los facades que hacen `UPDATE` de esa columna,
+  no solo el que motivó el trigger originalmente. Si hay más de uno, condicionar con
+  `auth_user_role()` en vez de hardcodear el rol en el texto.
+- **Fuente:** `specs/fixes/fix-148-m-notif-secretaria-cierre-clase-b`
+
 ---
 
 ## Convención para agregar una entrada nueva

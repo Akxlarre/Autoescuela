@@ -283,10 +283,12 @@
               <button
                 type="button"
                 (click)="clearUpload()"
-                aria-label="Eliminar archivo seleccionado"
-                class="w-8 h-8 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-colors"
+                aria-label="Quitar archivo"
+                data-llm-action="remove-signed-contract"
+                class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5 shrink-0"
               >
-                <app-icon name="x" [size]="14" />
+                <app-icon name="trash-2" [size]="12" />
+                Quitar archivo
               </button>
             </div>
           }

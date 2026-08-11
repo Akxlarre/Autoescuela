@@ -874,6 +874,126 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(pendiente?.origen).toBe('no_show');
       expect(pendiente?.justificada).toBe(true);
     });
+
+    it('Refuerzo Clase B (practical_hours=4.5): progresoPractico.requeridas y clasesPracticas usan 6, no 12 (spec 0006-m, AC2)', async () => {
+      const mock = makeFlexibleSupabaseMock();
+
+      mock.setSingleResult('students', {
+        id: 42,
+        status: 'active',
+        created_at: '2026-01-01',
+        users: {
+          id: 7,
+          rut: '11.111.111-1',
+          first_names: 'Pedro',
+          paternal_last_name: 'Ramírez',
+          maternal_last_name: 'Díaz',
+          email: 'pedro@example.com',
+          phone: '123456789',
+        },
+        enrollments: [
+          {
+            id: 200,
+            number: '2026-0002',
+            created_at: '2026-01-02',
+            total_paid: 0,
+            pending_balance: 0,
+            license_group: 'class_b',
+            promotion_course_id: null,
+            registration_channel: 'in_person',
+            certificate_b_pdf_url: null,
+            certificate_professional_pdf_url: null,
+            license_initial_url: null,
+            license_full_url: null,
+            courses: { name: 'Refuerzo Clase B', practical_hours: 4.5, is_reinforcement: true },
+            digital_contracts: null,
+            status: 'active',
+          },
+        ],
+      });
+
+      mock.setResult('class_b_practice_attendance', []);
+      mock.setResult('class_b_sessions', []);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.initialize(42);
+
+      expect(facade.progresoPractico().requeridas).toBe(6);
+      expect(facade.clasesPracticas()).toHaveLength(6);
+      expect(facade.alumno()?.isReinforcement).toBe(true);
+    });
+
+    it('regresión AC-E1: Clase B estándar (sin practical_hours en el fixture) sigue usando 12', async () => {
+      const mock = makeFlexibleSupabaseMock();
+
+      mock.setSingleResult('students', {
+        id: 42,
+        status: 'active',
+        created_at: '2026-01-01',
+        users: {
+          id: 7,
+          rut: '22.222.222-2',
+          first_names: 'Laura',
+          paternal_last_name: 'Vidal',
+          maternal_last_name: 'Muñoz',
+          email: 'laura@example.com',
+          phone: '123456789',
+        },
+        enrollments: [
+          {
+            id: 201,
+            number: '2026-0003',
+            created_at: '2026-01-02',
+            total_paid: 0,
+            pending_balance: 0,
+            license_group: 'class_b',
+            promotion_course_id: null,
+            registration_channel: 'in_person',
+            certificate_b_pdf_url: null,
+            certificate_professional_pdf_url: null,
+            license_initial_url: null,
+            license_full_url: null,
+            courses: { name: 'Clase B' },
+            digital_contracts: null,
+            status: 'active',
+          },
+        ],
+      });
+
+      mock.setResult('class_b_practice_attendance', []);
+      mock.setResult('class_b_sessions', []);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.initialize(42);
+
+      expect(facade.progresoPractico().requeridas).toBe(12);
+      expect(facade.clasesPracticas()).toHaveLength(12);
+      expect(facade.alumno()?.isReinforcement).toBe(false);
+    });
   });
 
   describe('setReagendarSeleccion — RF-053', () => {

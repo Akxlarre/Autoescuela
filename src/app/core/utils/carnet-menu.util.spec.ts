@@ -62,4 +62,35 @@ describe('buildCarnetMenu', () => {
       expect(byId(conFull, 'generar-carnet-12').label).toBe('Volver a generar Carnet 12 clases');
     });
   });
+
+  describe('Refuerzo Clase B (isReinforcement) — spec 0006-m', () => {
+    it('omite por completo la sección de 12 clases (solo 3 ítems, sin headers de 12)', () => {
+      const menu = buildCarnetMenu({
+        initialPath: null,
+        fullPath: null,
+        primeras6Completadas: 0,
+        isReinforcement: true,
+      });
+      expect(menu).toHaveLength(3);
+      expect(menu.find((i) => i.id === 'carnet-12-header')).toBeUndefined();
+      expect(menu.find((i) => i.id === 'generar-carnet-12')).toBeUndefined();
+      expect(menu.find((i) => i.id === 'ver-carnet-12')).toBeUndefined();
+    });
+
+    it('el carnet de 6 clases se comporta idéntico a Clase B estándar', () => {
+      const menu = buildCarnetMenu({
+        initialPath: 'path/6.pdf',
+        fullPath: null,
+        primeras6Completadas: 6,
+        isReinforcement: true,
+      });
+      expect(byId(menu, 'generar-carnet-6').label).toBe('Volver a generar Carnet 6 clases');
+      expect(byId(menu, 'ver-carnet-6').disabled).toBe(false);
+    });
+
+    it('isReinforcement=false (default) mantiene el comportamiento previo — regresión', () => {
+      const menu = buildCarnetMenu({ initialPath: null, fullPath: null, primeras6Completadas: 0 });
+      expect(menu).toHaveLength(6);
+    });
+  });
 });

@@ -28,6 +28,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   template: `
     <app-drawer-form [hasFooter]="true">
+      @if (matriculaSubtitle()) {
+        <p class="text-xs text-text-secondary m-0 mb-3">{{ matriculaSubtitle() }}</p>
+      }
       @if (facade.studentDocsLoading()) {
         <div class="flex flex-col gap-3">
           @for (_ of [1, 2, 3, 4]; track $index) {
@@ -104,9 +107,20 @@ export class DmsStudentDocsDrawerComponent {
 
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
+  /** Matrícula/sede de la fila que se está viendo (spec 0007-m) — deriva de studentsWithDocs(), ya poblado por el "Ver →" que abrió este drawer. */
+  readonly matriculaSubtitle = computed(() => {
+    const detail = this.facade.studentDetail();
+    if (!detail?.enrollmentId) return null;
+    const row = this.facade
+      .studentsWithDocs()
+      .find((s) => s.studentId === detail.studentId && s.enrollmentId === detail.enrollmentId);
+    if (!row) return null;
+    return `Matrícula ${row.matriculaNumber}${row.branchName ? ' — ' + row.branchName : ''}`;
+  });
+
   openUploadDrawer(): void {
-    const id = this.facade.studentDetail()?.studentId ?? null;
-    this.facade.openUpload('student', id);
+    const detail = this.facade.studentDetail();
+    this.facade.openUpload('student', detail?.studentId ?? null, detail?.enrollmentId ?? null);
   }
 
   onSelectDocument(path: string | null, fileName: string): void {
@@ -127,9 +141,9 @@ export class DmsStudentDocsDrawerComponent {
     if (!confirmed) return;
     try {
       await this.facade.deleteStudentDocument(docId, source);
-      const studentId = this.facade.studentDetail()?.studentId;
-      if (studentId) {
-        void this.facade.loadStudentDocuments(studentId);
+      const detail = this.facade.studentDetail();
+      if (detail?.studentId) {
+        void this.facade.loadStudentDocuments(detail.studentId, detail.enrollmentId ?? undefined);
       }
     } catch (err) {
       console.error('Error al eliminar:', err);

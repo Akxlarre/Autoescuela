@@ -40,8 +40,22 @@ describe('findCourseByLicenseClass', () => {
     branch_id: 1,
     base_price: 350000,
   });
+  const refuerzoBranch1 = makeCourse({
+    id: 5,
+    code: 'refuerzo_b_1',
+    license_class: 'B',
+    branch_id: 1,
+    base_price: 175000,
+    is_reinforcement: true,
+  });
 
-  const courses = [classBBranch1, classBBranch2, professionalA2, classBSenceBranch1];
+  const courses = [
+    classBBranch1,
+    classBBranch2,
+    professionalA2,
+    classBSenceBranch1,
+    refuerzoBranch1,
+  ];
 
   it('con branchId explícito, devuelve el curso de esa sede aunque haya otra con la misma license_class', () => {
     expect(findCourseByLicenseClass(courses, 'B', { branchId: 2 })?.id).toBe(classBBranch2.id);
@@ -71,5 +85,27 @@ describe('findCourseByLicenseClass', () => {
 
   it('devuelve undefined si no hay match', () => {
     expect(findCourseByLicenseClass(courses, 'A5', { branchId: 1 })).toBeUndefined();
+  });
+
+  it('con isReinforcement: true, resuelve el curso de Refuerzo sin cruzarse con el estándar ni con SENCE', () => {
+    expect(findCourseByLicenseClass(courses, 'B', { branchId: 1, isReinforcement: true })?.id).toBe(
+      refuerzoBranch1.id,
+    );
+  });
+
+  it('con isReinforcement: false (default), excluye el curso de Refuerzo — regresión Clase B estándar', () => {
+    expect(findCourseByLicenseClass(courses, 'B', { branchId: 1 })?.id).toBe(classBBranch1.id);
+    expect(
+      findCourseByLicenseClass(courses, 'B', { branchId: 1, isReinforcement: false })?.id,
+    ).toBe(classBBranch1.id);
+  });
+
+  it('isSence e isReinforcement no se cruzan entre sí en la misma sede', () => {
+    expect(findCourseByLicenseClass(courses, 'B', { branchId: 1, isSence: true })?.id).toBe(
+      classBSenceBranch1.id,
+    );
+    expect(findCourseByLicenseClass(courses, 'B', { branchId: 1, isReinforcement: true })?.id).toBe(
+      refuerzoBranch1.id,
+    );
   });
 });

@@ -318,7 +318,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <div class="flex items-center justify-between gap-2 shrink-0">
               <div class="flex items-center gap-2">
                 <app-icon name="users" [size]="20" [style.color]="'var(--color-primary)'" />
-                <h2 class="font-semibold text-text-primary">
+                <h2 class="item-title">
                   Alumnos del ciclo
                   @if (selectedCycleId() !== null) {
                     <span class="text-text-muted">({{ roster().length }})</span>
@@ -380,7 +380,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 @for (alumno of filteredRoster(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-2 px-2 py-3 rounded-md list-item-hover">
                     <div class="min-w-0 flex-1">
-                      <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
+                      <p class="text-sm text-text-primary truncate">{{ alumno.nombre }}</p>
                       <p class="text-sm text-text-muted truncate">
                         {{ alumno.email || 'Sin correo' }}
                       </p>

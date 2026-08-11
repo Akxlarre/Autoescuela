@@ -72,9 +72,11 @@ export class AdminDocumentosComponent {
     this.facade.openUpload('school');
   }
 
-  onViewStudentDocs(studentId: number): void {
-    const row = this.facade.studentsWithDocs().find((s) => s.studentId === studentId);
-    this.facade.openStudentDocsDrawer(studentId, row?.name ?? 'Alumno');
+  onViewStudentDocs(event: { studentId: number; enrollmentId: number }): void {
+    const row = this.facade
+      .studentsWithDocs()
+      .find((s) => s.studentId === event.studentId && s.enrollmentId === event.enrollmentId);
+    this.facade.openStudentDocsDrawer(event.studentId, event.enrollmentId, row?.name ?? 'Alumno');
   }
 
   onViewInstructorDocs(instructorId: number): void {

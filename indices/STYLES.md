@@ -288,20 +288,20 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 441 | `#38bdf8` |
-| `--text-muted` | 401 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 439 | `#38bdf8` |
+| `--text-muted` | 397 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 265 | `var(--color-primary-text)` |
 | `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 216 | `#f87171` |
-| `--bg-surface` | 195 | `#18181b` |
+| `--bg-surface` | 194 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
 | `--color-primary` | 147 | `#38bdf8` |
 | `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
 | `--state-warning` | 125 | `#fbbf24` |
-| `--bg-elevated` | 80 | `#27272a` |
+| `--bg-elevated` | 78 | `#27272a` |
 | `--text-sm` | 64 | `0.875rem` |
-| `--bg-subtle` | 60 | `rgba(255, 255, 255, 0.1)` |
+| `--bg-subtle` | 58 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 57 | `200ms` |
 | `--radius-md` | 56 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
@@ -318,13 +318,13 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 235 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 164 | `src/styles/tokens/_variables.scss` |
+| `.card` | 240 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 163 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 130 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
-| `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
+| `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
+| `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
-| `.card-tinted` | 12 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 4 | `src/styles/tokens/_variables.scss` |
@@ -423,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 53 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 917 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 896 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

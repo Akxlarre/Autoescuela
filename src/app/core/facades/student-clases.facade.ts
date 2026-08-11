@@ -3,6 +3,7 @@ import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { toISODate, to24hTime } from '@core/utils/date.utils';
+import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   StudentClasesData,
   StudentClasesKpis,
@@ -129,7 +130,9 @@ export class StudentClasesFacade {
 
     const { data: enrollment, error: enrollmentError } = await this.supabase.client
       .from('enrollments')
-      .select('id, license_group, student_id, promotion_course_id, students!inner(id)')
+      .select(
+        'id, license_group, student_id, promotion_course_id, students!inner(id), courses!inner(practical_hours)',
+      )
       .eq('id', activeId)
       .maybeSingle();
 
@@ -143,9 +146,10 @@ export class StudentClasesFacade {
     const studentId: number = (enrollment as any).student_id;
     const licenseGroup: 'class_b' | 'professional' = (enrollment as any).license_group;
     const promotionCourseId: number | null = (enrollment as any).promotion_course_id;
+    const practicalHours: number | null = (enrollment as any).courses?.practical_hours ?? null;
 
     if (licenseGroup === 'class_b') {
-      await this.fetchClassBData(enrollmentId, studentId);
+      await this.fetchClassBData(enrollmentId, studentId, practicalHours);
     } else {
       await this.fetchProfessionalData(enrollmentId, promotionCourseId);
     }
@@ -153,7 +157,11 @@ export class StudentClasesFacade {
 
   // ─── Clase B ─────────────────────────────────────────────────────────────
 
-  private async fetchClassBData(enrollmentId: number, _studentId: number): Promise<void> {
+  private async fetchClassBData(
+    enrollmentId: number,
+    _studentId: number,
+    practicalHours: number | null = null,
+  ): Promise<void> {
     // La asistencia teórica fue eliminada (Spec 0001 — Ciclos Teóricos): la vista
     // del alumno solo muestra prácticas.
     const [practiceResult, progressResult] = await Promise.all([
@@ -195,9 +203,13 @@ export class StudentClasesFacade {
       (s) => s.status === 'scheduled' || s.status === 'in_progress',
     ).length;
 
+    // Cantidad de prácticas requeridas se deriva del curso de la matrícula (spec 0006-m) —
+    // ya no asume 12 fijo. Fallback a 12 si falta el dato (regresión Clase B estándar, AC-E1).
+    const totalPractices = classCountFromPracticalHours(practicalHours) || 12;
+
     const kpis: StudentClasesKpis = {
       completedPractices: completed,
-      totalPractices: 12,
+      totalPractices,
       scheduledUpcoming: upcoming,
       theoryPct: 0,
     };

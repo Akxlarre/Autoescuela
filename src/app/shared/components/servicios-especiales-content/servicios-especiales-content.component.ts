@@ -50,7 +50,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     StableWidthDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen-2" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -67,9 +67,12 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
       />
 
       <!-- ── Catálogo de Servicios ──────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <section class="card">
-          <div class="flex items-center justify-between mb-4">
+      <div
+        class="bento-banner bento-fill flex flex-col h-full"
+        style="container-type:inline-size; container-name:svc-catalogo"
+      >
+        <section class="card flex flex-col h-full min-h-0">
+          <div class="flex items-center justify-between mb-4 shrink-0">
             <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
             <button
               type="button"
@@ -82,7 +85,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             </button>
           </div>
 
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 svc-catalogo-grid gap-4 flex-1 min-h-0 overflow-y-auto">
             @for (servicio of catalogo(); track servicio.id) {
               <div class="card flex flex-col gap-3">
                 <div class="flex items-start justify-between">
@@ -139,11 +142,14 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
       </div>
 
       <!-- ── Historial de Ventas ────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <section class="card">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div
+        class="bento-banner bento-fill flex flex-col h-full"
+        style="container-type:inline-size; container-name:svc-historial"
+      >
+        <section class="card flex flex-col h-full min-h-0">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5 shrink-0">
             <h2 class="text-lg font-semibold text-text-primary m-0">Historial de Ventas</h2>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <p-select
                 [ngModel]="filtroServicio()"
                 (ngModelChange)="filtroServicio.set($event)"
@@ -152,8 +158,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 optionValue="value"
                 placeholder="Todos los servicios"
                 styleClass="w-full h-10"
+                class="min-w-0"
               />
-              <div class="relative">
+              <div class="relative shrink-0">
                 <button
                   type="button"
                   class="btn-secondary h-10 px-4 flex items-center justify-center gap-2 disabled:opacity-60"
@@ -188,8 +195,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
           </div>
           <!-- (Contenido de la tabla sigue igual...) -->
 
-          <!-- Vista Desktop: Tabla (Visible en SM+) -->
-          <div class="hidden sm:block overflow-x-auto">
+          <!-- Vista Desktop: Tabla (Visible en SM+ del CONTENEDOR, no del viewport) -->
+          <div class="svc-table-view overflow-x-auto flex-1 min-h-0 overflow-y-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr style="border-bottom:1px solid var(--border-subtle)">
@@ -264,8 +271,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             </table>
           </div>
 
-          <!-- Vista Mobile: Card List (Visible solo en < SM) -->
-          <div class="sm:hidden flex flex-col gap-4">
+          <!-- Vista Mobile: Card List (Visible cuando el CONTENEDOR es angosto) -->
+          <div class="svc-mobile-view flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
             @for (venta of ventasFiltradas(); track venta.id) {
               <div
                 class="p-4 rounded-xl bg-surface border border-border-subtle flex flex-col gap-3"
@@ -369,6 +376,40 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
       /* Alineación del selector */
       :host ::ng-deep .p-select {
         height: 2.5rem !important;
+      }
+
+      /* Catálogo y switch tabla/mobile del Historial: por CONTENEDOR, no por
+         viewport (fix-021-i). Con el drawer de LayoutDrawer abierto, el ancho
+         visual de estas celdas se reduce pero el viewport del navegador no
+         cambia — los breakpoints sm:/lg: de Tailwind (@media) no reaccionan,
+         mientras que @container sí, porque mide el propio elemento. */
+      .svc-catalogo-grid {
+        grid-template-columns: repeat(1, 1fr);
+      }
+      @container svc-catalogo (min-width: 480px) {
+        .svc-catalogo-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @container svc-catalogo (min-width: 720px) {
+        .svc-catalogo-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .svc-table-view {
+        display: none;
+      }
+      .svc-mobile-view {
+        display: flex;
+      }
+      @container svc-historial (min-width: 640px) {
+        .svc-table-view {
+          display: block;
+        }
+        .svc-mobile-view {
+          display: none;
+        }
       }
     `,
   ],

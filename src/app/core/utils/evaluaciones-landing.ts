@@ -104,7 +104,10 @@ export function buildCursoResumen(
 
 /**
  * Ensambla el aterrizaje completo: cada promoción con sus cursos resumidos y
- * los totales del grupo. Preserva el orden de `promotions` (más recientes primero).
+ * los totales del grupo. Las promociones `in_progress` (activas) van siempre primero —
+ * son las que requieren atención inmediata (registrar notas de un curso en curso) — seguidas
+ * de las `planned`. Dentro de cada grupo de estado se preserva el orden de entrada (más
+ * recientes primero, heredado del `order by start_date desc` de la query).
  */
 export function buildLanding(
   promotions: PromotionLite[],
@@ -112,15 +115,20 @@ export function buildLanding(
   enrollments: EnrollmentLite[],
   grades: GradeLite[],
 ): PromocionConCursos[] {
-  return promotions.map((promo) => {
+  const result = promotions.map((promo) => {
     const cursosDeLaPromo = courses.filter((c) => c.promotionId === promo.id);
 
-    const cursos = cursosDeLaPromo.map((course) => {
-      const enrollmentsDelCurso = enrollments.filter(
-        (e) => e.promotionCourseId === course.promotionCourseId,
-      );
-      return buildCursoResumen(course, enrollmentsDelCurso, grades);
-    });
+    const cursos = cursosDeLaPromo
+      .map((course) => {
+        const enrollmentsDelCurso = enrollments.filter(
+          (e) => e.promotionCourseId === course.promotionCourseId,
+        );
+        return buildCursoResumen(course, enrollmentsDelCurso, grades);
+      })
+      // Supabase no garantiza el orden de `promotion_courses` (orden de inserción, no
+      // alfabético) — se ordena por código (A2 < A3 < A4 < A5) para que las tarjetas
+      // de curso aparezcan siempre en el mismo orden predecible.
+      .sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 
     const totalAlumnos = cursos.reduce((s, c) => s + c.totalAlumnos, 0);
     const cursosConfirmados = cursos.filter((c) => c.estado === 'confirmada').length;
@@ -135,6 +143,11 @@ export function buildLanding(
       cursosConfirmados,
     };
   });
+
+  const statusRank = (status: string): number => (status === 'in_progress' ? 0 : 1);
+  // Array.prototype.sort es estable (ES2019+) → dentro de cada rango de estado se preserva
+  // el orden original de `promotions`, no se re-ordena por nada más.
+  return result.sort((a, b) => statusRank(a.status) - statusRank(b.status));
 }
 
 /** Helper de presentación: ¿el promedio del curso aprueba? (para color de la tarjeta) */
