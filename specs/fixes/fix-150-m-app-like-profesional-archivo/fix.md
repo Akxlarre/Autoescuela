@@ -1,7 +1,8 @@
 # Fix: App-like `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo`
 > id: fix-150-m-app-like-profesional-archivo
 > refs: ASG-b-081
-> status: in_progress
+> status: done
+> closed: 2026-08-11
 > created: 2026-08-10
 
 ## Root Cause
@@ -25,8 +26,15 @@ Ninguno — fix de rollout de patrón visual (app-like), no ligado a un AC de ne
      scroll horizontal tras el cambio — no romperla.
 
 ## Test de Regresión
-- [ ] `force-compact` verificado con drawer abierto
-- [ ] `/verify` en `/admin/clase-profesional/archivo`
-- [ ] `/verify` en `/secretaria/profesional/archivo` (wrappea al de admin, se resuelve
-      automáticamente, pero se confirma igual)
-- [ ] Confirmar `sticky-col` funcionando con scroll horizontal después del cambio
+- [x] `force-compact` con drawer abierto — N/A: este componente no abre ningún drawer
+- [x] `/verify` en `/admin/clase-profesional/archivo` — PASA (consola limpia, sin 4xx,
+      documentScrolls=false, sin violaciones de `contain`/`min-height` inline)
+- [x] `/verify` en `/secretaria/profesional/archivo` (`secretaria2@test.com`) — PASA,
+      wrapper hereda el fix sin cambios adicionales
+- [x] `sticky-col` confirmado con scroll horizontal (`scrollLeft` aplicado, columna
+      "Alumno" no se desplaza) — sigue funcionando
+
+Reserva no bloqueante (no AC): con datos reales el área scrolleable de la tabla se ve
+compacta (~120px) a 800px de alto porque el header + leyenda + KPIs viven dentro de la
+misma card `.bento-fill` — está dentro del alcance declarado, no requiere cambio.
+

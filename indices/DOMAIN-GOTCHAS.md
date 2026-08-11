@@ -706,6 +706,30 @@
   contexto de search_path para ESA invocación puntual, sin importar el del caller.
 - **Fuente:** `specs/fixes/fix-145-m-bugs-audit-log-qa-0006-m`
 
+### DG-059 — Un trigger `AFTER UPDATE` no sabe quién hizo el UPDATE a menos que lo pidas explícitamente con `auth_user_role()`/`auth.uid()`
+- **Trampa:** asumir que un trigger de notificación instalado para un flujo de un solo rol
+  (ej. "el instructor cierra la clase") solo se dispara desde ese rol, porque el nombre de la
+  notificación lo dice ("Clase cerrada **por el instructor**"). Un trigger `AFTER UPDATE OF
+  status ON class_b_sessions` se dispara igual sin importar qué código/rol ejecutó el
+  `UPDATE` — y en este proyecto varios facades comparten la misma transición de estado
+  (`AsistenciaClaseBFacade.finalizarClase()`, usado tanto por `secretaria-asistencia` como por
+  `admin-asistencia`, deja `class_b_sessions.status='completed'` igual que
+  `InstructorClasesFacade.finishClass()`).
+- **Realidad:** `notify_class_b_completed()` (`20260801100000`) notificaba a secretaría con
+  texto fijo "completada por el instructor" incluso cuando quien cerraba la clase era la propia
+  secretaría o un admin — autonotificándose con un mensaje falso. `SECURITY DEFINER` no ayuda
+  acá: solo eleva el rol de EJECUCIÓN de la función, no oculta quién disparó la transacción.
+  `auth_user_role()`/`auth.uid()` siguen leyendo el JWT de la sesión que originó el `UPDATE`
+  (viaja con la request, no con el rol de ejecución), así que sirven dentro del trigger para
+  distinguir el actor real. Fix: filtrar el bloque de notificación a secretaría con
+  `WHERE public.auth_user_role() = 'instructor'`.
+- **Lección:** cualquier trigger de notificación que redacte el mensaje asumiendo un actor fijo
+  (rol único) debe verificar primero si la tabla/columna que dispara el trigger puede ser
+  mutada por más de un flujo/rol — buscar todos los facades que hacen `UPDATE` de esa columna,
+  no solo el que motivó el trigger originalmente. Si hay más de uno, condicionar con
+  `auth_user_role()` en vez de hardcodear el rol en el texto.
+- **Fuente:** `specs/fixes/fix-148-m-notif-secretaria-cierre-clase-b`
+
 ---
 
 ## Convención para agregar una entrada nueva
