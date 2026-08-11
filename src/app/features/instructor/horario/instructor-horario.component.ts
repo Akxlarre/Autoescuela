@@ -33,7 +33,7 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
     BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <app-section-hero
         [animateOnInit]="false"
         title="Mi Horario"
@@ -49,9 +49,9 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
       />
 
       <!-- Schedule content -->
-      <div class="bento-banner">
+      <div class="bento-banner bento-fill flex flex-col h-full">
         <!-- DESKTOP: Grid Semanal -->
-        <div class="hidden md:block">
+        <div class="hidden md:flex md:flex-col md:min-h-0 h-full">
           <app-weekly-schedule-grid
             [schedule]="facade.weeklySchedule()"
             [isLoading]="isDataLoading()"

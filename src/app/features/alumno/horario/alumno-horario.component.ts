@@ -38,8 +38,49 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     IconComponent,
     TabsComponent,
   ],
+  styles: [
+    `
+      .horario-calendar-card {
+        container-type: inline-size;
+        container-name: horarioCalendar;
+      }
+      .horario-days-grid {
+        grid-template-columns: repeat(7, minmax(88px, 1fr));
+        min-width: 620px;
+      }
+      /* Contenedor angosto (mobile): ~3 días visibles por pantalla, el resto se
+         alcanza con swipe/scroll horizontal nativo — en vez de min-width:620px fijo,
+         que dejaba ~3.5 columnas cortadas sin pista visual de que había más contenido. */
+      @container horarioCalendar (max-width: 480px) {
+        .horario-days-grid {
+          grid-template-columns: repeat(7, minmax(30%, 1fr));
+          min-width: 0;
+        }
+        /* Swipe "engancha" en cada día en vez de scroll libre — el wrapper
+           .overflow-x-auto es el scroller, cada columna de día es su snap point. */
+        .horario-days-scroller {
+          scroll-snap-type: x mandatory;
+        }
+        .horario-days-grid > * {
+          scroll-snap-align: start;
+        }
+        /* 4 items en flex-wrap no entran en el ancho mobile disponible (~276px medido en
+           vivo) y quedan 3+1 huérfano — grid 2x2 balanceado en vez de forzar 1 línea. */
+        .horario-legend {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          flex-wrap: unset;
+        }
+      }
+    `,
+  ],
   template: `
-    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi horario">
+    <section
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      appBentoReveal
+      appBentoGridLayout
+      aria-label="Mi horario"
+    >
       <!-- ── HERO ─────────────────────────────────────────────────────────────── -->
       <app-section-hero
         icon="calendar-days"
@@ -51,60 +92,96 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         density="slim"
       />
 
-      <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
-      @if (context.enrollments().length > 1) {
-        <div class="bento-banner p-2">
-          <app-tabs
-            [tabs]="enrollmentTabs()"
-            [activeId]="activeEnrollmentStr()"
-            variant="pill"
-            (activeIdChange)="selectEnrollment(+$event)"
-          />
-        </div>
-      }
-
-      <!-- ── PRÓXIMA CLASE — tarjeta destacada ─────────────────────────────────── -->
-      @if (!loading() && nextSession()) {
-        <div class="bento-banner" appScrollReveal>
-          <div
-            class="card card-tinted flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4"
-            appCardHover
-            style="border-left: 3px solid var(--ds-brand)"
-          >
-            <div
-              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-brand-tint"
-            >
-              <app-icon name="calendar-check" [size]="22" class="text-brand" />
-            </div>
-
-            <div class="flex flex-col gap-1 flex-1 min-w-0">
-              <span class="text-2xs uppercase font-bold tracking-wider text-brand"
-                >Próxima clase</span
-              >
-              <p class="font-semibold text-text-primary m-0 leading-tight">
-                {{ formatDate(nextSession()!.date) }}
-                @if (nextSession()!.startTime) {
-                  <span class="text-text-secondary font-normal">
-                    · {{ nextSession()!.startTime }}</span
-                  >
-                }
-              </p>
-              @if (nextSession()!.classNumber) {
-                <span class="text-xs text-text-muted">
-                  Clase {{ nextSession()!.classNumber }} de 12
-                </span>
-              }
-            </div>
-
-            <app-badge variant="brand">
-              {{ daysUntil(nextSession()!.date) }}
-            </app-badge>
+      <!-- ── Selector de matrícula + Próxima clase + Sin matrícula (1 sola fila auto) ──
+           Wrapper SIEMPRE presente (aunque quede vacío) para que --fill-screen-kpi, que fija
+           3 filas de grid (hero/auto/fill), siga colocando el calendario en la fila fill — si
+           el @if envolvente ocultara el wrapper entero, el auto-placement correría el
+           calendario a la fila "auto" y contain:size lo colapsaría a 0 (fix-127-b). -->
+      <div class="bento-banner flex flex-col gap-3">
+        @if (context.enrollments().length > 1) {
+          <div class="p-2">
+            <app-tabs
+              [tabs]="enrollmentTabs()"
+              [activeId]="activeEnrollmentStr()"
+              variant="segmented"
+              (activeIdChange)="selectEnrollment(+$event)"
+            />
           </div>
-        </div>
-      }
+        }
+
+        @if (!loading() && nextSession()) {
+          <div appScrollReveal>
+            <div
+              class="card card-tinted flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4"
+              appCardHover
+              style="border-left: 3px solid var(--ds-brand)"
+            >
+              <div
+                class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-brand-tint"
+              >
+                <app-icon name="calendar-check" [size]="22" class="text-brand" />
+              </div>
+
+              <div class="flex flex-col gap-1 flex-1 min-w-0">
+                <span class="text-2xs uppercase font-bold tracking-wider text-brand"
+                  >Próxima clase</span
+                >
+                <p class="font-semibold text-text-primary m-0 leading-tight">
+                  {{ formatDate(nextSession()!.date) }}
+                  @if (nextSession()!.startTime) {
+                    <span class="text-text-secondary font-normal">
+                      · {{ nextSession()!.startTime }}</span
+                    >
+                  }
+                </p>
+                @if (nextSession()!.classNumber) {
+                  <span class="text-xs text-text-muted">
+                    Clase {{ nextSession()!.classNumber }} de 12
+                  </span>
+                }
+              </div>
+
+              <app-badge variant="brand">
+                {{ daysUntil(nextSession()!.date) }}
+              </app-badge>
+            </div>
+          </div>
+        }
+
+        @if (!loading() && facade.licenseGroup() === null) {
+          <div appScrollReveal>
+            <div class="card flex flex-col items-center gap-3 py-10 text-center" appCardHover>
+              <app-icon name="calendar-x" [size]="36" class="text-text-muted" />
+              <p class="text-sm text-text-muted m-0">
+                Sin matrícula activa. Consulta a la secretaría.
+              </p>
+            </div>
+          </div>
+        }
+
+        @if (!loading() && isCompletedEnrollment()) {
+          <div appScrollReveal>
+            <div
+              class="card flex flex-col sm:flex-row items-center gap-3 p-4 text-center sm:text-left"
+              appCardHover
+              style="border-left: 3px solid var(--state-warning)"
+            >
+              <app-icon name="graduation-cap" [size]="28" class="text-text-muted shrink-0" />
+              <p class="text-sm text-text-secondary m-0">
+                Tu matrícula de {{ completedCourseName() }} finalizó. Consulta a la secretaría para
+                una nueva.
+              </p>
+            </div>
+          </div>
+        }
+      </div>
 
       <!-- ── CALENDARIO SEMANAL ─────────────────────────────────────────────────── -->
-      <div class="bento-banner card flex flex-col gap-4" appScrollReveal appCardHover>
+      <div
+        class="horario-calendar-card bento-banner bento-fill card flex flex-col gap-4 h-full overflow-y-auto"
+        appScrollReveal
+        appCardHover
+      >
         <!-- Navegación de semana -->
         <div class="flex items-center gap-2">
           <button
@@ -153,11 +230,8 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             }
           </div>
         } @else {
-          <div class="overflow-x-auto -mx-4 px-4">
-            <div
-              class="grid gap-1.5"
-              style="grid-template-columns: repeat(7, minmax(88px, 1fr)); min-width: 620px"
-            >
+          <div class="horario-days-scroller overflow-x-auto -mx-4 px-4">
+            <div class="horario-days-grid grid gap-1.5">
               @for (day of weekDays(); track day.date) {
                 <div class="flex flex-col gap-1.5">
                   <!-- Cabecera del día -->
@@ -249,7 +323,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 
           <!-- Leyenda de estados -->
           <div
-            class="flex items-center gap-4 flex-wrap pt-1"
+            class="horario-legend flex items-center gap-4 flex-wrap pt-1 mt-auto"
             style="border-top: 1px solid var(--border-subtle)"
           >
             @for (item of legend; track item.label) {
@@ -261,18 +335,6 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
           </div>
         }
       </div>
-
-      <!-- ── SIN MATRÍCULA ────────────────────────────────────────────────────── -->
-      @if (!loading() && facade.licenseGroup() === null) {
-        <div class="bento-banner" appScrollReveal>
-          <div class="card flex flex-col items-center gap-3 py-10 text-center" appCardHover>
-            <app-icon name="calendar-x" [size]="36" class="text-text-muted" />
-            <p class="text-sm text-text-muted m-0">
-              Sin matrícula activa. Consulta a la secretaría.
-            </p>
-          </div>
-        </div>
-      }
     </section>
   `,
 })
@@ -298,11 +360,19 @@ export class AlumnoHorarioComponent {
   readonly enrollmentTabs = computed(() => {
     return this.context.enrollments().map((enr) => ({
       id: String(enr.id),
-      label: enr.label,
+      label: enr.status === 'completed' ? `${enr.label} (finalizada)` : enr.label,
     }));
   });
 
   readonly activeEnrollmentStr = computed(() => String(this.context.activeEnrollmentId()));
+
+  readonly isCompletedEnrollment = computed(
+    () => this.context.activeEnrollment()?.status === 'completed',
+  );
+
+  readonly completedCourseName = computed(
+    () => this.context.activeEnrollment()?.courseName ?? 'tu curso',
+  );
 
   readonly heroContextLine = computed(() => {
     const next = this.nextSession();
