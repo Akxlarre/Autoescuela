@@ -95,7 +95,7 @@ Valida la regla de negocio central del producto (`docs/PRODUCT-VISION.md` §Trip
 - [ ] Instructor: iniciar clase (KM inicial) → estado pasa a "en curso"
 - [ ] Instructor: intentar iniciar una segunda clase mientras otra está "en curso" → bloqueado (exclusión mutua)
 - [ ] Instructor: finalizar clase (KM final, checklist, firma) → estado pasa a "completada", asistencia registrada
-- [ ] Verificar cron de fin de jornada: clases no resueltas del día quedan `no_show` automáticamente (validar al día siguiente o con dato de prueba)
+- [x] Verificar cron de fin de jornada: clases no resueltas del día quedan `no_show` automáticamente (validar al día siguiente o con dato de prueba) — verificado 2026-08-11: el cron solo cierra `scheduled`, las `in_progress` sin cerrar quedan abiertas a propósito (requieren KM final de un humano) y se destacan visualmente en el dashboard hasta que se cierran. Comportamiento correcto, no es bug.
 
 ---
 
@@ -170,4 +170,5 @@ Valida la regla de negocio central del producto (`docs/PRODUCT-VISION.md` §Trip
 
 | # | Paquete | Caso | Severidad | Descripción | Track (fix-NNN) |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | 3 | Doble-agendar el mismo instructor en el mismo horario | Media | No hay `UNIQUE`/`EXCLUDE` constraint en BD sobre `class_b_sessions(instructor_id, scheduled_at)` — la única protección es que la vista de disponibilidad filtra al leer, no al escribir. Condición de carrera posible con dos secretarias agendando casi simultáneo. | [fix-152-m-doble-agendado-instructor-sin-constraint-bd](../specs/fixes/fix-152-m-doble-agendado-instructor-sin-constraint-bd/fix.md) |
+| 2 | 3 / 5 | Vehículo con SOAP/revisión técnica vencida no bloquea agendamiento | Alta | No existe UI para cargar/editar documentos de vehículo (SOAP, Revisión Técnica, etc.) — `FlotaFacade.upsertVehicleDocument()` existe pero ningún componente lo llama. Sin datos reales, tampoco hay validación de bloqueo al agendar. Hueco de punta a punta. | [fix-153-m-vehiculo-documentos-sin-ui-de-carga](../specs/fixes/fix-153-m-vehiculo-documentos-sin-ui-de-carga/fix.md) |
