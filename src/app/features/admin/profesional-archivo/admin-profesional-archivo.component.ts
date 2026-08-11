@@ -37,7 +37,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
       <app-section-hero
         density="slim"
@@ -108,7 +108,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
       <!-- ═══ Estado vacío (nada seleccionado) ═══ -->
       @if (!facade.isLoading() && !facade.selectedPromocionId()) {
-        <div class="bento-banner bento-card flex flex-col items-center gap-4 text-center py-16">
+        <div
+          class="bento-banner bento-fill bento-card flex flex-col items-center justify-center gap-4 text-center"
+        >
           @if (facade.promociones().length === 0) {
             <app-icon name="folder-open" [size]="52" color="var(--text-muted)" />
             <div>
@@ -134,7 +136,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       @if (
         facade.selectedPromocionId() && !facade.selectedCursoId() && !facade.isLoadingAlumnos()
       ) {
-        <div class="bento-banner bento-card flex flex-col items-center gap-3 text-center py-12">
+        <div
+          class="bento-banner bento-fill bento-card flex flex-col items-center justify-center gap-3 text-center"
+        >
           <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
           <p class="text-sm text-text-muted">
             Selecciona un curso para ver el historial de alumnos.
@@ -144,363 +148,480 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
       <!-- ═══ Tabla de alumnos ═══ -->
       @if (facade.selectedCursoId()) {
-        <section class="bento-banner bento-card p-5" appCardHover>
-          <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <div class="flex items-center gap-2">
-                <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
-                <h2 class="item-title m-0">Resultados por alumno</h2>
-              </div>
-              <span class="hidden sm:inline text-border-default">|</span>
-              <span class="text-xs font-medium text-text-secondary">
-                {{ cursoLabel() }}
-              </span>
-            </div>
-            <div
-              class="flex items-center gap-4 text-xs text-text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
-            >
-              <span class="flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-success"></span>
-                Aprobado (≥75)
-              </span>
-              <span class="flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-error"></span>
-                Reprobado (&lt;75)
-              </span>
-            </div>
-          </div>
-
-          <!-- KPIs del Curso -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            @for (kpi of cursoKpis(); track kpi.id) {
-              <div
-                class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="text-2xs uppercase font-bold text-text-muted tracking-wider">{{
-                    kpi.label
-                  }}</span>
-                  @if (kpi.icon) {
-                    <app-icon [name]="kpi.icon" [size]="14" class="text-text-muted opacity-50" />
-                  }
+        <section class="bento-banner bento-fill bento-card p-0 flex flex-col" appCardHover>
+          <div class="p-5 pb-0">
+            <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div class="flex items-center gap-2">
+                  <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
+                  <h2 class="item-title m-0">Resultados por alumno</h2>
                 </div>
-                <span
-                  class="text-2xl font-bold"
-                  [class]="kpi.color ? 'text-' + kpi.color : 'text-text-primary'"
-                >
-                  {{ kpi.value }}{{ kpi.suffix || '' }}
+                <span class="hidden sm:inline text-border-default">|</span>
+                <span class="text-xs font-medium text-text-secondary">
+                  {{ cursoLabel() }}
                 </span>
               </div>
-            }
-          </div>
+              <div
+                class="flex items-center gap-4 text-xs text-text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
+              >
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-success"></span>
+                  Aprobado (≥75)
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-error"></span>
+                  Reprobado (&lt;75)
+                </span>
+              </div>
+            </div>
 
-          <!-- Skeleton de carga -->
-          @if (facade.isLoadingAlumnos()) {
-            <div class="flex flex-col gap-3 pt-2">
-              @for (i of skeletonRows; track $index) {
-                <app-skeleton-block variant="text" width="100%" height="44px" />
+            <!-- KPIs del Curso -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              @for (kpi of cursoKpis(); track kpi.id) {
+                <div
+                  class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="text-2xs uppercase font-bold text-text-muted tracking-wider">{{
+                      kpi.label
+                    }}</span>
+                    @if (kpi.icon) {
+                      <app-icon [name]="kpi.icon" [size]="14" class="text-text-muted opacity-50" />
+                    }
+                  </div>
+                  <span
+                    class="text-2xl font-bold"
+                    [class]="kpi.color ? 'text-' + kpi.color : 'text-text-primary'"
+                  >
+                    {{ kpi.value }}{{ kpi.suffix || '' }}
+                  </span>
+                </div>
               }
             </div>
-          } @else if (facade.alumnos().length === 0) {
-            <div class="p-10 text-center">
-              <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
-              <p class="text-sm font-medium text-text-primary">Sin alumnos en este curso</p>
-              <p class="mt-1 text-xs text-text-muted">
-                No hay matrículas registradas para este curso archivado.
-              </p>
-            </div>
-          } @else {
-            <!-- Desktop: Tabla con scroll horizontal -->
-            <div class="hidden md:block overflow-hidden border border-border-subtle rounded-lg">
-              <div class="overflow-x-auto">
+          </div>
+
+          <div class="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+            <!-- Skeleton de carga: silueta de la tabla/tarjetas reales, no barras genéricas -->
+            @if (facade.isLoadingAlumnos()) {
+              <!-- Desktop: fila con avatar + columnas angostas por módulo, como la tabla real -->
+              <div class="hidden md:block overflow-hidden border border-border-subtle rounded-lg">
                 <table class="archivo-table w-full">
                   <thead>
                     <tr>
                       <th class="text-left sticky-col">Alumno</th>
-                      <!-- Asistencia -->
-                      <th
-                        class="text-center"
-                        [pTooltip]="'Sesiones teóricas asistidas / total'"
-                        tooltipPosition="top"
-                      >
-                        Teoría
-                      </th>
-                      <th
-                        class="text-center"
-                        [pTooltip]="'Sesiones prácticas asistidas / total'"
-                        tooltipPosition="top"
-                      >
-                        Práctica
-                      </th>
-                      <!-- Módulos 1-7 -->
+                      <th class="text-center">Teoría</th>
+                      <th class="text-center">Práctica</th>
                       @for (name of facade.moduleNames(); track $index) {
-                        <th
-                          class="text-center"
-                          style="min-width: 72px"
-                          [pTooltip]="name"
-                          tooltipPosition="top"
-                        >
-                          M{{ $index + 1 }}
-                        </th>
+                        <th class="text-center" style="min-width: 72px">M{{ $index + 1 }}</th>
                       }
-                      <!-- Promedio + estado -->
                       <th class="text-center" style="min-width: 88px">Promedio</th>
                       <th class="text-center" style="min-width: 110px">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+                    @for (i of skeletonRows; track $index) {
                       <tr>
-                        <!-- Alumno -->
                         <td class="sticky-col">
                           <div class="flex items-center gap-2.5">
-                            <div class="initials-avatar">{{ alumno.initials }}</div>
-                            <div class="min-w-0">
-                              <p class="text-sm font-medium text-text-primary truncate">
-                                {{ alumno.nombre }}
-                              </p>
-                              <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
+                            <app-skeleton-block variant="circle" width="30px" height="30px" />
+                            <div class="flex min-w-0 flex-col gap-1.5">
+                              <app-skeleton-block variant="text" width="110px" />
+                              <app-skeleton-block variant="text" width="70px" />
                             </div>
                           </div>
                         </td>
-
-                        <!-- Asistencia Teoría -->
                         <td class="text-center">
-                          <div class="flex flex-col items-center gap-0.5">
-                            <span class="text-xs text-text-secondary font-medium">
-                              {{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}
-                            </span>
-                            @if (alumno.pctTeoria !== null) {
-                              <span
-                                class="pct-badge"
-                                [class.pct-ok]="alumno.pctTeoria >= 75"
-                                [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
-                                [class.pct-danger]="alumno.pctTeoria < 50"
-                              >
-                                {{ alumno.pctTeoria }}%
-                              </span>
-                            } @else {
-                              <span class="text-xs text-text-muted">—</span>
-                            }
-                          </div>
+                          <app-skeleton-block
+                            variant="rect"
+                            width="48px"
+                            height="20px"
+                            borderRadius="10px"
+                            class="mx-auto"
+                          />
                         </td>
-
-                        <!-- Asistencia Práctica -->
                         <td class="text-center">
-                          <div class="flex flex-col items-center gap-0.5">
-                            <span class="text-xs text-text-secondary font-medium">
-                              {{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}
-                            </span>
-                            @if (alumno.pctPractica !== null) {
-                              <span
-                                class="pct-badge"
-                                [class.pct-ok]="alumno.pctPractica >= 75"
-                                [class.pct-warn]="
-                                  alumno.pctPractica >= 50 && alumno.pctPractica < 75
-                                "
-                                [class.pct-danger]="alumno.pctPractica < 50"
-                              >
-                                {{ alumno.pctPractica }}%
-                              </span>
-                            } @else {
-                              <span class="text-xs text-text-muted">—</span>
-                            }
-                          </div>
+                          <app-skeleton-block
+                            variant="rect"
+                            width="48px"
+                            height="20px"
+                            borderRadius="10px"
+                            class="mx-auto"
+                          />
                         </td>
-
-                        <!-- Notas de módulos (7 celdas) -->
-                        @for (nota of alumno.notas; track nota.moduleNumber) {
+                        @for (name of facade.moduleNames(); track $index) {
                           <td class="text-center px-1">
-                            @if (nota.grade !== null) {
-                              <span
-                                class="grade-cell"
-                                [class.grade-pass]="nota.passed === true"
-                                [class.grade-fail]="nota.passed === false"
-                              >
-                                {{ nota.grade }}
-                              </span>
-                            } @else {
-                              <span class="grade-cell grade-empty">—</span>
-                            }
+                            <app-skeleton-block
+                              variant="rect"
+                              width="36px"
+                              height="24px"
+                              borderRadius="6px"
+                              class="mx-auto"
+                            />
                           </td>
                         }
-
-                        <!-- Promedio -->
                         <td class="text-center">
-                          @if (alumno.notaPromedio !== null) {
-                            <span
-                              class="promedio-badge"
-                              [class.promedio-pass]="alumno.promedioAprobado === true"
-                              [class.promedio-fail]="alumno.promedioAprobado === false"
-                            >
-                              {{ alumno.notaPromedio }}
-                            </span>
-                          } @else {
-                            <span class="text-text-muted text-xs">—</span>
-                          }
+                          <app-skeleton-block
+                            variant="rect"
+                            width="40px"
+                            height="22px"
+                            borderRadius="20px"
+                            class="mx-auto"
+                          />
                         </td>
-
-                        <!-- Estado final -->
                         <td class="text-center">
-                          @if (alumno.aprobado) {
-                            <span class="estado-badge estado-aprobado">
-                              <app-icon name="check-circle" [size]="11" />
-                              Aprobado
-                            </span>
-                          } @else {
-                            <span class="estado-badge estado-reprobado">
-                              <app-icon name="x-circle" [size]="11" />
-                              Reprobado
-                            </span>
-                          }
+                          <app-skeleton-block
+                            variant="rect"
+                            width="84px"
+                            height="22px"
+                            borderRadius="20px"
+                            class="mx-auto"
+                          />
                         </td>
                       </tr>
                     }
                   </tbody>
                 </table>
               </div>
-            </div>
 
-            <!-- Mobile: Tarjetas responsivas -->
-            <div class="flex flex-col gap-4 md:hidden">
-              @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
-                <div
-                  class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm"
-                >
-                  <!-- Cabecera Alumno -->
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
-                      <div class="min-w-0 flex flex-col">
-                        <p class="item-title truncate">
-                          {{ alumno.nombre }}
-                        </p>
-                        <p class="text-2xs text-text-muted">{{ alumno.rut }}</p>
-                      </div>
-                    </div>
-                    <div class="shrink-0">
-                      @if (alumno.aprobado) {
-                        <span class="estado-badge estado-aprobado whitespace-nowrap">
-                          <app-icon name="check-circle" [size]="11" /> Aprobado
-                        </span>
-                      } @else {
-                        <span class="estado-badge estado-reprobado whitespace-nowrap">
-                          <app-icon name="x-circle" [size]="11" /> Reprobado
-                        </span>
-                      }
-                    </div>
-                  </div>
-
-                  <!-- Asistencia (Teoría y Práctica) -->
+              <!-- Mobile: tarjeta con avatar + cuerpo, como el card real -->
+              <div class="flex flex-col gap-4 md:hidden">
+                @for (i of skeletonRows; track $index) {
                   <div
-                    class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
+                    class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm"
                   >
-                    <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
-                        >Teoría</span
-                      >
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-text-primary"
-                          >{{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}</span
-                        >
-                        @if (alumno.pctTeoria !== null) {
-                          <span
-                            class="pct-badge"
-                            [class.pct-ok]="alumno.pctTeoria >= 75"
-                            [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
-                            [class.pct-danger]="alumno.pctTeoria < 50"
-                          >
-                            {{ alumno.pctTeoria }}%
-                          </span>
-                        } @else {
-                          <span class="text-xs text-text-muted">—</span>
-                        }
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <app-skeleton-block variant="circle" width="30px" height="30px" />
+                        <div class="flex flex-col gap-1.5">
+                          <app-skeleton-block variant="text" width="130px" />
+                          <app-skeleton-block variant="text" width="80px" />
+                        </div>
                       </div>
+                      <app-skeleton-block
+                        variant="rect"
+                        width="80px"
+                        height="20px"
+                        borderRadius="20px"
+                      />
                     </div>
-                    <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
-                        >Práctica</span
-                      >
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-text-primary"
-                          >{{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}</span
-                        >
-                        @if (alumno.pctPractica !== null) {
-                          <span
-                            class="pct-badge"
-                            [class.pct-ok]="alumno.pctPractica >= 75"
-                            [class.pct-warn]="alumno.pctPractica >= 50 && alumno.pctPractica < 75"
-                            [class.pct-danger]="alumno.pctPractica < 50"
-                          >
-                            {{ alumno.pctPractica }}%
-                          </span>
-                        } @else {
-                          <span class="text-xs text-text-muted">—</span>
-                        }
-                      </div>
-                    </div>
+                    <app-skeleton-block
+                      variant="rect"
+                      width="100%"
+                      height="52px"
+                      borderRadius="8px"
+                    />
+                    <app-skeleton-block
+                      variant="rect"
+                      width="100%"
+                      height="60px"
+                      borderRadius="8px"
+                    />
                   </div>
-
-                  <!-- Notas Módulos -->
-                  <div>
-                    <span
-                      class="text-2xs uppercase font-bold text-text-muted block mb-2 tracking-wide"
-                      >Evaluaciones</span
-                    >
-                    <div class="flex flex-wrap gap-1.5">
-                      @for (nota of alumno.notas; track nota.moduleNumber) {
-                        <div
-                          class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-9"
+                }
+              </div>
+            } @else if (facade.alumnos().length === 0) {
+              <div class="p-10 text-center">
+                <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
+                <p class="text-sm font-medium text-text-primary">Sin alumnos en este curso</p>
+                <p class="mt-1 text-xs text-text-muted">
+                  No hay matrículas registradas para este curso archivado.
+                </p>
+              </div>
+            } @else {
+              <!-- Desktop: Tabla con scroll horizontal -->
+              <div class="hidden md:block overflow-hidden border border-border-subtle rounded-lg">
+                <div class="overflow-x-auto">
+                  <table class="archivo-table w-full">
+                    <thead>
+                      <tr>
+                        <th class="text-left sticky-col">Alumno</th>
+                        <!-- Asistencia -->
+                        <th
+                          class="text-center"
+                          [pTooltip]="'Sesiones teóricas asistidas / total'"
+                          tooltipPosition="top"
                         >
-                          <span class="text-2xs text-text-muted mb-1 font-medium"
-                            >M{{ nota.moduleNumber }}</span
+                          Teoría
+                        </th>
+                        <th
+                          class="text-center"
+                          [pTooltip]="'Sesiones prácticas asistidas / total'"
+                          tooltipPosition="top"
+                        >
+                          Práctica
+                        </th>
+                        <!-- Módulos 1-7 -->
+                        @for (name of facade.moduleNames(); track $index) {
+                          <th
+                            class="text-center"
+                            style="min-width: 72px"
+                            [pTooltip]="name"
+                            tooltipPosition="top"
                           >
-                          @if (nota.grade !== null) {
+                            M{{ $index + 1 }}
+                          </th>
+                        }
+                        <!-- Promedio + estado -->
+                        <th class="text-center" style="min-width: 88px">Promedio</th>
+                        <th class="text-center" style="min-width: 110px">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+                        <tr>
+                          <!-- Alumno -->
+                          <td class="sticky-col">
+                            <div class="flex items-center gap-2.5">
+                              <div class="initials-avatar">{{ alumno.initials }}</div>
+                              <div class="min-w-0">
+                                <p class="text-sm font-medium text-text-primary truncate">
+                                  {{ alumno.nombre }}
+                                </p>
+                                <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <!-- Asistencia Teoría -->
+                          <td class="text-center">
+                            <div class="flex flex-col items-center gap-0.5">
+                              <span class="text-xs text-text-secondary font-medium">
+                                {{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}
+                              </span>
+                              @if (alumno.pctTeoria !== null) {
+                                <span
+                                  class="pct-badge"
+                                  [class.pct-ok]="alumno.pctTeoria >= 75"
+                                  [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
+                                  [class.pct-danger]="alumno.pctTeoria < 50"
+                                >
+                                  {{ alumno.pctTeoria }}%
+                                </span>
+                              } @else {
+                                <span class="text-xs text-text-muted">—</span>
+                              }
+                            </div>
+                          </td>
+
+                          <!-- Asistencia Práctica -->
+                          <td class="text-center">
+                            <div class="flex flex-col items-center gap-0.5">
+                              <span class="text-xs text-text-secondary font-medium">
+                                {{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}
+                              </span>
+                              @if (alumno.pctPractica !== null) {
+                                <span
+                                  class="pct-badge"
+                                  [class.pct-ok]="alumno.pctPractica >= 75"
+                                  [class.pct-warn]="
+                                    alumno.pctPractica >= 50 && alumno.pctPractica < 75
+                                  "
+                                  [class.pct-danger]="alumno.pctPractica < 50"
+                                >
+                                  {{ alumno.pctPractica }}%
+                                </span>
+                              } @else {
+                                <span class="text-xs text-text-muted">—</span>
+                              }
+                            </div>
+                          </td>
+
+                          <!-- Notas de módulos (7 celdas) -->
+                          @for (nota of alumno.notas; track nota.moduleNumber) {
+                            <td class="text-center px-1">
+                              @if (nota.grade !== null) {
+                                <span
+                                  class="grade-cell"
+                                  [class.grade-pass]="nota.passed === true"
+                                  [class.grade-fail]="nota.passed === false"
+                                >
+                                  {{ nota.grade }}
+                                </span>
+                              } @else {
+                                <span class="grade-cell grade-empty">—</span>
+                              }
+                            </td>
+                          }
+
+                          <!-- Promedio -->
+                          <td class="text-center">
+                            @if (alumno.notaPromedio !== null) {
+                              <span
+                                class="promedio-badge"
+                                [class.promedio-pass]="alumno.promedioAprobado === true"
+                                [class.promedio-fail]="alumno.promedioAprobado === false"
+                              >
+                                {{ alumno.notaPromedio }}
+                              </span>
+                            } @else {
+                              <span class="text-text-muted text-xs">—</span>
+                            }
+                          </td>
+
+                          <!-- Estado final -->
+                          <td class="text-center">
+                            @if (alumno.aprobado) {
+                              <span class="estado-badge estado-aprobado">
+                                <app-icon name="check-circle" [size]="11" />
+                                Aprobado
+                              </span>
+                            } @else {
+                              <span class="estado-badge estado-reprobado">
+                                <app-icon name="x-circle" [size]="11" />
+                                Reprobado
+                              </span>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile: Tarjetas responsivas -->
+              <div class="flex flex-col gap-4 md:hidden">
+                @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+                  <div
+                    class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm"
+                  >
+                    <!-- Cabecera Alumno -->
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
+                        <div class="min-w-0 flex flex-col">
+                          <p class="item-title truncate">
+                            {{ alumno.nombre }}
+                          </p>
+                          <p class="text-2xs text-text-muted">{{ alumno.rut }}</p>
+                        </div>
+                      </div>
+                      <div class="shrink-0">
+                        @if (alumno.aprobado) {
+                          <span class="estado-badge estado-aprobado whitespace-nowrap">
+                            <app-icon name="check-circle" [size]="11" /> Aprobado
+                          </span>
+                        } @else {
+                          <span class="estado-badge estado-reprobado whitespace-nowrap">
+                            <app-icon name="x-circle" [size]="11" /> Reprobado
+                          </span>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Asistencia (Teoría y Práctica) -->
+                    <div
+                      class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
+                    >
+                      <div class="bg-surface flex flex-col items-center p-2.5">
+                        <span
+                          class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
+                          >Teoría</span
+                        >
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-semibold text-text-primary"
+                            >{{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}</span
+                          >
+                          @if (alumno.pctTeoria !== null) {
                             <span
-                              class="text-xs font-bold"
-                              [class.text-success]="nota.passed === true"
-                              [class.text-error]="nota.passed === false"
+                              class="pct-badge"
+                              [class.pct-ok]="alumno.pctTeoria >= 75"
+                              [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
+                              [class.pct-danger]="alumno.pctTeoria < 50"
                             >
-                              {{ nota.grade }}
+                              {{ alumno.pctTeoria }}%
                             </span>
                           } @else {
                             <span class="text-xs text-text-muted">—</span>
                           }
                         </div>
-                      }
+                      </div>
+                      <div class="bg-surface flex flex-col items-center p-2.5">
+                        <span
+                          class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
+                          >Práctica</span
+                        >
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-semibold text-text-primary"
+                            >{{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}</span
+                          >
+                          @if (alumno.pctPractica !== null) {
+                            <span
+                              class="pct-badge"
+                              [class.pct-ok]="alumno.pctPractica >= 75"
+                              [class.pct-warn]="alumno.pctPractica >= 50 && alumno.pctPractica < 75"
+                              [class.pct-danger]="alumno.pctPractica < 50"
+                            >
+                              {{ alumno.pctPractica }}%
+                            </span>
+                          } @else {
+                            <span class="text-xs text-text-muted">—</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
 
-                      <!-- Promedio Final -->
-                      <div
-                        class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]"
+                    <!-- Notas Módulos -->
+                    <div>
+                      <span
+                        class="text-2xs uppercase font-bold text-text-muted block mb-2 tracking-wide"
+                        >Evaluaciones</span
                       >
-                        <span class="text-2xs text-brand font-bold mb-1 uppercase">Prom</span>
-                        @if (alumno.notaPromedio !== null) {
-                          <span class="text-sm font-bold text-brand">{{
-                            alumno.notaPromedio
-                          }}</span>
-                        } @else {
-                          <span class="text-xs text-text-muted">—</span>
+                      <div class="flex flex-wrap gap-1.5">
+                        @for (nota of alumno.notas; track nota.moduleNumber) {
+                          <div
+                            class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-9"
+                          >
+                            <span class="text-2xs text-text-muted mb-1 font-medium"
+                              >M{{ nota.moduleNumber }}</span
+                            >
+                            @if (nota.grade !== null) {
+                              <span
+                                class="text-xs font-bold"
+                                [class.text-success]="nota.passed === true"
+                                [class.text-error]="nota.passed === false"
+                              >
+                                {{ nota.grade }}
+                              </span>
+                            } @else {
+                              <span class="text-xs text-text-muted">—</span>
+                            }
+                          </div>
                         }
+
+                        <!-- Promedio Final -->
+                        <div
+                          class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]"
+                        >
+                          <span class="text-2xs text-brand font-bold mb-1 uppercase">Prom</span>
+                          @if (alumno.notaPromedio !== null) {
+                            <span class="text-sm font-bold text-brand">{{
+                              alumno.notaPromedio
+                            }}</span>
+                          } @else {
+                            <span class="text-xs text-text-muted">—</span>
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              }
-            </div>
-
-            <!-- Footer: resumen de criterios -->
-            <div
-              class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-text-muted bg-surface border border-border-subtle rounded-lg mt-4"
-            >
-              <div class="flex items-center gap-2">
-                <app-icon name="info" [size]="13" />
-                <span
-                  >Aprobación requiere: asistencia teórica ≥ 75% y promedio de módulos ≥ 75</span
-                >
+                }
               </div>
-              <span class="sm:ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
-            </div>
-          }
+
+              <!-- Footer: resumen de criterios -->
+              <div
+                class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-text-muted bg-surface border border-border-subtle rounded-lg mt-4"
+              >
+                <div class="flex items-center gap-2">
+                  <app-icon name="info" [size]="13" />
+                  <span
+                    >Aprobación requiere: asistencia teórica ≥ 75% y promedio de módulos ≥ 75</span
+                  >
+                </div>
+                <span class="sm:ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
+              </div>
+            }
+          </div>
         </section>
       }
     </div>

@@ -80,7 +80,6 @@
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | fix | Baja-Media | b | 3 páginas sin relación, se pueden reclamar por separado. Ver `specs/assignments/ASG-b-077-*.md` |
 | ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | fix | Media | b | 5 páginas independientes. Solo `alumnos` necesita tests de densidad nuevos. Ver `specs/assignments/ASG-b-078-*.md` |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | `b` | fix | Media | b | Mobile-first, prioridad menor. `pagar` puede quedar exenta si su contenido nunca desborda. Ver `specs/assignments/ASG-b-079-*.md` |
-| ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | `m` | fix | Media | b | Más simple que la matriz de notas — sin modo dual. `sticky-col` ya existe, no romperlo. Ver `specs/assignments/ASG-b-081-*.md` |
 | ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | `i` | spec | Alta | b | 7 secciones (reportes) + CSS custom con contador táctil (cuadratura). Necesita diseño previo. Ver `specs/assignments/ASG-b-082-*.md` |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | `i` | fix | Media | b | Va ANTES de ASG-b-085 a propósito — piloto de bajo riesgo para validar el patrón de tabs. Ver `specs/assignments/ASG-b-084-*.md` |
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | spec | Alta | b | 1654 líneas, máximo tráfico. No reclamar sin haber hecho ASG-b-084 antes. QA visual exhaustivo obligatorio. Ver `specs/assignments/ASG-b-085-*.md` |
@@ -208,6 +207,7 @@
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | [0006-m-matricula-refuerzo-clase-b](specs/0006-m-matricula-refuerzo-clase-b/spec.md) | 2026-08-09 |
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | [fix-021-i-app-like-servicios-especiales](fixes/fix-021-i-app-like-servicios-especiales/fix.md) | 2026-08-10 |
 | ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
+| ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 <!-- AUTO-GENERATED:END -->
 
 ---
