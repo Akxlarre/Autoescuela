@@ -140,7 +140,10 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
 
     @if (variant() === 'segmented') {
       <div
-        class="flex gap-1 self-start p-1 rounded-lg bg-subtle overflow-x-auto custom-scrollbar-hidden"
+        class="flex gap-1 self-start p-1 rounded-lg bg-subtle"
+        [class.flex-wrap]="wrap()"
+        [class.overflow-x-auto]="!wrap()"
+        [class.custom-scrollbar-hidden]="!wrap()"
         role="tablist"
       >
         @for (tab of tabs(); track tab.id) {
@@ -281,6 +284,8 @@ export class TabsComponent {
   activeId = input.required<string>();
   variant = input<TabVariant>('line');
   uppercase = input<boolean>(false);
+  /** Solo aplica a variant="segmented": true = las tabs bajan de línea; false (default) = scroll horizontal. */
+  wrap = input<boolean>(false);
 
   activeIdChange = output<string>();
 
