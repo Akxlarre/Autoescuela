@@ -126,7 +126,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | `m` | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -208,6 +207,7 @@
 | ASG-b-083 | App-like: `/alumno/dashboard` | [0035-b-app-like-alumno-dashboard](specs/0035-b-app-like-alumno-dashboard/spec.md) | 2026-08-08 |
 | ASG-b-038 | Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | [0006-m-matricula-refuerzo-clase-b](specs/0006-m-matricula-refuerzo-clase-b/spec.md) | 2026-08-09 |
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | [fix-021-i-app-like-servicios-especiales](fixes/fix-021-i-app-like-servicios-especiales/fix.md) | 2026-08-10 |
+| ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -81,7 +81,7 @@
 | `/app/secretaria/profesional/relatores` | `SecretariaProfesionalRelatoresComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/promociones` | `SecretariaProfesionalPromocionesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/asistencia` | `SecretariaProfesionalAsistenciaComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
-| `/app/secretaria/profesional/notas` | `SecretariaProfesionalNotasComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
+| `/app/secretaria/profesional/evaluaciones` | `SecretariaProfesionalNotasComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/certificados` | `SecretariaProfesionalCertificadosComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/archivo` | `SecretariaProfesionalArchivoComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/notificaciones` | `SecretariaNotificacionesComponent` | — | `src/app/app.routes.ts` |
