@@ -52,6 +52,7 @@ export class AnticiposFacade {
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _selectedInstructorId = signal<number | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -62,6 +63,13 @@ export class AnticiposFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly error = this._error.asReadonly();
+  /** Instructor preseleccionado al abrir el drawer "Registrar Anticipo" desde una fila. */
+  readonly selectedInstructorId = this._selectedInstructorId.asReadonly();
+
+  /** Precarga el instructor del drawer "Registrar Anticipo"; `null` = sin preselección. */
+  selectInstructor(id: number | null): void {
+    this._selectedInstructorId.set(id);
+  }
 
   // ── KPIs computed ─────────────────────────────────────────────────────────
   readonly kpis = computed<AnticiposKpis>(() => {

@@ -154,7 +154,9 @@ export class RegistrarAnticipoDrawerComponent {
   protected readonly errorMsg = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
-    instructorId: ['', Validators.required],
+    // Precargado si se abrió desde la fila de un instructor (facade.selectInstructor());
+    // vacío si se abrió desde el botón "Registrar Anticipo" del hero.
+    instructorId: [(this.facade.selectedInstructorId() ?? '') as number | '', Validators.required],
     date: [new Date().toISOString().slice(0, 10), Validators.required],
     amount: [null as number | null, [Validators.required, Validators.min(1)]],
     reason: [''],
