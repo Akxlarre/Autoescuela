@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { EnrollmentTab, LicenseGroup } from '@core/models/ui/student-home.model';
 
@@ -18,6 +18,11 @@ export class StudentEnrollmentContextFacade {
   readonly enrollments = this._enrollments.asReadonly();
   readonly activeEnrollmentId = this._activeId.asReadonly();
 
+  /** Matrícula actualmente seleccionada (objeto completo, no solo el id). */
+  readonly activeEnrollment = computed(
+    () => this._enrollments().find((e) => e.id === this._activeId()) ?? null,
+  );
+
   /** Idempotente: solo carga la primera vez. */
   async initialize(dbId: number): Promise<void> {
     if (this._initialized) return;
@@ -25,7 +30,9 @@ export class StudentEnrollmentContextFacade {
 
     const { data } = await this.supabase.client
       .from('enrollments')
-      .select('id, number, license_group, created_at, courses!inner(name), students!inner(user_id)')
+      .select(
+        'id, number, license_group, status, created_at, courses!inner(name), students!inner(user_id)',
+      )
       .eq('students.user_id', dbId)
       .in('status', ['active', 'completed'])
       .order('created_at', { ascending: false });
@@ -38,7 +45,8 @@ export class StudentEnrollmentContextFacade {
         : (e.courses?.name ?? '');
       const base = lg === 'class_b' ? 'Clase B' : courseName;
       const label = e.number ? `${base} · #${e.number}` : base;
-      return { id: e.id, label, licenseGroup: lg };
+      const status: 'active' | 'completed' = e.status === 'completed' ? 'completed' : 'active';
+      return { id: e.id, label, licenseGroup: lg, status, courseName: base };
     });
 
     this._enrollments.set(tabs);

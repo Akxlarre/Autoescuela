@@ -36,14 +36,54 @@ describe('StudentEnrollmentContextFacade', () => {
 
   it('mapea class_b a "Clase B" y professional al nombre del curso', async () => {
     const { facade } = setup([
-      { id: 1, number: null, license_group: 'class_b', courses: { name: 'Curso B' } },
-      { id: 2, number: null, license_group: 'professional', courses: { name: 'A-4 Profesional' } },
+      {
+        id: 1,
+        number: null,
+        license_group: 'class_b',
+        status: 'active',
+        courses: { name: 'Curso B' },
+      },
+      {
+        id: 2,
+        number: null,
+        license_group: 'professional',
+        status: 'active',
+        courses: { name: 'A-4 Profesional' },
+      },
     ]);
     await facade.initialize(77);
     expect(facade.enrollments()).toEqual([
-      { id: 1, label: 'Clase B', licenseGroup: 'class_b' },
-      { id: 2, label: 'A-4 Profesional', licenseGroup: 'professional' },
+      {
+        id: 1,
+        label: 'Clase B',
+        licenseGroup: 'class_b',
+        status: 'active',
+        courseName: 'Clase B',
+      },
+      {
+        id: 2,
+        label: 'A-4 Profesional',
+        licenseGroup: 'professional',
+        status: 'active',
+        courseName: 'A-4 Profesional',
+      },
     ]);
+  });
+
+  it('mapea status "completed" tal cual, y cualquier otro valor cae a "active"', async () => {
+    const { facade } = setup([
+      {
+        id: 1,
+        number: null,
+        license_group: 'class_b',
+        status: 'completed',
+        courses: { name: 'x' },
+      },
+      { id: 2, number: null, license_group: 'class_b', status: null, courses: { name: 'x' } },
+    ]);
+    await facade.initialize(77);
+    expect(facade.enrollments()[0].status).toBe('completed');
+    expect(facade.enrollments()[1].status).toBe('active');
   });
 
   it('agrega el sufijo "· #N" cuando la matrícula tiene número', async () => {
@@ -105,5 +145,37 @@ describe('StudentEnrollmentContextFacade', () => {
     await facade.initialize(77);
     facade.setActive(2);
     expect(facade.activeEnrollmentId()).toBe(2);
+  });
+
+  it('activeEnrollment devuelve el objeto completo de la matrícula seleccionada', async () => {
+    const { facade } = setup([
+      {
+        id: 1,
+        number: null,
+        license_group: 'class_b',
+        status: 'completed',
+        courses: { name: 'x' },
+      },
+      {
+        id: 2,
+        number: null,
+        license_group: 'professional',
+        status: 'active',
+        courses: { name: 'y' },
+      },
+    ]);
+    await facade.initialize(77);
+    expect(facade.activeEnrollment()?.id).toBe(1);
+    expect(facade.activeEnrollment()?.status).toBe('completed');
+
+    facade.setActive(2);
+    expect(facade.activeEnrollment()?.id).toBe(2);
+    expect(facade.activeEnrollment()?.status).toBe('active');
+  });
+
+  it('activeEnrollment es null cuando no hay matrículas', async () => {
+    const { facade } = setup([]);
+    await facade.initialize(77);
+    expect(facade.activeEnrollment()).toBeNull();
   });
 });

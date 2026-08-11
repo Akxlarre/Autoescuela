@@ -6,6 +6,10 @@ export interface EnrollmentTab {
   id: number;
   label: string;
   licenseGroup: LicenseGroup;
+  /** Estado real de la matrícula — `completed` habilita avisos de "curso cerrado" en la UI. */
+  status: 'active' | 'completed';
+  /** Nombre del curso sin el número de matrícula (ej. "Clase B"), para mensajes contextuales. */
+  courseName: string;
 }
 
 export interface StudentHomeHero {
