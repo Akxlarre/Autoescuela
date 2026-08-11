@@ -4,6 +4,12 @@
     {
       "name": "autoescuela-dev-attach",
       "url": "http://localhost:4200"
+    },
+    {
+      "name": "autoescuela-worktree-dev",
+      "runtimeExecutable": "ng",
+      "runtimeArgs": ["serve", "--port", "4201"],
+      "port": 4201
     }
   ]
 }

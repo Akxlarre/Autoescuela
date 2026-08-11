@@ -38,7 +38,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             subtitle="Todos los alumnos elegibles ya tienen su certificado generado"
           />
         } @else {
-          <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
+          <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
             @for (alumno of pendientes(); track alumno.enrollmentId) {
               <div class="flex items-center gap-3 px-4 py-2.5">
                 <app-icon name="file-check" [size]="14" class="text-success shrink-0" />

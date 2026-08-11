@@ -342,7 +342,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Mobile: lista de tarjetas -->
-                <div class="ficha-table-mobile divide-y border-border-subtle">
+                <div class="ficha-table-mobile divide-y divide-border-subtle border-border-subtle">
                   @for (row of detail.fichaTecnica; track row.classNumber) {
                     <div class="p-4 space-y-3">
                       <!-- Fila 1: número + fecha + badge -->
