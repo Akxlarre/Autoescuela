@@ -1,5 +1,5 @@
 # Fix: `divide-x`/`divide-y` sin color explícito caen a `currentColor` (archivos restantes)
-> id: fix-133-b-divide-color-tokens-restantes
+> id: fix-138-b-divide-color-tokens-restantes
 > refs: fix-136-b-cursos-container-query-divide-color (origen del hallazgo, root cause completa ahí)
 > status: done
 > closed: 2026-08-11

@@ -39,7 +39,6 @@
 | `/app/admin/contabilidad/liquidaciones` | `AdminContabilidadLiquidacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/contabilidad/cursos` | `AdminContabilidadCursosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/flota` | `AdminFlotaComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/flota/hoja-de-ruta/:id` | `RouteSheetComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/flota/:id/mantenimientos` | `VehicleMaintenancesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/instructores` | `AdminInstructoresComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/certificacion` | `AdminCertificacionComponent` | — | `src/app/app.routes.ts` |
