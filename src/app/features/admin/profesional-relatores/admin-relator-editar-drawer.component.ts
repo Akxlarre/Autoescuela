@@ -15,13 +15,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-
-const SPEC_COLORS: Record<string, string> = {
-  A2: '#3b82f6',
-  A3: '#8b5cf6',
-  A4: '#f59e0b',
-  A5: '#10b981',
-};
+import { SPECIALIZATION_OPTIONS } from '@core/utils/professional-specializations';
 
 @Component({
   selector: 'app-admin-relator-editar-drawer',
@@ -362,12 +356,7 @@ export class AdminRelatorEditarDrawerComponent {
   }
 
   // ── Opciones ────────────────────────────────────────────────────────────────
-  protected readonly specializationOptions = [
-    { value: 'A2', label: 'Taxis y colectivos', color: SPEC_COLORS['A2'] },
-    { value: 'A3', label: 'Buses', color: SPEC_COLORS['A3'] },
-    { value: 'A4', label: 'Carga simple', color: SPEC_COLORS['A4'] },
-    { value: 'A5', label: 'Carga profesional', color: SPEC_COLORS['A5'] },
-  ];
+  protected readonly specializationOptions = SPECIALIZATION_OPTIONS;
 
   protected isSelected(spec: string): boolean {
     return this.selectedSpecs().includes(spec);

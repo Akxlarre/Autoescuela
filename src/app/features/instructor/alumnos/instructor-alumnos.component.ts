@@ -25,22 +25,7 @@ import { StudentDrawerDetailComponent } from './components/student-drawer-detail
 import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
-
-const AVATAR_PALETTES = [
-  { bg: 'linear-gradient(135deg,#6366f1,#8b5cf6)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#0ea5e9,#06b6d4)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#10b981,#059669)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#f59e0b,#ef4444)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#ec4899,#db2777)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#14b8a6,#0891b2)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#a855f7,#6366f1)', text: '#fff' },
-  { bg: 'linear-gradient(135deg,#f97316,#ef4444)', text: '#fff' },
-];
-
-function avatarPalette(name: string) {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
-}
+import { avatarPalette } from '@core/utils/avatar-palette';
 
 const PAGE_SIZE = 9;
 

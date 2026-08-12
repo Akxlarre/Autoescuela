@@ -7,6 +7,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
@@ -17,17 +18,6 @@ import type {
 
 const AMOUNT_PER_HOUR_DEFAULT = 5_000;
 
-const AVATAR_COLORS = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#0ea5e9',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#14b8a6',
-];
-
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
@@ -35,11 +25,6 @@ function getInitials(name: string): string {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-function getAvatarColor(name: string): string {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 // ─── Facade ───────────────────────────────────────────────────────────────────
@@ -314,7 +299,7 @@ export class LiquidacionesFacade {
             nombre,
             rut: u?.rut ?? '—',
             initials: getInitials(nombre),
-            avatarColor: getAvatarColor(nombre),
+            avatarColor: getLiquidacionAvatarColor(nombre),
             practicalSessions,
             totalHours,
             amountPerHour,
