@@ -318,9 +318,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 240 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 163 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 130 | `src/styles/tokens/_variables.scss` |
+| `.card` | 239 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 168 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 135 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
@@ -423,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 53 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 896 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 898 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -443,9 +443,9 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 10 | `text-sm font-bold text-text-primary` |
 | 9 | `m-0 font-semibold text-text-primary` |
 | 8 | `text-xs font-semibold uppercase tracking-wider` |
+| 6 | `text-base font-bold text-text-primary` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
 | 6 | `text-text-secondary font-semibold text-xs tracking-wider` |
-| 5 | `w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase` |
 
 
 <!-- AUTO-GENERATED:END -->

@@ -215,13 +215,6 @@ export const routes: Routes = [
                   ),
               },
               {
-                path: 'hoja-de-ruta/:id',
-                loadComponent: () =>
-                  import('./features/admin/flota/route-sheet/route-sheet.component').then(
-                    (m) => m.RouteSheetComponent,
-                  ),
-              },
-              {
                 path: ':id/mantenimientos',
                 loadComponent: () =>
                   import('./features/admin/flota/vehicle-maintenances/vehicle-maintenances.component').then(

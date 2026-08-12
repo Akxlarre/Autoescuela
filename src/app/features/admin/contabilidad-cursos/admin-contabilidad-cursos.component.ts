@@ -77,7 +77,7 @@ const BILLING_LABEL: Record<string, string> = {
   ],
   template: `
     <div
-      class="bento-grid"
+      class="bento-grid bento-grid--fill-screen"
       appBentoGridLayout
       #bentoGrid
       [class.force-compact]="layoutDrawer.isOpen()"
@@ -97,9 +97,15 @@ const BILLING_LABEL: Record<string, string> = {
       />
 
       <!-- ── Contenido Principal (Listado) ─────────────────────────────────── -->
-      <div class="bento-banner">
-        <section class="card pb-10" aria-label="Listado de cursos singulares" appCardHover>
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div class="bento-banner bento-fill flex flex-col h-full">
+        <section
+          class="card pb-10 flex flex-col h-full min-h-0 dual-viewport-container"
+          aria-label="Listado de cursos singulares"
+          appCardHover
+        >
+          <div
+            class="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"
+          >
             <div class="flex items-center gap-2">
               <app-icon name="list" [size]="18" color="var(--ds-brand)" />
               <h2 class="font-bold text-text-primary">Listado de Cursos</h2>
@@ -129,8 +135,8 @@ const BILLING_LABEL: Record<string, string> = {
             </div>
           </div>
 
-          <!-- ══ VISTA MOBILE (< lg): cards apiladas ══════════════════════════════ -->
-          <div class="lg:hidden flex flex-col gap-3">
+          <!-- ══ VISTA MOBILE (contenedor angosto): cards apiladas ═══════════════ -->
+          <div class="mobile-view show-on-squeeze flex flex-col gap-3">
             @if (facade.isLoading()) {
               @for (i of skeletonRows; track i) {
                 <div class="rounded-xl p-4 flex flex-col gap-3 border border-border-muted">
@@ -171,7 +177,9 @@ const BILLING_LABEL: Record<string, string> = {
                   </div>
 
                   <!-- Grid de datos clave (3 cols) -->
-                  <div class="grid grid-cols-3 divide-x px-0 border-t border-b border-border-muted">
+                  <div
+                    class="grid grid-cols-3 divide-x divide-border-muted px-0 border-t border-b border-border-muted"
+                  >
                     <div class="py-3 px-4 flex flex-col gap-0.5">
                       <p class="micro-label">Precio</p>
                       <p class="item-title">
@@ -255,8 +263,8 @@ const BILLING_LABEL: Record<string, string> = {
             }
           </div>
 
-          <!-- ══ VISTA DESKTOP (≥ lg): tabla clásica ═══════════════════════════ -->
-          <div class="hidden lg:block overflow-x-auto">
+          <!-- ══ VISTA DESKTOP (contenedor ancho): tabla clásica ═════════════════ -->
+          <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-y-auto overflow-x-auto">
             <table class="w-full" role="table" aria-label="Cursos singulares">
               <thead>
                 <tr class="border-b border-border-muted">
@@ -274,7 +282,7 @@ const BILLING_LABEL: Record<string, string> = {
                 </tr>
               </thead>
 
-              <tbody class="divide-y border-border-muted">
+              <tbody class="divide-y divide-border-muted">
                 @if (facade.isLoading()) {
                   @for (i of skeletonRows; track i) {
                     <tr>
@@ -399,7 +407,7 @@ const BILLING_LABEL: Record<string, string> = {
 
           <!-- Nota informativa -->
           <div
-            class="mt-4 px-4 py-3 rounded-lg text-xs text-text-secondary bg-brand/6 border border-brand/20"
+            class="shrink-0 mt-4 px-4 py-3 rounded-lg text-xs text-text-secondary bg-brand/6 border border-brand/20"
           >
             <strong class="text-brand">SENCE:</strong>
             Los cursos SENCE se facturan directamente al organismo. El cobro al alumno es $0 si está
@@ -423,6 +431,24 @@ const BILLING_LABEL: Record<string, string> = {
       .accion-btn--cobro:hover {
         color: var(--state-success);
         background: color-mix(in srgb, var(--state-success) 10%, transparent);
+      }
+      .dual-viewport-container {
+        container-type: inline-size;
+        container-name: cursosContainer;
+      }
+      .show-on-squeeze {
+        display: none;
+      }
+      /* 1000px: el contenedor real nunca supera ~1064px incluso en el ancho de
+         referencia de escritorio (1440px de viewport) — un umbral de 1100px dejaba la
+         vista tabla inalcanzable siempre (fix-136-b, verificado en vivo). */
+      @container cursosContainer (max-width: 1000px) {
+        .hide-on-squeeze {
+          display: none !important;
+        }
+        .show-on-squeeze {
+          display: block !important;
+        }
       }
     `,
   ],
