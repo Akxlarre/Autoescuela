@@ -1,14 +1,14 @@
 # Asignación ASG-b-090 — Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** Media
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-12
+> **resulting_track:** fix-155-m-consolidar-paletas-color-duplicadas
 
 ---
 

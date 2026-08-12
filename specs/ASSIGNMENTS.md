@@ -90,7 +90,6 @@
 > en `ASG-b-089`.
 
 | ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `b` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
-| ASG-b-090 | 5 paletas de color duplicadas/hardcodeadas en ~12 archivos (`SPEC_COLORS`, `COURSE_COLORS`, avatares, `INCOME_COLORS`, liquidaciones) | `m` | fix | Media | b | El mismo set de hex vive copiado en 3-4 archivos sueltos — garantiza drift si alguien cambia uno sin saber de las copias. Divisible por cluster. Ver `specs/assignments/ASG-b-090-*.md` |
 
 ### Tanda auditoría del Design System — 2026-07-31
 
@@ -119,7 +118,8 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
-| ASG-b-078 | App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
+| ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
+| ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | `m` | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---
