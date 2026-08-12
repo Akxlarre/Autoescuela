@@ -730,6 +730,48 @@
   `auth_user_role()` en vez de hardcodear el rol en el texto.
 - **Fuente:** `specs/fixes/fix-148-m-notif-secretaria-cierre-clase-b`
 
+### DG-060 — Una VIEW que filtra slots ocupados "al leer" no es una garantía de integridad — solo un trigger a nivel de escritura lo es
+- **Trampa:** asumir que `v_class_b_schedule_availability` excluyendo horarios ocupados
+  (`cb.status NOT IN ('cancelled')` + solape de `scheduled_at`/`duration_min`,
+  `20260307130000_fix_schedule_availability_tz_and_constraints.sql:104-126`) es suficiente
+  protección contra doble-agendar el mismo instructor. La vista solo filtra lo que el cliente
+  llega a **leer** antes de escribir — no existía ninguna restricción de integridad
+  (`UNIQUE`/`EXCLUDE`/trigger) sobre `class_b_sessions(instructor_id, scheduled_at)` a nivel de
+  `INSERT`/`UPDATE`. Dos secretarias agendando casi simultáneo (o cualquier insert que se salte
+  la vista, manual o vía función) podían colar dos sesiones activas con el mismo instructor en
+  horarios solapados sin que la BD lo impidiera.
+- **Realidad:** el único precedente de exclusión real a nivel de escritura para esta tabla era
+  `trg_prevent_concurrent_in_progress` (DG relacionado: exclusión mutua de `status='in_progress'`,
+  `20260804120000`), pero cubría solo esa transición puntual, no el caso general de solape de
+  horario en cualquier status activo. Fix: `trg_prevent_double_booking`
+  (`20260811110000_fix152_class_b_sessions_prevent_double_booking.sql`) replica la misma fórmula
+  de solape que usa la vista de disponibilidad, pero como `RAISE EXCEPTION` en un trigger
+  `BEFORE INSERT OR UPDATE`.
+- **Lección:** cuando una VIEW de "disponibilidad"/"slots libres" es la única lógica que impide
+  una colisión de negocio (agenda, reservas, turnos), verificar si existe también una constraint
+  o trigger equivalente en la tabla base. Si no existe, la vista es UX (evita que el usuario
+  intente algo que fallaría), no una garantía — la carrera sigue abierta a nivel de escritura.
+- **Fuente:** `specs/fixes/fix-152-m-doble-agendado-instructor-sin-constraint-bd`
+
+### DG-061 — Un método de Facade con `.upsert(payload, { onConflict: 'col1,col2' })` puede compilar y parecer completo sin que exista la constraint que ese `onConflict` necesita
+- **Trampa:** ver `FlotaFacade.upsertVehicleDocument()` ya escrito, con el `onConflict` correcto y
+  el nombre de las columnas bien elegido, y asumir que "la lógica de guardado ya está resuelta,
+  solo falta conectarle un formulario". El código de la Facade es sintácticamente correcto y no
+  tira ningún error hasta que se ejecuta contra Postgres real.
+- **Realidad:** `vehicle_documents` nunca tuvo `UNIQUE(vehicle_id, type)` — ni constraint ni
+  exclusion index. Postgres exige que el target de `ON CONFLICT` coincida con una constraint real;
+  sin ella, **todo** `upsert()` fallaba con "there is no unique or exclusion constraint matching
+  the ON CONFLICT specification". Como ningún componente en `src/` llamaba a este método (fix-153-m
+  root cause), el bug nunca se manifestó — quedó como lógica huérfana "correcta en apariencia"
+  durante meses. Se detectó recién al construir el formulario que finalmente lo invoca.
+- **Lección:** antes de conectar un método de Facade que hace `.upsert(..., { onConflict: 'a,b' })`
+  (o `.upsert()` a secas, que asume PK), verificar contra el schema real (`indices/DATABASE.md` o
+  `pg_constraint`) que esa combinación de columnas tiene una constraint `UNIQUE`/`EXCLUDE`
+  efectivamente creada — no asumirlo por el nombre de las columnas o porque el código "se ve bien".
+  Un método de Facade sin ningún caller no ha sido probado contra la BD real, sin importar cuánto
+  tiempo lleve en el repo.
+- **Fuente:** `specs/fixes/fix-153-m-vehiculo-documentos-sin-ui-de-carga`
+
 ---
 
 ## Convención para agregar una entrada nueva

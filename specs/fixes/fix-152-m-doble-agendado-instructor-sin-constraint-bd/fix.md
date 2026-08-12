@@ -1,7 +1,8 @@
 # Fix: Doble-agendado del mismo instructor sin constraint atómica en BD
 > id: fix-152-m-doble-agendado-instructor-sin-constraint-bd
 > refs: docs/UAT-PLAN.md — Paquete 3, caso "Intentar doble-agendar el mismo instructor en el mismo horario → debe ser imposible"
-> status: in_progress
+> status: done
+> closed: 2026-08-11
 > created: 2026-08-11
 
 ## Root Cause
@@ -30,6 +31,21 @@ Ninguno — fix autónomo, hallazgo de auditoría UAT (Paquete 3), no ligado a u
   (`scheduled`/`in_progress`), a nivel de BD — no solo a nivel de vista de lectura.
 
 ## Test de Regresión
-- Pendiente: agregar test de integración/spec que intente insertar dos `class_b_sessions` con el
-  mismo `instructor_id`/`scheduled_at` en paralelo (o vía dos llamadas seguidas) y verifique que la
-  segunda falla con la constraint/trigger nuevo.
+- Verificado manualmente contra la BD remota (`supabase db query --linked`, dentro de una
+  transacción `BEGIN ... ROLLBACK` que instala función+trigger, corre los casos y revierte todo
+  sin dejar datos de prueba):
+  1. Insert base `instructor_id=X`, `scheduled_at='2099-01-01 10:00'`, `duration_min=45`,
+     `status='scheduled'` → OK.
+  2. Insert solapado (mismo instructor, `10:20`, dentro del rango `10:00–10:45`) → **rechazado**
+     con `SQLSTATE P0001` ("El instructor ya tiene una clase agendada que se solapa con este
+     horario.").
+  3. Insert no solapado (mismo instructor, `12:00`, 2h después) → permitido.
+  4. Insert `status='cancelled'` superpuesto con el bloque 10:00–10:45 → permitido (los
+     cancelados no bloquean, igual que la vista de disponibilidad).
+- No se agregó test automatizado en el repo porque no existe suite de integración contra Supabase
+  real (mismo criterio que `trg_prevent_concurrent_in_progress`, verificado igual por SQL manual
+  en `specs/specs/0001-i-ciclo-vida-clase-exclusion-cierre/acceptance.md`).
+- **Pendiente de deploy:** la migración `20260811110000_fix152_class_b_sessions_prevent_double_booking.sql`
+  está creada pero no pusheada a remoto (`npx supabase db push`) — igual que otras migraciones ya
+  pendientes en el repo (`20260808120000` en adelante). Requiere confirmación del usuario antes de
+  hacer push porque afecta la BD compartida.

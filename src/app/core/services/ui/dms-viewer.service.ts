@@ -21,7 +21,7 @@ export class DmsViewerService {
 
     // Importación diferida para evitar ciclos de inyección
     import('@shared/components/dms-viewer-modal/dms-viewer-modal.component').then((m) => {
-      this.layoutDrawer.open(
+      this.layoutDrawer.push(
         m.DmsViewerModalComponent,
         doc.name,
         doc.type === 'pdf' ? 'file-text' : doc.type === 'image' ? 'image' : 'file',

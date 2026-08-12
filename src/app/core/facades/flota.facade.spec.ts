@@ -53,6 +53,203 @@ describe('FlotaFacade', () => {
   });
 });
 
+// ─── fix-153-m: upsertVehicleDocument() / getDocumentSignedUrl() ─────────────
+describe('FlotaFacade — upsertVehicleDocument (fix-153-m)', () => {
+  let service: FlotaFacade;
+  let upsertMock: ReturnType<typeof vi.fn>;
+  let uploadMock: ReturnType<typeof vi.fn>;
+  let createSignedUrlMock: ReturnType<typeof vi.fn>;
+  let fromMock: ReturnType<typeof vi.fn>;
+
+  function makeSupabaseMock() {
+    upsertMock = vi.fn().mockResolvedValue({ error: null });
+    uploadMock = vi.fn().mockResolvedValue({ error: null });
+    createSignedUrlMock = vi
+      .fn()
+      .mockResolvedValue({ data: { signedUrl: 'https://signed.example/doc.pdf' }, error: null });
+
+    fromMock = vi.fn((table: string) => {
+      if (table === 'vehicle_documents') {
+        return { upsert: upsertMock };
+      }
+      // vehicles / expenses (usados por refreshSilently -> fetchVehiclesData)
+      const builder: any = {
+        select: vi.fn(() => builder),
+        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        eq: vi.fn(() => builder),
+        not: vi.fn(() => builder),
+        gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      };
+      return builder;
+    });
+
+    return {
+      client: {
+        from: fromMock,
+        storage: {
+          from: vi.fn(() => ({ upload: uploadMock, createSignedUrl: createSignedUrlMock })),
+        },
+      },
+    };
+  }
+
+  beforeEach(() => {
+    toastMock.success.mockClear();
+    toastMock.error.mockClear();
+    TestBed.configureTestingModule({
+      providers: [
+        FlotaFacade,
+        { provide: SupabaseService, useValue: makeSupabaseMock() },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
+      ],
+    });
+    service = TestBed.inject(FlotaFacade);
+  });
+
+  it('sin archivo: hace upsert con el filePath existente y status calculado desde expiryDate', async () => {
+    const farFutureDate = '2099-01-01';
+    await service.upsertVehicleDocument({
+      vehicleId: 7,
+      type: 'soap',
+      expiryDate: farFutureDate,
+      file: null,
+      existingFilePath: 'vehicle-docs/7/old.pdf',
+    });
+
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(upsertMock).toHaveBeenCalledWith(
+      {
+        vehicle_id: 7,
+        type: 'soap',
+        expiry_date: farFutureDate,
+        file_url: 'vehicle-docs/7/old.pdf',
+        status: 'valid',
+      },
+      { onConflict: 'vehicle_id,type' },
+    );
+    expect(toastMock.success).toHaveBeenCalled();
+  });
+
+  it('con archivo: sube al bucket "documents" primero y usa el path nuevo en el upsert', async () => {
+    const file = new File(['contenido'], 'soap.pdf', { type: 'application/pdf' });
+    await service.upsertVehicleDocument({
+      vehicleId: 7,
+      type: 'soap',
+      expiryDate: '2099-01-01',
+      file,
+      existingFilePath: null,
+    });
+
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    const [uploadedPath, uploadedFile] = uploadMock.mock.calls[0];
+    expect(uploadedPath).toMatch(/^vehicle-docs\/7\/\d+_soap\.pdf$/);
+    expect(uploadedFile).toBe(file);
+
+    const upsertPayload = upsertMock.mock.calls[0][0];
+    expect(upsertPayload.file_url).toBe(uploadedPath);
+  });
+
+  it('calcula status="expired" cuando expiryDate ya pasó', async () => {
+    await service.upsertVehicleDocument({
+      vehicleId: 7,
+      type: 'soap',
+      expiryDate: '2000-01-01',
+      file: null,
+      existingFilePath: null,
+    });
+
+    expect(upsertMock.mock.calls[0][0].status).toBe('expired');
+  });
+
+  it('propaga el error y NO muestra toast de éxito si el upsert falla', async () => {
+    upsertMock.mockResolvedValueOnce({ error: new Error('constraint violation') });
+
+    await expect(
+      service.upsertVehicleDocument({
+        vehicleId: 7,
+        type: 'soap',
+        expiryDate: '2099-01-01',
+        file: null,
+        existingFilePath: null,
+      }),
+    ).rejects.toThrow('constraint violation');
+    expect(toastMock.success).not.toHaveBeenCalled();
+  });
+
+  it('getDocumentSignedUrl devuelve la signed URL del bucket "documents"', async () => {
+    const url = await service.getDocumentSignedUrl('vehicle-docs/7/soap.pdf');
+    expect(url).toBe('https://signed.example/doc.pdf');
+    expect(createSignedUrlMock).toHaveBeenCalledWith('vehicle-docs/7/soap.pdf', 3600);
+  });
+
+  it('getDocumentSignedUrl devuelve null si Supabase Storage responde con error', async () => {
+    createSignedUrlMock.mockResolvedValueOnce({ data: null, error: new Error('not found') });
+    const url = await service.getDocumentSignedUrl('vehicle-docs/7/missing.pdf');
+    expect(url).toBeNull();
+  });
+});
+
+// ─── fix-154-m: createVehicle() devuelve el id creado (para el staging de docs) ───────────────
+describe('FlotaFacade — createVehicle devuelve el id (fix-154-m)', () => {
+  let service: FlotaFacade;
+  let insertMock: ReturnType<typeof vi.fn>;
+  let singleMock: ReturnType<typeof vi.fn>;
+
+  function makeSupabaseMock() {
+    singleMock = vi.fn().mockResolvedValue({ data: { id: 42 }, error: null });
+    const selectAfterInsert = vi.fn(() => ({ single: singleMock }));
+    insertMock = vi.fn(() => ({ select: selectAfterInsert }));
+
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'vehicles') {
+        return {
+          insert: insertMock,
+          select: vi.fn(() => ({ order: vi.fn(() => Promise.resolve({ data: [], error: null })) })),
+        };
+      }
+      const builder: any = {
+        select: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        not: vi.fn(() => builder),
+        gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      };
+      return builder;
+    });
+
+    return { client: { from: fromMock } };
+  }
+
+  beforeEach(() => {
+    toastMock.success.mockClear();
+    TestBed.configureTestingModule({
+      providers: [
+        FlotaFacade,
+        { provide: SupabaseService, useValue: makeSupabaseMock() },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        { provide: ToastService, useValue: toastMock },
+      ],
+    });
+    service = TestBed.inject(FlotaFacade);
+  });
+
+  it('devuelve el id del vehículo insertado', async () => {
+    const id = await service.createVehicle({ license_plate: 'AB1234' });
+    expect(id).toBe(42);
+    expect(insertMock).toHaveBeenCalledWith({ license_plate: 'AB1234' });
+    expect(toastMock.success).toHaveBeenCalled();
+  });
+
+  it('propaga el error si el insert falla', async () => {
+    singleMock.mockResolvedValueOnce({ data: null, error: new Error('insert failed') });
+    await expect(service.createVehicle({ license_plate: 'AB1234' })).rejects.toThrow(
+      'insert failed',
+    );
+  });
+});
+
 // ─── spec 0005-m: guard de requestId contra respuestas stale ─────────────────
 describe('FlotaFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
   /**
