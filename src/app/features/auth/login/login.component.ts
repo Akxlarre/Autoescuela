@@ -6,7 +6,6 @@ import {
   viewChild,
   ElementRef,
   afterNextRender,
-  isDevMode,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -39,17 +38,12 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     >
       <!-- Orbs decorativos — backdrop para el efecto glass de la card -->
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div
-          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
-          
-        ></div>
+        <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"></div>
         <div
           class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
-          
         ></div>
         <div
           class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
-          
         ></div>
       </div>
 
@@ -68,41 +62,36 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       </div>
 
       <!-- ── Recordatorio de credenciales de prueba ─────────────────── -->
-      @if (devMode) {
-        <div
-          class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-2xs text-text-muted shadow-sm"
-          aria-label="Credenciales de prueba disponibles"
-        >
-          <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
-            <app-icon name="info" [size]="14" class="text-text-muted" />
-            Credenciales de prueba
-          </p>
-          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
-            <span>admin@test.com</span>
-            <span>secretaria@test.com</span>
-            <span>secretaria2@test.com</span>
-            <span>alumno@test.com</span>
-            <span>instructor@test.com</span>
-          </div>
-          <p class="m-0">
-            <span class="font-semibold text-text-secondary">Contraseña:</span>
-            <span class="font-normal"> Test123456</span>
-          </p>
+      <div
+        class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-2xs text-text-muted shadow-sm"
+        aria-label="Credenciales de prueba disponibles"
+      >
+        <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
+          <app-icon name="info" [size]="14" class="text-text-muted" />
+          Credenciales de prueba
+        </p>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
+          <span>admin@test.com</span>
+          <span>secretaria@test.com</span>
+          <span>secretaria2@test.com</span>
+          <span>alumno@test.com</span>
+          <span>instructor@test.com</span>
         </div>
-      }
+        <p class="m-0">
+          <span class="font-semibold text-text-secondary">Contraseña:</span>
+          <span class="font-normal"> Test123456</span>
+        </p>
+      </div>
       <!-- ── /Recordatorio de credenciales de prueba ────────────────── -->
     </div>
   `,
   host: { style: 'display: contents;' },
 })
 export class LoginComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly auth = inject(AuthFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly gsap = inject(GsapAnimationsService);
-
-  /** Solo true en `ng serve` / builds de desarrollo. False en producción. */
-  readonly devMode = isDevMode();
 
   readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
 
@@ -153,7 +142,7 @@ private readonly auth = inject(AuthFacade);
     try {
       switch (this.mode()) {
         case 'login': {
-          // data.password es opcional en la interfaz porque no se usa en 'reset', 
+          // data.password es opcional en la interfaz porque no se usa en 'reset',
           // pero siempre estará presente al hacer login.
           const { error } = await this.auth.login(data.email, data.password ?? '');
           if (error) {
