@@ -425,27 +425,41 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                    desktop fill, donde la celda tiene alto fijo). thead sticky
                    se ancla a este scrollport. -->
               <div class="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
-                <table class="w-full text-sm">
+                <table class="w-full text-sm table-fixed">
+                  <!-- Anchos fijos por columna (fix-159): sin esto, table-layout:auto
+                       concentra TODO el ancho sobrante en la última columna sin ancho
+                       propio (Acciones), dejando un hueco en blanco entre los botones y
+                       el borde de la card — más notorio cuantas menos columnas hay (ej.
+                       sin Sede). Dos sets de %, según showBranchColumn(), siempre suman 100. -->
+                  <colgroup>
+                    <col [style.width.%]="columnWidths().agendada" />
+                    <col [style.width.%]="columnWidths().inicio" />
+                    <col [style.width.%]="columnWidths().fin" />
+                    @if (showBranchColumn()) {
+                      <col [style.width.%]="columnWidths().sede" />
+                    }
+                    <col [style.width.%]="columnWidths().instructor" />
+                    <col [style.width.%]="columnWidths().alumno" />
+                    <col [style.width.%]="columnWidths().vehiculo" />
+                    <col [style.width.%]="columnWidths().estado" />
+                    <col [style.width.%]="columnWidths().acciones" />
+                  </colgroup>
                   <thead class="sticky top-0 z-10 bg-surface">
                     <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                      <th
-                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-20"
-                      >
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Agendada
                       </th>
-                      <th
-                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16"
-                      >
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Inicio
                       </th>
-                      <th
-                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16"
-                      >
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Fin
                       </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Sede
-                      </th>
+                      @if (showBranchColumn()) {
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Sede
+                        </th>
+                      }
                       <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Instructor
                       </th>
@@ -488,7 +502,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             <span class="text-text-muted">—</span>
                           }
                         </td>
-                        <td class="py-3 pr-4 text-text-secondary text-xs">{{ row.branchName }}</td>
+                        @if (showBranchColumn()) {
+                          <td class="py-3 pr-4 text-text-secondary text-xs">
+                            {{ row.branchName }}
+                          </td>
+                        }
                         <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
                         <td class="py-3 pr-4">
                           @if (row.alumnoName) {
@@ -525,7 +543,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           </app-badge>
                         </td>
                         <td class="py-3 pl-4">
-                          <div class="flex items-center justify-start gap-2">
+                          <!-- justify-end (fix-159): la columna Acciones puede quedar más
+                               ancha que su contenido (colgroup fijo, ver arriba) — alinear
+                               a la derecha evita que los botones floten lejos del borde
+                               derecho de la tabla. -->
+                          <div class="flex items-center justify-end gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
@@ -789,6 +811,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly savingAlertaId = input<number | null>(null);
   /** Presupuesto de densidad (spec 0028/0030): null = sin límite (desktop). Llega resuelto por input — este Dumb NO inyecta LayoutService. */
   readonly maxVisible = input<number | null>(null);
+  /** Columna "Sede" de la tabla de prácticas: solo aporta cuando conviven filas de varias
+   *  sedes (admin en "Todas las sedes"). Resuelto por el Smart — este Dumb no inyecta BranchFacade/AuthFacade. */
+  readonly showBranchColumn = input(true);
 
   // ── Inputs Ciclos Teóricos (Spec 0001) ──────────────────────────────────────
   readonly cycles = input<CicloOption[]>([]);
@@ -929,6 +954,39 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   /** true cuando la fecha seleccionada es posterior a hoy → modo solo lectura */
   protected readonly isFutureDate = computed(() => this.selectedDate() > this.todayIsoVal);
+
+  /**
+   * Anchos de columna en % (fix-159), sujetos a `<colgroup>` con `table-layout: fixed`.
+   * Sin esto, `table-layout: auto` concentra todo el ancho sobrante en la última columna
+   * sin ancho propio (Acciones), dejando un hueco en blanco entre los botones y el borde
+   * de la card — más visible cuantas menos columnas hay (ej. con Sede oculta). Ambos sets
+   * suman 100.
+   */
+  protected readonly columnWidths = computed(() =>
+    this.showBranchColumn()
+      ? {
+          agendada: 8,
+          inicio: 6,
+          fin: 6,
+          sede: 10,
+          instructor: 14,
+          alumno: 15,
+          vehiculo: 13,
+          estado: 10,
+          acciones: 18,
+        }
+      : {
+          agendada: 9,
+          inicio: 7,
+          fin: 7,
+          sede: 0,
+          instructor: 16,
+          alumno: 17,
+          vehiculo: 15,
+          estado: 11,
+          acciones: 18,
+        },
+  );
 
   protected readonly filteredPracticas = computed(() => {
     let rows = this.clasesPracticas();

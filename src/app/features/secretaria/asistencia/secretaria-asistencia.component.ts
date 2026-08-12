@@ -36,6 +36,7 @@ import type {
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
+      [showBranchColumn]="false"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"

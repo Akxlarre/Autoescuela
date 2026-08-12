@@ -143,6 +143,33 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               />
             </div>
 
+            <!-- Alumno sin cuenta Auth: la invitación nunca se envió o falló -->
+            @if (facade.alumno() && !facade.alumno()!.hasAuthAccount) {
+              <div
+                class="flex flex-col gap-2 p-3 rounded-lg text-sm bg-warning-subtle text-warning"
+                style="border: 1px solid var(--state-warning-border)"
+              >
+                <span class="flex items-center gap-2 font-medium">
+                  <app-icon name="alert-triangle" [size]="16" />
+                  Este alumno todavía no tiene cuenta para ingresar al sistema.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary self-start flex items-center gap-2"
+                  [disabled]="isSendingInvite() || form.get('email')!.invalid"
+                  (click)="onEnviarInvitacion()"
+                  data-llm-action="enviar-invitacion-alumno"
+                >
+                  @if (isSendingInvite()) {
+                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                    Enviando...
+                  } @else {
+                    Enviar invitación
+                  }
+                </button>
+              </div>
+            }
+
             <!-- Feedback de error -->
             @if (saveError()) {
               <p class="text-sm text-error">
@@ -233,6 +260,7 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
   protected readonly isSaving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   protected readonly saveSuccess = signal(false);
+  protected readonly isSendingInvite = signal(false);
 
   protected readonly form = this.fb.group({
     first_names: ['', Validators.required],
@@ -310,6 +338,25 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
       );
     } finally {
       this.isSaving.set(false);
+    }
+  }
+
+  protected async onEnviarInvitacion(): Promise<void> {
+    const userId = this.facade.alumno()?.userId;
+    const email = this.form.get('email')!.value;
+    if (!userId || !email || this.form.get('email')!.invalid) return;
+
+    this.isSendingInvite.set(true);
+    this.saveError.set(null);
+
+    try {
+      await this.facade.enviarInvitacion(userId, email);
+    } catch (err) {
+      this.saveError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al enviar invitación.',
+      );
+    } finally {
+      this.isSendingInvite.set(false);
     }
   }
 }

@@ -39,6 +39,7 @@ import type {
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
+      [showBranchColumn]="showBranchColumn()"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"
@@ -79,6 +80,11 @@ export class AdminAsistenciaComponent {
   // "Cargar más" en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
   protected readonly maxVisible = computed(() =>
     this.layoutService.tier() === 'desktop' ? null : 6,
+  );
+
+  // Columna "Sede" solo aporta cuando conviven filas de varias sedes en la misma tabla.
+  protected readonly showBranchColumn = computed(
+    () => this.branchFacade.selectedBranchId() === null,
   );
 
   constructor() {

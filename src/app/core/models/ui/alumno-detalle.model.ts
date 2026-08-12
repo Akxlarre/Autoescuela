@@ -63,6 +63,8 @@ export interface AlumnoDetalleUI {
   certificateEmailSent: boolean;
   /** true = curso "Refuerzo Clase B" (6 clases, sin certificado ni carnet "full"). Spec 0006-m. */
   isReinforcement: boolean;
+  /** false = el alumno nunca activó su cuenta Auth (invitación pendiente o falló). fix-157-m. */
+  hasAuthAccount: boolean;
 }
 
 /** Progreso de asistencia para alumnos profesionales (teoría o práctica). */

@@ -1333,14 +1333,7 @@ export class EnrollmentFacade {
 
       // Crear cuenta Auth del alumno y enviarle correo de invitación.
       // Fire-and-forget: no bloquea la confirmación si el correo falla.
-      const pd = this._personalData();
-      if (draft.userId && pd?.email) {
-        this.supabase.client.functions
-          .invoke('activate-student-account', {
-            body: { userId: draft.userId, email: pd.email },
-          })
-          .catch((err) => console.error('activate-student-account error:', err));
-      }
+      this.inviteStudentToAuth(draft.userId, this._personalData()?.email);
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
@@ -1397,14 +1390,7 @@ export class EnrollmentFacade {
       const enrollmentNumber = data as string;
 
       // Crear cuenta Auth del alumno y enviarle correo de invitación (fire-and-forget).
-      const pd = this._personalData();
-      if (draft.userId && pd?.email) {
-        this.supabase.client.functions
-          .invoke('activate-student-account', {
-            body: { userId: draft.userId, email: pd.email },
-          })
-          .catch((err) => console.error('activate-student-account error:', err));
-      }
+      this.inviteStudentToAuth(draft.userId, this._personalData()?.email);
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
@@ -1417,6 +1403,34 @@ export class EnrollmentFacade {
     } finally {
       this._isSubmitting.set(false);
     }
+  }
+
+  /**
+   * Crea la cuenta Auth del alumno y le envía la invitación (fire-and-forget: no bloquea
+   * la confirmación de matrícula ya exitosa). A diferencia de un `.catch()` a secas, revisa
+   * el `error` de la respuesta — `functions.invoke()` de supabase-js NO rechaza la promesa
+   * en respuestas no-2xx (ej. `inviteUserByEmail` rechazando un email con formato inválido),
+   * así que un `.catch()` solo nunca se enteraba de ese tipo de fallo (fix-157-m).
+   */
+  private inviteStudentToAuth(userId: number | null, email: string | undefined): void {
+    if (!userId || !email) return;
+
+    this.supabase.client.functions
+      .invoke('activate-student-account', { body: { userId, email } })
+      .then(({ error }) => {
+        if (error) {
+          console.error('activate-student-account error:', error);
+          this.toast.warning(
+            'La matrícula se confirmó, pero no se pudo crear la cuenta del alumno. Revisa su email desde la ficha del alumno.',
+          );
+        }
+      })
+      .catch((err) => {
+        console.error('activate-student-account error:', err);
+        this.toast.warning(
+          'La matrícula se confirmó, pero no se pudo crear la cuenta del alumno. Revisa su email desde la ficha del alumno.',
+        );
+      });
   }
 
   /**

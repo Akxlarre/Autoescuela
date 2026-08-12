@@ -772,6 +772,12 @@
   tiempo lleve en el repo.
 - **Fuente:** `specs/fixes/fix-153-m-vehiculo-documentos-sin-ui-de-carga`
 
+### DG-062 — `supabase.functions.invoke()` NO rechaza la promesa en respuestas no-2xx: un `.catch()` fire-and-forget nunca se entera de un fallo de la Edge Function
+- **Trampa:** ver un patrón como `this.supabase.client.functions.invoke('x', {...}).catch(err => console.error(...))` tras una acción que ya se dio por exitosa (ej. confirmar una matrícula) y asumir que cualquier fallo de la Edge Function, aunque no bloquee el flujo principal, al menos queda logueado. `enrollment.facade.ts` usaba exactamente este patrón para invocar `activate-student-account` tras confirmar la matrícula.
+- **Realidad:** `functions.invoke()` de `supabase-js` v2 resuelve `{ data, error }` para respuestas HTTP no-2xx — no lanza excepción. Un `.catch()` solo atrapa fallos de red/transporte (fetch que nunca llega a responder), nunca un `errorResponse(..., 4xx/5xx)` devuelto explícitamente por la función. Si `activate-student-account` rechazaba la invitación (ej. `inviteUserByEmail` de Supabase Auth validando el formato de un email mal escrito), el `.catch()` nunca se disparaba — el fallo no llegaba ni siquiera a la consola del navegador. El alumno quedaba con `users.supabase_uid = NULL` para siempre, sin ningún rastro de que algo había fallado, hasta que alguien intentaba editar su perfil y `update-student-profile` exigía ese `supabase_uid` inexistente.
+- **Lección:** cualquier llamada fire-and-forget a `functions.invoke()` debe revisar el campo `error` de la respuesta resuelta (`.then(({ error }) => { if (error) {...} })`), no solo encadenar `.catch()`. Si la acción es best-effort (no debe bloquear el flujo principal) pero su fallo deja al sistema en un estado permanentemente roto (una fila sin vínculo que nadie vuelve a intentar crear), el fallo debe ser visible para el staff (toast/notificación), no solo loguearse — de lo contrario es indetectable hasta que otra pantalla, sin relación aparente, choca con la consecuencia.
+- **Fuente:** `specs/fixes/fix-157-m-correo-invalido-bloquea-edicion-perfil-alumno`
+
 ---
 
 ## Convención para agregar una entrada nueva
