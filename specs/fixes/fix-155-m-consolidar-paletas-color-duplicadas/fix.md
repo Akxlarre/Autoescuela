@@ -1,7 +1,8 @@
 # Fix: Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas
 > id: fix-155-m-consolidar-paletas-color-duplicadas
 > refs: ASG-b-090
-> status: in_progress
+> status: done
+> closed: 2026-08-12
 > created: 2026-08-12
 
 ## Root Cause
@@ -52,11 +53,39 @@ de color, solo cambia de dónde se lee). El riesgo real es solo de tipeo al copi
 
 ## Cambio
 
-_Pendiente de completar durante la implementación._
+- **Cluster 1 (`SPEC_COLORS`):** eliminadas las 4 copias locales, ahora importan `getSpecColor()` /
+  `getSpecLabel()` / `SPECIALIZATION_OPTIONS` desde `core/utils/professional-specializations.ts` (fuente
+  ya existía): `admin-relator-ver-drawer.component.ts`, `admin-relator-editar-drawer.component.ts`,
+  `admin-relator-crear-drawer.component.ts`, `admin-profesional-relatores.component.ts`.
+- **Cluster 2 (`COURSE_COLORS`):** nuevo `core/utils/course-colors.ts` (+ `course-colors.spec.ts`) con
+  `COURSE_COLORS`/`getCourseColor()`, mismo patrón que el cluster 1. Migrados los 3 archivos:
+  `admin-promocion-ver-drawer.component.ts`, `admin-promocion-crear-drawer.component.ts`,
+  `admin-profesional-promociones.component.ts`.
+- **Cluster 3 (paleta de avatares):** nuevo `core/utils/avatar-palette.ts` (+ `avatar-palette.spec.ts`)
+  con `AVATAR_PALETTES`/`avatarPalette()`. Migrados `instructor-alumnos.component.ts` y
+  `student-drawer-detail.component.ts` (eran duplicados byte a byte).
+- **Cluster 4 (`INCOME_COLORS`):** no se movió a un util nuevo — se documentó con un comentario en
+  `reportes-contables.utils.ts` por qué `professional`/`standalone` quedan como hex nombrado en vez de
+  `--state-*`: son colores de categoría (no de estado), y mapearlos a un token `--state-*` existente
+  sería apropiarse de un significado (info/warning/success) que no les corresponde. Mismo criterio que
+  `SPEC_COLORS`/`COURSE_COLORS`. Sin cambio de valores.
+- **Cluster 5 (paleta de liquidaciones):** nuevo `core/utils/liquidaciones-avatar-colors.ts` (+ spec) con
+  `LIQUIDACIONES_AVATAR_COLORS`/`getLiquidacionAvatarColor()`, extraído de
+  `liquidaciones.facade.ts` (vivía inline en el Facade). El wrapper local `getAvatarColor()` del Facade
+  se eliminó, el único call site pasa a usar el util directamente.
 
 ## Test de Regresión
 
-_Pendiente de completar durante la implementación._
+- `core/utils/course-colors.spec.ts` (nuevo): `getCourseColor()` retorna el color mapeado para cada
+  código A2-A5 y el fallback `#6b7280` para uno desconocido.
+- `core/utils/avatar-palette.spec.ts` (nuevo): `avatarPalette()` siempre retorna una entrada de la
+  paleta, es determinístico para el mismo nombre, y produce la misma entrada para anagramas (por el
+  hash de suma de código de carácter).
+- `core/utils/liquidaciones-avatar-colors.spec.ts` (nuevo): `getLiquidacionAvatarColor()` siempre
+  retorna un color de la paleta y es determinístico para el mismo nombre.
+- `npx tsc --noEmit`: sin errores. `npm run test:ci`: 2003 tests verdes, 0 regresiones (7 archivos con
+  tests directamente relacionados corridos primero de forma dirigida, luego la suite completa).
+  `npm run lint:arch`: 0 errores (169 advertencias pre-existentes sin relación a este fix).
 
 ## Referencias
 

@@ -39,6 +39,12 @@ const BRANCH_ABBREV: Record<number, string> = {
   2: 'C. Chillán',
 };
 
+// class_b/complement/special_service reusan tokens `--state-*` porque su color ya tiene
+// un significado semántico compartido en el resto de la app (info/warning/success). `professional`
+// y `standalone` son categorías de ingreso puras sin equivalente de estado — forzarlas a un
+// `--state-*` existente sería apropiarse de un significado que no les corresponde (ninguna es
+// "advertencia" ni "éxito"), así que quedan como hex nombrado, igual criterio que `SPEC_COLORS`
+// y `COURSE_COLORS` (colores de categoría, no de estado).
 const INCOME_COLORS: Record<string, string> = {
   class_b: 'var(--state-info)',
   professional: '#7c3aed',

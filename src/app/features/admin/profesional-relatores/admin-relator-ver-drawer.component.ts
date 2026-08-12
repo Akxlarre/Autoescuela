@@ -8,20 +8,7 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
-
-const SPEC_COLORS: Record<string, string> = {
-  A2: '#3b82f6',
-  A3: '#8b5cf6',
-  A4: '#f59e0b',
-  A5: '#10b981',
-};
-
-const SPEC_LABELS: Record<string, string> = {
-  A2: 'Taxis y colectivos',
-  A3: 'Buses',
-  A4: 'Carga simple',
-  A5: 'Carga profesional',
-};
+import { getSpecColor, getSpecLabel } from '@core/utils/professional-specializations';
 
 @Component({
   selector: 'app-admin-relator-ver-drawer',
@@ -337,11 +324,11 @@ export class AdminRelatorVerDrawerComponent {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected specColor(spec: string): string {
-    return SPEC_COLORS[spec] ?? '#6b7280';
+    return getSpecColor(spec);
   }
 
   protected specLabel(spec: string): string {
-    return SPEC_LABELS[spec] ?? spec;
+    return getSpecLabel(spec);
   }
 
   protected roleLabel(role: string | null): string {

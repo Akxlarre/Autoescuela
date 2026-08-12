@@ -8,6 +8,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { SPECIALIZATION_OPTIONS } from '@core/utils/professional-specializations';
 
 @Component({
   selector: 'app-admin-relator-crear-drawer',
@@ -322,12 +323,7 @@ export class AdminRelatorCrearDrawerComponent {
   );
 
   // ── Opciones especialidades ─────────────────────────────────────────────────
-  protected readonly specializationOptions = [
-    { value: 'A2', label: 'Taxis y colectivos', color: '#3b82f6' },
-    { value: 'A3', label: 'Buses', color: '#8b5cf6' },
-    { value: 'A4', label: 'Carga simple', color: '#f59e0b' },
-    { value: 'A5', label: 'Carga profesional', color: '#10b981' },
-  ];
+  protected readonly specializationOptions = SPECIALIZATION_OPTIONS;
 
   protected isSelected(spec: string): boolean {
     return this.selectedSpecs().includes(spec);

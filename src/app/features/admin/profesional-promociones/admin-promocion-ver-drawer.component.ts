@@ -8,13 +8,7 @@ import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/st
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
-
-const COURSE_COLORS: Record<string, string> = {
-  A2: '#3b82f6',
-  A3: '#8b5cf6',
-  A4: '#f59e0b',
-  A5: '#10b981',
-};
+import { getCourseColor } from '@core/utils/course-colors';
 
 const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> = {
   planned: { label: 'Planificada', variant: 'brand' },
@@ -445,7 +439,7 @@ export class AdminPromocionVerDrawerComponent {
   }
 
   protected courseColor(code: string): string {
-    return COURSE_COLORS[code] ?? '#6b7280';
+    return getCourseColor(code);
   }
 
   protected enrollPercent(curso: { enrolledStudents: number; maxStudents: number }): number {
