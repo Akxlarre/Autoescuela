@@ -378,6 +378,33 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  describe('enviarInvitacion — fix-157-m', () => {
+    it('invoca activate-student-account con el userId y email, y muestra un toast de éxito', async () => {
+      const invokeFn = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      await facade.enviarInvitacion(55, 'Alumno@Example.com');
+
+      expect(invokeFn).toHaveBeenCalledWith('activate-student-account', {
+        body: { userId: 55, email: 'alumno@example.com' },
+      });
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('propaga el error sin tragárselo (ej. email no coincide con el registrado)', async () => {
+      const invokeFn = vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error('El email no coincide con el registrado para este usuario'),
+      });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      await expect(facade.enviarInvitacion(55, 'otro@example.com')).rejects.toThrow(
+        'El email no coincide con el registrado para este usuario',
+      );
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+  });
+
   describe('fetchClassBProgress (vía initialize) — RF-053', () => {
     /** Builder Supabase encadenable y awaitable, con resultado configurable por tabla. */
     function makeFlexibleSupabaseMock() {

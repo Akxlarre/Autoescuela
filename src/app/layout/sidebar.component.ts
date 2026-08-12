@@ -17,7 +17,11 @@ import { MenuConfigService } from '@core/services/auth/menu-config.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
-import { canAccessProfessional } from '@core/utils/professional-access.utils';
+import {
+  canAccessProfessional,
+  canUnlockProfessional as canUnlockProfessionalUtil,
+  visibleNavGroups,
+} from '@core/utils/professional-access.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { LogoComponent } from '@shared/components/logo/logo.component';
 
@@ -38,7 +42,7 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
   template: `
     <nav
       #sidebarEl
-      class="flex h-full min-h-0 w-60 flex-col max-lg:border-r border-border-subtle bg-surface py-4 max-lg:shadow-(--shadow-layout-sidebar) max-lg:rounded-tr-[var(--radius-2xl)]"
+      class="flex h-full min-h-0 w-60 flex-col max-lg:border-r border-border-subtle bg-surface py-4 max-lg:shadow-(--shadow-layout-sidebar) max-lg:rounded-tr-2xl"
       style="will-change: transform;"
       aria-label="Navegación principal"
     >
@@ -49,7 +53,7 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
 
       <!-- Nav groups -->
       <div class="flex flex-1 flex-col overflow-y-auto min-h-0 pl-3 pr-3 mr-2 pt-4 pb-4">
-        @for (group of menuConfig.menuItems(); track group.group) {
+        @for (group of visibleGroups(); track group.group) {
           <div class="mb-6">
             <p
               class="text-2xs font-semibold uppercase tracking-widest px-3 mb-1"
@@ -59,29 +63,29 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
             </p>
             <div class="flex flex-col gap-1">
               @for (item of group.items; track item.routerLink) {
-              <a
-                [routerLink]="
-                  item.requiresProfessional && !hasProfessional() ? null : item.routerLink
-                "
-                routerLinkActive="!bg-brand-muted !text-brand"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center justify-between rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-(--transition-color) hover:bg-brand-muted hover:text-brand"
-                [class.opacity-50]="item.requiresProfessional && !hasProfessional()"
-                [attr.aria-label]="
-                  item.label +
-                  (item.requiresProfessional && !hasProfessional() ? ' (Bloqueado)' : '')
-                "
-                [attr.data-llm-nav]="item.routerLink"
-                (click)="onItemClick($event, item)"
-              >
-                <div class="flex items-center gap-3">
-                  <app-icon [name]="item.icon" [size]="16" />
-                  <span>{{ item.label }}</span>
-                </div>
-                @if (item.requiresProfessional && !hasProfessional()) {
-                  <app-icon name="lock" [size]="14" class="text-text-muted" />
-                }
-              </a>
+                <a
+                  [routerLink]="
+                    item.requiresProfessional && !hasProfessional() ? null : item.routerLink
+                  "
+                  routerLinkActive="!bg-brand-muted !text-brand"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="flex items-center justify-between rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-(--transition-color) hover:bg-brand-muted hover:text-brand"
+                  [class.opacity-50]="item.requiresProfessional && !hasProfessional()"
+                  [attr.aria-label]="
+                    item.label +
+                    (item.requiresProfessional && !hasProfessional() ? ' (Bloqueado)' : '')
+                  "
+                  [attr.data-llm-nav]="item.routerLink"
+                  (click)="onItemClick($event, item)"
+                >
+                  <div class="flex items-center gap-3">
+                    <app-icon [name]="item.icon" [size]="16" />
+                    <span>{{ item.label }}</span>
+                  </div>
+                  @if (item.requiresProfessional && !hasProfessional()) {
+                    <app-icon name="lock" [size]="14" class="text-text-muted" />
+                  }
+                </a>
               }
             </div>
           </div>
@@ -117,6 +121,23 @@ export class SidebarComponent {
       user?.canAccessBothBranches,
     );
   });
+
+  /** Puede desbloquear "Academia Profesional" conmutando de sede (admin, o secretaria con grant). */
+  protected readonly canUnlockProfessional = computed(() =>
+    canUnlockProfessionalUtil(
+      this.auth.currentUser()?.role,
+      this.auth.currentUser()?.canAccessBothBranches,
+    ),
+  );
+
+  /** Oculta el grupo "Academia Profesional" cuando nunca es alcanzable para el usuario actual. */
+  protected readonly visibleGroups = computed(() =>
+    visibleNavGroups(
+      this.menuConfig.menuItems(),
+      this.hasProfessional(),
+      this.canUnlockProfessional(),
+    ),
+  );
 
   constructor() {
     afterNextRender(() => {

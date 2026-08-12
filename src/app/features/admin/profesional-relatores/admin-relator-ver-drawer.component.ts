@@ -63,7 +63,7 @@ import { getSpecColor, getSpecLabel } from '@core/utils/professional-specializat
                 {{ rel.initials }}
               </div>
               <div class="text-center">
-                <p class="text-base font-semibold text-text-primary">
+                <p class="font-semibold text-text-primary">
                   {{ rel.nombre }}
                 </p>
                 <p class="text-sm text-text-muted">{{ rel.rut }}</p>
