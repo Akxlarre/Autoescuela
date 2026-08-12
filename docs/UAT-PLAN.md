@@ -87,8 +87,8 @@ Valida la regla de negocio central del producto (`docs/PRODUCT-VISION.md` §Trip
 
 - [ ] Ver agenda semanal → slots disponibles/ocupados/completados se distinguen visualmente
 - [ ] Filtrar agenda por instructor → solo muestra sus clases
-- [ ] Intentar doble-agendar el mismo instructor en el mismo horario → **debe ser imposible** (bloqueo de negocio)
-- [ ] Intentar agendar con un vehículo cuyo SOAP/revisión técnica está vencido → bloqueado o alertado
+- [x] Intentar doble-agendar el mismo instructor en el mismo horario → **debe ser imposible** (bloqueo de negocio) — bug encontrado y cerrado: [fix-152-m-doble-agendado-instructor-sin-constraint-bd](../specs/fixes/fix-152-m-doble-agendado-instructor-sin-constraint-bd/fix.md)
+- [x] Intentar agendar con un vehículo cuyo SOAP/revisión técnica está vencido → bloqueado o alertado — bug encontrado y cerrado: [fix-153-m-vehiculo-documentos-sin-ui-de-carga](../specs/fixes/fix-153-m-vehiculo-documentos-sin-ui-de-carga/fix.md) (+ seguimiento [fix-154](../specs/fixes/fix-154-m-vehiculo-crear-staged-docs/fix.md), [hotfix-066](../specs/hotfixes/hotfix-066-m-cursor-pointer-drawer-documentos-vehiculo/hotfix.md), [hotfix-067](../specs/hotfixes/hotfix-067-m-dms-viewer-drawer-sin-boton-atras/hotfix.md))
 - [ ] Navegar semanas adelante/atrás, "Hoy", salto rápido de fecha → datos correctos por semana
 - [ ] Verificar que no se puede navegar más allá del límite configurado (2/3/4 meses) — "semanas fantasma" bloqueadas
 - [ ] Instructor: ver panel "Mis clases hoy" → coincide con lo agendado por secretaría

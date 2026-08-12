@@ -1,18 +1,45 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // Facades & Models
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { ToastService } from '@core/services/ui/toast.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
+import type { DocStatus } from '@core/models/ui/vehicle-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+
+interface VehicleDocRow {
+  type: string;
+  label: string;
+  icon: string;
+  expiryDate: string | null;
+  status: DocStatus | null;
+  filePath: string | null;
+}
+
+const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label, icon: t.icon }));
 
 /**
  * VehicleDocumentsDrawerComponent — Contenido dinámico para el LayoutDrawer.
- * Muestra los documentos legales asociados a un vehículo.
+ * Muestra los 4 documentos legales obligatorios de un vehículo (SOAP, Revisión Técnica,
+ * Permiso de Circulación, Seguro) y permite cargar/actualizar fecha de vencimiento + adjunto.
  */
 @Component({
   selector: 'app-vehicle-documents-drawer',
@@ -24,6 +51,8 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    DateInputComponent,
+    AsyncBtnComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -119,49 +148,115 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   </div>
                 }
               </div>
-            } @else if (documents().length === 0) {
-              <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
-                <div
-                  class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-text-muted"
-                >
-                  <app-icon name="file-question" [size]="32" />
-                </div>
-                <p class="font-bold text-text-primary">Sin documentos registrados</p>
-              </div>
             } @else {
               <div class="grid grid-cols-1 gap-4">
-                @for (doc of documents(); track doc.type) {
+                @for (doc of rows(); track doc.type) {
                   <div
-                    class="p-5 rounded-2xl border bg-base flex items-center justify-between group hover:border-ds-brand hover:shadow-sm transition-all duration-300"
+                    class="p-5 rounded-2xl border bg-base transition-all duration-300"
+                    [class.border-ds-brand]="editingType() === doc.type"
                   >
-                    <div class="flex items-center gap-4">
-                      <div
-                        class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand"
-                      >
-                        <app-icon [name]="docIcon(doc.type)" [size]="24" />
+                    <div class="flex items-center justify-between group">
+                      <div class="flex items-center gap-4">
+                        <div
+                          class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand"
+                        >
+                          <app-icon [name]="doc.icon" [size]="24" />
+                        </div>
+                        <div>
+                          <h4 class="item-title leading-tight mb-0.5">
+                            {{ doc.label }}
+                          </h4>
+                          <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
+                            @if (doc.expiryDate) {
+                              Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
+                            } @else {
+                              Sin fecha de vencimiento registrada
+                            }
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 class="item-title leading-tight mb-0.5">
-                          {{ docLabel(doc.type) }}
-                        </h4>
-                        <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
-                          Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
-                        </p>
+
+                      <div class="flex items-center gap-2">
+                        @if (doc.status) {
+                          <app-badge [variant]="doc.status === 'expired' ? 'error' : 'success'">
+                            {{ doc.status === 'expired' ? 'Vencido' : 'Vigente' }}
+                          </app-badge>
+                        } @else {
+                          <app-badge variant="warning">Sin cargar</app-badge>
+                        }
+                        @if (doc.filePath) {
+                          <button
+                            class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                            aria-label="Ver documento"
+                            data-llm-action="view-vehicle-document"
+                            (click)="onViewDoc(doc)"
+                          >
+                            <app-icon name="external-link" [size]="14" />
+                          </button>
+                        }
+                        <button
+                          class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                          aria-label="Actualizar documento"
+                          data-llm-action="edit-vehicle-document"
+                          (click)="onEditDoc(doc)"
+                        >
+                          <app-icon name="pencil" [size]="14" />
+                        </button>
                       </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                      <app-badge [variant]="doc.status === 'valid' ? 'success' : 'error'">
-                        {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
-                      </app-badge>
-                      <button
-                        class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
-                        aria-label="Ver documento"
-                        data-llm-action="view-vehicle-document"
-                      >
-                        <app-icon name="external-link" [size]="14" />
-                      </button>
-                    </div>
+                    @if (editingType() === doc.type) {
+                      <div class="mt-4 pt-4 border-t border-border-subtle flex flex-col gap-3">
+                        <app-date-input
+                          label="Fecha de vencimiento"
+                          [required]="true"
+                          [value]="editExpiry()"
+                          (valueChange)="editExpiry.set($event)"
+                        />
+                        <div class="flex flex-col gap-1.5">
+                          <label class="micro-label block">Adjuntar archivo (opcional)</label>
+                          <div class="flex items-center gap-2">
+                            <button
+                              type="button"
+                              class="btn-secondary"
+                              data-llm-action="select-vehicle-document-file"
+                              (click)="fileInput.click()"
+                            >
+                              <app-icon name="upload" [size]="13" />
+                              {{ editFile()?.name ?? 'Elegir archivo (PDF/JPG/PNG)' }}
+                            </button>
+                            <input
+                              #fileInput
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              class="hidden"
+                              data-llm-description="hidden file input for vehicle document upload"
+                              (change)="onFileChange($event)"
+                            />
+                          </div>
+                        </div>
+                        @if (formError()) {
+                          <p class="text-xs text-error">{{ formError() }}</p>
+                        }
+                        <div class="flex items-center justify-end gap-2 mt-1">
+                          <button
+                            type="button"
+                            class="btn-secondary"
+                            data-llm-action="cancel-edit-vehicle-document"
+                            (click)="onCancelEdit()"
+                          >
+                            Cancelar
+                          </button>
+                          <app-async-btn
+                            label="Guardar"
+                            icon="save"
+                            [loading]="isSubmitting()"
+                            llmAction="save-vehicle-document"
+                            (click)="onSaveDoc(doc)"
+                          ></app-async-btn>
+                        </div>
+                      </div>
+                    }
                   </div>
                 }
               </div>
@@ -186,10 +281,33 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 export class VehicleDocumentsDrawerComponent {
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly dmsViewer = inject(DmsViewerService);
+  private readonly toast = inject(ToastService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
 
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
-  readonly documents = signal<any[]>([]); // Se cargará del Facade
+  readonly documents = signal<
+    { type: string; expiryDate: string; status: DocStatus; filePath: string | null }[]
+  >([]);
   readonly isLoading = signal(false);
+
+  readonly rows = computed<VehicleDocRow[]>(() =>
+    DOC_TYPES.map((cfg) => {
+      const doc = this.documents().find((d) => d.type === cfg.type);
+      return {
+        ...cfg,
+        expiryDate: doc?.expiryDate || null,
+        status: doc?.status ?? null,
+        filePath: doc?.filePath ?? null,
+      };
+    }),
+  );
+
+  readonly editingType = signal<string | null>(null);
+  readonly editExpiry = signal<string>('');
+  readonly editFile = signal<File | null>(null);
+  readonly isSubmitting = signal(false);
+  readonly formError = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -210,24 +328,69 @@ export class VehicleDocumentsDrawerComponent {
     this.isLoading.set(false);
   }
 
-  docLabel(type: string): string {
-    const map: Record<string, string> = {
-      soap: 'SOAP',
-      technical_inspection: 'Revisión Técnica',
-      circulation_permit: 'Permiso de Circulación',
-      insurance: 'Seguro',
-    };
-    return map[type] ?? type;
+  onEditDoc(doc: VehicleDocRow): void {
+    this.editingType.set(doc.type);
+    this.editExpiry.set(doc.expiryDate ?? '');
+    this.editFile.set(null);
+    this.formError.set(null);
   }
 
-  docIcon(type: string): string {
-    const map: Record<string, string> = {
-      soap: 'file-text',
-      technical_inspection: 'wrench',
-      circulation_permit: 'file-badge',
-      insurance: 'shield-check',
-    };
-    return map[type] ?? 'file';
+  onCancelEdit(): void {
+    this.editingType.set(null);
+    this.editFile.set(null);
+    this.formError.set(null);
+  }
+
+  onFileChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const error = validateDocumentFile(file);
+    if (error) {
+      this.formError.set(error);
+      return;
+    }
+    this.formError.set(null);
+    this.editFile.set(file);
+  }
+
+  async onSaveDoc(doc: VehicleDocRow): Promise<void> {
+    if (!this.editExpiry()) {
+      this.formError.set('La fecha de vencimiento es obligatoria.');
+      return;
+    }
+    const vehicleId = this.vehicleId();
+    if (!vehicleId) return;
+
+    this.isSubmitting.set(true);
+    this.formError.set(null);
+    try {
+      await this.flotaFacade.upsertVehicleDocument({
+        vehicleId,
+        type: doc.type,
+        expiryDate: this.editExpiry(),
+        file: this.editFile(),
+        existingFilePath: doc.filePath,
+      });
+      this.onCancelEdit();
+    } catch (err) {
+      this.formError.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al guardar el documento',
+      );
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  async onViewDoc(doc: VehicleDocRow): Promise<void> {
+    if (!doc.filePath) return;
+    const url = await this.flotaFacade.getDocumentSignedUrl(doc.filePath);
+    if (!url) {
+      this.toast.error('No se pudo abrir el documento');
+      return;
+    }
+    this.dmsViewer.openByUrl(url, doc.label);
   }
 
   onClose() {

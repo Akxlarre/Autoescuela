@@ -11,6 +11,8 @@ export interface VehicleDocSummary {
   type: string; // 'soap' | 'technical_inspection' | 'circulation_permit' | 'insurance'
   expiryDate: string;
   status: DocStatus;
+  /** Storage path en el bucket 'documents' (no URL pública) — null si nunca se adjuntó archivo. */
+  filePath: string | null;
 }
 
 export interface VehicleTableRow {

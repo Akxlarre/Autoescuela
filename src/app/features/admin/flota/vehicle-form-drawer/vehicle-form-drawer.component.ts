@@ -32,8 +32,12 @@ import { FlotaFacade } from '@core/facades/flota.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
+import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -55,6 +59,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     DrawerFormComponent,
     StableWidthDirective,
     BranchScopeSelectorComponent,
+    DateInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -208,6 +213,95 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 (valueChange)="onSedeScopeChange($event)"
               />
 
+              <!-- ── Sección: Documentos (solo al crear — recién existe vehicleId al guardar) ── -->
+              @if (!isEdit()) {
+                <h3 class="section-title">Documentos (opcional)</h3>
+                <div class="flex flex-col gap-3 mb-2">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="field-label" for="vf-doc-type">Tipo de documento</label>
+                      <p-select
+                        inputId="vf-doc-type"
+                        [options]="availableDocTypes()"
+                        [(ngModel)]="pendingDocTypeModel"
+                        [ngModelOptions]="{ standalone: true }"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Selecciona un tipo..."
+                        styleClass="w-full"
+                        appendTo="body"
+                        data-llm-description="Tipo de documento a adjuntar para el nuevo vehículo"
+                      ></p-select>
+                    </div>
+                    <app-date-input
+                      label="Fecha de vencimiento"
+                      id="vf-doc-expiry"
+                      [value]="pendingDocExpiry()"
+                      (valueChange)="pendingDocExpiry.set($event)"
+                    />
+                  </div>
+                  <input
+                    #vehicleDocFileInput
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    class="hidden"
+                    data-llm-description="hidden file input for the vehicle document to attach"
+                    (change)="onDocFileSelected($event)"
+                  />
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center justify-center gap-2"
+                      data-llm-action="adjuntar-documento-vehiculo"
+                      (click)="vehicleDocFileInput.click()"
+                    >
+                      <app-icon name="upload" [size]="14" />
+                      {{ pendingDocFile()?.name ?? 'Adjuntar archivo (opcional)' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="!pendingDocType() || !pendingDocExpiry()"
+                      data-llm-action="agregar-documento-vehiculo"
+                      (click)="addStagedDoc()"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                  @if (docValidationError()) {
+                    <span class="field-error">{{ docValidationError() }}</span>
+                  }
+
+                  @if (stagedDocs().length > 0) {
+                    <ul class="flex flex-col gap-2 m-0 p-0 list-none">
+                      @for (doc of stagedDocs(); track doc.type) {
+                        <li
+                          class="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border-subtle"
+                        >
+                          <div class="min-w-0">
+                            <p class="text-sm font-medium m-0 text-text-primary truncate">
+                              {{ docTypeLabel(doc.type) }}
+                            </p>
+                            <p class="text-xs m-0 text-text-secondary">
+                              Vence: {{ doc.expiryDate }}{{ doc.file ? ' · ' + doc.file.name : '' }}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
+                            aria-label="Quitar documento adjunto"
+                            data-llm-action="quitar-documento-vehiculo"
+                            (click)="removeStagedDoc(doc.type)"
+                          >
+                            <app-icon name="trash-2" [size]="14" />
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              }
+
               <!-- Mensajes -->
               @if (errorMsg()) {
                 <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
@@ -249,6 +343,7 @@ export class VehicleFormDrawerComponent {
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly toast = inject(ToastService);
   protected readonly authFacade = inject(AuthFacade);
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -287,6 +382,59 @@ export class VehicleFormDrawerComponent {
   });
 
   readonly branchOptions = this.branchFacade.branches;
+
+  // ── Documentos adjuntos (se suben recién al crear el vehículo, cuando ya hay id — fix-154-m) ──
+  readonly stagedDocs = signal<{ type: string; expiryDate: string; file: File | null }[]>([]);
+  readonly pendingDocType = signal<string | null>(null);
+  readonly pendingDocExpiry = signal<string>('');
+  readonly pendingDocFile = signal<File | null>(null);
+  readonly docValidationError = signal<string | null>(null);
+
+  readonly vehicleDocTypes = VEHICLE_DOC_TYPES;
+  readonly availableDocTypes = computed(() => {
+    const used = new Set(this.stagedDocs().map((d) => d.type));
+    return this.vehicleDocTypes.filter((t) => !used.has(t.value));
+  });
+
+  protected get pendingDocTypeModel(): string | null {
+    return this.pendingDocType();
+  }
+  protected set pendingDocTypeModel(v: string | null) {
+    this.pendingDocType.set(v);
+  }
+
+  docTypeLabel(type: string): string {
+    return this.vehicleDocTypes.find((t) => t.value === type)?.label ?? type;
+  }
+
+  onDocFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    const error = validateDocumentFile(file);
+    this.docValidationError.set(error);
+    if (error) return;
+
+    this.pendingDocFile.set(file);
+  }
+
+  addStagedDoc(): void {
+    const type = this.pendingDocType();
+    const expiryDate = this.pendingDocExpiry();
+    if (!type || !expiryDate) return;
+
+    this.stagedDocs.update((docs) => [...docs, { type, expiryDate, file: this.pendingDocFile() }]);
+    this.pendingDocType.set(null);
+    this.pendingDocExpiry.set('');
+    this.pendingDocFile.set(null);
+    this.docValidationError.set(null);
+  }
+
+  removeStagedDoc(type: string): void {
+    this.stagedDocs.update((docs) => docs.filter((d) => d.type !== type));
+  }
 
   constructor() {
     effect(() => {
@@ -338,7 +486,10 @@ export class VehicleFormDrawerComponent {
       if (id) {
         await this.flotaFacade.updateVehicle(id, val);
       } else {
-        await this.flotaFacade.createVehicle(val);
+        const newVehicleId = await this.flotaFacade.createVehicle(val);
+        if (newVehicleId) {
+          await this.uploadStagedDocs(newVehicleId);
+        }
       }
       this.layoutDrawer.close();
     } catch (error) {
@@ -354,5 +505,29 @@ export class VehicleFormDrawerComponent {
 
   onCancel(): void {
     this.layoutDrawer.close();
+  }
+
+  /**
+   * Sube los documentos adjuntados durante la creación — recién ahora existe el vehicleId.
+   * Fallas individuales no bloquean el cierre del drawer (el vehículo ya quedó creado); se
+   * avisan por toast para que se reintenten desde el drawer de Documentos (mismo criterio que
+   * `admin-instructor-crear-drawer`).
+   */
+  private async uploadStagedDocs(vehicleId: number): Promise<void> {
+    for (const doc of this.stagedDocs()) {
+      try {
+        await this.flotaFacade.upsertVehicleDocument({
+          vehicleId,
+          type: doc.type,
+          expiryDate: doc.expiryDate,
+          file: doc.file,
+        });
+      } catch {
+        this.toast.error(
+          'No se pudo subir un documento',
+          `${this.docTypeLabel(doc.type)} — puedes reintentarlo desde Documentos del vehículo.`,
+        );
+      }
+    }
   }
 }
