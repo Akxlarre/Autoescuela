@@ -20,6 +20,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
+import { LayoutService } from '@core/services/ui/layout.service';
 
 @Component({
   selector: 'app-instructor-horario',
@@ -50,9 +51,12 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 
       <!-- Schedule content -->
       <div class="bento-banner bento-fill flex flex-col h-full">
-        <!-- DESKTOP: Grid Semanal -->
-        <div class="hidden md:flex md:flex-col md:min-h-0 h-full">
+        @if (isDesktopLayout()) {
+          <!-- DESKTOP: Grid Semanal — solo se monta con ancho de CONTENEDOR real (tier
+               desktop), no por viewport: la grilla necesita ~900px reales para sus 7
+               columnas; con un drawer abierto angostando <main>, cae a timeline (fix-145-b) -->
           <app-weekly-schedule-grid
+            class="h-full"
             [schedule]="facade.weeklySchedule()"
             [isLoading]="isDataLoading()"
             [selectedDate]="selectedDayDate()"
@@ -62,10 +66,8 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
             (daySelect)="onDaySelect($event)"
             (blockClick)="onBlockClick($event)"
           />
-        </div>
-
-        <!-- MOBILE: Timeline Diario -->
-        <div class="md:hidden">
+        } @else {
+          <!-- MOBILE/TABLET (o contenedor angostado por drawer): Timeline Diario -->
           <app-daily-schedule-timeline
             [daySchedule]="todaySchedule()"
             [weekDays]="facade.weeklySchedule()?.days"
@@ -74,7 +76,7 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
             (daySelect)="onMobileDaySelect($event)"
             (blockClick)="onBlockClick($event)"
           />
-        </div>
+        }
       </div>
     </div>
   `,
@@ -89,6 +91,12 @@ export class InstructorHorarioComponent implements OnInit {
   });
   private router = inject(Router);
   private currentWeekDate: string = new Date().toISOString();
+
+  /** Switch grilla/timeline por ancho de CONTENEDOR (fix-145-b), no por viewport `md:` —
+   *  la grilla necesita ~900px reales de <main>, que un drawer abierto puede angostar aunque
+   *  el viewport siga siendo ancho. */
+  private readonly layoutService = inject(LayoutService);
+  protected readonly isDesktopLayout = computed(() => this.layoutService.tier() === 'desktop');
 
   // Mobile day selection
   public selectedDate = signal<string>(new Date().toISOString().split('T')[0]);

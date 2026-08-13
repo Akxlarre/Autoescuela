@@ -219,7 +219,7 @@ interface SemaforoInfo {
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
               >
                 <ng-template pTemplate="header">
-                  <tr class="micro-label bg-subtle text-left">
+                  <tr class="micro-label text-left">
                     <th class="pl-6 py-4">Alumno</th>
                     <th>Nº Mat.</th>
                     <th>Promoción</th>

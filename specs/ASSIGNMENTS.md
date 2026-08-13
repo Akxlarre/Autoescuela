@@ -118,7 +118,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
-| ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | `b` | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -207,6 +206,7 @@
 | ASG-b-073 | App-like: familia "servicios especiales" (`admin` + `secretaria`) | [fix-021-i-app-like-servicios-especiales](fixes/fix-021-i-app-like-servicios-especiales/fix.md) | 2026-08-10 |
 | ASG-b-080 | App-like: matriz de notas (`admin/clase-profesional/evaluaciones` + `secretaria/profesional/notas`) | [0008-m-app-like-matriz-notas-evaluaciones](specs/0008-m-app-like-matriz-notas-evaluaciones/spec.md) | 2026-08-10 |
 | ASG-b-091 | Alumno con matrícula solo `completed` ve horario histórico sin aviso | [fix-128-b-alumno-matricula-completada-sin-aviso](fixes/fix-128-b-alumno-matricula-completada-sin-aviso/fix.md) | 2026-08-10 |
+| ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 | ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
 <!-- AUTO-GENERATED:END -->

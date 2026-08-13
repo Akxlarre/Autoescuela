@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { InstructorProfileFacade } from '@core/facades/instructor-profile.facade';
@@ -45,7 +45,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     IconComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         title="Mi Día"
@@ -58,7 +58,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         [loadingKpiCount]="4"
       />
       <!-- Main grid: clases + sidebar -->
-      <div class="bento-banner" appScrollReveal>
+      <div class="bento-banner bento-fill flex flex-col h-full overflow-y-auto" appScrollReveal>
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Lista de clases del día (col-span-2) -->
           <div class="lg:col-span-2">
@@ -139,6 +139,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                   subtitle="Disfruta tu día libre o revisa tu horario para ver tus próximas clases."
                   actionLabel="Ver mi horario semanal"
                   actionIcon="calendar"
+                  (action)="goToHorario()"
                 />
               } @else {
                 <div class="divide-y divide-border-default">
@@ -292,6 +293,11 @@ export class InstructorDashboardComponent implements OnInit {
   public profile = inject(InstructorProfileFacade);
   public horasFacade = inject(InstructorHorasFacade);
   private destroyRef = inject(DestroyRef);
+  private router = inject(Router);
+
+  goToHorario(): void {
+    this.router.navigate(['/app/instructor/horario']);
+  }
 
   readonly proximaHora = computed(() => {
     const t = this.clasesFacade.nextClass()?.timeLabel;

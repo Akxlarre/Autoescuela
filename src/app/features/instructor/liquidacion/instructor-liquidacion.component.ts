@@ -4,6 +4,7 @@ import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import {
   HorizontalBarChartComponent,
   ChartDataGroup,
@@ -25,13 +26,14 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     SectionHeroComponent,
     AlertCardComponent,
     IconComponent,
+    SkeletonBlockComponent,
     HorizontalBarChartComponent,
     BentoGridLayoutDirective,
     ScrollRevealDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
       <app-section-hero
         [animateOnInit]="false"
@@ -54,10 +56,10 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         </div>
       } @else if (facade.monthlyTarget(); as target) {
         <!-- Contenido principal -->
-        <div class="bento-banner">
-          <div class="flex flex-col gap-6">
+        <div class="bento-banner bento-fill flex flex-col h-full">
+          <div class="flex flex-col gap-6 h-full min-h-0">
             <!-- Breakdown Chart -->
-            <div class="card p-6" appCardHover appScrollReveal>
+            <div class="card p-6 shrink-0" appCardHover appScrollReveal>
               <h3
                 class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
               >
@@ -67,9 +69,13 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             </div>
 
             <!-- Daily Logs Table -->
-            <div class="card p-0 overflow-hidden" appCardHover [appScrollReveal]="{ delay: 0.1 }">
+            <div
+              class="card p-0 overflow-hidden flex-1 min-h-0 flex flex-col"
+              appCardHover
+              [appScrollReveal]="{ delay: 0.1 }"
+            >
               <div
-                class="px-6 py-4 border-b border-border-subtle bg-subtle flex justify-between items-center"
+                class="px-6 py-4 border-b border-border-subtle flex justify-between items-center shrink-0"
               >
                 <h3 class="text-lg font-bold text-text-primary">Registro Diario (Mes Actual)</h3>
                 <button class="btn-secondary text-xs" data-llm-action="export-pdf">
@@ -78,10 +84,10 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 </button>
               </div>
 
-              <div class="overflow-x-auto">
+              <div class="overflow-x-auto overflow-y-auto flex-1 min-h-0">
                 <table class="w-full text-left border-collapse">
                   <thead>
-                    <tr class="micro-label border-b border-border-subtle bg-subtle">
+                    <tr class="micro-label border-b border-border-subtle">
                       <th class="p-4 font-semibold">Fecha</th>
                       <th class="p-4 font-semibold">Tipo de Actividad</th>
                       <th class="p-4 font-semibold">Sesiones</th>
@@ -123,6 +129,34 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     }
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Loading skeleton — fiel al layout real (chart shrink-0 + tabla flex-1) -->
+        <div class="bento-banner bento-fill flex flex-col h-full">
+          <div class="flex flex-col gap-6 h-full min-h-0">
+            <div class="card p-6 shrink-0">
+              <app-skeleton-block variant="text" width="220px" height="20px" class="mb-4" />
+              <app-skeleton-block variant="rect" width="100%" height="24px" borderRadius="0.5rem" />
+            </div>
+            <div class="card p-0 overflow-hidden flex-1 min-h-0 flex flex-col">
+              <div
+                class="px-6 py-4 border-b border-border-subtle flex justify-between items-center shrink-0"
+              >
+                <app-skeleton-block variant="text" width="180px" height="18px" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="100px"
+                  height="28px"
+                  borderRadius="0.375rem"
+                />
+              </div>
+              <div class="flex-1 min-h-0 p-4 space-y-3">
+                @for (_ of [1, 2, 3, 4]; track $index) {
+                  <app-skeleton-block variant="rect" width="100%" height="20px" />
+                }
               </div>
             </div>
           </div>

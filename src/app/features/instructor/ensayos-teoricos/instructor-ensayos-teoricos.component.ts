@@ -35,7 +35,7 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
     EmptyStateComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         [animateOnInit]="false"
@@ -51,8 +51,8 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
       />
 
       <!-- Main content -->
-      <div class="bento-banner">
-        <div class="flex flex-col gap-6">
+      <div class="bento-banner bento-fill flex flex-col h-full">
+        <div class="flex flex-col gap-6 h-full min-h-0">
           <!-- Error state -->
           @if (facade.error()) {
             <app-alert-card title="Error al cargar puntajes" severity="error">
@@ -61,18 +61,18 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
           }
 
           <!-- Tabla de historial -->
-          <div class="card p-0 overflow-hidden" appCardHover>
+          <div class="card p-0 overflow-hidden flex-1 min-h-0 flex flex-col" appCardHover>
             <div
-              class="px-6 py-4 border-b border-border-subtle bg-subtle flex items-center justify-between"
+              class="px-6 py-4 border-b border-border-subtle flex items-center justify-between shrink-0"
             >
               <h3 class="text-lg font-bold text-text-primary">Historial de Puntajes</h3>
             </div>
 
             @if (isDataLoading()) {
-              <div class="overflow-x-auto">
+              <div class="overflow-x-auto overflow-y-auto flex-1 min-h-0">
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
-                    <tr class="micro-label border-b border-border-subtle bg-subtle">
+                    <tr class="micro-label border-b border-border-subtle">
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
                       <th class="p-4 font-semibold">Puntaje</th>
@@ -104,16 +104,18 @@ import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
                 </table>
               </div>
             } @else if (facade.examScores().length === 0) {
-              <app-empty-state
-                icon="file-question"
-                message="Sin puntajes registrados"
-                subtitle="Aún no hay resultados de ensayos teóricos para tus alumnos."
-              />
+              <div class="flex-1 flex items-center justify-center">
+                <app-empty-state
+                  icon="file-question"
+                  message="Sin puntajes registrados"
+                  subtitle="Aún no hay resultados de ensayos teóricos para tus alumnos."
+                />
+              </div>
             } @else {
-              <div class="overflow-x-auto">
+              <div class="overflow-x-auto overflow-y-auto flex-1 min-h-0">
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
-                    <tr class="micro-label border-b border-border-subtle bg-subtle">
+                    <tr class="micro-label border-b border-border-subtle">
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
                       <th class="p-4 font-semibold">Puntaje</th>

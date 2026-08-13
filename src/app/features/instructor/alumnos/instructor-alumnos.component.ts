@@ -12,6 +12,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -25,6 +26,8 @@ import { StudentDrawerDetailComponent } from './components/student-drawer-detail
 import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { avatarPalette } from '@core/utils/avatar-palette';
 
 const PAGE_SIZE = 9;
@@ -38,6 +41,7 @@ const PAGE_SIZE = 9;
     SelectModule,
     DatePipe,
     TagModule,
+    TableModule,
     SectionHeroComponent,
     EmptyStateComponent,
     IconComponent,
@@ -47,7 +51,7 @@ const PAGE_SIZE = 9;
     BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- ══ HERO ══ -->
       <app-section-hero
         [animateOnInit]="false"
@@ -60,242 +64,334 @@ const PAGE_SIZE = 9;
         [loadingKpiCount]="4"
       />
 
-      <!-- ══ MAIN CONTENT ══ -->
-      <div class="bento-banner flex flex-col gap-6">
-        <!-- ══ TOOLS BAR (Search + Filters) ══
-           Unificamos buscador y filtros en una sola card premium. -->
-        <div class="card overflow-visible">
-          <div class="p-4 space-y-4">
-            <!-- Premium Search Field -->
-            <div class="search-field">
-              <app-icon name="search" [size]="18" class="text-text-muted" />
-              <input
-                type="text"
-                class="search-field__input"
-                placeholder="Buscar alumno por nombre o RUT..."
-                [ngModel]="searchTerm()"
-                (ngModelChange)="onSearch($event)"
-              />
-              @if (searchTerm()) {
-                <button
-                  class="search-field__clear"
-                  aria-label="Limpiar búsqueda"
-                  (click)="onSearch('')"
-                >
-                  <app-icon name="x" [size]="14" />
-                </button>
-              }
-            </div>
-
-            <!-- Bottom Tools Row -->
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <!-- Filter Pills Row -->
-              <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                @for (f of statusFilters; track f.value) {
-                  <button
-                    class="filter-pill"
-                    [class.filter-pill--active]="filterStatus() === f.value"
-                    (click)="setFilter(f.value)"
-                  >
-                    <span
-                      class="filter-pill__dot"
-                      [class.filter-pill__dot--active]="filterStatus() === f.value"
-                    ></span>
-                    <span>{{ f.label }}</span>
-                    <span class="filter-pill__badge">{{ f.count() }}</span>
-                  </button>
-                }
-              </div>
-
-              <!-- Sort Tool -->
-              <p-select
-                [options]="sortOptions"
-                optionLabel="label"
-                optionValue="value"
-                [ngModel]="sortBy()"
-                (ngModelChange)="sortBy.set($event)"
-                styleClass="w-44"
-                data-llm-description="sort student list by field"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- ══ STUDENT DIRECTORY ══ -->
-
-        <!-- Empty state (solo cuando termina de cargar y no hay resultados) -->
-        @if (!facade.isLoading() && filteredStudents().length === 0) {
-          <app-empty-state
-            icon="search"
-            message="No se encontraron alumnos"
-            subtitle="Refina tus términos de búsqueda o filtros."
-            actionLabel="Ver todos"
-            (action)="clearFilters()"
-          />
-        } @else {
-          <!-- Grid único — skeleton inline dentro del mismo contenedor -->
-          <div class="bento-grid">
-            @if (facade.isLoading()) {
-              @for (i of skeletonItems; track i) {
-                <!-- Skeleton fiel a la student-card: mismos gaps, padding y estructura -->
-                <div class="student-card bento-wide" aria-hidden="true" data-col-span="4">
-                  <!-- Accent bar -->
-                  <div class="student-card__accent bg-subtle"></div>
-
-                  <div class="p-5 flex flex-col gap-4 h-full">
-                    <!-- Header: avatar + nombre/rut + badge -->
-                    <div class="flex justify-between items-start gap-4">
-                      <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <app-skeleton-block variant="circle" width="42px" height="42px" />
-                        <div class="flex-1 space-y-2">
-                          <app-skeleton-block variant="text" width="65%" />
-                          <app-skeleton-block variant="text" width="40%" />
-                        </div>
-                      </div>
-                      <!-- Badge placeholder -->
-                      <app-skeleton-block variant="rect" width="64px" height="22px" />
-                    </div>
-
-                    <!-- Curso -->
-                    <app-skeleton-block variant="text" width="75%" />
-
-                    <!-- Progreso -->
-                    <div class="space-y-2">
-                      <div class="flex justify-between">
-                        <app-skeleton-block variant="text" width="45%" />
-                        <app-skeleton-block variant="text" width="20%" />
-                      </div>
-                      <app-skeleton-block variant="rect" height="6px" />
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="pt-4 mt-auto border-t border-border-subtle">
-                      <div class="flex items-center justify-between">
-                        <app-skeleton-block variant="text" width="50%" />
-                        <app-skeleton-block variant="rect" width="48px" height="22px" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
-            } @else {
-              @for (s of pagedStudents(); track s.studentId) {
-                <div
-                  class="student-card group bento-wide"
-                  appCardHover
-                  (click)="openDetail(s)"
-                  data-col-span="4"
-                >
-                  <!-- Accent gradient top bar -->
-                  <div
-                    class="student-card__accent"
-                    [style.background]="getPalette(s.name).bg"
-                  ></div>
-
-                  <div class="p-5 flex flex-col gap-4 h-full relative">
-                    <!-- Header -->
-                    <div class="flex justify-between items-start gap-4">
-                      <div class="flex items-center gap-3 min-w-0">
-                        <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
-                          {{ initials(s.name) }}
-                        </div>
-                        <div class="min-w-0">
-                          <h3
-                            class="text-sm font-bold truncate"
-                            [style.color]="'var(--text-primary)'"
-                          >
-                            {{ s.name }}
-                          </h3>
-                          <p class="text-xs" [style.color]="'var(--text-muted)'">{{ s.rut }}</p>
-                        </div>
-                      </div>
-                      <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
-                    </div>
-
-                    <!-- Curso -->
-                    <div
-                      class="flex items-center gap-2 text-xs"
-                      [style.color]="'var(--text-secondary)'"
-                    >
-                      <app-icon name="book-open" [size]="14" />
-                      <span class="truncate" [attr.title]="s.courseName">{{ s.courseName }}</span>
-                    </div>
-
-                    <!-- Progreso -->
-                    <div class="space-y-2">
-                      <div class="flex justify-between text-xs" [style.color]="'var(--text-muted)'">
-                        <span>Progreso Práctico</span>
-                        <span class="font-bold" [style.color]="'var(--text-primary)'"
-                          >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
-                        >
-                      </div>
-                      <div class="progress-track">
-                        <div
-                          class="progress-fill"
-                          [style.width.%]="s.practicePercent"
-                          [style.background]="getPalette(s.name).bg"
-                        ></div>
-                      </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div
-                      class="pt-4 mt-auto flex items-center justify-between border-t border-border-subtle"
-                    >
-                      <div
-                        class="flex items-center gap-2 text-xs"
-                        [style.color]="'var(--text-muted)'"
-                      >
-                        <app-icon name="calendar" [size]="14" />
-                        <span>{{
-                          s.nextClassDate
-                            ? (s.nextClassDate | date: 'dd MMM, HH:mm')
-                            : 'Sin agendar'
-                        }}</span>
-                      </div>
-                      <div class="details-link">
-                        <span>Ficha</span>
-                        <app-icon name="chevron-right" [size]="14" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
+      <!-- ══ MAIN CONTENT (Dual-Viewport — mismo canon que alumnos-list-content) ══ -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
+        appCardHover
+      >
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+          <!-- Buscador -->
+          <div class="search-field flex-1 min-w-52 max-w-xs">
+            <app-icon name="search" [size]="18" class="text-text-muted" />
+            <input
+              type="text"
+              class="search-field__input"
+              placeholder="Buscar alumno por nombre o RUT..."
+              [ngModel]="searchTerm()"
+              (ngModelChange)="onSearch($event)"
+            />
+            @if (searchTerm()) {
+              <button
+                class="search-field__clear"
+                aria-label="Limpiar búsqueda"
+                (click)="onSearch('')"
+              >
+                <app-icon name="x" [size]="14" />
+              </button>
             }
           </div>
 
-          <!-- Paginación (solo con contenido real) -->
-          @if (!facade.isLoading() && totalPages() > 1) {
-            <div class="pagination-footer">
-              <div class="pagination-shell">
-                <button
-                  class="pag-btn"
-                  [disabled]="currentPage() === 0"
-                  aria-label="Página anterior"
-                  (click)="prevPage()"
-                >
-                  <app-icon name="chevron-left" [size]="16" />
-                </button>
-                @for (p of pageNumbers(); track p) {
-                  <button
-                    class="pag-btn"
-                    [class.pag-btn--active]="p === currentPage()"
-                    (click)="currentPage.set(p)"
-                  >
-                    {{ p + 1 }}
-                  </button>
+          <!-- Filtro por estado -->
+          <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            @for (f of statusFilters; track f.value) {
+              <button
+                class="filter-pill"
+                [class.filter-pill--active]="filterStatus() === f.value"
+                (click)="setFilter(f.value)"
+              >
+                <span
+                  class="filter-pill__dot"
+                  [class.filter-pill__dot--active]="filterStatus() === f.value"
+                ></span>
+                <span>{{ f.label }}</span>
+                <span class="filter-pill__badge">{{ f.count() }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- Sort -->
+          <p-select
+            [options]="sortOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="sortBy()"
+            (ngModelChange)="sortBy.set($event)"
+            styleClass="w-44 ml-auto"
+            data-llm-description="sort student list by field"
+          />
+        </div>
+
+        @if (facade.isLoading()) {
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- VISTA 1: TABLA SKELETON (oculta cuando se comprime) -->
+            <div
+              class="desktop-view hide-on-squeeze p-4 space-y-0 flex flex-col flex-1 min-h-0 h-full w-full"
+            >
+              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                <app-skeleton-block variant="text" width="28%" height="11px" />
+                <app-skeleton-block variant="text" width="20%" height="11px" />
+                <app-skeleton-block variant="text" width="20%" height="11px" />
+                <app-skeleton-block variant="text" width="18%" height="11px" />
+                <app-skeleton-block variant="text" width="14%" height="11px" />
+              </div>
+              @for (row of skeletonItems; track row) {
+                <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                  <div class="flex items-center gap-3 w-[28%]">
+                    <app-skeleton-block variant="circle" width="36px" height="36px" />
+                    <div class="flex flex-col gap-1.5 flex-1">
+                      <app-skeleton-block variant="text" width="70%" height="12px" />
+                      <app-skeleton-block variant="text" width="45%" height="10px" />
+                    </div>
+                  </div>
+                  <app-skeleton-block variant="text" width="20%" height="12px" />
+                  <app-skeleton-block variant="rect" width="20%" height="6px" />
+                  <app-skeleton-block variant="text" width="18%" height="12px" />
+                  <app-skeleton-block variant="rect" width="64px" height="22px" />
+                </div>
+              }
+            </div>
+
+            <!-- VISTA 2: TARJETAS SKELETON (visible cuando se comprime o en móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="bento-grid">
+                @for (i of skeletonItems; track i) {
+                  <div class="student-card bento-wide" aria-hidden="true" data-col-span="4">
+                    <div class="student-card__accent bg-subtle"></div>
+                    <div class="p-5 flex flex-col gap-4 h-full">
+                      <div class="flex justify-between items-start gap-4">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                          <app-skeleton-block variant="circle" width="42px" height="42px" />
+                          <div class="flex-1 space-y-2">
+                            <app-skeleton-block variant="text" width="65%" />
+                            <app-skeleton-block variant="text" width="40%" />
+                          </div>
+                        </div>
+                        <app-skeleton-block variant="rect" width="64px" height="22px" />
+                      </div>
+                      <app-skeleton-block variant="text" width="75%" />
+                      <div class="space-y-2">
+                        <div class="flex justify-between">
+                          <app-skeleton-block variant="text" width="45%" />
+                          <app-skeleton-block variant="text" width="20%" />
+                        </div>
+                        <app-skeleton-block variant="rect" height="6px" />
+                      </div>
+                      <div class="pt-4 mt-auto border-t border-border-subtle">
+                        <div class="flex items-center justify-between">
+                          <app-skeleton-block variant="text" width="50%" />
+                          <app-skeleton-block variant="rect" width="48px" height="22px" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 }
-                <button
-                  class="pag-btn"
-                  [disabled]="currentPage() === totalPages() - 1"
-                  aria-label="Página siguiente"
-                  (click)="nextPage()"
-                >
-                  <app-icon name="chevron-right" [size]="16" />
-                </button>
               </div>
             </div>
-          }
+          </div>
+        } @else {
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- VISTA 1: LA TABLA CLÁSICA (oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+              <p-table
+                [value]="filteredStudents()"
+                [rows]="9"
+                [paginator]="true"
+                [scrollable]="true"
+                scrollHeight="flex"
+                responsiveLayout="scroll"
+                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+              >
+                <ng-template pTemplate="header">
+                  <tr class="micro-label text-left">
+                    <th class="pl-6 py-4">Alumno</th>
+                    <th>Curso</th>
+                    <th>Progreso Práctico</th>
+                    <th>Próxima Clase</th>
+                    <th class="pr-6">Estado</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-s>
+                  <tr
+                    class="list-item-hover transition-colors border-b border-border-subtle cursor-pointer"
+                    (click)="openDetail(s)"
+                  >
+                    <td class="pl-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase shrink-0"
+                        >
+                          {{ initials(s.name) }}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                          <span class="item-title truncate">{{ s.name }}</span>
+                          <span class="text-xs text-text-muted font-mono">{{ s.rut }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-sm text-text-secondary">{{ s.courseName }}</td>
+                    <td>
+                      <div class="flex items-center gap-2 min-w-[140px]">
+                        <div class="progress-track flex-1">
+                          <div
+                            class="progress-fill"
+                            [style.width.%]="s.practicePercent"
+                            [style.background]="getPalette(s.name).bg"
+                          ></div>
+                        </div>
+                        <span class="text-xs font-bold text-text-primary whitespace-nowrap"
+                          >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
+                        >
+                      </div>
+                    </td>
+                    <td class="text-xs text-text-secondary">
+                      {{
+                        s.nextClassDate ? (s.nextClassDate | date: 'dd MMM, HH:mm') : 'Sin agendar'
+                      }}
+                    </td>
+                    <td class="pr-6">
+                      <p-tag
+                        [value]="s.statusLabel"
+                        [severity]="$any(s.statusColor)"
+                        styleClass="text-xs font-bold px-2 py-0.5"
+                      ></p-tag>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="5" class="p-0">
+                      <app-empty-state
+                        icon="search"
+                        message="No se encontraron alumnos"
+                        subtitle="Refina tus términos de búsqueda o filtros."
+                        actionLabel="Ver todos"
+                        (action)="clearFilters()"
+                      />
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+
+            <!-- VISTA 2: TARJETAS APILADAS (visible cuando se comprime o en móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="bento-grid">
+                @for (s of visibleStudents(); track s.studentId) {
+                  <div
+                    class="student-card group bento-wide"
+                    appCardHover
+                    (click)="openDetail(s)"
+                    data-col-span="4"
+                  >
+                    <!-- Accent gradient top bar -->
+                    <div
+                      class="student-card__accent"
+                      [style.background]="getPalette(s.name).bg"
+                    ></div>
+
+                    <div class="p-5 flex flex-col gap-4 h-full relative">
+                      <!-- Header -->
+                      <div class="flex justify-between items-start gap-4">
+                        <div class="flex items-center gap-3 min-w-0">
+                          <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
+                            {{ initials(s.name) }}
+                          </div>
+                          <div class="min-w-0">
+                            <h3
+                              class="text-sm font-bold truncate"
+                              [style.color]="'var(--text-primary)'"
+                            >
+                              {{ s.name }}
+                            </h3>
+                            <p class="text-xs" [style.color]="'var(--text-muted)'">{{ s.rut }}</p>
+                          </div>
+                        </div>
+                        <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
+                      </div>
+
+                      <!-- Curso -->
+                      <div
+                        class="flex items-center gap-2 text-xs"
+                        [style.color]="'var(--text-secondary)'"
+                      >
+                        <app-icon name="book-open" [size]="14" />
+                        <span class="truncate" [attr.title]="s.courseName">{{ s.courseName }}</span>
+                      </div>
+
+                      <!-- Progreso -->
+                      <div class="space-y-2">
+                        <div
+                          class="flex justify-between text-xs"
+                          [style.color]="'var(--text-muted)'"
+                        >
+                          <span>Progreso Práctico</span>
+                          <span class="font-bold" [style.color]="'var(--text-primary)'"
+                            >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
+                          >
+                        </div>
+                        <div class="progress-track">
+                          <div
+                            class="progress-fill"
+                            [style.width.%]="s.practicePercent"
+                            [style.background]="getPalette(s.name).bg"
+                          ></div>
+                        </div>
+                      </div>
+
+                      <!-- Footer -->
+                      <div
+                        class="pt-4 mt-auto flex items-center justify-between border-t border-border-subtle"
+                      >
+                        <div
+                          class="flex items-center gap-2 text-xs"
+                          [style.color]="'var(--text-muted)'"
+                        >
+                          <app-icon name="calendar" [size]="14" />
+                          <span>{{
+                            s.nextClassDate
+                              ? (s.nextClassDate | date: 'dd MMM, HH:mm')
+                              : 'Sin agendar'
+                          }}</span>
+                        </div>
+                        <div class="details-link">
+                          <span>Ficha</span>
+                          <app-icon name="chevron-right" [size]="14" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="col-span-full py-8">
+                    <app-empty-state
+                      icon="search"
+                      message="No se encontraron alumnos"
+                      subtitle="Refina tus términos de búsqueda o filtros."
+                      actionLabel="Ver todos"
+                      (action)="clearFilters()"
+                    />
+                  </div>
+                }
+
+                <!-- Densidad adaptativa: "Cargar más" solo en tablet/mobile (maxVisible() no-null) -->
+                @if (remainingStudents() > 0) {
+                  <div class="col-span-full pt-1">
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium"
+                      (click)="loadMoreStudents()"
+                      data-llm-action="cargar-mas-alumnos"
+                    >
+                      <app-icon name="chevron-down" [size]="16" />
+                      Cargar más ({{ remainingStudents() }} restantes)
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         }
       </div>
     </div>
@@ -378,7 +474,7 @@ const PAGE_SIZE = 9;
         opacity: 0.6;
       }
 
-      /* ══ Student Card ══ */
+      /* ══ Student Card (mobile) ══ */
       .student-card {
         background: var(--bg-surface);
         border: 1px solid var(--border-subtle);
@@ -388,12 +484,6 @@ const PAGE_SIZE = 9;
         cursor: pointer;
         height: 100%;
         /* Hover gestionado por appCardHover (GSAP) — sin CSS transition aquí */
-      }
-      /* ELIMINADO: .student-card:hover — regla DS: usar GSAP addCardHover(), no CSS transform.
-         El appCardHover directive ya aplica translateY + shadow via GSAP. */
-      .student-card--hover-accent {
-        border-color: var(--color-primary);
-        box-shadow: var(--shadow-lg);
       }
       .student-card__accent {
         height: 4px;
@@ -447,55 +537,29 @@ const PAGE_SIZE = 9;
         transform: translateX(2px);
       }
 
-      /* ══ Pagination ══ */
-      .pagination-footer {
-        display: flex;
-        justify-content: center;
-        padding-top: var(--space-4);
-      }
-      .pagination-shell {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        background: var(--bg-surface);
-        padding: 4px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border-subtle);
-      }
-      .pag-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--text-xs);
-        font-weight: var(--font-semibold);
-        background: transparent;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: 0.2s;
-      }
-      .pag-btn:hover:not(:disabled) {
-        background: var(--bg-elevated);
-        color: var(--color-primary);
-      }
-      .pag-btn--active {
-        background: var(--color-primary);
-        color: #fff;
-      }
-      .pag-btn:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-      }
-
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
       .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+
+      /* ══ Dual Viewport — mismo canon que alumnos-list-content (spec 0036-b) ══ */
+      .dual-viewport-container {
+        container-type: inline-size;
+        container-name: instructorAlumnosContainer;
+      }
+      .show-on-squeeze {
+        display: none;
+      }
+      @container instructorAlumnosContainer (max-width: 900px) {
+        .hide-on-squeeze {
+          display: none !important;
+        }
+        .show-on-squeeze {
+          display: block !important;
+        }
       }
     `,
   ],
@@ -511,7 +575,6 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
     { label: 'Mayor Progreso', value: 'progress' },
     { label: 'Próxima Clase', value: 'nextClass' },
   ];
-  public currentPage = signal(0);
 
   readonly skeletonItems = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   readonly heroActions: SectionHeroAction[] = [];
@@ -572,15 +635,34 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
     return list;
   });
 
-  public totalPages = computed(() => Math.ceil(this.filteredStudents().length / PAGE_SIZE));
-  public pageStart = computed(() => this.currentPage() * PAGE_SIZE);
-  public pageEnd = computed(() =>
-    Math.min(this.pageStart() + PAGE_SIZE, this.filteredStudents().length),
+  /** Densidad adaptativa (fix-139-b / ASG-b-078): sin límite en desktop (la tabla pagina
+   *  sola vía p-table); presupuesto + "Cargar más" en tablet/mobile — mismo patrón que
+   *  admin-secretarias/admin-instructores (ASG-b-066/068). */
+  private static readonly CARDS_STEP = PAGE_SIZE;
+  private readonly layoutService = inject(LayoutService);
+  public readonly mobileShown = signal(InstructorAlumnosComponent.CARDS_STEP);
+
+  public readonly maxVisible = computed(() =>
+    this.layoutService.tier() === 'desktop' ? null : this.mobileShown(),
   );
-  public pagedStudents = computed(() =>
-    this.filteredStudents().slice(this.pageStart(), this.pageEnd()),
+
+  public readonly visibleStudents = computed(() =>
+    sliceByBudget(this.filteredStudents(), this.maxVisible()),
   );
-  public pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, i) => i));
+
+  public readonly remainingStudents = computed(() => {
+    const max = this.maxVisible();
+    if (max === null) return 0;
+    return Math.max(0, this.filteredStudents().length - max);
+  });
+
+  public loadMoreStudents(): void {
+    this.mobileShown.update((n) => n + InstructorAlumnosComponent.CARDS_STEP);
+  }
+
+  private resetDensity(): void {
+    this.mobileShown.set(InstructorAlumnosComponent.CARDS_STEP);
+  }
 
   getPalette = (name: string) => avatarPalette(name);
   initials = (name: string) =>
@@ -592,22 +674,16 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
 
   onSearch(val: string) {
     this.searchTerm.set(val);
-    this.currentPage.set(0);
+    this.resetDensity();
   }
   setFilter(val: 'all' | 'active' | 'completed') {
     this.filterStatus.set(val);
-    this.currentPage.set(0);
+    this.resetDensity();
   }
   clearFilters() {
     this.searchTerm.set('');
     this.filterStatus.set('all');
-    this.currentPage.set(0);
-  }
-  prevPage() {
-    if (this.currentPage() > 0) this.currentPage.update((p) => p - 1);
-  }
-  nextPage() {
-    if (this.currentPage() < this.totalPages() - 1) this.currentPage.update((p) => p + 1);
+    this.resetDensity();
   }
 
   openDetail(student: InstructorStudentCard) {

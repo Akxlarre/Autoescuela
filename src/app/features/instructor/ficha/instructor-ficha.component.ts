@@ -229,7 +229,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 <div class="ficha-table-desktop overflow-x-auto">
                   <table class="w-full text-left border-collapse">
                     <thead>
-                      <tr class="micro-label border-b bg-subtle border-border-subtle">
+                      <tr class="micro-label border-b border-border-subtle">
                         <th class="p-4 font-semibold">N°</th>
                         <th class="p-4 font-semibold">Fecha</th>
                         <th class="p-4 font-semibold">Hora</th>

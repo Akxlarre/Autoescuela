@@ -178,7 +178,7 @@ import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-speci
               currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} relatores"
             >
               <ng-template pTemplate="header">
-                <tr class="micro-label bg-subtle text-left">
+                <tr class="micro-label text-left">
                   <th class="pl-6 py-4">Relator</th>
                   <th>Especialidades</th>
                   <th>WhatsApp</th>
