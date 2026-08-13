@@ -1,7 +1,8 @@
 # Fix: App-like: portal instructor resto (`dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`)
 > id: fix-139-b-app-like-portal-instructor-resto
 > refs: ASG-b-078
-> status: in_progress
+> status: done
+> closed: 2026-08-11
 > created: 2026-08-11
 
 ## Root Cause
@@ -54,6 +55,15 @@ Ninguno — fix autónomo (rollout de layout, no cambia contrato de negocio).
 
 ## Test de Regresión
 <!-- El test que prueba que el fix funciona. Debe quedar verde post-fix. -->
-- `.spec.ts` nuevo SOLO para `/instructor/alumnos` (lógica de densidad `sliceByBudget`/`mobileShown`) — obligatorio por `testing-tdd.md`. Las otras 4 páginas no agregan lógica de densidad nueva.
-- `force-compact` verificado con drawer abierto en cada una de las 5 páginas.
-- `/verify` en 390×844, 1440×900 y 768 de alto, cada página.
+- `instructor-alumnos.component.spec.ts` (nuevo, 11 tests) ✓ — cubre `maxVisible`/`visibleStudents`/`remainingStudents`/`loadMoreStudents` en desktop y mobile/tablet, y el reset de densidad en `onSearch`/`setFilter`/`clearFilters`.
+- `npm run test:ci`: 158 test files / 1995 tests ✓ (2 skipped pre-existentes, sin relación), sin regresiones.
+- `npx tsc --noEmit`: sin errores.
+- `npm run lint:arch`: 0 errores (169 advertencias, todas pre-existentes fuera de los 5 archivos tocados).
+- `force-compact`: **no aplica a ninguna de las 5 páginas** — confirmado por grep, ninguna inyecta `LayoutDrawerFacadeService` ni abre drawers.
+- `/verify` manual en navegador, logueado como `instructor@test.com`, las 5 rutas (`/instructor/dashboard`, `/instructor/alumnos`, `/instructor/liquidacion`, `/instructor/ensayos-teoricos`, `/instructor/notificaciones`):
+  - **1440×900:** `documentScrolls:false` en las 5; `.bento-fill` con `contain:size` confirmado vía JS en cada una.
+  - **1440×768:** `documentScrolls:false` en las 5 (altura mínima de laptop, sin overflow).
+  - **390×844:** scroll nativo correcto, sin `--fill-screen` forzado en mobile; cards/tablas/empty-states legibles.
+  - Consola sin errores, red sin 4xx/5xx en ninguna de las 5 rutas.
+  - `/instructor/ensayos-teoricos`: empty-state confirmado centrado en wrapper `flex-1 flex items-center justify-center` dentro del `.bento-fill`.
+  - `/instructor/alumnos`: con 1 solo alumno de prueba no se pudo ejercitar "Cargar más" visualmente (requiere >9 alumnos) — cubierto en cambio por los 11 tests unitarios de densidad, que sí simulan 22 alumnos.

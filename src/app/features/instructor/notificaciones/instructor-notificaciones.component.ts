@@ -23,7 +23,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SectionHeroComponent, IconComponent, BentoGridLayoutDirective, CardHoverDirective],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         [animateOnInit]="false"
@@ -36,10 +36,13 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         (actionClick)="onHeroAction($event)"
       />
 
-      <div class="bento-banner">
-        <div class="card p-0 overflow-hidden divide-y divide-border-subtle" appCardHover>
+      <div class="bento-banner bento-fill flex flex-col h-full">
+        <div
+          class="card p-0 divide-y divide-border-subtle flex-1 min-h-0 overflow-y-auto"
+          appCardHover
+        >
           @if (notifications().length === 0) {
-            <div class="p-12 text-center">
+            <div class="p-12 text-center h-full flex flex-col items-center justify-center">
               <app-icon
                 name="bell-off"
                 [size]="48"

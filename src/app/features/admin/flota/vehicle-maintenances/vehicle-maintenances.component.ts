@@ -172,13 +172,13 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
             >
               <ng-template pTemplate="header">
                 <tr class="text-left">
-                  <th class="micro-label pl-6 py-4 bg-subtle">Fecha</th>
-                  <th class="micro-label bg-subtle">Tipo</th>
-                  <th class="micro-label bg-subtle">Kilometraje</th>
-                  <th class="micro-label bg-subtle">Costo</th>
-                  <th class="micro-label bg-subtle">Taller</th>
-                  <th class="micro-label bg-subtle">Estado</th>
-                  <th class="micro-label pr-6 text-right bg-subtle">Acc.</th>
+                  <th class="micro-label pl-6 py-4">Fecha</th>
+                  <th class="micro-label">Tipo</th>
+                  <th class="micro-label">Kilometraje</th>
+                  <th class="micro-label">Costo</th>
+                  <th class="micro-label">Taller</th>
+                  <th class="micro-label">Estado</th>
+                  <th class="micro-label pr-6 text-right">Acc.</th>
                 </tr>
               </ng-template>
 
