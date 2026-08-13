@@ -186,6 +186,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           [scheduleGrid]="data().scheduleGrid"
           [slotSelection]="data().slotSelection"
           [scheduleLoading]="data().scheduleLoading"
+          [showVehicleWarnings]="false"
           (slotsChange)="onSlotsChange($event)"
         />
       } @else if (!data().scheduleLoading) {

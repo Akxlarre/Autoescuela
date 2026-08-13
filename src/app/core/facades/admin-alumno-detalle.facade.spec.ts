@@ -1402,6 +1402,78 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
     });
 
+    it('puebla vehicleDocWarning por slot desde vehicle_documents (fix-165-m)', async () => {
+      const slotBuilder: any = {
+        select: vi.fn(() => slotBuilder),
+        eq: vi.fn(() => slotBuilder),
+        lte: vi.fn(() => slotBuilder),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              slot_start: '2026-07-10T09:00:00',
+              slot_end: '2026-07-10T10:00:00',
+              slot_status: 'available',
+              instructor_id: 9,
+              vehicle_id: 10,
+            },
+            {
+              slot_start: '2026-07-10T10:00:00',
+              slot_end: '2026-07-10T11:00:00',
+              slot_status: 'available',
+              instructor_id: 9,
+              vehicle_id: 20,
+            },
+          ],
+          error: null,
+        }),
+      };
+      const docsBuilder: any = {
+        select: vi.fn().mockResolvedValue({
+          data: [
+            { vehicle_id: 10, type: 'soap', expiry_date: '2020-01-01', status: null }, // expired
+            { vehicle_id: 20, type: 'soap', expiry_date: '2099-01-01', status: null }, // valid
+          ],
+          error: null,
+        }),
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          {
+            provide: SupabaseService,
+            useValue: {
+              client: {
+                from: vi.fn((table: string) =>
+                  table === 'vehicle_documents' ? docsBuilder : slotBuilder,
+                ),
+                functions: { invoke: vi.fn() },
+              },
+            },
+          },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+          {
+            provide: AgendaSettingsService,
+            useValue: { maxVisibleDateIso: vi.fn().mockReturnValue('2026-09-20') },
+          },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.loadScheduleGrid(9);
+
+      const slots = facade.scheduleGrid()?.slots ?? [];
+      expect(slots.find((s) => s.id === '2026-07-10T09:00:00')?.vehicleDocWarning).toEqual({
+        expiredDocs: ['SOAP'],
+        expiringSoonDocs: [],
+      });
+      expect(slots.find((s) => s.id === '2026-07-10T10:00:00')?.vehicleDocWarning).toBeNull();
+    });
+
     it('bloquea (fix-062, ASG-023) un día que ya tiene 2 clases agendadas — tope bajó de 3 a 2', async () => {
       const builder = setupWithAgendaLimit('2026-09-20');
       builder.order.mockResolvedValue({

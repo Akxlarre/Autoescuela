@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type {
   ScheduleGrid,
@@ -14,6 +15,10 @@ import {
   selectedSlotsLabels,
   toggleSlotIds,
 } from './schedule-grid.logic';
+import {
+  shouldShowVehicleDocWarning,
+  vehicleDocWarningLabelGeneric,
+} from '@core/utils/vehicle-document-status.utils';
 
 /**
  * Grilla semanal de selección de horarios (dumb component compartido).
@@ -31,7 +36,7 @@ import {
   selector: 'app-schedule-grid',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, TooltipModule],
   template: `
     <div class="space-y-4">
       <!-- Aviso: el instructor no tiene cupo suficiente para el total requerido -->
@@ -148,7 +153,7 @@ import {
                   @if (slot) {
                     <button
                       type="button"
-                      class="m-1 rounded-lg py-2 text-xs font-semibold transition-all"
+                      class="relative m-1 rounded-lg py-2 text-xs font-semibold transition-all"
                       [style.background]="slotBg(slot)"
                       [style.color]="slotColor(slot)"
                       [style.cursor]="isSelectable(slot) ? 'pointer' : 'not-allowed'"
@@ -160,6 +165,17 @@ import {
                       "
                       (click)="onSlotToggle(slot)"
                     >
+                      @if (showVehicleDocWarning(slot)) {
+                        <app-icon
+                          name="triangle-alert"
+                          [size]="11"
+                          color="var(--state-warning)"
+                          class="absolute top-0.5 right-0.5"
+                          [pTooltip]="vehicleDocWarningTooltip(slot)"
+                          tooltipPosition="top"
+                          [attr.data-llm-description]="vehicleDocWarningTooltip(slot)"
+                        />
+                      }
                       {{ slot.startTime }}
                     </button>
                   } @else {
@@ -240,6 +256,8 @@ export class ScheduleGridComponent {
   readonly scheduleGrid = input.required<ScheduleGrid | null>();
   readonly slotSelection = input.required<SlotSelection>();
   readonly scheduleLoading = input<boolean>(false);
+  /** Oculta el badge de advertencia de documentos de vehículo (ej. flujo público de matrícula). */
+  readonly showVehicleWarnings = input<boolean>(true);
 
   /** Emite la nueva lista de slots seleccionados (selección inmutable). */
   readonly slotsChange = output<string[]>();
@@ -311,6 +329,14 @@ export class ScheduleGridComponent {
   /** Etiqueta de encabezado de día "lun 22/6" derivada de la fecha. */
   protected dayHeader(date: string): string {
     return formatDayShort(date);
+  }
+
+  protected showVehicleDocWarning(slot: TimeSlot): boolean {
+    return shouldShowVehicleDocWarning(slot.vehicleDocWarning ?? null, this.showVehicleWarnings());
+  }
+
+  protected vehicleDocWarningTooltip(slot: TimeSlot): string {
+    return vehicleDocWarningLabelGeneric(slot.vehicleDocWarning ?? null);
   }
 
   protected slotAt(date: string, time: string): TimeSlot | null {

@@ -4,6 +4,13 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
+import { isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
+import {
+  buildVehicleDocWarningMap,
+  type VehicleDocWarningInfo,
+} from '@core/utils/vehicle-document-status.utils';
 import type {
   AgendaWeekData,
   AgendaWeekKpis,
@@ -113,6 +120,13 @@ interface RawVehicle {
   license_plate: string;
 }
 
+interface RawVehicleDocument {
+  vehicle_id: number;
+  type: string;
+  expiry_date: string | null;
+  status: string | null;
+}
+
 // ─── Facade ─────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -120,6 +134,7 @@ export class AgendaFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly agendaSettings = inject(AgendaSettingsService);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
 
@@ -136,6 +151,7 @@ export class AgendaFacade {
   /** Mapas de lookup para enriquecer slots con nombres (cargados en initialize) */
   private instructorMap = new Map<number, string>();
   private vehicleMap = new Map<number, string>();
+  private vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
 
   /** SWR: evita re-fetch completo con skeleton en re-visitas */
   private _initialized = false;
@@ -143,6 +159,9 @@ export class AgendaFacade {
 
   /** Realtime: canal de suscripción a cambios en class_b_sessions */
   private realtimeChannel: RealtimeChannel | null = null;
+
+  /** Descarta respuestas de fetchWeekData() obsoletas ante navegación rápida encolada. */
+  private readonly weekDataGuard = createRequestGuard();
 
   // ── Estado público (readonly) ──────────────────────────────────────────────
 
@@ -260,6 +279,7 @@ export class AgendaFacade {
 
   /** Fetch compartido: obtiene y setea weekData sin tocar isLoading. */
   private async fetchWeekData(): Promise<void> {
+    const requestToken = this.weekDataGuard.next();
     const branchId = this.getActiveBranchId();
     const weekStart = this._weekStart();
     const weekEnd = addDays(weekStart, 4);
@@ -279,10 +299,15 @@ export class AgendaFacade {
         ? slotsResult.filter((s) => branchInstructorIds.has(s.instructor_id))
         : slotsResult;
 
+    // Descarta esta respuesta si ya se disparó un fetch más reciente (navegación
+    // rápida encolada) — evita que datos obsoletos pisen la semana vigente.
+    if (!this.weekDataGuard.isCurrent(requestToken)) return;
+
     this._weekData.set(this.buildWeekData(weekStart, weekEnd, filteredSlots, sessionsResult));
   }
 
   goToNextWeek(): void {
+    if (isNextWeekBeyondLimit(this._weekStart(), this.agendaSettings.maxVisibleDateIso())) return;
     this._weekStart.update((d) => addDays(d, 7));
     this.loadWeek();
   }
@@ -396,12 +421,15 @@ export class AgendaFacade {
     let vehicleQuery: any = this.supabase.client.from('vehicles').select('id, license_plate');
     if (branchId !== null) vehicleQuery = vehicleQuery.eq('branch_id', branchId);
 
-    const [instrResult, vehResult] = await Promise.all([
+    const [instrResult, vehResult, docsResult] = await Promise.all([
       this.supabase.client
         .from('instructors')
         .select('id, users!inner ( first_names, paternal_last_name )')
         .eq('active', true),
       vehicleQuery,
+      this.supabase.client
+        .from('vehicle_documents')
+        .select('vehicle_id, type, expiry_date, status'),
     ]);
 
     this.instructorMap.clear();
@@ -415,6 +443,10 @@ export class AgendaFacade {
     for (const v of (vehResult.data as unknown as RawVehicle[]) ?? []) {
       this.vehicleMap.set(v.id, v.license_plate);
     }
+
+    this.vehicleDocWarningMap = buildVehicleDocWarningMap(
+      (docsResult.data as unknown as RawVehicleDocument[]) ?? [],
+    );
   }
 
   private async loadInstructors(): Promise<void> {
@@ -480,6 +512,7 @@ export class AgendaFacade {
         instructorName: this.instructorMap.get(raw.instructor_id) ?? `#${raw.instructor_id}`,
         vehicleId: raw.vehicle_id,
         vehiclePlate: this.vehicleMap.get(raw.vehicle_id) ?? `V${raw.vehicle_id}`,
+        vehicleDocWarning: this.vehicleDocWarningMap.get(raw.vehicle_id) ?? null,
       });
     }
 
@@ -500,6 +533,7 @@ export class AgendaFacade {
         instructorName: this.instructorMap.get(s.instructor_id) ?? `#${s.instructor_id}`,
         vehicleId: s.vehicle_id,
         vehiclePlate: this.vehicleMap.get(s.vehicle_id) ?? `V${s.vehicle_id}`,
+        vehicleDocWarning: this.vehicleDocWarningMap.get(s.vehicle_id) ?? null,
         sessionId: s.id,
         enrollmentId: s.enrollment_id,
         studentName,

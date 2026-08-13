@@ -167,11 +167,18 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
             Género <span style="color: var(--state-error);">*</span>
           </label>
           <div
+            tabindex="-1"
             class="flex rounded-xl overflow-hidden"
-            style="border: 1.5px solid var(--border-default);"
+            [style.border]="
+              isDirty('gender') && !genderValid()
+                ? '1.5px solid var(--state-error)'
+                : '1.5px solid var(--border-default)'
+            "
             role="radiogroup"
             aria-labelledby="pub-gender-label"
             aria-required="true"
+            [attr.aria-invalid]="isDirty('gender') && !genderValid()"
+            aria-describedby="pub-gender-error"
             data-llm-description="Student gender for enrollment records and certificate"
           >
             @for (opt of genderOptions; track opt.value; let last = $last) {
@@ -196,6 +203,16 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
               </button>
             }
           </div>
+          @if (isDirty('gender') && !genderValid()) {
+            <p
+              id="pub-gender-error"
+              class="text-xs flex items-center gap-1"
+              style="color: var(--state-error);"
+            >
+              <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
+              Selecciona una opción
+            </p>
+          }
         </div>
       </div>
 
@@ -497,8 +514,11 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
         </button>
         <button
           type="submit"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-opacity"
           [disabled]="_isLoading()"
+          [style.opacity]="!_isLoading() && !canAdvance() ? 0.5 : 1"
+          [style.cursor]="!_isLoading() && !canAdvance() ? 'not-allowed' : 'pointer'"
+          [attr.aria-disabled]="!canAdvance()"
           [appStableWidth]="_isLoading()"
           data-llm-action="submit-personal-data"
         >
@@ -551,6 +571,7 @@ export class PublicPersonalDataComponent {
   protected readonly paternalLastNameValid = computed(() =>
     validateName(this.formData().paternalLastName.trim()),
   );
+  protected readonly genderValid = computed(() => this.formData().gender.length > 0);
 
   private readonly courseTypeForValidation = computed(
     () => this.context()?.courseType ?? this.formData().courseType,
@@ -653,7 +674,6 @@ export class PublicPersonalDataComponent {
 
   protected onNext(): void {
     if (this._isLoading()) return;
-    this._submitting.set(true);
 
     // Silver Bullet para Chrome Autofill en Angular:
     // Los navegadores a veces rellenan los inputs visualmente pero no emiten `input` o `change`,
@@ -682,7 +702,6 @@ export class PublicPersonalDataComponent {
       const advance = canAdvanceFn(d, this.courseTypeForValidation());
 
       if (!advance) {
-        this._submitting.set(false);
         this._allDirty.set(true);
         this.markDirty('rut');
         this.markDirty('gender');
@@ -692,7 +711,7 @@ export class PublicPersonalDataComponent {
         this._birthDateInvalid.set(isInvalidDate(d.birthDate));
         setTimeout(() => this.focusFirstError(), 0);
       } else {
-        this._submitting.set(false);
+        this._submitting.set(true);
         this.next.emit();
       }
     }, 10);

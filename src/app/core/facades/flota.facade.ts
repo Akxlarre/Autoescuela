@@ -6,6 +6,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
+import { resolveDocStatus } from '@core/utils/vehicle-document-status.utils';
 import { toISODate } from '@core/utils/date.utils';
 import type {
   VehicleTableRow,
@@ -16,8 +17,6 @@ import type {
   DocStatus,
 } from '@core/models/ui/vehicle-table.model';
 import type { VehicleAgendaSlot } from '@core/models/ui/vehicle-detail.model';
-
-const EXPIRY_SOON_DAYS = 30;
 
 @Injectable({ providedIn: 'root' })
 export class FlotaFacade {
@@ -231,7 +230,7 @@ export class FlotaFacade {
       documents: (v.vehicle_documents ?? []).map((d: any) => ({
         type: d.type ?? 'unknown',
         expiryDate: d.expiry_date ?? '',
-        status: this.resolveDocStatus(d.expiry_date, d.status),
+        status: resolveDocStatus(d.expiry_date, d.status),
         filePath: d.file_url ?? null,
       })),
       combustibleMes: combustibleByVehicle?.get(v.id) ?? 0,
@@ -289,7 +288,7 @@ export class FlotaFacade {
       filePath = path;
     }
 
-    const status: DocStatus = this.resolveDocStatus(payload.expiryDate, null);
+    const status: DocStatus = resolveDocStatus(payload.expiryDate, null);
     const { error } = await this.supabase.client.from('vehicle_documents').upsert(
       {
         vehicle_id: payload.vehicleId,
@@ -369,12 +368,5 @@ export class FlotaFacade {
     )
       ? 'professional'
       : 'class_b';
-  }
-
-  private resolveDocStatus(expiryDate: string | null, rawStatus: string | null): DocStatus {
-    if (rawStatus === 'expired') return 'expired';
-    if (!expiryDate) return 'valid';
-    const diffDays = Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / 86400000);
-    return diffDays < 0 ? 'expired' : diffDays <= EXPIRY_SOON_DAYS ? 'expiring_soon' : 'valid';
   }
 }

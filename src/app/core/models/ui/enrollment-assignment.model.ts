@@ -1,3 +1,5 @@
+import type { VehicleDocWarningInfo } from '@core/utils/vehicle-document-status.utils';
+
 // Enrollment Step 2 — Payment mode, instructor assignment, schedule slots, promotion cohort
 
 // ─── Student Summary (header banner) ───
@@ -39,6 +41,12 @@ export interface TimeSlot {
   startTime: string;
   endTime: string;
   status: SlotStatus;
+  /**
+   * Documentos del vehículo asignado a este slot que están vencidos o por vencer;
+   * `null`/`undefined` si está vigente. Opcional porque el flujo público construye su grid vía
+   * Edge Function y no lo expone (no debe mostrarse al alumno de todas formas).
+   */
+  vehicleDocWarning?: VehicleDocWarningInfo | null;
 }
 
 export interface WeekDay {

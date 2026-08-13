@@ -6,18 +6,20 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
+import type { TimeSlot, WeekDay } from '@core/models/ui/enrollment-assignment.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { vehicleDocWarningLabelGeneric } from '@core/utils/vehicle-document-status.utils';
 
 @Component({
   selector: 'app-admin-reprogramar-clase-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, TooltipModule],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
@@ -198,7 +200,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                       <button
                         type="button"
                         (click)="selectSlot(slot.id)"
-                        class="p-2.5 border rounded-lg text-xs font-medium transition-all text-center cursor-pointer"
+                        class="relative p-2.5 border rounded-lg text-xs font-medium transition-all text-center cursor-pointer"
                         [class.bg-brand]="selectedSlotId() === slot.id"
                         [class.text-surface]="selectedSlotId() === slot.id"
                         [class.border-brand]="selectedSlotId() === slot.id"
@@ -207,6 +209,19 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                         [class.border-border-default]="selectedSlotId() !== slot.id"
                         data-llm-action="seleccionar-slot-reprogramar"
                       >
+                        @if (slot.vehicleDocWarning) {
+                          <app-icon
+                            name="triangle-alert"
+                            [size]="11"
+                            color="var(--state-warning)"
+                            class="absolute top-0.5 right-0.5"
+                            [pTooltip]="vehicleDocWarningLabelGeneric(slot.vehicleDocWarning)"
+                            tooltipPosition="top"
+                            [attr.data-llm-description]="
+                              vehicleDocWarningLabelGeneric(slot.vehicleDocWarning)
+                            "
+                          />
+                        }
                         {{ slot.startTime }} – {{ slot.endTime }}
                       </button>
                     }
@@ -278,6 +293,8 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
   private readonly sanitizer = inject(ErrorSanitizerService);
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  protected readonly vehicleDocWarningLabelGeneric = vehicleDocWarningLabelGeneric;
 
   protected readonly selectedInstructorId = signal<number | null>(null);
   protected readonly selectedSlotId = signal<string | null>(null);

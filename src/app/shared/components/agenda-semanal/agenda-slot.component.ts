@@ -1,5 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import {
+  shouldShowVehicleDocWarning,
+  vehicleDocWarningLabel as vehicleDocWarningLabelUtil,
+} from '@core/utils/vehicle-document-status.utils';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
 /**
@@ -16,7 +21,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
 @Component({
   selector: 'app-agenda-slot',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, TooltipModule],
   host: {
     class: 'block',
     '[class.cursor-pointer]': 'isInteractive()',
@@ -33,6 +38,16 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [class]="statusClass()"
       [attr.data-llm-action]="slot().status === 'available' ? 'schedule-class' : 'view-slot-detail'"
     >
+      @if (showVehicleDocWarning()) {
+        <app-icon
+          name="triangle-alert"
+          [size]="12"
+          class="slot-vehicle-warning"
+          [pTooltip]="vehicleDocWarningLabel()"
+          tooltipPosition="top"
+          [attr.data-llm-description]="vehicleDocWarningLabel()"
+        />
+      }
       @switch (slot().status) {
         @case ('available') {
           <div class="flex items-center gap-1">
@@ -86,6 +101,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       display: flex;
       flex-direction: column;
       gap: 2px;
+      position: relative;
       transition:
         background var(--duration-instant) var(--ease-standard),
         border-color var(--duration-instant) var(--ease-standard),
@@ -215,6 +231,15 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       letter-spacing: 0.04em;
       color: var(--text-muted);
     }
+
+    /* ── Advertencia de documentos de vehículo (SOAP/revisión técnica) ──
+       No bloquea la selección del slot, solo informa. */
+    .slot-vehicle-warning {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      color: var(--state-warning);
+    }
   `,
 })
 export class AgendaSlotComponent {
@@ -228,7 +253,17 @@ export class AgendaSlotComponent {
    * un estado propio del slot.
    */
   disabled = input(false);
+  /** Oculta el badge de advertencia de documentos de vehículo (ej. flujo público de matrícula). */
+  showVehicleWarnings = input(true);
   slotClicked = output<AgendaSlot>();
+
+  readonly showVehicleDocWarning = computed(() =>
+    shouldShowVehicleDocWarning(this.slot().vehicleDocWarning, this.showVehicleWarnings()),
+  );
+
+  readonly vehicleDocWarningLabel = computed(() =>
+    vehicleDocWarningLabelUtil(this.slot().vehiclePlate, this.slot().vehicleDocWarning),
+  );
 
   /** Todos los estados son interactivos excepto cancelled o forzado por `disabled`. */
   readonly isInteractive = computed(() => !this.disabled() && this.slot().status !== 'cancelled');

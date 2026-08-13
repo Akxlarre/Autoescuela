@@ -778,6 +778,36 @@
 - **Lección:** cualquier llamada fire-and-forget a `functions.invoke()` debe revisar el campo `error` de la respuesta resuelta (`.then(({ error }) => { if (error) {...} })`), no solo encadenar `.catch()`. Si la acción es best-effort (no debe bloquear el flujo principal) pero su fallo deja al sistema en un estado permanentemente roto (una fila sin vínculo que nadie vuelve a intentar crear), el fallo debe ser visible para el staff (toast/notificación), no solo loguearse — de lo contrario es indetectable hasta que otra pantalla, sin relación aparente, choca con la consecuencia.
 - **Fuente:** `specs/fixes/fix-157-m-correo-invalido-bloquea-edicion-perfil-alumno`
 
+### DG-063 — Un trigger sin `SET search_path` propio hereda el `search_path` vacío de la función `SECURITY DEFINER` que lo disparó indirectamente
+- **Trampa:** escribir una función de trigger nueva (`CREATE FUNCTION ... RETURNS TRIGGER ... SECURITY DEFINER`) sin `SET search_path = ''` y con tablas sin calificar (`FROM class_b_sessions` en vez de `FROM public.class_b_sessions`), asumiendo que "funciona en mis pruebas manuales" es suficiente. `prevent_double_booking_class_b_sessions()` (fix-152) compilaba, pasaba QA manual (INSERT/UPDATE directos desde una sesión normal con `search_path` default) y solo fallaba cuando lo disparaba **otra** función.
+- **Realidad:** `mark_end_of_day_class_b_absences()` es `SECURITY DEFINER` con `SET search_path = ''` (correcto, evita schema hijacking). Su `UPDATE public.class_b_sessions SET status='no_show'` dispara `trg_prevent_double_booking`. Un trigger function sin su propio `SET search_path` no usa el `search_path` de la sesión del cliente ni el default — **hereda el `search_path` vigente en el contexto que lo invocó**, que en este caso era el `''` vacío de la función que hizo el `UPDATE`. Con `search_path=''`, `class_b_sessions` sin prefijo no resuelve → `relation "class_b_sessions" does not exist`, silenciado por el `EXCEPTION WHEN OTHERS` de la función que dispara el barrido nocturno (el cron corría sin marcar nada, sin error visible salvo en logs de Postgres).
+- **Lección:** toda función `SECURITY DEFINER` nueva —trigger o no— debe llevar `SET search_path = ''` y calificar cada tabla con `public.` (mismo patrón que `mark_end_of_day_class_b_absences()`/`apply_class_b_absence_penalty()`). No alcanza con probarla invocándola directamente: si la tabla que toca tiene otros triggers, o algún día alguno de ellos corre dentro de una función `SECURITY DEFINER` con `search_path` restringido, el trigger sin su propio `search_path` hereda ese contexto y puede romperse en producción sin que el código haya cambiado. Ya pasó dos veces en este proyecto (fix-145, fix-163) con funciones distintas.
+- **Fuente:** `specs/fixes/fix-163-m-cron-no-show-search-path-y-horario-medianoche`
+
+### DG-064 — `AgendaFacade`/`AgendaSlot` es solo la vista de lectura; ningún flujo que agenda de verdad la usa para escribir
+- **Trampa:** cuando una pantalla se llama "Agenda" y muestra la disponibilidad de horarios,
+  asumir que cualquier otro flujo que también "agenda" (matrícula, reagendamiento,
+  reprogramación, wizard público) reutiliza el mismo facade/componente de esa pantalla. Inferir
+  eso de una nota sobre un fix a nivel de base de datos (un `trigger`/`constraint` que protege
+  todas las escrituras por igual) como si fuera evidencia de que también comparten UI — un
+  fix de BD dice cómo se protege la escritura, no qué componente la origina.
+- **Realidad:** en este proyecto, `AgendaFacade` solo alimenta la Agenda Semanal de solo
+  lectura (el click en un slot abre detalle, no agenda). Cada flujo que sí escribe una clase
+  nueva tiene su propio pipeline de facade + componente de grilla:
+  nueva matrícula → `EnrollmentFacade` → `AssignmentComponent` → `ScheduleGridComponent`;
+  reagendamiento masivo → `AdminAlumnoDetalleFacade` → mismo `AssignmentComponent`/
+  `ScheduleGridComponent`; reprogramación individual → mismo `AdminAlumnoDetalleFacade` pero con
+  un grid inline propio (no reutiliza `ScheduleGridComponent`); flujo público →
+  `PublicEnrollmentFacade`, que ni corre en Angular (delega en una Edge Function). Los 3 flujos
+  internos comparten el modelo `TimeSlot`/`ScheduleGrid`
+  (`core/models/ui/enrollment-assignment.model.ts`) — un modelo distinto de `AgendaSlot`.
+- **Lección:** antes de agregar o propagar un campo nuevo a "el flujo de agendamiento", ubicar
+  primero, con grep del código real, cuál facade y qué componente de grilla renderiza cada
+  drawer/wizard concreto que se quiere afectar — nunca asumirlo por el nombre de la pantalla ni
+  por una nota de otro fix que resolvió el problema a otro nivel (BD vs UI).
+- **Fuente:** `specs/fixes/fix-164-m-advertencia-documentos-vehiculo-agendamiento` (el error) +
+  `specs/fixes/fix-165-m-advertencia-vehiculo-scheduling-real-flows` (la corrección)
+
 ---
 
 ## Convención para agregar una entrada nueva

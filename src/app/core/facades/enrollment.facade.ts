@@ -19,6 +19,10 @@ import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
 import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
+import {
+  buildVehicleDocWarningMap,
+  type VehicleDocWarningInfo,
+} from '@core/utils/vehicle-document-status.utils';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
   EnrollmentPersonalData,
@@ -132,6 +136,8 @@ export class EnrollmentFacade {
   // vía saveAssignment(). Sirve para que la vista de disponibilidad no los reporte
   // como ocupados por otro alumno cuando el propio INSERT dispara un refetch.
   private readonly _ownReservedSlotIds = signal<string[]>([]);
+  /** vehicle_id → advertencia; rebuilt en cada loadScheduleGrid(), reutilizado en re-fetch de Realtime. */
+  private _vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
   private readonly _paymentMode = signal<PaymentMode | null>(null);
   private readonly _selectedInstructorId = signal<number | null>(null);
   private readonly _promotionGroups = signal<PromotionGroup[]>([]);
@@ -824,14 +830,19 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
-      const { data, error } = await this.supabase.client
-        .from('v_class_b_schedule_availability')
-        .select('*')
-        .eq('instructor_id', instructorId)
-        // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
-        // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
-        .order('slot_start', { ascending: true });
+      const [{ data, error }, docsResult] = await Promise.all([
+        this.supabase.client
+          .from('v_class_b_schedule_availability')
+          .select('*')
+          .eq('instructor_id', instructorId)
+          // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+          // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
+          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .order('slot_start', { ascending: true }),
+        this.supabase.client
+          .from('vehicle_documents')
+          .select('vehicle_id, type, expiry_date, status'),
+      ]);
 
       if (error) {
         this._error.set(
@@ -839,6 +850,8 @@ export class EnrollmentFacade {
         );
         return;
       }
+
+      this._vehicleDocWarningMap = buildVehicleDocWarningMap(docsResult.data ?? []);
 
       if (!data || data.length === 0) {
         this._scheduleGrid.set(null);
@@ -2351,6 +2364,7 @@ export class EnrollmentFacade {
         status: (s.slot_status === 'occupied' && !ownSlotIds?.has(String(s.slot_start))
           ? 'occupied'
           : 'available') as SlotStatus,
+        vehicleDocWarning: this._vehicleDocWarningMap.get(s.vehicle_id) ?? null,
       };
     });
 
