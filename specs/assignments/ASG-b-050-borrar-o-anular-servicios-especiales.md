@@ -1,11 +1,14 @@
 # Asignación ASG-b-050 — Poder borrar (¿o anular?) Servicios Especiales
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** i
+> **claimed_at:** 2026-08-10
+> **resulting_track:** fix-022-i-borrar-servicio-especial
 
 ---
 
