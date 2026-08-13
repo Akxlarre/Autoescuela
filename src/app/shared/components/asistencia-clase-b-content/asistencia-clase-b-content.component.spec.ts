@@ -129,6 +129,33 @@ describe('AsistenciaClaseBContentComponent — alerta compacta (fix post-QA visu
   });
 });
 
+describe('AsistenciaClaseBContentComponent — columna Sede (fix-158)', () => {
+  let component: AsistenciaClaseBContentComponent;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AsistenciaClaseBContentComponent],
+      providers: [
+        {
+          provide: GsapAnimationsService,
+          useValue: { animateBentoGrid: vi.fn() },
+        },
+      ],
+    });
+    component = TestBed.createComponent(AsistenciaClaseBContentComponent).componentInstance;
+  });
+
+  it('por defecto muestra la columna Sede (compatibilidad con consumidores existentes)', () => {
+    expect(component.showBranchColumn()).toBe(true);
+  });
+
+  it('oculta la columna Sede cuando showBranchColumn es false', () => {
+    const s = signal(false);
+    Object.defineProperty(component, 'showBranchColumn', { value: s });
+    expect(component.showBranchColumn()).toBe(false);
+  });
+});
+
 describe('AsistenciaClaseBContentComponent — presupuesto de densidad (spec 0030)', () => {
   let component: AsistenciaClaseBContentComponent;
   let rowsSig: ReturnType<typeof signal<ClasePracticaRow[]>>;

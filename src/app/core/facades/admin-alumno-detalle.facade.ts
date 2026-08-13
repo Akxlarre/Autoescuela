@@ -392,7 +392,7 @@ export class AdminAlumnoDetalleFacade {
         .select(
           `
           id, status, created_at,
-          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone),
+          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, supabase_uid),
           enrollments(
             id, number, created_at, total_paid, pending_balance, branch_id,
             license_group, promotion_course_id, registration_channel,
@@ -521,6 +521,7 @@ export class AdminAlumnoDetalleFacade {
         saldoPendiente: lastEnrollment?.pending_balance ?? 0,
         certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
         isReinforcement: courseIsReinforcement,
+        hasAuthAccount: !!u.supabase_uid,
       });
 
       // ── Step 2: Queries según tipo de licencia ──
@@ -1051,6 +1052,22 @@ export class AdminAlumnoDetalleFacade {
     });
     if (error)
       throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil');
+    void this.refreshSilently();
+  }
+
+  /**
+   * Crea la cuenta Auth del alumno y le envía la invitación por correo, vía Edge Function
+   * `activate-student-account`. Solo aplica cuando el alumno todavía no tiene `supabase_uid`
+   * (invitación pendiente o falló al matricularlo — fix-157-m).
+   */
+  async enviarInvitacion(userId: number, email: string): Promise<void> {
+    const { error } = await this.supabase.client.functions.invoke('activate-student-account', {
+      body: { userId, email: email.trim().toLowerCase() },
+    });
+    if (error) {
+      throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al enviar la invitación');
+    }
+    this.toast.success('Invitación enviada correctamente.');
     void this.refreshSilently();
   }
 

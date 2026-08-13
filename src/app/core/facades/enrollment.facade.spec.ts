@@ -709,6 +709,28 @@ describe('EnrollmentFacade', () => {
       expect(mockNotifications.notifyRole).not.toHaveBeenCalled();
     });
 
+    // fix-157-m: functions.invoke() no rechaza la promesa en respuestas no-2xx, así que un
+    // .catch() a secas nunca se enteraba de que activate-student-account falló.
+    it('avisa por toast si activate-student-account falla (ej. email con formato inválido)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      (facade as any)._personalData.set({
+        firstNames: 'Pedro',
+        paternalLastName: 'Morales',
+        email: 'pedro@invalido.cl|',
+      });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      mockSupabase.client.functions.invoke = vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error('Unable to validate email address: invalid format'),
+      });
+
+      await facade.confirmEnrollment();
+      await Promise.resolve(); // deja correr el .then() del invoke fire-and-forget
+
+      expect(mockToast.warning).toHaveBeenCalled();
+    });
+
     // fix-114-m (ASG-b-063): re-entrada rechazada a nivel de dominio, no solo de UI
     it('rechaza una re-entrada concurrente (doble submit) mientras ya hay una confirmación en curso', async () => {
       (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });

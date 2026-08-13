@@ -90,7 +90,6 @@
 > en `ASG-b-089`.
 
 | ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `b` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
-| ASG-b-090 | 5 paletas de color duplicadas/hardcodeadas en ~12 archivos (`SPEC_COLORS`, `COURSE_COLORS`, avatares, `INCOME_COLORS`, liquidaciones) | `m` | fix | Media | b | El mismo set de hex vive copiado en 3-4 archivos sueltos — garantiza drift si alguien cambia uno sin saber de las copias. Divisible por cluster. Ver `specs/assignments/ASG-b-090-*.md` |
 
 ### Tanda auditoría del Design System — 2026-07-31
 
@@ -209,6 +208,7 @@
 | ASG-b-091 | Alumno con matrícula solo `completed` ve horario histórico sin aviso | [fix-128-b-alumno-matricula-completada-sin-aviso](fixes/fix-128-b-alumno-matricula-completada-sin-aviso/fix.md) | 2026-08-10 |
 | ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
+| ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---

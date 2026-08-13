@@ -106,21 +106,30 @@ Deno.serve(async (req: Request) => {
         .eq('id', userId)
         .maybeSingle();
 
-      if (findError || !targetUser?.supabase_uid) {
+      if (findError || !targetUser) {
         return errorResponse('No se encontró al alumno en la BD', 404);
       }
 
-      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        targetUser.supabase_uid,
-        { email: email.trim().toLowerCase() },
-      );
+      // El alumno nunca tuvo cuenta Auth creada (ej. la invitación falló al matricularlo,
+      // fix-157-m) → no hay nada que sincronizar en Auth, se guarda el email directo en
+      // public.users más abajo. Cuando se le envíe la invitación (botón "Enviar invitación"),
+      // se usará este email ya corregido.
+      if (targetUser.supabase_uid) {
+        const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+          targetUser.supabase_uid,
+          { email: email.trim().toLowerCase() },
+        );
 
-      if (authUpdateError) {
-        // Auth rechazó el cambio → NO se toca public.users, evita la desincronización.
-        if (authUpdateError.message?.toLowerCase().includes('already registered')) {
-          return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
+        if (authUpdateError) {
+          // Auth rechazó el cambio → NO se toca public.users, evita la desincronización.
+          if (authUpdateError.message?.toLowerCase().includes('already registered')) {
+            return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
+          }
+          return errorResponse(
+            `Error al actualizar email en Auth: ${authUpdateError.message}`,
+            500,
+          );
         }
-        return errorResponse(`Error al actualizar email en Auth: ${authUpdateError.message}`, 500);
       }
     }
 

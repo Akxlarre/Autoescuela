@@ -33,6 +33,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-drawer.component';
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
+import { getCourseColor } from '@core/utils/course-colors';
 
 @Component({
   selector: 'app-admin-profesional-promociones',
@@ -471,13 +472,7 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   }
 
   protected getCourseColor(code: string): string {
-    const colors: Record<string, string> = {
-      A2: '#3b82f6',
-      A3: '#8b5cf6',
-      A4: '#f59e0b',
-      A5: '#10b981',
-    };
-    return colors[code] ?? '#6b7280';
+    return getCourseColor(code);
   }
 
   protected openVerDrawer(promo: PromocionTableRow): void {

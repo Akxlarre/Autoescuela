@@ -31,6 +31,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AdminRelatorCrearDrawerComponent } from './admin-relator-crear-drawer.component';
 import { AdminRelatorVerDrawerComponent } from './admin-relator-ver-drawer.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
+import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-specializations';
 
 @Component({
   selector: 'app-admin-profesional-relatores',
@@ -498,13 +499,7 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   }
 
   protected getSpecColor(spec: string): string {
-    const colors: Record<string, string> = {
-      A2: '#3b82f6',
-      A3: '#8b5cf6',
-      A4: '#f59e0b',
-      A5: '#10b981',
-    };
-    return colors[spec] ?? '#6b7280';
+    return getSpecColorUtil(spec);
   }
 
   protected openVerDrawer(rel: RelatorTableRow): void {

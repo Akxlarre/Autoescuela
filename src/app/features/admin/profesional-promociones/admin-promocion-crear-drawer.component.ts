@@ -18,13 +18,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
-
-const COURSE_COLORS: Record<string, string> = {
-  A2: '#3b82f6',
-  A3: '#8b5cf6',
-  A4: '#f59e0b',
-  A5: '#10b981',
-};
+import { getCourseColor } from '@core/utils/course-colors';
 
 /** Genera los próximos N lunes disponibles a partir de hoy. */
 function generateAvailableMondays(count: number): { date: string; suggested: boolean }[] {
@@ -484,7 +478,7 @@ export class AdminPromocionCrearDrawerComponent {
   }
 
   protected courseColor(code: string): string {
-    return COURSE_COLORS[code] ?? '#6b7280';
+    return getCourseColor(code);
   }
 
   protected getFilteredRelatores(courseCode: string, courseId: number): RelatorOption[] {

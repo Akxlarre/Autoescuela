@@ -154,7 +154,7 @@ export class FlotaFacade {
         `
         id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id, both_branches,
         vehicle_assignments(instructor_id, end_date, instructors(user_id, users(first_names, paternal_last_name))),
-        vehicle_documents(type, expiry_date, status)
+        vehicle_documents(type, expiry_date, status, file_url)
       `,
       )
       .order('id', { ascending: true });
@@ -232,6 +232,7 @@ export class FlotaFacade {
         type: d.type ?? 'unknown',
         expiryDate: d.expiry_date ?? '',
         status: this.resolveDocStatus(d.expiry_date, d.status),
+        filePath: d.file_url ?? null,
       })),
       combustibleMes: combustibleByVehicle?.get(v.id) ?? 0,
     };
@@ -247,11 +248,16 @@ export class FlotaFacade {
     this._selectedVehicleId.set(id);
   }
 
-  async createVehicle(payload: any): Promise<void> {
-    const { error } = await this.supabase.client.from('vehicles').insert(payload);
+  async createVehicle(payload: any): Promise<number | null> {
+    const { data, error } = await this.supabase.client
+      .from('vehicles')
+      .insert(payload)
+      .select('id')
+      .single();
     if (error) throw error;
     this.toast.success('Vehículo creado', 'El vehículo ha sido registrado correctamente.');
     void this.refreshSilently();
+    return (data as { id: number } | null)?.id ?? null;
   }
 
   async updateVehicle(id: number, payload: any): Promise<void> {
@@ -261,12 +267,51 @@ export class FlotaFacade {
     void this.refreshSilently();
   }
 
-  async upsertVehicleDocument(payload: any): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('vehicle_documents')
-      .upsert({ ...payload, status: 'valid' }, { onConflict: 'vehicle_id,type' });
+  /**
+   * Sube (si viene `file`) y hace upsert de un documento de vehículo. `existingFilePath` conserva
+   * el archivo ya guardado cuando el usuario solo actualiza la fecha de vencimiento sin re-adjuntar.
+   */
+  async upsertVehicleDocument(payload: {
+    vehicleId: number;
+    type: string;
+    expiryDate: string;
+    file?: File | null;
+    existingFilePath?: string | null;
+  }): Promise<void> {
+    let filePath = payload.existingFilePath ?? null;
+    if (payload.file) {
+      const ext = payload.file.name.split('.').pop() ?? 'pdf';
+      const path = `vehicle-docs/${payload.vehicleId}/${Date.now()}_${payload.type}.${ext}`;
+      const { error: uploadError } = await this.supabase.client.storage
+        .from('documents')
+        .upload(path, payload.file, { upsert: true });
+      if (uploadError) throw uploadError;
+      filePath = path;
+    }
+
+    const status: DocStatus = this.resolveDocStatus(payload.expiryDate, null);
+    const { error } = await this.supabase.client.from('vehicle_documents').upsert(
+      {
+        vehicle_id: payload.vehicleId,
+        type: payload.type,
+        expiry_date: payload.expiryDate,
+        file_url: filePath,
+        status,
+      },
+      { onConflict: 'vehicle_id,type' },
+    );
     if (error) throw error;
+    this.toast.success('Documento actualizado', 'La fecha de vencimiento se guardó correctamente.');
     void this.refreshSilently();
+  }
+
+  /** Signed URL (TTL 1h) de un documento de vehículo guardado en el bucket 'documents'. */
+  async getDocumentSignedUrl(path: string): Promise<string | null> {
+    const { data, error } = await this.supabase.client.storage
+      .from('documents')
+      .createSignedUrl(path, 3600);
+    if (error || !data) return null;
+    return data.signedUrl;
   }
 
   async loadVehicleAgenda(vehicleId: number, date: Date): Promise<void> {

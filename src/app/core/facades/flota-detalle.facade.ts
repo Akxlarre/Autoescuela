@@ -45,6 +45,7 @@ interface RawVehicleForDetail {
     type: string | null;
     expiry_date: string | null;
     status: string | null;
+    file_url: string | null;
   }[];
 }
 
@@ -116,7 +117,7 @@ export class FlotaDetalleFacade {
           .select(
             `id, license_plate, brand, model, year, status, current_km, last_maintenance, branch_id, both_branches,
              vehicle_assignments(instructor_id, end_date, instructors(users(first_names, paternal_last_name))),
-             vehicle_documents(type, expiry_date, status)`,
+             vehicle_documents(type, expiry_date, status, file_url)`,
           )
           .eq('id', vehicleId)
           .single(),
@@ -168,6 +169,7 @@ export class FlotaDetalleFacade {
           type: d.type ?? 'unknown',
           expiryDate: d.expiry_date ?? '',
           status: 'valid' as const,
+          filePath: d.file_url ?? null,
         })),
         // fix-007-i: esta vista de detalle no muestra el gasto mensual de combustible; 0 por defecto.
         combustibleMes: 0,

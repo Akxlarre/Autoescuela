@@ -49,7 +49,7 @@
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
-| `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional` |
+| `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate` |
@@ -68,6 +68,7 @@
 | `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
+| `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
 | `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
 
 <!-- AUTO-GENERATED:END -->
