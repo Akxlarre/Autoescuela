@@ -1,3 +1,5 @@
+import type { VehicleDocWarningInfo } from '@core/utils/vehicle-document-status.utils';
+
 // Agenda Semanal — UI Models
 
 // ─── KPIs semanales ────────────────────────────────────────────────────────
@@ -31,6 +33,8 @@ export interface AgendaSlot {
   instructorName: string;
   vehicleId: number;
   vehiclePlate: string;
+  /** Documentos del vehículo vencidos/por vencer, si los hay; `null` si todo vigente. */
+  vehicleDocWarning: VehicleDocWarningInfo | null;
   // Solo presente cuando status !== 'available'
   sessionId?: number;
   enrollmentId?: number;

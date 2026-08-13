@@ -20,6 +20,10 @@ import type {
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
+import {
+  buildVehicleDocWarningMap,
+  type VehicleDocWarningInfo,
+} from '@core/utils/vehicle-document-status.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
   InstructorOption,
@@ -164,6 +168,8 @@ export class AdminAlumnoDetalleFacade {
   } | null>(null);
   /** slot_start (timestamptz) → vehicle_id; rebuilt on each loadScheduleGrid call. */
   private _slotVehicleMap = new Map<string, number>();
+  /** vehicle_id → advertencia; rebuilt on each loadScheduleGrid call. */
+  private _vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
 
   private readonly _enrollmentSummaries = signal<EnrollmentSummary[]>([]);
 
@@ -1313,14 +1319,21 @@ export class AdminAlumnoDetalleFacade {
     this._slotVehicleMap.clear();
     this._isLoadingSchedule.set(true);
     try {
-      const { data } = await this.supabase.client
-        .from('v_class_b_schedule_availability')
-        .select('*')
-        .eq('instructor_id', instructorId)
-        // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
-        // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
-        .order('slot_start', { ascending: true });
+      const [{ data }, docsResult] = await Promise.all([
+        this.supabase.client
+          .from('v_class_b_schedule_availability')
+          .select('*')
+          .eq('instructor_id', instructorId)
+          // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+          // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
+          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .order('slot_start', { ascending: true }),
+        this.supabase.client
+          .from('vehicle_documents')
+          .select('vehicle_id, type, expiry_date, status'),
+      ]);
+
+      this._vehicleDocWarningMap = buildVehicleDocWarningMap(docsResult.data ?? []);
 
       if (data && data.length > 0) {
         for (const s of data) {
@@ -1620,6 +1633,7 @@ export class AdminAlumnoDetalleFacade {
         status: (isBlocked || s.slot_status === 'occupied'
           ? 'occupied'
           : 'available') as SlotStatus,
+        vehicleDocWarning: this._vehicleDocWarningMap.get(s.vehicle_id) ?? null,
       };
     });
 

@@ -15,6 +15,7 @@
 | Archivo | Exports |
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
+| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope` |
@@ -69,6 +70,7 @@
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
+| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `buildVehicleDocWarningMap` (fix-164-m — extraído de `FlotaFacade`; fix-165-m agregó `buildVehicleDocWarningMap()`/`vehicleDocWarningLabelGeneric()`, reutilizados por `AgendaFacade`, `EnrollmentFacade`, `AdminAlumnoDetalleFacade`, `ScheduleGridComponent` y `admin-reprogramar-clase-drawer.component.ts` para el badge de advertencia de documentos vencidos en TODOS los flujos reales de agendamiento; fix-166-m cambió `VehicleDocWarningInfo` de un estado único (`'expired'\|'expiring_soon'`) a `{ expiredDocs: string[], expiringSoonDocs: string[] }` — nombres de documentos específicos vía `VEHICLE_DOC_TYPES`, ej. "SOAP vencido" en vez de "documento vencido"; requiere que la query a `vehicle_documents` seleccione también `type`) |
 | `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
 
 <!-- AUTO-GENERATED:END -->

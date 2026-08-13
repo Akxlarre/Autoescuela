@@ -23,6 +23,7 @@ import { AgendaSlotComponent } from './agenda-slot.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
 import { todayIso } from '@core/utils/date.utils';
+import { isDateBeyondLimit, isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -36,49 +37,6 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
-
-/**
- * Suma `days` días a una fecha ISO ('YYYY-MM-DD') y devuelve el resultado en
- * el mismo formato. Mediodía fijo al parsear para evitar corrimientos por
- * DST/zona horaria. Función pura.
- */
-export function addDaysToIso(iso: string, days: number): string {
-  const d = new Date(iso + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-/**
- * True si `dateIso` supera la fecha límite de visualización configurada
- * (`maxVisibleDateIso`) — usado para deshabilitar celdas/días individuales
- * dentro de una semana "límite" (parte dentro del rango, parte fuera).
- * Comparación de strings ISO 'YYYY-MM-DD' (ordenan igual que fechas).
- */
-export function isDateBeyondLimit(
-  dateIso: string | null | undefined,
-  maxVisibleDateIso: string | null,
-): boolean {
-  if (!maxVisibleDateIso || !dateIso) return false;
-  return dateIso > maxVisibleDateIso;
-}
-
-/**
- * True si la PRÓXIMA semana (weekStart + 7 días) ya arrancaría más allá de
- * la fecha límite — es decir, sería una semana enteramente "fantasma" (cero
- * días válidos). Deshabilita "Semana siguiente" en ese caso exacto: permite
- * llegar a la última semana con al menos un día válido, nunca a una semana
- * completamente fuera de rango. Función pura, sin depender de servicios.
- */
-export function isNextWeekBeyondLimit(
-  weekStart: string | null | undefined,
-  maxVisibleDateIso: string | null,
-): boolean {
-  if (!maxVisibleDateIso || !weekStart) return false;
-  return addDaysToIso(weekStart, 7) > maxVisibleDateIso;
-}
 
 /** Opción para el dropdown de filtro de instructor. */
 interface InstructorOption {
@@ -371,6 +329,7 @@ interface CellSummary {
                             [slot]="slot"
                             [compact]="true"
                             [disabled]="isDayBeyondLimit(day)"
+                            [showVehicleWarnings]="showVehicleWarnings()"
                             (slotClicked)="slotClick.emit($event)"
                           />
                         }
@@ -425,6 +384,7 @@ interface CellSummary {
                         [slot]="slot"
                         [compact]="true"
                         [disabled]="isDayBeyondLimit(day)"
+                        [showVehicleWarnings]="showVehicleWarnings()"
                         (slotClicked)="slotClick.emit($event)"
                       />
                     }
@@ -1035,6 +995,13 @@ export class AgendaSemanalComponent implements AfterViewInit {
   showKpis = input(true);
   /** Ocultar hero cuando la agenda se renderiza dentro de un drawer. */
   showHero = input(true);
+  /**
+   * Ocultar el badge de advertencia de documentos de vehículo (SOAP/revisión
+   * técnica vencidos o por vencer). Default `true` — se apaga explícitamente
+   * en el flujo público de matrícula, donde el alumno no debe ver información
+   * operativa interna de flota.
+   */
+  showVehicleWarnings = input(true);
   /**
    * Fecha límite (ISO YYYY-MM-DD) hasta la que se puede navegar/agendar —
    * viene de `AgendaSettingsService` a través del Smart padre (este Dumb

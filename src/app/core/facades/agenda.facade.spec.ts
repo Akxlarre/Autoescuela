@@ -3,6 +3,8 @@ import { AgendaFacade } from './agenda.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
+import { addDaysToIso } from '@core/utils/agenda-week.utils';
 
 /**
  * Builder de cadena Supabase genérico y "thenable": cualquier método
@@ -88,6 +90,69 @@ describe('AgendaFacade', () => {
     expect(facade.weekStart()).toBe(initial);
   });
 
+  it('request guard: descarta una respuesta de fetch obsoleta cuando hay navegación rápida encolada', async () => {
+    let callIndex = 0;
+    const origFrom = supabaseSpy.client.from;
+    supabaseSpy.client.from = vi.fn((table: string) => {
+      if (table !== 'v_class_b_schedule_availability') return origFrom(table);
+      const callNumber = ++callIndex;
+      const delayMs = callNumber === 1 ? 20 : 0; // el primer click resuelve DESPUÉS del segundo
+      const builder: any = {
+        select: () => builder,
+        eq: () => builder,
+        neq: () => builder,
+        gte: () => builder,
+        lt: () => builder,
+        lte: () => builder,
+        gt: () => builder,
+        in: () => builder,
+        order: () => builder,
+        then: (resolve: any) => setTimeout(() => resolve({ data: [], error: null }), delayMs),
+      };
+      return builder;
+    });
+
+    const pendingFirstLoad = facade.loadWeek(); // fetch #1 (semana actual, resuelve en 20ms)
+    facade.goToNextWeek(); // fetch #2 (semana siguiente, resuelve en 0ms) — dispara loadWeek() interno
+    const expectedFinalWeekStart = facade.weekStart();
+
+    await pendingFirstLoad;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // La respuesta más reciente (#2) debe ganar aunque haya resuelto antes que la obsoleta (#1).
+    expect(facade.weekData()?.weekStart).toBe(expectedFinalWeekStart);
+  });
+
+  describe('goToNextWeek — límite de semanas fantasma', () => {
+    it('no avanza weekStart ni dispara fetch si la próxima semana ya excede el límite configurado', () => {
+      const localSupabaseSpy = makeFlexibleSupabaseMock();
+      const localAuthSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) };
+      const localBranchSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AgendaFacade,
+          { provide: SupabaseService, useValue: localSupabaseSpy },
+          { provide: AuthFacade, useValue: localAuthSpy },
+          { provide: BranchFacade, useValue: localBranchSpy },
+        ],
+      });
+
+      const limitedFacade = TestBed.inject(AgendaFacade);
+      const settings = TestBed.inject(AgendaSettingsService);
+      const currentWeekStart = limitedFacade.weekStart();
+
+      // Límite justo dentro de la semana actual: la próxima semana ya sería 100% fantasma.
+      vi.spyOn(settings, 'maxVisibleDateIso').mockReturnValue(addDaysToIso(currentWeekStart, 3));
+
+      limitedFacade.goToNextWeek();
+
+      expect(limitedFacade.weekStart()).toBe(currentWeekStart);
+      expect(limitedFacade.isLoading()).toBe(false);
+    });
+  });
+
   it('setSelectedSlot should update selectedSlot signal', () => {
     const slot = { id: 'test' } as any;
     facade.setSelectedSlot(slot);
@@ -166,6 +231,40 @@ describe('AgendaFacade', () => {
       // ...y la fila real fuera del bloque estándar se agrega, no reemplaza nada.
       expect(rows).toContain('13:30');
       expect(rows.length).toBe(14);
+    });
+  });
+
+  describe('vehicleDocWarning — fix-164-m', () => {
+    it('expone vehicleDocWarning por slot según vehicle_documents', async () => {
+      supabaseSpy.setResult('v_class_b_schedule_availability', [
+        {
+          instructor_id: 1,
+          vehicle_id: 10,
+          slot_start: `${facade.weekStart()}T12:30:00Z`,
+          slot_end: `${facade.weekStart()}T13:15:00Z`,
+          slot_status: 'available',
+        },
+        {
+          instructor_id: 1,
+          vehicle_id: 20,
+          slot_start: `${facade.weekStart()}T13:20:00Z`,
+          slot_end: `${facade.weekStart()}T14:05:00Z`,
+          slot_status: 'available',
+        },
+      ]);
+      supabaseSpy.setResult('vehicle_documents', [
+        { vehicle_id: 10, type: 'soap', expiry_date: '2020-01-01', status: null }, // expired
+        { vehicle_id: 20, type: 'soap', expiry_date: '2099-01-01', status: null }, // valid
+      ]);
+
+      await facade.initialize();
+
+      const allSlots = facade.filteredDays().flatMap((d) => d.slots);
+      expect(allSlots.find((s) => s.vehicleId === 10)?.vehicleDocWarning).toEqual({
+        expiredDocs: ['SOAP'],
+        expiringSoonDocs: [],
+      });
+      expect(allSlots.find((s) => s.vehicleId === 20)?.vehicleDocWarning).toBeNull();
     });
   });
 

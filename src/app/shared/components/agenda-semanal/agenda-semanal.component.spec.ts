@@ -1,4 +1,8 @@
-import { addDaysToIso, isDateBeyondLimit, isNextWeekBeyondLimit } from './agenda-semanal.component';
+import {
+  addDaysToIso,
+  isDateBeyondLimit,
+  isNextWeekBeyondLimit,
+} from '@core/utils/agenda-week.utils';
 
 describe('addDaysToIso', () => {
   it('suma días dentro del mismo mes', () => {

@@ -936,6 +936,45 @@ describe('EnrollmentFacade', () => {
       vi.useRealTimers();
     });
 
+    it('puebla vehicleDocWarning por slot desde vehicle_documents (fix-165-m)', async () => {
+      const slotsData = [
+        {
+          instructor_id: INSTRUCTOR_ID,
+          vehicle_id: 10,
+          slot_start: '2026-03-16T09:00:00-03:00',
+          slot_end: '2026-03-16T09:45:00-03:00',
+          slot_status: 'available',
+        },
+        {
+          instructor_id: INSTRUCTOR_ID,
+          vehicle_id: 20,
+          slot_start: '2026-03-16T09:45:00-03:00',
+          slot_end: '2026-03-16T10:30:00-03:00',
+          slot_status: 'available',
+        },
+      ];
+      const docsData = [
+        { vehicle_id: 10, type: 'soap', expiry_date: '2020-01-01', status: null }, // expired
+        { vehicle_id: 20, type: 'soap', expiry_date: '2099-01-01', status: null }, // valid
+      ];
+
+      mockSupabase.client.from = vi.fn((table: string) => {
+        if (table === 'vehicle_documents') return createMockQueryBuilder(docsData, null);
+        const builder = createMockQueryBuilder();
+        builder.order = vi.fn().mockResolvedValue({ data: slotsData, error: null });
+        return builder;
+      });
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      const slots = facade.scheduleGrid()?.slots ?? [];
+      expect(slots.find((s) => s.id === '2026-03-16T09:00:00-03:00')?.vehicleDocWarning).toEqual({
+        expiredDocs: ['SOAP'],
+        expiringSoonDocs: [],
+      });
+      expect(slots.find((s) => s.id === '2026-03-16T09:45:00-03:00')?.vehicleDocWarning).toBeNull();
+    });
+
     it('should auto-deselect slots that become occupied after realtime update', async () => {
       vi.useFakeTimers();
       setupScheduleQuery();
