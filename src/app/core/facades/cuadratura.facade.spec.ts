@@ -3,6 +3,7 @@ import {
   CuadraturaFacade,
   mapPaymentToIngreso,
   mapSingularSaleToIngreso,
+  mapSpecialServiceSaleToIngreso,
 } from './cuadratura.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -369,5 +370,38 @@ describe('mapSingularSaleToIngreso', () => {
     });
     expect(row.total).toBe(0);
     expect(row.claseB).toBe(0);
+  });
+});
+
+// ─── fix-024-i: ventas de Servicios Especiales en Caja Diaria ─────────────────
+
+describe('mapSpecialServiceSaleToIngreso', () => {
+  const base = {
+    id: 7,
+    price: 40_000,
+    serviceName: 'Psicotécnico',
+    clientName: 'María López',
+  };
+
+  it('marca source special_service y bucket "efectivo" (sin método de pago en la tabla)', () => {
+    const row = mapSpecialServiceSaleToIngreso(base);
+    expect(row.source).toBe('special_service');
+    expect(row.claseB).toBe(40_000);
+    expect(row.claseA).toBe(0);
+    expect(row.otros).toBe(0);
+    expect(row.sence).toBe(0);
+    expect(row.total).toBe(40_000);
+    expect(row.enrollmentId).toBeNull();
+  });
+
+  it('glosa incluye el nombre del servicio y del cliente', () => {
+    const row = mapSpecialServiceSaleToIngreso(base);
+    expect(row.glosa).toContain('Psicotécnico');
+    expect(row.glosa).toContain('María López');
+  });
+
+  it('serviceName nulo cae a un placeholder legible', () => {
+    const row = mapSpecialServiceSaleToIngreso({ ...base, serviceName: null });
+    expect(row.glosa).toContain('Servicio especial');
   });
 });

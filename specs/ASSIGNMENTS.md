@@ -116,7 +116,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `i` | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-10 |
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
 <!-- AUTO-GENERATED:END -->
 
@@ -209,6 +208,7 @@
 | ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 | ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
+| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-13 |
 <!-- AUTO-GENERATED:END -->
 
 ---
