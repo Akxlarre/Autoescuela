@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  computed,
   effect,
   inject,
   input,
@@ -12,6 +13,11 @@ import {
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { getStatusVisual, getDotStyle } from '@core/utils/schedule-status.utils';
+import {
+  filterRemainingBlocks,
+  shouldShowEmptyDayState,
+} from '@core/utils/daily-schedule-timeline.utils';
+import { filterVisibleWeekDays } from '@core/utils/schedule-week-days.utils';
 import type { DaySchedule, ScheduleBlock } from '@core/models/ui/instructor-portal.model';
 import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -23,35 +29,55 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
   imports: [IconComponent, SkeletonBlockComponent, CardHoverDirective],
   template: `
     <div class="space-y-6">
-      <!-- ── Day Tab Strip ─────────────────────────────────────────────────── -->
-      <div class="flex gap-2 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
-        @for (day of weekDays(); track day.date) {
-          <button
-            class="flex flex-col items-center justify-center px-4 py-3 rounded-2xl shrink-0 min-w-[64px] transition-all duration-200 border"
-            [style.background]="getDayPillBg(day)"
-            [style.border-color]="getDayPillBorderColor(day)"
-            data-llm-action="select-day"
-            (click)="daySelect.emit(day.date)"
-          >
-            <span
-              class="text-2xs font-bold uppercase tracking-widest mb-1"
-              [style.color]="getDayPillTextColor(day, 'label')"
-            >
-              {{ day.name.slice(0, 3) }}
-            </span>
-            <span
-              class="text-2xl font-black leading-none"
-              [style.color]="getDayPillTextColor(day, 'number')"
-            >
-              {{ day.dayNumber }}
-            </span>
+      <!-- ── Day Tab Strip: chevrons de semana a los costados, Lun-Sáb al centro ── -->
+      <div class="flex items-center gap-1">
+        <button
+          aria-label="Semana anterior"
+          class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-border-subtle text-text-secondary cursor-pointer"
+          data-llm-action="prev-week"
+          (click)="prevWeek.emit()"
+        >
+          <app-icon name="chevron-left" [size]="16" />
+        </button>
 
-            <!-- Indicador sutil de "hoy" en pildora no seleccionada -->
-            @if (day.isToday && day.date !== selectedDateString()) {
-              <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
-            }
-          </button>
-        }
+        <div class="flex gap-1 flex-1 min-w-0">
+          @for (day of visibleWeekDays(); track day.date) {
+            <button
+              class="relative flex-1 min-w-0 flex flex-col items-center justify-center px-1 py-2.5 rounded-xl transition-all duration-200 border"
+              [style.background]="getDayPillBg(day)"
+              [style.border-color]="getDayPillBorderColor(day)"
+              data-llm-action="select-day"
+              (click)="daySelect.emit(day.date)"
+            >
+              <span
+                class="text-2xs font-bold uppercase mb-1"
+                [style.color]="getDayPillTextColor(day, 'label')"
+              >
+                {{ day.name.slice(0, 3) }}
+              </span>
+              <span
+                class="text-lg font-black leading-none"
+                [style.color]="getDayPillTextColor(day, 'number')"
+              >
+                {{ day.dayNumber }}
+              </span>
+
+              <!-- Indicador sutil de "hoy" en pildora no seleccionada -->
+              @if (day.isToday && day.date !== selectedDateString()) {
+                <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
+              }
+            </button>
+          }
+        </div>
+
+        <button
+          aria-label="Siguiente semana"
+          class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-border-subtle text-text-secondary cursor-pointer"
+          data-llm-action="next-week"
+          (click)="nextWeek.emit()"
+        >
+          <app-icon name="chevron-right" [size]="16" />
+        </button>
       </div>
 
       <!-- ── Selected Date Label ────────────────────────────────────────────── -->
@@ -107,13 +133,19 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                 class="text-2xl font-black tracking-tight mb-1 leading-tight"
                 [style.color]="'var(--color-primary-text)'"
               >
-                {{ nextBlock.studentName }}
+                {{ nextBlock.enrollmentNumber ? '#' + nextBlock.enrollmentNumber : '—' }}
               </h4>
+              <p
+                class="text-sm font-semibold mb-1"
+                style="color: var(--color-primary-text); opacity: 0.9"
+              >
+                {{ nextBlock.studentName }}
+              </p>
               <p
                 class="text-xs font-semibold mb-6"
                 style="color: var(--color-primary-text); opacity: 0.85"
               >
-                Clase Nº {{ nextBlock.classNumber }} •
+                Clase Nº {{ nextBlock.classNumber ?? '—' }} •
                 {{ nextBlock.vehiclePlate || 'S/A' }}
               </p>
 
@@ -126,8 +158,8 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               </div>
             </div>
           </div>
-        } @else {
-          <!-- Empty day state -->
+        } @else if (isDayEmpty()) {
+          <!-- Empty day state: solo si el día no tiene NINGÚN bloque (ni siquiera completados) -->
           <div
             class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-45 border border-dashed border-border-subtle"
           >
@@ -147,12 +179,12 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 
         <!-- ── Timeline Rail ───────────────────────────────────────────────── -->
         <div class="mt-4 space-y-4">
-          @for (block of daySchedule()?.blocks; track block.sessionId; let last = $last) {
+          @for (block of remainingBlocks(); track block.sessionId; let last = $last) {
             <div #timelineNode class="flex gap-4 items-stretch w-full">
               <!-- Time label -->
               <div class="w-11.25 shrink-0 pt-4 flex justify-end">
                 <span
-                  class="font-black text-2xs tracking-tighter"
+                  class="font-black text-sm tracking-tight"
                   [style.color]="
                     block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--text-muted)'
                   "
@@ -207,17 +239,24 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                   </div>
 
                   <h5
-                    class="text-base font-bold mb-1 truncate"
+                    class="text-base font-black mb-1 truncate"
+                    [style.color]="getStatusVisual(block.status).textColor"
+                  >
+                    {{ block.enrollmentNumber ? '#' + block.enrollmentNumber : '—' }}
+                  </h5>
+
+                  <div
+                    class="text-xs font-semibold truncate mb-1 opacity-80"
                     [style.color]="getStatusVisual(block.status).textColor"
                   >
                     {{ block.studentName }}
-                  </h5>
+                  </div>
 
                   <div
                     class="flex items-center gap-2 text-2xs font-bold opacity-70"
                     [style.color]="getStatusVisual(block.status).textColor"
                   >
-                    <span>#{{ block.classNumber }}</span>
+                    <span>Clase {{ block.classNumber ?? '—' }}</span>
                     <span>•</span>
                     <span>{{ block.vehiclePlate || 'Sin vehículo' }}</span>
                   </div>
@@ -229,17 +268,6 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
       }
     </div>
   `,
-  styles: [
-    `
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-    `,
-  ],
 })
 export class DailyScheduleTimelineComponent {
   readonly daySchedule = input<DaySchedule | null>(null);
@@ -251,6 +279,19 @@ export class DailyScheduleTimelineComponent {
 
   readonly daySelect = output<string>();
   readonly blockClick = output<ScheduleBlock>();
+  readonly prevWeek = output<void>();
+  readonly nextWeek = output<void>();
+
+  /** Bloques del rail sin el que ya se muestra en el Hero Card de "próxima clase". */
+  readonly remainingBlocks = computed<ScheduleBlock[]>(() =>
+    filterRemainingBlocks(this.daySchedule()),
+  );
+
+  /** "Agenda Libre" solo cuando el día no tiene ningún bloque (ver core/utils). */
+  readonly isDayEmpty = computed<boolean>(() => shouldShowEmptyDayState(this.daySchedule()));
+
+  /** El domingo nunca tiene clases (regla de negocio) — se omite del day tab strip mobile. */
+  readonly visibleWeekDays = computed(() => filterVisibleWeekDays(this.weekDays()));
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly nodes = viewChildren<ElementRef<HTMLElement>>('timelineNode');

@@ -63,7 +63,6 @@ import { LayoutService } from '@core/services/ui/layout.service';
             (prevWeek)="changeWeek(-1)"
             (nextWeek)="changeWeek(1)"
             (today)="resetToToday()"
-            (daySelect)="onDaySelect($event)"
             (blockClick)="onBlockClick($event)"
           />
         } @else {
@@ -75,6 +74,8 @@ import { LayoutService } from '@core/services/ui/layout.service';
             [isLoading]="isDataLoading()"
             (daySelect)="onMobileDaySelect($event)"
             (blockClick)="onBlockClick($event)"
+            (prevWeek)="changeWeek(-1)"
+            (nextWeek)="changeWeek(1)"
           />
         }
       </div>
@@ -221,10 +222,6 @@ export class InstructorHorarioComponent implements OnInit {
     this.selectedDayDate.set(null); // Clear desktop selection on week change
   }
 
-  onDaySelect(dateStr: string) {
-    this.selectedDayDate.set(dateStr);
-  }
-
   onMobileDaySelect(dateStr: string) {
     this.selectedDate.set(dateStr);
 
@@ -262,8 +259,9 @@ export class InstructorHorarioComponent implements OnInit {
     if (!block.sessionId) return;
 
     if (block.status === 'completed') {
+      if (!block.studentId) return;
       this.router.navigate([
-        `/app/instructor/alumnos/${block.sessionId}/evaluacion/${block.sessionId}`,
+        `/app/instructor/alumnos/${block.studentId}/evaluacion/${block.sessionId}`,
       ]);
     } else if (block.status === 'scheduled') {
       this.router.navigate(['/app/instructor/clase/iniciar'], {

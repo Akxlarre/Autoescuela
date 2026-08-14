@@ -441,6 +441,30 @@ describe('InstructorClasesFacade', () => {
         );
       });
 
+      it('propaga km_end a vehicles.current_km cuando la sesión tiene vehicle_id (fix-189)', async () => {
+        const selectChain = makeThenableChain({
+          data: { enrollment_id: 10, vehicle_id: 3, enrollments: { student_id: 40 } },
+          error: null,
+        });
+        const updateSessionChain = makeThenableChain({ error: null });
+        const updateVehicleChain = makeThenableChain({ error: null });
+        const upsertChain = makeThenableChain({ error: null });
+        const refreshChain = makeThenableChain({ data: [], error: null });
+
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValueOnce(selectChain) // select session
+          .mockReturnValueOnce(updateSessionChain) // update status=completed
+          .mockReturnValueOnce(updateVehicleChain) // update vehicles.current_km
+          .mockReturnValueOnce(upsertChain) // upsert practice attendance
+          .mockReturnValueOnce(refreshChain); // refreshSilently
+
+        await facade.finishClass(5, 12500);
+
+        expect(updateVehicleChain.update).toHaveBeenCalledWith({ current_km: 12500 });
+        expect(updateVehicleChain.eq).toHaveBeenCalledWith('id', 3);
+      });
+
       it('propaga el error si la actualización de la sesión falla', async () => {
         const selectChain = makeThenableChain({ data: null, error: null });
         const updateChain = makeThenableChain({ error: { message: 'update failed' } });

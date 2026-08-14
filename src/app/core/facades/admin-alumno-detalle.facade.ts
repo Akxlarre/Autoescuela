@@ -1579,7 +1579,59 @@ export class AdminAlumnoDetalleFacade {
 
     this._reagendarSeleccion.set([]);
     this.toast.success('Clases reagendadas correctamente.');
+    this.notifyClasesReagendadas(seleccion, orderedSlotIds, payload.instructorId);
     await this.refreshSilently();
+  }
+
+  /**
+   * Notifica al alumno y al instructor tras reagendar clases penalizadas (RF-053).
+   * Paridad con `notifyClaseReprogramada()`: el drawer "Reagendar Clases" hace el
+   * mismo tipo de cambio sobre `class_b_sessions` pero por lote, así que agrupa
+   * todas las clases reagendadas en un único mensaje por destinatario en vez de
+   * uno por clase. Fire-and-forget: un fallo nunca rompe el reagendamiento ya
+   * confirmado (mismo criterio que AC-E1 de `notifyClaseReprogramada`).
+   */
+  private notifyClasesReagendadas(
+    seleccion: ClaseSeleccionadaReagendar[],
+    orderedSlotIds: string[],
+    instructorId: number,
+  ): void {
+    const alumno = this._alumno();
+    const detalle = seleccion
+      .map(
+        (s, i) =>
+          `N° ${s.claseNumero} (${formatChileanDate(orderedSlotIds[i])} ${to24hTime(orderedSlotIds[i])})`,
+      )
+      .join(', ');
+    const referenceId = seleccion[0]?.sessionId;
+
+    if (alumno?.userId) {
+      this.notifications
+        .notifyUsers([alumno.userId], {
+          subject: 'Clases reagendadas',
+          message: `Se reagendaron tus clases: ${detalle}.`,
+          referenceType: 'class_b',
+          referenceId,
+        })
+        .catch(() => this.toast.warning('No se pudo notificar al alumno del reagendamiento'));
+    }
+
+    this.resolveInstructorUserIds([instructorId])
+      .then((userIdByInstructorId) => {
+        const instructorUserId = userIdByInstructorId.get(instructorId);
+        if (!instructorUserId) return;
+        this.notifications
+          .notifyUsers([instructorUserId], {
+            subject: 'Clases reagendadas',
+            message: `Se te asignaron las clases reagendadas de ${alumno?.nombre ?? 'un alumno'}: ${detalle}.`,
+            referenceType: 'class_b',
+            referenceId,
+          })
+          .catch(() => this.toast.warning('No se pudo notificar al instructor'));
+      })
+      .catch(() => {
+        // Resolución de destinatario falló (red/RLS) — no rompe el reagendamiento (paridad AC-E1).
+      });
   }
 
   private slotDateFromStart(ts: string | null | undefined): string {

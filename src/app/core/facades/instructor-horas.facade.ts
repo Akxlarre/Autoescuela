@@ -14,8 +14,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorHorasFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private profileFacade = inject(InstructorProfileFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
@@ -183,7 +183,9 @@ private profileFacade = inject(InstructorProfileFacade);
       this._sessionsLog.set(log);
     } catch (err: any) {
       console.error('Error fetching sessions log:', err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar registro de sesiones');
+      this._error.set(
+        this.sanitizer.sanitize(err).message || 'Error al cargar registro de sesiones',
+      );
     }
   }
 
@@ -267,7 +269,9 @@ private profileFacade = inject(InstructorProfileFacade);
       this._sessionDetails.set(mapped);
     } catch (err: any) {
       console.error('Error fetching session details:', err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar detalle de sesiones');
+      this._error.set(
+        this.sanitizer.sanitize(err).message || 'Error al cargar detalle de sesiones',
+      );
     } finally {
       this._isLoading.set(false);
     }
@@ -296,8 +300,8 @@ private profileFacade = inject(InstructorProfileFacade);
         .from('class_b_sessions')
         .select(
           `
-          id, scheduled_at, start_time, end_time, duration_min, status,
-          enrollments(students(users(first_names, paternal_last_name))),
+          id, scheduled_at, start_time, end_time, duration_min, status, class_number,
+          enrollments(number, students(id, users(first_names, paternal_last_name))),
           vehicles(license_plate)
         `,
         )
@@ -323,7 +327,8 @@ private profileFacade = inject(InstructorProfileFacade);
         const endDt = new Date(dt.getTime() + durationMin * 60_000);
         const endTime = row.end_time || padTime(endDt.getHours(), endDt.getMinutes());
 
-        const u = (row.enrollments as any)?.students?.users;
+        const e = row.enrollments as any;
+        const u = e?.students?.users;
         const v = row.vehicles as any;
 
         return {
@@ -335,7 +340,9 @@ private profileFacade = inject(InstructorProfileFacade);
           status: row.status as ScheduleBlock['status'],
           studentName: u ? `${u.first_names} ${u.paternal_last_name}` : '—',
           vehiclePlate: v?.license_plate || null,
-          classNumber: null,
+          classNumber: row.class_number ?? null,
+          enrollmentNumber: e?.number ?? null,
+          studentId: e?.students?.id ?? null,
           startTime,
           endTime,
         };

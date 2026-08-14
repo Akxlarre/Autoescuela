@@ -23,7 +23,9 @@ import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive'
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import type { InstructorClassRow } from '@core/models/ui/instructor-portal.model';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { isClassStartOverdue } from '@core/utils/class-schedule-timing.utils';
 
 @Component({
   selector: 'app-instructor-dashboard',
@@ -166,8 +168,11 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                             <p-tag [value]="cls.statusLabel" [severity]="$any(cls.statusColor)" />
                           </div>
                           <h3 class="font-bold text-text-primary">
-                            {{ cls.studentName }}
+                            {{ cls.enrollmentNumber ? '#' + cls.enrollmentNumber : '—' }}
                           </h3>
+                          <p class="text-sm text-text-secondary font-medium">
+                            {{ cls.studentName }}
+                          </p>
 
                           <div
                             class="flex flex-col sm:flex-row sm:flex-wrap gap-1.5 sm:gap-x-4 sm:gap-y-1 mt-1.5 text-sm text-text-muted"
@@ -194,6 +199,15 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                               data-llm-description="clase en curso, pendiente de finalizar"
                             >
                               Clase en curso — recuerda finalizarla al terminar
+                            </p>
+                          }
+                          @if (isLate(cls)) {
+                            <p
+                              class="flex items-center gap-1.5 text-sm font-semibold text-warning mt-2"
+                              data-llm-description="clase agendada cuya hora de inicio ya pasó y aún no se inicia"
+                            >
+                              <app-icon name="alert-triangle" [size]="14" />
+                              Hora de inicio superada — aún no se inicia
                             </p>
                           }
                         </div>
@@ -306,6 +320,10 @@ export class InstructorDashboardComponent implements OnInit {
 
   goToHorario(): void {
     this.router.navigate(['/app/instructor/horario']);
+  }
+
+  isLate(cls: InstructorClassRow): boolean {
+    return isClassStartOverdue(cls.scheduledAt, cls.status);
   }
 
   readonly proximaHora = computed(() => {
