@@ -66,6 +66,36 @@ export function mapSingularSaleToIngreso(s: SingularSaleDto): IngresoRow {
   };
 }
 
+/** Venta de Servicio Especial cobrada hoy (special_service_sales, fix-024-i). */
+export interface SpecialServiceSaleIngresoDto {
+  id: number;
+  price: number;
+  serviceName: string | null;
+  clientName: string;
+}
+
+/**
+ * Mapea una venta de Servicio Especial cobrada a la fila de cuadratura.
+ * La tabla no registra método de pago (a diferencia de payments/singular) — se bucketea
+ * completa a "efectivo" (claseB), mismo fallback que usa `mapSingularSaleToIngreso()` para un
+ * método desconocido/nulo.
+ */
+export function mapSpecialServiceSaleToIngreso(s: SpecialServiceSaleIngresoDto): IngresoRow {
+  const monto = s.price ?? 0;
+  return {
+    id: s.id,
+    source: 'special_service',
+    enrollmentId: null,
+    nBoleta: null,
+    glosa: `Servicio especial: ${s.serviceName ?? '—'} — ${s.clientName}`,
+    claseB: monto,
+    claseA: 0,
+    sence: 0,
+    otros: 0,
+    total: monto,
+  };
+}
+
 function mapExpenseToEgreso(e: Expense): EgresoRow {
   return {
     id: e.id,
@@ -167,6 +197,11 @@ export class CuadraturaFacade {
         { event: '*', schema: 'public', table: 'standalone_course_enrollments' },
         () => void this.refreshSilently(),
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'special_service_sales' },
+        () => void this.refreshSilently(),
+      )
       .subscribe();
   }
 
@@ -245,11 +280,47 @@ export class CuadraturaFacade {
     }
 
     // El ordenamiento y limitación siempre al final de la cadena de filtros
-    const [{ data }, singulares] = await Promise.all([
+    const [{ data }, singulares, serviciosEspeciales] = await Promise.all([
       query.order('payment_date', { ascending: true }),
       this.fetchSingularSales(start, end, branchId),
+      this.fetchSpecialServiceSales(today, branchId),
     ]);
-    this._pagosHoy.set([...(data ?? []).map(mapPaymentToIngreso), ...singulares]);
+    this._pagosHoy.set([
+      ...(data ?? []).map(mapPaymentToIngreso),
+      ...singulares,
+      ...serviciosEspeciales,
+    ]);
+  }
+
+  /**
+   * Ventas de Servicios Especiales cobradas hoy (fix-024-i). `special_service_sales` nunca se
+   * sumaba a los ingresos de Caja Diaria — mismo patrón que `fetchSingularSales()`.
+   */
+  private async fetchSpecialServiceSales(
+    today: string,
+    branchId: number | null,
+  ): Promise<IngresoRow[]> {
+    let query: any = this.supabase.client
+      .from('special_service_sales')
+      .select('id, price, service_name, client_name')
+      .eq('sale_date', today)
+      .eq('paid', true);
+
+    if (branchId) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data, error } = await query;
+    if (error) return [];
+
+    return (data ?? []).map((row: any) =>
+      mapSpecialServiceSaleToIngreso({
+        id: row.id,
+        price: row.price,
+        serviceName: row.service_name,
+        clientName: row.client_name ?? '—',
+      }),
+    );
   }
 
   /**
@@ -335,6 +406,19 @@ export class CuadraturaFacade {
           .update({ payment_status: 'pending', amount_paid: 0, paid_at: null })
           .eq('id', row.id);
         this.toast.success('Cobro revertido: la inscripción quedó pendiente de pago.');
+        void this.refreshSilently();
+        return true;
+      }
+
+      if (row.source === 'special_service') {
+        // fix-024-i: venta de Servicio Especial — no se borra, se revierte el cobro
+        // (misma filosofía que 'singular': la venta sigue existiendo, solo deja de
+        // contar como ingreso cobrado hoy).
+        await this.supabase.client
+          .from('special_service_sales')
+          .update({ paid: false, status: 'pending' })
+          .eq('id', row.id);
+        this.toast.success('Cobro revertido: la venta quedó pendiente de pago.');
         void this.refreshSilently();
         return true;
       }

@@ -17,6 +17,8 @@ import { MenuModule } from 'primeng/menu';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { EliminarServicioModalComponent } from '@shared/components/eliminar-servicio-modal/eliminar-servicio-modal.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
@@ -48,6 +50,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     SelectModule,
     MenuModule,
     StableWidthDirective,
+    EliminarServicioModalComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen-2" appBentoGridLayout #bentoGrid>
@@ -72,22 +75,36 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         style="container-type:inline-size; container-name:svc-catalogo"
       >
         <section class="card flex flex-col h-full min-h-0">
-          <div class="flex items-center justify-between mb-4 shrink-0">
+          <div class="flex items-center justify-between mb-4 shrink-0 flex-wrap gap-2">
             <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
-            <button
-              type="button"
-              class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
-              data-llm-action="open-nuevo-servicio-drawer"
-              (click)="requestNuevoServicio.emit()"
-            >
-              <app-icon name="plus" [size]="14" />
-              Agregar servicio
-            </button>
+            <div class="flex items-center gap-3 flex-wrap">
+              <label
+                class="flex items-center gap-2 text-xs font-medium text-text-secondary cursor-pointer select-none"
+              >
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 rounded text-brand focus:ring-brand"
+                  [checked]="mostrarInactivos()"
+                  (change)="mostrarInactivos.set($any($event.target).checked)"
+                  data-llm-action="toggle-mostrar-inactivos"
+                />
+                Mostrar inactivos
+              </label>
+              <button
+                type="button"
+                class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
+                data-llm-action="open-nuevo-servicio-drawer"
+                (click)="requestNuevoServicio.emit()"
+              >
+                <app-icon name="plus" [size]="14" />
+                Agregar servicio
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 svc-catalogo-grid gap-4 flex-1 min-h-0 overflow-y-auto">
-            @for (servicio of catalogo(); track servicio.id) {
-              <div class="card flex flex-col gap-3">
+            @for (servicio of serviciosVisibles(); track servicio.id) {
+              <div class="card flex flex-col gap-3" [class.opacity-60]="!servicio.activo">
                 <div class="flex items-start justify-between">
                   <div
                     class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -95,9 +112,20 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                     <app-icon [name]="servicio.icono" [size]="18" />
                   </div>
-                  <app-badge [variant]="servicio.activo ? 'success' : 'neutral'">
-                    {{ servicio.activo ? 'Activo' : 'Inactivo' }}
-                  </app-badge>
+                  <div class="flex items-center gap-1">
+                    <app-badge [variant]="servicio.activo ? 'success' : 'neutral'">
+                      {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+                    </app-badge>
+                    <button
+                      type="button"
+                      class="cursor-pointer text-text-muted hover:text-error transition-colors p-1 rounded-lg hover:bg-error/10"
+                      [attr.data-llm-action]="'borrar-servicio-' + servicio.id"
+                      [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
+                      (click)="onBorrarServicio(servicio)"
+                    >
+                      <app-icon name="trash-2" [size]="13" />
+                    </button>
+                  </div>
                 </div>
                 <div class="flex-1">
                   <h3 class="item-title m-0 mb-1">
@@ -114,14 +142,35 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <span class="font-bold text-text-primary"
                     >\${{ servicio.precio.toLocaleString('es-CL') }}</span
                   >
-                  <button
-                    type="button"
-                    class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
-                    [attr.data-llm-action]="'vender-' + servicio.id"
-                    (click)="requestRegistrarVenta.emit(servicio)"
-                  >
-                    Vender
-                  </button>
+                  @if (servicio.activo) {
+                    <button
+                      type="button"
+                      class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
+                      [attr.data-llm-action]="'vender-' + servicio.id"
+                      (click)="requestRegistrarVenta.emit(servicio)"
+                    >
+                      Vender
+                    </button>
+                  } @else {
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="cursor-pointer text-xs font-medium px-2 py-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"
+                        [attr.data-llm-action]="'eliminar-definitivo-servicio-' + servicio.id"
+                        (click)="onEliminarDefinitivo(servicio)"
+                      >
+                        Eliminar definitivamente
+                      </button>
+                      <button
+                        type="button"
+                        class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-brand/30 text-brand hover:bg-brand/10 transition-colors"
+                        [attr.data-llm-action]="'reactivar-servicio-' + servicio.id"
+                        (click)="onReactivarServicio(servicio)"
+                      >
+                        Reactivar
+                      </button>
+                    </div>
+                  }
                 </div>
               </div>
             }
@@ -206,6 +255,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <th class="micro-label text-center py-3 px-4">Estado</th>
                   <th class="micro-label text-center py-3 px-4">Cobro</th>
                   <th class="micro-label text-left py-3 px-4">Fecha</th>
+                  <th class="micro-label text-center py-3 px-4">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,10 +309,21 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       }
                     </td>
                     <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
+                    <td class="py-3 px-4 text-center">
+                      <button
+                        type="button"
+                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                        [attr.data-llm-action]="'borrar-venta-' + venta.id"
+                        [attr.aria-label]="'Borrar venta de ' + venta.cliente"
+                        (click)="onBorrar(venta)"
+                      >
+                        <app-icon name="trash-2" [size]="15" />
+                      </button>
+                    </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6" class="py-10 text-center text-text-muted text-sm">
+                    <td colspan="7" class="py-10 text-center text-text-muted text-sm">
                       No hay ventas registradas.
                     </td>
                   </tr>
@@ -325,6 +386,15 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                         Cobrar
                       </button>
                     }
+                    <button
+                      type="button"
+                      class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                      [attr.data-llm-action]="'borrar-venta-mobile-' + venta.id"
+                      [attr.aria-label]="'Borrar venta de ' + venta.cliente"
+                      (click)="onBorrar(venta)"
+                    >
+                      <app-icon name="trash-2" [size]="15" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -338,6 +408,15 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         </section>
       </div>
     </div>
+
+    <!-- fix-024-i: modal de confirmación por texto para el borrado definitivo -->
+    <app-eliminar-servicio-modal
+      [visible]="servicioAEliminarDefinitivo() !== null"
+      [servicioNombre]="servicioAEliminarDefinitivo()?.nombre ?? ''"
+      [isDeleting]="isEliminandoDefinitivo()"
+      (confirmado)="onConfirmarEliminarDefinitivo()"
+      (cancelado)="servicioAEliminarDefinitivo.set(null)"
+    />
   `,
   styles: [
     `
@@ -425,20 +504,33 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
   readonly requestRegistrarVenta = output<ServicioEspecial | undefined>();
   readonly requestNuevoServicio = output<void>();
   readonly cobroRegistrado = output<number>();
   readonly exportarHistorial = output<'excel' | 'pdf'>();
+  readonly ventaBorrada = output<number>();
+  readonly servicioBorrado = output<number>();
+  readonly servicioReactivado = output<number>();
+  readonly servicioEliminadoDefinitivo = output<number>();
 
   // ── Estado interno ──────────────────────────────────────────────────────────
   protected readonly filtroServicio = signal<string | null>(null);
   protected readonly exportMenuOpen = signal(false);
+  protected readonly mostrarInactivos = signal(false);
+  // fix-024-i: servicio objetivo del modal de borrado definitivo (null = modal cerrado).
+  protected readonly servicioAEliminarDefinitivo = signal<ServicioEspecial | null>(null);
+  protected readonly isEliminandoDefinitivo = signal(false);
 
   // ── Computed ────────────────────────────────────────────────────────────────
   protected readonly filtroOptions = computed(() =>
     this.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
+  );
+
+  protected readonly serviciosVisibles = computed(() =>
+    this.mostrarInactivos() ? this.catalogo() : this.catalogo().filter((s) => s.activo),
   );
 
   protected readonly ventasFiltradas = computed(() => {
@@ -497,6 +589,49 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   protected onExport(format: 'excel' | 'pdf'): void {
     this.exportMenuOpen.set(false);
     this.exportarHistorial.emit(format);
+  }
+
+  protected async onBorrar(venta: VentaServicio): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Borrar venta',
+      message: `¿Borrar la venta de "${venta.servicio}" a ${venta.cliente}? Esta acción no se puede deshacer.`,
+      confirmLabel: 'Sí, borrar',
+      cancelLabel: 'Cancelar',
+      severity: 'danger',
+    });
+
+    if (confirmed) {
+      this.ventaBorrada.emit(venta.id);
+    }
+  }
+
+  protected async onBorrarServicio(servicio: ServicioEspecial): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Borrar servicio',
+      message: `¿Borrar "${servicio.nombre}" del catálogo? Si ya tiene ventas registradas, se desactivará en vez de borrarse.`,
+      confirmLabel: 'Sí, borrar',
+      cancelLabel: 'Cancelar',
+      severity: 'danger',
+    });
+
+    if (confirmed) {
+      this.servicioBorrado.emit(servicio.id);
+    }
+  }
+
+  protected onReactivarServicio(servicio: ServicioEspecial): void {
+    this.servicioReactivado.emit(servicio.id);
+  }
+
+  protected onEliminarDefinitivo(servicio: ServicioEspecial): void {
+    this.servicioAEliminarDefinitivo.set(servicio);
+  }
+
+  protected onConfirmarEliminarDefinitivo(): void {
+    const servicio = this.servicioAEliminarDefinitivo();
+    if (!servicio) return;
+    this.servicioAEliminarDefinitivo.set(null);
+    this.servicioEliminadoDefinitivo.emit(servicio.id);
   }
 
   protected getServiceIconStyle(color: ServicioColor): string {

@@ -3,10 +3,11 @@ export interface IngresoRow {
   id: number;
   /**
    * Origen del ingreso: 'payment' = tabla payments (matrículas/servicios);
-   * 'singular' = cobro de standalone_course_enrollments (cursos singulares).
+   * 'singular' = cobro de standalone_course_enrollments (cursos singulares);
+   * 'special_service' = venta cobrada de special_service_sales (fix-024-i).
    * Determina cómo se revierte al eliminar.
    */
-  source: 'payment' | 'singular';
+  source: 'payment' | 'singular' | 'special_service';
   /** FK a enrollments — necesario para revertir saldos al eliminar. */
   enrollmentId: number | null;
   nBoleta: string | null;

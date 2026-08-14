@@ -807,8 +807,48 @@
   por una nota de otro fix que resolvió el problema a otro nivel (BD vs UI).
 - **Fuente:** `specs/fixes/fix-164-m-advertencia-documentos-vehiculo-agendamiento` (el error) +
   `specs/fixes/fix-165-m-advertencia-vehiculo-scheduling-real-flows` (la corrección)
+  
+  ### DG-065 — `cash_closings` guarda un snapshot congelado; borrar/editar hacia atrás una fila que alimentó ese cálculo no lo recalcula sola
+- **Trampa:** al agregar borrado/edición a cualquier tabla que aporta dinero al día (`payments`,
+  `special_service_sales`, `expenses`, anticipos, etc.), asumir que como `cash_closings` "muestra
+  los totales del día" esos totales se recalculan cada vez que se consulta la pantalla — y que
+  por lo tanto un DELETE/UPDATE sobre una fila vieja es seguro sin ninguna verificación adicional.
+- **Realidad:** `cash_closings.total_income`/`total_expenses`/`balance`/`payments_count` son
+  columnas `INTEGER` calculadas y **grabadas una sola vez**, al momento del cierre
+  (`closed=true`). No hay trigger ni vista que las recalcule si cambian las filas de origen.
+  Borrar o editar hacia atrás una venta/pago cuyo `sale_date`/`payment_date` cae en un día con
+  `cash_closings.closed=true` para esa `branch_id` deja el número de esa cuadratura pasada
+  desincronizado del detalle real, sin ningún error visible — el descuadre queda invisible hasta
+  que alguien audita ese día puntual.
+- **Lección:** antes de exponer un borrado/edición sobre cualquier tabla cuyos montos alimentan
+  `cash_closings`, verificar primero si existe una fila `cash_closings` con `closed=true` para
+  `(branch_id, fecha)` de ese registro — igual candado que resolvió `ASG-b-037` y que replicó
+  `fix-022-i` para `special_service_sales`. Sin ese candado, cada tabla financiera nueva
+  reintroduce el mismo agujero de trazabilidad por separado.
+- **Fuente:** `specs/fixes/fix-022-i-borrar-servicio-especial` (ASG-b-050, mismo criterio que
+  ASG-b-037)
 
-### DG-065 — Supabase Auth solo tiene UN template de correo "invite" para todo el proyecto — no es por rol
+### DG-066 — Un catálogo con columna `active` y una FK entrante sin `ON DELETE CASCADE` necesita capturar `error.code === '23503'`, no solo intentar el DELETE
+- **Trampa:** al exponer un botón de borrar sobre una tabla "catálogo" (`service_catalog`,
+  `courses`, cualquier tabla con una columna `active`/`is_active` booleana), asumir que un
+  simple `DELETE` alcanza porque la policy RLS ya lo permite — sin considerar qué pasa si otra
+  tabla referencia esa fila.
+- **Realidad:** una FK entrante sin `ON DELETE CASCADE` (default `NO ACTION`) rechaza el DELETE
+  con una violación de FK en cuanto existe al menos una fila que la referencia. PostgREST
+  traduce eso a HTTP `409` y `error.code = '23503'` en la respuesta de `supabase-js`. Sin
+  capturar ese código específico, el usuario ve un error crudo de base de datos en vez de una
+  acción con sentido de negocio — y si la tabla ya tiene una columna `active`/`is_active`
+  pensada para "dejar de ofrecer sin borrar", esa columna queda sin ningún botón que la use.
+- **Regla:** cuando se exponga un borrado sobre cualquier catálogo con una columna
+  `active`/`is_active`, el criterio de aplicabilidad es: verificar primero si alguna otra tabla
+  lo referencia por FK sin `CASCADE` (`grep` de `REFERENCES <tabla>(id)` en
+  `supabase/migrations/`). Si existe esa referencia, intentar el DELETE duro primero y, si
+  Postgres devuelve `23503`, hacer fallback automático a `UPDATE active = false` en vez de
+  mostrar el error crudo. No aplica a tablas sin ninguna FK entrante — ahí el DELETE simple
+  basta.
+- **Fuente:** `specs/fixes/fix-022-i-borrar-servicio-especial`
+
+### DG-067 — Supabase Auth solo tiene UN template de correo "invite" para todo el proyecto — no es por rol
 - **Trampa:** asumir que `auth.admin.inviteUserByEmail()` se puede reutilizar para invitar a un
   rol distinto (instructor, secretaria) solo pasando otro valor en `data: { role: ... }`, y que
   el correo se adaptará a ese rol. El template HTML que Supabase Auth dispara automáticamente es
@@ -833,7 +873,7 @@
   distinto.
 - **Fuente:** `specs/fixes/fix-167-m-instructor-invite-correo-set-password`
 
-### DG-066 — `auth.admin.generateLink({ type: 'invite' })` falla si el usuario de Auth YA existe
+### DG-068 — `auth.admin.generateLink({ type: 'invite' })` falla si el usuario de Auth YA existe
 - **Trampa:** reutilizar `type: 'invite'` para "reenviar" una invitación a un usuario que ya
   tiene cuenta de Auth (creada en un paso anterior, ej. `create-instructor`). GoTrue rechaza
   `invite` para un email ya registrado con un error que contiene "already registered" — el
@@ -848,7 +888,7 @@
   `type: 'magiclink'`, no `'invite'`, para el reenvío.
 - **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`
 
-### DG-067 — Una fila de `public.users` insertada fuera del flujo de creación normal (seed, SQL directo) puede no tener `supabase_uid`, aunque el flujo "oficial" lo garantice
+### DG-069 — Una fila de `public.users` insertada fuera del flujo de creación normal (seed, SQL directo) puede no tener `supabase_uid`, aunque el flujo "oficial" lo garantice
 - **Trampa:** asumir que una garantía que da la Edge Function de creación (ej.
   `create-instructor` siempre crea la cuenta de Auth ANTES de insertar la fila, con
   rollback en cascada si algo falla — ver DG-066) aplica a **todas** las filas de esa
@@ -868,7 +908,7 @@
   error. Ver el patrón correcto ya usado en `activate-student-account`.
 - **Fuente:** `specs/fixes/fix-169-m-reenviar-invitacion-instructor-sin-cuenta-auth`
 
-### DG-068 — Un dato "opcional" capturado en un formulario se pierde silenciosamente si su persistencia vive dentro de una función distinta a la que siempre se ejecuta
+### DG-070 — Un dato "opcional" capturado en un formulario se pierde silenciosamente si su persistencia vive dentro de una función distinta a la que siempre se ejecuta
 - **Trampa:** en un flujo con dos posibles submits (uno "esencial" que siempre corre, otro
   "opcional" que corre condicionalmente), colocar la persistencia de un campo opcional
   (firmas, observaciones) **solo** dentro de la función condicional. Si el usuario llena
@@ -885,7 +925,7 @@
   usa en otro flujo relacionado.
 - **Fuente:** `specs/fixes/fix-175-m-instructor-clase-cierre-simplificado`
 
-### DG-069 — `new Date().toISOString().split('T')[0]` como límite de "hoy" en una query pierde filas cerca de la medianoche en Chile
+### DG-071 — `new Date().toISOString().split('T')[0]` como límite de "hoy" en una query pierde filas cerca de la medianoche en Chile
 - **Trampa:** calcular el límite de fecha de un filtro `.gte`/`.lt` sobre una columna
   `timestamptz` con `new Date().toISOString().split('T')[0]` + sufijo `+00:00`. Parece
   "la fecha de hoy", pero es la fecha de hoy **en UTC**, no en Santiago.
@@ -902,6 +942,7 @@
   offset explícito de Santiago), nunca con `toISOString()` crudo — sin excepción, incluso
   si el bug "solo" se manifiesta de noche.
 - **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
+
 
 ---
 

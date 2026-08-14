@@ -1878,7 +1878,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `student_id` | INT | sí | — | → `students.id` |
-| `service_id` | INT | NO | — | → `service_catalog.id` |
+| `service_id` | INT | **sí** (fix-024-i, migración `20260813060000`) | — | → `service_catalog.id`, `NO ACTION` (sin CASCADE) |
+| `service_name` | TEXT | sí (fix-024-i) | — | — |
 | `sale_date` | DATE | NO | — | — |
 | `price` | INTEGER | NO | — | — |
 | `metadata` | JSONB | sí | — | — |
@@ -1890,6 +1891,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `status` | TEXT | NO | `'pending'` | — |
 | `paid` | BOOLEAN | NO | `false` | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
+
+> **`service_id` nullable + `service_name` (fix-024-i):** `service_catalog` no tiene
+> `ON DELETE CASCADE` en esta FK. Para permitir borrar un servicio del catálogo de forma
+> permanente sin perder el historial de ventas, `ServiciosEspecialesFacade.borrarServicioDefinitivo()`
+> desvincula (`service_id=null`) antes de borrar el catálogo. `service_name` es un snapshot del
+> nombre tomado al momento de la venta (`registrarVenta()`) — sobrevive aunque el servicio
+> origen deje de existir. `mapVentaDto()` prioriza `service_name` sobre el join a
+> `service_catalog.name`. Ver DG-066.
 
 **Policies:**
 

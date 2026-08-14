@@ -3,7 +3,6 @@ import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
-import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -21,7 +20,6 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
     ReactiveFormsModule,
     IconComponent,
     SelectModule,
-    DateInputComponent,
     DrawerFormComponent,
     StableWidthDirective,
   ],
@@ -88,16 +86,16 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
           </div>
         }
 
-        <!-- Fecha + Monto -->
+        <!-- Fecha (fija a hoy, fix-023-i) + Monto -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
-            <app-date-input
-              label="Fecha"
-              [required]="true"
-              [value]="ventaForm.get('fecha')?.value ?? ''"
-              (valueChange)="ventaForm.get('fecha')?.setValue($event)"
-              data-llm-description="fecha de la venta del servicio especial"
-            />
+            <span class="micro-label">Fecha</span>
+            <div
+              class="w-full h-11 px-3 flex items-center text-sm rounded-xl border border-border-default bg-subtle text-text-secondary"
+              data-llm-description="fecha de la venta — siempre hoy, no editable"
+            >
+              {{ hoyLabel }}
+            </div>
           </div>
           <div class="flex flex-col gap-1.5">
             <label class="micro-label" for="v-precio">
@@ -168,21 +166,28 @@ export class RegistrarVentaDrawerComponent {
   ];
 
   readonly catalogoOptions = computed(() =>
-    this.facade.catalogo().map((s) => ({
-      label: `$${s.precio.toLocaleString('es-CL')} — ${s.nombre}`,
-      value: s.id,
-    })),
+    this.facade
+      .catalogo()
+      // fix-023-i: el catálogo ahora incluye inactivos (para el toggle "Mostrar
+      // inactivos") — una venta nueva nunca debe poder elegir uno inactivo.
+      .filter((s) => s.activo)
+      .map((s) => ({
+        label: `$${s.precio.toLocaleString('es-CL')} — ${s.nombre}`,
+        value: s.id,
+      })),
   );
 
   protected readonly isSaving = signal(false);
   protected readonly showTipoCliente = signal(false);
+
+  // fix-023-i: la fecha ya no es un campo del formulario — se fija a hoy al enviar.
+  protected readonly hoyLabel = new Date().toLocaleDateString('es-CL');
 
   protected readonly ventaForm = new FormGroup({
     servicioId: new FormControl('', Validators.required),
     nombre: new FormControl('', Validators.required),
     rut: new FormControl('', Validators.required),
     esAlumno: new FormControl<boolean>(false),
-    fecha: new FormControl(new Date().toISOString().split('T')[0], Validators.required),
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
     cobrado: new FormControl<boolean>(false),
   });
@@ -230,7 +235,7 @@ export class RegistrarVentaDrawerComponent {
       nombre: val.nombre!,
       rut: val.rut!,
       esAlumno: !!val.esAlumno,
-      fecha: val.fecha!,
+      fecha: new Date().toISOString().split('T')[0],
       precio: val.precio!,
       cobrado: !!val.cobrado,
     });

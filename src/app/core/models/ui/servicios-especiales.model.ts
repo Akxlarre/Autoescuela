@@ -22,8 +22,8 @@ export interface VentaServicio {
   esAlumno: boolean;
   /** Nombre del servicio (desnormalizado para display) */
   servicio: string;
-  /** FK a service_catalog.id */
-  servicioId: number;
+  /** FK a service_catalog.id — null si el servicio fue eliminado definitivamente (fix-024-i) */
+  servicioId: number | null;
   precio: number;
   /** Formato 'YYYY-MM-DD' */
   fecha: string;
@@ -32,6 +32,8 @@ export interface VentaServicio {
   cobrado: boolean;
   /** `users.id` del alumno (vía `students.user_id`), null si es cliente externo */
   studentUserId: number | null;
+  /** Sede de la venta — usado para el candado de borrado (fix-022-i) */
+  branchId: number | null;
 }
 
 export interface VentaFormData {

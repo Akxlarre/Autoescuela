@@ -37,7 +37,6 @@
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
 | ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
-| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | `i` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-b-037 |
 
 ### Tanda auditoría "peor cliente posible" — 2026-08-03
 
@@ -209,6 +208,7 @@
 | ASG-b-078 | App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`) | [fix-139-b-app-like-portal-instructor-resto](fixes/fix-139-b-app-like-portal-instructor-resto/fix.md) | 2026-08-11 |
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 | ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
+| ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-13 |
 <!-- AUTO-GENERATED:END -->
 
 ---

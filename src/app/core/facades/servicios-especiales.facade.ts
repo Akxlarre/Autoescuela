@@ -72,14 +72,20 @@ function mapVentaDto(
     cliente: dto.client_name ?? '—',
     rut: dto.client_rut ?? '—',
     esAlumno: dto.is_student,
-    servicio: dto.service_catalog?.name ?? '—',
+    // fix-024-i: prioriza el snapshot service_name — sobrevive a un borrado definitivo del
+    // catálogo (el join service_catalog.name da null si ya no existe la fila).
+    servicio: dto.service_name ?? dto.service_catalog?.name ?? '—',
     servicioId: dto.service_id,
     precio: dto.price,
     fecha: dto.sale_date,
-    estado: dto.status === 'completed' ? 'completado' : 'pendiente',
+    // fix-023-i: "Estado" se fusiona con "Cobro" — dto.status nunca se actualizaba a
+    // 'completed' en ningún flujo, así que quedaba en "Pendiente" para siempre. paid ya
+    // refleja lo mismo que el usuario espera ver acá.
+    estado: dto.paid ? 'completado' : 'pendiente',
     resultado,
     cobrado: dto.paid,
     studentUserId: student?.user_id ?? null,
+    branchId: dto.branch_id,
   };
 }
 
@@ -180,10 +186,11 @@ export class ServiciosEspecialesFacade {
     if (branchId !== null) ventasQuery = ventasQuery.eq('branch_id', branchId);
 
     const [catalogoResult, ventasResult] = await Promise.all([
+      // fix-023-i: trae TODO el catálogo (activos e inactivos) — el toggle "Mostrar
+      // inactivos" filtra client-side; el dropdown de venta filtra .activo aparte.
       this.supabase.client
         .from('service_catalog')
         .select('*')
-        .eq('active', true)
         .order('created_at', { ascending: true }),
 
       ventasQuery,
@@ -228,8 +235,13 @@ export class ServiciosEspecialesFacade {
 
   async registrarVenta(data: VentaFormData): Promise<boolean> {
     const registeredBy = this.auth.currentUser()?.dbId ?? null;
+    // fix-024-i: snapshot del nombre — el Historial lo sigue mostrando aunque el servicio
+    // se borre definitivamente del catálogo más tarde (service_id queda en null).
+    const servicioNombre = this._catalogo().find((s) => s.id === data.servicioId)?.nombre ?? null;
+
     const { error } = await this.supabase.client.from('special_service_sales').insert({
       service_id: data.servicioId,
+      service_name: servicioNombre,
       student_id: null,
       is_student: data.esAlumno,
       client_name: data.nombre,
@@ -237,7 +249,9 @@ export class ServiciosEspecialesFacade {
       sale_date: data.fecha,
       price: data.precio,
       paid: data.cobrado,
-      status: 'pending',
+      // fix-023-i: status refleja "paid" — evita dejar la columna desalineada con lo que
+      // "Estado" muestra en la UI (que ahora se deriva de paid, no de status).
+      status: data.cobrado ? 'completed' : 'pending',
       registered_by: registeredBy,
       branch_id: this.getActiveBranchId(true),
       metadata: null,
@@ -272,7 +286,7 @@ export class ServiciosEspecialesFacade {
   async registrarCobro(id: number): Promise<void> {
     const { error } = await this.supabase.client
       .from('special_service_sales')
-      .update({ paid: true })
+      .update({ paid: true, status: 'completed' })
       .eq('id', id);
 
     if (error) {
@@ -305,6 +319,142 @@ export class ServiciosEspecialesFacade {
       .catch(() => {
         // Fallo de notificación no revierte el cobro ya registrado (AC-E1).
       });
+  }
+
+  /**
+   * Borra una venta de Servicio Especial (fix-022-i, ASG-b-050).
+   *
+   * Borrado duro (DELETE real, sin estado "anulada") — pero bloqueado si el día de la
+   * venta (`sale_date`) ya tiene una fila en `cash_closings` para su sede. La cuadratura
+   * guarda `total_income` como snapshot congelado al cerrar; borrar hacia atrás una venta
+   * de un día ya cerrado descuadraría ese número en silencio (mismo criterio que ASG-b-037).
+   */
+  async borrarVenta(id: number): Promise<{ success: boolean; blockedReason?: string }> {
+    const venta = this._ventas().find((v) => v.id === id);
+    if (!venta) return { success: false };
+
+    let closedQuery = this.supabase.client
+      .from('cash_closings')
+      .select('id')
+      .eq('date', venta.fecha)
+      .eq('closed', true)
+      .limit(1);
+    if (venta.branchId !== null) closedQuery = closedQuery.eq('branch_id', venta.branchId);
+
+    const { data: closedData, error: closedError } = await closedQuery;
+    if (closedError) {
+      this._error.set(this.sanitizer.sanitize(closedError).message);
+      return { success: false };
+    }
+    if (closedData && closedData.length > 0) {
+      return {
+        success: false,
+        blockedReason: `No se puede borrar: la caja del ${venta.fecha} ya está cerrada.`,
+      };
+    }
+
+    const { error } = await this.supabase.client
+      .from('special_service_sales')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      this._error.set(this.sanitizer.sanitize(error).message);
+      return { success: false };
+    }
+
+    await this.refreshSilently();
+    return { success: true };
+  }
+
+  /**
+   * Borra un servicio del catálogo (fix-022-i, ASG-b-050 — alcance real de la asignación,
+   * corregido tras confusión con `borrarVenta`).
+   *
+   * Intenta DELETE duro primero. `special_service_sales.service_id` referencia esta tabla
+   * SIN `ON DELETE CASCADE`: si el servicio tiene ventas asociadas, Postgres rechaza el DELETE
+   * con una violación de FK (código `23503`). En ese caso, en vez de mostrar el error crudo,
+   * hace fallback automático a `active = false` (desactivar) — dejar de ofrecerlo para nuevas
+   * ventas sin romper el historial ya existente.
+   */
+  async borrarServicio(id: number): Promise<{ success: boolean; deactivated: boolean }> {
+    const { error: deleteError } = await this.supabase.client
+      .from('service_catalog')
+      .delete()
+      .eq('id', id);
+
+    if (!deleteError) {
+      await this.refreshSilently();
+      return { success: true, deactivated: false };
+    }
+
+    if (deleteError.code !== '23503') {
+      this._error.set(this.sanitizer.sanitize(deleteError).message);
+      return { success: false, deactivated: false };
+    }
+
+    const { error: updateError } = await this.supabase.client
+      .from('service_catalog')
+      .update({ active: false })
+      .eq('id', id);
+
+    if (updateError) {
+      this._error.set(this.sanitizer.sanitize(updateError).message);
+      return { success: false, deactivated: false };
+    }
+
+    await this.refreshSilently();
+    return { success: true, deactivated: true };
+  }
+
+  /** Reactiva un servicio del catálogo previamente desactivado (fix-023-i). */
+  async reactivarServicio(id: number): Promise<{ success: boolean }> {
+    const { error } = await this.supabase.client
+      .from('service_catalog')
+      .update({ active: true })
+      .eq('id', id);
+
+    if (error) {
+      this._error.set(this.sanitizer.sanitize(error).message);
+      return { success: false };
+    }
+
+    await this.refreshSilently();
+    return { success: true };
+  }
+
+  /**
+   * Borra un servicio del catálogo de forma DEFINITIVA (fix-024-i) — a diferencia de
+   * `borrarServicio()`, no hay fallback: se usa solo desde la tarjeta ya Inactiva, con
+   * confirmación explícita del usuario (escribir "ELIMINAR").
+   *
+   * Las ventas asociadas NO se borran — se desvinculan (`service_id = NULL`) para liberar la
+   * FK. El nombre del servicio ya quedó guardado en `service_name` al momento de la venta
+   * (`registrarVenta()`), así que el Historial no pierde esa información.
+   */
+  async borrarServicioDefinitivo(id: number): Promise<{ success: boolean }> {
+    const { error: unlinkError } = await this.supabase.client
+      .from('special_service_sales')
+      .update({ service_id: null })
+      .eq('service_id', id);
+
+    if (unlinkError) {
+      this._error.set(this.sanitizer.sanitize(unlinkError).message);
+      return { success: false };
+    }
+
+    const { error: deleteError } = await this.supabase.client
+      .from('service_catalog')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      this._error.set(this.sanitizer.sanitize(deleteError).message);
+      return { success: false };
+    }
+
+    await this.refreshSilently();
+    return { success: true };
   }
 
   async exportarHistorial(format: 'excel' | 'pdf'): Promise<void> {

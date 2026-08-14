@@ -10,19 +10,41 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 type TableResponse = { data: unknown; error: unknown };
 
+/**
+ * `tables` acepta keys `"tabla"` (respuesta fija sin importar el método) o
+ * `"tabla:delete"`/`"tabla:update"`/etc. (respuesta específica por operación,
+ * necesario para simular un DELETE que falla y un UPDATE de fallback sobre la
+ * misma tabla — ver `borrarServicio`).
+ */
 function createMockSupabase(tables: Record<string, TableResponse>) {
   const builders = new Map<string, any>();
   const from = vi.fn().mockImplementation((table: string) => {
     if (!builders.has(table)) {
-      const res = tables[table] ?? { data: [], error: null };
+      let lastOp = 'select';
       const builder: any = {
-        select: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
+        select: vi.fn(function (this: any) {
+          lastOp = 'select';
+          return this;
+        }),
+        insert: vi.fn(function (this: any) {
+          lastOp = 'insert';
+          return this;
+        }),
+        update: vi.fn(function (this: any) {
+          lastOp = 'update';
+          return this;
+        }),
+        delete: vi.fn(function (this: any) {
+          lastOp = 'delete';
+          return this;
+        }),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        then: (resolve: any, reject: any) => Promise.resolve(res).then(resolve, reject),
+        then: (resolve: any, reject: any) => {
+          const res = tables[`${table}:${lastOp}`] ?? tables[table] ?? { data: [], error: null };
+          return Promise.resolve(res).then(resolve, reject);
+        },
       };
       builders.set(table, builder);
     }
@@ -83,6 +105,7 @@ function venta(overrides: Record<string, unknown> = {}) {
     status: 'pending',
     paid: false,
     metadata: null,
+    branch_id: 3,
     service_catalog: { name: 'Psicotécnico' },
     ...overrides,
   };
@@ -130,12 +153,12 @@ describe('ServiciosEspecialesFacade', () => {
   });
 
   describe('mapeo de ventas', () => {
-    it('traduce status y usa "—" para cliente/rut/servicio nulos', async () => {
+    it('usa "—" para cliente/rut/servicio nulos', async () => {
       const { facade } = setup({
         tables: {
           special_service_sales: {
             data: [
-              venta({ status: 'completed' }),
+              venta({ paid: true }),
               venta({ id: 2, client_name: null, client_rut: null, service_catalog: null }),
             ],
             error: null,
@@ -143,12 +166,29 @@ describe('ServiciosEspecialesFacade', () => {
         },
       });
       await facade.initialize();
-      const [completada, anonima] = facade.ventas();
-      expect(completada.estado).toBe('completado');
-      expect(anonima.estado).toBe('pendiente');
+      const [, anonima] = facade.ventas();
       expect(anonima.cliente).toBe('—');
       expect(anonima.rut).toBe('—');
       expect(anonima.servicio).toBe('—');
+    });
+
+    // fix-023-i: "Estado" se fusiona con "Cobro" (paid) — status de BD ya no se usa para mostrarlo.
+    it('estado se deriva de "paid", no de "status" (fix-023-i)', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: {
+            data: [
+              venta({ id: 1, paid: true, status: 'pending' }), // status desalineado a propósito
+              venta({ id: 2, paid: false, status: 'completed' }),
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      const [cobrada, sinCobrar] = facade.ventas();
+      expect(cobrada.estado).toBe('completado');
+      expect(sinCobrar.estado).toBe('pendiente');
     });
   });
 
@@ -193,8 +233,9 @@ describe('ServiciosEspecialesFacade', () => {
       } as any);
       expect(ok).toBe(true);
       const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      // fix-023-i: status refleja "cobrado" (paid) en el INSERT, no queda hardcodeado.
       expect(insertMock).toHaveBeenCalledWith(
-        expect.objectContaining({ branch_id: 3, registered_by: 9, status: 'pending' }),
+        expect.objectContaining({ branch_id: 3, registered_by: 9, status: 'completed' }),
       );
     });
 
@@ -282,6 +323,214 @@ describe('ServiciosEspecialesFacade', () => {
       await facade.registrarCobro(7);
 
       expect(facade.ventas()[0].cobrado).toBe(true);
+    });
+  });
+
+  describe('borrarVenta — candado de cuadratura cerrada (fix-022-i, ASG-b-050)', () => {
+    it('golden path: sin cash_closings para la fecha → borra y refresca', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-10' })], error: null },
+          cash_closings: { data: [], error: null },
+        },
+      });
+      await facade.initialize();
+
+      const result = await facade.borrarVenta(7);
+
+      expect(result).toEqual({ success: true });
+      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
+      expect(deleteMock).toHaveBeenCalled();
+    });
+
+    it('AC-E1: la fecha ya tiene cash_closings → bloquea, no ejecuta DELETE', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-01' })], error: null },
+          cash_closings: { data: [{ id: 99 }], error: null },
+        },
+      });
+      await facade.initialize();
+
+      const result = await facade.borrarVenta(7);
+
+      expect(result.success).toBe(false);
+      expect(result.blockedReason).toContain('2026-08-01');
+      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
+      expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    it('venta inexistente en el estado local → falla sin consultar cash_closings', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { special_service_sales: { data: [], error: null } },
+      });
+      await facade.initialize();
+
+      const result = await facade.borrarVenta(999);
+
+      expect(result.success).toBe(false);
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('cash_closings');
+    });
+  });
+
+  describe('borrarServicio — fallback a desactivar si tiene ventas asociadas (fix-022-i, ASG-b-050)', () => {
+    it('sin ventas asociadas: DELETE duro exitoso', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'service_catalog:delete': { data: null, error: null },
+        },
+      });
+
+      const result = await facade.borrarServicio(1);
+
+      expect(result).toEqual({ success: true, deactivated: false });
+      const builder = mockSupabase._builders.get('service_catalog');
+      expect(builder.delete).toHaveBeenCalled();
+      expect(builder.update).not.toHaveBeenCalled();
+    });
+
+    it('con ventas asociadas: DELETE falla con FK (23503) → fallback a active=false', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'service_catalog:delete': {
+            data: null,
+            error: { code: '23503', message: 'FK violation' },
+          },
+          'service_catalog:update': { data: null, error: null },
+        },
+      });
+
+      const result = await facade.borrarServicio(1);
+
+      expect(result).toEqual({ success: true, deactivated: true });
+      const builder = mockSupabase._builders.get('service_catalog');
+      expect(builder.delete).toHaveBeenCalled();
+      expect(builder.update).toHaveBeenCalledWith({ active: false });
+    });
+
+    it('error genérico (no FK) → success:false, error saneado', async () => {
+      const { facade } = setup({
+        tables: {
+          'service_catalog:delete': { data: null, error: { code: '42501', message: 'RLS deny' } },
+        },
+      });
+
+      const result = await facade.borrarServicio(1);
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('RLS deny');
+    });
+
+    it('el fallback de UPDATE también falla → success:false', async () => {
+      const { facade } = setup({
+        tables: {
+          'service_catalog:delete': {
+            data: null,
+            error: { code: '23503', message: 'FK violation' },
+          },
+          'service_catalog:update': { data: null, error: new Error('update failed') },
+        },
+      });
+
+      const result = await facade.borrarServicio(1);
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('reactivarServicio (fix-023-i)', () => {
+    it('UPDATE active=true exitoso → refresca catálogo', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'service_catalog:update': { data: null, error: null },
+        },
+      });
+
+      const result = await facade.reactivarServicio(1);
+
+      expect(result).toEqual({ success: true });
+      const builder = mockSupabase._builders.get('service_catalog');
+      expect(builder.update).toHaveBeenCalledWith({ active: true });
+    });
+
+    it('error del UPDATE → success:false, error saneado', async () => {
+      const { facade } = setup({
+        tables: {
+          'service_catalog:update': { data: null, error: { message: 'RLS deny' } },
+        },
+      });
+
+      const result = await facade.reactivarServicio(1);
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  describe('mapeo — service_name sobrevive a un catálogo borrado (fix-024-i)', () => {
+    it('usa service_name como snapshot, con fallback al join service_catalog.name', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: {
+            data: [
+              venta({ id: 1, service_name: 'Psicotécnico (snapshot)', service_catalog: null }),
+              venta({ id: 2, service_name: null, service_catalog: { name: 'Del join' } }),
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      const [conSnapshot, sinSnapshot] = facade.ventas();
+      expect(conSnapshot.servicio).toBe('Psicotécnico (snapshot)');
+      expect(sinSnapshot.servicio).toBe('Del join');
+    });
+  });
+
+  describe('borrarServicioDefinitivo (fix-024-i)', () => {
+    it('desvincula las ventas (service_id=null) y borra el catálogo', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'special_service_sales:update': { data: null, error: null },
+          'service_catalog:delete': { data: null, error: null },
+        },
+      });
+
+      const result = await facade.borrarServicioDefinitivo(1);
+
+      expect(result).toEqual({ success: true });
+      const ventasBuilder = mockSupabase._builders.get('special_service_sales');
+      expect(ventasBuilder.update).toHaveBeenCalledWith({ service_id: null });
+      const catalogoBuilder = mockSupabase._builders.get('service_catalog');
+      expect(catalogoBuilder.delete).toHaveBeenCalled();
+    });
+
+    it('si falla desvincular las ventas, no intenta el DELETE del catálogo', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'special_service_sales:update': { data: null, error: { message: 'RLS deny' } },
+        },
+      });
+
+      const result = await facade.borrarServicioDefinitivo(1);
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('RLS deny');
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('service_catalog');
+    });
+
+    it('si el DELETE del catálogo falla, reporta el error', async () => {
+      const { facade } = setup({
+        tables: {
+          'special_service_sales:update': { data: null, error: null },
+          'service_catalog:delete': { data: null, error: { message: 'FK inesperada' } },
+        },
+      });
+
+      const result = await facade.borrarServicioDefinitivo(1);
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('FK inesperada');
     });
   });
 });
