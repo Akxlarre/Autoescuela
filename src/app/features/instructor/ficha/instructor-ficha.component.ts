@@ -61,7 +61,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     `,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--hero-fit" appBentoReveal appBentoGridLayout>
       <!-- ── Error ── -->
       @if (facade.error()) {
         <div class="bento-banner">
@@ -107,21 +107,18 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         <!-- ── Contenido principal ── -->
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
-            <!-- 3-Card Grid — skeleton inline -->
-            <div class="bento-grid" appScrollReveal>
+            <!-- 2-Card Grid — skeleton inline -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" appScrollReveal>
               @if (facade.detailLoading()) {
-                <div class="bento-wide" data-col-span="4">
+                <div>
                   <app-skeleton-block variant="rect" width="100%" height="160px" />
                 </div>
-                <div class="bento-wide" data-col-span="4">
-                  <app-skeleton-block variant="rect" width="100%" height="160px" />
-                </div>
-                <div class="bento-wide" data-col-span="4">
+                <div>
                   <app-skeleton-block variant="rect" width="100%" height="160px" />
                 </div>
               } @else if (facade.studentDetail(); as detail) {
                 <!-- Info Personal -->
-                <div class="card bento-wide" appCardHover data-col-span="4">
+                <div class="card" appCardHover>
                   <h3 class="kpi-label mb-4">Información del Alumno</h3>
                   <div class="space-y-3">
                     <div>
@@ -164,7 +161,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Prácticas -->
-                <div class="card bento-wide" appCardHover data-col-span="4">
+                <div class="card" appCardHover>
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">

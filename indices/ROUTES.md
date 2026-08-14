@@ -99,7 +99,6 @@
 | `/app/instructor/clase/:id` | `InstructorClaseDetailComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/ficha/:id` | → redirect a `alumnos/:id/ficha` | — | `src/app/app.routes.ts` |
 | `/app/instructor/horario` | `InstructorHorarioComponent` | — | `src/app/app.routes.ts` |
-| `/app/instructor/ensayos-teoricos` | `InstructorEnsayosTeoricosComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/liquidacion` | `InstructorLiquidacionComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/notificaciones` | `InstructorNotificacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/tareas` | `InstructorTareasComponent` | — | `src/app/app.routes.ts` |

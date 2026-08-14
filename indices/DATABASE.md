@@ -2174,8 +2174,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 **Índices:** `idx_vehicle_docs_expiry`
 
-**Constraints:** `vehicle_documents_vehicle_id_type_key` — `UNIQUE(vehicle_id, type)` (`20260811120000`, fix-153-m). Requerida por `FlotaFacade.upsertVehicleDocument()`, que hace `.upsert(..., { onConflict: 'vehicle_id,type' })` — sin esta constraint el upsert fallaba siempre (no había target de ON CONFLICT válido).
-
 ### `vehicles` — 🔒 RLS
 
 > Flota de vehículos con patente, estado y kilometraje (RF-087)
@@ -2300,7 +2298,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
 
 
 <!-- AUTO-GENERATED:END -->

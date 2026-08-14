@@ -1,31 +1,17 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-  signal,
-  effect,
-  computed,
-} from '@angular/core';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
-import { EvaluationChecklistComponent } from '@shared/components/evaluation-checklist/evaluation-checklist.component';
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import {
-  EVALUATION_CHECKLIST_ITEMS,
-  EvaluationChecklistItem,
-  EvaluationFormData,
-} from '@core/models/ui/instructor-portal.model';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-instructor-clase-detail',
@@ -33,11 +19,9 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    ReactiveFormsModule,
     TagModule,
     IconComponent,
     EmptyStateComponent,
-    EvaluationChecklistComponent,
     SignaturePadComponent,
     SectionHeroComponent,
     AlertCardComponent,
@@ -46,24 +30,19 @@ import {
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid bento-grid--hero-fit" appBentoGridLayout>
       <!-- Section Hero Premium -->
       <app-section-hero
-        [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
-        [subtitle]="
-          showFinalStep()
-            ? 'Registra el kilometraje final y firmas'
-            : 'Completa la evaluación mientras transcurre la clase'
-        "
+        title="Clase en Curso"
+        subtitle="Registra el kilometraje de retorno para finalizar"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
-        [actions]="heroActions()"
+        [actions]="heroActions"
         density="slim"
-        (actionClick)="onHeroAction($event)"
       />
 
       <div class="bento-banner">
-        <div class="max-w-4xl mx-auto flex flex-col gap-6">
+        <div class="max-w-3xl mx-auto flex flex-col gap-6">
           @if (clasesFacade.isLoading()) {
             <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
             <div class="bento-card relative overflow-hidden">
@@ -85,15 +64,6 @@ import {
                   height="24px"
                   borderRadius="999px"
                   class="hidden sm:block shrink-0"
-                />
-              </div>
-
-              <div class="mb-5 sm:hidden mt-2">
-                <app-skeleton-block
-                  variant="rect"
-                  width="80px"
-                  height="24px"
-                  borderRadius="999px"
                 />
               </div>
 
@@ -131,50 +101,9 @@ import {
               </div>
             </div>
 
-            <!-- Skeleton: Checklist Premium -->
-            <div class="grid grid-cols-1 gap-6 mt-2">
-              <div class="bento-card p-6 sm:p-10 space-y-10 relative overflow-hidden">
-                <!-- Lista de ítems -->
-                <div class="space-y-6 w-full max-w-2xl mx-auto">
-                  @for (_ of [1, 2, 3, 4]; track $index) {
-                    <div class="flex flex-col gap-2">
-                      <app-skeleton-block variant="text" width="40%" height="16px" />
-                      <div class="flex items-center justify-between">
-                        <app-skeleton-block variant="text" width="80%" height="12px" />
-                        <app-skeleton-block
-                          variant="rect"
-                          width="100px"
-                          height="32px"
-                          borderRadius="999px"
-                        />
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <div class="w-full h-px bg-border-subtle/60 max-w-2xl mx-auto"></div>
-
-                <!-- Observaciones y Botón -->
-                <div class="space-y-4 w-full max-w-2xl mx-auto">
-                  <app-skeleton-block variant="text" width="180px" height="14px" />
-                  <app-skeleton-block
-                    variant="rect"
-                    width="100%"
-                    height="120px"
-                    borderRadius="1rem"
-                  />
-                </div>
-
-                <div class="pt-4 flex justify-center">
-                  <app-skeleton-block
-                    variant="rect"
-                    width="320px"
-                    height="56px"
-                    borderRadius="1rem"
-                    class="w-full sm:w-80"
-                  />
-                </div>
-              </div>
+            <div class="bento-card p-6 sm:p-10 space-y-8 relative overflow-hidden">
+              <app-skeleton-block variant="rect" width="100%" height="140px" borderRadius="1rem" />
+              <app-skeleton-block variant="rect" width="100%" height="100px" borderRadius="1rem" />
             </div>
           } @else if (clasesFacade.error()) {
             <app-alert-card title="Error al cargar clase" severity="error">
@@ -261,168 +190,111 @@ import {
               </div>
             </div>
 
-            @if (!showFinalStep()) {
-              <!-- STEP 1: EVALUATION (DURING CLASS) -->
-              <div class="grid grid-cols-1 gap-6 mt-2">
-                <div
-                  class="bento-card p-6 sm:p-10 space-y-10 relative overflow-hidden"
-                  appCardHover
+            <!-- Cierre de clase: km (obligatorio) + observaciones y firmas (opcionales) -->
+            <div class="card p-6 space-y-8">
+              <!-- KM END ODOMETER -->
+              <div>
+                <label
+                  class="text-sm font-bold text-text-secondary uppercase tracking-widest mb-2 flex justify-center text-center"
                 >
-                  <!-- Checklist Premium -->
-                  <div class="relative z-10 w-full max-w-2xl mx-auto">
-                    <app-evaluation-checklist
-                      [items]="checklistItems"
-                      (itemsChange)="onChecklistChange($event)"
-                    />
-                  </div>
-
-                  <div class="w-full h-px bg-border-subtle/60 max-w-2xl mx-auto"></div>
-
-                  <!-- Observaciones Premium -->
-                  <div class="space-y-4 relative z-10 w-full max-w-2xl mx-auto">
-                    <label
-                      class="text-xs sm:text-sm font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2"
-                      for="obs"
+                  Kilometraje al Retorno
+                </label>
+                <div
+                  class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-subtle rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors focus-within:border-brand/50 focus-within:bg-subtle"
+                >
+                  <input
+                    type="number"
+                    [(ngModel)]="kmEnd"
+                    max="999999"
+                    class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
+                    placeholder="0"
+                    data-llm-description="input for the odometer reading at class return"
+                  />
+                  <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2"
+                    >km</span
+                  >
+                </div>
+                <!-- Warning Label -->
+                <div class="flex justify-center mt-3">
+                  @if (kmEnd !== null && kmEnd <= (cls.kmStart ?? 0)) {
+                    <div
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-error/10 text-error text-sm font-medium animate-in fade-in"
                     >
-                      <app-icon name="pen-tool" [size]="16" />
-                      Observaciones y Correcciones
-                    </label>
-                    <div class="relative group">
-                      <textarea
-                        id="obs"
-                        [(ngModel)]="observations"
-                        rows="4"
-                        class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
-                        placeholder="Documenta áreas de mejora, destrezas adquiridas o tareas pendientes para la próxima sesión..."
-                        data-llm-description="input for class observations and corrections"
-                      ></textarea>
+                      <app-icon name="alert-circle" [size]="14" />
+                      <span>Debe ser mayor al inicial ({{ cls.kmStart }} km)</span>
                     </div>
-                  </div>
-
-                  <div class="pt-4 relative z-10 flex justify-center">
-                    <button
-                      class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center sm:ml-auto group hover:-translate-y-0.5 transition-all"
-                      (click)="showFinalStep.set(true)"
-                      data-llm-action="avanzar-a-registrar-retorno"
-                    >
-                      <app-icon
-                        name="flag"
-                        [size]="20"
-                        class="mr-2 group-hover:translate-x-1 transition-transform"
-                      />
-                      <span>Finalizar y Registrar Retorno</span>
-                    </button>
-                  </div>
+                  } @else {
+                    <p class="text-xs text-text-muted opacity-70">
+                      Verifique el odómetro del tablero central.
+                    </p>
+                  }
                 </div>
               </div>
-            } @else {
-              <!-- STEP 2: CLOSURE (KM END + SIGNATURES) -->
-              <div class="card p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div class="space-y-6">
-                  <!-- KM END ODOMETER -->
-                  <div>
-                    <label
-                      class="text-sm font-bold text-text-secondary uppercase tracking-widest mb-2 flex justify-center text-center"
-                    >
-                      Kilometraje al Retorno
-                    </label>
-                    <div
-                      class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-subtle rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors focus-within:border-brand/50 focus-within:bg-subtle"
-                    >
-                      <input
-                        type="number"
-                        [(ngModel)]="kmEnd"
-                        max="999999"
-                        class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
-                        placeholder="0"
-                        data-llm-description="input for the odometer reading at class return"
-                      />
-                      <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2"
-                        >km</span
-                      >
-                    </div>
-                    <!-- Warning Label -->
-                    <div class="flex justify-center mt-3">
-                      @if (kmEnd !== null && kmEnd <= (cls?.kmStart ?? 0)) {
-                        <div
-                          class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-error/10 text-error text-sm font-medium animate-in fade-in"
-                        >
-                          <app-icon name="alert-circle" [size]="14" />
-                          <span>Debe ser mayor al inicial ({{ cls.kmStart }} km)</span>
-                        </div>
-                      } @else {
-                        <p class="text-xs text-text-muted opacity-70">
-                          Verifique el odómetro del tablero central.
-                        </p>
-                      }
-                    </div>
-                  </div>
 
-                  <!-- NOTA GLOBAL (Estrellas / Premium UI) -->
-                  <div
-                    class="space-y-4 flex flex-col items-center border-t border-b border-border-subtle py-8 my-8"
-                  >
-                    <h3
-                      class="font-bold text-text-primary uppercase tracking-widest text-sm text-center"
-                    >
-                      Calificación General
-                      <span class="font-normal normal-case text-text-muted">(opcional)</span>
-                    </h3>
-                    <div
-                      class="flex gap-2 sm:gap-4 p-2 bg-subtle rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
-                    >
-                      @for (grade of [3, 4, 5, 6, 7]; track grade) {
-                        <button
-                          class="w-12 h-12 sm:w-16 sm:h-16 flex flex-col items-center justify-center font-display font-bold text-lg sm:text-2xl rounded-xl transition-all duration-300"
-                          [class.bg-brand]="selectedGrade() === grade"
-                          [class.text-white]="selectedGrade() === grade"
-                          [class.shadow-md]="selectedGrade() === grade"
-                          [class.scale-110]="selectedGrade() === grade"
-                          [class.bg-transparent]="selectedGrade() !== grade"
-                          [class.text-text-muted]="selectedGrade() !== grade"
-                          [class.hover:bg-subtle]="selectedGrade() !== grade"
-                          (click)="selectedGrade.set(grade)"
-                          data-llm-action="seleccionar-calificacion-clase"
-                        >
-                          <span class="leading-none">{{ grade }}</span>
-                        </button>
-                      }
-                    </div>
-                  </div>
+              <hr class="border-border-subtle" />
 
-                  <!-- SIGNATURES -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <app-signature-pad
-                      label="Firma del Alumno"
-                      (signatureChange)="onSignatureChange('student', $event)"
-                      [height]="150"
-                    />
-                    <app-signature-pad
-                      label="Firma del Instructor"
-                      (signatureChange)="onSignatureChange('instructor', $event)"
-                      [height]="150"
-                    />
-                  </div>
-                </div>
-
-                <div class="pt-6 flex justify-center mt-4">
-                  <button
-                    class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
-                    [disabled]="!canFinalize() || isSubmitting()"
-                    (click)="onFinalize(cls)"
-                    data-llm-action="cerrar-clase-definitivamente"
-                  >
-                    @if (isSubmitting()) {
-                      <app-icon name="loader-2" [size]="20" class="animate-spin mr-2" />
-                      <span>Guardando Resultados...</span>
-                    } @else {
-                      <app-icon name="check-circle" [size]="20" class="mr-2" />
-                      <span>Cerrar Clase Definitivamente</span>
-                    }
-                  </button>
+              <!-- Observaciones (opcional) -->
+              <div class="space-y-1.5">
+                <label
+                  class="text-xs sm:text-sm font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2"
+                  for="obs"
+                >
+                  <app-icon name="pen-tool" [size]="16" />
+                  Observaciones (opcional)
+                </label>
+                <p class="text-sm text-text-muted">
+                  La evaluación de desempeño se completa después desde la ficha técnica del alumno.
+                </p>
+                <div class="relative group">
+                  <textarea
+                    id="obs"
+                    [(ngModel)]="observations"
+                    rows="3"
+                    class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
+                    placeholder="Notas rápidas sobre el retorno (opcional)..."
+                    data-llm-description="input for class observations on return"
+                  ></textarea>
                 </div>
               </div>
-            }
+
+              <hr class="border-border-subtle" />
+
+              <!-- Firmas (opcional) -->
+              <div class="space-y-3">
+                <h3 class="text-sm font-bold text-text-secondary uppercase tracking-widest">
+                  Firmas (opcional)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <app-signature-pad
+                    label="Firma del Alumno"
+                    (signatureChange)="onSignatureChange('student', $event)"
+                    [height]="150"
+                  />
+                  <app-signature-pad
+                    label="Firma del Instructor"
+                    (signatureChange)="onSignatureChange('instructor', $event)"
+                    [height]="150"
+                  />
+                </div>
+              </div>
+
+              <div class="pt-2 flex justify-center">
+                <button
+                  class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
+                  [disabled]="!canFinalize() || isSubmitting()"
+                  (click)="onFinalize(cls)"
+                  data-llm-action="cerrar-clase-definitivamente"
+                >
+                  @if (isSubmitting()) {
+                    <app-icon name="loader-2" [size]="20" class="animate-spin mr-2" />
+                    <span>Guardando...</span>
+                  } @else {
+                    <app-icon name="flag" [size]="20" class="mr-2" />
+                    <span>Finalizar y Registrar Retorno</span>
+                  }
+                </button>
+              </div>
+            </div>
           } @else {
             <app-empty-state
               icon="search-x"
@@ -454,57 +326,10 @@ export class InstructorClaseDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  public showFinalStep = signal(false);
   public isSubmitting = signal(false);
+  readonly heroActions: SectionHeroAction[] = [];
 
-  // ── Hero actions (acciones principales / estado interno) ──
-  readonly heroActions = computed<SectionHeroAction[]>(() => {
-    if (this.showFinalStep()) {
-      return [
-        {
-          id: 'back_to_eval',
-          label: 'Editar Evaluación',
-          icon: 'square-pen',
-          primary: false,
-        },
-      ];
-    }
-    return [];
-  });
-
-  onHeroAction(id: string) {
-    if (id === 'back_to_eval') {
-      this.showFinalStep.set(false);
-    }
-  }
-
-  // Evaluation Data
-  public checklistItems: EvaluationChecklistItem[] = [...EVALUATION_CHECKLIST_ITEMS].map(
-    (item) => ({
-      ...item,
-      checked: true,
-    }),
-  );
   public observations = '';
-  public selectedGrade = signal<number | null>(null);
-
-  constructor() {
-    // Sincronizar datos cargados desde el Facade si existen (para persistencia ante refresco)
-    effect(() => {
-      const cls = this.clasesFacade.selectedClass();
-      if (cls) {
-        // Solo sobreescribimos si el checklist cargado tiene datos
-        if (cls.evaluationChecklist && cls.evaluationChecklist.length > 0) {
-          this.checklistItems = [...cls.evaluationChecklist];
-        }
-        if (cls.notes) {
-          this.observations = cls.notes;
-        }
-      }
-    });
-  }
-
-  // Closure Data
   public kmEnd: number | null = null;
   private studentSignature: string | null = null;
   private instructorSignature: string | null = null;
@@ -519,12 +344,6 @@ export class InstructorClaseDetailComponent implements OnInit {
         }
       }
     });
-
-    // Restaurar si ya había algo (puedes añadir persistencia en localStorage después)
-  }
-
-  onChecklistChange(items: EvaluationChecklistItem[]) {
-    this.checklistItems = items;
   }
 
   onSignatureChange(type: 'student' | 'instructor', dataUrl: string | null) {
@@ -537,31 +356,16 @@ export class InstructorClaseDetailComponent implements OnInit {
     return this.kmEnd !== null && this.kmEnd > (cls?.kmStart || 0);
   }
 
-  async onFinalize(cls: any) {
+  async onFinalize(cls: { sessionId: number }) {
     if (!this.canFinalize()) return;
 
     this.isSubmitting.set(true);
     try {
-      // 1. Finalizar clase (status + km_end) — la evaluación NUNCA es requisito para cerrar.
-      await this.clasesFacade.finishClass(cls.sessionId, this.kmEnd!);
-
-      // 2. Guardar evaluación solo si el instructor alcanzó a calificarla ahora mismo;
-      // si no, la completa después desde su propio portal (fix-115-m).
-      if (this.selectedGrade() !== null) {
-        const evalData: EvaluationFormData = {
-          sessionId: cls.sessionId,
-          classNumber: cls.classNumber,
-          studentName: cls.studentName,
-          kmStart: cls.kmStart,
-          kmEnd: this.kmEnd,
-          grade: this.selectedGrade()!,
-          observations: this.observations,
-          checklist: this.checklistItems,
-          studentSignature: this.studentSignature,
-          instructorSignature: this.instructorSignature,
-        };
-        await this.clasesFacade.saveEvaluation(evalData);
-      }
+      await this.clasesFacade.finishClass(cls.sessionId, this.kmEnd!, {
+        notes: this.observations || undefined,
+        studentSignature: this.studentSignature,
+        instructorSignature: this.instructorSignature,
+      });
 
       this.clasesFacade.showSuccess('Clase Finalizada', 'La sesión se ha guardado con éxito.');
       this.router.navigate(['/app/instructor/dashboard']);

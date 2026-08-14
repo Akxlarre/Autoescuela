@@ -8,8 +8,6 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 import type {
   InstructorStudentCard,
   InstructorStudentDetail,
-  ExamScoreRow,
-  RegisterExamPayload,
 } from '@core/models/ui/instructor-portal.model';
 
 @Injectable({
@@ -43,22 +41,17 @@ export class InstructorAlumnosFacade {
   /** Alumno seleccionado actualmente para detalle (Drawer) */
   private _activeStudent = signal<InstructorStudentCard | null>(null);
 
-  private _examScores = signal<ExamScoreRow[]>([]);
-
   private _isLoading = signal<boolean>(false);
   private _detailLoading = signal<boolean>(false);
-  private _examLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
   private _initialized = false;
 
   readonly students = this._students.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
   readonly activeStudent = this._activeStudent.asReadonly();
-  readonly examScores = this._examScores.asReadonly();
 
   readonly isLoading = this._isLoading.asReadonly();
   readonly detailLoading = this._detailLoading.asReadonly();
-  readonly examLoading = this._examLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
   readonly kpis = computed(() => {
@@ -279,72 +272,6 @@ export class InstructorAlumnosFacade {
       this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando detalle');
     } finally {
       this._detailLoading.set(false);
-    }
-  }
-
-  async loadExamScores(): Promise<void> {
-    this._error.set(null);
-    this._examLoading.set(true);
-    try {
-      const enrollmentIds = this._students().map((s) => s.enrollmentId);
-      if (enrollmentIds.length === 0) {
-        this._examScores.set([]);
-        this._examLoading.set(false);
-        return;
-      }
-
-      const { data, error } = await this.supabase.client
-        .from('class_b_exam_scores')
-        .select(
-          `
-          id, score, date, passed,
-          students!fk_class_b_exam_scores_student!inner(id, users!inner(first_names, paternal_last_name, rut)),
-          enrollments!fk_class_b_exam_scores_enrollment(id)
-        `,
-        )
-        .in('enrollment_id', enrollmentIds)
-        .order('date', { ascending: false });
-
-      if (error) throw error;
-
-      const mapped = (data || []).map((row) => {
-        const u = (row.students as any)?.users;
-        return {
-          id: row.id,
-          studentName: u ? `${u.first_names} ${u.paternal_last_name}` : '',
-          studentRut: u?.rut || '',
-          enrollmentId: (row.enrollments as any)?.id || 0,
-          date: row.date,
-          score: row.score,
-          passed: row.passed,
-          passedLabel: row.passed ? 'Aprobado' : 'Reprobado',
-          scoreColor: row.passed ? 'success' : 'error',
-        } as ExamScoreRow;
-      });
-
-      this._examScores.set(mapped);
-    } catch (err: any) {
-      console.error(err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando ensayos');
-    } finally {
-      this._examLoading.set(false);
-    }
-  }
-
-  async registerExamScore(payload: RegisterExamPayload): Promise<void> {
-    try {
-      const { error } = await this.supabase.client.from('class_b_exam_scores').insert({
-        student_id: payload.studentId,
-        enrollment_id: payload.enrollmentId,
-        date: payload.date || new Date().toISOString(),
-        score: payload.score,
-        passed: payload.score >= 87,
-      });
-
-      if (error) throw error;
-      await this.loadExamScores();
-    } catch (err: any) {
-      throw err;
     }
   }
 

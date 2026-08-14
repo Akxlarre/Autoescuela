@@ -656,13 +656,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'ensayos-teoricos',
-            loadComponent: () =>
-              import('./features/instructor/ensayos-teoricos/instructor-ensayos-teoricos.component').then(
-                (m) => m.InstructorEnsayosTeoricosComponent,
-              ),
-          },
-          {
             path: 'liquidacion',
             loadComponent: () =>
               import('./features/instructor/liquidacion/instructor-liquidacion.component').then(

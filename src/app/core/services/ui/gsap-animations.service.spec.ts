@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
+import gsap from 'gsap';
 import { GsapAnimationsService } from './gsap-animations.service';
 
 /**
@@ -128,5 +129,92 @@ describe('GsapAnimationsService (server context)', () => {
       // En contexto server shouldAnimate()=false → estado final visible inmediato.
       expect(cell.style.opacity).toBe('1');
     });
+  });
+});
+
+// ── fix-171-m: animateScrollReveal ahora usa IntersectionObserver en vez de
+// ScrollTrigger (que calculaba la posición del trigger una sola vez y podía quedar
+// obsoleta ante animaciones de un padre aún en curso, dejando el elemento en
+// opacity:0 permanente) ────────────────────────────────────────────────────────
+describe('GsapAnimationsService.animateScrollReveal (browser context, fix-171-m)', () => {
+  let service: GsapAnimationsService;
+  let observerCallback!: IntersectionObserverCallback;
+  let observeSpy: ReturnType<typeof vi.fn>;
+  let disconnectSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+
+    observeSpy = vi.fn();
+    disconnectSpy = vi.fn();
+    vi.stubGlobal(
+      'IntersectionObserver',
+      vi.fn().mockImplementation(function (this: unknown, cb: IntersectionObserverCallback) {
+        observerCallback = cb;
+        return { observe: observeSpy, disconnect: disconnectSpy };
+      }),
+    );
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+    });
+    service = TestBed.inject(GsapAnimationsService);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('hides the element and observes it via IntersectionObserver instead of ScrollTrigger', () => {
+    const el = document.createElement('div');
+    service.animateScrollReveal(el);
+
+    expect(el.style.opacity).toBe('0');
+    expect(observeSpy).toHaveBeenCalledWith(el);
+  });
+
+  it('reveals the element and disconnects the observer once it intersects', () => {
+    const el = document.createElement('div');
+    const toSpy = vi.spyOn(gsap, 'to');
+    service.animateScrollReveal(el);
+
+    observerCallback(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(disconnectSpy).toHaveBeenCalled();
+    expect(toSpy).toHaveBeenCalledWith(el, expect.objectContaining({ opacity: 1, y: 0 }));
+  });
+
+  it('does nothing while the element has not intersected yet', () => {
+    const el = document.createElement('div');
+    const toSpy = vi.spyOn(gsap, 'to');
+    service.animateScrollReveal(el);
+
+    observerCallback(
+      [{ isIntersecting: false } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(disconnectSpy).not.toHaveBeenCalled();
+    expect(toSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns a cleanup function that disconnects the observer', () => {
+    const el = document.createElement('div');
+    const cleanup = service.animateScrollReveal(el);
+
+    cleanup();
+
+    expect(disconnectSpy).toHaveBeenCalled();
   });
 });

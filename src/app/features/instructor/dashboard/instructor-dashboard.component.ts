@@ -120,7 +120,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                           width="100px"
                           height="40px"
                           borderRadius="0.5rem"
-                          class="w-full sm:w-[100px]"
+                          class="w-full sm:w-25"
                         />
                       </div>
                     </div>
@@ -165,7 +165,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                             <app-badge variant="success"> Práctica </app-badge>
                             <p-tag [value]="cls.statusLabel" [severity]="$any(cls.statusColor)" />
                           </div>
-                          <h3 class="font-bold text-base text-text-primary">
+                          <h3 class="font-bold text-text-primary">
                             {{ cls.studentName }}
                           </h3>
 
@@ -187,6 +187,15 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                               </span>
                             }
                           </div>
+
+                          @if (cls.status === 'in_progress') {
+                            <p
+                              class="indicator-live text-sm font-semibold text-success mt-2"
+                              data-llm-description="clase en curso, pendiente de finalizar"
+                            >
+                              Clase en curso — recuerda finalizarla al terminar
+                            </p>
+                          }
                         </div>
                       </div>
 

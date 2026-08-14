@@ -426,6 +426,34 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               }
             </div>
 
+            <!-- Instructor sin cuenta activada: nunca tuvo cuenta Auth (fix-169-m,
+                 ej. filas insertadas vía seed/SQL directo) o nunca seteó su contraseña -->
+            @if (!inst.hasAuthAccount || inst.firstLogin) {
+              <div
+                class="flex flex-col gap-2 p-3 rounded-lg text-sm mb-6 bg-warning-subtle text-warning"
+                style="border: 1px solid var(--state-warning-border)"
+              >
+                <span class="flex items-center gap-2 font-medium">
+                  <app-icon name="alert-triangle" [size]="16" />
+                  Este instructor todavía no tiene cuenta activada para ingresar al sistema.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary self-start flex items-center gap-2"
+                  [disabled]="isSendingInvite() || !emailValido()"
+                  (click)="onEnviarInvitacion(inst.userId)"
+                  data-llm-action="enviar-invitacion-instructor"
+                >
+                  @if (isSendingInvite()) {
+                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                    Enviando...
+                  } @else {
+                    Reenviar invitación
+                  }
+                </button>
+              </div>
+            }
+
             <!-- ── Estado activo/inactivo ──────────────────────────────────────── -->
             <div class="flex flex-col gap-4 mb-6">
               <h3 class="section-title">Estado de la cuenta</h3>
@@ -560,6 +588,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly sedeId = signal<number | null>(null);
   protected readonly bothBranches = signal(false);
   protected readonly activo = signal(true);
+  protected readonly isSendingInvite = signal(false);
 
   protected currentEmail = '';
   protected readonly currentVehicleId = signal<number | null>(null);
@@ -729,6 +758,17 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
 
   protected verDocumentos(inst: { id: number; nombre: string }): void {
     this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
+  }
+
+  protected async onEnviarInvitacion(userId: number): Promise<void> {
+    if (!userId || !this.emailValido()) return;
+
+    this.isSendingInvite.set(true);
+    try {
+      await this.facade.enviarInvitacion(userId, this.email());
+    } finally {
+      this.isSendingInvite.set(false);
+    }
   }
 
   protected async submit(instructorId: number, userId: number): Promise<void> {

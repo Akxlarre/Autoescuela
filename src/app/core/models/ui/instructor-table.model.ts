@@ -32,6 +32,15 @@ export interface InstructorTableRow {
   maternalLastName: string;
   branchId: number | null;
   bothBranches: boolean;
+  /** true = todavía no seteó su contraseña (nunca activó la invitación por correo). */
+  firstLogin: boolean;
+  /**
+   * false = nunca tuvo cuenta de Auth (`supabase_uid IS NULL`). A diferencia de
+   * `create-instructor` (que siempre crea la cuenta al mismo tiempo que el registro),
+   * una fila insertada fuera de ese flujo (seed, SQL directo) puede no tenerla — ver
+   * fix-169-m.
+   */
+  hasAuthAccount: boolean;
 }
 
 export interface VehicleOption {

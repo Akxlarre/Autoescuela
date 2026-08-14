@@ -252,7 +252,7 @@ interface CellSummary {
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
           <div
-            class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]"
+            class="flex flex-1 items-center justify-center border-t border-(--color-border)"
           >
             <app-empty-state
               icon="calendar"
