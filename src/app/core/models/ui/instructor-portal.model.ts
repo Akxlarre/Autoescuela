@@ -20,6 +20,7 @@ export interface InstructorClassRow {
   status: string; // scheduled, in_progress, completed, cancelled, no_show
   studentName: string; // derivado JOIN
   studentRut: string; // derivado JOIN
+  enrollmentNumber: string | null; // "N° de matrícula" real — enrollments.number
   enrollmentId: number;
   studentId: number;
   vehiclePlate: string; // derivado JOIN
@@ -45,6 +46,7 @@ export interface InstructorClassRow {
 export interface InstructorStudentCard {
   studentId: number;
   enrollmentId: number;
+  enrollmentNumber: string | null; // "N° de matrícula" real — enrollments.number
   name: string;
   rut: string;
   phone: string | null;
@@ -138,7 +140,9 @@ export interface ScheduleBlock {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   studentName: string;
   vehiclePlate: string | null;
-  classNumber: number | null;
+  classNumber: number | null; // "Clase Nº" — qué sesión es dentro del curso práctico (1-12)
+  enrollmentNumber: string | null; // "N° de matrícula" real — enrollments.number
+  studentId: number | null; // students.id — requerido para navegar a /instructor/alumnos/:id/...
   sessionId: number | null;
   startTime: string; // "HH:MM"
   endTime: string; // "HH:MM"

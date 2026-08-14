@@ -1,14 +1,18 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { getStatusVisual, getStatusLabel, getDotStyle } from '@core/utils/schedule-status.utils';
-import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-portal.model';
+import { filterVisibleWeekDays } from '@core/utils/schedule-week-days.utils';
+import type {
+  ScheduleBlock,
+  ScheduleDay,
+  WeekSchedule,
+} from '@core/models/ui/instructor-portal.model';
 
 @Component({
   selector: 'app-weekly-schedule-grid',
   standalone: true,
-  imports: [DecimalPipe, IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -17,33 +21,17 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         flex-direction: column;
         min-height: 0;
       }
-      .schedule-grid {
-        display: grid;
-        grid-template-columns: 72px repeat(var(--days, 5), 1fr);
+      .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
       }
-
-      .hour-cell {
-        height: 80px; /* 1 hora = 80px */
-        overflow: visible; /* allow the absolutely-positioned time label (-top-6px) to escape */
-      }
-
-      .grid-content {
-        display: grid;
-        grid-template-columns: repeat(var(--days, 5), 1fr);
-        grid-template-rows: repeat(48, 20px); /* 12h × 4 cuartos = 48 filas */
-      }
-
-      .overflow-x-auto::-webkit-scrollbar {
-        height: 6px;
-      }
-      .overflow-x-auto::-webkit-scrollbar-track {
+      .overflow-y-auto::-webkit-scrollbar-track {
         background: transparent;
       }
-      .overflow-x-auto::-webkit-scrollbar-thumb {
+      .overflow-y-auto::-webkit-scrollbar-thumb {
         background: var(--border-subtle);
         border-radius: 10px;
       }
-      .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+      .overflow-y-auto::-webkit-scrollbar-thumb:hover {
         background: var(--text-muted);
       }
     `,
@@ -72,7 +60,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         <div class="flex items-center p-1 rounded-xl bg-elevated border border-border-subtle">
           <button
             aria-label="Semana anterior"
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer"
             (click)="prevWeek.emit()"
             title="Semana anterior"
             data-llm-action="prev-week"
@@ -80,7 +68,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
             <app-icon name="chevron-left" [size]="18" />
           </button>
           <button
-            class="item-title px-4 h-8 rounded-lg transition-colors mx-1"
+            class="item-title px-4 h-8 rounded-lg transition-colors mx-1 cursor-pointer"
             (click)="today.emit()"
             data-llm-action="go-today"
           >
@@ -88,7 +76,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
           </button>
           <button
             aria-label="Siguiente semana"
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer"
             (click)="nextWeek.emit()"
             title="Siguiente semana"
             data-llm-action="next-week"
@@ -98,128 +86,73 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         </div>
       </div>
 
-      <!-- Cuerpo con scroll horizontal -->
-      <div class="overflow-x-auto flex-1 bg-surface">
+      <!-- Cuerpo: columnas por día (sin franja horaria), Lun-Sáb -->
+      <div class="overflow-y-auto flex-1 bg-surface">
+        <!-- Header días — sticky -->
         <div
-          class="min-w-[900px] schedule-container"
-          [style.--days]="schedule()?.days?.length || 5"
+          class="flex gap-3 sticky top-0 z-10 px-4 pt-5 pb-4 bg-surface"
+          style="border-bottom: 1px solid var(--border-subtle)"
         >
-          <!-- Header días — sticky -->
-          <div
-            class="schedule-grid sticky top-0 z-40 pt-5 pb-6 bg-surface"
-            style="border-bottom: 1px solid var(--border-subtle)"
-          >
-            <!-- Esquina vacía (alineada con la columna de horas) -->
-            <div></div>
-
-            <!-- Columnas de días -->
-            @if (isLoading()) {
-              @for (i of [1, 2, 3, 4, 5]; track i) {
-                <div class="flex flex-col items-center justify-center px-1">
-                  <div class="w-full max-w-[80px] py-3 flex flex-col items-center gap-2">
-                    <app-skeleton-block variant="text" width="28px" height="10px" />
-                    <app-skeleton-block variant="rect" width="44px" height="44px" />
-                  </div>
-                </div>
-              }
-            } @else {
-              @for (day of schedule()?.days; track day.date) {
-                <div class="flex flex-col items-center justify-center px-1">
-                  <button
-                    class="w-full max-w-[80px] py-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 relative group"
-                    [style.background]="getDayHeaderBg(day)"
-                    (click)="daySelect.emit(day.date)"
-                  >
-                    <!-- Nombre del día -->
-                    <span
-                      class="text-2xs font-bold uppercase tracking-widest mb-1.5"
-                      [style.color]="getDayHeaderTextColor(day, 'label')"
-                    >
-                      {{ day.name }}
-                    </span>
-                    <!-- Número del día -->
-                    <span
-                      class="text-3xl font-black leading-none tracking-tighter"
-                      [style.color]="getDayHeaderTextColor(day, 'number')"
-                    >
-                      {{ day.dayNumber }}
-                    </span>
-
-                    <!-- Indicador "hoy" sutil -->
-                    @if (day.isToday && day.date !== selectedDate()) {
-                      <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
-                    }
-                  </button>
-                </div>
-              }
+          @if (isLoading()) {
+            @for (i of skeletonDayIndexes; track i) {
+              <div class="flex-1 min-w-0 flex flex-col items-center gap-2 py-3">
+                <app-skeleton-block variant="text" width="28px" height="10px" />
+                <app-skeleton-block variant="rect" width="36px" height="36px" />
+              </div>
             }
-          </div>
+          } @else {
+            @for (day of visibleWeekDays(); track day.date) {
+              <div
+                class="flex-1 min-w-0 py-3 rounded-2xl flex flex-col items-center justify-center relative"
+                [style.background]="getDayHeaderBg(day)"
+              >
+                <span
+                  class="text-2xs font-bold uppercase tracking-widest mb-1.5"
+                  [style.color]="getDayHeaderTextColor(day, 'label')"
+                >
+                  {{ day.name.slice(0, 3) }}
+                </span>
+                <span
+                  class="text-2xl font-black leading-none tracking-tighter"
+                  [style.color]="getDayHeaderTextColor(day, 'number')"
+                >
+                  {{ day.dayNumber }}
+                </span>
 
-          <!-- Cuerpo del grid -->
-          <div class="relative schedule-grid schedule-body">
-            <!-- Columna de etiquetas horarias -->
-            <div class="flex flex-col z-20 pointer-events-none">
-              @for (hour of hours; track hour; let isFirst = $first) {
-                <div class="hour-cell relative">
-                  <span
-                    class="text-2xs font-bold tracking-widest absolute right-4 whitespace-nowrap"
-                    [style.top]="isFirst ? '2px' : '-6px'"
-                    [style.color]="'var(--text-muted)'"
-                  >
-                    {{ hour | number: '2.0' }}:00
-                  </span>
-                </div>
-              }
-            </div>
-
-            <!-- Celdas del grid con bloques de clase -->
-            <div
-              class="grid-content relative"
-              [style.grid-column]="'span ' + (schedule()?.days?.length || 5)"
-            >
-              <!-- Today Column Tint -->
-              @for (day of schedule()?.days; track day.date; let i = $index) {
-                @if (day.isToday) {
-                  <div
-                    class="absolute top-0 bottom-0 pointer-events-none z-0 rounded-lg"
-                    [style.grid-column]="i + 1"
-                    class="bg-brand-tint"
-                  ></div>
-                }
-              }
-
-              <!-- Líneas horizontales de horas -->
-              <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
-                @for (hour of hours; track hour; let i = $index) {
-                  <div
-                    class="absolute w-full"
-                    style="border-top: 1px solid var(--border-subtle); opacity: 0.5"
-                    [style.top.px]="i * 80"
-                  ></div>
+                <!-- Indicador "hoy" sutil -->
+                @if (day.isToday && day.date !== selectedDate()) {
+                  <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
                 }
               </div>
+            }
+          }
+        </div>
 
-              <!-- Skeleton: bloques fantasma representativos -->
-              @if (isLoading()) {
-                @for (ghost of skeletonBlocks; track ghost.col) {
+        <!-- Columnas de día: cada una lista solo sus clases reales, sin filas de hora vacías -->
+        <div class="flex gap-3 items-start px-4 py-4">
+          @if (isLoading()) {
+            @for (count of skeletonColumnCounts; track $index) {
+              <div class="flex-1 min-w-0 flex flex-col gap-2">
+                @for (n of times(count); track n) {
                   <div
-                    class="rounded-2xl m-1 p-3 flex flex-col gap-2 pointer-events-none bg-elevated border border-border-subtle"
-                    [style.grid-column]="ghost.col"
-                    [style.grid-row-start]="ghost.rowStart"
-                    [style.grid-row-end]="ghost.rowEnd"
+                    class="rounded-2xl p-3 flex flex-col gap-2 bg-elevated border border-border-subtle"
                   >
                     <app-skeleton-block variant="text" width="36px" height="8px" />
                     <app-skeleton-block variant="text" width="70%" height="12px" />
                   </div>
                 }
-              } @else {
-                @for (block of schedule()?.blocks; track block.sessionId) {
+              </div>
+            }
+          } @else {
+            @for (day of visibleWeekDays(); track day.date; let i = $index) {
+              <div
+                class="flex-1 min-w-0 flex flex-col gap-2 rounded-xl p-1"
+                [class.bg-brand-tint]="day.isToday"
+              >
+                @for (block of getBlocksForDay(i); track block.sessionId) {
                   <div
-                    [class]="getBlockClass(block)"
+                    [class]="getCardClass(block)"
                     [style]="getBlockStyle(block)"
-                    [style.grid-column]="block.dayOfWeek + 1"
-                    [style.grid-row-start]="getRowStart(block)"
-                    [style.grid-row-end]="getRowEnd(block)"
                     [attr.data-llm-action]="
                       block.status === 'scheduled' || block.status === 'in_progress'
                         ? 'open-class-' + block.sessionId
@@ -231,102 +164,66 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                         blockClick.emit(block)
                     "
                   >
-                    <div
-                      class="flex flex-col gap-0.5 h-full min-h-0 overflow-hidden"
-                      [class.flex-row]="block.durationMin <= 30"
-                      [class.items-center]="block.durationMin <= 30"
-                      [class.gap-2]="block.durationMin <= 30"
-                    >
-                      @if (block.durationMin > 30) {
-                        <!-- Layout normal: hora + nombre + footer -->
-                        <div class="flex items-center justify-between shrink-0 mb-1">
-                          <span
-                            class="text-2xs font-black tracking-widest uppercase"
-                            [style.color]="
-                              block.status === 'in_progress'
-                                ? 'var(--color-primary-text)'
-                                : 'var(--color-primary)'
-                            "
-                          >
-                            {{ block.startTime }}
-                          </span>
-                          @if (block.status === 'in_progress') {
-                            <span
-                              class="flex h-1.5 w-1.5 rounded-full indicator-live bg-text-primary"
-                            ></span>
-                          } @else if (getStatusVisual(block.status).icon; as iconName) {
-                            <app-icon
-                              [name]="iconName"
-                              [size]="10"
-                              [style.color]="'var(--text-muted)'"
-                            />
-                          }
-                        </div>
-                        <div
-                          class="text-xs font-bold leading-tight tracking-tight line-clamp-2"
-                          [style.color]="
-                            block.status === 'in_progress'
-                              ? 'var(--color-primary-text)'
-                              : 'var(--text-primary)'
-                          "
-                        >
-                          {{ block.studentName }}
-                        </div>
-                        <div
-                          class="mt-auto flex items-center justify-between shrink-0 pt-1"
-                          style="opacity: 0.8"
-                        >
-                          <span
-                            class="text-2xs font-bold uppercase tracking-wider truncate"
-                            [style.color]="
-                              block.status === 'in_progress'
-                                ? 'var(--color-primary-text)'
-                                : 'var(--text-muted)'
-                            "
-                          >
-                            #{{ block.classNumber }}
-                          </span>
-                          <span
-                            class="text-2xs font-black shrink-0 ml-2"
-                            [style.color]="
-                              block.status === 'in_progress'
-                                ? 'var(--color-primary-text)'
-                                : 'var(--text-muted)'
-                            "
-                          >
-                            {{ block.durationMin }}'
-                          </span>
-                        </div>
-                      } @else {
-                        <!-- Layout ultra-compacto para bloques ≤ 30min -->
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span
+                        class="text-sm font-black uppercase tracking-wide"
+                        [style.color]="
+                          block.status === 'in_progress'
+                            ? 'var(--color-primary-text)'
+                            : 'var(--color-primary)'
+                        "
+                      >
+                        {{ block.startTime }}
+                      </span>
+                      @if (block.status === 'in_progress') {
                         <span
-                          class="text-2xs font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md"
-                          class="bg-white/20"
-                          [style.color]="
-                            block.status === 'in_progress'
-                              ? 'var(--color-primary-text)'
-                              : 'var(--text-primary)'
-                          "
-                        >
-                          {{ block.startTime }}
-                        </span>
-                        <div
-                          class="text-2xs font-bold truncate flex-1"
-                          [style.color]="
-                            block.status === 'in_progress'
-                              ? 'var(--color-primary-text)'
-                              : 'var(--text-primary)'
-                          "
-                        >
-                          {{ block.studentName }}
-                        </div>
+                          class="flex h-1.5 w-1.5 rounded-full indicator-live bg-text-primary"
+                        ></span>
+                      } @else if (getStatusVisual(block.status).icon; as iconName) {
+                        <app-icon
+                          [name]="iconName"
+                          [size]="11"
+                          [style.color]="getStatusVisual(block.status).textColor"
+                        />
                       }
                     </div>
+
+                    <!-- N° de matrícula: dato principal de la card -->
+                    <div
+                      class="text-lg font-black leading-none mb-1"
+                      [style.color]="getStatusVisual(block.status).textColor"
+                    >
+                      {{ block.enrollmentNumber ? '#' + block.enrollmentNumber : '—' }}
+                    </div>
+
+                    <!-- Alumno: dato secundario -->
+                    <div
+                      class="text-2xs font-semibold truncate mb-1.5 opacity-80"
+                      [style.color]="getStatusVisual(block.status).textColor"
+                    >
+                      {{ block.studentName }}
+                    </div>
+
+                    <div
+                      class="flex items-center justify-between text-2xs font-bold opacity-70"
+                      [style.color]="getStatusVisual(block.status).textColor"
+                    >
+                      <span class="truncate">
+                        Clase {{ block.classNumber ?? '—' }} · {{ block.vehiclePlate || 'S/V' }}
+                      </span>
+                      <span class="shrink-0 ml-1">{{ block.durationMin }}'</span>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="flex items-center justify-center py-6">
+                    <span class="text-2xs font-medium" [style.color]="'var(--text-muted)'">
+                      Sin clases
+                    </span>
                   </div>
                 }
-              }
-            </div>
-          </div>
+              </div>
+            }
+          }
         </div>
       </div>
 
@@ -364,23 +261,14 @@ export class WeeklyScheduleGridComponent {
   prevWeek = output<void>();
   nextWeek = output<void>();
   today = output<void>();
-  daySelect = output<string>();
   blockClick = output<ScheduleBlock>();
 
-  readonly hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+  /** Lun-Sáb — el domingo nunca tiene clases (regla de negocio, ver core/utils). */
+  readonly visibleWeekDays = computed(() => filterVisibleWeekDays(this.schedule()?.days));
 
-  /** Bloques fantasma para skeleton */
-  readonly skeletonBlocks = [
-    { col: 1, rowStart: 5, rowEnd: 11 },
-    { col: 1, rowStart: 25, rowEnd: 29 },
-    { col: 2, rowStart: 11, rowEnd: 17 },
-    { col: 3, rowStart: 1, rowEnd: 5 },
-    { col: 3, rowStart: 21, rowEnd: 27 },
-    { col: 4, rowStart: 13, rowEnd: 17 },
-    { col: 4, rowStart: 33, rowEnd: 39 },
-    { col: 5, rowStart: 7, rowEnd: 13 },
-    { col: 5, rowStart: 29, rowEnd: 33 },
-  ];
+  readonly skeletonDayIndexes = [0, 1, 2, 3, 4, 5];
+  /** Cantidad de cards fantasma por columna durante el loading — solo variedad visual. */
+  readonly skeletonColumnCounts = [2, 1, 2, 3, 1, 2];
 
   readonly legendItems = (['scheduled', 'in_progress', 'completed', 'cancelled'] as const).map(
     (s) => ({
@@ -390,23 +278,28 @@ export class WeeklyScheduleGridComponent {
     }),
   );
 
-  getRowStart(block: ScheduleBlock): number {
-    const hourOffset = block.hour - 8;
-    const minuteOffset = Math.floor(block.minuteStart / 15);
-    return hourOffset * 4 + minuteOffset + 1;
+  times(n: number): number[] {
+    return Array.from({ length: n }, (_, i) => i);
   }
 
-  getRowEnd(block: ScheduleBlock): number {
-    return this.getRowStart(block) + Math.ceil(block.durationMin / 15);
+  /**
+   * Bloques del día `dayIndex` (0=Lun...5=Sáb), ordenados por hora. `dayIndex` corresponde a la
+   * posición dentro de `visibleWeekDays()`, que preserva el orden Lun-Sáb del backend tras
+   * excluir Domingo — coincide 1:1 con `ScheduleBlock.dayOfWeek`.
+   */
+  getBlocksForDay(dayIndex: number): ScheduleBlock[] {
+    return (this.schedule()?.blocks ?? [])
+      .filter((b) => b.dayOfWeek === dayIndex)
+      .sort((a, b) => a.hour * 60 + a.minuteStart - (b.hour * 60 + b.minuteStart));
   }
 
-  getDayHeaderBg(day: any): string {
+  getDayHeaderBg(day: ScheduleDay): string {
     if (day.isToday) return 'var(--color-primary)';
     if (day.date === this.selectedDate()) return 'var(--color-primary-muted)';
     return 'transparent';
   }
 
-  getDayHeaderTextColor(day: any, type: 'label' | 'number'): string {
+  getDayHeaderTextColor(day: ScheduleDay, type: 'label' | 'number'): string {
     if (day.isToday) return 'var(--color-primary-text)';
     if (day.date === this.selectedDate()) return 'var(--color-primary)';
     return type === 'label' ? 'var(--text-muted)' : 'var(--text-primary)';
@@ -425,18 +318,16 @@ export class WeeklyScheduleGridComponent {
     return style;
   }
 
-  getBlockClass(block: ScheduleBlock): string {
+  getCardClass(block: ScheduleBlock): string {
     const visual = getStatusVisual(block.status);
-    const isShort = block.durationMin <= 45;
-    const pad = isShort ? 'p-2 px-3' : 'p-3';
     const cursor = visual.interactive ? 'cursor-pointer' : 'cursor-default';
-    const base = `rounded-2xl transition-all duration-200 relative m-1 flex flex-col overflow-hidden ${pad} ${cursor}`;
+    const base = `rounded-2xl p-3 transition-all duration-200 relative overflow-hidden ${cursor}`;
 
     return block.status === 'in_progress' ? `${base} scale-[1.02] shadow-lg` : base;
   }
 
   // Wrapper for template
-  getStatusVisual(status: any) {
+  getStatusVisual(status: ScheduleBlock['status']) {
     return getStatusVisual(status);
   }
 }

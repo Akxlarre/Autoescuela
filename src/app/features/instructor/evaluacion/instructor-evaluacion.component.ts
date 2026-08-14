@@ -75,7 +75,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           <app-icon name="alert-circle" [size]="20" class="mt-0.5 shrink-0" />
           <p class="text-sm">{{ clasesFacade.error() }}</p>
         </div>
-      } @else if (clasesFacade.selectedClass(); as cls) {
+      } @else if (accessibleClass(); as cls) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Sidebar Info -->
           <div class="lg:col-span-1 space-y-6">
@@ -273,9 +273,6 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           icon="file-x"
           message="Clase no encontrada"
           subtitle="La sesión a evaluar no existe o no tienes acceso."
-          actionLabel="Volver"
-          actionIcon="arrow-left"
-          (action)="goBack()"
         />
       }
     </div>
@@ -298,6 +295,15 @@ export class InstructorEvaluacionComponent implements OnInit {
   private instructorSignature: string | null = null;
 
   readonly gradeOptions = [3, 4, 5, 6, 7];
+
+  /**
+   * Solo se puede evaluar una clase ya `completed` — bloquea el acceso al formulario si se
+   * manipula la URL con el sessionId de una clase scheduled/in_progress/cancelled/no_show.
+   */
+  readonly accessibleClass = computed(() => {
+    const cls = this.clasesFacade.selectedClass();
+    return cls?.status === 'completed' ? cls : null;
+  });
 
   readonly readonlyMode = computed(() => {
     const cls = this.clasesFacade.selectedClass();

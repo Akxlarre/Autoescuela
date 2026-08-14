@@ -122,8 +122,8 @@ export class InstructorClasesFacade {
           `
           id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, notes,
           enrollments!inner(
-            id,
-            students!inner(id, users!inner(id, first_names, paternal_last_name, rut))
+            id, number,
+            students!inner(id, users!inner(id, first_names, paternal_last_name, maternal_last_name, rut))
           ),
           vehicles(id, license_plate, brand, model)
         `,
@@ -168,8 +168,8 @@ export class InstructorClasesFacade {
           `
           id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, evaluation_checklist, notes, student_signature, instructor_signature,
           enrollments!inner(
-            id,
-            students!inner(id, users!inner(id, first_names, paternal_last_name, rut))
+            id, number,
+            students!inner(id, users!inner(id, first_names, paternal_last_name, maternal_last_name, rut))
           ),
           vehicles(id, license_plate, brand, model, current_km)
         `,
@@ -273,7 +273,7 @@ export class InstructorClasesFacade {
       // 1. Get session details for attendance registration
       const { data: session } = await this.supabase.client
         .from('class_b_sessions')
-        .select('enrollment_id, enrollments!inner(student_id)')
+        .select('enrollment_id, vehicle_id, enrollments!inner(student_id)')
         .eq('id', sessionId)
         .maybeSingle();
 
@@ -306,7 +306,15 @@ export class InstructorClasesFacade {
 
       if (error) throw error;
 
-      // 4. Register practice attendance
+      // 4. Propagar km final al vehículo (fix-189)
+      if (session?.vehicle_id) {
+        await this.supabase.client
+          .from('vehicles')
+          .update({ current_km: kmEnd })
+          .eq('id', session.vehicle_id);
+      }
+
+      // 5. Register practice attendance
       if (session?.enrollments) {
         const studentId = (session.enrollments as any).student_id;
         if (studentId) {
@@ -544,7 +552,7 @@ export class InstructorClasesFacade {
   private mapSessionToRow(row: any): InstructorClassRow {
     const studentUser = row.enrollments?.students?.users;
     const studentName = studentUser
-      ? `${studentUser.first_names} ${studentUser.paternal_last_name}`
+      ? `${studentUser.first_names} ${studentUser.paternal_last_name} ${studentUser.maternal_last_name || ''}`.trim()
       : 'Desconocido';
     const studentRut = studentUser?.rut || '';
     const v = row.vehicles;
@@ -588,6 +596,7 @@ export class InstructorClasesFacade {
       status: row.status,
       studentName,
       studentRut,
+      enrollmentNumber: row.enrollments?.number ?? null,
       enrollmentId: row.enrollments?.id || 0,
       studentId: row.enrollments?.students?.id || 0,
       vehiclePlate: v?.license_plate || '',
@@ -622,6 +631,7 @@ export class InstructorClasesFacade {
         status: 'scheduled',
         studentName: 'Juanito Pérez (Mock)',
         studentRut: '12.345.678-9',
+        enrollmentNumber: 'MOCK-101',
         enrollmentId: 101,
         studentId: 201,
         vehiclePlate: 'MOCK-12',
@@ -651,6 +661,7 @@ export class InstructorClasesFacade {
         status: 'scheduled',
         studentName: 'María García (Mock)',
         studentRut: '9.876.543-2',
+        enrollmentNumber: 'MOCK-102',
         enrollmentId: 102,
         studentId: 202,
         vehiclePlate: 'MOCK-12',

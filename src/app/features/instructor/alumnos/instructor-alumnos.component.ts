@@ -207,7 +207,7 @@ const PAGE_SIZE = 9;
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
                     <th class="pl-6 py-4">Alumno</th>
-                    <th>Curso</th>
+                    <th>N° Matrícula</th>
                     <th>Progreso Práctico</th>
                     <th>Próxima Clase</th>
                     <th class="pr-6">Estado</th>
@@ -231,9 +231,11 @@ const PAGE_SIZE = 9;
                         </div>
                       </div>
                     </td>
-                    <td class="text-sm text-text-secondary">{{ s.courseName }}</td>
+                    <td class="text-sm font-bold text-text-primary font-mono">
+                      {{ s.enrollmentNumber ? '#' + s.enrollmentNumber : '—' }}
+                    </td>
                     <td>
-                      <div class="flex items-center gap-2 min-w-[140px]">
+                      <div class="flex items-center gap-2 min-w-35">
                         <div class="progress-track flex-1">
                           <div
                             class="progress-fill"
@@ -312,13 +314,15 @@ const PAGE_SIZE = 9;
                         <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
                       </div>
 
-                      <!-- Curso -->
+                      <!-- N° Matrícula -->
                       <div
-                        class="flex items-center gap-2 text-xs"
+                        class="flex items-center gap-2 text-xs font-bold font-mono"
                         [style.color]="'var(--text-secondary)'"
                       >
-                        <app-icon name="book-open" [size]="14" />
-                        <span class="truncate" [attr.title]="s.courseName">{{ s.courseName }}</span>
+                        <app-icon name="hash" [size]="14" />
+                        <span class="truncate">
+                          {{ s.enrollmentNumber ? '#' + s.enrollmentNumber : '—' }}
+                        </span>
                       </div>
 
                       <!-- Progreso -->

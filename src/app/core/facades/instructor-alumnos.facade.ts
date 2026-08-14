@@ -112,9 +112,9 @@ export class InstructorAlumnosFacade {
           .from('enrollments')
           .select(
             `
-            id, status, courses!inner(name, code),
+            id, number, status, courses!inner(name, code),
             students!inner(
-              id, users!inner(first_names, paternal_last_name, rut, email, phone)
+              id, users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)
             ),
             class_b_sessions(id, status, scheduled_at, class_number)
           `,
@@ -156,7 +156,10 @@ export class InstructorAlumnosFacade {
         mappedStudents.push({
           studentId: (row.students as any)?.id,
           enrollmentId: row.id,
-          name: user ? `${user.first_names} ${user.paternal_last_name}` : 'Unknown',
+          enrollmentNumber: (row as any).number ?? null,
+          name: user
+            ? `${user.first_names} ${user.paternal_last_name} ${user.maternal_last_name || ''}`.trim()
+            : 'Unknown',
           rut: user?.rut || '',
           email: user?.email || null,
           phone: user?.phone || null,

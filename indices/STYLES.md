@@ -290,15 +290,15 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 |-------|------|-------|
 | `--ds-brand` | 439 | `#38bdf8` |
 | `--text-muted` | 397 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 265 | `var(--color-primary-text)` |
+| `--text-primary` | 266 | `var(--color-primary-text)` |
+| `--state-error` | 230 | `#f87171` |
 | `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
-| `--state-error` | 222 | `#f87171` |
 | `--border-subtle` | 219 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 193 | `#18181b` |
-| `--state-success` | 178 | `#4ade80` |
+| `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 144 | `#38bdf8` |
-| `--border-default` | 131 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 130 | `#fbbf24` |
+| `--border-default` | 132 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 128 | `#fbbf24` |
 | `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 64 | `0.875rem` |
 | `--bg-subtle` | 58 | `rgba(255, 255, 255, 0.1)` |
@@ -311,7 +311,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--color-primary-text` | 45 | `#ffffff` |
 | `--color-success` | 39 | `—` |
 | `--bg-base` | 30 | `#09090b` |
-| `--state-error-bg` | 24 | `rgba(248, 113, 113, 0.1)` |
+| `--state-error-bg` | 26 | `rgba(248, 113, 113, 0.1)` |
 | `--radius-full` | 24 | `9999px` |
 
 ## Clases semánticas del Design System
@@ -320,13 +320,13 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 |-------|------------------|---------|
 | `.card` | 240 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 169 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 135 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 137 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 7 | `src/styles/tokens/_variables.scss` |
-| `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
+| `.indicator-live` | 6 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 4 | `src/styles/tokens/_variables.scss` |
 | `.badge-pulse` | 3 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
@@ -422,8 +422,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 53 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 887 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 52 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 886 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

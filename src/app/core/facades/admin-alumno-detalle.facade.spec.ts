@@ -1270,6 +1270,98 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  describe('reagendarClasesPenalizadas — notificaciones (fix-177-m)', () => {
+    const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    function buildReagendarMockConNotificaciones(prevRows: any[], instructorRows: any[]) {
+      const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
+      const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
+      const selectInSpy = vi.fn().mockResolvedValue({ data: prevRows, error: null });
+      const selectSpy = vi.fn().mockReturnValue({ in: selectInSpy });
+      const historyInsertSpy = vi.fn().mockResolvedValue({ error: null });
+      const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
+      const historySelectSpy = vi.fn().mockReturnValue({ eq: historyEqSpy });
+      const instructorsInSpy = vi.fn().mockResolvedValue({ data: instructorRows, error: null });
+      const instructorsSelectSpy = vi.fn().mockReturnValue({ in: instructorsInSpy });
+
+      const fromSpy = vi.fn((table: string) => {
+        if (table === 'class_b_sessions') return { select: selectSpy, update: updateSpy };
+        if (table === 'class_b_reschedule_history') {
+          return { insert: historyInsertSpy, select: historySelectSpy };
+        }
+        if (table === 'instructors') return { select: instructorsSelectSpy };
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      return { fromSpy };
+    }
+
+    beforeEach(() => {
+      (facade as any)._alumno.set({ userId: 42, nombre: 'Ana Alumna' });
+    });
+
+    it('notifica a alumno e instructor con el detalle de todas las clases reagendadas', async () => {
+      const mock = buildReagendarMockConNotificaciones(
+        [
+          { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
+          { id: 601, scheduled_at: '2026-06-02T09:00:00', instructor_id: 3 },
+        ],
+        [{ id: 9, user_id: 300 }],
+      );
+      supabaseSpy.client.from = mock.fromSpy;
+
+      facade.setReagendarSeleccion([
+        { sessionId: 501, claseNumero: 9, origen: 'no_show' },
+        { sessionId: 601, claseNumero: 11, origen: 'cancelled' },
+      ]);
+      (facade as any)._slotVehicleMap = new Map([
+        ['2026-07-10T09:00:00', 55],
+        ['2026-07-13T10:00:00', 55],
+      ]);
+
+      await facade.reagendarClasesPenalizadas({
+        enrollmentId: 100,
+        instructorId: 9,
+        selectedSlotIds: ['2026-07-13T10:00:00', '2026-07-10T09:00:00'],
+        razon: 'medica',
+      });
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [42],
+        expect.objectContaining({ referenceType: 'class_b', referenceId: 501 }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [300],
+        expect.objectContaining({ referenceType: 'class_b', referenceId: 501 }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(2);
+    });
+
+    it('no rompe el reagendamiento si falla la notificación', async () => {
+      const mock = buildReagendarMockConNotificaciones(
+        [{ id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 }],
+        [{ id: 9, user_id: 300 }],
+      );
+      supabaseSpy.client.from = mock.fromSpy;
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('insert failed'));
+
+      facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
+      (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
+
+      await expect(
+        facade.reagendarClasesPenalizadas({
+          enrollmentId: 100,
+          instructorId: 9,
+          selectedSlotIds: ['2026-07-10T09:00:00'],
+          razon: 'medica',
+        }),
+      ).resolves.toBeUndefined();
+      await flushMicrotasks();
+    });
+  });
+
   describe('loadHistorialReagendamientos — fix-008-i', () => {
     it('mapea la razón al label legible y formatea las fechas', async () => {
       supabaseSpy.client.from = vi.fn().mockReturnValue({

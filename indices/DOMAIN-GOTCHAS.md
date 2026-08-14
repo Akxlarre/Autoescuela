@@ -943,6 +943,23 @@
   si el bug "solo" se manifiesta de noche.
 - **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
 
+### DG-072 — Un `storage.upload(..., { upsert: true })` necesita policy SELECT además de INSERT/UPDATE, o sigue dando 403 aunque ambas estén bien
+- **Trampa:** dar de alta las policies `FOR INSERT WITH CHECK` y `FOR UPDATE USING/WITH CHECK`
+  para un rol nuevo sobre un bucket de Storage y asumir que con eso el `upload(..., { upsert:
+  true })` va a funcionar.
+- **Realidad:** el cliente de Storage con `upsert:true` ejecuta
+  `INSERT INTO storage.objects (...) VALUES (...) ON CONFLICT (name, bucket_id) DO UPDATE
+  SET ... RETURNING *`. Ese `RETURNING *` necesita que la fila resultante sea visible bajo
+  la policy `FOR SELECT` del rol — si no existe ninguna (rol nunca tuvo lectura del bucket),
+  el Storage API sigue reportando el mismo error genérico `"new row violates row-level
+  security policy"` **aunque el INSERT/UPDATE ya estén correctamente permitidos** y
+  verificados uno por uno. El error no distingue "tu WITH CHECK falló" de "no puedes leer
+  el resultado" — hay que revisar las 3 (INSERT, UPDATE, SELECT) como un set, no solo las
+  dos que intuitivamente hacen falta para "escribir".
+- **Regla de aplicabilidad:** al dar acceso de escritura a un rol nuevo sobre un bucket
+  existente vía `upload(..., { upsert: true })`, agregar SIEMPRE una policy `FOR SELECT`
+  con el mismo alcance — no basta con INSERT+UPDATE.
+- **Fuente:** `specs/fixes/fix-188-m-instructor-firma-rls-storage-documents` (v3)
 
 ---
 
