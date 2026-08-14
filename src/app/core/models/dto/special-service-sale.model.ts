@@ -18,4 +18,6 @@ export interface SpecialServiceSale {
   status: 'completed' | 'pending';
   paid: boolean;
   branch_id: number | null;
+  /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
+  document_number: string | null;
 }

@@ -27,7 +27,7 @@
 | `standalone_courses` | M3 - Finanzas | `id`, `type`, `branch_id` (**NOT NULL** desde `20260612000001` — backfill NULL→1), `updated_at` (TIMESTAMPTZ, agregado en `20260615120000`) | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260612000001` (fix-016-m): `branch_id` obligatorio; trigger `trg_standalone_capacity` (BEFORE INSERT en enrollments, `FOR UPDATE` sobre el curso) bloquea sobreventa de cupos con `RAISE EXCEPTION 'CUPOS_AGOTADOS'` (la UI lo traduce vía `db-error.utils`). · `20260615120000`: `updated_at` añadido para soporte del cron `auto_transition_standalone_course_status`. |
 | `standalone_course_enrollments` | M3 - Finanzas | `id`, `course_id`, `payment_method` (TEXT, def 'efectivo'), `registered_by` (FK users), `discount_amount` (INT NOT NULL def 0), `discount_reason` (TEXT), `paid_at` (TIMESTAMPTZ — NULL si pendiente) | `standalone_course_id`, `student_id`, `certificate_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260417000003`: `payment_method` y `registered_by`. · `20260612000001` (fix-016-m): descuentos persistidos (`discount_amount`/`discount_reason` — el cobro es `base_price − discount_amount`) y `paid_at` (fuente de la cuadratura diaria; backfill `enrolled_at` para pagados históricos). |
 | `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
-| `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog, `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
+| `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog (nullable, fix-024-i), `service_name` (fix-024-i), `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `document_number` (fix-025-i), `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructors` | M4 - Acad. B | `id`, `user_id`, `both_branches` (BOOL, def false) | `user_id` | Admin: CRUD, Sec: **R por sede** (SELECT `branch_visible` sobre la sede del user dueño **OR `both_branches`** — spec 0017 + 0004-m; honra `can_access_both_branches`), Inst: R (self) | ✅ Definida · `20260624120000` scope SELECT por sede · `20260730100000` (spec 0004-m): columna `both_branches` — instructor dicta clases en las dos sedes; `branch_id` (de `users`) sigue siendo su sede principal |
@@ -1891,6 +1891,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `status` | TEXT | NO | `'pending'` | — |
 | `paid` | BOOLEAN | NO | `false` | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
+| `document_number` | TEXT | sí (fix-025-i, migración `20260813070000`) | — | — |
+
+> **fix-025-i:** desde este fix toda venta se inserta con `paid=true, status='completed'` de
+> entrada — el flujo de "pendiente de cobro" para Servicios Especiales ya no existe en la UI
+> (el drawer perdió el toggle "Registrar como ya cobrado" y el historial ya no muestra columnas
+> Estado/Cobro). `document_number` es opcional (N° de boleta emitida, capturado en el drawer) y
+> se propaga a `IngresoRow.nBoleta` en Caja Diaria, donde el ingreso ahora bucketea a "otros"
+> (antes iba a "efectivo"/claseB).
 
 > **`service_id` nullable + `service_name` (fix-024-i):** `service_catalog` no tiene
 > `ON DELETE CASCADE` en esta FK. Para permitir borrar un servicio del catálogo de forma

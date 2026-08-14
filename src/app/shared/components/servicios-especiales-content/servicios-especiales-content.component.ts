@@ -252,8 +252,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <th class="micro-label text-left py-3 px-4">Cliente</th>
                   <th class="micro-label text-left py-3 px-4">Servicio</th>
                   <th class="micro-label text-right py-3 px-4">Monto</th>
-                  <th class="micro-label text-center py-3 px-4">Estado</th>
-                  <th class="micro-label text-center py-3 px-4">Cobro</th>
+                  <th class="micro-label text-left py-3 px-4">N° Boleta</th>
                   <th class="micro-label text-left py-3 px-4">Fecha</th>
                   <th class="micro-label text-center py-3 px-4">Acciones</th>
                 </tr>
@@ -286,27 +285,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                     <td class="py-3 px-4 text-right font-semibold text-text-primary">
                       \${{ venta.precio.toLocaleString('es-CL') }}
                     </td>
-                    <td class="py-3 px-4 text-center">
-                      <app-badge [variant]="venta.estado === 'completado' ? 'success' : 'warning'">
-                        {{ venta.estado === 'completado' ? 'Completado' : 'Pendiente' }}
-                      </app-badge>
-                    </td>
-                    <td class="py-3 px-4 text-center">
-                      @if (venta.cobrado) {
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border bg-success-subtle text-success border-success"
-                        >
-                          Cobrado
-                        </span>
-                      } @else {
-                        <button
-                          type="button"
-                          class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-subtle transition-colors"
-                          (click)="cobroRegistrado.emit(venta.id)"
-                        >
-                          Cobrar
-                        </button>
-                      }
+                    <td class="py-3 px-4 text-text-muted">
+                      {{ venta.documentNumber ?? '—' }}
                     </td>
                     <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
                     <td class="py-3 px-4 text-center">
@@ -323,7 +303,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="7" class="py-10 text-center text-text-muted text-sm">
+                    <td colspan="6" class="py-10 text-center text-text-muted text-sm">
                       No hay ventas registradas.
                     </td>
                   </tr>
@@ -355,47 +335,23 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                     venta.servicio
                   }}</span>
                   <span class="text-2xs text-text-muted">{{ venta.fecha }}</span>
+                  @if (venta.documentNumber) {
+                    <span class="text-2xs text-text-muted font-mono"
+                      >· Boleta {{ venta.documentNumber }}</span
+                    >
+                  }
                 </div>
 
-                <div
-                  class="flex items-center justify-between pt-3 border-t border-border-subtle/50"
-                >
-                  <span
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-2xs font-bold uppercase tracking-wider"
-                    [style]="
-                      venta.estado === 'completado'
-                        ? 'background:var(--state-success-bg);color:var(--state-success)'
-                        : 'background:var(--state-warning-bg);color:var(--state-warning)'
-                    "
+                <div class="flex items-center justify-end pt-3 border-t border-border-subtle/50">
+                  <button
+                    type="button"
+                    class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                    [attr.data-llm-action]="'borrar-venta-mobile-' + venta.id"
+                    [attr.aria-label]="'Borrar venta de ' + venta.cliente"
+                    (click)="onBorrar(venta)"
                   >
-                    {{ venta.estado }}
-                  </span>
-
-                  <div class="flex items-center gap-2">
-                    @if (venta.cobrado) {
-                      <span
-                        class="text-2xs font-bold text-success uppercase px-2 py-1 bg-success-subtle border border-success rounded"
-                        >Pagado</span
-                      >
-                    } @else {
-                      <button
-                        type="button"
-                        class="text-2xs font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
-                        (click)="cobroRegistrado.emit(venta.id)"
-                      >
-                        Cobrar
-                      </button>
-                    }
-                    <button
-                      type="button"
-                      class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
-                      [attr.data-llm-action]="'borrar-venta-mobile-' + venta.id"
-                      [attr.aria-label]="'Borrar venta de ' + venta.cliente"
-                      (click)="onBorrar(venta)"
-                    >
-                      <app-icon name="trash-2" [size]="15" />
-                    </button>
-                  </div>
+                    <app-icon name="trash-2" [size]="15" />
+                  </button>
                 </div>
               </div>
             } @empty {
@@ -509,7 +465,6 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   // ── Outputs ─────────────────────────────────────────────────────────────────
   readonly requestRegistrarVenta = output<ServicioEspecial | undefined>();
   readonly requestNuevoServicio = output<void>();
-  readonly cobroRegistrado = output<number>();
   readonly exportarHistorial = output<'excel' | 'pdf'>();
   readonly ventaBorrada = output<number>();
   readonly servicioBorrado = output<number>();

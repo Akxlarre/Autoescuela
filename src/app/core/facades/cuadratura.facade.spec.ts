@@ -381,14 +381,15 @@ describe('mapSpecialServiceSaleToIngreso', () => {
     price: 40_000,
     serviceName: 'Psicotécnico',
     clientName: 'María López',
+    documentNumber: null,
   };
 
-  it('marca source special_service y bucket "efectivo" (sin método de pago en la tabla)', () => {
+  it('marca source special_service y bucket "otros" (fix-025-i — no es una clase de manejo)', () => {
     const row = mapSpecialServiceSaleToIngreso(base);
     expect(row.source).toBe('special_service');
-    expect(row.claseB).toBe(40_000);
+    expect(row.claseB).toBe(0);
     expect(row.claseA).toBe(0);
-    expect(row.otros).toBe(0);
+    expect(row.otros).toBe(40_000);
     expect(row.sence).toBe(0);
     expect(row.total).toBe(40_000);
     expect(row.enrollmentId).toBeNull();
@@ -403,5 +404,15 @@ describe('mapSpecialServiceSaleToIngreso', () => {
   it('serviceName nulo cae a un placeholder legible', () => {
     const row = mapSpecialServiceSaleToIngreso({ ...base, serviceName: null });
     expect(row.glosa).toContain('Servicio especial');
+  });
+
+  it('propaga documentNumber a nBoleta (fix-025-i)', () => {
+    const row = mapSpecialServiceSaleToIngreso({ ...base, documentNumber: 'B-4582' });
+    expect(row.nBoleta).toBe('B-4582');
+  });
+
+  it('documentNumber nulo cae a nBoleta null', () => {
+    const row = mapSpecialServiceSaleToIngreso(base);
+    expect(row.nBoleta).toBeNull();
   });
 });

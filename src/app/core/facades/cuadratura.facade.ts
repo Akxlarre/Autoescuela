@@ -72,13 +72,15 @@ export interface SpecialServiceSaleIngresoDto {
   price: number;
   serviceName: string | null;
   clientName: string;
+  /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
+  documentNumber: string | null;
 }
 
 /**
  * Mapea una venta de Servicio Especial cobrada a la fila de cuadratura.
- * La tabla no registra método de pago (a diferencia de payments/singular) — se bucketea
- * completa a "efectivo" (claseB), mismo fallback que usa `mapSingularSaleToIngreso()` para un
- * método desconocido/nulo.
+ * La tabla no registra método de pago (a diferencia de payments/singular) — un servicio
+ * especial no es una clase de manejo, así que se bucketea completo a "otros" (fix-025-i;
+ * antes iba a "efectivo"/claseB, decisión revertida a pedido del usuario).
  */
 export function mapSpecialServiceSaleToIngreso(s: SpecialServiceSaleIngresoDto): IngresoRow {
   const monto = s.price ?? 0;
@@ -86,12 +88,12 @@ export function mapSpecialServiceSaleToIngreso(s: SpecialServiceSaleIngresoDto):
     id: s.id,
     source: 'special_service',
     enrollmentId: null,
-    nBoleta: null,
+    nBoleta: s.documentNumber ?? null,
     glosa: `Servicio especial: ${s.serviceName ?? '—'} — ${s.clientName}`,
-    claseB: monto,
+    claseB: 0,
     claseA: 0,
     sence: 0,
-    otros: 0,
+    otros: monto,
     total: monto,
   };
 }
@@ -302,7 +304,7 @@ export class CuadraturaFacade {
   ): Promise<IngresoRow[]> {
     let query: any = this.supabase.client
       .from('special_service_sales')
-      .select('id, price, service_name, client_name')
+      .select('id, price, service_name, client_name, document_number')
       .eq('sale_date', today)
       .eq('paid', true);
 
@@ -319,6 +321,7 @@ export class CuadraturaFacade {
         price: row.price,
         serviceName: row.service_name,
         clientName: row.client_name ?? '—',
+        documentNumber: row.document_number ?? null,
       }),
     );
   }

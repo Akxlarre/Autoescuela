@@ -190,6 +190,24 @@ describe('ServiciosEspecialesFacade', () => {
       expect(cobrada.estado).toBe('completado');
       expect(sinCobrar.estado).toBe('pendiente');
     });
+
+    it('propaga document_number a documentNumber, null si no se capturó (fix-026-i)', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: {
+            data: [
+              venta({ id: 1, document_number: 'B-9001' }),
+              venta({ id: 2, document_number: null }),
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      const [conBoleta, sinBoleta] = facade.ventas();
+      expect(conBoleta.documentNumber).toBe('B-9001');
+      expect(sinBoleta.documentNumber).toBeNull();
+    });
   });
 
   describe('KPIs', () => {
@@ -229,11 +247,9 @@ describe('ServiciosEspecialesFacade', () => {
         rut: '1-9',
         fecha: '2026-07-01',
         precio: 25000,
-        cobrado: true,
-      } as any);
+      });
       expect(ok).toBe(true);
       const insertMock = mockSupabase._builders.get('special_service_sales').insert;
-      // fix-023-i: status refleja "cobrado" (paid) en el INSERT, no queda hardcodeado.
       expect(insertMock).toHaveBeenCalledWith(
         expect.objectContaining({ branch_id: 3, registered_by: 9, status: 'completed' }),
       );
@@ -250,10 +266,58 @@ describe('ServiciosEspecialesFacade', () => {
         rut: '1-9',
         fecha: '2026-07-01',
         precio: 1,
-        cobrado: false,
-      } as any);
+      });
       expect(ok).toBe(false);
       expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  describe('registrarVenta — cobro inmediato + N° de boleta (fix-025-i)', () => {
+    it('siempre inserta paid=true y status="completed", sin importar lo que reciba', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: null });
+      await facade.registrarVenta({
+        servicioId: 5,
+        esAlumno: false,
+        nombre: 'Juan',
+        rut: '1-9',
+        fecha: '2026-07-01',
+        precio: 25000,
+      });
+      const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ paid: true, status: 'completed' }),
+      );
+    });
+
+    it('propaga documentNumber al INSERT cuando viene informado', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: null });
+      await facade.registrarVenta({
+        servicioId: 5,
+        esAlumno: false,
+        nombre: 'Juan',
+        rut: '1-9',
+        fecha: '2026-07-01',
+        precio: 25000,
+        documentNumber: 'B-4582',
+      });
+      const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ document_number: 'B-4582' }),
+      );
+    });
+
+    it('documentNumber ausente → inserta document_number=null', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: null });
+      await facade.registrarVenta({
+        servicioId: 5,
+        esAlumno: false,
+        nombre: 'Juan',
+        rut: '1-9',
+        fecha: '2026-07-01',
+        precio: 25000,
+      });
+      const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ document_number: null }));
     });
   });
 

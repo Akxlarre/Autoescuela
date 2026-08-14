@@ -22,7 +22,6 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
       backRoute="/app/secretaria/dashboard"
       (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
       (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
-      (cobroRegistrado)="facade.registrarCobro($event)"
       (exportarHistorial)="onExportar($event)"
       (ventaBorrada)="onBorrarVenta($event)"
       (servicioBorrado)="onBorrarServicio($event)"

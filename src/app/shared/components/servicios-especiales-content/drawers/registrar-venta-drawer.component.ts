@@ -116,22 +116,18 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
           </div>
         </div>
 
-        <!-- Cobrado al registrar -->
-        <label
-          class="flex items-center gap-3 p-4 rounded-xl border border-border-default cursor-pointer hover:bg-subtle transition-colors"
-        >
+        <!-- N° de boleta (fix-025-i, opcional) -->
+        <div class="flex flex-col gap-1.5">
+          <label class="micro-label" for="v-boleta">N° de boleta</label>
           <input
-            type="checkbox"
-            formControlName="cobrado"
-            class="w-4 h-4 rounded text-brand focus:ring-brand"
+            id="v-boleta"
+            type="text"
+            formControlName="documentNumber"
+            placeholder="Ej. 4582 (opcional)"
+            data-llm-description="número de boleta emitida, opcional — se refleja en Caja Diaria"
+            class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
           />
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-text-primary">Registrar como ya cobrado</span>
-            <span class="text-xs text-text-muted"
-              >Se marcará la venta como "Pagada" inmediatamente</span
-            >
-          </div>
-        </label>
+        </div>
       </form>
 
       <!-- Botones -->
@@ -189,21 +185,36 @@ export class RegistrarVentaDrawerComponent {
     rut: new FormControl('', Validators.required),
     esAlumno: new FormControl<boolean>(false),
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
-    cobrado: new FormControl<boolean>(false),
+    documentNumber: new FormControl<string>(''),
   });
 
   constructor() {
     this.ventaForm
       .get('servicioId')!
       .valueChanges.pipe(takeUntilDestroyed())
-      .subscribe((idStr) => {
-        if (!idStr) return;
-        const servicio = this.facade.catalogo().find((s) => String(s.id) === idStr);
+      .subscribe((id) => {
+        if (!id) return;
+        // Bug preexistente (hallado en QA de fix-025-i): p-select con optionValue="value"
+        // entrega el id como number al seleccionarlo a mano, no como string — comparar con
+        // String(s.id) === id fallaba siempre en ese caso (solo funcionaba cuando el prellenado
+        // de este mismo fix pasaba explícitamente un string). Number() normaliza ambos casos.
+        const servicio = this.facade.catalogo().find((s) => s.id === Number(id));
         if (servicio) {
           this.ventaForm.patchValue({ precio: servicio.precio }, { emitEvent: false });
           this.showTipoCliente.set(this.esPsicotecnicoOInforme(servicio.nombre));
         }
       });
+
+    // fix-025-i: si el drawer se abrió desde la tarjeta "Vender" de un servicio específico,
+    // prellena servicioId (dispara el valueChanges de arriba y autocompleta el precio).
+    // fix-026-i: el valor debe ser number, no string — catalogoOptions usa optionValue="value"
+    // con `value: s.id` (number); si se prellena con String(id) el precio igual se autocompleta
+    // (el valueChanges normaliza con Number()) pero el p-select nunca encuentra el option que
+    // hace match, así que el combobox se queda mostrando el placeholder en vez de la etiqueta.
+    const preseleccionado = this.facade.selectedServicio();
+    if (preseleccionado) {
+      this.ventaForm.patchValue({ servicioId: preseleccionado.id as unknown as string });
+    }
   }
 
   private esPsicotecnicoOInforme(nombre: string): boolean {
@@ -237,7 +248,7 @@ export class RegistrarVentaDrawerComponent {
       esAlumno: !!val.esAlumno,
       fecha: new Date().toISOString().split('T')[0],
       precio: val.precio!,
-      cobrado: !!val.cobrado,
+      documentNumber: val.documentNumber?.trim() || null,
     });
 
     this.isSaving.set(false);

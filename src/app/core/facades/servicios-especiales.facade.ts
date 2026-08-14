@@ -86,6 +86,7 @@ function mapVentaDto(
     cobrado: dto.paid,
     studentUserId: student?.user_id ?? null,
     branchId: dto.branch_id,
+    documentNumber: dto.document_number,
   };
 }
 
@@ -248,10 +249,11 @@ export class ServiciosEspecialesFacade {
       client_rut: data.rut,
       sale_date: data.fecha,
       price: data.precio,
-      paid: data.cobrado,
-      // fix-023-i: status refleja "paid" — evita dejar la columna desalineada con lo que
-      // "Estado" muestra en la UI (que ahora se deriva de paid, no de status).
-      status: data.cobrado ? 'completed' : 'pending',
+      // fix-025-i: toda venta se cobra al momento de registrarse — ya no existe un flujo de
+      // "pendiente de cobro" para servicios especiales (decisión de negocio 2026-08-13).
+      paid: true,
+      status: 'completed',
+      document_number: data.documentNumber ?? null,
       registered_by: registeredBy,
       branch_id: this.getActiveBranchId(true),
       metadata: null,

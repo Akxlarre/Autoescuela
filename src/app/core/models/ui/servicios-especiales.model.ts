@@ -34,6 +34,8 @@ export interface VentaServicio {
   studentUserId: number | null;
   /** Sede de la venta — usado para el candado de borrado (fix-022-i) */
   branchId: number | null;
+  /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
+  documentNumber: string | null;
 }
 
 export interface VentaFormData {
@@ -44,7 +46,8 @@ export interface VentaFormData {
   esAlumno: boolean;
   fecha: string;
   precio: number;
-  cobrado: boolean;
+  /** N° de boleta emitida (opcional) — se propaga a Caja Diaria (fix-025-i). */
+  documentNumber?: string | null;
 }
 
 export interface NuevoServicioFormData {
