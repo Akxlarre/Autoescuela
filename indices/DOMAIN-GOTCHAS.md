@@ -807,8 +807,8 @@
   por una nota de otro fix que resolvió el problema a otro nivel (BD vs UI).
 - **Fuente:** `specs/fixes/fix-164-m-advertencia-documentos-vehiculo-agendamiento` (el error) +
   `specs/fixes/fix-165-m-advertencia-vehiculo-scheduling-real-flows` (la corrección)
-
-### DG-065 — `cash_closings` guarda un snapshot congelado; borrar/editar hacia atrás una fila que alimentó ese cálculo no lo recalcula sola
+  
+  ### DG-065 — `cash_closings` guarda un snapshot congelado; borrar/editar hacia atrás una fila que alimentó ese cálculo no lo recalcula sola
 - **Trampa:** al agregar borrado/edición a cualquier tabla que aporta dinero al día (`payments`,
   `special_service_sales`, `expenses`, anticipos, etc.), asumir que como `cash_closings` "muestra
   los totales del día" esos totales se recalculan cada vez que se consulta la pantalla — y que
@@ -847,6 +847,102 @@
   mostrar el error crudo. No aplica a tablas sin ninguna FK entrante — ahí el DELETE simple
   basta.
 - **Fuente:** `specs/fixes/fix-022-i-borrar-servicio-especial`
+
+### DG-067 — Supabase Auth solo tiene UN template de correo "invite" para todo el proyecto — no es por rol
+- **Trampa:** asumir que `auth.admin.inviteUserByEmail()` se puede reutilizar para invitar a un
+  rol distinto (instructor, secretaria) solo pasando otro valor en `data: { role: ... }`, y que
+  el correo se adaptará a ese rol. El template HTML que Supabase Auth dispara automáticamente es
+  **uno solo por proyecto** (`supabase/email-templates/invite-user.html`), compartido por
+  cualquier llamada a `inviteUserByEmail`, sin importar los metadatos que se le pasen.
+- **Realidad:** ese template está hardcodeado con copy y variables de branding exclusivas del
+  flujo de alumno (`public-enrollment` → `inviteStudentToAuth`): "tu proceso de matrícula...",
+  feature strip "Mi horario/Mi progreso/Mis pagos", y variables (`schoolName`, `brandColor`,
+  `gradientHero`, etc.) que solo esa función arma leyendo `website_config` por sede. Si otra
+  Edge Function llama `inviteUserByEmail` sin pasar esas mismas variables, el correo sale con
+  colores rotos (variables vacías) y texto que no corresponde al rol invitado.
+- **Regla de aplicabilidad:** cuando el rol a invitar sea el mismo que ya usa
+  `inviteUserByEmail` en algún flujo existente del proyecto (hoy: alumno), reutilizar esa
+  llamada tal cual — comparte template y variables sin conflicto. Cuando sea un rol nuevo o
+  distinto (instructor, secretaria, cualquier alta futura), NO llamar `inviteUserByEmail` —
+  usar en su lugar `auth.admin.generateLink({ type: 'invite', email, options })`, que crea la
+  cuenta y devuelve `properties.action_link` **sin enviar correo**, y despachar el correo uno
+  mismo por SMTP propio (patrón ya existente en `send-zoom-email`/`send-certificate-email`:
+  `nodemailer` + secrets `SMTP_HOST/PORT/USER/PASS/FROM`), con HTML y copy propios de ese rol.
+  Este criterio aplica independientemente de si Supabase agrega soporte multi-template a
+  futuro: el punto de fondo es que un solo template compartido no escala a N roles con copy
+  distinto.
+- **Fuente:** `specs/fixes/fix-167-m-instructor-invite-correo-set-password`
+
+### DG-068 — `auth.admin.generateLink({ type: 'invite' })` falla si el usuario de Auth YA existe
+- **Trampa:** reutilizar `type: 'invite'` para "reenviar" una invitación a un usuario que ya
+  tiene cuenta de Auth (creada en un paso anterior, ej. `create-instructor`). GoTrue rechaza
+  `invite` para un email ya registrado con un error que contiene "already registered" — el
+  mismo texto que `create-instructor` ya intercepta para su propio caso de alta.
+- **Realidad:** `type: 'invite'` es exclusivamente para **crear** el usuario de Auth. Un
+  "reenvío" (el usuario de Auth ya existe, solo no activó su contraseña — `first_login=true`)
+  necesita `type: 'magiclink'`, que sí genera un link válido para un usuario existente sin
+  intentar recrearlo. El resto del patrón (generar link sin enviar correo nativo + despachar
+  correo propio vía SMTP con el mismo copy/template) es igual al de la creación.
+- **Regla de aplicabilidad:** cualquier Edge Function de "reenviar invitación" para un rol que
+  ya usa `generateLink({ type: 'invite' })` en su función de creación debe usar
+  `type: 'magiclink'`, no `'invite'`, para el reenvío.
+- **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`
+
+### DG-069 — Una fila de `public.users` insertada fuera del flujo de creación normal (seed, SQL directo) puede no tener `supabase_uid`, aunque el flujo "oficial" lo garantice
+- **Trampa:** asumir que una garantía que da la Edge Function de creación (ej.
+  `create-instructor` siempre crea la cuenta de Auth ANTES de insertar la fila, con
+  rollback en cascada si algo falla — ver DG-066) aplica a **todas** las filas de esa
+  tabla, sin excepción. Un fix que solo contempla el estado "reenvío" (`supabase_uid`
+  seteado, `first_login=true`) y rechaza cualquier otro caso con un error genérico
+  ("ya activó su cuenta") rompe silenciosamente para una fila insertada por fuera de ese
+  camino.
+- **Realidad:** cualquier tabla con filas que puedan originarse en un seed, una migración
+  de datos, o un INSERT manual vía SQL Editor no tiene esa garantía — la garantía es del
+  código de la Edge Function, no de la tabla ni de una constraint de BD. Caso real:
+  instructor insertado vía seed con `supabase_uid IS NULL` rompió `activate-instructor-
+  account`, que asumía (incorrectamente) que todo instructor tiene `supabase_uid`.
+- **Regla de aplicabilidad:** cuando una función de "activar/reenviar cuenta" distinga
+  entre "primera vez" y "reenvío" usando una sola columna (`first_login` o similar), usar
+  la combinación de **ambas** señales (`supabase_uid` presente Y estado de activación),
+  nunca una sola — y tratar la ausencia de `supabase_uid` como "primera vez", no como
+  error. Ver el patrón correcto ya usado en `activate-student-account`.
+- **Fuente:** `specs/fixes/fix-169-m-reenviar-invitacion-instructor-sin-cuenta-auth`
+
+### DG-070 — Un dato "opcional" capturado en un formulario se pierde silenciosamente si su persistencia vive dentro de una función distinta a la que siempre se ejecuta
+- **Trampa:** en un flujo con dos posibles submits (uno "esencial" que siempre corre, otro
+  "opcional" que corre condicionalmente), colocar la persistencia de un campo opcional
+  (firmas, observaciones) **solo** dentro de la función condicional. Si el usuario llena
+  el campo opcional pero no dispara la condición (ej. no seleccionó una nota), el dato
+  capturado en el formulario nunca llega a la BD — sin error visible, sin log, sin toast.
+  El componente cree que "guardó todo" porque el submit esencial sí tuvo éxito.
+- **Realidad:** caso real en `InstructorClasesFacade` — `finishClass()` (siempre corre al
+  cerrar una clase) no recibía `notes`/firmas; solo `saveEvaluation()` (condicional a
+  `selectedGrade() !== null`) las persistía. Un instructor que firmaba pero no calificaba
+  perdía la firma sin saberlo.
+- **Regla de aplicabilidad:** cuando un campo se marque como "opcional" en la UI, su
+  persistencia debe vivir en la función que **siempre** se ejecuta al completar el flujo,
+  nunca en una función condicional/secundaria — independiente de si ese campo también se
+  usa en otro flujo relacionado.
+- **Fuente:** `specs/fixes/fix-175-m-instructor-clase-cierre-simplificado`
+
+### DG-071 — `new Date().toISOString().split('T')[0]` como límite de "hoy" en una query pierde filas cerca de la medianoche en Chile
+- **Trampa:** calcular el límite de fecha de un filtro `.gte`/`.lt` sobre una columna
+  `timestamptz` con `new Date().toISOString().split('T')[0]` + sufijo `+00:00`. Parece
+  "la fecha de hoy", pero es la fecha de hoy **en UTC**, no en Santiago.
+- **Realidad:** Chile está detrás de UTC (UTC-3/-4). El reloj UTC cruza medianoche
+  mientras en Chile sigue siendo "hoy" — desde ~21:00 hora Chile en adelante, la fecha
+  UTC ya es "mañana". Cualquier filtro `[todayUTC 00:00, todayUTC 23:59]` construido así
+  deja fuera, en ese tramo horario, las filas cuyo timestamp real corresponde al día
+  chileno vigente. Caso real: `InstructorClasesFacade.fetchTodayClasses()` hacía
+  desaparecer "Mis Clases de Hoy" (incluida una clase recién iniciada) pasadas las 21:00.
+  Ya había pasado antes con pagos nocturnos, resuelto con `getChileDateTimeRange()`
+  (`core/utils/date.utils.ts`) — este fix repitió el mismo error en un facade distinto.
+- **Regla de aplicabilidad:** todo filtro de "hoy"/"este rango de días" sobre una columna
+  `timestamptz` debe construirse con `todayIso()` + `getChileDateTimeRange()` (o el
+  offset explícito de Santiago), nunca con `toISOString()` crudo — sin excepción, incluso
+  si el bug "solo" se manifiesta de noche.
+- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
+
 
 ---
 

@@ -17,6 +17,7 @@
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
+| `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
@@ -24,6 +25,7 @@
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
 | `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` |
+| `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
@@ -43,6 +45,7 @@
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
 | `src/app/core/utils/license-seniority.utils.ts` | `calcLicenseSeniority` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
+| `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
@@ -70,7 +73,7 @@
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
-| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `buildVehicleDocWarningMap` (fix-164-m — extraído de `FlotaFacade`; fix-165-m agregó `buildVehicleDocWarningMap()`/`vehicleDocWarningLabelGeneric()`, reutilizados por `AgendaFacade`, `EnrollmentFacade`, `AdminAlumnoDetalleFacade`, `ScheduleGridComponent` y `admin-reprogramar-clase-drawer.component.ts` para el badge de advertencia de documentos vencidos en TODOS los flujos reales de agendamiento; fix-166-m cambió `VehicleDocWarningInfo` de un estado único (`'expired'\|'expiring_soon'`) a `{ expiredDocs: string[], expiringSoonDocs: string[] }` — nombres de documentos específicos vía `VEHICLE_DOC_TYPES`, ej. "SOAP vencido" en vez de "documento vencido"; requiere que la query a `vehicle_documents` seleccione también `type`) |
+| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
 | `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
 
 <!-- AUTO-GENERATED:END -->

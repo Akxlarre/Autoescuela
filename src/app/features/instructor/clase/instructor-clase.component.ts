@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { LowerCasePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -32,7 +32,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--hero-fit" appBentoReveal appBentoGridLayout>
       <app-section-hero
         title="Iniciar Clase"
         subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
@@ -251,7 +251,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         type="number"
                         formControlName="kmStart"
                         max="999999"
-                        class="!bg-transparent !border-none !outline-none !shadow-none !ring-0 text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:!bg-transparent"
+                        class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
                         placeholder="0"
                       />
                       <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2"
@@ -313,7 +313,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <h3 class="text-xl font-display font-bold text-text-primary mb-2">
                   Clase Bloqueada
                 </h3>
-                <p class="text-base text-text-muted mb-6 max-w-sm">
+                <p class="text-text-muted mb-6 max-w-sm">
                   Esta sesión se encuentra
                   <strong class="text-text-primary">{{ cls.statusLabel | lowercase }}</strong
                   >. Solo se permite iniciar clases en estado "Agendada".
@@ -353,6 +353,14 @@ export class InstructorClaseComponent implements OnInit {
     this.startForm = this.fb.group({
       kmStart: [null, [Validators.required, Validators.min(1), Validators.max(999999)]],
     });
+
+    effect(() => {
+      const cls = this.clasesFacade.selectedClass();
+      const kmControl = this.startForm.get('kmStart');
+      if (cls?.vehicleCurrentKm != null && kmControl && !kmControl.dirty) {
+        kmControl.setValue(cls.vehicleCurrentKm);
+      }
+    });
   }
 
   ngOnInit() {
@@ -373,7 +381,8 @@ export class InstructorClaseComponent implements OnInit {
     try {
       const kmStart = this.startForm.value.kmStart;
       await this.clasesFacade.startClass(sessionId, kmStart);
-      this.router.navigate(['/app/instructor/clase', sessionId]);
+      this.clasesFacade.showSuccess('Clase iniciada', 'Ya puedes comenzar la sesión práctica.');
+      this.router.navigate(['/app/instructor/dashboard']);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Por favor, intenta de nuevo.';
       this.clasesFacade.showError('Error al iniciar la clase', message);

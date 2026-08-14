@@ -90,6 +90,8 @@ interface InstructorRow {
     phone: string | null;
     active: boolean;
     branch_id: number | null;
+    first_login: boolean;
+    supabase_uid: string | null;
   } | null;
   vehicle_assignments: VehicleAssignmentRow[];
 }
@@ -244,7 +246,9 @@ export class InstructoresFacade {
       email,
       phone,
       active,
-      branch_id
+      branch_id,
+      first_login,
+      supabase_uid
     ),
     vehicle_assignments (
       vehicle_id,
@@ -645,6 +649,38 @@ export class InstructoresFacade {
     }
   }
 
+  /**
+   * (Re)envía el correo de invitación de activación de un instructor vía Edge Function
+   * `activate-instructor-account` (fix-168-m, corregido en fix-169-m). Aplica tanto para
+   * un reenvío normal (`first_login = true`, ya tiene cuenta pero nunca la activó) como
+   * para una primera activación tardía (`!hasAuthAccount`) — un instructor creado por
+   * `create-instructor` siempre tiene `supabase_uid` desde el alta, pero una fila
+   * insertada fuera de ese flujo (seed, SQL directo) puede no tenerla; la Edge Function
+   * crea la cuenta en ese caso y sincroniza `supabase_uid` de vuelta a `public.users`.
+   */
+  async enviarInvitacion(userId: number, email: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'activate-instructor-account',
+        { body: { userId, email: email.trim().toLowerCase() } },
+      );
+      if (error)
+        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al enviar la invitación');
+      if (data?.error) throw new Error(data.error);
+
+      this.toast.success('Invitación enviada correctamente.');
+      void this.refreshSilently();
+      return true;
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al enviar la invitación';
+      this.toast.error('Error', msg);
+      return false;
+    }
+  }
+
   private mapRow(r: InstructorRow, activeClassesCount: number): InstructorTableRow {
     const u = r.users!;
     const nombre = [u.first_names, u.paternal_last_name, u.maternal_last_name ?? '']
@@ -690,6 +726,8 @@ export class InstructoresFacade {
       maternalLastName: u.maternal_last_name ?? '',
       branchId: u.branch_id,
       bothBranches: r.both_branches ?? false,
+      firstLogin: u.first_login,
+      hasAuthAccount: !!u.supabase_uid,
     };
   }
 }

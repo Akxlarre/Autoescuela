@@ -1,7 +1,6 @@
 import { Injectable, inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { CustomEase } from 'gsap/CustomEase';
 
 /**
@@ -34,7 +33,7 @@ export class GsapAnimationsService {
       this.ngZone.runOutsideAngular(() => {
         // CustomEase hace que los tokens cubic-bezier(...) del design system
         // se traduzcan a eases nativos de GSAP (antes caían al ease default).
-        gsap.registerPlugin(ScrollTrigger, CustomEase);
+        gsap.registerPlugin(CustomEase);
         this.customEaseReady = true;
         // Asegura que el ticker de GSAP corra fuera de Angular Zone
         gsap.ticker.wake();
@@ -288,7 +287,7 @@ export class GsapAnimationsService {
         duration: 1.2,
         yoyo: true,
         repeat: -1,
-        ease: 'sine.inOut'
+        ease: 'sine.inOut',
       });
 
       tl.to(shimmerEl, {
@@ -910,7 +909,12 @@ export class GsapAnimationsService {
       }
 
       if (panelEl) {
-        tl.fromTo(panelEl, { x: '100%' }, { x: '0%', duration: 0.3, ease: 'power3.out', clearProps: 'transform' }, 0);
+        tl.fromTo(
+          panelEl,
+          { x: '100%' },
+          { x: '0%', duration: 0.3, ease: 'power3.out', clearProps: 'transform' },
+          0,
+        );
       }
     } else {
       // ── DESKTOP: layout-shift animando el width ───────────────────────────
@@ -1302,10 +1306,10 @@ export class GsapAnimationsService {
     gsap.killTweensOf(el);
 
     const duration = this.getTokenMs('--duration-toast-enter') / 1000 || 0.25;
-    
+
     // Forzamos inline para evitar que Change Detection limpie las clases de motion
     el.style.transition = 'none';
-    
+
     gsap.fromTo(
       el,
       { opacity: 0, x: 80 },
@@ -1334,10 +1338,10 @@ export class GsapAnimationsService {
     gsap.killTweensOf(el);
 
     const duration = this.getTokenMs('--duration-toast-leave') / 1000 || 0.18;
-    
+
     // Forzamos inline para evitar que Change Detection restaure la transición CSS
     el.style.transition = 'none';
-    
+
     gsap.to(el, {
       opacity: 0,
       x: 80,
@@ -1562,11 +1566,18 @@ export class GsapAnimationsService {
     // Estado inicial: invisible y desplazado
     gsap.set(el, { opacity: 0, y });
 
-    const st = ScrollTrigger.create({
-      trigger: el,
-      start: `top ${Math.round((1 - threshold) * 100)}%`,
-      once: true,
-      onEnter: () => {
+    // IntersectionObserver en vez de ScrollTrigger (fix-171-m): ScrollTrigger.create()
+    // calcula la posición de trigger UNA SOLA VEZ al crearse, y solo la re-evalúa ante
+    // scroll/resize del scroller — si un padre (ej. animateBentoGrid() vía appBentoReveal)
+    // todavía está animando su propia entrada en ese instante, la posición calculada queda
+    // obsoleta y, si el usuario nunca llega a scrollear, el elemento queda en opacity:0
+    // permanente. IntersectionObserver reevalúa la intersección real de forma continua
+    // (se autocorrige ante cualquier layout shift posterior) y su `root` por defecto ya
+    // maneja contenedores con scroll interno anidados sin necesitar configurar un scroller.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        observer.disconnect();
         gsap.to(el, {
           opacity: 1,
           y: 0,
@@ -1576,9 +1587,11 @@ export class GsapAnimationsService {
           clearProps: 'transform',
         });
       },
-    });
+      { threshold },
+    );
+    observer.observe(el);
 
-    return () => st.kill();
+    return () => observer.disconnect();
   }
 
   /**
@@ -1641,13 +1654,13 @@ export class GsapAnimationsService {
   /** Obtiene un token de duración en ms (ej: "250ms" → 250) */
   private getTokenMs(name: string): number {
     if (typeof document === 'undefined') return 0;
-    
+
     const cached = this.tokenCache.get(name);
     if (cached !== undefined) return cached;
-    
+
     const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     let result = 0;
-    
+
     if (val) {
       const match = val.match(/^(\d+(?:\.\d+)?)\s*ms$/);
       if (match) {
@@ -1659,7 +1672,7 @@ export class GsapAnimationsService {
         }
       }
     }
-    
+
     this.tokenCache.set(name, result);
     return result;
   }

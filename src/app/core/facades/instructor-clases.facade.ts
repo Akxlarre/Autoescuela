@@ -3,6 +3,7 @@ import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
 import type {
   InstructorClassRow,
   EvaluationFormData,
@@ -113,7 +114,7 @@ export class InstructorClasesFacade {
 
     this._error.set(null);
     try {
-      const todayDate = new Date().toISOString().split('T')[0];
+      const { start, end } = getChileDateTimeRange(todayIso());
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
@@ -128,8 +129,8 @@ export class InstructorClasesFacade {
         `,
         )
         .eq('instructor_id', instructorId)
-        .gte('scheduled_at', `${todayDate}T00:00:00+00:00`)
-        .lt('scheduled_at', `${todayDate}T23:59:59+00:00`)
+        .gte('scheduled_at', start)
+        .lte('scheduled_at', end)
         .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
@@ -170,7 +171,7 @@ export class InstructorClasesFacade {
             id,
             students!inner(id, users!inner(id, first_names, paternal_last_name, rut))
           ),
-          vehicles(id, license_plate, brand, model)
+          vehicles(id, license_plate, brand, model, current_km)
         `,
         )
         .eq('id', sessionId)
@@ -236,7 +237,15 @@ export class InstructorClasesFacade {
     }
   }
 
-  async finishClass(sessionId: number, kmEnd: number): Promise<void> {
+  async finishClass(
+    sessionId: number,
+    kmEnd: number,
+    extra?: {
+      notes?: string;
+      studentSignature?: string | null;
+      instructorSignature?: string | null;
+    },
+  ): Promise<void> {
     if (this.useMock) {
       await new Promise((resolve) => setTimeout(resolve, 800));
       const updatedClasses = this._todayClasses().map((c) => {
@@ -247,10 +256,11 @@ export class InstructorClasesFacade {
             statusLabel: 'Completada',
             statusColor: 'success',
             kmEnd: kmEnd,
+            notes: extra?.notes ?? c.notes,
             endTime: new Date().toLocaleTimeString('es-CL'),
             canStart: false,
             canFinish: false,
-            canEvaluate: false, // Ya evaluada en el mismo paso
+            canEvaluate: true,
           };
         }
         return c;
@@ -267,7 +277,15 @@ export class InstructorClasesFacade {
         .eq('id', sessionId)
         .maybeSingle();
 
-      // 2. Update session status
+      // 2. Subir firmas opcionales (mismo helper que saveEvaluation)
+      const studentSignatureUrl = extra?.studentSignature
+        ? await this.uploadSignature(sessionId, 'student', extra.studentSignature)
+        : null;
+      const instructorSignatureUrl = extra?.instructorSignature
+        ? await this.uploadSignature(sessionId, 'instructor', extra.instructorSignature)
+        : null;
+
+      // 3. Update session status — km, notas y firmas son opcionales salvo km.
       const { error } = await this.supabase.client
         .from('class_b_sessions')
         .update({
@@ -275,12 +293,20 @@ export class InstructorClasesFacade {
           end_time: new Date().toTimeString().split(' ')[0],
           km_end: kmEnd,
           completed_at: new Date().toISOString(),
+          ...(extra?.notes ? { notes: extra.notes } : {}),
+          ...(studentSignatureUrl || instructorSignatureUrl
+            ? {
+                signature_timestamp: new Date().toISOString(),
+                student_signature: !!studentSignatureUrl,
+                instructor_signature: !!instructorSignatureUrl,
+              }
+            : {}),
         })
         .eq('id', sessionId);
 
       if (error) throw error;
 
-      // 3. Register practice attendance
+      // 4. Register practice attendance
       if (session?.enrollments) {
         const studentId = (session.enrollments as any).student_id;
         if (studentId) {
@@ -372,8 +398,8 @@ export class InstructorClasesFacade {
           notes: data.observations,
           evaluation_checklist: data.checklist,
           signature_timestamp: new Date().toISOString(),
-          student_signature_url: studentSignatureUrl,
-          instructor_signature_url: instructorSignatureUrl,
+          student_signature: !!studentSignatureUrl,
+          instructor_signature: !!instructorSignatureUrl,
           km_end: data.kmEnd, // Reforzamos el guardado de KM final aquí también
           status: 'completed',
         })
@@ -566,6 +592,7 @@ export class InstructorClasesFacade {
       studentId: row.enrollments?.students?.id || 0,
       vehiclePlate: v?.license_plate || '',
       vehicleLabel: vehicleLabel || 'Vehículo',
+      vehicleCurrentKm: v?.current_km ?? null,
       kmStart: row.km_start,
       kmEnd: row.km_end,
       evaluationGrade: row.evaluation_grade,
@@ -599,6 +626,7 @@ export class InstructorClasesFacade {
         studentId: 201,
         vehiclePlate: 'MOCK-12',
         vehicleLabel: 'Toyota Yaris (Mock)',
+        vehicleCurrentKm: 15230,
         kmStart: null,
         kmEnd: null,
         evaluationGrade: null,
@@ -627,6 +655,7 @@ export class InstructorClasesFacade {
         studentId: 202,
         vehiclePlate: 'MOCK-12',
         vehicleLabel: 'Toyota Yaris (Mock)',
+        vehicleCurrentKm: 15230,
         kmStart: null,
         kmEnd: null,
         evaluationGrade: null,

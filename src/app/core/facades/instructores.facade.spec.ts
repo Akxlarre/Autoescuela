@@ -477,4 +477,33 @@ describe('InstructoresFacade', () => {
       );
     });
   });
+
+  describe('enviarInvitacion — fix-168-m', () => {
+    it('invoca activate-instructor-account con el userId y email, y muestra un toast de éxito', async () => {
+      const invokeFn = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      const ok = await facade.enviarInvitacion(55, 'Instructor@Example.com');
+
+      expect(ok).toBe(true);
+      expect(invokeFn).toHaveBeenCalledWith('activate-instructor-account', {
+        body: { userId: 55, email: 'instructor@example.com' },
+      });
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('captura el error, muestra un toast y retorna false (ej. el instructor ya activó su cuenta)', async () => {
+      const invokeFn = vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error('Este instructor ya activó su cuenta.'),
+      });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      const ok = await facade.enviarInvitacion(55, 'otro@example.com');
+
+      expect(ok).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalled();
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+  });
 });

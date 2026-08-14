@@ -303,11 +303,6 @@ const INSTRUCTOR_NAV: NavGroup[] = [
     items: [
       { label: 'Mi Horario', icon: 'clock', routerLink: '/app/instructor/horario' },
       { label: 'Mis Alumnos', icon: 'users', routerLink: '/app/instructor/alumnos' },
-      {
-        label: 'Ensayos Teóricos',
-        icon: 'book-open',
-        routerLink: '/app/instructor/ensayos-teoricos',
-      },
       { label: 'Mis Horas', icon: 'dollar-sign', routerLink: '/app/instructor/liquidacion' },
       { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/instructor/tareas' },
     ],

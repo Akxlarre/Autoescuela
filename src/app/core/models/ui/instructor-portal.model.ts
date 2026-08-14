@@ -24,6 +24,7 @@ export interface InstructorClassRow {
   studentId: number;
   vehiclePlate: string; // derivado JOIN
   vehicleLabel: string; // marca + modelo derivado
+  vehicleCurrentKm: number | null; // vehicles.current_km — precarga de km al iniciar clase
   kmStart: number | null;
   kmEnd: number | null;
   evaluationGrade: number | null;
@@ -101,6 +102,14 @@ export interface EvaluationFormData {
   observations: string;
   studentSignature: string | null; // base64 PNG
   instructorSignature: string | null;
+}
+
+export interface ClassClosureData {
+  sessionId: number;
+  kmEnd: number;
+  notes?: string;
+  studentSignature?: string | null; // base64 PNG
+  instructorSignature?: string | null;
 }
 
 export interface EvaluationChecklistItem {
@@ -193,26 +202,6 @@ export interface SessionDetailRow {
   studentName: string | null; // null para teoría
   status: string;
   statusLabel: string;
-}
-
-// ── Ensayos Teóricos ──
-export interface ExamScoreRow {
-  id: number;
-  studentName: string;
-  studentRut: string;
-  enrollmentId: number;
-  date: string;
-  score: number; // 0-100
-  passed: boolean;
-  passedLabel: string;
-  scoreColor: string;
-}
-
-export interface RegisterExamPayload {
-  studentId: number;
-  enrollmentId: number;
-  date: string;
-  score: number;
 }
 
 // ── Asistencia ──

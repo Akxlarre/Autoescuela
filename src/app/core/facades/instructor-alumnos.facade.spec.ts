@@ -81,10 +81,4 @@ describe('InstructorAlumnosFacade', () => {
     await facade.fetchStudents();
     expect(facade.students()).toEqual([]);
   });
-
-  it('loadExamScores should filter by enrollment IDs from students signal', async () => {
-    await facade.loadExamScores();
-    // With no students loaded, should set empty and return early
-    expect(facade.examScores()).toEqual([]);
-  });
 });

@@ -265,8 +265,12 @@ export class InstructorHorarioComponent implements OnInit {
       this.router.navigate([
         `/app/instructor/alumnos/${block.sessionId}/evaluacion/${block.sessionId}`,
       ]);
-    } else if (block.status === 'scheduled' || block.status === 'in_progress') {
-      this.router.navigate([`/app/instructor/clases/${block.sessionId}/iniciar`]);
+    } else if (block.status === 'scheduled') {
+      this.router.navigate(['/app/instructor/clase/iniciar'], {
+        queryParams: { sessionId: block.sessionId },
+      });
+    } else if (block.status === 'in_progress') {
+      this.router.navigate(['/app/instructor/clase', block.sessionId]);
     }
   }
 }

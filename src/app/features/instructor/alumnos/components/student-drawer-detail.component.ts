@@ -62,101 +62,103 @@ import { avatarPalette } from '@core/utils/avatar-palette';
         </ng-template>
         <ng-template #content>
           @if (facade.activeStudent(); as detail) {
-            <!-- Avatar + estado -->
-            <div class="flex items-center gap-4">
-              <div
-                class="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 shadow-lg"
-                [style]="
-                  'background:' +
-                  getPalette(detail.name).bg +
-                  '; color:' +
-                  getPalette(detail.name).text
-                "
-              >
-                {{ initials(detail.name) }}
-              </div>
-              <div>
-                <p class="font-bold text-lg text-text-primary">{{ detail.name }}</p>
-                <p class="text-sm mb-1 text-text-muted">{{ detail.rut }}</p>
-                <p-tag [value]="detail.statusLabel" [severity]="$any(detail.statusColor)" />
-              </div>
-            </div>
-
-            <!-- Contacto -->
-            <div class="space-y-1">
-              <p class="micro-label mb-2">Contacto</p>
-              @if (detail.phone) {
-                <a [href]="'tel:' + detail.phone" class="drawer-contact-link">
-                  <span class="drawer-contact-link__icon"
-                    ><app-icon name="phone" [size]="15"
-                  /></span>
-                  {{ detail.phone }}
-                </a>
-              }
-              @if (detail.email) {
-                <a [href]="'mailto:' + detail.email" class="drawer-contact-link">
-                  <span class="drawer-contact-link__icon"
-                    ><app-icon name="mail" [size]="15"
-                  /></span>
-                  <span class="break-all">{{ detail.email }}</span>
-                </a>
-              }
-            </div>
-
-            <!-- Progreso -->
-            <div>
-              <p class="micro-label mb-3">Progreso</p>
-              <div class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle">
-                <div>
-                  <span class="block text-xs mb-0.5 text-text-muted">Curso</span>
-                  <span class="item-title">{{ detail.courseName }}</span>
-                </div>
-                <!-- Práctica -->
-                <div>
-                  <div class="flex justify-between text-xs mb-1.5">
-                    <span class="text-text-secondary"
-                      >Práctica · {{ detail.practiceProgress }}/{{
-                        detail.totalSessions
-                      }}
-                      clases</span
-                    >
-                    <b class="text-brand">{{ detail.practicePercent }}%</b>
-                  </div>
-                  <div class="w-full rounded-full h-2 bg-border-muted">
-                    <div
-                      class="h-2 rounded-full transition-all duration-500"
-                      [style]="
-                        'width:' +
-                        detail.practicePercent +
-                        '%; background:' +
-                        getPalette(detail.name).bg
-                      "
-                    ></div>
-                  </div>
-                </div>
-                <!-- Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos) -->
-              </div>
-            </div>
-
-            <!-- Próxima clase -->
-            @if (detail.nextClassDate) {
-              <div
-                class="flex items-center gap-3 p-3.5 rounded-xl bg-brand-muted border border-brand/20"
-              >
+            <div class="flex flex-col gap-5">
+              <!-- Avatar + estado -->
+              <div class="flex items-center gap-4">
                 <div
-                  class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 bg-brand"
-                  style="color: #fff"
+                  class="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 shadow-lg"
+                  [style]="
+                    'background:' +
+                    getPalette(detail.name).bg +
+                    '; color:' +
+                    getPalette(detail.name).text
+                  "
                 >
-                  <app-icon name="calendar-clock" [size]="16" />
+                  {{ initials(detail.name) }}
                 </div>
                 <div>
-                  <p class="text-xs font-semibold text-brand">Próxima Clase</p>
-                  <p class="item-title">
-                    {{ detail.nextClassDate | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}
-                  </p>
+                  <p class="font-bold text-lg text-text-primary">{{ detail.name }}</p>
+                  <p class="text-sm mb-1 text-text-muted">{{ detail.rut }}</p>
+                  <p-tag [value]="detail.statusLabel" [severity]="$any(detail.statusColor)" />
                 </div>
               </div>
-            }
+
+              <!-- Contacto -->
+              <div class="space-y-1">
+                <p class="micro-label mb-2">Contacto</p>
+                @if (detail.phone) {
+                  <a [href]="'tel:' + detail.phone" class="drawer-contact-link">
+                    <span class="drawer-contact-link__icon"
+                      ><app-icon name="phone" [size]="15"
+                    /></span>
+                    {{ detail.phone }}
+                  </a>
+                }
+                @if (detail.email) {
+                  <a [href]="'mailto:' + detail.email" class="drawer-contact-link">
+                    <span class="drawer-contact-link__icon"
+                      ><app-icon name="mail" [size]="15"
+                    /></span>
+                    <span class="break-all">{{ detail.email }}</span>
+                  </a>
+                }
+              </div>
+
+              <!-- Progreso -->
+              <div>
+                <p class="micro-label mb-3">Progreso</p>
+                <div class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle">
+                  <div>
+                    <span class="block text-xs mb-0.5 text-text-muted">Curso</span>
+                    <span class="item-title">{{ detail.courseName }}</span>
+                  </div>
+                  <!-- Práctica -->
+                  <div>
+                    <div class="flex justify-between text-xs mb-1.5">
+                      <span class="text-text-secondary"
+                        >Práctica · {{ detail.practiceProgress }}/{{
+                          detail.totalSessions
+                        }}
+                        clases</span
+                      >
+                      <b class="text-brand">{{ detail.practicePercent }}%</b>
+                    </div>
+                    <div class="w-full rounded-full h-2 bg-border-muted">
+                      <div
+                        class="h-2 rounded-full transition-all duration-500"
+                        [style]="
+                          'width:' +
+                          detail.practicePercent +
+                          '%; background:' +
+                          getPalette(detail.name).bg
+                        "
+                      ></div>
+                    </div>
+                  </div>
+                  <!-- Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos) -->
+                </div>
+              </div>
+
+              <!-- Próxima clase -->
+              @if (detail.nextClassDate) {
+                <div
+                  class="flex items-center gap-3 p-3.5 rounded-xl bg-brand-muted border border-brand/20"
+                >
+                  <div
+                    class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 bg-brand"
+                    style="color: #fff"
+                  >
+                    <app-icon name="calendar-clock" [size]="16" />
+                  </div>
+                  <div>
+                    <p class="text-xs font-semibold text-brand">Próxima Clase</p>
+                    <p class="item-title">
+                      {{ detail.nextClassDate | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
           }
         </ng-template>
       </app-drawer-content-loader>
@@ -166,6 +168,7 @@ import { avatarPalette } from '@core/utils/avatar-palette';
         <ng-container ngProjectAs="[drawer-form-footer]">
           <a
             [routerLink]="['/app/instructor/alumnos', detail.studentId, 'ficha']"
+            (click)="facade.closeDrawer()"
             class="btn-primary w-full flex items-center justify-center gap-2"
           >
             <app-icon name="file-text" [size]="18" />

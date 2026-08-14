@@ -3,6 +3,7 @@ import { InstructorClasesFacade } from './instructor-clases.facade';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
 
 describe('InstructorClasesFacade', () => {
   let facade: InstructorClasesFacade;
@@ -203,6 +204,25 @@ describe('InstructorClasesFacade', () => {
 
         expect(supabaseMock.client.from).not.toHaveBeenCalled();
       });
+
+      it('usa el rango horario de Chile (no UTC) para no perder clases nocturnas', async () => {
+        const chain = makeThenableChain({ data: [], error: null });
+        supabaseMock.client.from = vi.fn().mockReturnValue(chain);
+
+        const { start, end } = getChileDateTimeRange(todayIso());
+
+        await facade.fetchTodayClasses();
+
+        expect(chain.gte).toHaveBeenCalledWith('scheduled_at', start);
+        expect(chain.lte).toHaveBeenCalledWith('scheduled_at', end);
+        // Regresión: NUNCA debe usar el límite crudo en UTC (`+00:00`), que corta
+        // las clases de la noche cuando Chile todavía está en "hoy" pero UTC ya
+        // avanzó a "mañana".
+        expect(chain.gte).not.toHaveBeenCalledWith(
+          'scheduled_at',
+          expect.stringContaining('+00:00'),
+        );
+      });
     });
 
     describe('loadClassDetail', () => {
@@ -231,6 +251,37 @@ describe('InstructorClasesFacade', () => {
         expect(facade.selectedClass()?.sessionId).toBe(77);
         expect(facade.selectedClass()?.studentName).toBe('Luis Rojas');
         expect(facade.isLoading()).toBe(false);
+      });
+
+      it('mapea vehicleCurrentKm desde vehicles.current_km', async () => {
+        const row = {
+          id: 78,
+          scheduled_at: '2026-07-28T11:00:00Z',
+          duration_min: 45,
+          status: 'scheduled',
+          class_number: 4,
+          enrollments: {
+            id: 11,
+            students: {
+              id: 21,
+              users: { id: 31, first_names: 'Luis', paternal_last_name: 'Rojas', rut: '2-8' },
+            },
+          },
+          vehicles: {
+            id: 1,
+            license_plate: 'AB-CD-12',
+            brand: 'Toyota',
+            model: 'Yaris',
+            current_km: 42000,
+          },
+        };
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: row, error: null }));
+
+        await facade.loadClassDetail(78);
+
+        expect(facade.selectedClass()?.vehicleCurrentKm).toBe(42000);
       });
 
       it('setea selectedClass en null si no hay data (sesión inexistente)', async () => {
@@ -400,6 +451,41 @@ describe('InstructorClasesFacade', () => {
 
         await expect(facade.finishClass(5, 12500)).rejects.toBeTruthy();
       });
+
+      it('persiste notes y firmas cuando se proveen', async () => {
+        const selectChain = makeThenableChain({ data: null, error: null });
+        const updateChain = makeThenableChain({ error: null });
+
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValueOnce(selectChain) // select session
+          .mockReturnValueOnce(updateChain) // update status=completed
+          .mockReturnValueOnce(makeThenableChain({ data: [], error: null })); // refreshSilently
+
+        supabaseMock.client.storage = {
+          from: vi.fn().mockReturnValue({
+            upload: vi
+              .fn()
+              .mockResolvedValue({ data: { path: 'sessions/5/signature.png' }, error: null }),
+          }),
+        };
+
+        await facade.finishClass(5, 12500, {
+          notes: 'Buen retorno, sin novedades',
+          studentSignature: 'data:image/png;base64,AAA',
+          instructorSignature: 'data:image/png;base64,BBB',
+        });
+
+        expect(updateChain.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'completed',
+            km_end: 12500,
+            notes: 'Buen retorno, sin novedades',
+            student_signature: true,
+            instructor_signature: true,
+          }),
+        );
+      });
     });
 
     describe('saveEvaluation', () => {
@@ -425,8 +511,8 @@ describe('InstructorClasesFacade', () => {
           expect.objectContaining({
             evaluation_grade: 6.5,
             status: 'completed',
-            student_signature_url: null,
-            instructor_signature_url: null,
+            student_signature: false,
+            instructor_signature: false,
           }),
         );
       });
