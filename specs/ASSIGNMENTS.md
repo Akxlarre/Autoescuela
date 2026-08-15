@@ -88,7 +88,6 @@
 > (investigación de listas grandes/virtual scroll) — no reutilizar esos números. Estas 2 arrancan
 > en `ASG-b-089`.
 
-| ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `b` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
 
 ### Tanda auditoría del Design System — 2026-07-31
 
@@ -116,6 +115,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-b-089 | Facade inyectado directamente en Dumb Components (`shared/components/**`) | `b` | [fix-146-b-facade-en-dumb-components](fixes/fix-146-b-facade-en-dumb-components/fix.md) | 2026-08-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---

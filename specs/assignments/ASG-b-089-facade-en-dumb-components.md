@@ -1,14 +1,14 @@
 # Asignación ASG-b-089 — Facade inyectado directamente en Dumb Components (`shared/components/**`)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** Media
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-15
+> **resulting_track:** fix-146-b-facade-en-dumb-components
 
 ---
 
@@ -80,3 +80,19 @@ precedente) antes de atacar los drawers/modales más grandes.
 - Candidato a dividirse en varias asignaciones más chicas si un solo dev no quiere tomarlo
   completo (ej. una por componente, o agrupado logo+ajustes-drawer vs. los 5 drawers/modales).
 - No es urgente — es deuda arquitectónica real pero sin síntoma visible para el usuario final.
+
+## Alcance real al reclamarse (2026-08-15)
+
+Reclamada por `b` → `fix-146-b-facade-en-dumb-components`, pero **solo por los 4 casos
+mecánicos** (`logo`, `alumnos-por-vencer-drawer`, `detalle-cuadratura-modal`,
+`pago-instructor-modal`), usando la división que contempla la nota "candidato a dividirse"
+de arriba.
+
+**Los 3 restantes NO están cubiertos por ese track** y siguen pendientes:
+`ajustes-drawer`, `agregar-servicio-drawer`, `registrar-venta-drawer`. Se difirieron porque
+el punto 4 del Alcance sugerido dice explícitamente "decidir con el equipo... no asumir":
+definir si heredan el estatus semi-Smart del `*-content` padre es decisión de arquitectura,
+no del dev que reclama.
+
+→ Al cerrar `fix-146-b`, abrir una ASG nueva para esa decisión. **No dar ASG-b-089 por
+completada al 100% sin ella.**
