@@ -12,6 +12,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBrandText } from '@core/utils/brand-text.utils';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { MenuConfigService } from '@core/services/auth/menu-config.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -48,7 +49,7 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
     >
       <!-- Brand Logo -->
       <div class="px-5 py-4 shrink-0 flex items-center justify-center">
-        <app-logo />
+        <app-logo [brandText]="brandText()" />
       </div>
 
       <!-- Nav groups -->
@@ -105,6 +106,20 @@ export class SidebarComponent {
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly sidebarEl = viewChild<ElementRef<HTMLElement>>('sidebarEl');
+
+  /**
+   * Texto de marca/sede que se le pasa a `<app-logo>` (fix-146-b).
+   * El logo es un Dumb puro: la decisión de qué sede mostrar se resuelve acá, donde
+   * inyectar Facades es legítimo (`layout/`), delegando en un núcleo funcional puro.
+   */
+  protected readonly brandText = computed(() =>
+    resolveBrandText(
+      this.auth.currentUser()?.role,
+      this.branchFacade.selectedBranchId(),
+      this.auth.currentUser()?.branchId,
+      this.branchFacade.branches(),
+    ),
+  );
 
   /**
    * Determina si la sede activa tiene habilitados los cursos profesionales.

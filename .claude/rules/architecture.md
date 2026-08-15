@@ -40,8 +40,38 @@ supabase/
 
 ## Smart vs Dumb Components
 
-- **Dumb (`shared/`)**: Solo `input()` y `output()`. Sin inyección de Facades.
+- **Dumb (presentacional)**: Solo `input()` y `output()`. Sin inyección de Facades.
 - **Smart (`features/`)**: Inyectan Facades. Coordinan Dumb Components.
+- **Organismo (`shared/`, atado a un dominio)**: puede inyectar **el Facade de su propio
+  dominio**. Ver criterio abajo.
+
+### El criterio es el ROL, no la carpeta
+
+`shared/` contiene dos cosas distintas y la regla no puede tratarlas igual:
+
+| Pregunta | Sí → **Dumb** | No → **Organismo** |
+|---|---|---|
+| ¿Cualquier caller podría usarlo pasándole datos planos, sin conocer su dominio? | `app-icon`, `app-kpi-card`, `app-badge`, `app-skeleton-block`, `app-logo` | `*-content`, drawers/modales de dominio |
+
+- **Dumb** → prohibido inyectar cualquier Facade. Si necesita datos, los recibe por `input()`.
+- **Organismo** → puede inyectar el Facade de **su** dominio (`ServiciosEspecialesFacade` en un
+  drawer de servicios especiales). Sigue prohibido inyectar Facades **transversales**
+  (`AuthFacade`, `BranchFacade`) para derivar algo que el Facade de dominio podría exponer:
+  mové ese `computed()` al Facade en vez de inyectar el transversal en el componente.
+
+**Señal de que algo es Organismo y no Dumb:** se abre dinámicamente vía
+`LayoutDrawerFacadeService.open(Componente, …)`. Ese servicio no pasa `inputs` — un componente
+sin padre en ningún template no puede recibir datos por `input()`, así que exigirle "solo
+`input()`/`output()`" es imposible por construcción, no por descuido.
+
+> Hasta fix-146-b esta regla decía `Dumb (shared/)`, equiparando carpeta con rol. Una auditoría
+> del DS (H1, 2026-08-03) marcó 7 componentes como violación por eso; al revisarlos, 6 eran
+> organismos legítimos y solo `app-logo` era una violación real (renderizaba un único string
+> inyectando `AuthFacade` + `BranchFacade`). Se corrigió la regla, no los 6 componentes —
+> forzarles `input()` habría requerido extender la infraestructura de drawers para producir
+> componentes con 8 inputs que igual solo funcionan en un lugar. Criterio de aplicabilidad:
+> **cuando la regla y el código llevan mucho tiempo en desacuerdo y el código es coherente
+> consigo mismo, sospechá de la regla antes que del código.**
 - **Skeletons**: **NO** se crean componentes `*-skeleton.component.ts` colocados. El estado de
   carga se resuelve **dentro del mismo componente** con `@if (loading())` + `<app-skeleton-block>`.
   Fuente única de esta regla: `visual-system.md` §"Skeletons y Estados de Carga".
