@@ -2204,7 +2204,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
 | delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_vehicles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
-| update_vehicles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` | — |
 
 ### `website_config` — 🔒 RLS
 
@@ -2284,6 +2283,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `prevent_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
+| `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `tasks_set_updated_at` | `()` |

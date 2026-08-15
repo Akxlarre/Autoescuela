@@ -289,11 +289,11 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 439 | `#38bdf8` |
-| `--text-muted` | 397 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 266 | `var(--color-primary-text)` |
+| `--text-muted` | 391 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 260 | `var(--color-primary-text)` |
 | `--state-error` | 230 | `#f87171` |
 | `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 219 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 217 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 193 | `#18181b` |
 | `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 144 | `#38bdf8` |
@@ -308,8 +308,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--border-muted` | 50 | `var(--border-subtle)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
 | `--text-xs` | 46 | `0.75rem` |
-| `--color-primary-text` | 45 | `#ffffff` |
 | `--color-success` | 39 | `—` |
+| `--color-primary-text` | 37 | `#ffffff` |
 | `--bg-base` | 30 | `#09090b` |
 | `--state-error-bg` | 26 | `rgba(248, 113, 113, 0.1)` |
 | `--radius-full` | 24 | `9999px` |
@@ -318,7 +318,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 240 | `src/styles/tokens/_variables.scss` |
+| `.card` | 241 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 169 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 137 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
@@ -422,8 +422,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 52 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 886 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 51 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 887 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
