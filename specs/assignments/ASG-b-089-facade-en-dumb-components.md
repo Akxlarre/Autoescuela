@@ -1,14 +1,14 @@
 # Asignación ASG-b-089 — Facade inyectado directamente en Dumb Components (`shared/components/**`)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** Media
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-15
+> **resulting_track:** fix-146-b-facade-en-dumb-components
 
 ---
 
@@ -80,3 +80,31 @@ precedente) antes de atacar los drawers/modales más grandes.
 - Candidato a dividirse en varias asignaciones más chicas si un solo dev no quiere tomarlo
   completo (ej. una por componente, o agrupado logo+ajustes-drawer vs. los 5 drawers/modales).
 - No es urgente — es deuda arquitectónica real pero sin síntoma visible para el usuario final.
+
+## Resolución (2026-08-15) — el hallazgo era un falso positivo, salvo 1 caso
+
+Reclamada por `b` → `fix-146-b-facade-en-dumb-components`.
+
+> ⚠️ Una nota anterior de este mismo día decía que se cubrían "4 casos mecánicos" y que
+> quedaban "3 pendientes". **Eso quedó obsoleto**: se escribió antes de investigar cómo se
+> instancian los componentes. El resultado real es distinto y es el que vale.
+
+**La premisa de esta Asignación era incorrecta.** Asumía que el arreglo era "el Smart padre
+pasa la data por `input()`". Eso es imposible para 6 de los 7: se abren dinámicamente vía
+`LayoutDrawerFacadeService.open(Componente, …)`, que no tiene parámetro de inputs, y se
+renderizan con `*ngComponentOutlet` sin binding de `inputs`. No tienen padre en ningún
+template.
+
+**Clasificación final:** 1 violación real (`logo` — renderizaba un único string inyectando
+`AuthFacade` + `BranchFacade`) y 6 organismos legítimos, cada uno inyectando el Facade de su
+propio dominio (`ajustes-drawer` incluido: es el panel de *Ajustes*, auth/sede **son** su
+dominio).
+
+**Qué se hizo:** se arregló `logo` y se corrigió la **regla** (`.claude/rules/architecture.md`),
+que equiparaba carpeta con rol. Ahora distingue Dumb presentacional (prohibido inyectar) de
+Organismo de dominio (puede inyectar el Facade de su dominio, nunca transversales para derivar
+algo que el Facade podría exponer), con la señal diagnóstica de apertura dinámica.
+
+→ **ASG-b-089 queda resuelta.** El hallazgo H1 no vuelve a levantarse porque la regla ya no
+lo genera. Queda un residuo opcional, que NO bloquea el cierre: mudar los organismos a una
+carpeta que refleje su rol (`shared/organisms/` o por dominio). Ver ASG-b-092.

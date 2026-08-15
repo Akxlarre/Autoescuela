@@ -87,8 +87,19 @@
 > ⚠️ **Numeración:** la rama `claude/exciting-curie-2bdfdd` ya pusheó `ASG-b-087`/`ASG-b-088`
 > (investigación de listas grandes/virtual scroll) — no reutilizar esos números. Estas 2 arrancan
 > en `ASG-b-089`.
+>
+> ✅ **H1 resuelto (2026-08-15) vía `fix-146-b`** — y resultó ser en su mayoría un falso positivo:
+> de los 7 componentes marcados, 6 eran organismos legítimos (inyectan el Facade de su propio
+> dominio y se abren dinámicamente, sin padre en ningún template desde donde pasarles `input()`).
+> Solo `logo` era violación real. Se arregló `logo` y se corrigió la regla de
+> `architecture.md`, que equiparaba carpeta con rol. **Lección para futuras auditorías del DS:
+> un grep de `inject(*Facade)` sobre `shared/` no distingue rol — verificar cómo se instancia
+> el componente antes de contarlo como violación.**
 
-| ASG-b-089 | Facade inyectado directamente en 7 Dumb Components (`shared/components/**`) | `b` | fix | Media | b | Rompe la separación Smart/Dumb. Sin solución mecánica única — cada componente necesita su propio análisis (empezar por `logo.component.ts`, el más simple). Ver `specs/assignments/ASG-b-089-*.md` |
+| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
+|----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | `cualquiera` | spec | Baja | b | Residuo no bloqueante de ASG-b-089. **Evaluar primero un guardrail en `architect.js` en vez de mover archivos** — más barato y duradero. Ver `specs/assignments/ASG-b-092-*.md` |
+
 
 ### Tanda auditoría del Design System — 2026-07-31
 
@@ -209,6 +220,7 @@
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 | ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-13 |
+| ASG-b-089 | Facade inyectado directamente en Dumb Components (`shared/components/**`) | [fix-146-b-facade-en-dumb-components](fixes/fix-146-b-facade-en-dumb-components/fix.md) | 2026-08-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---

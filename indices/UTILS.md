@@ -20,6 +20,7 @@
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope` |
+| `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
@@ -28,7 +29,7 @@
 | `src/app/core/utils/class-schedule-timing.utils.ts` | `isClassStartOverdue` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
-| `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` — usados por `app-daily-schedule-timeline` (fix-179-m) |
+| `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
@@ -65,7 +66,7 @@
 | `src/app/core/utils/route-sheet-print.util.ts` | `RouteSheetPrintOptions`, `buildRouteSheetHtml` |
 | `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
-| `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` (excluye Domingo — nunca hay clases ese día) — compartida por `app-daily-schedule-timeline` y `app-weekly-schedule-grid` (fix-180-m, fix-181-m) |
+| `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch` |
 | `src/app/core/utils/search-intents.ts` | `INTENT_ENTRIES`, `getActionResults` |
 | `src/app/core/utils/sede-theme.utils.ts` | `SedeTheme`, `DEFAULT_SEDE_THEME`, `branchIdToTheme` |

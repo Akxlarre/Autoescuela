@@ -1,14 +1,14 @@
-import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
-import { AuthFacade } from '@core/facades/auth.facade';
-import { BranchFacade } from '@core/facades/branch.facade';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 
 /**
- * LogoComponent — Abstrae la lógica del logo y nombre de la sede/marca.
+ * LogoComponent — Muestra el nombre de marca/sede en el sidebar.
  *
- * Muestra dinámicamente el nombre de la sede extraído del BranchFacade/AuthFacade.
- * - Admin sin sede filtrada -> "Autoescuela"
- * - Sede regular -> ej. "Autoescuela Chillán" (leído de la BD)
- * - Sede profesional -> ej. "Conductores Chillán" (leído de la BD)
+ * Dumb puro (fix-146-b): recibe el texto ya resuelto vía `input()`. Antes inyectaba
+ * `AuthFacade` + `BranchFacade` para calcularlo él mismo, violando la separación
+ * Smart/Dumb — es un componente presentacional que renderiza un único string, no un
+ * organismo de dominio. La decisión de qué sede mostrar vive ahora en
+ * `resolveBrandText()` (`core/utils/brand-text.utils.ts`), y la inyección de Facades
+ * en `SidebarComponent` (`layout/`, autorizado a hacerlo).
  */
 @Component({
   selector: 'app-logo',
@@ -26,24 +26,6 @@ import { BranchFacade } from '@core/facades/branch.facade';
   },
 })
 export class LogoComponent {
-  private readonly auth = inject(AuthFacade);
-  private readonly branchFacade = inject(BranchFacade);
-
-  protected readonly brandText = computed(() => {
-    const role = this.auth.currentUser()?.role;
-    let activeId: number | null | undefined = null;
-
-    if (role === 'admin') {
-      activeId = this.branchFacade.selectedBranchId();
-    } else if (role === 'secretaria') {
-      activeId = this.auth.currentUser()?.branchId;
-    }
-
-    if (!activeId) {
-      return 'Autoescuela';
-    }
-
-    const branch = this.branchFacade.branches().find((b) => b.id === activeId);
-    return branch?.name ?? 'Autoescuela';
-  });
+  /** Texto de marca ya resuelto por el padre (ej. "Autoescuela Chillán"). */
+  readonly brandText = input.required<string>();
 }
