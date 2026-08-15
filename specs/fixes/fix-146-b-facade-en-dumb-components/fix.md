@@ -2,7 +2,8 @@
 
 > id: fix-146-b-facade-en-dumb-components
 > refs: ASG-b-089
-> status: in_progress
+> status: done
+> closed: 2026-08-15
 > created: 2026-08-15
 
 ## Root Cause

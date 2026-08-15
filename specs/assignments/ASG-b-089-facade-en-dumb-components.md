@@ -1,6 +1,6 @@
 # Asignación ASG-b-089 — Facade inyectado directamente en Dumb Components (`shared/components/**`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** Media
@@ -81,18 +81,30 @@ precedente) antes de atacar los drawers/modales más grandes.
   completo (ej. una por componente, o agrupado logo+ajustes-drawer vs. los 5 drawers/modales).
 - No es urgente — es deuda arquitectónica real pero sin síntoma visible para el usuario final.
 
-## Alcance real al reclamarse (2026-08-15)
+## Resolución (2026-08-15) — el hallazgo era un falso positivo, salvo 1 caso
 
-Reclamada por `b` → `fix-146-b-facade-en-dumb-components`, pero **solo por los 4 casos
-mecánicos** (`logo`, `alumnos-por-vencer-drawer`, `detalle-cuadratura-modal`,
-`pago-instructor-modal`), usando la división que contempla la nota "candidato a dividirse"
-de arriba.
+Reclamada por `b` → `fix-146-b-facade-en-dumb-components`.
 
-**Los 3 restantes NO están cubiertos por ese track** y siguen pendientes:
-`ajustes-drawer`, `agregar-servicio-drawer`, `registrar-venta-drawer`. Se difirieron porque
-el punto 4 del Alcance sugerido dice explícitamente "decidir con el equipo... no asumir":
-definir si heredan el estatus semi-Smart del `*-content` padre es decisión de arquitectura,
-no del dev que reclama.
+> ⚠️ Una nota anterior de este mismo día decía que se cubrían "4 casos mecánicos" y que
+> quedaban "3 pendientes". **Eso quedó obsoleto**: se escribió antes de investigar cómo se
+> instancian los componentes. El resultado real es distinto y es el que vale.
 
-→ Al cerrar `fix-146-b`, abrir una ASG nueva para esa decisión. **No dar ASG-b-089 por
-completada al 100% sin ella.**
+**La premisa de esta Asignación era incorrecta.** Asumía que el arreglo era "el Smart padre
+pasa la data por `input()`". Eso es imposible para 6 de los 7: se abren dinámicamente vía
+`LayoutDrawerFacadeService.open(Componente, …)`, que no tiene parámetro de inputs, y se
+renderizan con `*ngComponentOutlet` sin binding de `inputs`. No tienen padre en ningún
+template.
+
+**Clasificación final:** 1 violación real (`logo` — renderizaba un único string inyectando
+`AuthFacade` + `BranchFacade`) y 6 organismos legítimos, cada uno inyectando el Facade de su
+propio dominio (`ajustes-drawer` incluido: es el panel de *Ajustes*, auth/sede **son** su
+dominio).
+
+**Qué se hizo:** se arregló `logo` y se corrigió la **regla** (`.claude/rules/architecture.md`),
+que equiparaba carpeta con rol. Ahora distingue Dumb presentacional (prohibido inyectar) de
+Organismo de dominio (puede inyectar el Facade de su dominio, nunca transversales para derivar
+algo que el Facade podría exponer), con la señal diagnóstica de apertura dinámica.
+
+→ **ASG-b-089 queda resuelta.** El hallazgo H1 no vuelve a levantarse porque la regla ya no
+lo genera. Queda un residuo opcional, que NO bloquea el cierre: mudar los organismos a una
+carpeta que refleje su rol (`shared/organisms/` o por dominio). Ver ASG-b-092.
