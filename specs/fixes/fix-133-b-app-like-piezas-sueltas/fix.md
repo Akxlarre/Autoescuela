@@ -1,7 +1,7 @@
 # Fix: App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`)
 > id: fix-133-b-app-like-piezas-sueltas
 > refs: ASG-b-077
-> status: in_progress
+> status: done
 > created: 2026-08-11
 
 ## Root Cause
