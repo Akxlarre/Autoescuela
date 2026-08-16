@@ -961,6 +961,43 @@
   con el mismo alcance — no basta con INSERT+UPDATE.
 - **Fuente:** `specs/fixes/fix-188-m-instructor-firma-rls-storage-documents` (v3)
 
+### DG-073 — `jsonb_set` sobre una ruta anidada cuyo padre no existe no crea nada: devuelve el JSONB intacto, en silencio
+- **Trampa:** escribir `jsonb_set(config, '{contact,email}', ...)` asumiendo que
+  `create_if_missing = true` (el default) va a crear también el objeto `contact` si falta.
+  El `UPDATE` reporta filas afectadas y no lanza ningún error.
+- **Realidad:** `create_if_missing` solo crea **la última clave del path**. Si algún nivel
+  intermedio no existe, la función devuelve el JSONB **sin modificar** y el `UPDATE` escribe
+  el mismo valor que ya había. Queda como filas actualizadas y cero cambios reales. El
+  peligro se multiplica cuando la verificación posterior está escrita **en negativo**
+  ("que no queden valores placeholder"): un no-op pasa esa comprobación, porque tampoco
+  encuentra el valor viejo — no hay ninguna señal de que el update no hizo nada.
+- **Regla de aplicabilidad:** toda migración que modifique una clave anidada de una columna
+  JSONB debe verificarse **en positivo** — afirmar que el valor esperado está presente, no
+  solo que el valor incorrecto desapareció. Cuando el JSONB deba coincidir con otra tabla,
+  hacer la aserción por `JOIN` contra esa tabla, que además impide que vuelvan a divergir.
+- **Fuente:** `specs/fixes/fix-190-m-datos-contacto-inventados-sedes-y-sitios`
+
+### DG-074 — Los archivos de `supabase/migrations/` NO son fuente de verdad de lo que hay en producción
+- **Trampa:** auditar el estado de la base leyendo las migraciones del repo y concluir que
+  producción está como dicen esos archivos. En este proyecto hay al menos dos casos
+  confirmados de configuración cambiada **a mano en el panel de Supabase**, sin migración que
+  la respalde: las direcciones de `branches` (reales en producción, placeholder en el seed) y
+  cambios de bucket cuya intención el archivo de creación no refleja.
+- **Realidad:** el repo y producción divergen en ambos sentidos. Además, corregir esa
+  divergencia editando un archivo **ya aplicado** —en vez de agregar una migración nueva—
+  produce el problema inverso: un archivo cuyo contenido nunca corrió tal cual en ningún
+  entorno, y comentarios que citan migraciones posteriores a su propia fecha. Leerlo en orden
+  cronológico lleva a una conclusión falsa. Caso concreto: `20260307160000` y `20260310130000`
+  crean el bucket `documents` con `public = true`, y `20260413000001` lo cierra — quien lea
+  solo los dos primeros concluye que hay datos sensibles expuestos, y se equivoca.
+- **Regla de aplicabilidad:** antes de afirmar cómo está configurado algo en producción
+  (buckets, seed, flags, datos de configuración), **confirmarlo contra la base o el panel**,
+  no contra el archivo — y buscar siempre migraciones **posteriores** que toquen el mismo
+  objeto (`UPDATE`, no solo `INSERT`/`CREATE`) antes de concluir. Para corregir, agregar una
+  migración nueva; nunca editar una ya aplicada.
+- **Fuente:** `specs/fixes/fix-190-m-datos-contacto-inventados-sedes-y-sitios` · auditoría
+  `.compliance/` corrida 1
+
 ---
 
 ## Convención para agregar una entrada nueva

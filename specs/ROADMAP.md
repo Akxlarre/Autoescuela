@@ -16,6 +16,7 @@
 
 | ID | Título | Prioridad | Owner | Notas |
 |----|--------|-----------|-------|-------|
+| [0009-m](./specs/0009-m-consentimiento-ley-21719/spec.md) | Registro de consentimiento y deber de información (Ley 21.719) | **P0** | Matías | **Bloqueante de despliegue** — debe estar en producción antes de matricular al primer alumno real, o el consentimiento hay que recolectarlo retroactivamente. Origen: auditoría `.compliance/` corrida 1 (skill `compliance-cl`). Ley vigente 2026-12-01. 7 AC + 4 edge cases. Fuera de alcance por decisión documentada: marketing, MFA, depuración a 5 años, ARCO automatizado. |
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
