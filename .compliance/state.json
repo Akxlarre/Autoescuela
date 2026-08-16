@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "generated_at": "2026-08-16T18:08:32Z",
+  "git_commit": "748d8874",
+  "run": 1,
+  "note": "Dos responsables independientes que comparten un mismo sistema informatico. Los controles tecnicos se evaluan una vez porque la infraestructura es comun; los controles de gobernanza aplican por separado a cada RUT.",
+  "estado_despliegue": {
+    "fase": "desarrollo avanzado, sin desplegar",
+    "datos_reales_en_produccion": false,
+    "implicancia": "No existen titulares reales todavia. La base de datos empieza a poblarse el dia del despliegue. Esto convierte el cumplimiento en preventivo y no correctivo: si las casillas de consentimiento y el aviso del Art. 14 ter estan en produccion desde el dia 1, no queda ningun alumno sin registro de consentimiento y no hay que recolectar nada retroactivamente. La EIPD ademas resulta PREVIA al tratamiento, que es exactamente lo que exige el Art. 15 ter.",
+    "consecuencia_retencion": "El plazo de 5 anos se cuenta desde el egreso de alumnos que aun no existen. La rutina de depuracion no tiene urgencia; basta con dejarla definida."
+  },
+  "companies": [
+    {
+      "id": "conductores",
+      "razon_social": "Sociedad Comercial Chillan Capacita Limitada",
+      "rut": "77.940.120-0",
+      "domicilio": "Carrera 74, Chillan, Region de Nuble",
+      "giro": "Educacion extraescolar - escuela de conduccion (SII 809030)",
+      "representante_legal": { "nombre": "Jorge Enrique Perez Godoy", "rut": "7.271.517-9" },
+      "contacto_datos": "conductorchillan@gmail.com",
+      "trabajadores": 8,
+      "ingresos_anuales_clp": 120000000,
+      "tamano": "pequena",
+      "tamano_fundamento": "Ley 20.416: ~2.500-3.000 UF, bajo el techo de 25.000 UF. Aplica gracia MIPYME 12 meses (Art. sexto transitorio).",
+      "docs_dir": "docs/conductores"
+    },
+    {
+      "id": "otec",
+      "razon_social": "Jorge Enrique Perez Godoy Capacitacion y Servicios EIRL",
+      "rut": "76.007.217-6",
+      "domicilio": "Maipon 418, Chillan, Region de Nuble",
+      "giro": "Educacion extraescolar (SII 809030)",
+      "representante_legal": { "nombre": "Jorge Enrique Perez Godoy", "rut": "7.271.517-9" },
+      "contacto_datos": "otecchillan@gmail.com",
+      "trabajadores": 6,
+      "ingresos_anuales_clp": 100000000,
+      "tamano": "pequena",
+      "tamano_fundamento": "Ley 20.416: ~2.500 UF, bajo el techo de 25.000 UF. Aplica gracia MIPYME 12 meses (Art. sexto transitorio).",
+      "docs_dir": "docs/otec"
+    }
+  ],
+  "active_packs": ["ley-21719"],
+  "packs_no_activados": {
+    "ley-21595": "No activado en esta corrida por decision del usuario. Ya esta vigente; el canal de denuncias no existe (respuesta 2.2 del cuestionario). Candidato para la proxima corrida.",
+    "autoescuela-cl": "No activado en esta corrida. Aplica al giro (DS 39 / DS 251 / Ley 18.290). Requiere levantar datos operativos de instructores, flota, reconocimiento oficial y curricula."
+  },
+  "decisiones_resueltas": {
+    "dpo_obligatorio": {
+      "resultado": false,
+      "fundamento": "Art. 50: exigible a organismos publicos o a datos sensibles a gran escala. Ambas sociedades tratan datos sensibles (certificados medicos) pero no a gran escala. Se designa responsable interno por cargo, no DPO formal."
+    },
+    "eipd_obligatoria": {
+      "resultado": true,
+      "fundamento": "Art. 15 ter, supuesto de tratamiento masivo de datos sensibles o de ninos, ninas y adolescentes. Doble gatillo verificado en codigo: student_documents contiene certificado medico y students.is_minor modela alumnos menores de edad."
+    },
+    "gracia_mipyme": {
+      "resultado": true,
+      "fundamento": "Art. sexto transitorio: primeros 12 meses desde la vigencia (dic-2026 a dic-2027) la Agencia puede aplicar amonestacion en vez de multa. Ambas sociedades califican como empresa de menor tamano (Ley 20.416)."
+    },
+    "transferencia_internacional": {
+      "resultado": true,
+      "mecanismo": "Clausulas Contractuales Modelo del Ministerio de Economia (Resolucion RAEX202503748, D.O. 19-12-2025)",
+      "pendiente": "Confirmar la region concreta del proyecto Supabase; define el pais de destino."
+    }
+  },
+  "controls": {
+    "gov-responsable": {
+      "status": "partial",
+      "evidence": "Designado por cargo (Secretaria en funciones) con el representante legal como suplente, en el Anexo A de cada RAT. El cargo rota, por eso se designa la funcion y no la persona.",
+      "remediation": "Nominar a la persona que ocupa el cargo hoy (nombre, RUT, fecha) en el Anexo A de ambos RAT."
+    },
+    "gov-registro": {
+      "status": "pass",
+      "evidence": "docs/conductores/21719-rat.md (13 actividades) y docs/otec/21719-rat.md (14 actividades), generados en esta corrida.",
+      "remediation": ""
+    },
+    "gov-politicas": {
+      "status": "partial",
+      "evidence": "Politica de privacidad redactada para ambas sociedades.",
+      "remediation": "Publicarla en el sitio web y enlazarla desde el formulario de preinscripcion y la ficha de matricula. Un documento no publicado no cumple el deber de informacion."
+    },
+    "data-rights-channel": {
+      "status": "partial",
+      "evidence": "Canal documentado con procedimiento, plazos y bitacora (21719-canal-derechos.md). Correos definidos: conductorchillan@gmail.com y otecchillan@gmail.com.",
+      "remediation": "Publicar el canal y designar quien revisa esos correos a diario. Idealmente, formulario en la app."
+    },
+    "data-licitud": {
+      "status": "partial",
+      "evidence": "Las bases de licitud existen y estan mapeadas por actividad en el RAT (contrato, obligacion legal, consentimiento, interes legitimo).",
+      "remediation": "No hay registro estructurado del consentimiento en el sistema. Sin el, la carga de la prueba del Art. 12 no se puede levantar."
+    },
+    "data-consent-text": {
+      "status": "fail",
+      "evidence": "Textos redactados en 21719-consentimiento.md, pero no implementados. Se verifico que los formularios actuales (contract.component, public-contract.component) no separan el consentimiento de datos sensibles ni el de marketing.",
+      "remediation": "Implementar casillas no premarcadas y separadas: matricula, certificado medico (Art. 16) y marketing. Ver references/build/derechos-y-datos.md."
+    },
+    "data-derechos": {
+      "status": "partial",
+      "evidence": "Existen Edge Functions de exportacion (export-students, export-certificates-zip, export-special-services) que cubren parcialmente acceso y portabilidad.",
+      "remediation": "No existe flujo de supresion ni de anonimizacion, ni bloqueo ni oposicion. Falta el circuito formal de 30 dias con evidencia de respuesta."
+    },
+    "data-info": {
+      "status": "partial",
+      "evidence": "Contenido del Art. 14 ter cubierto integramente en la politica de privacidad generada.",
+      "remediation": "Falta entregarlo en el punto de captura: aviso corto en el formulario publico y en la ficha de matricula."
+    },
+    "data-minimizacion": {
+      "status": "partial",
+      "evidence": "Retencion definida por la direccion en 5 anos y documentada por actividad en ambos RAT. No hay mecanismo automatico que la ejecute, pero el sistema no esta desplegado: no existe ningun dato cuyo plazo pueda estar vencido.",
+      "remediation": "Dejar definida la rutina de depuracion a los 5 anos y la eliminacion de la imagen del certificado medico al cerrar expediente. Sin urgencia: el primer vencimiento posible es 5 anos despues del primer egreso posterior al despliegue."
+    },
+    "data-dpa": {
+      "status": "fail",
+      "evidence": "No existe ningun contrato de tratamiento firmado. Quien mantiene el sistema tiene acceso a produccion sin contrato escrito (Art. 15 bis).",
+      "remediation": "Firmar Modelo A con el proveedor del sistema y con el contador. En la OTEC, ademas, Modelo B con cada empresa cliente que envia trabajadores a capacitarse."
+    },
+    "data-transfer": {
+      "status": "fail",
+      "evidence": "Transferencias reales y verificadas a Supabase Inc., Google y Zoom sin mecanismo incorporado.",
+      "remediation": "Incorporar las clausulas contractuales modelo con cada proveedor y archivar la constancia. Confirmar la region del proyecto Supabase."
+    },
+    "data-eipd": {
+      "status": "pass",
+      "evidence": "EIPD realizada para ambas sociedades (21719-eipd.md). El test del Art. 15 ter da obligatoria.",
+      "remediation": "El control esta cumplido (la evaluacion existe), pero su conclusion es que el riesgo residual NO es aceptable hasta implementar M-1 y M-2."
+    },
+    "data-privacy-by-design": {
+      "status": "pass",
+      "evidence": "supabase/migrations/20260413000001_secure_documents_bucket.sql cierra el bucket 'documents': UPDATE storage.buckets SET public = false, elimina la policy de lectura publica incondicional, la reemplaza por documents_authenticated_read restringida a roles admin/secretary autenticados, y migra las URLs absolutas a rutas relativas para forzar signed URLs. Confirmado en el panel de Supabase: el bucket no tiene badge PUBLIC. Ninguna re-ejecucion lo revierte: 20260307160000 usa ON CONFLICT DO NOTHING y 20260310130000 omite deliberadamente 'public' del DO UPDATE.",
+      "remediation": ""
+    },
+    "data-pseudonym": {
+      "status": "fail",
+      "evidence": "No se encontro seudonimizacion ni anonimizacion en el codigo ni en las migraciones.",
+      "remediation": "Anonimizar al vencer la retencion, en vez de eliminar en duro, para conservar estadistica sin dato personal. Desvincular las encuestas de satisfaccion del identificador de matricula al cerrar el periodo."
+    },
+    "sec-tls": {
+      "status": "pass",
+      "evidence": "Toda la comunicacion va por HTTPS contra el endpoint de Supabase (src/environments/environment.ts).",
+      "remediation": ""
+    },
+    "sec-rest": {
+      "status": "pass",
+      "evidence": "Supabase cifra en reposo a nivel de plataforma. El control de acceso al almacenamiento esta cerrado: bucket privado + policy de lectura restringida a admin/secretary + acceso por signed URL con TTL de 1 hora desde las Facades.",
+      "remediation": ""
+    },
+    "sec-passwords": {
+      "status": "pass",
+      "evidence": "Supabase Auth aplica hashing. La contrasena inicial derivada del RUT esta mitigada por el cambio obligatorio en el primer ingreso (src/app/core/guards/first-login.guard.ts, role.guard.ts, role-redirect.guard.ts).",
+      "remediation": ""
+    },
+    "sec-mfa": {
+      "status": "partial",
+      "evidence": "supabase/config.toml: [auth.mfa.totp] enroll_enabled = false, verify_enabled = false. No implementado.",
+      "decision": "RIESGO ACEPTADO por decision documentada del representante legal (2026-08-16), no omision.",
+      "fundamento": "La Ley 21.719 no exige MFA. El Art. 14 quinquies exige medidas proporcionales al riesgo. Para una organizacion de 8 y 6 trabajadores, con control de acceso por rol en base de datos (371 policies), almacenamiento privado con enlaces firmados, audit_log inmutable con IP y cambio forzado de contrasena al primer ingreso, la ausencia de MFA no rompe la proporcionalidad.",
+      "controles_compensatorios": [
+        "Prohibicion de compartir cuentas: una cuenta nominativa por persona",
+        "Revocacion de acceso el mismo dia en que una persona deja el cargo",
+        "Contrasenas unicas, no reutilizadas de otros servicios",
+        "Revision del audit_log ante cualquier sospecha"
+      ],
+      "reevaluacion": "Ante crecimiento relevante del numero de alumnos o de cuentas con rol admin/secretary, o ante cualquier incidente de credenciales. En todo caso, en la revision anual de la EIPD.",
+      "remediation": "Si se decide implementarlo: activar TOTP en el panel y exigirlo por rol tanto en los guards como en RLS (auth.jwt()->>'aal' = 'aal2'). Sin la parte de RLS el control protege la UI pero no los datos."
+    },
+    "sec-logs": {
+      "status": "pass",
+      "evidence": "Tabla audit_log con user_id, action, entity, entity_id, ip, created_at y branch_id. Inmutable (sin UPDATE), lectura solo admin. Triggers en migraciones 20260323100000, 20260323110000 y 20260323120000.",
+      "remediation": ""
+    },
+    "sec-tenant": {
+      "status": "pass",
+      "evidence": "371 politicas RLS sobre 13 tablas con RLS habilitado; segmentacion por branch_id y funcion auth_user_role().",
+      "remediation": "Verificar que la segmentacion por sede coincida con la separacion entre ambos RUT, para que el personal de una sociedad no alcance datos de la otra."
+    },
+    "sec-secrets": {
+      "status": "pass",
+      "evidence": "Credenciales SMTP en variables de entorno de las Edge Functions. La anonKey en environment.ts es publica por diseno y esta protegida por RLS.",
+      "remediation": ""
+    },
+    "sec-backups": {
+      "status": "unknown",
+      "evidence": "No verificable desde el repositorio: depende del plan contratado en Supabase.",
+      "remediation": "Confirmar en el panel de Supabase que los backups automaticos esten activos y con que retencion. Probar una restauracion al menos una vez."
+    },
+    "inc-brechas": {
+      "status": "pass",
+      "evidence": "Plan de respuesta (21719-plan-respuesta-brechas.md) y registro de vulneraciones abierto y fechado (21719-registro-vulneraciones.md) para ambas sociedades.",
+      "remediation": "Completar el contacto tecnico y el apoyo legal en la tabla de roles de ambos planes."
+    }
+  },
+  "frameworks": {
+    "ley-21719": {
+      "score": 0.61,
+      "controls_required": 23,
+      "pass": 10,
+      "partial": 8,
+      "fail": 4,
+      "unknown": 1,
+      "aplica_a": ["conductores", "otec"],
+      "vigencia": "2026-12-01",
+      "dias_restantes_al_generar": 107
+    }
+  }
+}
