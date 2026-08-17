@@ -117,7 +117,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-077 | App-like: piezas sueltas (`flota/mantenimientos`, `contabilidad/cursos`, `contabilidad/anticipos`) | `b` | [fix-133-b-app-like-piezas-sueltas](fixes/fix-133-b-app-like-piezas-sueltas/fix.md) | 2026-08-11 |
-| ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | `i` | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -210,6 +209,7 @@
 | ASG-b-081 | App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo` | [fix-150-m-app-like-profesional-archivo](fixes/fix-150-m-app-like-profesional-archivo/fix.md) | 2026-08-11 |
 | ASG-b-090 | Consolidar paletas de color duplicadas/hardcodeadas en fuentes únicas | [fix-155-m-consolidar-paletas-color-duplicadas](fixes/fix-155-m-consolidar-paletas-color-duplicadas/fix.md) | 2026-08-12 |
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-13 |
+| ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
 <!-- AUTO-GENERATED:END -->
 
 ---
