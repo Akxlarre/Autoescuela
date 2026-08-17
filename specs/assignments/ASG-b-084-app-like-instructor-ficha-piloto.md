@@ -1,14 +1,14 @@
 # Asignación ASG-b-084 — App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-17
+> **resulting_track:** fix-027-i-app-like-instructor-ficha-tabs
 
 ---
 
