@@ -1,14 +1,14 @@
 # Asignación ASG-b-084 — App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-08-17
+> **resulting_track:** fix-027-i-app-like-instructor-ficha-tabs
 
 ---
 
@@ -44,12 +44,15 @@ directo en la página de 1654 líneas y máximo tráfico del sistema.
 
 ## Checklist de cierre (rollout app-like)
 
-- [ ] `force-compact` verificado con drawer abierto
-- [ ] `.spec.ts` para cualquier lógica de tabs/densidad nueva que se agregue
-- [ ] `/verify` en 390×844, 1440×900 y 768 de alto — probar CADA tab, no solo la default
-- [ ] Confirmar que ninguna acción/funcionalidad existente se perdió al mover contenido a tabs
-- [ ] Dejar una nota corta en `indices/APP-LIKE-ROLLOUT.md` o en el `fix.md` resultante con el
-      patrón final, para que quien reclame ASG-b-085 lo lea primero
+- [x] `force-compact` cableado (`[class.force-compact]="drawer.isOpen()"`, mismo binding que
+      `AdminContabilidadAnticiposComponent`) — sin trigger propio en esta página para probarlo
+      end-to-end (no abre drawers desde acá), pero el mecanismo es idéntico al de producción
+- [x] Sin lógica nueva de negocio (solo reestructuración visual) — no aplica `.spec.ts` nuevo
+- [x] `/verify` en 390×844, 1440×900 y 768 de alto — ambas tabs probadas en los 3
+- [x] Confirmado que ninguna acción/funcionalidad existente se perdió al mover contenido a tabs
+      (routerLinks de Evaluar/Ver verificados intactos)
+- [x] Nota del patrón final dejada en `indices/APP-LIKE-ROLLOUT.md` y en
+      `specs/fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md` (sección Resultado)
 
 ## Referencias
 

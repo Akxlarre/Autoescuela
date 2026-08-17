@@ -5,6 +5,7 @@ import {
   OnInit,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,11 +18,15 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+
+type FichaTab = 'datos' | 'ficha-tecnica';
 
 @Component({
   selector: 'app-instructor-ficha',
@@ -37,6 +42,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     AlertCardComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
+    TabsComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     ScrollRevealDirective,
@@ -58,10 +64,27 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           display: none;
         }
       }
+
+      /* fix-027-i (feedback visual): centrar verticalmente el tab "Datos" (2 cards cortas)
+         dentro del .bento-fill SOLO en desktop, donde el panel se fuerza a llenar la
+         pantalla. En mobile el panel no tiene alto forzado — centrar ahí solo empuja el
+         contenido hacia abajo y deja un hueco arriba en vez de abajo. */
+      @container layoutmain (min-width: 1024px) {
+        .ficha-datos-panel {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+      }
     `,
   ],
   template: `
-    <div class="bento-grid bento-grid--hero-fit" appBentoReveal appBentoGridLayout>
+    <div
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      [class.force-compact]="drawer.isOpen()"
+      appBentoReveal
+      appBentoGridLayout
+    >
       <!-- ── Error ── -->
       @if (facade.error()) {
         <div class="bento-banner">
@@ -104,116 +127,138 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           />
         }
 
-        <!-- ── Contenido principal ── -->
-        <div class="bento-banner">
-          <div class="flex flex-col gap-6">
-            <!-- 2-Card Grid — skeleton inline -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" appScrollReveal>
-              @if (facade.detailLoading()) {
-                <div>
-                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+        <!-- ── Tabs (Datos / Ficha Técnica) — fix-027-i, piloto ASG-b-084 ── -->
+        <app-tabs
+          class="bento-banner"
+          [tabs]="tabOptions"
+          [activeId]="activeTab()"
+          variant="segmented"
+          (activeIdChange)="setActiveTab($event)"
+        />
+
+        <!-- ── Panel (celda única .bento-fill, sin importar la tab activa) ── -->
+        <div
+          class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col h-full"
+          appCardHover
+        >
+          @switch (activeTab()) {
+            @case ('datos') {
+              <!-- fix-027-i (feedback visual): panel corto dentro de .bento-fill — se centra
+                   verticalmente en el alto disponible en vez de quedar pegado arriba con un
+                   hueco vacío debajo (mismo criterio que empty-states/skeletons en bento-fill,
+                   ver visual-system.md §"Estados vacíos y skeletons dentro de un .bento-fill"). -->
+              <div class="ficha-datos-panel flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" appScrollReveal>
+                  @if (facade.detailLoading()) {
+                    <div>
+                      <app-skeleton-block variant="rect" width="100%" height="160px" />
+                    </div>
+                    <div>
+                      <app-skeleton-block variant="rect" width="100%" height="160px" />
+                    </div>
+                  } @else if (facade.studentDetail(); as detail) {
+                    <!-- Info Personal -->
+                    <div class="card" appCardHover>
+                      <h3 class="kpi-label mb-4">Información del Alumno</h3>
+                      <div class="space-y-3">
+                        <div>
+                          <span class="kpi-label">RUT</span>
+                          <span
+                            class="block text-sm font-medium mt-1"
+                            [style.color]="'var(--text-primary)'"
+                            >{{ detail.rut }}</span
+                          >
+                        </div>
+                        @if (detail.email) {
+                          <div>
+                            <span class="kpi-label">Email</span>
+                            <span
+                              class="block text-sm font-medium mt-1 break-all"
+                              [style.color]="'var(--text-primary)'"
+                              >{{ detail.email }}</span
+                            >
+                          </div>
+                        }
+                        @if (detail.phone) {
+                          <div>
+                            <span class="kpi-label">Teléfono</span>
+                            <span
+                              class="block text-sm font-medium mt-1"
+                              [style.color]="'var(--text-primary)'"
+                              >{{ detail.phone }}</span
+                            >
+                          </div>
+                        }
+                        <div>
+                          <span class="kpi-label">Curso</span>
+                          <span
+                            class="block text-sm font-medium mt-1"
+                            [style.color]="'var(--text-primary)'"
+                            >{{ detail.courseName }}</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Clases Prácticas -->
+                    <div class="card" appCardHover>
+                      <div class="flex items-start justify-between mb-4">
+                        <div class="min-w-0 flex-1 mr-3">
+                          <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
+                            Clases Prácticas
+                          </h3>
+                          <p class="text-xs mt-0.5" [style.color]="'var(--text-muted)'">
+                            De {{ detail.totalSessions }} requeridas
+                          </p>
+                        </div>
+                        <span
+                          class="kpi-value shrink-0 text-brand"
+                          style="font-size: 2rem; line-height: 1"
+                        >
+                          {{
+                            detail.totalSessions > 0
+                              ? ((detail.practiceProgress / detail.totalSessions) * 100
+                                | number: '1.0-0')
+                              : 0
+                          }}%
+                        </span>
+                      </div>
+                      <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
+                        <div
+                          class="h-full rounded-full transition-all bg-brand"
+                          [style.width.%]="
+                            detail.totalSessions > 0
+                              ? (detail.practiceProgress / detail.totalSessions) * 100
+                              : 0
+                          "
+                        ></div>
+                      </div>
+                      <div class="flex items-center justify-between text-sm">
+                        <span [style.color]="'var(--text-muted)'"
+                          >{{ detail.practiceProgress }} completadas</span
+                        >
+                        <span class="font-semibold" [style.color]="'var(--text-primary)'">
+                          {{ detail.totalSessions - detail.practiceProgress }} restantes
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Clases Teóricas eliminadas (Spec 0001 — Ciclos Teóricos) -->
+                  }
                 </div>
-                <div>
-                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+              </div>
+            }
+            @case ('ficha-tecnica') {
+              @if (facade.detailLoading()) {
+                <div class="p-4 md:p-6">
+                  <app-skeleton-block variant="rect" width="100%" height="320px" />
                 </div>
               } @else if (facade.studentDetail(); as detail) {
-                <!-- Info Personal -->
-                <div class="card" appCardHover>
-                  <h3 class="kpi-label mb-4">Información del Alumno</h3>
-                  <div class="space-y-3">
-                    <div>
-                      <span class="kpi-label">RUT</span>
-                      <span
-                        class="block text-sm font-medium mt-1"
-                        [style.color]="'var(--text-primary)'"
-                        >{{ detail.rut }}</span
-                      >
-                    </div>
-                    @if (detail.email) {
-                      <div>
-                        <span class="kpi-label">Email</span>
-                        <span
-                          class="block text-sm font-medium mt-1 break-all"
-                          [style.color]="'var(--text-primary)'"
-                          >{{ detail.email }}</span
-                        >
-                      </div>
-                    }
-                    @if (detail.phone) {
-                      <div>
-                        <span class="kpi-label">Teléfono</span>
-                        <span
-                          class="block text-sm font-medium mt-1"
-                          [style.color]="'var(--text-primary)'"
-                          >{{ detail.phone }}</span
-                        >
-                      </div>
-                    }
-                    <div>
-                      <span class="kpi-label">Curso</span>
-                      <span
-                        class="block text-sm font-medium mt-1"
-                        [style.color]="'var(--text-primary)'"
-                        >{{ detail.courseName }}</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Clases Prácticas -->
-                <div class="card" appCardHover>
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="min-w-0 flex-1 mr-3">
-                      <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
-                        Clases Prácticas
-                      </h3>
-                      <p class="text-xs mt-0.5" [style.color]="'var(--text-muted)'">
-                        De {{ detail.totalSessions }} requeridas
-                      </p>
-                    </div>
-                    <span
-                      class="kpi-value shrink-0 text-brand"
-                      style="font-size: 2rem; line-height: 1"
-                    >
-                      {{
-                        detail.totalSessions > 0
-                          ? ((detail.practiceProgress / detail.totalSessions) * 100
-                            | number: '1.0-0')
-                          : 0
-                      }}%
-                    </span>
-                  </div>
-                  <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
-                    <div
-                      class="h-full rounded-full transition-all bg-brand"
-                      [style.width.%]="
-                        detail.totalSessions > 0
-                          ? (detail.practiceProgress / detail.totalSessions) * 100
-                          : 0
-                      "
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between text-sm">
-                    <span [style.color]="'var(--text-muted)'"
-                      >{{ detail.practiceProgress }} completadas</span
-                    >
-                    <span class="font-semibold" [style.color]="'var(--text-primary)'">
-                      {{ detail.totalSessions - detail.practiceProgress }} restantes
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Clases Teóricas eliminadas (Spec 0001 — Ciclos Teóricos) -->
-              }
-            </div>
-
-            <!-- ── Ficha Técnica — skeleton inline ── -->
-            @if (facade.detailLoading()) {
-              <app-skeleton-block variant="rect" width="100%" height="320px" />
-            } @else if (facade.studentDetail(); as detail) {
-              <div class="card p-0 overflow-hidden" appCardHover [appScrollReveal]="{ delay: 0.1 }">
-                <!-- Cabecera de tabla -->
-                <div class="px-4 md:px-6 py-4 border-b border-border-subtle">
+                <!-- Cabecera -->
+                <div
+                  class="shrink-0 px-4 md:px-6 py-4"
+                  style="border-bottom: 1px solid var(--border-subtle)"
+                >
                   <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">
                     Ficha Técnica — Clases Prácticas
                   </h3>
@@ -222,253 +267,259 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   </p>
                 </div>
 
-                <!-- Desktop: tabla -->
-                <div class="ficha-table-desktop overflow-x-auto">
-                  <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr class="micro-label border-b border-border-subtle">
-                        <th class="p-4 font-semibold">N°</th>
-                        <th class="p-4 font-semibold">Fecha</th>
-                        <th class="p-4 font-semibold">Hora</th>
-                        <th class="p-4 font-semibold">Instructor</th>
-                        <th class="p-4 font-semibold text-right">Km Inicio</th>
-                        <th class="p-4 font-semibold text-right">Km Fin</th>
-                        <th class="p-4 font-semibold">Observaciones</th>
-                        <th class="p-4 font-semibold text-center">Estado</th>
-                        <th class="p-4 font-semibold text-center">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody class="text-sm">
-                      @for (row of detail.fichaTecnica; track row.classNumber) {
-                        <tr
-                          class="border-b transition-colors border-border-subtle"
-                          [style.background]="row.date ? '' : 'var(--bg-elevated)'"
-                        >
-                          <td class="p-4 w-14">
+                <div class="flex-1 min-h-0 overflow-y-auto" [appScrollReveal]="{ delay: 0.1 }">
+                  <!-- Desktop: tabla -->
+                  <div class="ficha-table-desktop overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                      <thead>
+                        <tr class="micro-label border-b border-border-subtle">
+                          <th class="p-4 font-semibold">N°</th>
+                          <th class="p-4 font-semibold">Fecha</th>
+                          <th class="p-4 font-semibold">Hora</th>
+                          <th class="p-4 font-semibold">Instructor</th>
+                          <th class="p-4 font-semibold text-right">Km Inicio</th>
+                          <th class="p-4 font-semibold text-right">Km Fin</th>
+                          <th class="p-4 font-semibold">Observaciones</th>
+                          <th class="p-4 font-semibold text-center">Estado</th>
+                          <th class="p-4 font-semibold text-center">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody class="text-sm">
+                        @for (row of detail.fichaTecnica; track row.classNumber) {
+                          <tr
+                            class="border-b transition-colors border-border-subtle"
+                            [style.background]="row.date ? '' : 'var(--bg-elevated)'"
+                          >
+                            <td class="p-4 w-14">
+                              <div
+                                class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
+                              >
+                                {{ row.classNumber }}
+                              </div>
+                            </td>
+                            <td class="p-4 whitespace-nowrap">
+                              @if (row.date) {
+                                <span
+                                  class="font-medium font-mono text-xs"
+                                  [style.color]="'var(--text-primary)'"
+                                >
+                                  {{ row.date | date: 'dd/MM/yyyy' }}
+                                </span>
+                              } @else {
+                                <span class="italic" [style.color]="'var(--text-muted)'">-</span>
+                              }
+                            </td>
+                            <td
+                              class="p-4 whitespace-nowrap font-mono text-xs"
+                              [style.color]="'var(--text-muted)'"
+                            >
+                              @if (row.date) {
+                                {{ row.date | date: 'HH:mm' }}
+                              } @else {
+                                -
+                              }
+                            </td>
+                            <td class="p-4 text-xs" [style.color]="'var(--text-muted)'">
+                              {{ row.instructorName || '-' }}
+                            </td>
+                            <td
+                              class="p-4 text-right font-mono text-xs"
+                              [style.color]="'var(--text-muted)'"
+                            >
+                              {{ row.kmStart ?? '-' }}
+                            </td>
+                            <td
+                              class="p-4 text-right font-mono text-xs"
+                              [style.color]="'var(--text-muted)'"
+                            >
+                              {{ row.kmEnd ?? '-' }}
+                            </td>
+                            <td class="p-4 text-xs max-w-xs" [style.color]="'var(--text-muted)'">
+                              @if (row.notes) {
+                                {{ row.notes }}
+                              } @else {
+                                <span class="italic">Pendiente</span>
+                              }
+                            </td>
+                            <td class="p-4 text-center w-28">
+                              <app-badge [variant]="getStatusVariant(row.status)">
+                                {{ getStatusLabel(row.status) }}
+                              </app-badge>
+                            </td>
+                            <td class="p-4 text-center w-28">
+                              @if (row.canEvaluate) {
+                                <a
+                                  [routerLink]="[
+                                    '/app/instructor/alumnos',
+                                    detail.studentId,
+                                    'evaluacion',
+                                    row.sessionId,
+                                  ]"
+                                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-brand"
+                                  style="color: var(--color-primary-text)"
+                                  data-llm-action="evaluate-class"
+                                >
+                                  <app-icon name="clipboard-pen" [size]="12" />
+                                  Evaluar
+                                </a>
+                              } @else if (row.status === 'completed') {
+                                <a
+                                  [routerLink]="[
+                                    '/app/instructor/alumnos',
+                                    detail.studentId,
+                                    'evaluacion',
+                                    row.sessionId,
+                                  ]"
+                                  class="text-xs font-medium transition-colors hover:underline"
+                                  [style.color]="'var(--text-muted)'"
+                                  >Ver</a
+                                >
+                              } @else {
+                                <span class="text-xs" [style.color]="'var(--text-muted)'">-</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Mobile: lista de tarjetas -->
+                  <div
+                    class="ficha-table-mobile divide-y divide-border-subtle border-border-subtle"
+                  >
+                    @for (row of detail.fichaTecnica; track row.classNumber) {
+                      <div class="p-4 space-y-3">
+                        <!-- Fila 1: número + fecha + badge -->
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="flex items-center gap-3 min-w-0">
                             <div
-                              class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
+                              class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 bg-brand-muted text-brand"
                             >
                               {{ row.classNumber }}
                             </div>
-                          </td>
-                          <td class="p-4 whitespace-nowrap">
-                            @if (row.date) {
-                              <span
-                                class="font-medium font-mono text-xs"
-                                [style.color]="'var(--text-primary)'"
+                            <div class="min-w-0">
+                              @if (row.date) {
+                                <span
+                                  class="text-sm font-semibold block"
+                                  [style.color]="'var(--text-primary)'"
+                                >
+                                  {{ row.date | date: 'dd MMM yyyy' }}
+                                </span>
+                                <span
+                                  class="text-xs font-mono"
+                                  [style.color]="'var(--text-muted)'"
+                                  >{{ row.date | date: 'HH:mm' }}</span
+                                >
+                              } @else {
+                                <span class="text-sm italic" [style.color]="'var(--text-muted)'"
+                                  >No agendada</span
+                                >
+                              }
+                            </div>
+                          </div>
+                          <div class="flex items-center gap-2 shrink-0">
+                            @if (row.grade) {
+                              <div
+                                class="flex items-center gap-1 font-bold text-base"
+                                [style.color]="
+                                  row.grade >= 4 ? 'var(--state-success)' : 'var(--state-error)'
+                                "
                               >
-                                {{ row.date | date: 'dd/MM/yyyy' }}
-                              </span>
-                            } @else {
-                              <span class="italic" [style.color]="'var(--text-muted)'">-</span>
+                                <app-icon name="star" [size]="14" />
+                                {{ row.grade }}
+                              </div>
                             }
-                          </td>
-                          <td
-                            class="p-4 whitespace-nowrap font-mono text-xs"
-                            [style.color]="'var(--text-muted)'"
-                          >
-                            @if (row.date) {
-                              {{ row.date | date: 'HH:mm' }}
-                            } @else {
-                              -
-                            }
-                          </td>
-                          <td class="p-4 text-xs" [style.color]="'var(--text-muted)'">
-                            {{ row.instructorName || '-' }}
-                          </td>
-                          <td
-                            class="p-4 text-right font-mono text-xs"
-                            [style.color]="'var(--text-muted)'"
-                          >
-                            {{ row.kmStart ?? '-' }}
-                          </td>
-                          <td
-                            class="p-4 text-right font-mono text-xs"
-                            [style.color]="'var(--text-muted)'"
-                          >
-                            {{ row.kmEnd ?? '-' }}
-                          </td>
-                          <td class="p-4 text-xs max-w-xs" [style.color]="'var(--text-muted)'">
-                            @if (row.notes) {
-                              {{ row.notes }}
-                            } @else {
-                              <span class="italic">Pendiente</span>
-                            }
-                          </td>
-                          <td class="p-4 text-center w-28">
                             <app-badge [variant]="getStatusVariant(row.status)">
                               {{ getStatusLabel(row.status) }}
                             </app-badge>
-                          </td>
-                          <td class="p-4 text-center w-28">
-                            @if (row.canEvaluate) {
-                              <a
-                                [routerLink]="[
-                                  '/app/instructor/alumnos',
-                                  detail.studentId,
-                                  'evaluacion',
-                                  row.sessionId,
-                                ]"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-brand"
-                                style="color: var(--color-primary-text)"
-                                data-llm-action="evaluate-class"
-                              >
-                                <app-icon name="clipboard-pen" [size]="12" />
-                                Evaluar
-                              </a>
-                            } @else if (row.status === 'completed') {
-                              <a
-                                [routerLink]="[
-                                  '/app/instructor/alumnos',
-                                  detail.studentId,
-                                  'evaluacion',
-                                  row.sessionId,
-                                ]"
-                                class="text-xs font-medium transition-colors hover:underline"
-                                [style.color]="'var(--text-muted)'"
-                                >Ver</a
-                              >
-                            } @else {
-                              <span class="text-xs" [style.color]="'var(--text-muted)'">-</span>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Mobile: lista de tarjetas -->
-                <div class="ficha-table-mobile divide-y divide-border-subtle border-border-subtle">
-                  @for (row of detail.fichaTecnica; track row.classNumber) {
-                    <div class="p-4 space-y-3">
-                      <!-- Fila 1: número + fecha + badge -->
-                      <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                          <div
-                            class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 bg-brand-muted text-brand"
-                          >
-                            {{ row.classNumber }}
-                          </div>
-                          <div class="min-w-0">
-                            @if (row.date) {
-                              <span
-                                class="text-sm font-semibold block"
-                                [style.color]="'var(--text-primary)'"
-                              >
-                                {{ row.date | date: 'dd MMM yyyy' }}
-                              </span>
-                              <span class="text-xs font-mono" [style.color]="'var(--text-muted)'">{{
-                                row.date | date: 'HH:mm'
-                              }}</span>
-                            } @else {
-                              <span class="text-sm italic" [style.color]="'var(--text-muted)'"
-                                >No agendada</span
-                              >
-                            }
                           </div>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                          @if (row.grade) {
-                            <div
-                              class="flex items-center gap-1 font-bold text-base"
-                              [style.color]="
-                                row.grade >= 4 ? 'var(--state-success)' : 'var(--state-error)'
-                              "
-                            >
-                              <app-icon name="star" [size]="14" />
-                              {{ row.grade }}
+
+                        <!-- Meta grid -->
+                        <div class="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg bg-elevated">
+                          <div>
+                            <span class="kpi-label block mb-0.5">Kilómetros</span>
+                            <span class="font-mono" [style.color]="'var(--text-primary)'">
+                              {{ row.kmStart ?? '-' }} → {{ row.kmEnd ?? '-' }}
+                            </span>
+                          </div>
+                          <div>
+                            <span class="kpi-label block mb-0.5">Instructor</span>
+                            <span class="truncate block" [style.color]="'var(--text-primary)'">{{
+                              row.instructorName || '-'
+                            }}</span>
+                          </div>
+                          @if (row.notes) {
+                            <div class="col-span-2">
+                              <span class="kpi-label block mb-0.5">Observaciones</span>
+                              <span [style.color]="'var(--text-primary)'">{{ row.notes }}</span>
                             </div>
                           }
-                          <app-badge [variant]="getStatusVariant(row.status)">
-                            {{ getStatusLabel(row.status) }}
-                          </app-badge>
                         </div>
-                      </div>
 
-                      <!-- Meta grid -->
-                      <div class="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg bg-elevated">
-                        <div>
-                          <span class="kpi-label block mb-0.5">Kilómetros</span>
-                          <span class="font-mono" [style.color]="'var(--text-primary)'">
-                            {{ row.kmStart ?? '-' }} → {{ row.kmEnd ?? '-' }}
+                        <!-- CTA móvil -->
+                        @if (row.canEvaluate) {
+                          <a
+                            [routerLink]="[
+                              '/app/instructor/alumnos',
+                              detail.studentId,
+                              'evaluacion',
+                              row.sessionId,
+                            ]"
+                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all bg-brand"
+                            style="color: var(--color-primary-text)"
+                            data-llm-action="evaluate-class"
+                          >
+                            <app-icon name="clipboard-pen" [size]="14" />
+                            Evaluar Clase
+                          </a>
+                        } @else if (row.status === 'completed') {
+                          <a
+                            [routerLink]="[
+                              '/app/instructor/alumnos',
+                              detail.studentId,
+                              'evaluacion',
+                              row.sessionId,
+                            ]"
+                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
+                          >
+                            <app-icon name="eye" [size]="14" />
+                            Ver Detalles
+                          </a>
+                        } @else if (row.status === 'in_progress') {
+                          <span
+                            class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
+                            >En Curso</span
+                          >
+                        } @else if (row.status === 'scheduled') {
+                          <span
+                            class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold bg-brand-muted text-brand"
+                          >
+                            <app-icon name="calendar-check" [size]="13" />
+                            Agendada
                           </span>
-                        </div>
-                        <div>
-                          <span class="kpi-label block mb-0.5">Instructor</span>
-                          <span class="truncate block" [style.color]="'var(--text-primary)'">{{
-                            row.instructorName || '-'
-                          }}</span>
-                        </div>
-                        @if (row.notes) {
-                          <div class="col-span-2">
-                            <span class="kpi-label block mb-0.5">Observaciones</span>
-                            <span [style.color]="'var(--text-primary)'">{{ row.notes }}</span>
-                          </div>
+                        } @else {
+                          <span
+                            class="flex items-center justify-center w-full py-2 rounded-lg text-xs bg-elevated text-text-muted"
+                            >Pendiente de agendar</span
+                          >
                         }
                       </div>
-
-                      <!-- CTA móvil -->
-                      @if (row.canEvaluate) {
-                        <a
-                          [routerLink]="[
-                            '/app/instructor/alumnos',
-                            detail.studentId,
-                            'evaluacion',
-                            row.sessionId,
-                          ]"
-                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all bg-brand"
-                          style="color: var(--color-primary-text)"
-                          data-llm-action="evaluate-class"
-                        >
-                          <app-icon name="clipboard-pen" [size]="14" />
-                          Evaluar Clase
-                        </a>
-                      } @else if (row.status === 'completed') {
-                        <a
-                          [routerLink]="[
-                            '/app/instructor/alumnos',
-                            detail.studentId,
-                            'evaluacion',
-                            row.sessionId,
-                          ]"
-                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
-                        >
-                          <app-icon name="eye" [size]="14" />
-                          Ver Detalles
-                        </a>
-                      } @else if (row.status === 'in_progress') {
-                        <span
-                          class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
-                          >En Curso</span
-                        >
-                      } @else if (row.status === 'scheduled') {
-                        <span
-                          class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold bg-brand-muted text-brand"
-                        >
-                          <app-icon name="calendar-check" [size]="13" />
-                          Agendada
-                        </span>
-                      } @else {
-                        <span
-                          class="flex items-center justify-center w-full py-2 rounded-lg text-xs bg-elevated text-text-muted"
-                          >Pendiente de agendar</span
-                        >
-                      }
-                    </div>
-                  }
+                    }
+                  </div>
                 </div>
 
                 <!-- Nota informativa -->
-                <div class="p-4">
+                <div class="shrink-0 p-4">
                   <app-alert-card title="¿Cómo funciona la ficha?" severity="info">
                     Puedes evaluar las clases completadas haciendo clic en <strong>Evaluar</strong>.
                     Las clases ya evaluadas se pueden revisar con <strong>Ver Detalles</strong>.
                   </app-alert-card>
                 </div>
-              </div>
+              }
             }
-          </div>
+          }
         </div>
       }
     </div>
@@ -476,11 +527,21 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 })
 export class InstructorFichaComponent implements OnInit {
   protected readonly facade = inject(InstructorAlumnosFacade);
+  protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly heroActions: SectionHeroAction[] = [];
   protected readonly heroContextLine = 'Ficha Técnica del Alumno';
+
+  // fix-027-i (piloto ASG-b-084, app-like): 2 secciones reales del contenido cargado
+  // (Datos / Ficha Técnica) reestructuradas en tabs — antes apiladas en una sola columna.
+  protected readonly activeTab = signal<FichaTab>('datos');
+
+  protected readonly tabOptions: TabOption[] = [
+    { id: 'datos', label: 'Datos' },
+    { id: 'ficha-tecnica', label: 'Ficha Técnica' },
+  ];
 
   protected readonly heroChips = computed((): SectionHeroChip[] => {
     const detail = this.facade.studentDetail();
@@ -510,6 +571,10 @@ export class InstructorFichaComponent implements OnInit {
 
   protected goBack(): void {
     history.back();
+  }
+
+  protected setActiveTab(tabId: string): void {
+    this.activeTab.set(tabId as FichaTab);
   }
 
   protected getStatusLabel(status: string): string {
