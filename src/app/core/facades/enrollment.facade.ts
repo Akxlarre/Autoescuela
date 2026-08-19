@@ -16,6 +16,8 @@ import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
+import { buildEnrollmentConsents } from '@core/utils/consent-builder.utils';
+import { ConsentsFacade } from '@core/facades/consents.facade';
 import type { Course } from '@core/models/dto/course.model';
 import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
@@ -78,6 +80,7 @@ export class EnrollmentFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly consentsFacade = inject(ConsentsFacade);
   private readonly docsFacade = inject(EnrollmentDocumentsFacade);
   private readonly paymentFacade = inject(EnrollmentPaymentFacade);
   private readonly confirmModal = inject(ConfirmModalService);
@@ -1243,6 +1246,64 @@ export class EnrollmentFacade {
   }
 
   /**
+   * Registra el consentimiento de esta matrícula (spec 0009-m, AC5/AC7).
+   *
+   * Se llama al confirmar, con el `enrollmentId` ya existente. Devuelve `false` si no
+   * se pudo registrar, y el llamador **aborta la confirmación**: una matrícula sin su
+   * registro de consentimiento no se puede acreditar ante la Agencia (Art. 12), así que
+   * es preferible que la secretaria reintente a dejar un huérfano en la base.
+   */
+  private async recordEnrollmentConsent(enrollmentId: number): Promise<boolean> {
+    const draft = this._draft();
+    // `_personalData()` puede no estar rehidratado en un draft recuperado, así que NO se
+    // exige: el titular ya queda identificado por `draft.userId`. Solo se usa, si está,
+    // para saber si es menor.
+    const pd = this._personalData();
+
+    // La sede se lee de la matrícula, no del usuario: un admin puede matricular en una
+    // sede distinta a la suya, y `consents.branch_id` debe decir ante QUÉ responsable
+    // se otorgó el consentimiento.
+    const { data: row } = await this.supabase.client
+      .from('enrollments')
+      .select('branch_id')
+      .eq('id', enrollmentId)
+      .maybeSingle();
+
+    const branchId = row?.branch_id ?? this.auth.currentUser()?.branchId ?? null;
+    if (branchId === null) return false;
+
+    const isMinor = pd?.birthDate ? (calcAge(pd.birthDate) ?? 99) < 18 : false;
+
+    const drafts = buildEnrollmentConsents({
+      branchId,
+      source: 'secretaria',
+      policyAccepted: this._privacyConsentAccepted(),
+      // AC7: si el alumno es menor, quien consiente es su representante legal, que está
+      // presente en la sede. Su identidad consta en la autorización notarial del
+      // expediente — por eso solo se marca el hecho, no se recolecta su RUT.
+      isMinor,
+      userId: draft.userId ?? null,
+      subjectRut: pd?.rut ?? null,
+      enrollmentId,
+    });
+
+    return this.consentsFacade.recordMany(drafts);
+  }
+
+  /** Declaración de lectura de la Política de Privacidad (spec 0009-m, AC3/AC5). */
+  private readonly _privacyConsentAccepted = signal<boolean>(false);
+  readonly privacyConsentAccepted = this._privacyConsentAccepted.asReadonly();
+
+  /**
+   * Guarda el consentimiento al tratamiento de datos que la secretaria marcó con el
+   * alumno (o su apoderado) presente. Se persiste en `consents` al confirmar la
+   * matrícula — nunca después, para que no exista matrícula sin su registro.
+   */
+  setPrivacyConsent(accepted: boolean): void {
+    this._privacyConsentAccepted.set(accepted);
+  }
+
+  /**
    * Registra la firma digital del contrato (sin archivo físico).
    * Actualiza digital_contracts + enrollments.contract_accepted y avanza al paso 6.
    */
@@ -1334,6 +1395,16 @@ export class EnrollmentFacade {
 
       if (error) {
         this._error.set('Error al confirmar matrícula: ' + this.sanitizer.sanitize(error).message);
+        return null;
+      }
+
+      // Consentimiento (AC5). Va antes de confirmar las sesiones y de invitar al alumno:
+      // si falla, se corta acá en vez de dejar una matrícula activa sin respaldo legal.
+      const consentOk = await this.recordEnrollmentConsent(draft.enrollmentId);
+      if (!consentOk) {
+        this._error.set(
+          'No se pudo registrar el consentimiento del alumno. La matrícula no se confirmó.',
+        );
         return null;
       }
 
@@ -1713,6 +1784,19 @@ export class EnrollmentFacade {
       // 6. Rehidratar step 3 (documentos) si el paso es >= 3
       if (currentStep >= 3) {
         await this.docsFacade.loadDocuments(enrollmentId);
+      }
+
+      // 6b. Rehidratar step 4 (contrato) si el paso es >= 4: sin esto, `_contractFileUrl`
+      // queda null en la re-entrada y el botón "Contrato Firmado" no abre nada.
+      if (currentStep >= 4) {
+        const { data: contract } = await this.supabase.client
+          .from('digital_contracts')
+          .select('file_url')
+          .eq('enrollment_id', enrollmentId)
+          .maybeSingle();
+        if (contract?.file_url) {
+          this._contractFileUrl.set(contract.file_url);
+        }
       }
 
       // 7. Rehidratar step 5 (pago) si el paso es >= 5

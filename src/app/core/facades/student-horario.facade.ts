@@ -17,7 +17,7 @@ interface RawPracticeSession {
   class_number: number | null;
   scheduled_at: string;
   status: string;
-  class_b_practice_attendance: { status: string }[];
+  class_b_practice_attendance: { status: string; archived_at: string | null }[];
 }
 
 interface RawProfTheorySession {
@@ -61,7 +61,9 @@ function deriveSessionStatus(raw: RawPracticeSession): string {
   const sessionStatus = (raw.status ?? '').toLowerCase();
   if (sessionStatus === 'cancelled') return 'cancelled';
   if (sessionStatus === 'in_progress') return 'in_progress';
-  const att = raw.class_b_practice_attendance?.[0];
+  // fix-191-m: la asistencia archivada pertenece a una ocurrencia anterior de una sesión
+  // reciclada por reagendamiento (RF-053) — no describe el estado actual.
+  const att = (raw.class_b_practice_attendance ?? []).find((a) => a.archived_at == null);
   if (!att) return new Date(raw.scheduled_at) < new Date() ? 'no_show' : 'scheduled';
   if (att.status === 'present' || att.status === 'late') return 'completed';
   if (att.status === 'absent') return 'absent';
@@ -244,7 +246,7 @@ export class StudentHorarioFacade {
       .from('class_b_sessions')
       .select(
         `id, class_number, scheduled_at, status,
-         class_b_practice_attendance(status)`,
+         class_b_practice_attendance(status, archived_at)`,
       )
       .eq('enrollment_id', enrollmentId)
       .order('scheduled_at', { ascending: true });

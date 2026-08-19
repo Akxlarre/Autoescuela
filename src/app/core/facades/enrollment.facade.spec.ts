@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { EnrollmentFacade } from './enrollment.facade';
+import { ConsentsFacade } from './consents.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
@@ -90,6 +91,7 @@ describe('EnrollmentFacade', () => {
   let mockConfirm: any;
   let mockViewer: any;
   let mockAuth: any;
+  let mockConsents: any;
   let mockDocs: any;
   let mockPayment: any;
   let mockNotifications: any;
@@ -100,7 +102,17 @@ describe('EnrollmentFacade', () => {
     mockSupabase = createMockSupabaseService();
     mockConfirm = createMockService(['confirm']);
     mockViewer = createMockService(['openByUrl']);
-    mockAuth = { whenReady: Promise.resolve(), currentUser: vi.fn() };
+    // spec 0009-m: confirmEnrollment registra el consentimiento antes de dar la
+    // matrícula por buena; si no se puede registrar, aborta.
+    mockConsents = { recordMany: vi.fn().mockResolvedValue(true) };
+
+    // spec 0009-m: `confirmEnrollment` necesita resolver la sede para registrar el
+    // consentimiento (`consents.branch_id` es NOT NULL). En el flujo real siempre hay
+    // usuario autenticado; antes el mock devolvía undefined porque nada lo necesitaba.
+    mockAuth = {
+      whenReady: Promise.resolve(),
+      currentUser: vi.fn().mockReturnValue({ dbId: 5, branchId: 1 }),
+    };
     mockDocs = createMockService(['reset']);
     mockPayment = createMockService(['reset']);
     mockNotifications = {
@@ -117,6 +129,7 @@ describe('EnrollmentFacade', () => {
         { provide: ConfirmModalService, useValue: mockConfirm },
         { provide: DmsViewerService, useValue: mockViewer },
         { provide: AuthFacade, useValue: mockAuth },
+        { provide: ConsentsFacade, useValue: mockConsents },
         { provide: EnrollmentDocumentsFacade, useValue: mockDocs },
         { provide: EnrollmentPaymentFacade, useValue: mockPayment },
         { provide: NotificationsFacade, useValue: mockNotifications },
@@ -653,6 +666,52 @@ describe('EnrollmentFacade', () => {
   // ── Generate Contract ──
 
   describe('generateContract', () => {
+    // ── spec 0009-m (AC5): consentimiento y matrícula son inseparables ──────────
+
+    it('registra el consentimiento antes de dar la matrícula por confirmada', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+
+      await facade.confirmEnrollment();
+
+      expect(mockConsents.recordMany).toHaveBeenCalled();
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      expect(drafts[0]).toMatchObject({
+        consentType: 'matricula_datos',
+        source: 'secretaria',
+        enrollmentId: 10,
+        userId: 30,
+      });
+    });
+
+    // Una matrícula activa sin registro de consentimiento no se puede acreditar ante la
+    // Agencia (Art. 12). Es preferible que la secretaria reintente a dejar un huérfano.
+    it('NO confirma la matrícula si el consentimiento no se pudo registrar', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      mockConsents.recordMany.mockResolvedValue(false);
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBeNull();
+      expect(facade.error()).toContain('consentimiento');
+      // Y no se le notifica al alumno una matrícula que no quedó confirmada.
+      expect(mockNotifications.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('propaga la negativa: si no marcó la casilla, se registra granted=false', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      facade.setPrivacyConsent(false);
+
+      await facade.confirmEnrollment();
+
+      expect(mockConsents.recordMany.mock.calls[0][0][0].granted).toBe(false);
+    });
+
     it('should return null when no draft enrollment', async () => {
       const result = await facade.generateContract();
       expect(result).toBeNull();

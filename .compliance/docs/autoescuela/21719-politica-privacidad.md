@@ -3,13 +3,15 @@
 **Última actualización:** 16 de agosto de 2026
 **Entrada en vigencia:** 1 de diciembre de 2026 (vigencia de la Ley 21.719)
 
-> Documento **público**. Debe quedar accesible desde el sitio web, desde el formulario de
-> preinscripción en línea y entregarse al momento de la matrícula.
+> **Anexo 3 del Expediente de Cumplimiento Ley 21.719.**
+> Documento **público**: es el único del expediente dirigido al titular de los datos. Debe quedar
+> accesible desde el sitio web, desde el formulario de preinscripción en línea y entregarse al momento
+> de la matrícula. Se publica sin este recuadro.
 
 ## 1. Responsable del tratamiento
 
 **Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL**, RUT 76.007.217-6, con domicilio en
-Maipón 418, Chillán, Región de Ñuble. Giro: educación extraescolar.
+Maipón 418, Chillán, Región de Ñuble. Giro: Educación extraescolar.
 
 Contacto para todo lo relativo a datos personales: **otecchillan@gmail.com**
 
@@ -26,18 +28,19 @@ observaciones de tu relator o instructor y resultado del curso.
 
 **Datos de pago:** monto, medio de pago, número de boleta y estado de tu cuenta.
 
-**Datos técnicos:** dirección IP y registro de tus accesos al sistema, con fines de seguridad.
-
-**Imágenes:** nuestras instalaciones cuentan con **cámaras de seguridad**, debidamente señalizadas.
+**Datos técnicos:** cuando otorgas un consentimiento en línea (preinscripción, matrícula, certificado
+médico), registramos la **dirección IP** desde la que lo otorgaste, junto a la fecha y hora. Es la
+evidencia que la ley nos exige poder mostrar de que tú diste ese consentimiento. No llevamos un registro
+general de tus accesos al sistema más allá de eso.
 
 **Si te capacitas a través de tu empleador:** además tratamos el nombre de la empresa y tu cargo, datos
 que nos entrega tu empleador para gestionar tu participación en el curso.
 
 ### Datos sensibles
 
-El **certificado médico** es un dato sensible de salud. Lo tratamos únicamente porque la normativa
-sectorial exige acreditar tu aptitud, y solo con tu **autorización expresa**. No lo usamos para ninguna
-otra finalidad ni lo compartimos con terceros distintos de la autoridad competente.
+El **certificado médico** es un dato sensible de salud. Lo tratamos únicamente si lo subes tú, de forma
+voluntaria, para **justificar una inasistencia** a clases, y solo con tu **autorización expresa**. No lo
+usamos para ninguna otra finalidad ni lo compartimos con terceros distintos de la autoridad competente.
 
 ### Menores de edad
 
@@ -51,14 +54,13 @@ resguardo.
 |---|---|
 | Matricularte, ejecutar el contrato e impartir el curso | Ejecución del contrato de matrícula |
 | Llevar el libro de clases y acreditar tu asistencia y horas cursadas | Obligación legal |
-| Tratar tu certificado médico | Tu consentimiento expreso (Art. 16) y la exigencia normativa de acreditar aptitud |
+| Tratar tu certificado médico | Tu consentimiento expreso (Art. 16), únicamente si lo subes para justificar una inasistencia |
 | Emitir tus certificados de aprobación | Obligación legal y ejecución del contrato |
 | Cobrar y emitir documentos tributarios | Ejecución del contrato y obligación legal tributaria |
 | Rendir e informar a **SENCE** los cursos con franquicia o financiamiento | Obligación legal |
 | Informar a tu empleador tu asistencia y resultado, cuando él financia el curso | Ejecución del contrato entre tu empleador y nosotros |
 | Comunicarnos contigo sobre tu curso (correos, enlaces de clase) | Ejecución del contrato |
-| Videovigilancia de nuestras instalaciones | Interés legítimo en la seguridad de personas y bienes |
-| Registrar accesos al sistema para detectar usos indebidos | Interés legítimo en la seguridad, y nuestro deber legal de seguridad |
+| Registrar la dirección IP al otorgar un consentimiento en línea | Evidencia legal de que tú diste ese consentimiento |
 | Encuestas de satisfacción una vez egresado | Tu consentimiento — participar es voluntario |
 
 ## 4. Con quién compartimos los datos
@@ -66,12 +68,19 @@ resguardo.
 **Proveedores que tratan datos por cuenta nuestra (encargados):**
 
 - **Supabase Inc.** — infraestructura de base de datos, almacenamiento de archivos y autenticación.
-- **Google** — correo electrónico corporativo con el que te escribimos.
+- **OVH SAS** — la infraestructura que aloja nuestro sitio y nuestro servidor de correo (cPanel), desde
+  el que te llegan nuestros correos: certificados, enlaces de clase y avisos.
+- **Google** — la casilla de correo por la que nos escribes para ejercer tus derechos.
 - **Zoom** — clases en línea, cuando el curso las contempla.
 
-Estos proveedores procesan datos **fuera de Chile** (Estados Unidos). Esa transferencia se ampara en
+Google y Zoom procesan datos **fuera de Chile, en Estados Unidos**. Supabase procesa datos **fuera de
+Chile** `[PENDIENTE 17-08-2026: la región (Brasil o EE.UU.) aún no se decide. Al crear el proyecto hay
+que fijarla acá, en SUPABASE_HOSTING_COUNTRY del código y en los Anexos 1, 2, 8 y 9]`. Esa
+transferencia se ampara en
 las **Cláusulas Contractuales Modelo aprobadas por el Ministerio de Economía** (Resolución
 RAEX202503748, Diario Oficial de 19-12-2025).
+El servidor de correo está alojado en **Warrenton, Virginia, Estados Unidos** (OVH SAS), y queda
+cubierto por las mismas cláusulas.
 
 **Organismos y terceros a los que informamos:**
 
@@ -91,9 +100,8 @@ Excepciones:
 | Dato | Plazo | Motivo |
 |---|---|---|
 | Documentación tributaria (boletas, pagos) | 6 años | Plazo del Código Tributario |
-| Grabaciones de las cámaras de seguridad | 30 días | Plazo proporcional al fin de seguridad |
 | Datos de preinscripción sin matrícula concretada | 12 meses | No hay contrato que justifique conservarlos más |
-| Registros técnicos de acceso (IP) | 2 años | Suficiente para investigar un incidente |
+| Dirección IP asociada a un consentimiento | Mismo plazo que el consentimiento que respalda | Es evidencia de ese consentimiento, no un registro independiente |
 
 ## 6. Tus derechos
 
@@ -151,4 +159,4 @@ Si consideras que no hemos respetado tus derechos, puedes reclamar ante la **Age
 Datos Personales** de Chile.
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

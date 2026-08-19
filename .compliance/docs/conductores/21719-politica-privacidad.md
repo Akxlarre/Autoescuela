@@ -3,13 +3,15 @@
 **Última actualización:** 16 de agosto de 2026
 **Entrada en vigencia:** 1 de diciembre de 2026 (vigencia de la Ley 21.719)
 
-> Documento **público**. Debe quedar accesible desde el sitio web, desde el formulario de
-> preinscripción en línea y entregarse al momento de la matrícula.
+> **Anexo 3 del Expediente de Cumplimiento Ley 21.719.**
+> Documento **público**: es el único del expediente dirigido al titular de los datos. Debe quedar
+> accesible desde el sitio web, desde el formulario de preinscripción en línea y entregarse al momento
+> de la matrícula. Se publica sin este recuadro.
 
 ## 1. Responsable del tratamiento
 
 **Sociedad Comercial Chillán Capacita Limitada**, RUT 77.940.120-0, con domicilio en Carrera 74,
-Chillán, Región de Ñuble. Giro: educación extraescolar — escuela de conducción.
+Chillán, Región de Ñuble. Giro: Educación extraescolar — Escuela de conducción.
 
 Contacto para todo lo relativo a datos personales: **conductorchillan@gmail.com**
 
@@ -24,18 +26,30 @@ evaluaciones, observaciones de tu instructor y resultado del curso.
 **Documentos de tu expediente:** cédula de identidad, fotografía, Hoja de Vida del Conductor y
 **certificado médico**.
 
+**Evaluación psicológica (solo cursos profesionales):** si te preinscribes en línea a un curso
+profesional, las **respuestas que das al cuestionario EPQ** y el resultado de su evaluación.
+
 **Datos de pago:** monto, medio de pago, número de boleta y estado de tu cuenta.
 
-**Datos técnicos:** dirección IP y registro de tus accesos al sistema, con fines de seguridad.
-
-**Imágenes:** nuestras instalaciones cuentan con **cámaras de seguridad**, debidamente señalizadas.
+**Datos técnicos:** cuando otorgas un consentimiento en línea (preinscripción, matrícula, certificado
+médico, test psicológico), registramos la **dirección IP** desde la que lo otorgaste, junto a la fecha y
+hora. Es la evidencia que la ley nos exige poder mostrar de que tú diste ese consentimiento. No llevamos
+un registro general de tus accesos al sistema más allá de eso.
 
 ### Datos sensibles
 
-El **certificado médico** es un dato sensible de salud. Lo tratamos únicamente porque la normativa de
-escuelas de conductores exige acreditar tu aptitud para conducir, y solo con tu **autorización expresa**.
-No lo usamos para ninguna otra finalidad ni lo compartimos con terceros distintos de la autoridad
-competente.
+Tratamos dos datos sensibles, ambos **solo con tu autorización expresa** y para nada más:
+
+El **certificado médico** es un dato de salud. Lo tratamos únicamente si lo subes tú, de forma
+voluntaria, para **justificar una inasistencia** a clases. No lo usamos para ninguna otra finalidad ni lo
+compartimos con terceros distintos de la autoridad competente.
+
+El **cuestionario psicológico EPQ** de los cursos profesionales es un dato de salud psíquica.
+Conservamos tus respuestas porque **un profesional debe poder revisarlas una por una** para evaluarte, y
+porque puede necesitar volver sobre ellas si pides una nueva evaluación. **La decisión de aptitud la
+toma siempre una persona: ningún programa puntúa ni interpreta tus respuestas automáticamente.** Si
+prefieres no responderlo en línea, puedes rendirlo **en papel, presencialmente en la escuela**, y en ese
+caso no guardamos ninguna respuesta en el sistema.
 
 ### Menores de edad
 
@@ -49,13 +63,13 @@ menores con especial resguardo.
 |---|---|
 | Matricularte, ejecutar el contrato e impartir el curso | Ejecución del contrato de matrícula |
 | Llevar el libro de clases, el registro de alumnos y acreditar las horas mínimas | Obligación legal (normativa de escuelas de conductores) |
-| Tratar tu certificado médico | Tu consentimiento expreso (Art. 16) y la exigencia normativa de acreditar aptitud |
+| Tratar tu certificado médico | Tu consentimiento expreso (Art. 16), únicamente si lo subes para justificar una inasistencia |
+| Aplicar y evaluar el cuestionario psicológico EPQ (cursos profesionales) | Tu consentimiento expreso (Art. 16) |
 | Emitir certificados y documentación de licencia | Obligación legal |
 | Cobrar y emitir documentos tributarios | Ejecución del contrato y obligación legal tributaria |
 | Informar a MTT, la Municipalidad y SENCE lo que exige la normativa | Obligación legal |
 | Comunicarnos contigo sobre tu curso (correos, enlaces de clase, certificados) | Ejecución del contrato |
-| Videovigilancia de nuestras instalaciones | Interés legítimo en la seguridad de personas y bienes |
-| Registrar accesos al sistema para detectar usos indebidos | Interés legítimo en la seguridad, y nuestro deber legal de seguridad |
+| Registrar la dirección IP al otorgar un consentimiento en línea | Evidencia legal de que tú diste ese consentimiento |
 | Encuestas de satisfacción una vez egresado | Tu consentimiento — participar es voluntario |
 
 ## 4. Con quién compartimos los datos
@@ -63,10 +77,16 @@ menores con especial resguardo.
 **Proveedores que tratan datos por cuenta nuestra (encargados):**
 
 - **Supabase Inc.** — infraestructura de base de datos, almacenamiento de archivos y autenticación.
-- **Google** — correo electrónico corporativo con el que te escribimos.
+- **OVH SAS** — la infraestructura que aloja nuestro sitio web y nuestro servidor de correo (cPanel),
+  desde el que te llegan nuestros correos: certificados, enlaces de clase y avisos.
+- **Google** — la casilla de correo por la que nos escribes para ejercer tus derechos.
 - **Zoom** — clases en línea, cuando el curso las contempla.
 
-Estos proveedores procesan datos **fuera de Chile** (Estados Unidos). Esa transferencia se ampara en
+Google y Zoom procesan datos **fuera de Chile, en Estados Unidos**. Nuestro servidor de correo está
+alojado en **Warrenton, Virginia, Estados Unidos**, sobre infraestructura de OVH SAS. Supabase procesa
+datos **fuera de Chile** `[PENDIENTE 17-08-2026: la región (Brasil o EE.UU.) aún no se decide. Al crear
+el proyecto hay que fijarla acá, en SUPABASE_HOSTING_COUNTRY del código y en los Anexos 1, 2 y 9]`. Esa
+transferencia se ampara en
 las **Cláusulas Contractuales Modelo aprobadas por el Ministerio de Economía** (Resolución
 RAEX202503748, Diario Oficial de 19-12-2025).
 
@@ -88,9 +108,9 @@ Excepciones:
 | Dato | Plazo | Motivo |
 |---|---|---|
 | Documentación tributaria (boletas, pagos) | 6 años | Plazo del Código Tributario |
-| Grabaciones de las cámaras de seguridad | 30 días | Plazo proporcional al fin de seguridad |
 | Datos de preinscripción sin matrícula concretada | 12 meses | No hay contrato que justifique conservarlos más |
-| Registros técnicos de acceso (IP) | 2 años | Suficiente para investigar un incidente |
+| Respuestas del cuestionario psicológico EPQ | 12 meses si no te matriculas; 5 años si te matriculas | Mismo plazo que la preinscripción o el expediente que lo contiene |
+| Dirección IP asociada a un consentimiento | Mismo plazo que el consentimiento que respalda | Es evidencia de ese consentimiento, no un registro independiente |
 
 ## 6. Tus derechos
 
@@ -147,4 +167,4 @@ Si consideras que no hemos respetado tus derechos, puedes reclamar ante la **Age
 Datos Personales** de Chile.
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

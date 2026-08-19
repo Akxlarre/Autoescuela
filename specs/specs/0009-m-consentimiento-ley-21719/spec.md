@@ -1,6 +1,6 @@
 # Spec 0009-m — Registro de consentimiento y deber de información (Ley 21.719)
 
-> **Status:** draft
+> **Status:** **done** (2026-08-18) — 7/7 AC + 3/3 edge cases vigentes. Ver [acceptance.md](./acceptance.md)
 > **Created:** 2026-08-16
 > **Owner:** Matías
 > **Priority:** P0 — **bloqueante de despliegue**
@@ -57,7 +57,20 @@ hacerlo barato es exactamente ahora y se cierra con el primer alumno real.
 - **AC1**: Given un visitante en el **primer paso que captura datos personales** del flujo público
   (`public-personal-data`), When la pantalla carga, Then ve un **aviso del Art. 14 ter** con la identidad
   del responsable, la finalidad, el plazo de conservación y el correo del canal de derechos, más un
-  enlace a la política de privacidad. Ídem en el paso equivalente del flujo de secretaría.
+  enlace a la política de privacidad.
+
+  **En la matrícula presencial el aviso viaja en el contrato que el alumno lee y firma**
+  (cláusula QUINTA, `supabase/functions/_shared/contract-pdf.ts`), no en la pantalla.
+
+  > ⚠️ **Corregido el 2026-08-18.** El AC decía "ídem en el paso equivalente del flujo de secretaría", y
+  > así se implementó primero. Es incorrecto: **esa pantalla la ve la secretaria, no el titular.** Un
+  > aviso en segunda persona ("tus datos") dirigido a quien no lo lee no cumple el deber de informar y no
+  > deja evidencia de nada. El canal correcto para el flujo presencial es el contrato firmado —que además
+  > es prueba acreditable ante la Agencia— y es donde el propio Anexo 4 §3 del expediente lo ubica desde
+  > el principio: *"en la ficha de matrícula (en línea y en papel), junto a la firma del contrato"*.
+  >
+  > De paso quedó al descubierto que la cláusula de datos del contrato citaba la **Ley 19.628**, derogada
+  > por la 21.719, y no traía finalidad, plazo, canal de derechos ni referencia a la política.
 
 - **AC2**: Given cualquier usuario, When navega a **`/politica-privacidad/:branchSlug`** (ruta pública,
   fuera del shell autenticado), Then se renderiza la política de **la sociedad correspondiente a esa
@@ -70,34 +83,55 @@ hacerlo barato es exactamente ahora y se cierra con el primer alumno real.
   términos del contrato de matrícula, que ya existía, y (b) la declaración de haber leído la política de
   privacidad. And no puede avanzar sin ambas.
 
-- **AC4**: Given un alumno en el paso de documentos, When intenta **subir el certificado médico**, Then
-  la subida está bloqueada mientras no marque una casilla de **autorización expresa del Art. 16**,
-  específica para ese dato y separada de toda otra aceptación. And esa casilla no condiciona la subida de
-  los demás documentos.
+- **AC4**: Given una secretaria subiendo un documento al **DMS del alumno**, When el tipo seleccionado es
+  `certificado_medico`, Then la subida está bloqueada mientras no marque una casilla de **autorización
+  expresa del Art. 16**, específica para ese dato y separada de toda otra aceptación. And esa casilla no
+  condiciona la subida de ningún otro tipo de documento.
+
+  > ⚠️ **Corregido el 2026-08-17.** El AC original ubicaba esta casilla en el paso de documentos del
+  > wizard de matrícula. Discovery mostró que **el certificado médico no se sube en ningún flujo de
+  > matrícula**: `DocumentType` (`core/models/ui/enrollment-documents.model.ts:21-25`) solo tiene
+  > `hoja_vida_conductor`, `cedula_identidad`, `licencia_conducir` y `autorizacion_notarial`, y el paso
+  > público solo sube `id_photo`. El dueño confirmó el mismo día que **el certificado médico nunca se
+  > pide en matrícula — se recibe solo cuando un alumno quiere justificar inasistencias**, y entra por
+  > `dms-upload-drawer.component.ts:331`. El gate va donde el dato de salud realmente ingresa.
 
 - **AC5**: Given un alumno que completa cualquiera de los flujos, When se persiste la matrícula, Then
   queda **un registro por cada consentimiento otorgado** con: titular, tipo de consentimiento, si fue
   concedido, fecha y hora, **dirección IP**, **versión de la política vigente** y origen
-  (`public` / `secretaria` / `papel`).
+  (`public` / `secretaria`).
 
 - **AC6**: Given un administrador, When consulta los consentimientos de un alumno, Then puede ver
   qué aceptó, cuándo y con qué versión de política. And ningún rol puede **modificar ni borrar** un
   registro de consentimiento ya otorgado (append-only; solo se admite marcar revocación).
 
-- **AC7**: Given un **alumno menor de edad**, When avanza por el flujo de matrícula, Then los
-  consentimientos los otorga su **representante legal**, identificado con nombre y RUT, y quedan
-  registrados a su nombre en relación con el alumno. And ningún consentimiento de un menor queda sin
-  registrar por la rama `@if (!data().isMinor)` que hoy oculta el bloque de aceptación.
+- **AC7**: Given un **alumno menor de edad**, When avanza por el flujo de matrícula, Then el registro
+  del consentimiento queda marcado como **otorgado por su representante legal**
+  (`granted_by_representative = true`), sin dejar de tener al alumno como titular. And ningún
+  consentimiento de un menor queda sin registrar por la rama `@if (!data().isMinor)` que hoy oculta el
+  bloque de aceptación.
+
+  > ⚠️ **Ajustado el 2026-08-17.** El AC original pedía identificar al representante **con nombre y
+  > RUT**. Se descartó: la **autorización notarial** ya es obligatoria para menores
+  > (`MINOR_DOCUMENT`, `required: true` en `enrollment-documents.facade.ts:21`), está firmada ante
+  > notario y lo identifica mejor que dos campos tipeados en un formulario. Pedir además su RUT sería
+  > recolectar el dato personal de un tercero ya acreditado por otra vía — lo contrario del principio
+  > de minimización. Basta el booleano que deja constancia de que **no consintió el menor**.
 
 ### Edge cases obligatorios
 
-- **AC-E1**: Given un alumno que **no marca** la autorización del Art. 16, When completa el resto de la
-  matrícula, Then la matrícula se puede concretar igual, pero **sin certificado médico digitalizado** y
-  con constancia registrada de que no autorizó.
+- **AC-E1**: Given un alumno que entrega un certificado médico para justificar una inasistencia pero
+  **no autoriza** su tratamiento digital, When la secretaria intenta cargarlo, Then el archivo **no se
+  digitaliza**, queda registrada la negativa (`granted = false`) y la justificación se resuelve con el
+  documento físico en el expediente. And la matrícula y la asistencia del alumno no se ven afectadas.
 
-- **AC-E2**: Given una matrícula tomada **en papel** por secretaría, When la secretaria la carga al
-  sistema, Then puede registrar los consentimientos con origen `papel`, quedando trazable que la
-  evidencia física está en el expediente.
+  > ⚠️ **Reformulado el 2026-08-17**, junto con AC4. La redacción original ("la matrícula se puede
+  > concretar igual") suponía que el certificado médico era un requisito de matrícula; nunca lo fue.
+
+- ~~**AC-E2**~~ — **ELIMINADO el 2026-08-17.** Describía un flujo que no existe: el dueño confirmó que
+  **nunca** se digita al sistema una matrícula tomada en ficha física. En consecuencia se quitó también
+  el valor `'papel'` de `consents.source`, que habría quedado como rama muerta. El certificado médico,
+  aunque llegue en papel, lo sube la secretaria **desde el sistema** → `source = 'secretaria'`.
 
 - **AC-E3**: Given un alumno que **revoca** un consentimiento revocable, When se procesa la solicitud,
   Then se marca la revocación con su fecha **sin borrar el registro original** del consentimiento
@@ -165,8 +199,8 @@ hacerlo barato es exactamente ahora y se cierra con el primer alumno real.
 | `revoked_at` | timestamptz nullable — único campo actualizable |
 | `ip` | text |
 | `policy_version` | text |
-| `source` | `public` / `secretaria` / `papel` |
-| `granted_by_representative` | Datos del representante legal cuando el titular es menor (AC7) |
+| `source` | `public` / `secretaria` — sin `papel` (ver AC-E2) |
+| `granted_by_representative` | Booleano: el consentimiento lo otorgó el representante legal de un menor (AC7). **No** se guardan su nombre ni su RUT |
 
 **RLS:** INSERT desde `anon` (flujo público) y `authenticated`; SELECT restringido a `admin` y
 `secretary`. **Sin policy de UPDATE salvo `revoked_at`, sin policy de DELETE** — append-only, mismo
@@ -188,10 +222,9 @@ para registrar revocaciones.
 |---|---|
 | `public-enrollment-steps/public-personal-data/` | Aviso Art. 14 ter |
 | `public-enrollment-steps/public-contract/` (`:107`) | Separar en 2 casillas |
-| `public-enrollment-steps/public-documents/` | Casilla Art. 16 que bloquea la subida del certificado médico |
 | `matricula-steps/personal-data/` | Aviso Art. 14 ter |
 | `matricula-steps/contract/` (`.html:314`) | Separar en 2 casillas |
-| `matricula-steps/documents/` | Casilla Art. 16 |
+| `admin/documentos/dms-upload-drawer/` (`:331`) | Casilla Art. 16 que bloquea la subida cuando el tipo es `certificado_medico` — **único punto real de ingreso del dato de salud** (ver AC4) |
 | **`/politica-privacidad/:branchSlug`** | **Vista nueva** — única de la spec. Pública, fuera del shell. Una política por sociedad, resuelta por `branches.slug` (ver §9) |
 
 **Flujo principal:** el alumno ve el aviso al entregar sus datos → marca las dos casillas en el contrato
@@ -205,9 +238,21 @@ mensaje que explica por qué (no un error silencioso).
 `.compliance/docs/conductores/21719-consentimiento.md` y `.compliance/docs/otec/21719-consentimiento.md`.
 **No redactar textos nuevos** — usar esos, que son los que respaldan los documentos legales.
 
-> ⚠️ **Trampa detectada en la auditoría:** en `public-contract.component.ts` el bloque de aceptación está
-> dentro de `@if (!data().isMinor)`. Si se replica el patrón sin más, **justo los titulares con mayor
-> protección legal quedan sin registro de consentimiento**. AC7 existe por esto.
+> ⚠️ **La "trampa" de la auditoría no existe, y AC7 vive solo en el flujo de secretaría.**
+>
+> La auditoría advertía que en `public-contract.component.ts` el bloque de aceptación está dentro de
+> `@if (!data().isMinor)`, y que replicar ese patrón dejaría sin registro justo a los titulares con más
+> protección legal. **Verificado el 2026-08-17: en el flujo público `isMinor` nunca puede ser `true` en
+> ese componente.** `canAdvanceFn` (`public-personal-data.component.ts:38-40`) bloquea el avance cuando
+> `getAgeStatus()` devuelve `'requires-authorization'` — el caso de 17 años (`age.utils.ts:32`) — y el
+> paso 1 muestra *"Tienes 17 años — No puedes inscribirte online"* con los pasos presenciales. Un menor
+> **nunca llega al contrato en línea**. Esa rama `isMinor` es código inalcanzable (se deja anotada; no
+> se borra, excede esta spec).
+>
+> **Consecuencia:** AC7 se cumple **únicamente en el flujo de secretaría**, que es donde el apoderado
+> está físicamente presente con la autorización notarial. Ahí la casilla la marca la secretaria con él
+> al lado y se registra `granted_by_representative = true`. En `public-contract` las dos casillas del
+> AC3 van **sin condicional de edad**.
 
 ---
 
@@ -238,16 +283,29 @@ mensaje que explica por qué (no un error silencioso).
       La ruta usa el `slug`, que ya existe, es único y es legible por rol anónimo
       (`select_branches_anon`), así que no hace falta esquema nuevo.
 
-- [ ] ⚠️ **Corregir el seed de `branches` con los datos reales.** Hoy trae placeholders
-      (`'Dirección Autoescuela Chillán'`, `contacto@autoescuela-chillan.cl`) y **la política muestra el
-      domicilio y el correo del responsable**, así que publicarla con esos valores sería entregar
-      información falsa al titular. Valores reales: Carrera 74 / conductorchillan@gmail.com y
-      Maipón 418 / otecchillan@gmail.com (ambos en Chillán, Región de Ñuble).
-- [ ] Confirmar el mecanismo exacto con que `audit_log` obtiene la `ip`, para reutilizarlo tal cual.
-- [ ] Definir cómo se versiona `policy_version` (constante en código vs. tabla).
-- [ ] Definir si `consents` necesita `branch_id` propio para saber **ante qué responsable** se otorgó cada
-      consentimiento, o si basta derivarlo por `enrollment_id`. Importa para los leads de preinscripción,
-      que pueden no tener matrícula asociada todavía.
+- [x] ⚠️ **Corregir el seed de `branches` con los datos reales.** → **Sí, y va antes de exponer la ruta
+      pública.** Hoy trae placeholders (`'Dirección Autoescuela Chillán'`,
+      `contacto@autoescuela-chillan.cl`) y **la política muestra el domicilio y el correo del
+      responsable**, así que publicarla con esos valores sería entregar información falsa al titular.
+      Valores reales: Carrera 74 / conductorchillan@gmail.com y Maipón 418 / otecchillan@gmail.com
+      (ambos en Chillán, Región de Ñuble). No es solo cosmético: `branches.address` ya se muestra en el
+      banner de contexto del flujo público. Migración planificada en `plan.md` §4.
+- [x] **Mecanismo de la `ip`** → **no existe ninguno que reutilizar.** `audit_log.ip` es una columna
+      declarada que **nada escribe nunca** (ninguna versión de `log_change()` la asigna), y
+      `digital_contracts.signature_ip` está igual. Hay que construirlo, por dos caminos distintos:
+      **(a) flujo público** → `getClientIp(req)`, que **ya existe** en
+      `supabase/functions/public-enrollment/index.ts:260` (hoy lo usa el rate-limit);
+      **(b) flujo autenticado** → función Postgres que lee
+      `current_setting('request.headers')->>'x-forwarded-for'`, mismo patrón que el trigger de
+      auditoría (`20260801140000_audit_log_restore_header_user_id.sql:74`). Resuelto 2026-08-17.
+- [x] **Versionado de `policy_version`** → **constante en código**
+      (`PRIVACY_POLICY_VERSION` en `core/models/ui/privacy-policy.model.ts`), no tabla. AC-E4 solo exige
+      que el registro guarde el string vigente al otorgarse; una tabla agregaría RLS, seed y facade para
+      un dato que cambia una vez por década, y la constante además queda versionada en git.
+- [x] **¿`consents.branch_id` propio?** → **Sí, `NOT NULL`.** Determina **ante qué responsable** se
+      otorgó el consentimiento, y los leads de preinscripción no tienen `enrollment_id` del que
+      derivarlo. Sin él, un registro de preinscripción no sabría a cuál de las dos sociedades pertenece
+      — que es justo lo que hay que acreditar ante la Agencia.
 
 ---
 
@@ -255,3 +313,9 @@ mensaje que explica por qué (no un error silencioso).
 
 - 2026-08-16 — draft inicial por Matías. Origen: auditoría `.compliance/` corrida 1 (skill
   `compliance-cl`, pack `ley-21719`).
+- 2026-08-17 (2) — Decisiones del dueño aplicadas: **AC-E2 eliminado** (nunca hay matrícula en papel) y
+  **AC7 ajustado** (el representante se marca con un booleano; su identidad consta en la autorización
+  notarial, no se recolecta de nuevo). Confirmado que la preinscripción pública lleva casilla propia.
+- 2026-08-17 — Discovery para `plan.md`: **AC4 reubicado al DMS** y **AC-E1 reformulado** (el
+  certificado médico nunca se pide en matrícula — confirmado por el dueño; solo entra para justificar
+  inasistencias). Cerradas las 4 decisiones abiertas de §9. Actualizada la tabla de §7.

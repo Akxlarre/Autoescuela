@@ -80,7 +80,7 @@ export interface LiveClassModel {
   studentName: string;
   instructorName: string;
   timeLabel: string; // ej. "10:00 - 10:45"
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'in_progress' | 'completed' | 'no_show';
   type: 'practical' | 'theoretical';
   vehicle?: string; // Opcional (concatenado para dashboard UI)
   vehiclePlate?: string;

@@ -29,6 +29,7 @@ import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
 import { AdminHistorialReagendamientosDrawerComponent } from './historial-reagendamientos-drawer/admin-historial-reagendamientos-drawer.component';
+import { AdminConsentimientosDrawerComponent } from './consentimientos-drawer/admin-consentimientos-drawer.component';
 import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
 import { AdminInasistenciasDrawerComponent } from './inasistencias-drawer/admin-inasistencias-drawer.component';
 import { AdminFichaTecnicaDrawerComponent } from './ficha-tecnica-drawer/admin-ficha-tecnica-drawer.component';
@@ -343,6 +344,17 @@ export function resolveListadoLabel(
                   <span class="truncate min-w-0">Ficha Técnica</span>
                 </button>
               </div>
+
+              <!-- spec 0009-m (AC6): evidencia del consentimiento, en solo lectura -->
+              <button
+                type="button"
+                class="btn-secondary w-full justify-center gap-1.5"
+                data-llm-action="ver-consentimientos"
+                (click)="openConsentimientosPanel()"
+              >
+                <app-icon name="shield" [size]="14" />
+                <span class="truncate min-w-0">Consentimientos</span>
+              </button>
 
               <!-- fix-009-i: Historial de Reagendamientos — fila completa, abre drawer -->
               <button
@@ -1412,6 +1424,14 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
   protected openFichaTecnicaPanel(): void {
     this.layoutDrawer.open(AdminFichaTecnicaDrawerComponent, 'Ficha Técnica', 'clipboard-check');
+  }
+
+  /**
+   * Consentimientos del alumno (spec 0009-m, AC6). Es la evidencia que se le muestra a la
+   * Agencia si pregunta por el consentimiento de este titular (Art. 12).
+   */
+  protected openConsentimientosPanel(): void {
+    this.layoutDrawer.open(AdminConsentimientosDrawerComponent, 'Consentimientos', 'shield');
   }
 
   /** fix-009-i: historial de reagendamientos movido de bento inline a drawer. */

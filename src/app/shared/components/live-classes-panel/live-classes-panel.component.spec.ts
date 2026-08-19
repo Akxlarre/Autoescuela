@@ -86,6 +86,10 @@ describe('LiveClassesPanelComponent', () => {
     it('in_progress atrasada (overdue=true) → "Atrasada" (spec 0001-i)', () => {
       expect(component.statusLabel('in_progress', true)).toBe('Atrasada');
     });
+
+    it('no_show → "No Asistió", distinto de "Finalizada" (fix-193)', () => {
+      expect(component.statusLabel('no_show')).toBe('No Asistió');
+    });
   });
 
   // ─── isOverdue / aviso de cierre atrasado (spec 0001-i, AC3) ────────────────

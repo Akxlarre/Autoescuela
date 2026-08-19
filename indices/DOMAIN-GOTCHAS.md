@@ -998,6 +998,50 @@
 - **Fuente:** `specs/fixes/fix-190-m-datos-contacto-inventados-sedes-y-sitios` · auditoría
   `.compliance/` corrida 1
 
+### DG-075 — El reagendamiento RECICLA la fila de `class_b_sessions`: la asistencia vieja sigue ahí
+- **Trampa:** asumir que una fila de `class_b_practice_attendance` describe el estado actual de
+  su sesión. `AdminAlumnoDetalleFacade.reagendarClasesPenalizadas()` (RF-053) **no crea una
+  sesión nueva**: recicla la misma fila de `class_b_sessions` (nuevo `scheduled_at`, `status`
+  vuelve a `'scheduled'`) y conserva a propósito la asistencia de la ocurrencia anterior para
+  auditoría. Como la tabla tiene `UNIQUE (class_b_session_id, student_id)`, esa fila vieja
+  ocupa el lugar de la asistencia de la ocurrencia nueva.
+- **Realidad:** hasta fix-191-m esa fila no tenía marca de vigencia, así que era indistinguible
+  del estado actual. Cada consumidor que derivaba estado desde la asistencia mostraba "Ausente"
+  una clase agendada (Asistencia B, vistas del alumno) mientras los que leen
+  `class_b_sessions.status` la mostraban bien — un mismo dato contradiciéndose entre vistas.
+  Peor, era silenciosamente destructivo del lado SQL: `apply_class_b_absence_penalty()` volvía a
+  detectar el par de faltas consecutivas y cancelaba las clases recién reagendadas, y el
+  `ON CONFLICT DO NOTHING` del cron nocturno impedía registrar la inasistencia a la clase nueva.
+- **Regla de aplicabilidad:** en cualquier tabla de asistencia/resultado colgada de una entidad
+  que se **recicla in-place** (reagendar, reabrir, reintentar), filtrar siempre por la marca de
+  vigencia — acá `archived_at IS NULL` — en **todas** las capas: selects de facades, upserts
+  (que deben limpiarla) y funciones SQL/cron. Un `soft archive` que no deja marca en la fila no
+  es archivar: es dejar el dato viejo haciéndose pasar por vigente. Si aparece un comentario del
+  tipo "no hace falta tocar esta tabla porque la vista X deriva de otra columna", verificar
+  **todos** los consumidores antes de creerle.
+- **Fuente:** `specs/fixes/fix-191-m-reagendadas-asistencia-vieja-no-archivada` ·
+  `supabase/migrations/20260817120000_class_b_attendance_archived_at.sql`
+
+### DG-076 — El contrato se genera en el paso 5 del wizard; el pago recién existe después
+- **Trampa:** asumir que `enrollments.total_paid`/`pending_balance` ya reflejan lo que el alumno
+  va a pagar cuando se genera el PDF del contrato (paso 5 de matrícula, tanto en secretaría como
+  en el flujo público). En ese momento el pago real todavía no se registró — solo existe
+  `enrollments.payment_mode` ('total' | 'partial' = 50%, elegido en el paso 2). `total_paid` vale
+  0 casi siempre ahí, aunque el alumno sí vaya a pagar algo en el acto.
+- **Realidad:** un contrato generado antes de pagar mostraba literalmente "paga la cantidad de $0,
+  quedando un saldo de $180.000" para una matrícula con `payment_mode = 'partial'` que en realidad
+  iba a pagar la mitad en el momento. La cláusula económica del contrato (`buildStructuredPdf`,
+  `contract-pdf.ts`) tiene que **prever** el monto según `payment_mode` cuando `total_paid` es 0,
+  y solo usar el valor real de la BD cuando ya existe un pago (`total_paid > 0`) — nunca mezclar
+  un saldo real de "nada pagado todavía" con un pago previsto de "la mitad", porque no suman el
+  precio del curso.
+- **Regla de aplicabilidad:** cualquier documento/resumen que se genere **antes** de que un flujo
+  de pago haya corrido (contratos, comprobantes, previsualizaciones) no puede leer las columnas de
+  saldo como si fueran definitivas — hay que derivar el valor previsto desde la decisión que sí
+  existe en ese punto del flujo (acá `payment_mode`), y solo preferir el dato real de BD cuando
+  éste ya es distinto de su default vacío.
+- **Fuente:** `specs/fixes/fix-192-m-contrato-pdf-no-coincide-con-real` (rondas 10-11)
+
 ---
 
 ## Convención para agregar una entrada nueva

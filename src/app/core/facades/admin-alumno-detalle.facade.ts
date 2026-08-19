@@ -562,7 +562,7 @@ export class AdminAlumnoDetalleFacade {
             .from('class_b_practice_attendance')
             .select(
               `
-              id, status, justification, recorded_at,
+              id, status, justification, recorded_at, archived_at,
               class_b_sessions!inner(
                 id, enrollment_id, class_number, scheduled_at, status,
                 instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))
@@ -598,9 +598,13 @@ export class AdminAlumnoDetalleFacade {
     ]);
 
     const attendanceRows = (attendanceResult.data ?? []) as any[];
+    // fix-191-m: la asistencia archivada es el registro histórico de una ocurrencia previa de
+    // una sesión reciclada por reagendamiento — sigue visible en el historial de inasistencias
+    // (marcada `reagendada`), pero no describe el estado actual de la sesión.
+    const attendanceVigente = attendanceRows.filter((r) => r.archived_at == null);
 
     this._progresoPractico.set({
-      completadas: attendanceRows.filter((r) => r.status === STATUS_PRESENTE).length,
+      completadas: attendanceVigente.filter((r) => r.status === STATUS_PRESENTE).length,
       requeridas: clasesRequeridas,
     });
 
@@ -628,7 +632,7 @@ export class AdminAlumnoDetalleFacade {
       number,
       { status: string; justification: string | null }
     >();
-    for (const r of attendanceRows) {
+    for (const r of attendanceVigente) {
       const sessionId = r.class_b_sessions?.id;
       if (sessionId != null) {
         attendanceBySessionId.set(sessionId, {
@@ -746,9 +750,11 @@ export class AdminAlumnoDetalleFacade {
       justificada: row.status === 'excused',
       justificacion: row.justification ?? null,
       instructor,
-      // RF-053 (soft archive): la sesión ya no está en 'no_show' → fue reciclada por
-      // el flujo de reagendar, pero el registro de inasistencia se conserva para auditoría.
-      reagendada: session?.status != null && session.status !== 'no_show',
+      // RF-053 (soft archive): la fila se archivó al reciclar la sesión en el flujo de
+      // reagendar, pero el registro de inasistencia se conserva para auditoría.
+      // fix-191-m: se deriva de `archived_at` — antes se infería de `session.status !==
+      // 'no_show'`, que también daba true para una sesión simplemente cancelada.
+      reagendada: row.archived_at != null,
     };
   }
 
@@ -1549,9 +1555,18 @@ export class AdminAlumnoDetalleFacade {
         .eq('id', session.sessionId);
       if (updateError) throw updateError;
       // Soft archive (RF-053): NO se borra class_b_practice_attendance — el historial de
-      // la inasistencia original se conserva para auditoría. La grilla principal ya
-      // deriva su color de class_b_sessions.status, así que queda "limpia" (azul) sin
-      // necesidad de tocar la tabla de asistencia.
+      // la inasistencia original se conserva para auditoría. Pero SÍ se marca como
+      // archivada (fix-191-m): la fila de sesión se recicló, así que esa asistencia dejó
+      // de describir el estado actual. Mientras no se marcaba, todo consumidor que deriva
+      // estado desde la asistencia — Asistencia B, vistas del alumno — seguía viendo
+      // "Ausente" sobre una clase agendada, y apply_class_b_absence_penalty() volvía a
+      // detectar el par de faltas consecutivas y cancelaba las clases recién reagendadas.
+      const { error: archiveError } = await this.supabase.client
+        .from('class_b_practice_attendance')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('class_b_session_id', session.sessionId)
+        .is('archived_at', null);
+      if (archiveError) throw archiveError;
 
       const prev = prevMap.get(session.sessionId);
       historyRows.push({

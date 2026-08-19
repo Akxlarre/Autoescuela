@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  computed,
   input,
   output,
   signal,
@@ -10,7 +11,10 @@ import {
   afterNextRender,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract.model';
+import type {
+  EnrollmentContractData,
+  PublicContractSignedPayload,
+} from '@core/models/ui/enrollment-contract.model';
 
 @Component({
   selector: 'app-public-contract',
@@ -86,33 +90,67 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
             hábiles de anticipación.
           </p>
           <p>
-            <strong>4. Datos y Vigencia:</strong> Los datos se tratarán según Ley Nº 19.628. El
-            contrato rige desde su firma hasta la finalización del curso.
+            <strong>4. Datos y Vigencia:</strong> Tus datos se tratarán conforme a la
+            <strong>Ley Nº 21.719</strong> sobre protección de datos personales, para impartir el
+            curso, certificar tu egreso y cumplir las obligaciones que la normativa impone. Se
+            conservan 5 años desde tu egreso o baja; el detalle está en la Política de Privacidad.
+            El contrato rige desde su firma hasta la finalización del curso.
           </p>
         </div>
       }
 
       @if (!data().isMinor) {
-        <!-- Consent Checkbox -->
-        <label class="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            class="mt-0.5"
-            [checked]="termsAccepted()"
-            (change)="toggleTerms($event)"
-            style="accent-color: var(--ds-brand); width: 1.1rem; height: 1.1rem;"
-            data-llm-action="aceptar-terminos-contrato-publico"
-          />
-          <span class="text-sm font-medium" style="color: var(--text-primary);">
-            He leído y acepto los términos y condiciones de mi matrícula.
-          </span>
-        </label>
+        <!--
+          DOS casillas separadas y ninguna premarcada (Ley 21.719 Art. 12, spec 0009-m AC3).
+          Antes había una sola —"He leído y acepto los términos"— que mezclaba el contrato de
+          matrícula con el tratamiento de datos personales. La ley exige que el consentimiento
+          sea ESPECÍFICO: aceptar un contrato no es autorizar un tratamiento de datos.
+        -->
+        <div class="space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              [checked]="termsAccepted()"
+              (change)="toggleTerms($event)"
+              style="accent-color: var(--ds-brand); width: 1.1rem; height: 1.1rem;"
+              data-llm-action="aceptar-terminos-contrato-publico"
+            />
+            <span class="text-sm font-medium" style="color: var(--text-primary);">
+              He leído y acepto los términos y condiciones de mi matrícula.
+            </span>
+          </label>
+
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              [checked]="privacyAccepted()"
+              (change)="togglePrivacy($event)"
+              style="accent-color: var(--ds-brand); width: 1.1rem; height: 1.1rem;"
+              data-llm-action="aceptar-politica-privacidad-publico"
+            />
+            <span class="text-sm font-medium" style="color: var(--text-primary);">
+              {{ data().privacyPolicyLabel }}
+              <a
+                [href]="data().privacyPolicyUrl"
+                target="_blank"
+                rel="noopener"
+                class="underline"
+                style="color: var(--ds-brand);"
+                data-llm-nav="politica-privacidad"
+                (click)="$event.stopPropagation()"
+                >Ver Política de Privacidad</a
+              >
+            </span>
+          </label>
+        </div>
 
         <!-- Signature Canvas -->
         <div
           class="space-y-2"
-          [class.opacity-50]="!termsAccepted()"
-          [class.pointer-events-none]="!termsAccepted()"
+          [class.opacity-50]="!consentsComplete()"
+          [class.pointer-events-none]="!consentsComplete()"
         >
           <div class="flex justify-between items-center">
             <p class="text-sm font-semibold" style="color: var(--text-primary);">Dibuja tu firma</p>
@@ -134,7 +172,7 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
               #signatureCanvas
               width="300"
               height="150"
-              class="w-full h-[150px] cursor-crosshair block"
+              class="w-full h-37.5 cursor-crosshair block"
               (pointerdown)="startDrawing($event)"
               (pointermove)="draw($event)"
               (pointerup)="stopDrawing()"
@@ -155,7 +193,7 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
         <button
           type="button"
           class="btn-primary w-full rounded-xl py-3.5"
-          [disabled]="!data().isMinor && !termsAccepted()"
+          [disabled]="!data().isMinor && !consentsComplete()"
           (click)="handleConfirm()"
           data-llm-action="confirmar-contrato-publico"
         >
@@ -176,11 +214,29 @@ import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract
 export class PublicContractComponent {
   readonly data = input.required<EnrollmentContractData>();
 
-  // Emit base64 string
-  readonly contractSigned = output<string>();
+  /**
+   * Firma en base64 + el estado de las dos casillas (AC3/AC5).
+   *
+   * El consentimiento viaja CON la firma y no por un output aparte para que sea imposible
+   * persistir una matrícula sin su registro de consentimiento: son el mismo evento.
+   */
+  readonly contractSigned = output<PublicContractSignedPayload>();
   readonly goBack = output<void>();
 
   readonly termsAccepted = signal(false);
+
+  /**
+   * Declaración de haber leído la Política de Privacidad (Art. 12, AC3).
+   *
+   * Separada de `termsAccepted` a propósito: son dos consentimientos distintos y la ley
+   * exige que cada uno sea específico. No premarcada — el consentimiento requiere un
+   * **acto afirmativo** del titular.
+   */
+  readonly privacyAccepted = signal(false);
+
+  /** Ambas casillas son obligatorias para avanzar (AC3). */
+  readonly consentsComplete = computed(() => this.termsAccepted() && this.privacyAccepted());
+
   readonly signatureError = signal(false);
 
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('signatureCanvas');
@@ -197,6 +253,14 @@ export class PublicContractComponent {
   toggleTerms(event: Event): void {
     const el = event.target as HTMLInputElement;
     this.termsAccepted.set(el.checked);
+    if (!el.checked) {
+      this.clearSignature();
+    }
+  }
+
+  togglePrivacy(event: Event): void {
+    const el = event.target as HTMLInputElement;
+    this.privacyAccepted.set(el.checked);
     if (!el.checked) {
       this.clearSignature();
     }
@@ -227,7 +291,7 @@ export class PublicContractComponent {
   }
 
   startDrawing(e: PointerEvent): void {
-    if (!this.termsAccepted() || !this.ctx) return;
+    if (!this.consentsComplete() || !this.ctx) return;
     this.isDrawing = true;
     this.signatureError.set(false);
     this.hasSignature = true;
@@ -273,12 +337,14 @@ export class PublicContractComponent {
 
   handleConfirm(): void {
     if (this.data().isMinor) {
-      // If minor, skip signature and emit a placeholder to allow advancing
-      this.contractSigned.emit('');
+      // Rama inalcanzable en el flujo público: `canAdvanceFn` bloquea a los menores en el
+      // paso 1 (`getAgeStatus() === 'requires-authorization'`), así que nadie con isMinor
+      // llega a este componente. Se conserva por seguridad; su limpieza excede la spec 0009-m.
+      this.contractSigned.emit({ signatureBase64: '', termsAccepted: false, privacyAccepted: false });
       return;
     }
 
-    if (!this.termsAccepted()) return;
+    if (!this.consentsComplete()) return;
     if (!this.hasSignature) {
       this.signatureError.set(true);
       return;
@@ -298,6 +364,10 @@ export class PublicContractComponent {
     }
 
     const base64 = tempCanvas.toDataURL('image/png');
-    this.contractSigned.emit(base64);
+    this.contractSigned.emit({
+      signatureBase64: base64,
+      termsAccepted: this.termsAccepted(),
+      privacyAccepted: this.privacyAccepted(),
+    });
   }
 }

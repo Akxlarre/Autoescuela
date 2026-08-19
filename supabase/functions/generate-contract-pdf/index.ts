@@ -19,12 +19,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   type EnrollmentData,
   buildStructuredPdf,
-  formatDate,
-  formatCurrency,
-  escapePdfWinAnsi,
-  wrapTextToLines,
-  assemblePdf,
+  tryLoadIdPhoto,
 } from '../_shared/contract-pdf.ts';
+import { loadPngForPdf } from '../_shared/pdf-utils.ts';
+
+// Mismo logo que generate-certificate-b-pdf / generate-certificate-professional-pdf /
+// generate-student-license-pdf — bucket público `assets` de Storage, no un archivo del repo.
+const LOGO_URL =
+  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
 
 // ─── CORS headers ───
 
@@ -64,9 +66,13 @@ Deno.serve(async (req: Request) => {
         `
         id,
         student_id,
+        course_id,
         number,
         base_price,
         discount,
+        total_paid,
+        pending_balance,
+        payment_mode,
         created_at,
         students!inner (
           birth_date,
@@ -89,7 +95,10 @@ Deno.serve(async (req: Request) => {
         ),
         branches!inner (
           name,
-          address
+          address,
+          slug,
+          email,
+          phone
         )
       `,
       )
@@ -113,8 +122,33 @@ Deno.serve(async (req: Request) => {
     // Flatten nested relations
     const data = flattenEnrollment(enrollment, licenseValidation);
 
+    // 3c. Número previsto para drafts sin confirmar aún (secretaría genera/previsualiza el
+    // contrato en el paso 5 del wizard, ANTES de la confirmación final — que es donde recién se
+    // asigna `enrollments.number`, ver `EnrollmentFacade.generateEnrollmentNumber()`). Sin esto el
+    // contrato imprime "N° -" hasta confirmar, aunque el alumno ya lo esté firmando en ese paso.
+    // Misma función de solo lectura que usa la confirmación real y el preview público — no reserva
+    // ni consume nada, así que llamarla acá es seguro.
+    if (!data.number && enrollment.course_id) {
+      const { data: previewNumber, error: previewNumberErr } = await supabase.rpc(
+        'get_next_enrollment_number',
+        { p_course_id: enrollment.course_id },
+      );
+      if (previewNumberErr) {
+        console.error('generate-contract-pdf: get_next_enrollment_number failed', {
+          enrollmentId: enrollment_id,
+          courseId: enrollment.course_id,
+          error: previewNumberErr,
+        });
+      }
+      data.number = previewNumber ?? null;
+    }
+
     // 4. Generate structured PDF directly from enrollment data
-    const pdfBytes = buildStructuredPdf(data);
+    const [idPhoto, logo] = await Promise.all([
+      tryLoadIdPhoto(supabase, enrollment_id),
+      loadPngForPdf(LOGO_URL),
+    ]);
+    const pdfBytes = buildStructuredPdf(data, null, idPhoto, logo);
 
     // 5. Build filename and upload to Storage
     const studentName = sanitizeFilename(
@@ -186,6 +220,9 @@ function flattenEnrollment(
     number: raw.number,
     base_price: raw.base_price,
     discount: raw.discount,
+    total_paid: raw.total_paid ?? null,
+    pending_balance: raw.pending_balance ?? null,
+    payment_mode: raw.payment_mode ?? null,
     created_at: raw.created_at,
     student: {
       birth_date: raw.students.birth_date,
@@ -209,6 +246,9 @@ function flattenEnrollment(
     branch: {
       name: raw.branches.name,
       address: raw.branches.address,
+      slug: raw.branches.slug ?? null,
+      email: raw.branches.email ?? null,
+      phone: raw.branches.phone ?? null,
     },
     convalidation: licenseValidation ?? null,
   };
@@ -229,4 +269,3 @@ async function computeHash(data: Uint8Array): Promise<string> {
 }
 
 // PDF generation functions are imported from ../_shared/contract-pdf.ts
-

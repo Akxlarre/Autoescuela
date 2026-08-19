@@ -133,7 +133,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300 inline-flex items-center gap-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed'"
+                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
                   [class.text-error]="isOverdue(cls) || isFromPrevDay(cls)"
                   [attr.data-llm-description]="
                     isFromPrevDay(cls)
@@ -204,7 +204,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed'"
+                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
                   [class.text-error]="isOverdue(cls)"
                 >
                   {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls)) }}
@@ -215,7 +215,9 @@ import { TooltipModule } from 'primeng/tooltip';
                 class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm hover-icon-container"
                 [class.bg-brand]="cls.status === 'in_progress' && !isOverdue(cls)"
                 [class.text-brand-text]="cls.status === 'in_progress' && !isOverdue(cls)"
-                [class.bg-subtle]="cls.status === 'pending' || cls.status === 'completed'"
+                [class.bg-subtle]="
+                  cls.status === 'pending' || cls.status === 'completed' || cls.status === 'no_show'
+                "
                 [class.text-brand]="cls.status === 'pending'"
                 [class.text-text-muted]="cls.status === 'completed'"
                 [class.bg-error-subtle]="isOverdue(cls)"
@@ -223,7 +225,7 @@ import { TooltipModule } from 'primeng/tooltip';
               >
                 <app-icon
                   [name]="
-                    cls.status === 'completed'
+                    cls.status === 'completed' || cls.status === 'no_show'
                       ? 'chevron-right'
                       : isOverdue(cls)
                         ? 'alert-triangle'
@@ -367,6 +369,7 @@ export class LiveClassesPanelComponent {
     if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
+    if (status === 'no_show') return 'No Asistió';
     return 'Finalizada';
   }
 
@@ -385,6 +388,7 @@ export class LiveClassesPanelComponent {
   getRelativeTime(isoString: string, status: string, overdue = false): string {
     if (!isoString) return '';
     if (status === 'completed') return 'Concluida';
+    if (status === 'no_show') return 'No asistió';
     if (overdue) return 'Cierre atrasado';
     if (status === 'in_progress') return 'Transcurriendo';
 

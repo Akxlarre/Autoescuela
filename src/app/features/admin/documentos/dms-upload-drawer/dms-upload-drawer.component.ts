@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { ConsentsFacade } from '@core/facades/consents.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -132,6 +133,37 @@ type UploadMode = 'student' | 'school' | 'instructor';
               ></p-select>
             </div>
 
+            <!-- ── Art. 16: dato sensible de salud (spec 0009-m, AC4) ──
+                 Solo para el certificado médico. La ley exige que esta autorización sea
+                 expresa y ESPECÍFICA para ese dato: no puede ir implícita en ninguna
+                 aceptación previa, ni condicionar la subida de otros documentos. -->
+            @if (isMedicalCertificate()) {
+              <app-alert-card severity="warning" title="Dato sensible de salud — requiere autorización">
+                <p class="m-0">
+                  El certificado médico es un dato de salud. Solo puede digitalizarse con la
+                  autorización expresa del alumno (Ley 21.719, Art. 16).
+                </p>
+                <label class="flex items-start gap-3 cursor-pointer group mt-3">
+                  <input
+                    type="checkbox"
+                    class="mt-0.5 shrink-0 w-4 h-4 accent-brand cursor-pointer"
+                    [checked]="art16Accepted()"
+                    (change)="art16Accepted.set($any($event.target).checked)"
+                    data-llm-action="aceptar-art16-certificado-medico"
+                  />
+                  <span class="text-sm text-text-secondary leading-relaxed">
+                    El alumno <strong class="text-text-primary">autoriza expresamente</strong> el
+                    tratamiento de su certificado médico con el único fin de acreditar su aptitud,
+                    y entiende que no se usará para ninguna otra finalidad.
+                  </span>
+                </label>
+                <p class="text-xs text-text-muted m-0 mt-2">
+                  Si no autoriza, usa <strong>"No autoriza"</strong>: queda la constancia y el
+                  archivo no se sube.
+                </p>
+              </app-alert-card>
+            }
+
             <!-- ── Descripción (modo school) ── -->
             @if (facade.currentUploadMode() === 'school') {
               <div class="flex flex-col gap-1.5">
@@ -201,6 +233,17 @@ type UploadMode = 'student' | 'school' | 'instructor';
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
+        @if (isMedicalCertificate()) {
+          <button
+            type="button"
+            class="btn-secondary"
+            data-llm-action="registrar-negativa-art16"
+            [disabled]="isSubmitting() || !selectedEnrollmentId()"
+            (click)="onRefuseArt16()"
+          >
+            No autoriza
+          </button>
+        }
         <button
           type="button"
           class="btn-secondary"
@@ -224,6 +267,7 @@ type UploadMode = 'student' | 'school' | 'instructor';
 export class DmsUploadDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   readonly facade = inject(DmsFacade);
+  private readonly consents = inject(ConsentsFacade);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
@@ -308,6 +352,20 @@ export class DmsUploadDrawerComponent {
     return this.schoolDocTypes;
   });
 
+  /**
+   * El certificado médico es un **dato sensible de salud** (Ley 21.719 Art. 16) y exige
+   * autorización expresa y específica para ese dato — no basta ninguna aceptación previa.
+   *
+   * Este es el ÚNICO punto de la app por donde entra: no se pide en la matrícula, solo
+   * llega cuando un alumno justifica inasistencias (confirmado por el dueño, 17-08-2026).
+   */
+  readonly isMedicalCertificate = computed(
+    () => this.facade.currentUploadMode() === 'student' && this.selectedType() === 'certificado_medico',
+  );
+
+  /** Casilla del Art. 16. No premarcada: el consentimiento exige un acto afirmativo. */
+  readonly art16Accepted = signal<boolean>(false);
+
   readonly canSubmit = computed(() => {
     if (!this.selectedFile() || !this.selectedType()) return false;
     const mode = this.facade.currentUploadMode();
@@ -315,6 +373,8 @@ export class DmsUploadDrawerComponent {
       return false;
     }
     if (mode === 'instructor' && !this.selectedInstructorId()) return false;
+    // Sin autorización expresa no se digitaliza el dato de salud (AC4).
+    if (this.isMedicalCertificate() && !this.art16Accepted()) return false;
     return true;
   });
 
@@ -442,6 +502,20 @@ export class DmsUploadDrawerComponent {
     this.isSubmitting.set(true);
     try {
       const mode = this.facade.currentUploadMode();
+
+      // Consentimiento del Art. 16 ANTES de subir: si no se puede registrar, no se
+      // digitaliza el dato de salud. Registrar después dejaría una ventana en la que el
+      // documento existe sin respaldo.
+      if (this.isMedicalCertificate()) {
+        const ok = await this.consents.recordMedicalCertificate(this.selectedEnrollmentId()!, true);
+        if (!ok) {
+          this.validationError.set(
+            'No se pudo registrar la autorización del alumno. El certificado no se subió.',
+          );
+          return;
+        }
+      }
+
       if (mode === 'student') {
         await this.facade.uploadStudentDocument({
           file: this.selectedFile()!,
@@ -469,6 +543,33 @@ export class DmsUploadDrawerComponent {
       this.validationError.set(
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir el archivo',
       );
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  /**
+   * El alumno exhibió el certificado pero NO autoriza digitalizarlo (AC-E1).
+   *
+   * Deja constancia de la negativa y cierra sin subir el archivo. Sin esto, ese caso sería
+   * indistinguible de "nadie le preguntó" — y ante la Agencia son cosas muy distintas.
+   */
+  async onRefuseArt16(): Promise<void> {
+    const enrollmentId = this.selectedEnrollmentId();
+    if (!enrollmentId) return;
+
+    this.isSubmitting.set(true);
+    try {
+      const ok = await this.consents.recordMedicalCertificate(enrollmentId, false);
+      if (!ok) {
+        this.validationError.set('No se pudo registrar la negativa. Inténtalo de nuevo.');
+        return;
+      }
+      this.facade.showSuccess(
+        'Negativa registrada',
+        'Quedó constancia de que el alumno no autorizó digitalizar su certificado médico. El documento no se subió.',
+      );
+      this.onClose();
     } finally {
       this.isSubmitting.set(false);
     }

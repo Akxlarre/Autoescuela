@@ -47,4 +47,27 @@ export interface EnrollmentContractData {
   isProfessional: boolean;
   /** Upload or signature is required to advance to step 6 */
   canAdvance: boolean;
+
+  // ── Consentimiento (spec 0009-m, Ley 21.719 Art. 12) ───────────────────────
+  /**
+   * Texto literal de la casilla de declaración de lectura de la política.
+   * Sale de `PRIVACY_POLICIES[slug].policyCheckboxLabel` — nombra a la sociedad
+   * responsable, que no es la misma en las dos sedes.
+   */
+  privacyPolicyLabel: string;
+  /** `/politica-privacidad/:branchSlug` de la sede en que se matricula (AC2). */
+  privacyPolicyUrl: string;
+}
+
+/**
+ * Lo que emite el paso de contrato al firmar (AC3/AC5).
+ *
+ * El estado de las casillas viaja JUNTO con la firma y no por un output aparte:
+ * así es imposible persistir una matrícula sin su registro de consentimiento,
+ * porque para el consumidor son un solo evento.
+ */
+export interface PublicContractSignedPayload {
+  signatureBase64: string;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
 }

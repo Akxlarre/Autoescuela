@@ -1,4 +1,7 @@
-# Registro de Vulneraciones a las Medidas de Seguridad — Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL
+# Anexo 7 — Registro de Vulneraciones a las Medidas de Seguridad
+
+> **Expediente de Cumplimiento Ley 21.719** · Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL
+> **Clasificación:** documento interno, exhibible ante fiscalización. Bitácora permanente.
 
 **RUT:** 76.007.217-6 · **Versión:** 1.0 · **Apertura del registro:** 2026-08-16
 
@@ -40,4 +43,4 @@ Aunque no haya incidentes, dejar constancia de que se revisó:
 | | | | |
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

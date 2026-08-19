@@ -323,6 +323,9 @@ export class InstructorClasesFacade {
               class_b_session_id: sessionId,
               student_id: studentId,
               status: 'present',
+              // fix-191-m: si quedaba la fila archivada de una ocurrencia anterior de esta
+              // sesión (reagendamiento RF-053), la asistencia de HOY vuelve a ser la vigente.
+              archived_at: null,
             },
             { onConflict: 'class_b_session_id,student_id' },
           );

@@ -163,6 +163,9 @@ export class AsistenciaClaseBFacade {
               student_id: enrollment.student_id,
               status: dbStatus,
               recorded_by: recordedBy,
+              // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
+              // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
+              archived_at: null,
             },
             { onConflict: 'class_b_session_id,student_id' },
           );
@@ -210,7 +213,9 @@ export class AsistenciaClaseBFacade {
           .from('class_b_practice_attendance')
           .update({ justification: reason, status: 'excused' })
           .eq('class_b_session_id', sessionId)
-          .eq('student_id', enrollment.student_id);
+          .eq('student_id', enrollment.student_id)
+          // fix-191-m: nunca reescribir el registro histórico de una ocurrencia ya reagendada.
+          .is('archived_at', null);
       }
 
       this._clasesPracticas.update((rows) =>
@@ -455,6 +460,7 @@ export class AsistenciaClaseBFacade {
             student_id: payload.studentId,
             status: 'present',
             recorded_by: recordedBy,
+            archived_at: null, // fix-191-m: la asistencia de esta ocurrencia es la vigente
           },
           { onConflict: 'class_b_session_id,student_id' },
         );
@@ -582,7 +588,7 @@ export class AsistenciaClaseBFacade {
             users!inner(first_names, paternal_last_name)
           )
         ),
-        class_b_practice_attendance(status, justification)
+        class_b_practice_attendance(status, justification, archived_at)
       `,
       )
       .gte('scheduled_at', start)
@@ -615,7 +621,13 @@ export class AsistenciaClaseBFacade {
           ? `${student.first_names ?? ''} ${student.paternal_last_name ?? ''}`.trim()
           : null;
 
-        const attendance = row.class_b_practice_attendance?.[0];
+        // fix-191-m: solo la asistencia VIGENTE describe el estado de la sesión. Una fila
+        // archivada es el registro histórico de una ocurrencia anterior de esa misma sesión
+        // (reagendamiento RF-053, que recicla la fila en vez de crear una nueva); tomarla
+        // pintaba "Ausente" una clase que está agendada.
+        const attendance = (row.class_b_practice_attendance ?? []).find(
+          (a: any) => a.archived_at == null,
+        );
         const sessionBranchId = row.enrollments?.branch_id ?? 0;
         const branchName =
           row.enrollments?.branches?.name ?? branchMap.get(sessionBranchId) ?? 'Sin sede';
@@ -677,6 +689,9 @@ export class AsistenciaClaseBFacade {
       `,
       )
       .in('status', ['absent', 'no_show'])
+      // fix-191-m: una falta ya reagendada quedó archivada — es historial, no una
+      // falta viva. Sin esto seguía alimentando la alerta de faltas consecutivas.
+      .is('archived_at', null)
       .eq('class_b_sessions.enrollments.status', 'active')
       .in('class_b_sessions.status', VALID_CLASS_B_SESSION_STATUSES)
       .order('recorded_at', { ascending: false });

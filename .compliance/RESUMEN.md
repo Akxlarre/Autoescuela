@@ -6,17 +6,24 @@
 
 **Sociedades evaluadas:**
 
-| | Escuela de conductores | OTEC |
+| | Sede Conductores | Sede Autoescuela |
 |---|---|---|
 | Razón social | Sociedad Comercial Chillán Capacita Limitada | Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL |
 | RUT | 77.940.120-0 | 76.007.217-6 |
 | Domicilio | Carrera 74, Chillán | Maipón 418, Chillán |
 | Contacto de datos | conductorchillan@gmail.com | otecchillan@gmail.com |
 | Trabajadores | ~8 | ~6 |
-| Documentos | `docs/conductores/` | `docs/otec/` |
+| Expediente | `docs/conductores/` | `docs/autoescuela/` |
 
 Ambas son **responsables de datos independientes** ante la Agencia, aunque compartan sistema
-informático y representante legal. Por eso cada una tiene su juego completo de 9 documentos.
+informático y representante legal. Por eso cada una tiene su propio **expediente de cumplimiento**:
+una portada con índice más nueve anexos numerados.
+
+> **Este informe es distinto de los expedientes.** Es el diagnóstico técnico dirigido a la dirección y a
+> quien mantiene el sistema, y por eso cita migraciones, tablas y configuración: es donde esa
+> información pertenece. Los expedientes son lo que se exhibe ante la Agencia y lo que opera la
+> secretaría; ahí lo técnico está separado en un apéndice de evidencia al final del Anexo 1 y del
+> Anexo 2. **Este informe no se entrega en una fiscalización** — se entrega el expediente.
 
 ---
 
@@ -58,7 +65,30 @@ es el día del despliegue.**
 
 ---
 
-## Lo urgente: 1 hallazgo técnico
+## Lo urgente: 2 hallazgos técnicos
+
+### 🔴 Datos de salud psíquica recolectados sin consentimiento — *hallazgo de la corrida 2*
+
+**Solo afecta a Conductores Chillán** (los cursos profesionales son suyos).
+
+La preinscripción profesional en línea aplica el **EPQ — Eysenck Personality Questionnaire**, un
+instrumento psicométrico clínico de 81 ítems, y guarda **las respuestas individuales** además del
+resultado `apto`/`no apto` y el motivo de rechazo. Eso es **dato sensible de salud psíquica** (Art. 16),
+del mismo régimen que el certificado médico: exige consentimiento **expreso y separado**.
+
+Hoy el formulario público **no pide ninguna autorización**, y el dato no aparecía en ningún documento de
+este expediente: ni en el RAT, ni en la EIPD, ni en la política. **La corrida 1 lo pasó por alto.**
+
+**Lo que sí está bien:** el resultado **no es automático**. El sistema deja la evaluación en blanco a
+propósito y solo un profesional identificado la fija, así que no hay decisión automatizada que declarar
+—el agravante que habría cambiado el régimen legal completo—. Y el alumno ya puede rendir el test en
+papel: esa vía no guarda ninguna respuesta.
+
+**Arreglo:** casilla del Art. 16 separada, antes de la primera pregunta; sin ella no se guarda ninguna
+respuesta. Texto en el **Anexo 4 §4 bis**. Track SDD `0010-m`.
+
+**Ninguna respuesta ha sido recolectada todavía**, porque el sistema no se despliega. Se corrige gratis
+hoy; después habría que pedirle autorización retroactiva a cada preinscrito o borrar sus respuestas.
 
 ### 🟠 No se registra el consentimiento
 
@@ -70,31 +100,23 @@ La ley pone **la carga de la prueba en la empresa** (Art. 12). Ante una fiscaliz
 "muéstreme el consentimiento" — y hoy no hay nada que mostrar.
 
 **Arreglo:** casillas separadas y no premarcadas, más una tabla que registre cada aceptación. Los textos
-exactos ya están escritos en `21719-consentimiento.md` de cada sociedad.
+exactos ya están escritos en el **Anexo 4** de cada expediente.
 
-**Es lo único que debe estar sí o sí antes de matricular al primer alumno real.**
+**Junto con el hallazgo anterior, es lo que debe estar sí o sí antes de matricular al primer alumno real.**
 
-### 🔵 Segundo factor de autenticación — riesgo aceptado, no pendiente
+> Estado: **en ejecución** en el track SDD `0009-m`. La tabla `consents` ya existe, con registro
+> append-only, IP capturada del lado del servidor y sin posibilidad de borrado en ningún rol.
 
-TOTP está desactivado (`supabase/config.toml` → `[auth.mfa.totp] enroll_enabled = false`). El
-representante legal evaluó la medida el 16-08-2026 y **decidió no implementarla en esta etapa**.
+### 🔵 Disciplina de credenciales — control aplicado, no pendiente
 
-Es una decisión defendible: la ley no exige MFA, sino medidas *proporcionales* (Art. 14 quinquies), y
-el conjunto ya implementado —RLS por rol, almacenamiento privado con enlaces firmados, auditoría
-inmutable con IP, cambio forzado de contraseña— sostiene esa proporcionalidad para una organización de
-este tamaño. El costo, en cambio, es alto: facade, dos vistas, tres guards, migración de RLS y un flujo
-de recuperación para cuando a una secretaria se le pierda el teléfono.
+El control frente a una credencial de admin o secretaría comprometida es de disciplina de acceso, no de
+tecnología adicional. **Riesgo asumido:** una credencial comprometida permite leer el padrón completo de
+alumnos. La auditoría permite detectarlo, no impedirlo — por eso el control real está en reducir la
+probabilidad de que ocurra.
 
-**Lo que importa es que quedó documentada como decisión evaluada y no como omisión** — la diferencia
-exacta que mira un fiscalizador. El fundamento completo, los controles compensatorios y las condiciones
-de re-evaluación están en la §4.1 de cada EIPD.
-
-**Riesgo asumido:** una credencial comprometida de admin o secretaría permite leer el padrón completo.
-La auditoría permite detectarlo, no impedirlo.
-
-**A cambio, cuatro medidas de costo cero que hay que instruir antes del despliegue:** cuentas
+**Cuatro medidas de costo cero que hay que instruir antes del despliegue:** cuentas
 nominativas sin compartir, revocación de acceso el mismo día del término del vínculo, contraseñas únicas,
-y revisión del `audit_log` ante sospecha (`INSTRUCTIVO.md` §H).
+y revisión del `audit_log` ante sospecha (Instructivo operativo, §H).
 
 ---
 
@@ -132,8 +154,8 @@ Ninguna es un incumplimiento de la ley, pero conviene anotarlas:
 
 | Brecha | Estado | Acción |
 |---|---|---|
-| **Ningún contrato de tratamiento (DPA) firmado** | ❌ | Quien mantiene el sistema tiene acceso a producción sin contrato escrito, lo que el Art. 15 bis exige. Modelos listos en `21719-dpa.md` |
-| **La OTEC no tiene DPA con sus empresas clientes** | ❌ | Cuando una empresa envía trabajadores a capacitarse, la OTEC actúa como **encargada** de esos datos. Sin contrato, ese tratamiento no tiene marco. Modelo B en `docs/otec/21719-dpa.md` |
+| **Ningún contrato de tratamiento firmado** | ❌ | Quien mantiene el sistema tiene acceso a producción sin contrato escrito, lo que el Art. 15 bis exige. Modelo listo en el **Anexo 8** de cada expediente |
+| ~~La Autoescuela no tiene contrato con sus empresas clientes~~ | 🔵 **No aplica** | **Falso positivo de la primera corrida.** Se dio por hecho que la EIRL capacitaba a trabajadores enviados por sus empleadores. Verificado el 17-08-2026 con la secretaría en funciones: nunca ha ocurrido. Los alumnos con franquicia SENCE se matriculan por sí mismos, así que la sociedad es **responsable** y no encargada. El contrato queda redactado como contingencia (Anexo 8, Modelo B) |
 | **Transferencias al extranjero sin mecanismo** | ❌ | Supabase, Google y Zoom procesan fuera de Chile. Falta incorporar las cláusulas modelo del Ministerio de Economía |
 | **Sin proceso de depuración a los 5 años** | ❌ | La retención está definida pero nada la ejecuta. Los datos se acumulan indefinidamente |
 | **Política de privacidad sin publicar** | ⚠️ | Redactada. Falta subirla y enlazarla desde el formulario público y la matrícula |
@@ -150,7 +172,7 @@ No quedó nada pendiente de decisión legal. Estas preguntas se respondieron con
 | Pregunta | Respuesta | Fundamento |
 |---|---|---|
 | ¿Necesitan un DPO (delegado de protección de datos)? | **No** | Art. 50: solo organismos públicos o datos sensibles a gran escala. Tratan datos sensibles, pero no a gran escala. Basta el responsable interno designado |
-| ¿Necesitan una Evaluación de Impacto (EIPD)? | **Sí, obligatoria** | Art. 15 ter: doble gatillo verificado en el código — certificados médicos (sensibles) y alumnos menores de edad. **Ya está hecha**, en `21719-eipd.md` |
+| ¿Necesitan una Evaluación de Impacto (EIPD)? | **Sí, obligatoria** | Art. 15 ter: doble gatillo verificado en el código — certificados médicos (sensibles) y alumnos menores de edad. **Ya está hecha**, es el **Anexo 2** de cada expediente |
 | ¿Les aplica la gracia MIPYME? | **Sí** | Art. sexto transitorio. Ambas son empresa de menor tamaño (Ley 20.416). Los primeros 12 meses la Agencia puede amonestar en vez de multar |
 | ¿Cómo se resuelve que la secretaria rote? | Designación **por cargo**, no por persona | El correo del canal es estable y no cambia al rotar quien lo atiende |
 | ¿Un solo juego de documentos o dos? | **Dos** | Cada RUT responde por separado ante la Agencia |
@@ -165,32 +187,32 @@ El corte no es diciembre: es **el día del despliegue**.
 ### 🚧 Bloqueantes de despliegue — no matricular al primer alumno sin esto
 
 1. **Casillas de consentimiento separadas + tabla `consents`** (matrícula y certificado médico Art. 16),
-   en los dos flujos, público y secretaría.
-2. **Aviso del Art. 14 ter** en el primer paso que captura datos, en ambos flujos.
-3. **Publicar la política de privacidad** en la ruta `/politica-privacidad` y enlazarla desde las casillas.
-4. **Instruir las 4 medidas compensatorias** de `INSTRUCTIVO.md` §H (reemplazan al MFA).
-5. **Designar por escrito** quién ocupa el cargo de encargada de datos y quién revisa el correo del canal.
+   en los dos flujos, público y secretaría. — *track `0009-m`, tabla ya implementada.*
+2. **Casilla del Art. 16 para el test psicométrico EPQ** en la preinscripción profesional, con bloqueo:
+   sin autorización no se guarda ninguna respuesta. — *track `0010-m`.*
+3. **Aviso del Art. 14 ter** en el primer paso que captura datos, en ambos flujos.
+4. **Publicar la política de privacidad** en la ruta `/politica-privacidad` y enlazarla desde las casillas.
+5. **Instruir las 4 medidas de disciplina de credenciales** del Instructivo operativo §H.
+6. **Designar por escrito** quién ocupa el cargo de encargada de datos y quién revisa el correo del canal.
 
 ### 📄 Papeles — en paralelo, no dependen de desarrollo
 
-6. Firmar el **DPA con quien mantiene el sistema** y con el contador.
-7. La OTEC: **Modelo B con cada empresa cliente**, antes del primer curso a empresa.
+6. Firmar el **contrato de tratamiento con quien mantiene el sistema** y con el contador (Anexo 8).
+7. ~~Modelo B con cada empresa cliente~~ — **no aplica**, ver la tabla de brechas. Queda redactado como
+   contingencia; se firma solo si alguna vez una empresa encarga capacitar a una nómina propia.
 8. **Incorporar las cláusulas modelo** con Supabase, Google y Zoom, y archivar la constancia.
 9. **Confirmar la región del proyecto Supabase** — define el país de destino en el anexo.
-10. **Instalar la señalética de videovigilancia**, si no está.
-11. **Verificar los backups** en el panel y probar una restauración.
-12. **Capacitar a las secretarias** con el `INSTRUCTIVO.md`.
+10. **Verificar los backups** en el panel y probar una restauración.
+11. **Capacitar a las secretarias** con el Instructivo operativo.
 
 ### 🕓 Diferido — con fundamento, no por olvido
 
-13. **Rutina de depuración a los 5 años** y eliminación de la imagen del certificado médico al cerrar
+12. **Rutina de depuración a los 5 años** y eliminación de la imagen del certificado médico al cerrar
     expediente. El primer vencimiento posible está a 5 años del primer egreso posterior al despliegue:
     hay que dejarla definida, no construida.
-14. **Enforcement de MFA por rol.** Riesgo aceptado y fundado (§4.1 de las EIPD). Se revisa según las
-    condiciones ahí establecidas.
-15. **Flujo automatizado de derechos ARCO.** Al volumen de estas escuelas, los 30 días se cumplen a mano
-    con el procedimiento de `21719-canal-derechos.md`. La ley no exige automatizarlo.
-16. **Re-correr esta auditoría** al desplegar, para confirmar que el score subió y que no apareció drift.
+13. **Flujo automatizado de derechos ARCO.** Al volumen de estas escuelas, los 30 días se cumplen a mano
+    con el procedimiento del **Anexo 5**. La ley no exige automatizarlo.
+14. **Re-correr esta auditoría** al desplegar, para confirmar que el score subió y que no apareció drift.
 
 ---
 
@@ -206,8 +228,8 @@ No aplica — **esta es la primera corrida**. La próxima comparará control a c
 Para que quede claro qué queda fuera:
 
 - **Representación ante una fiscalización** de la Agencia. Es el único escenario donde conviene un
-  abogado; la representación es reservada por ley. El material que pediría la Agencia ya está en esta
-  carpeta.
+  abogado; la representación es reservada por ley. El material que pediría la Agencia ya está en el
+  expediente de cada sociedad.
 - **Monitoreo en tiempo real de filtraciones.** Esta corrida deja el plan de respuesta listo, no
   vigilancia 24/7.
 - **Ley 21.595 (delitos económicos)**, ya vigente, y **normativa sectorial de escuelas de conductores
@@ -225,4 +247,4 @@ antes del primer alumno, después cuesta diez veces más.
 Todo lo demás de la lista se puede hacer en paralelo, sin desarrollo, o está diferido con fundamento.
 
 ---
-*Generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un informe fundado en la normativa chilena vigente y en la evidencia del propio repositorio.*
+*Informe interno de diagnóstico, fundado en el texto vigente de la Ley 21.719 y en la evidencia del propio repositorio. No constituye asesoría legal.*

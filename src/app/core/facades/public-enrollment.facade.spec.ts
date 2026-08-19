@@ -980,9 +980,10 @@ describe('PublicEnrollmentFacade', () => {
       );
     });
 
-    it('envía las 81 respuestas cuando el alumno responde el test online', async () => {
+    it('envía las 81 respuestas cuando el alumno responde el test online y autoriza (AC2/AC3)', async () => {
       setupProfessional();
       facade.savePsychTestAnswers(Array(81).fill(true));
+      facade.setPsychTestConsent(true);
       mockSupabaseClient.functions.invoke = vi
         .fn()
         .mockResolvedValue({ data: { success: true }, error: null });
@@ -993,6 +994,41 @@ describe('PublicEnrollmentFacade', () => {
       expect(body.skipPsychTest).toBe(false);
       expect(Array.isArray(body.psychTestAnswers)).toBe(true);
       expect(body.psychTestAnswers.length).toBe(81);
+    });
+
+    // Spec 0010-m (Ley 21.719, Art. 16) — el gate cliente: sin la casilla marcada, se
+    // omite el test aunque ya haya 81 respuestas cargadas (defensa en profundidad, la
+    // garantía real vive en la Edge Function).
+    it('omite el test si NO se marcó la casilla del Art. 16, aunque ya haya 81 respuestas', async () => {
+      setupProfessional();
+      facade.savePsychTestAnswers(Array(81).fill(true));
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { success: true }, error: null });
+
+      await facade.submitPreInscription();
+
+      const body = mockSupabaseClient.functions.invoke.mock.calls[0][1].body;
+      expect(body.skipPsychTest).toBe(true);
+      expect(body.psychTestAnswers).toBeNull();
+    });
+
+    it('manda el consentimiento test_psicologico con granted acorde a la casilla', async () => {
+      setupProfessional();
+      facade.savePsychTestAnswers(Array(81).fill(true));
+      facade.setPsychTestConsent(true);
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { success: true }, error: null });
+
+      await facade.submitPreInscription();
+
+      const body = mockSupabaseClient.functions.invoke.mock.calls[0][1].body;
+      const psychConsent = body.consents.find(
+        (c: { consentType: string }) => c.consentType === 'test_psicologico',
+      );
+      expect(psychConsent).toBeDefined();
+      expect(psychConsent.granted).toBe(true);
     });
 
     it('confirmPsychTest avanza a pre-confirmation (ambos caminos)', () => {

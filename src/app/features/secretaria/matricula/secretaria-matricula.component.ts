@@ -19,6 +19,7 @@ import { ButtonModule } from 'primeng/button';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { getPrivacyPolicy } from '@core/models/ui/privacy-policy.model';
 import { EnrollmentFacade } from '@core/facades/enrollment.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
@@ -327,8 +328,22 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       isMinor,
       isProfessional: pd?.courseCategory === 'professional',
       canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
+      // Textos legales de la sede en que se matricula: cada una es una sociedad distinta
+      // y la casilla debe nombrar al responsable correcto (spec 0009-m AC2/AC3).
+      privacyPolicyLabel:
+        this.privacyPolicy()?.policyCheckboxLabel ??
+        'Declaro haber leído la Política de Privacidad.',
+      privacyPolicyUrl: `/politica-privacidad/${this.activeBranchSlug()}`,
     };
   });
+
+  /** Slug de la sede activa, para resolver la política de privacidad que corresponde. */
+  readonly activeBranchSlug = computed(
+    () => this.branchFacade.branches().find((b) => b.id === this.activeBranchId())?.slug ?? '',
+  );
+
+  /** Política de privacidad de la sede activa (spec 0009-m). */
+  readonly privacyPolicy = computed(() => getPrivacyPolicy(this.activeBranchSlug()));
 
   readonly step5Data = computed<EnrollmentPaymentData>(() => {
     const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;

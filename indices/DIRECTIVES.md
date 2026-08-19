@@ -19,6 +19,7 @@
 | `PressFeedbackDirective` | `[appPressFeedback]` | Hover+press GSAP sobre botones y triggers | `appPressFeedback: 'full'\|'press'` | ✅ Estable |
 | `SearchShortcutDirective` | `[appSearchShortcut]` | Atajo global Ctrl+K / Cmd+K → SearchPanelService | — | ✅ Estable |
 | `ClickOutsideDirective` | `[appClickOutside]` | Emite evento al hacer clic fuera del elemento host | `clickOutsideEnabled: boolean` | ✅ Estable |
+| `FileDropzoneDirective` | `[appFileDropzone]` | Agrega drag & drop a una caja de subida de archivo existente (borde punteado). Aplica `.is-dragover` al host durante el arrastre y emite `filesDropped` con el `FileList` soltado — la validación/subida la sigue haciendo el mismo handler que procesa el `<input type="file">` de siempre. Usado en el paso de Contrato (subida de contrato firmado) y en el paso de Documentos (foto carnet, pestaña "Subir archivo"). | `dropzoneEnabled: boolean` (true) | ✅ Estable |
 | `StableWidthDirective` | `[appStableWidth]` | Fija `min-width` al ancho medido en estado idle (contenido completo) vía `ResizeObserver` nativo — evita que un botón se achique al mostrar un estado de carga con texto más corto ("Guardar y Continuar" → "Procesando..."). Input `true` = contenido actualmente reducido (no remedir). Usado por `AsyncBtnComponent` (componente centralizado, 15 consumidores) + 40 botones hand-rolled migrados en hotfix-052 (drawers de crear/editar, exportar, certificaciones, etc. — lista completa en `specs/hotfixes/hotfix-052-m-stable-width-migracion-completa-botones/hotfix.md`). No aplica a botones `flex-1`/`w-full` (ancho ya lo define el contenedor) ni a indicadores de carga que no son `<button>`. **(hotfix-050):** la primera versión usaba `afterRenderEffect` — verificado con Playwright en vivo que nunca ejecutaba su callback (la señal quedaba `null` indefinidamente pese a renders repetidos), reemplazado por `ResizeObserver` que sí funciona (verificado: botón "Guardar y Continuar" ya no se achica al pasar a "Procesando..."). | `appStableWidth: boolean` (false) | ✅ Estable |
 
 ## Directivas de Layout
@@ -38,6 +39,7 @@
 | `BentoRevealDirective` | `[appBentoReveal]` | `skipOpacity` | — | `src/app/core/directives/bento-reveal.directive.ts` |
 | `CardHoverDirective` | `[appCardHover]` | — | — | `src/app/core/directives/card-hover.directive.ts` |
 | `ClickOutsideDirective` | `[appClickOutside]` | `clickOutsideEnabled`, `clickOutsideExclude` | `clickOutside` | `src/app/core/directives/click-outside.directive.ts` |
+| `FileDropzoneDirective` | `[appFileDropzone]` | `dropzoneEnabled` | `filesDropped` | `src/app/core/directives/file-dropzone.directive.ts` |
 | `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
 | `PressFeedbackDirective` | `[appPressFeedback]` | `appPressFeedback` | — | `src/app/core/directives/press-feedback.directive.ts` |
 | `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |
