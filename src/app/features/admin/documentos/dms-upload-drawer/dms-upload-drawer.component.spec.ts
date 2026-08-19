@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal, WritableSignal } from '@angular/core';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DmsUploadDrawerComponent } from './dms-upload-drawer.component';
+import { ConsentsFacade } from '@core/facades/consents.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type { StudentEnrollmentOption } from '@core/models/ui/dms.model';
@@ -88,6 +89,12 @@ describe('DmsUploadDrawerComponent', () => {
       imports: [DmsUploadDrawerComponent],
       providers: [
         { provide: DmsFacade, useValue: facadeMock },
+        // spec 0009-m: el drawer inyecta ConsentsFacade para el gate del Art. 16.
+        // Se mockea para no arrastrar ToastService → MessageService de PrimeNG.
+        {
+          provide: ConsentsFacade,
+          useValue: { recordMedicalCertificate: vi.fn().mockResolvedValue(true) },
+        },
         {
           provide: ErrorSanitizerService,
           useValue: { sanitize: (e: unknown) => ({ message: String(e) }) },

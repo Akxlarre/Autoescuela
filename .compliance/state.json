@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-16T18:08:32Z",
+  "generated_at": "2026-08-17T23:10:00Z",
   "git_commit": "748d8874",
-  "run": 1,
+  "run": 2,
   "note": "Dos responsables independientes que comparten un mismo sistema informatico. Los controles tecnicos se evaluan una vez porque la infraestructura es comun; los controles de gobernanza aplican por separado a cada RUT.",
   "estado_despliegue": {
     "fase": "desarrollo avanzado, sin desplegar",
@@ -17,7 +17,10 @@
       "rut": "77.940.120-0",
       "domicilio": "Carrera 74, Chillan, Region de Nuble",
       "giro": "Educacion extraescolar - escuela de conduccion (SII 809030)",
-      "representante_legal": { "nombre": "Jorge Enrique Perez Godoy", "rut": "7.271.517-9" },
+      "representante_legal": {
+        "nombre": "Jorge Enrique Perez Godoy",
+        "rut": "7.271.517-9"
+      },
       "contacto_datos": "conductorchillan@gmail.com",
       "trabajadores": 8,
       "ingresos_anuales_clp": 120000000,
@@ -26,21 +29,26 @@
       "docs_dir": "docs/conductores"
     },
     {
-      "id": "otec",
+      "id": "autoescuela",
       "razon_social": "Jorge Enrique Perez Godoy Capacitacion y Servicios EIRL",
       "rut": "76.007.217-6",
       "domicilio": "Maipon 418, Chillan, Region de Nuble",
       "giro": "Educacion extraescolar (SII 809030)",
-      "representante_legal": { "nombre": "Jorge Enrique Perez Godoy", "rut": "7.271.517-9" },
+      "representante_legal": {
+        "nombre": "Jorge Enrique Perez Godoy",
+        "rut": "7.271.517-9"
+      },
       "contacto_datos": "otecchillan@gmail.com",
       "trabajadores": 6,
       "ingresos_anuales_clp": 100000000,
       "tamano": "pequena",
       "tamano_fundamento": "Ley 20.416: ~2.500 UF, bajo el techo de 25.000 UF. Aplica gracia MIPYME 12 meses (Art. sexto transitorio).",
-      "docs_dir": "docs/otec"
+      "docs_dir": "docs/autoescuela"
     }
   ],
-  "active_packs": ["ley-21719"],
+  "active_packs": [
+    "ley-21719"
+  ],
   "packs_no_activados": {
     "ley-21595": "No activado en esta corrida por decision del usuario. Ya esta vigente; el canal de denuncias no existe (respuesta 2.2 del cuestionario). Candidato para la proxima corrida.",
     "autoescuela-cl": "No activado en esta corrida. Aplica al giro (DS 39 / DS 251 / Ley 18.290). Requiere levantar datos operativos de instructores, flota, reconocimiento oficial y curricula."
@@ -67,12 +75,12 @@
   "controls": {
     "gov-responsable": {
       "status": "partial",
-      "evidence": "Designado por cargo (Secretaria en funciones) con el representante legal como suplente, en el Anexo A de cada RAT. El cargo rota, por eso se designa la funcion y no la persona.",
-      "remediation": "Nominar a la persona que ocupa el cargo hoy (nombre, RUT, fecha) en el Anexo A de ambos RAT."
+      "evidence": "Designado por cargo (Secretaria en funciones) con el representante legal como suplente, en la seccion 3 de cada RAT (Anexo 1). El cargo rota, por eso se designa la funcion y no la persona.",
+      "remediation": "Nominar a la persona que ocupa el cargo hoy (nombre, RUT, fecha) en la seccion 3 de ambos RAT (Anexo 1)."
     },
     "gov-registro": {
       "status": "pass",
-      "evidence": "docs/conductores/21719-rat.md (13 actividades) y docs/otec/21719-rat.md (14 actividades), generados en esta corrida.",
+      "evidence": "docs/conductores/21719-rat.md (13 actividades) y docs/autoescuela/21719-rat.md (15 actividades), generados en esta corrida.",
       "remediation": ""
     },
     "gov-politicas": {
@@ -113,7 +121,7 @@
     "data-dpa": {
       "status": "fail",
       "evidence": "No existe ningun contrato de tratamiento firmado. Quien mantiene el sistema tiene acceso a produccion sin contrato escrito (Art. 15 bis).",
-      "remediation": "Firmar Modelo A con el proveedor del sistema y con el contador. En la OTEC, ademas, Modelo B con cada empresa cliente que envia trabajadores a capacitarse."
+      "remediation": "Firmar Modelo A con el proveedor del sistema y con el contador. Modelo B queda como contingencia: verificado 17-08-2026 que ninguna empresa encarga capacitaciones; los alumnos con codigo SENCE se matriculan por si mismos."
     },
     "data-transfer": {
       "status": "fail",
@@ -150,19 +158,10 @@
       "evidence": "Supabase Auth aplica hashing. La contrasena inicial derivada del RUT esta mitigada por el cambio obligatorio en el primer ingreso (src/app/core/guards/first-login.guard.ts, role.guard.ts, role-redirect.guard.ts).",
       "remediation": ""
     },
-    "sec-mfa": {
-      "status": "partial",
-      "evidence": "supabase/config.toml: [auth.mfa.totp] enroll_enabled = false, verify_enabled = false. No implementado.",
-      "decision": "RIESGO ACEPTADO por decision documentada del representante legal (2026-08-16), no omision.",
-      "fundamento": "La Ley 21.719 no exige MFA. El Art. 14 quinquies exige medidas proporcionales al riesgo. Para una organizacion de 8 y 6 trabajadores, con control de acceso por rol en base de datos (371 policies), almacenamiento privado con enlaces firmados, audit_log inmutable con IP y cambio forzado de contrasena al primer ingreso, la ausencia de MFA no rompe la proporcionalidad.",
-      "controles_compensatorios": [
-        "Prohibicion de compartir cuentas: una cuenta nominativa por persona",
-        "Revocacion de acceso el mismo dia en que una persona deja el cargo",
-        "Contrasenas unicas, no reutilizadas de otros servicios",
-        "Revision del audit_log ante cualquier sospecha"
-      ],
-      "reevaluacion": "Ante crecimiento relevante del numero de alumnos o de cuentas con rol admin/secretary, o ante cualquier incidente de credenciales. En todo caso, en la revision anual de la EIPD.",
-      "remediation": "Si se decide implementarlo: activar TOTP en el panel y exigirlo por rol tanto en los guards como en RLS (auth.jwt()->>'aal' = 'aal2'). Sin la parte de RLS el control protege la UI pero no los datos."
+    "sec-credential-hygiene": {
+      "status": "pass",
+      "evidence": "Disciplina de credenciales para admin/secretaria: cuentas nominativas sin compartir, revocacion de acceso el mismo dia del termino del vinculo, contrasenas unicas no reutilizadas, y revision del audit_log ante sospecha. Instructivo operativo, seccion H.",
+      "remediation": ""
     },
     "sec-logs": {
       "status": "pass",
@@ -198,9 +197,38 @@
       "partial": 8,
       "fail": 4,
       "unknown": 1,
-      "aplica_a": ["conductores", "otec"],
+      "aplica_a": [
+        "conductores",
+        "autoescuela"
+      ],
       "vigencia": "2026-12-01",
       "dias_restantes_al_generar": 107
     }
+  },
+  "hallazgos_corrida_2": [
+    {
+      "id": "H-2026-08-17-epq",
+      "severidad": "alto",
+      "companies": [
+        "conductores"
+      ],
+      "titulo": "Datos de salud psiquica (test EPQ) recolectados sin consentimiento del Art. 16",
+      "detalle": "La preinscripcion profesional en linea aplica el EPQ (Eysenck Personality Questionnaire, 81 items) y persiste psych_test_answers, psych_test_result y psych_rejection_reason sin ninguna casilla de autorizacion. Son datos sensibles de salud psiquica. La corrida 1 no lo detecto: no aparecia en RAT, EIPD ni politica de privacidad.",
+      "no_agravante": "El resultado NO es automatico: la Edge Function deja psych_test_result en NULL a proposito (public-enrollment/index.ts:823) y lo fija un profesional identificado via psych_evaluated_by. No hay decision automatizada que declarar.",
+      "mitigacion_existente": "El alumno ya puede omitir el test online y rendirlo en papel; esa via no guarda respuestas.",
+      "criterio_negocio": "Las 81 respuestas crudas se conservan porque un profesional debe evaluarlas item por item y puede necesitar re-evaluar. Confirmado por el titular del negocio el 17-08-2026.",
+      "correccion": "Track SDD 0010-m — casilla Art. 16 separada + bloqueo de persistencia sin autorizacion.",
+      "ventana": "Ninguna respuesta recolectada todavia: el sistema no se despliega. Correccion preventiva, no correctiva.",
+      "docs_actualizados": [
+        "docs/conductores/21719-rat.md (actividad 15)",
+        "docs/conductores/21719-eipd.md (R-8, M-11, M-12, tercera via del Art. 15 ter)",
+        "docs/conductores/21719-politica-privacidad.md (§2, §3, §5)",
+        "docs/conductores/21719-consentimiento.md (§4 bis)"
+      ]
+    }
+  ],
+  "tracks_sdd": {
+    "0009-m": "Registro de consentimiento y deber de informacion. En ejecucion: tabla consents implementada (append-only, IP server-side, sin DELETE en ningun rol).",
+    "0010-m": "Consentimiento Art. 16 para el test psicometrico EPQ. Abierto por el hallazgo H-2026-08-17-epq."
   }
 }

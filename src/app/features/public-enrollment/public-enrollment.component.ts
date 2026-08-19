@@ -36,6 +36,8 @@ import {
   type PublicPaymentSummary,
 } from '@shared/components/public-enrollment-steps/public-payment/public-payment.component';
 import { PsychTestComponent } from '@shared/components/matricula-steps/psych-test/psych-test.component';
+import { getPrivacyPolicy } from '@core/models/ui/privacy-policy.model';
+import type { PublicContractSignedPayload } from '@core/models/ui/enrollment-contract.model';
 import { PublicConfirmationComponent } from '@shared/components/matricula-steps/public-confirmation/public-confirmation.component';
 
 // Models
@@ -215,6 +217,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
 
           @case ('personal-data') {
             <app-public-personal-data
+              [branchSlug]="facade.selectedBranch()?.slug ?? ''"
               [data]="step1Data()"
               [context]="context()"
               [loading]="facade.isLoading()"
@@ -336,6 +339,29 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                 </div>
               </div>
 
+              <!-- Aviso Art. 14 ter — dato de salud psíquica (spec 0010-m, Anexo 4 §4 bis) -->
+              <div
+                class="flex items-start gap-3 rounded-xl p-3 text-sm"
+                style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+                role="note"
+              >
+                <app-icon
+                  name="shield"
+                  [size]="18"
+                  color="var(--ds-brand)"
+                  class="mt-0.5 shrink-0"
+                />
+                <span class="flex-1" style="color: var(--text-secondary);">
+                  Este cuestionario es un instrumento psicométrico: tus respuestas son
+                  <strong style="color: var(--text-primary);">datos de tu salud psíquica</strong>.
+                  Los trata {{ privacyPolicy()?.legalName ?? 'la escuela' }} con el único fin de
+                  evaluar tu aptitud para el curso profesional. Las revisa
+                  <strong>un profesional</strong>, nunca un programa, y se conservan
+                  <strong>12 meses</strong> si no te matriculas. Puedes rendirlo en papel en la
+                  escuela en vez de responder acá.
+                </span>
+              </div>
+
               <!-- Advertencia: si omite el test ahora, es obligatorio en la sede -->
               <div
                 class="flex items-start gap-3 rounded-xl p-3 text-sm"
@@ -355,15 +381,39 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                 <span class="flex-1">
                   Si decides no responderlo ahora, deberás rendir el test
                   <strong>obligatoriamente de forma presencial</strong> en la sede para poder
-                  completar tu matrícula.
+                  completar tu matrícula. Un resultado
+                  <strong>"no apto" puede impedir tu matrícula</strong> al curso profesional.
                 </span>
               </div>
+
+              <!-- Casilla Art. 16 — separada de toda otra aceptación, no premarcada -->
+              <label
+                class="flex items-start gap-3 rounded-xl p-3 text-sm cursor-pointer"
+                style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+              >
+                <input
+                  type="checkbox"
+                  class="mt-0.5 shrink-0"
+                  data-llm-action="accept-psych-test-consent"
+                  [checked]="facade.psychTestConsent()"
+                  (change)="onPsychTestConsentChange($event)"
+                />
+                <span style="color: var(--text-secondary);">
+                  <strong style="color: var(--text-primary);">Autorizo expresamente</strong> el
+                  tratamiento de mis respuestas al cuestionario psicológico y su resultado, que son
+                  datos de salud psíquica, con el único fin de evaluar mi aptitud para el curso
+                  profesional al que me preinscribo. Entiendo que mis respuestas las revisa un
+                  profesional, que ningún programa las puntúa automáticamente, y que puedo rendir
+                  este cuestionario en papel en la escuela en lugar de responderlo aquí.
+                </span>
+              </label>
 
               <div class="flex flex-col gap-3 pt-1">
                 <button
                   type="button"
-                  class="btn-primary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm"
+                  class="btn-primary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   data-llm-action="start-psych-test"
+                  [disabled]="!facade.psychTestConsent()"
                   (click)="facade.startPsychTest()"
                 >
                   <app-icon name="brain" [size]="16" color="white" />
@@ -524,6 +574,9 @@ export class PublicEnrollmentComponent {
   // ══════════════════════════════════════════════════════════════════════════════
   // Computed: shell + context
   // ══════════════════════════════════════════════════════════════════════════════
+
+  /** Política de privacidad de la sede en curso; `null` si la sede aún no se resolvió. */
+  readonly privacyPolicy = computed(() => getPrivacyPolicy(this.facade.selectedBranch()?.slug));
 
   readonly brandName = computed<string>(() => this.facade.selectedBranch()?.name ?? 'Autoescuela');
 
@@ -708,6 +761,12 @@ export class PublicEnrollmentComponent {
       isMinor: minor,
       isProfessional: pd?.courseCategory === 'professional',
       canAdvance: minor || !!this.facade.contractSignatureBase64(),
+      // Los textos legales dependen de la SEDE: cada una es una sociedad distinta y la
+      // casilla debe nombrar al responsable correcto (spec 0009-m AC2/AC3).
+      privacyPolicyLabel:
+        this.privacyPolicy()?.policyCheckboxLabel ??
+        'Declaro haber leído la Política de Privacidad.',
+      privacyPolicyUrl: `/politica-privacidad/${this.facade.selectedBranch()?.slug ?? ''}`,
     };
   });
 
@@ -808,8 +867,11 @@ export class PublicEnrollmentComponent {
     }
   }
 
-  onContractSigned(base64: string): void {
-    this.facade.setSignedContract(base64);
+  onContractSigned(payload: PublicContractSignedPayload): void {
+    // El consentimiento se guarda en el draft ANTES de confirmar el contrato: la Edge
+    // Function lo persiste junto con la matrícula, en la misma operación (spec 0009-m AC5).
+    this.facade.setPrivacyConsent(payload.privacyAccepted);
+    this.facade.setSignedContract(payload.signatureBase64);
     this.facade.confirmContract();
   }
 
@@ -834,6 +896,12 @@ export class PublicEnrollmentComponent {
     if (result.success) {
       this.facade.confirmPsychTest();
     }
+  }
+
+  /** Casilla de autorización Art. 16 (spec 0010-m) — separada de toda otra aceptación. */
+  onPsychTestConsentChange(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.facade.setPsychTestConsent(checked);
   }
 
   onRestoreDraft(): void {

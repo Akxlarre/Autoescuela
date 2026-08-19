@@ -1,6 +1,9 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { buildEnrollmentConsents, buildPsychTestConsent } from '@core/utils/consent-builder.utils';
+import type { ConsentDraft } from '@core/models/ui/consent.model';
+import { PRIVACY_POLICY_VERSION } from '@core/models/ui/privacy-policy.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
 import type { Course } from '@core/models/dto/course.model';
@@ -201,6 +204,11 @@ export class PublicEnrollmentFacade {
   private readonly _convalidatesSimultaneously = signal(false);
   /** Respuestas EPQ: array de 81 elementos (null = sin responder, true = Sí, false = No). */
   private readonly _psychTestAnswers = signal<(boolean | null)[]>(Array(81).fill(null));
+  /**
+   * Autorización expresa del Art. 16 para el test psicométrico (spec 0010-m, dato de
+   * salud psíquica). Casilla propia, separada de `_privacyConsentAccepted` — no premarcada.
+   */
+  private readonly _psychTestConsent = signal<boolean>(false);
 
   // ── Documents ──
   /** Ruta en Storage (sin bucket) del archivo temporal subido por el usuario público. */
@@ -250,6 +258,7 @@ export class PublicEnrollmentFacade {
   readonly selectedCourseType = this._selectedCourseType.asReadonly();
   readonly convalidatesSimultaneously = this._convalidatesSimultaneously.asReadonly();
   readonly psychTestAnswers = this._psychTestAnswers.asReadonly();
+  readonly psychTestConsent = this._psychTestConsent.asReadonly();
   /** URL pública de la foto de carnet subida temporalmente al Storage. */
   readonly carnetPhotoUrl = computed<string | null>(() => {
     // Opción A: blob URL local creada en uploadCarnetPhoto().
@@ -865,8 +874,75 @@ export class PublicEnrollmentFacade {
   // 3. MÉTODOS DE ACCIÓN — Contract
   // ══════════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Arma los consentimientos a enviar a la Edge Function (spec 0009-m AC5).
+   *
+   * La EF los persiste EN LA MISMA operación que crea la matrícula, y aborta si el
+   * insert falla: no puede quedar una matrícula sin su registro de consentimiento.
+   * Nunca devuelve lista vacía — si el titular no aceptó, va la negativa (AC-E1).
+   */
+  private buildConsents(
+    consentType: 'matricula_datos' | 'preinscripcion',
+  ): (ConsentDraft & { policyVersion: string })[] {
+    const branch = this._selectedBranch();
+    const pd = this._personalData();
+    if (!branch || !pd) return [];
+
+    return buildEnrollmentConsents({
+      branchId: branch.id,
+      source: 'public',
+      policyAccepted: this._privacyConsentAccepted(),
+      // En el flujo público un menor nunca llega hasta acá: `canAdvanceFn` lo bloquea en
+      // el paso 1 (`getAgeStatus() === 'requires-authorization'`). AC7 se cumple en el
+      // flujo de secretaría, donde el apoderado está presente.
+      isMinor: false,
+      subjectRut: normalizeRutForStorage(pd.rut),
+      consentType,
+    }).map((d) => ({ ...d, policyVersion: PRIVACY_POLICY_VERSION }));
+  }
+
+  /**
+   * Consentimiento del Art. 16 para el test psicométrico EPQ (spec 0010-m, dato de salud
+   * psíquica). Va aparte de `buildConsents()`: es una casilla propia, específica para
+   * este dato, nunca mezclada con la declaración de lectura de la política.
+   */
+  private buildPsychConsent(): (ConsentDraft & { policyVersion: string })[] {
+    const branch = this._selectedBranch();
+    const pd = this._personalData();
+    if (!branch || !pd) return [];
+
+    return [
+      {
+        ...buildPsychTestConsent({
+          branchId: branch.id,
+          source: 'public',
+          policyAccepted: this._psychTestConsent(),
+          isMinor: false,
+          subjectRut: normalizeRutForStorage(pd.rut),
+        }),
+        policyVersion: PRIVACY_POLICY_VERSION,
+      },
+    ];
+  }
+
+  /** Declaración de lectura de la Política de Privacidad (spec 0009-m). */
+  private readonly _privacyConsentAccepted = signal<boolean>(false);
+  readonly privacyConsentAccepted = this._privacyConsentAccepted.asReadonly();
+
   setSignedContract(signatureBase64: string): void {
     this._contractSignatureBase64.set(signatureBase64);
+  }
+
+  /**
+   * Declaración de haber leído la Política de Privacidad (spec 0009-m, AC3/AC5).
+   *
+   * Se guarda en el estado del wizard y viaja en el payload de `submit-clase-b` /
+   * `initiate-payment`, para que la Edge Function persista el consentimiento **en la
+   * misma operación** que crea la matrícula. Una matrícula sin su registro de
+   * consentimiento es un incidente, no un caso tolerable.
+   */
+  setPrivacyConsent(accepted: boolean): void {
+    this._privacyConsentAccepted.set(accepted);
   }
 
   /** Confirma contrato y avanza al paso de pago (Webpay). */
@@ -930,6 +1006,7 @@ export class PublicEnrollmentFacade {
           amount: this.calculatePaymentAmount(),
           carnetStoragePath: this._carnetStoragePath(),
           contractSignatureBase64: this._contractSignatureBase64(),
+          consents: this.buildConsents('matricula_datos'),
         },
       });
 
@@ -1042,6 +1119,11 @@ export class PublicEnrollmentFacade {
     this.saveDraft();
   }
 
+  /** Marca/desmarca la casilla de autorización Art. 16 del test psicológico (spec 0010-m). */
+  setPsychTestConsent(accepted: boolean): void {
+    this._psychTestConsent.set(accepted);
+  }
+
   /** Marca el test como completado y avanza a pre-confirmación. */
   confirmPsychTest(): void {
     this.updateStepStatus('psych-test', 'completed');
@@ -1091,6 +1173,7 @@ export class PublicEnrollmentFacade {
           sessionToken: this._sessionToken(),
           carnetStoragePath: this._carnetStoragePath(),
           contractSignatureBase64: this._contractSignatureBase64(),
+          consents: this.buildConsents('matricula_datos'),
         },
       });
 
@@ -1126,7 +1209,10 @@ export class PublicEnrollmentFacade {
     this._isSubmitting.set(true);
     this._error.set(null);
 
-    const skipTest = options?.skipTest ?? false;
+    // Gate cliente (AC3, spec 0010-m): sin la casilla del Art. 16 marcada, se omite el
+    // test sin importar si ya hay 81 respuestas cargadas. La EF vuelve a exigirlo
+    // server-side — este chequeo es UX, no la garantía legal (ver plan §3).
+    const skipTest = (options?.skipTest ?? false) || !this._psychTestConsent();
 
     try {
       const pd = this._personalData();
@@ -1156,6 +1242,7 @@ export class PublicEnrollmentFacade {
           convalidatesSimultaneously: this._convalidatesSimultaneously(),
           skipPsychTest: skipTest,
           psychTestAnswers: skipTest ? null : this._psychTestAnswers(),
+          consents: [...this.buildConsents('preinscripcion'), ...this.buildPsychConsent()],
         },
       });
 
@@ -1207,6 +1294,7 @@ export class PublicEnrollmentFacade {
     this._selectedCourseType.set(null);
     this._convalidatesSimultaneously.set(false);
     this._psychTestAnswers.set(Array(81).fill(null));
+    this._psychTestConsent.set(false);
     this._carnetStoragePath.set(null);
     const previewUrl = this._carnetPreviewUrl();
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -1438,6 +1526,7 @@ export class PublicEnrollmentFacade {
     this._selectedCourseType.set(null);
     this._convalidatesSimultaneously.set(false);
     this._psychTestAnswers.set(Array(81).fill(null));
+    this._psychTestConsent.set(false);
     this._carnetStoragePath.set(null);
     const previewUrl = this._carnetPreviewUrl();
     if (previewUrl) URL.revokeObjectURL(previewUrl);

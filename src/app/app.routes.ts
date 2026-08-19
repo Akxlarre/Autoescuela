@@ -70,6 +70,17 @@ export const routes: Routes = [
       ),
   },
 
+  // Política de privacidad — pública, sin sesión, fuera del AppShell.
+  // El titular tiene que poder leerla ANTES de decidir si entrega sus datos (Art. 14 ter),
+  // y de hecho antes de tener cuenta. Una por sociedad, resuelta por `branches.slug`.
+  {
+    path: 'politica-privacidad/:branchSlug',
+    loadComponent: () =>
+      import('./features/legal/politica-privacidad/politica-privacidad.component').then(
+        (m) => m.PoliticaPrivacidadComponent,
+      ),
+  },
+
   // Rutas protegidas — envueltas en el layout AppShell
   {
     path: 'app',

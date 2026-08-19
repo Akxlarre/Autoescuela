@@ -39,7 +39,7 @@
 | `class_b_theory_cycles` | M4 - Acad. B | `id`, `branch_id`, `start_date` (lunes), `end_date` (=start+11, viernes semana 2), `status` ('active'\|'finished') · UNIQUE(`branch_id`,`start_date`) | `branch_id` | Admin: CRUD · Sec: CRUD por sede (`branch_visible`) · Inst/Stu: R | ✅ Definida · **`20260630000000` (Spec 0001-m):** Ciclos teóricos Clase B (cohorte 2 semanas, 6 clases L/X/V). Transición `active→finished` vía pg_cron `auto_transition_theory_cycle_status`. |
 | `class_b_theory_sessions` | M4 - Acad. B | `id`, `cycle_id`, `class_number` (1–6), `class_date`, `topic` (opcional), `zoom_link`, `zoom_sent_at` · UNIQUE(`cycle_id`,`class_number`) | `cycle_id`→class_b_theory_cycles (CASCADE), `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R | ✅ **Reutilizada `20260630000000` (Spec 0001-m):** ahora modela las **6 clases de un ciclo** (no sesiones sueltas). Datos legacy `TRUNCATE`; `scheduled_at` ahora nullable; sin asistencia. |
 | ~~`class_b_theory_attendance`~~ | M4 - Acad. B | — | — | — | ❌ Eliminada (`20260630000000`, Spec 0001-m) — la asistencia teórica es irrelevante por decisión de negocio. Purgada de facades/UI y de `v_student_progress_b`. |
-| `class_b_practice_attendance` | M4 - Acad. B | `id`, `session_id` | `class_b_session_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
+| `class_b_practice_attendance` | M4 - Acad. B | `id`, `session_id`, `archived_at` | `class_b_session_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · `20260817120000` (fix-191-m): columna `archived_at` = marca de vigencia. `NULL` → la fila describe el estado actual de la sesión; `NOT NULL` → registro histórico de una ocurrencia anterior de esa misma fila de sesión, archivado al reagendarla (RF-053 recicla `class_b_sessions` en vez de crear una fila nueva). **Toda lectura de estado debe filtrar `archived_at IS NULL`**; `apply_class_b_absence_penalty()` también, o vuelve a cancelar las clases recién reagendadas. |
 | `class_b_exam_scores` | M4 - Acad. B | `id`, `student_id` | `student_id`, `enrollment_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (suyos) | ✅ Definida · Relaciones explicitadas via `20260406000000` para corregir error de resolución en PostgREST. |
 | `class_b_exam_catalog` | M4 - Acad. B | `id`, `title` | `created_by` | Admin: CRUD, Sec: R, Stu: R | ✅ Definida |
 | `class_b_exam_questions` | M4 - Acad. B | `id`, `exam_id` | `exam_id` | Admin: CRUD, Stu: R | ✅ Definida |
@@ -69,6 +69,7 @@
 | `enrollments` | M6 - Matrí. | `id`, `number`, `current_step` (1-6), `payment_mode` ('total'\|'partial') — ⚠️ corregido 2026-07-10 (Spec 0026): el índice documentaba 'deposit', pero el valor real usado en producción es 'partial' (verificado contra 44 enrollments reales), `license_group` ('class_b'\|'professional'), `status` ('draft'\|'pending_payment'\|'active'\|'inactive'\|'completed'\|'cancelled'), `registration_channel` ('presential'\|'online'), `certificate_enabled` (BOOL, false), `certificate_b_pdf_url` (TEXT, null hasta generar), `certificate_professional_pdf_url` (TEXT, null hasta generar), `license_pdf_url` (TEXT, **legacy** — ya no se escribe), `license_initial_url` (TEXT, null hasta generar — carnet 6 clases/amarillo), `license_full_url` (TEXT, null hasta generar — carnet 12 clases/verde), `theory_cycle_id` (INT, null — ciclo teórico asignado) | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by`, `theory_cycle_id`→class_b_theory_cycles | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · Fix `20260312100000`: UNIQUE(`number`, `branch_id`, `license_group`). · **`20260630000000` (Spec 0001-m):** `theory_cycle_id` — asignado automáticamente por trigger `trg_assign_theory_cycle` al activar una matrícula Clase B (RF-04/05/06). · Fix `20260317150000`: `chk_enrollment_number` actualizado. · **`20260412000001`:** `certificate_enabled` pasa a `true` cuando el trigger `trg_enable_certificate_b` detecta que la **clase práctica #12** fue completada. · **`20260413000000`:** añadida `certificate_professional_pdf_url` (TEXT) — path relativo del PDF de certificado Clase Profesional en bucket 'documents'. · **`20260501000001`:** añadida `license_pdf_url` (TEXT) — path relativo del PDF de carnet Clase B en bucket `documents/student-licenses/`; generado por EF `generate-student-license-pdf`. · **`20260621000001` (fix-019-m):** carnet dual — `license_initial_url` (6 clases, fondo amarillo) y `license_full_url` (12 clases, fondo verde) reemplazan a `license_pdf_url` (que queda legacy, backfilled a `license_initial_url`). La EF recibe `variant: 'initial'\|'full'` y escribe la columna correspondiente; ambos carnets coexisten. |
 | `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Inst: R (solo alumnos con `class_b_sessions` asignadas) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede, Inst solo sus alumnos** · **Fix `20260723000000` (H-028): UPDATE ahora sí incluye secretary (sede propia) — antes solo admin/student, bloqueaba upsert de matrícula Profesional con 403** | ✅ Definida · Fix `20260317140000`: fotos subidas en flujo público se insertan vía Edge Function (service role) desde ruta temporal `public-uploads/carnet/{sessionToken}` tras crear el enrollment · **`20260413000001`: `storage_url` ahora almacena path relativo** (ej: `students/42/id_photo`), no URL pública. |
 | `digital_contracts` | M6 - Matrí. | `id`, `content_hash`, `signed_contract_url` (TEXT, null — path relativo del PDF firmado escaneado; solo para flujo online) | `enrollment_id` (UNIQUE) | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · Fix `20260313130000`: UPDATE incluye secretary (necesario para upsert con `onConflict`) · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede vía enrollment** | ✅ Definida · `20260404120000`: eliminado `student_id` redundante. · **`20260413000001`: `file_url` almacena path relativo** (ej: `contracts/42/contract.pdf`). · **`20260501000002`: añadida `signed_contract_url`** — path relativo del contrato físicamente firmado. `null` en flujo online hasta que se suba; en flujo presencial `file_url` ya es el firmado. |
+| `consents` | M6 - Matrí. | `id` (bigserial), `user_id` (null en leads), `subject_rut`, `branch_id` (**NOT NULL** — ante qué responsable se otorgó), `consent_type` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico`), `granted` (BOOL NOT NULL — **`false` = negativa expresa, se registra como fila**), `granted_at`, `revoked_at` (única columna actualizable), `ip` (la escribe el trigger), `policy_version`, `source` (`public`\|`secretaria` — **sin `papel`**: nunca se digita una matrícula en ficha física), `granted_by_representative` (BOOL — lo otorgó el apoderado de un menor; **su identidad NO se guarda acá**, consta en la autorización notarial del expediente) | `user_id`→users, `enrollment_id`→enrollments, `branch_id`→branches · CHECK `consents_subject_identifiable` (user_id O subject_rut) | Admin/Sec: SELECT · authenticated: INSERT · Admin: UPDATE (acotado a `revoked_at` por trigger) · **DELETE: ninguna policy, en ningún rol** · **`anon`: ninguna policy + REVOKE ALL** — el flujo público escribe vía Edge Function con `service_role` | ✅ Definida (`20260817130000`) · **Spec 0009-m (Ley 21.719).** APPEND-ONLY: `trg_consents_append_only` lanza excepción ante cualquier UPDATE que no sea `revoked_at` (RLS no restringe por columna). IP server-side vía `trg_consents_set_ip` + `request_client_ip()` — ⚠️ la función del trigger es **SECURITY INVOKER a propósito**: en una DEFINER, `current_user` es el dueño y la rama `service_role` nunca se toma, guardando la IP del runtime de la EF en vez de la del alumno. · **`20260818130000` (spec 0010-m, Ley 21.719 Art. 16):** agregado `test_psicologico` al CHECK de `consent_type` — consentimiento reforzado del test psicométrico EPQ. Gate de persistencia en dos capas (cliente en `PublicEnrollmentFacade.submitPreInscription()` + servidor en `handleSubmitPreInscription()` de la EF `public-enrollment`): sin un draft `test_psicologico` con `granted:true`, `professional_pre_registrations.psych_test_answers` queda `NULL` aunque el body traiga las 81 respuestas — verificado empíricamente en Supabase local. |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
 | `document_templates` | M6 - Matrí. | `id`, `name` | `updated_by` | Admin: CRUD, Sec: R, Stu: R, Inst: R | ✅ Definida |
@@ -188,7 +189,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (78 tablas, acumulado de las migraciones)
+## Esquema efectivo (79 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -514,6 +515,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `consecutive_absences` | INT | sí | `0` | — |
 | `recorded_by` | INT | sí | — | → `users.id` |
 | `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `archived_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 
@@ -524,7 +526,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | update_class_b_practice_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
 | delete_class_b_practice_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
 
-**Índices:** `idx_class_b_practice_attendance_student`
+**Índices:** `idx_class_b_practice_attendance_student`, `idx_class_b_practice_attendance_vigente`
 
 ### `class_b_sessions` — 🔒 RLS
 
@@ -665,6 +667,42 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | update_class_book | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status != '…` | — |
 | delete_class_book | DELETE | `auth_user_role() = 'admin'` | — |
 | select_class_book | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+
+### `consents` — 🔒 RLS
+
+> Spec 0009-m (Ley 21.719 Art. 12/14 ter/16). APPEND-ONLY: sin policy de DELETE en '
+  'ningún rol y con trigger que bloquea todo UPDATE que no sea `revoked_at`. '
+  'El rol `anon` NO tiene ninguna policy A PROPÓSITO: el flujo público de inscripción '
+  'nunca habla con PostgREST, escribe a través de la Edge Function `public-enrollment` '
+  'con `service_role`. Si algún día un INSERT anónimo falla acá, la respuesta es pasarlo '
+  'por la Edge Function, no abrir la tabla.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `user_id` | INT | sí | — | → `users.id` |
+| `subject_rut` | TEXT | sí | — | — |
+| `enrollment_id` | INT | sí | — | → `enrollments.id` |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `consent_type` | TEXT | NO | — | — |
+| `granted` | BOOLEAN | NO | — | — |
+| `granted_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `revoked_at` | TIMESTAMPTZ | sí | — | — |
+| `ip` | TEXT | sí | — | — |
+| `policy_version` | TEXT | NO | — | — |
+| `source` | TEXT | NO | — | — |
+| `granted_by_representative` | BOOLEAN | NO | `false` | — |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_consents | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_consents | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
+| update_consents_revocation | UPDATE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_consents_enrollment`, `idx_consents_subject_rut`, `idx_consents_user`
 
 ### `courses` — 🔒 RLS
 
@@ -2283,11 +2321,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `prevent_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
+| `request_client_ip` | `()` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `tasks_set_updated_at` | `()` |
 | `trg_class_b_sessions_update_monthly_hours` | `()` |
+| `trg_consents_append_only_fn` | `()` |
+| `trg_consents_set_ip_fn` | `()` |
 | `trg_draft_to_pending_validation_fn` | `()` |
 | `trg_enrollment_validation_fn` | `()` |
 | `update_class_book_to_in_review` | `()` |

@@ -18,6 +18,7 @@
 | `/acceso-denegado` | `AccesoDenegadoComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion` | `PublicEnrollmentComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | — | `src/app/app.routes.ts` |
+| `/politica-privacidad/:branchSlug` | `PoliticaPrivacidadComponent` | — | `src/app/app.routes.ts` |
 | `/app` | `AppShellComponent` | `authGuard` | `src/app/app.routes.ts` |
 | `/app` | — | `roleRedirectGuard` | `src/app/app.routes.ts` |
 | `/app/admin` | — | `hasRoleGuard(['admin'])` | `src/app/app.routes.ts` |

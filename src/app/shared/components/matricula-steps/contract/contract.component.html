@@ -244,7 +244,9 @@
           @if (!data().signedContract) {
             <label
               class="block cursor-pointer group"
-              data-llm-description="file upload area for physically signed contract scan"
+              data-llm-description="file upload area for physically signed contract scan, supports drag and drop"
+              appFileDropzone
+              (filesDropped)="onFilesDropped($event)"
             >
               <input
                 type="file"
@@ -254,7 +256,7 @@
                 data-llm-action="upload-signed-contract"
               />
               <div
-                class="border-2 border-dashed border-border-default rounded-xl p-8 text-center transition-all group-hover:border-brand group-hover:bg-brand-muted"
+                class="border-2 border-dashed border-border-default rounded-xl p-8 text-center transition-all group-hover:border-brand group-hover:bg-brand-muted in-[.is-dragover]:border-brand in-[.is-dragover]:bg-brand-muted"
               >
                 <app-icon
                   name="upload-cloud"
@@ -262,7 +264,7 @@
                   class="mx-auto text-text-muted mb-3 group-hover:text-brand transition-colors"
                 />
                 <p class="text-sm font-bold text-text-primary">
-                  Haz clic para seleccionar el archivo
+                  Arrastra el archivo aquí o haz clic para seleccionarlo
                 </p>
                 <p class="text-xs text-text-muted mt-1">
                   PDF, JPG o PNG · Máximo {{ maxSizeMb }} MB
@@ -293,6 +295,48 @@
             </div>
           }
         </div>
+      }
+
+      <!-- ── Consentimiento al tratamiento de datos (Ley 21.719 Art. 12, spec 0009-m AC3) ──
+           Separado de la aceptación del contrato a propósito: firmar el contrato de matrícula
+           no es autorizar el tratamiento de los datos personales. Acá el contrato se acepta
+           con la firma física del documento que se sube; esta casilla cubre lo otro. -->
+      <label
+        class="flex items-start gap-3 cursor-pointer group"
+        data-llm-description="privacy policy consent checkbox required by Chilean Law 21.719"
+      >
+        <input
+          type="checkbox"
+          class="mt-0.5 shrink-0 w-4 h-4 accent-brand cursor-pointer"
+          [checked]="_privacyAccepted()"
+          (change)="onPrivacyToggle($any($event.target).checked)"
+          data-llm-action="accept-privacy-policy"
+        />
+        <span
+          class="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors"
+        >
+          @if (data().isMinor) {
+            <strong class="text-text-primary">El apoderado declara</strong> haber leído la Política
+            de Privacidad y autoriza el tratamiento de los datos personales del alumno.
+          } @else {
+            {{ data().privacyPolicyLabel }}
+          }
+          <a
+            [href]="data().privacyPolicyUrl"
+            target="_blank"
+            rel="noopener"
+            class="underline text-brand"
+            data-llm-nav="politica-privacidad"
+            (click)="$event.stopPropagation()"
+            >Ver Política de Privacidad</a
+          >
+        </span>
+      </label>
+
+      @if (data().isMinor) {
+        <p class="text-xs text-text-muted pl-7">
+          La identidad del apoderado consta en la autorización notarial del expediente.
+        </p>
       }
 
       <!-- ── Público: Aceptación de términos ── -->

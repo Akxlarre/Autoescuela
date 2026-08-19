@@ -8,6 +8,7 @@ Interfaces que mapean 1:1 las tablas y vistas de Supabase. Son estructuras de da
 | Modelo | Archivo | Descripción |
 |---|---|---|
 | `User` | `user.model.ts` | Entidad base de Supabase Auth (AppUser), contiene el id, email y el rol del usuario (ADMIN, RECEPCION, etc.) |
+| `Consent` | `consent.model.ts` | **Spec 0009-m (Ley 21.719).** Mapea la tabla `consents` 1:1. Exporta además los union types `ConsentType` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico` — el último agregado por la spec 0010-m, Art. 16, test EPQ) y `ConsentSource` (`public`\|`secretaria`), que espejan los CHECK de la BD. |
 | `WebsiteConfig` | `website-config.model.ts` | Configuración de las landing pages web multi-sede (Azul y Roja). **Spec 0004:** `CourseConfig` refactorizado — ya NO incluye `name/price/licenseClass` (heredados de `courses` via `course_id` FK lógica). Campos nuevos: `course_id`, `priceOverride`, `displayOrder`. Validado por trigger SQL `trg_validate_website_config_courses_fk`. |
 
 ## 📁 Interfaz de Usuario (`core/models/ui/`)
@@ -58,6 +59,9 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `EnrollmentCourseSummary` | `enrollment-confirmation.model.ts` | Resumen del curso para la confirmación: label, método de pago, fecha matrícula, descuento aplicado, total pagado |
 | `NextStep` | `enrollment-confirmation.model.ts` | Paso siguiente post-matrícula: texto descriptivo y segmentos a resaltar en bold |
 | `PendingDocumentsAlert` | `enrollment-confirmation.model.ts` | Alerta de documentos opcionales pendientes: visibilidad y mensaje (ej: certificado médico psicosensométrico) |
+| `ConsentDraft` | `consent.model.ts` | **Spec 0009-m.** Lo que la UI recolecta antes de persistir un consentimiento. **Omite `ip`, `id` y `granted_at` a propósito**: los pone el servidor. Si la UI pudiera setearlos, la prueba de consentimiento dejaría de probar nada. |
+| `ConsentRow` | `consent.model.ts` | **Spec 0009-m.** Fila legible para el panel de consulta del admin (AC6): `typeLabel`, `sourceLabel` y `status` derivado (`otorgado`/`rechazado`/`revocado`). Diccionarios `CONSENT_TYPE_LABELS` / `CONSENT_SOURCE_LABELS` en el mismo archivo. |
+| `PrivacyPolicyContent` | `privacy-policy.model.ts` | **Spec 0009-m. Contenido legal, no copy de producto.** Las **dos** políticas de privacidad (una por sociedad, indexadas por `branches.slug` en `PRIVACY_POLICIES`) más los textos literales del punto de captura: avisos Art. 14 ter y etiquetas de las casillas Art. 12 / Art. 16 / representante legal. Transcritas de `.compliance/docs/{conductores,autoescuela}/` — **no redactar ni "mejorar" nada acá**: se cambia primero en `.compliance/` y se sincroniza. `PRIVACY_POLICY_VERSION` se persiste en `consents.policy_version` (AC-E4): **al editar cualquier texto hay que subir esa fecha**, o los consentimientos nuevos apuntarán a una versión que el titular no leyó. Helper `getPrivacyPolicy(slug)` → `null` si el slug no existe. |
 
 > **Nota para los Agentes**: Al crear una interfaz nueva que defina la estructura de una tabla, ponla en `dto/`. Si es un formato de datos para que un componente se dibuje, ponla en `ui/`. Actualiza esta tabla al agregar un modelo.
 
@@ -82,6 +86,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ClassBSession` | `dto` | `src/app/core/models/dto/class-b-session.model.ts` |
 | `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
 | `ClassBook` | `dto` | `src/app/core/models/dto/class-book.model.ts` |
+| `ConsentType`, `ConsentSource`, `Consent` | `dto` | `src/app/core/models/dto/consent.model.ts` |
 | `Course` | `dto` | `src/app/core/models/dto/course.model.ts` |
 | `CuadraturaAdjustment` | `dto` | `src/app/core/models/dto/cuadratura-adjustment.model.ts` |
 | `DigitalContract` | `dto` | `src/app/core/models/dto/digital-contract.model.ts` |
@@ -153,6 +158,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
 | `CicloStatus`, `CicloOption`, `CicloClaseRow`, `CicloAlumno`, `CicloAlumnoMovible`, `ZoomEmailResult` | `ui` | `src/app/core/models/ui/ciclos-teoricos.model.ts` |
+| `ConsentDraft`, `ConsentStatus`, `ConsentRow` | `ui` | `src/app/core/models/ui/consent.model.ts` |
 | `CuadraturaAdjustmentRow`, `AjusteFormData` | `ui` | `src/app/core/models/ui/cuadratura-adjustment.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
 | `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
@@ -161,7 +167,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `EgresadoTableRow` | `ui` | `src/app/core/models/ui/egresado-table.model.ts` |
 | `StudentSummaryBanner`, `PaymentMode`, `PaymentModeOption`, `InstructorOption`, `SlotStatus`, `TimeSlot`, `WeekDay`, `WeekRange`, `ScheduleGrid`, `SlotSelection`, `PromotionStatus`, `PromotionOption`, `PromotionGroup`, `SingularFeature`, `AssignmentView`, `EnrollmentAssignmentData` | `ui` | `src/app/core/models/ui/enrollment-assignment.model.ts` |
 | `EnrollmentStudentSummary`, `EnrollmentCourseSummary`, `NextStep`, `NextStepsVariant`, `PendingDocumentsAlert`, `EnrollmentConfirmationData` | `ui` | `src/app/core/models/ui/enrollment-confirmation.model.ts` |
-| `ContractStatus`, `ContractGeneration`, `UploadStatus`, `SignedContractUpload`, `EnrollmentContractData` | `ui` | `src/app/core/models/ui/enrollment-contract.model.ts` |
+| `ContractStatus`, `ContractGeneration`, `UploadStatus`, `SignedContractUpload`, `EnrollmentContractData`, `PublicContractSignedPayload` | `ui` | `src/app/core/models/ui/enrollment-contract.model.ts` |
 | `PhotoSource`, `PhotoTab`, `CameraState`, `CarnetPhoto`, `DocumentType`, `UploadedDocument`, `HvcValidation`, `DocumentRequirement`, `DocumentsView`, `EnrollmentDocumentsData` | `ui` | `src/app/core/models/ui/enrollment-documents.model.ts` |
 | `PaymentMethod`, `PaymentMethodOption`, `PricingBreakdown`, `DiscountData`, `AvailableDiscount`, `SingularPaymentAlert`, `EnrollmentPaymentData` | `ui` | `src/app/core/models/ui/enrollment-payment.model.ts` |
 | `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
@@ -178,6 +184,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |
 | `RentabilidadCurso`, `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
 | `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |
+| `PolicyParagraph`, `PolicyList`, `PolicyTable`, `PolicyBlock`, `PolicySection`, `PrivacyPolicyContent` | `ui` | `src/app/core/models/ui/privacy-policy.model.ts` |
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
 | `PublicEnrollmentContext` | `ui` | `src/app/core/models/ui/public-enrollment-context.model.ts` |
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |

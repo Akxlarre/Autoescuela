@@ -1,4 +1,8 @@
-# Plan de Respuesta a Brechas de Datos Personales
+# Anexo 6 — Plan de Respuesta a Brechas de Datos Personales
+
+> **Expediente de Cumplimiento Ley 21.719** · Sociedad Comercial Chillán Capacita Limitada
+> **Clasificación:** documento operativo. Debe estar impreso y accesible sin depender del sistema —
+> una brecha puede ser, precisamente, la pérdida de acceso a él.
 
 **Empresa:** Sociedad Comercial Chillán Capacita Limitada · **RUT:** 77.940.120-0
 **Responsable del plan:** Jorge Enrique Pérez Godoy, representante legal
@@ -9,7 +13,7 @@
 hubo una vulneración y su alcance aproximado, se notifica; no se espera a tener el informe completo.
 
 Además hay que mantener un **registro de todas las vulneraciones**, aunque no se notifiquen
-(ver `21719-registro-vulneraciones.md`).
+(ver **Anexo 7 — Registro de Vulneraciones**).
 
 ---
 
@@ -27,7 +31,7 @@ Además hay que mantener un **registro de todas las vulneraciones**, aunque no s
 Cualquier **destrucción, pérdida, filtración o alteración no autorizada** de datos personales. Casos
 concretos y realistas en esta escuela:
 
-- Un expediente de alumno (cédula, certificado médico) queda accesible públicamente en internet.
+- Un expediente de alumno (cédula, certificado médico si lo tiene cargado) queda accesible públicamente en internet.
 - Un correo con datos de varios alumnos se envía por error a un destinatario equivocado.
 - Se pierde o roban un computador o teléfono con acceso al sistema.
 - Una cuenta de secretaría o administrador es comprometida (contraseña filtrada, phishing).
@@ -44,14 +48,15 @@ concretos y realistas en esta escuela:
    - Cambiar contraseñas y rotar las credenciales del sistema.
    - Si hay un archivo expuesto públicamente, quitarlo de circulación.
 3. **Abrir la bitácora del incidente** — desde este momento se anota todo, con hora.
-4. **No borrar evidencia.** Los registros de auditoría del sistema (que guardan usuario, acción, IP y
-   fecha) son la principal fuente para reconstruir qué pasó.
+4. **No borrar evidencia.** Los registros de auditoría del sistema (que guardan usuario, acción y fecha)
+   y el registro de consentimientos (que guarda la IP de cada consentimiento otorgado) son la principal
+   fuente para reconstruir qué pasó.
 
 ## Fase 2 — Evaluación (4–24 horas)
 
 1. **¿Qué datos se vieron afectados y de cuántos titulares?**
 2. **¿Hay datos sensibles, financieros o de menores de edad involucrados?** En esta escuela es muy
-   probable que sí: el expediente contiene certificados médicos y hay alumnos menores.
+   probable que sí: algunos expedientes pueden contener certificados médicos y hay alumnos menores.
 3. **¿El riesgo para los titulares es alto?** Considerar: posibilidad de suplantación de identidad,
    exposición de información de salud, perjuicio económico.
 4. Si el incidente fue de un **proveedor**, exigirle por escrito el detalle: qué pasó, qué datos, cuántos
@@ -85,8 +90,9 @@ y a quién contactar. Si el afectado es menor de edad, se avisa a su representan
 
 1. Determinar la **causa raíz**.
 2. Implementar la **medida correctiva** que impide que vuelva a pasar.
-3. **Actualizar** el RAT, este plan y la EIPD si el incidente reveló un riesgo no considerado.
-4. Anotar la vulneración en `21719-registro-vulneraciones.md`, **se haya notificado o no**.
+3. **Actualizar** el Registro de Actividades de Tratamiento (Anexo 1), este plan y la Evaluación de
+   Impacto (Anexo 2) si el incidente reveló un riesgo no considerado.
+4. Anotar la vulneración en el **Anexo 7 — Registro de Vulneraciones**, **se haya notificado o no**.
 
 ---
 
@@ -124,4 +130,4 @@ y a quién contactar. Si el afectado es menor de edad, se avisa a su representan
 > Sociedad Comercial Chillán Capacita Limitada
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

@@ -14,6 +14,7 @@ import { EmailInputComponent } from '@shared/components/email-input/email-input.
 import { PhoneInputComponent } from '@shared/components/phone-input/phone-input.component';
 import { PublicContextBannerComponent } from '../public-context-banner/public-context-banner.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { PrivacyNoticeComponent } from '@shared/components/privacy-notice/privacy-notice.component';
 import type {
   EnrollmentPersonalData,
   AgeAlertStatus,
@@ -77,6 +78,7 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
     PhoneInputComponent,
     PublicContextBannerComponent,
     DateInputComponent,
+    PrivacyNoticeComponent,
     StableWidthDirective,
   ],
   template: `
@@ -93,6 +95,14 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
     <p class="text-sm mb-5" style="color: var(--text-secondary);">
       Los campos marcados con <span style="color: var(--state-error);">*</span> son obligatorios.
     </p>
+
+    <!-- Deber de información (Art. 14 ter): va ANTES del primer campo, no después.
+         El titular tiene que saber quién trata sus datos antes de entregarlos. -->
+    @if (branchSlug()) {
+      <div class="mb-5">
+        <app-privacy-notice [branchSlug]="branchSlug()" context="enrollment" />
+      </div>
+    }
 
     <form (ngSubmit)="onNext()" class="space-y-4" novalidate>
       <!-- Honeypot anti-bot -->
@@ -536,6 +546,8 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
 export class PublicPersonalDataComponent {
   readonly data = input.required<EnrollmentPersonalData>();
   readonly context = input<PublicEnrollmentContext | null>(null);
+  /** `branches.slug` de la sede, para el aviso del Art. 14 ter (spec 0009-m AC1). */
+  readonly branchSlug = input<string>('');
   readonly loading = input<boolean>(false);
   readonly dataChange = output<EnrollmentPersonalData>();
   readonly next = output<void>();

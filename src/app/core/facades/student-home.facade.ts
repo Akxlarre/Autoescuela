@@ -21,6 +21,17 @@ import type {
   StudentHomeSideWidgets,
 } from '@core/models/ui/student-home.model';
 
+/**
+ * Asistencia VIGENTE de una sesión práctica (fix-191-m).
+ *
+ * Una fila con `archived_at` es el registro histórico de una ocurrencia anterior de esa
+ * misma sesión — el reagendamiento (RF-053) recicla la fila de `class_b_sessions` en vez
+ * de crear una nueva — y no describe el estado actual de la clase.
+ */
+function asistenciaVigente(session: any): { status: string } | undefined {
+  return (session?.class_b_practice_attendance ?? []).find((a: any) => a.archived_at == null);
+}
+
 /** Snapshot completo de la home del alumno. */
 @Injectable({ providedIn: 'root' })
 export class StudentHomeFacade {
@@ -169,7 +180,7 @@ export class StudentHomeFacade {
         // Sesiones prácticas (para timeline y consecutivas)
         this.supabase.client
           .from('class_b_sessions')
-          .select('id, scheduled_at, class_b_practice_attendance(status)')
+          .select('id, scheduled_at, class_b_practice_attendance(status, archived_at)')
           .eq('enrollment_id', enrollmentId)
           .order('scheduled_at', { ascending: false })
           .limit(PRACTICES_TOTAL),
@@ -204,7 +215,7 @@ export class StudentHomeFacade {
     // Sessions ordenadas cronológicamente para la lista de 1..12
     const sessions = (sessionsResult.data ?? []).slice().reverse();
     const practices = sessions.map((s: any, i: number) => {
-      const att = s.class_b_practice_attendance?.[0];
+      const att = asistenciaVigente(s);
       const isCompleted = att?.status === 'present' || att?.status === 'late';
       return {
         number: i + 1,
@@ -224,7 +235,7 @@ export class StudentHomeFacade {
     const recentSortedDesc = sessionsResult.data ?? [];
     let consecutiveAbsences = 0;
     for (const s of recentSortedDesc) {
-      const att = s.class_b_practice_attendance?.[0];
+      const att = asistenciaVigente(s);
       if (att?.status === 'absent') {
         consecutiveAbsences++;
       } else if (att) {
@@ -234,10 +245,10 @@ export class StudentHomeFacade {
 
     const recentSessions: StudentHomeSession[] = [
       ...recentSortedDesc
-        .filter((s: any) => s.class_b_practice_attendance?.[0] != null)
+        .filter((s: any) => asistenciaVigente(s) != null)
         .slice(0, 4)
         .map((s: any) => {
-          const att = s.class_b_practice_attendance[0];
+          const att = asistenciaVigente(s)!;
           const status: 'present' | 'absent' =
             att.status === 'present' || att.status === 'late' ? 'present' : 'absent';
           return {

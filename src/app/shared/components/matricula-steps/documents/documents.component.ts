@@ -14,6 +14,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
 import type { DocumentType } from '@core/models/ui/enrollment-documents.model';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { FileDropzoneDirective } from '@core/directives/file-dropzone.directive';
 
 @Component({
   selector: 'app-documents-step',
@@ -23,6 +24,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     AsyncBtnComponent,
     SkeletonBlockComponent,
     StableWidthDirective,
+    FileDropzoneDirective,
   ],
   templateUrl: './documents.component.html',
   styleUrl: './documents.component.scss',
@@ -76,14 +78,24 @@ export class DocumentsComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    this.applyFile(docType, file);
+    // Reset so the same file can be selected again (e.g. re-upload after error)
+    input.value = '';
+  }
+
+  onFilesDropped(files: FileList, docType: string): void {
+    const file = files[0];
+    if (!file) return;
+    this.applyFile(docType, file);
+  }
+
+  private applyFile(docType: string, file: File): void {
     if (docType === 'id_photo') {
       this.isUploadingPhoto.set(true);
     } else {
       this.uploadingDocType.set(docType);
     }
     this.fileSelected.emit({ type: docType, file });
-    // Reset so the same file can be selected again (e.g. re-upload after error)
-    input.value = '';
   }
 
   openLightbox(url: string): void {

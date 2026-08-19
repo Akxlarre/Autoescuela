@@ -25,6 +25,7 @@ function makeSupabaseMock() {
       gte: vi.fn(() => b),
       lte: vi.fn(() => b),
       in: vi.fn(() => b),
+      is: vi.fn(() => b),
       or: vi.fn(() => b),
       order: vi.fn(() => b),
       update: vi.fn(() => b),
@@ -146,6 +147,53 @@ describe('AsistenciaClaseBFacade', () => {
       'no_show',
     ]);
     expect(sessionsBuilder.eq).toHaveBeenCalledWith('enrollments.status', 'active');
+  });
+
+  // fix-191-m — regresión: el reagendamiento masivo recicla la fila de class_b_sessions y
+  // conserva la asistencia de la ocurrencia anterior, archivada. Sin filtrar por vigencia,
+  // Asistencia B pintaba "Ausente" una clase que está agendada.
+  it('mapea a pendiente una sesión scheduled cuya asistencia fue archivada por reagendamiento', async () => {
+    mock.setResult('class_b_sessions', [
+      {
+        id: 77,
+        enrollment_id: 10,
+        scheduled_at: '2026-08-20T16:40:00',
+        start_time: null,
+        end_time: null,
+        status: 'scheduled',
+        instructor_id: 3,
+        class_number: 3,
+        km_start: null,
+        vehicles: null,
+        instructors: { id: 3, users: { first_names: 'Roberto', paternal_last_name: 'Soto' } },
+        enrollments: {
+          id: 10,
+          branch_id: 1,
+          branches: { name: 'Chillán' },
+          students: { id: 5, users: { first_names: 'Alumna', paternal_last_name: 'Test' } },
+        },
+        // Falta de la ocurrencia ANTERIOR, ya archivada al reagendar.
+        class_b_practice_attendance: [
+          { status: 'absent', justification: null, archived_at: '2026-08-10T12:00:00Z' },
+        ],
+      },
+    ]);
+    mock.setResult('class_b_practice_attendance', []);
+
+    await facade.initialize();
+
+    expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    expect(facade.kpis()?.inasistenciasHoy).toBe(0);
+  });
+
+  it('excluye asistencia archivada de las alertas de faltas consecutivas', async () => {
+    mock.setResult('class_b_sessions', []);
+    mock.setResult('class_b_practice_attendance', []);
+
+    await facade.initialize();
+
+    const attendanceBuilder = mock.builderFor('class_b_practice_attendance');
+    expect(attendanceBuilder.is).toHaveBeenCalledWith('archived_at', null);
   });
 
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {

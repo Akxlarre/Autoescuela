@@ -97,6 +97,8 @@ export class PersonalDataComponent {
   /** Sedes disponibles. Array vacío = modo secretaria (oculta el selector). */
   branches = input<BranchOption[]>([]);
   selectedBranchId = input<number | null>(null);
+
+
   dataChange = output<EnrollmentPersonalData>();
   next = output<void>();
   cancel = output<void>();

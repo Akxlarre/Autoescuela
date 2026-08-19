@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, output, signal, computed } f
 import { DatePipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { FileDropzoneDirective } from '@core/directives/file-dropzone.directive';
 import {
   EnrollmentContractData,
   SignedContractUpload,
@@ -12,7 +13,7 @@ import {
 @Component({
   selector: 'app-contract-step',
   standalone: true,
-  imports: [DatePipe, IconComponent, AsyncBtnComponent],
+  imports: [DatePipe, IconComponent, AsyncBtnComponent, FileDropzoneDirective],
   templateUrl: './contract.component.html',
   styleUrl: './contract.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,9 +30,31 @@ export class ContractComponent {
   back = output<void>();
 
   readonly _termsAccepted = signal<boolean>(false);
-  readonly canProceed = computed(() =>
-    this.isPublic() ? this._termsAccepted() : this.data().canAdvance,
+
+  /**
+   * Declaración de haber leído la Política de Privacidad (spec 0009-m, AC3).
+   *
+   * **Siempre visible**, a diferencia de `_termsAccepted`, que vive dentro de un
+   * `@if (isPublic())` que nunca se cumple (el único consumidor no pasa `isPublic`).
+   * En este flujo la aceptación del CONTRATO se evidencia con el documento firmado a
+   * mano que la secretaria sube — prueba más fuerte que una casilla. Lo que faltaba, y
+   * es lo que agrega esta casilla, es el consentimiento al TRATAMIENTO DE DATOS, que la
+   * ley exige específico y no se puede dar por incluido en la firma del contrato.
+   */
+  readonly _privacyAccepted = signal<boolean>(false);
+
+  /** Emitido al marcar/desmarcar la casilla de privacidad. El Smart lo persiste (AC5/AC7). */
+  readonly privacyConsentChange = output<boolean>();
+
+  readonly canProceed = computed(
+    () =>
+      (this.isPublic() ? this._termsAccepted() : this.data().canAdvance) && this._privacyAccepted(),
   );
+
+  onPrivacyToggle(checked: boolean): void {
+    this._privacyAccepted.set(checked);
+    this.privacyConsentChange.emit(checked);
+  }
 
   readonly acceptedFormats = CONTRACT_ACCEPTED_FORMATS;
   readonly maxSizeMb = CONTRACT_MAX_SIZE_MB;
@@ -44,18 +67,24 @@ export class ContractComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    if (!this.applyFile(file)) input.value = '';
+  }
 
+  onFilesDropped(files: FileList): void {
+    this.applyFile(files[0]);
+  }
+
+  /** Valida y aplica el archivo de contrato firmado. Devuelve false si fue rechazado. */
+  private applyFile(file: File): boolean {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     if (!ContractComponent.ALLOWED_EXTENSIONS.has(ext)) {
       this.uploadError.set(`Formato no permitido. Usa: ${this.acceptedFormats}`);
-      input.value = '';
-      return;
+      return false;
     }
 
     if (file.size > this.maxSizeMb * 1024 * 1024) {
       this.uploadError.set(`El archivo supera el tamaño máximo de ${this.maxSizeMb} MB.`);
-      input.value = '';
-      return;
+      return false;
     }
 
     this.uploadError.set(null);
@@ -67,6 +96,7 @@ export class ContractComponent {
       errorMessage: null,
     };
     this.dataChange.emit({ ...this.data(), signedContract: upload, canAdvance: true });
+    return true;
   }
 
   clearUpload(): void {

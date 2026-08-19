@@ -647,13 +647,15 @@ describe('AdminAlumnoDetalleFacade', () => {
 
       // La sesión 502 fue reciclada por el flujo de reagendar: su class_b_sessions.status
       // ya no es 'no_show' (volvió a 'scheduled' con nueva fecha), pero el registro de
-      // asistencia original (id 2, status 'absent') se conserva — ya no se borra.
+      // asistencia original (id 2, status 'absent') se conserva — ya no se borra, se
+      // marca `archived_at` (fix-191-m), que es de donde sale `reagendada`.
       mock.setResult('class_b_practice_attendance', [
         {
           id: 2,
           status: 'absent',
           justification: null,
           recorded_at: '2026-06-02',
+          archived_at: '2026-07-05T12:00:00Z',
           class_b_sessions: {
             id: 502,
             enrollment_id: 100,
@@ -1053,11 +1055,20 @@ describe('AdminAlumnoDetalleFacade', () => {
       const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
       const historySelectSpy = vi.fn().mockReturnValue({ eq: historyEqSpy });
+      // fix-191-m: archivado de la asistencia de la ocurrencia anterior
+      // (update → eq(class_b_session_id) → is(archived_at, null)).
+      const attendanceIsSpy = vi.fn().mockResolvedValue({ error: null });
+      const attendanceEqSpy = vi.fn().mockReturnValue({ is: attendanceIsSpy });
+      const attendanceUpdateSpy = vi.fn().mockReturnValue({ eq: attendanceEqSpy });
+      const attendanceDeleteSpy = vi.fn();
 
       const fromSpy = vi.fn((table: string) => {
         if (table === 'class_b_sessions') return { select: selectSpy, update: updateSpy };
         if (table === 'class_b_reschedule_history') {
           return { insert: historyInsertSpy, select: historySelectSpy };
+        }
+        if (table === 'class_b_practice_attendance') {
+          return { update: attendanceUpdateSpy, delete: attendanceDeleteSpy };
         }
         throw new Error(`tabla inesperada: ${table}`);
       });
@@ -1071,6 +1082,10 @@ describe('AdminAlumnoDetalleFacade', () => {
         historyInsertSpy,
         historySelectSpy,
         historyOrderSpy,
+        attendanceUpdateSpy,
+        attendanceEqSpy,
+        attendanceIsSpy,
+        attendanceDeleteSpy,
       };
     }
 
@@ -1122,10 +1137,19 @@ describe('AdminAlumnoDetalleFacade', () => {
       });
       expect(mock.updateEqSpy).toHaveBeenCalledWith('id', 601);
 
-      // 3. Soft archive (RF-053): NUNCA se borra class_b_practice_attendance — el
-      // historial de la inasistencia original se conserva para auditoría. La grilla
-      // se ve "limpia" (azul) porque deriva su color de class_b_sessions.status.
-      expect(mock.fromSpy).not.toHaveBeenCalledWith('class_b_practice_attendance');
+      // 3. Soft archive (RF-053 + fix-191-m): la fila de class_b_practice_attendance NUNCA
+      // se borra — el historial de la inasistencia original se conserva para auditoría —
+      // pero SÍ se marca `archived_at`, porque la sesión se recicló y esa asistencia dejó
+      // de describir su estado actual. Sin la marca, toda vista que deriva estado desde la
+      // asistencia (Asistencia B, vistas del alumno) seguía mostrando "Ausente" una clase
+      // agendada, y la penalización volvía a cancelarla.
+      expect(mock.attendanceDeleteSpy).not.toHaveBeenCalled();
+      expect(mock.attendanceUpdateSpy).toHaveBeenCalledWith({
+        archived_at: expect.any(String),
+      });
+      expect(mock.attendanceEqSpy).toHaveBeenCalledWith('class_b_session_id', 501);
+      expect(mock.attendanceEqSpy).toHaveBeenCalledWith('class_b_session_id', 601);
+      expect(mock.attendanceIsSpy).toHaveBeenCalledWith('archived_at', null);
 
       // 4. Limpia la selección transitoria tras guardar.
       expect(facade.reagendarSeleccion()).toEqual([]);
@@ -1291,6 +1315,14 @@ describe('AdminAlumnoDetalleFacade', () => {
           return { insert: historyInsertSpy, select: historySelectSpy };
         }
         if (table === 'instructors') return { select: instructorsSelectSpy };
+        // fix-191-m: el reagendamiento archiva la asistencia de la ocurrencia anterior.
+        if (table === 'class_b_practice_attendance') {
+          return {
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue({ error: null }) }),
+            }),
+          };
+        }
         throw new Error(`tabla inesperada: ${table}`);
       });
 

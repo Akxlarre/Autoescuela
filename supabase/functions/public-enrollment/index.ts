@@ -29,6 +29,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { type EnrollmentData, buildStructuredPdf } from '../_shared/contract-pdf.ts';
+import { loadPngForPdf } from '../_shared/pdf-utils.ts';
+
+// Mismo logo que generate-contract-pdf / generate-certificate-b-pdf /
+// generate-certificate-professional-pdf / generate-student-license-pdf — bucket público `assets`
+// de Storage, no un archivo del repo.
+const LOGO_URL =
+  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
 import {
   RATE_LIMIT_MAX,
   RATE_LIMIT_WINDOW_MS,
@@ -257,6 +264,99 @@ const HONEYPOT_ACTIONS = new Set([
   'generate-contract-preview',
 ]);
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Consentimientos (Ley 21.719, spec 0009-m)
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface ConsentDraftPayload {
+  consentType: 'matricula_datos' | 'certificado_medico' | 'preinscripcion' | 'test_psicologico';
+  granted: boolean;
+  branchId: number;
+  source: 'public' | 'secretaria';
+  userId?: number | null;
+  subjectRut?: string | null;
+  enrollmentId?: number | null;
+  grantedByRepresentative?: boolean;
+  /**
+   * Versión de la política que el titular efectivamente vio. La manda el cliente y NO se
+   * duplica acá como constante: la fuente es `PRIVACY_POLICY_VERSION` del front, y tener
+   * dos copias garantizaría que algún día divergan y se registre una versión falsa.
+   */
+  policyVersion: string;
+}
+
+const CONSENT_TYPES = new Set([
+  'matricula_datos',
+  'certificado_medico',
+  'preinscripcion',
+  'test_psicologico',
+]);
+
+/**
+ * Gate del Art. 16 (spec 0010-m): busca en los drafts un consentimiento del test
+ * psicométrico OTORGADO. No confía en `skipPsychTest` del payload — eso lo manda el
+ * mismo cliente que podría manipular el resto del body, y este dato es sensible
+ * (salud psíquica, Art. 2). Sin un draft `granted:true`, el test se omite igual
+ * aunque vengan las 81 respuestas.
+ */
+function hasGrantedPsychConsent(drafts: ConsentDraftPayload[] | null | undefined): boolean {
+  if (!Array.isArray(drafts)) return false;
+  return drafts.some((d) => d?.consentType === 'test_psicologico' && d.granted === true);
+}
+
+/**
+ * Persiste los consentimientos de un flujo público.
+ *
+ * LANZA si falla. Es deliberado: el llamador debe abortar la operación completa antes
+ * que dejar una matrícula sin su registro de consentimiento. La carga de la prueba es
+ * del responsable (Art. 12) — una matrícula sin registro no se puede defender ante la
+ * Agencia, así que es preferible que el alumno reintente a que quede un huérfano.
+ *
+ * La IP la calcula la Edge Function con getClientIp(req) y se manda explícita: dentro
+ * de PostgREST, `request.headers` traería la IP del runtime de la function, no la del
+ * alumno. El trigger `trg_consents_set_ip` respeta la del payload cuando quien inserta
+ * es `service_role` (ver la migración 20260817130000).
+ */
+async function persistConsents(
+  supabase: any,
+  drafts: ConsentDraftPayload[],
+  clientIp: string,
+  overrides: { userId?: number | null; enrollmentId?: number | null } = {},
+): Promise<void> {
+  if (!Array.isArray(drafts) || drafts.length === 0) return;
+
+  const rows = drafts
+    .filter(
+      (d) =>
+        d &&
+        CONSENT_TYPES.has(d.consentType) &&
+        typeof d.granted === 'boolean' &&
+        typeof d.policyVersion === 'string' &&
+        d.policyVersion.length > 0 &&
+        typeof d.branchId === 'number',
+    )
+    .map((d) => ({
+      consent_type: d.consentType,
+      granted: d.granted,
+      branch_id: d.branchId,
+      source: 'public',
+      user_id: overrides.userId ?? d.userId ?? null,
+      subject_rut: d.subjectRut ?? null,
+      enrollment_id: overrides.enrollmentId ?? d.enrollmentId ?? null,
+      granted_by_representative: d.grantedByRepresentative ?? false,
+      policy_version: d.policyVersion,
+      ip: clientIp === 'unknown' ? null : clientIp,
+    }));
+
+  if (rows.length === 0) return;
+
+  const { error } = await supabase.from('consents').insert(rows);
+  if (error) {
+    console.error('consents insert error:', error);
+    throw new Error('CONSENT_PERSIST_FAILED');
+  }
+}
+
 function getClientIp(req: Request): string {
   const fwd = req.headers.get('x-forwarded-for');
   if (fwd) return fwd.split(',')[0].trim();
@@ -322,11 +422,11 @@ Deno.serve(async (req: Request) => {
         case 'release-slots':
           return await handleReleaseSlots(supabase, body);
         case 'submit-clase-b':
-          return await handleSubmitClaseB(supabase, body);
+          return await handleSubmitClaseB(supabase, body, getClientIp(req));
         case 'submit-pre-inscription':
-          return await handleSubmitPreInscription(supabase, body);
+          return await handleSubmitPreInscription(supabase, body, getClientIp(req));
         case 'initiate-payment':
-          return await handleInitiatePayment(supabase, body);
+          return await handleInitiatePayment(supabase, body, getClientIp(req));
         case 'confirm-payment':
           return await handleConfirmPayment(supabase, body);
         case 'get-carnet-upload-url':
@@ -539,7 +639,7 @@ async function handleReleaseSlots(supabase: any, body: any) {
 // retorna el enrollment existente sin crear duplicados.
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function handleSubmitClaseB(supabase: any, body: any) {
+async function handleSubmitClaseB(supabase: any, body: any, clientIp = 'unknown') {
   const { branchId, personalData, paymentMode, instructorId, selectedSlotIds, sessionToken } = body;
 
   if (!branchId || !personalData || !paymentMode || !instructorId || !selectedSlotIds?.length) {
@@ -595,7 +695,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
     // 3. Find the Clase B course for this branch
     const { data: course } = await supabase
       .from('courses')
-      .select('id')
+      .select('id, name, license_class, duration_weeks, practical_hours, theory_hours, base_price')
       .eq('branch_id', branchId)
       .eq('license_class', 'B')
       .eq('active', true)
@@ -699,6 +799,14 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 
     // 10. Generar y guardar contrato final en Storage (y DB)
     if (body.contractSignatureBase64) {
+      // `branch` no existía en este scope (bug: ReferenceError en runtime, fix-192-m) — el
+      // contrato firmado del flujo público de Clase B nunca llegaba a generarse.
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('name, address, slug, email, phone')
+        .eq('id', branchId)
+        .single();
+
       await generateAndSaveFinalContract(
         supabase,
         enrollment.id,
@@ -710,7 +818,16 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       );
     }
 
-    // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
+    // 11. Consentimientos (Ley 21.719, spec 0009-m AC5).
+    // Va ANTES de responder éxito y NO es fire-and-forget: si no se puede registrar el
+    // consentimiento, la matrícula no se da por buena. Es la única parte de este flujo
+    // que no admite recuperarse después — el alumno ya no está frente a la pantalla.
+    await persistConsents(supabase, body.consents, clientIp, {
+      userId,
+      enrollmentId: enrollment.id,
+    });
+
+    // 12. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
     void inviteStudentToAuth(supabase, userId, branchId);
 
     return jsonResponse({
@@ -726,6 +843,13 @@ async function handleSubmitClaseB(supabase: any, body: any) {
         message:
           'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
       });
+    }
+    if (err instanceof Error && err.message === 'CONSENT_PERSIST_FAILED') {
+      console.error('submit-clase-b: no se pudo registrar el consentimiento');
+      return errorResponse(
+        'No pudimos registrar tu consentimiento. Por tu seguridad no completamos la matrícula. Inténtalo de nuevo.',
+        500,
+      );
     }
     console.error('submit-clase-b error:', err);
     if (sessionToken) {
@@ -746,7 +870,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 // Crea user + professional_pre_registrations.
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function handleSubmitPreInscription(supabase: any, body: any) {
+async function handleSubmitPreInscription(supabase: any, body: any, clientIp = 'unknown') {
   const {
     branchId,
     personalData,
@@ -761,7 +885,9 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
   }
 
   // El alumno puede omitir el test online y rendirlo presencialmente en la sede.
-  const omitsPsychTest = skipPsychTest === true;
+  // Gate del Art. 16 (spec 0010-m): sin consentimiento OTORGADO, se omite igual —
+  // nunca se confía solo en `skipPsychTest` del cliente (ver hasGrantedPsychConsent).
+  const omitsPsychTest = skipPsychTest === true || !hasGrantedPsychConsent(body.consents);
 
   // Si NO lo omite, validar las 81 respuestas (booleanos obligatorios, ninguno null).
   if (!omitsPsychTest) {
@@ -893,6 +1019,13 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
       console.error('[public-enrollment] notification dispatch error:', notifyErr);
     }
 
+    // Consentimientos de la preinscripción (Ley 21.719, spec 0009-m AC5).
+    // El lead deja RUT, correo y teléfono aunque nunca se matricule — y el RAT le fija
+    // 12 meses de retención. Sin este registro, ese tratamiento no tendría base alguna.
+    // `enrollment_id` va NULL: todavía no hay matrícula, por eso `consents.branch_id` es
+    // NOT NULL (es el único dato que dice ante qué responsable se otorgó).
+    await persistConsents(supabase, body.consents, clientIp, { userId, enrollmentId: null });
+
     return jsonResponse({
       success: true,
       preRegistrationId: preReg.id,
@@ -908,6 +1041,13 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
         message:
           'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
       });
+    }
+    if (err instanceof Error && err.message === 'CONSENT_PERSIST_FAILED') {
+      console.error('submit-pre-inscription: no se pudo registrar el consentimiento');
+      return errorResponse(
+        'No pudimos registrar tu consentimiento. Por tu seguridad no completamos la pre-inscripción. Inténtalo de nuevo.',
+        500,
+      );
     }
     console.error('submit-pre-inscription error:', err);
     return errorResponse('Error interno al procesar pre-inscripción', 500);
@@ -927,7 +1067,7 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
 //   3. Retornar webpayUrl y webpayToken en la respuesta.
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function handleInitiatePayment(supabase: any, body: any) {
+async function handleInitiatePayment(supabase: any, body: any, clientIp = 'unknown') {
   const { branchId, personalData, paymentMode, instructorId, selectedSlotIds, sessionToken } = body;
 
   // ── Validate required fields with specific messages ──────────────────────────
@@ -1038,6 +1178,14 @@ async function handleInitiatePayment(supabase: any, body: any) {
           amount: serverAmount,
           courseId: course.id,
           courseBasePrice,
+          // Consentimientos (spec 0009-m AC5). Viajan en el snapshot porque el pago online
+          // parte acá y la matrícula recién se crea en `confirm-payment`: si se persistieran
+          // ahora, quedarían huérfanos cuando el pago se rechaza.
+          consents: body.consents ?? null,
+          // La IP se captura AHORA, que es cuando el titular marcó la casilla. La de
+          // `confirm-payment` sería la del retorno desde Webpay — mismo usuario, pero otro
+          // momento, y lo que se prueba es desde dónde consintió.
+          consentIp: clientIp,
         },
       },
       { onConflict: 'session_token' },
@@ -1296,7 +1444,11 @@ async function handleConfirmPayment(supabase: any, body: any) {
             )
             .eq('id', snapshot.courseId)
             .single(),
-          supabase.from('branches').select('name, address').eq('id', snapshot.branchId).single(),
+          supabase
+            .from('branches')
+            .select('name, address, slug, email, phone')
+            .eq('id', snapshot.branchId)
+            .single(),
         ]);
         if (course && branch) {
           await generateAndSaveFinalContract(
@@ -1310,7 +1462,15 @@ async function handleConfirmPayment(supabase: any, body: any) {
           );
         }
       }
-      // 13. Invitar al alumno a crear su cuenta (fire-and-forget)
+      // 13. Consentimientos (spec 0009-m AC5). ANTES de la invitación y sin fire-and-forget:
+      // si no se puede registrar, la operación entera falla. El pago ya está cobrado, así
+      // que este error se investiga — no se silencia dejando una matrícula sin respaldo.
+      await persistConsents(supabase, snapshot.consents, snapshot.consentIp ?? 'unknown', {
+        userId,
+        enrollmentId,
+      });
+
+      // 14. Invitar al alumno a crear su cuenta (fire-and-forget)
       void inviteStudentToAuth(supabase, userId, snapshot.branchId);
     } catch (commitErr) {
       const msg = commitErr instanceof Error ? commitErr.message : String(commitErr);
@@ -1514,6 +1674,7 @@ async function moveCarnetPhoto(
 }
 
 import { loadPngFromBytes } from '../_shared/pdf-utils.ts';
+import { tryLoadIdPhoto } from '../_shared/contract-pdf.ts';
 import { decodeBase64 } from 'jsr:@std/encoding/base64';
 
 /**
@@ -1536,12 +1697,24 @@ async function generateAndSaveFinalContract(
       return;
     }
 
+    // total_paid/pending_balance los mantiene un trigger sobre `payments` — se leen recién ahora
+    // porque el enrollment se acaba de crear en esta misma invocación (no venían en ningún select
+    // previo). Cláusula QUINTA del contrato real ("paga en este acto la cantidad de...").
+    const { data: balanceRow } = await supabase
+      .from('enrollments')
+      .select('total_paid, pending_balance, payment_mode')
+      .eq('id', enrollmentId)
+      .maybeSingle();
+
     // Build EnrollmentData
     const data: EnrollmentData = {
       id: enrollmentId,
       number: enrollmentNumber,
       base_price: course.base_price ?? null,
       discount: 0,
+      total_paid: balanceRow?.total_paid ?? null,
+      pending_balance: balanceRow?.pending_balance ?? null,
+      payment_mode: balanceRow?.payment_mode ?? null,
       created_at: enrollmentDate,
       student: {
         birth_date: personalData.birthDate ?? null,
@@ -1565,6 +1738,9 @@ async function generateAndSaveFinalContract(
       branch: {
         name: branch.name,
         address: branch.address ?? null,
+        slug: branch.slug ?? null,
+        email: branch.email ?? null,
+        phone: branch.phone ?? null,
       },
       convalidation: null,
     };
@@ -1579,7 +1755,11 @@ async function generateAndSaveFinalContract(
       console.error('generateAndSaveFinalContract: Failed to parse signature base64', e);
     }
 
-    const pdfBytes = buildStructuredPdf(data, signatureImage);
+    const [idPhoto, logo] = await Promise.all([
+      tryLoadIdPhoto(supabase, enrollmentId),
+      loadPngForPdf(LOGO_URL),
+    ]);
+    const pdfBytes = buildStructuredPdf(data, signatureImage, idPhoto, logo);
     const destPath = `contracts/${enrollmentId}/contract.pdf`;
 
     const { error: uploadError } = await supabase.storage
@@ -2083,16 +2263,38 @@ async function handleGenerateContractPreview(supabase: any, body: any) {
         .select('name, license_class, duration_weeks, practical_hours, theory_hours, base_price')
         .eq('id', courseId)
         .single(),
-      supabase.from('branches').select('name, address').eq('id', branchId).single(),
+      supabase
+        .from('branches')
+        .select('name, address, slug, email, phone')
+        .eq('id', branchId)
+        .single(),
     ]);
 
   if (courseErr || !course) return errorResponse('Course not found');
   if (branchErr || !branch) return errorResponse('Branch not found');
 
+  // Número previsto: la misma función que asigna el correlativo real al confirmar la matrícula
+  // (`get_next_enrollment_number`) es de solo lectura hasta que un enrollment se inserta con ese
+  // número — no reserva ni consume nada, así que llamarla en el preview es seguro. Puede diferir
+  // del número final si otra persona matricula en el mismo curso entretanto; es una previsión, no
+  // una garantía.
+  const { data: previewNumber, error: previewNumberErr } = await supabase.rpc(
+    'get_next_enrollment_number',
+    { p_course_id: courseId },
+  );
+  if (previewNumberErr) {
+    // No bloquea el preview (el contrato se genera igual, sin número) — pero si esto aparece en
+    // los logs de la función, es la causa exacta de un "N° -" que no debería estar en "-".
+    console.error('generate-contract-preview: get_next_enrollment_number failed', {
+      courseId,
+      error: previewNumberErr,
+    });
+  }
+
   // Build EnrollmentData in memory (no DB record needed for preview)
   const data: EnrollmentData = {
     id: 0,
-    number: null,
+    number: previewNumber ?? null,
     base_price: course.base_price ?? null,
     discount: 0,
     created_at: new Date().toISOString(),
@@ -2118,11 +2320,15 @@ async function handleGenerateContractPreview(supabase: any, body: any) {
     branch: {
       name: branch.name,
       address: branch.address ?? null,
+      slug: branch.slug ?? null,
+      email: branch.email ?? null,
+      phone: branch.phone ?? null,
     },
     convalidation: null,
   };
 
-  const pdfBytes = buildStructuredPdf(data);
+  const logo = await loadPngForPdf(LOGO_URL);
+  const pdfBytes = buildStructuredPdf(data, null, null, logo);
 
   const storagePath = `contracts/previews/${sessionToken}/Contrato_Preview.pdf`;
   const { error: uploadError } = await supabase.storage

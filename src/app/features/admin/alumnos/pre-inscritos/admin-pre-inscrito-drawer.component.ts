@@ -16,10 +16,13 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
 import { AdminPreInscritosFacade } from '@core/facades/admin-pre-inscritos.facade';
+import { ConsentsFacade } from '@core/facades/consents.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { PAYMENT_METHODS, type PaymentMethod } from '@core/models/ui/enrollment-payment.model';
+import type { ConsentRow, ConsentStatus } from '@core/models/ui/consent.model';
 import { EPQ_QUESTIONS } from '@core/utils/epq-questions.const';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -47,6 +50,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     SlicePipe,
     SelectModule,
     SkeletonBlockComponent,
+    BadgeComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     DateInputComponent,
@@ -255,6 +259,34 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
             <!-- ─── TAB: TEST PSICOLÓGICO ──────────────────────────────────── -->
             @if (activeTab() === 'test') {
               <div class="space-y-4" #tabContent>
+                <!-- Consentimiento Art. 16 (spec 0010-m, AC5) — solo lectura, append-only -->
+                @if (psychConsent(); as consent) {
+                  <div class="card flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <app-icon
+                        name="shield"
+                        [size]="15"
+                        color="var(--ds-brand)"
+                        class="shrink-0"
+                      />
+                      <div class="min-w-0">
+                        <p class="text-xs text-text-secondary uppercase tracking-wide">
+                          Consentimiento Art. 16
+                        </p>
+                        <p class="text-xs text-text-secondary mt-0.5">
+                          {{ formatConsentDate(consent.grantedAt) }}
+                          @if (consent.revokedAt) {
+                            · revocado {{ formatConsentDate(consent.revokedAt) }}
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <app-badge class="shrink-0" [variant]="consentStatusVariant(consent.status)">
+                      {{ consentStatusLabel(consent.status) }}
+                    </app-badge>
+                  </div>
+                }
+
                 <!-- Test no rendido online → ofrecer descarga del test en papel -->
                 @if (!p.psychAnswers || p.psychAnswers.length === 0) {
                   <div class="card space-y-3">
@@ -1065,6 +1097,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 })
 export class AdminPreInscritoDrawerComponent implements OnDestroy {
   protected readonly facade = inject(AdminPreInscritosFacade);
+  protected readonly consentsFacade = inject(ConsentsFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly gsap = inject(GsapAnimationsService);
@@ -1103,6 +1136,12 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
       if (p?.status === 'pending_contract') {
         this.activeTab.set('matricula');
       }
+    });
+
+    // Consentimiento Art. 16 del test psicológico (spec 0010-m, AC5) — solo lectura.
+    effect(() => {
+      const userId = this.facade.selected()?.tempUserId;
+      if (userId) void this.consentsFacade.loadByUser(userId);
     });
   }
 
@@ -1168,6 +1207,10 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
 
   // ── Computed ─────────────────────────────────────────────────────────────
   readonly questions = EPQ_QUESTIONS;
+  /** Consentimiento Art. 16 del test psicológico del preinscrito actual (spec 0010-m, AC5). */
+  readonly psychConsent = computed<ConsentRow | null>(
+    () => this.consentsFacade.consents().find((c) => c.consentType === 'test_psicologico') ?? null,
+  );
   /** Cantidad de tarjetas de datos personales a previsualizar en el skeleton. */
   readonly skeletonDataCards = Array.from({ length: 10 });
 
@@ -1274,6 +1317,28 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
   /** Abre la ventana de impresión con el test EPQ en blanco para rendir en la sede. */
   printBlankTest(p: PreInscritoTableRow): void {
     this.facade.printBlankTest(p);
+  }
+
+  protected formatConsentDate(iso: string | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  protected consentStatusLabel(status: ConsentStatus): string {
+    return { otorgado: 'Otorgado', rechazado: 'No autorizó', revocado: 'Revocado' }[status];
+  }
+
+  protected consentStatusVariant(status: ConsentStatus): 'success' | 'error' | 'warning' {
+    return { otorgado: 'success', rechazado: 'error', revocado: 'warning' }[status] as
+      | 'success'
+      | 'error'
+      | 'warning';
   }
 
   async submitEvaluation(preInscritoId: number): Promise<void> {

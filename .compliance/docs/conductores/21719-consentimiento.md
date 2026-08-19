@@ -1,4 +1,8 @@
-# Consentimiento y avisos en el punto de captura — Sociedad Comercial Chillán Capacita Limitada
+# Anexo 4 — Consentimientos y avisos en el punto de captura
+
+> **Expediente de Cumplimiento Ley 21.719** · Sociedad Comercial Chillán Capacita Limitada
+> **Clasificación:** documento operativo. Los textos enmarcados van literalmente en los formularios de
+> la aplicación, en la ficha de matrícula en papel y en la señalética del recinto.
 
 **Versión:** 1.0 · **Fecha:** 2026-08-16
 
@@ -52,17 +56,48 @@ En la ficha de matrícula (en línea y en papel), junto a la firma del contrato:
 ## 4. Datos sensibles — certificado médico (Art. 16, consentimiento reforzado)
 
 **Obligatorio y separado.** Este consentimiento no puede ir mezclado con la aceptación del contrato ni
-con la casilla anterior: la ley exige que sea **expreso y específico para ese dato**.
+con la casilla anterior: la ley exige que sea **expreso y específico para ese dato**. Aplica **solo si el
+alumno decide subir un certificado médico para justificar una inasistencia** — no es parte del proceso
+de matrícula.
 
 > ☐ **Autorizo expresamente** que Sociedad Comercial Chillán Capacita Limitada trate mi **certificado
-> médico**, que es un dato de salud, con el único fin de acreditar mi aptitud para cursar y obtener la
-> licencia, conforme lo exige la normativa de escuelas de conductores. Entiendo que no se usará para
-> ninguna otra finalidad ni se compartirá con terceros distintos de la autoridad competente.
+> médico**, que es un dato de salud, con el único fin de justificar mi inasistencia a clases. Entiendo
+> que no se usará para ninguna otra finalidad ni se compartirá con terceros distintos de la autoridad
+> competente.
 
 **Regla operativa para secretaría:** si el alumno no marca esta casilla, **no se sube el certificado al
-sistema**. El certificado sigue siendo requisito para cursar (lo exige la normativa), pero su
-digitalización y conservación requieren esta autorización. En ese caso se deja constancia en papel de
-que el certificado fue exhibido y verificado.
+sistema**. Subir el certificado es siempre opcional; si el alumno prefiere no autorizarlo, la
+inasistencia se gestiona por los medios habituales sin digitalizar el documento.
+
+## 4 bis. Datos sensibles — cuestionario psicológico EPQ (Art. 16, consentimiento reforzado)
+
+**Aplica solo a los cursos profesionales.** El cuestionario EPQ (Eysenck Personality Questionnaire, 81
+ítems) es un instrumento psicométrico: sus respuestas son **datos de salud psíquica**, del mismo régimen
+que el certificado médico. Va **separado** de toda otra casilla y **antes** de mostrar la primera
+pregunta.
+
+> ☐ **Autorizo expresamente** que Sociedad Comercial Chillán Capacita Limitada trate mis respuestas al
+> cuestionario psicológico y su resultado, que son datos de salud psíquica, con el único fin de evaluar
+> mi aptitud para el curso profesional al que me preinscribo. Entiendo que mis respuestas las revisa **un
+> profesional**, que **ningún programa las puntúa automáticamente**, y que puedo rendir este cuestionario
+> en papel en la escuela en lugar de responderlo aquí.
+
+**Reglas operativas:**
+
+1. Si no marca la casilla, **no se guarda ninguna respuesta**. La preinscripción continúa igual: el
+   sistema ya contempla rendir el test presencialmente (el formulario permite omitirlo y el panel de
+   administración ofrece descargar el test en blanco para llenarlo en papel).
+2. **Nunca compartir las respuestas ni el resultado con terceros** — tampoco con un empleador que
+   financie el curso. Al empleador se le informa asistencia y resultado del curso, jamás una evaluación
+   psicológica.
+3. El resultado `apto`/`no apto` lo fija **una persona identificada**, no el sistema. Si algún día se
+   automatiza el puntaje, cambia el régimen legal (decisión automatizada, Art. 8 bis) y hay que rehacer
+   la EIPD antes de activarlo.
+
+> ⚠️ **Hallazgo de la corrida 2 (17-08-2026).** Esta casilla **no existe hoy en la aplicación**: el
+> formulario público guarda las 81 respuestas sin pedir autorización alguna, y la corrida 1 de la
+> auditoría no lo detectó. Corrección en el track SDD `0010-m`, **bloqueante de despliegue**. Ninguna
+> respuesta ha sido recolectada todavía, porque el sistema aún no se despliega.
 
 ## 5. Alumnos menores de edad
 
@@ -70,22 +105,13 @@ Cuando el alumno es menor de edad, **todos** los consentimientos anteriores los 
 representante legal, además de la autorización notarial que exige la normativa sectorial.
 
 > ☐ En mi calidad de padre/madre/representante legal de **[nombre del alumno]**, RUT **[RUT]**, autorizo
-> el tratamiento de sus datos personales en los términos de la Política de Privacidad, y **autorizo
-> expresamente** el tratamiento de su certificado médico.
+> el tratamiento de sus datos personales en los términos de la Política de Privacidad, y —si en algún
+> momento se sube un certificado médico para justificar una inasistencia— **autorizo expresamente** su
+> tratamiento con ese único fin.
 >
 > Nombre del representante: _______________ RUT: __________ Firma: __________
 
-## 6. Videovigilancia — aviso en el acceso
-
-Cartel visible en la entrada de las instalaciones (**no requiere consentimiento**, se basa en interés
-legítimo, pero **sí requiere informar**):
-
-> **RECINTO CON CÁMARAS DE SEGURIDAD**
-> Responsable: Sociedad Comercial Chillán Capacita Limitada, RUT 77.940.120-0.
-> Finalidad: seguridad de personas y bienes. Las imágenes se conservan 30 días.
-> Ejercicio de derechos: conductorchillan@gmail.com
-
-## 7. Revocación
+## 6. Revocación
 
 Como no se envían correos promocionales, hoy **no se requiere link de baja**. Si eso cambia, cada correo
 promocional debe llevarlo visible al pie: *"¿No quieres seguir recibiendo estos correos? Darme de baja —
@@ -95,7 +121,7 @@ La vía de revocación es escribir a **conductorchillan@gmail.com**. Retirar el
 consentimiento debe ser tan fácil como darlo. La baja se ejecuta de inmediato, sin pedir explicaciones
 ni condicionarla a nada.
 
-## 8. Registro del consentimiento (la prueba)
+## 7. Registro del consentimiento (la prueba)
 
 La carga de la prueba es de la escuela. Por cada titular hay que poder demostrar **qué aceptó, cuándo y
 cómo**. Guardar por cada consentimiento:
@@ -110,8 +136,9 @@ cómo**. Guardar por cada consentimiento:
 | Revocación | Fecha, si la hubo |
 
 > **Brecha actual:** el sistema **no registra hoy los consentimientos** de forma estructurada. Sin ese
-> registro, ante una fiscalización no hay forma de acreditar que el alumno consintió. Ver `RESUMEN.md`
-> §Brechas — es una de las remediaciones de código pendientes.
+> registro, ante una fiscalización no hay forma de acreditar que el alumno consintió. Es la acción
+> pendiente **A** de la portada del expediente, y **debe estar resuelta antes de matricular al primer
+> alumno** — un consentimiento no registrado no se puede reconstruir después.
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

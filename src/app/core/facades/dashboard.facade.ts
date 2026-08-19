@@ -348,7 +348,8 @@ export class DashboardFacade {
 
     let status = 'pending';
     if (row.status === 'in_progress') status = 'in_progress';
-    if (row.status === 'completed' || row.status === 'no_show') status = 'completed';
+    if (row.status === 'completed') status = 'completed';
+    if (row.status === 'no_show') status = 'no_show';
 
     return {
       id: `prac-${row.id}`,

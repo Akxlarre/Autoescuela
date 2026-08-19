@@ -1,4 +1,7 @@
-# Canal de ejercicio de derechos — Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL
+# Anexo 5 — Canal de ejercicio de derechos
+
+> **Expediente de Cumplimiento Ley 21.719** · Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL
+> **Clasificación:** documento operativo, con bitácora exhibible ante fiscalización.
 
 **Correo del canal:** otecchillan@gmail.com · **Versión:** 1.0 · **Fecha:** 2026-08-16
 
@@ -9,7 +12,7 @@
 
 ## 1. Texto público — "Tus derechos"
 
-Va en la web y en la política de privacidad:
+Va en la web y en la Política de Privacidad (Anexo 3, sección 6):
 
 > Como titular de tus datos puedes ejercer estos derechos: **acceso, rectificación, supresión,
 > oposición, portabilidad y bloqueo**, y **retirar tu consentimiento** cuando quieras.
@@ -72,13 +75,13 @@ explicando el motivo.
 ### Paso 6 — Cierre
 
 Responder **por escrito** (correo basta) y **guardar la respuesta** en la bitácora. La evidencia de haber
-respondido en plazo es lo que protege a la OTEC ante una fiscalización.
+respondido en plazo es lo que protege a la Autoescuela ante una fiscalización.
 
 ---
 
 ## 3. Límites: cuándo NO se puede suprimir
 
-Hay datos que la OTEC **está obligada por ley a conservar**, aunque el alumno pida borrarlos. En esos
+Hay datos que la Autoescuela **está obligada por ley a conservar**, aunque el alumno pida borrarlos. En esos
 casos no se niega la solicitud sin más: se responde explicando la norma concreta y se ejecuta la parte
 que sí procede.
 
@@ -110,4 +113,4 @@ negativa fundada.
 | 1 | | | | | | | | |
 
 ---
-*Borrador generado con compliance-cl (pack ley-21719). No constituye asesoría legal; es un borrador fundado en la normativa chilena vigente.*
+*Documento preparado internamente sobre la base del texto vigente de la Ley 21.719. No constituye asesoría legal.*

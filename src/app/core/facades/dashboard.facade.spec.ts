@@ -238,6 +238,37 @@ describe('DashboardFacade', () => {
       expect(result.every((c) => c.status !== 'cancelled')).toBe(true);
     });
 
+    it('preserva no_show en vez de colapsarlo a completed (fix-193)', async () => {
+      const rows = [
+        {
+          id: 2,
+          class_number: 1,
+          scheduled_at: '2026-08-18T17:30:00',
+          status: 'no_show',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.status).toBe('no_show');
+    });
+
     it('no incluye sesiones reserved de enrollments draft (fix-110)', async () => {
       const mock = makeSupabaseMock([]);
 

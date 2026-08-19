@@ -11,10 +11,29 @@
 // 1. Text & Font Primitives
 // ══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Unicode → byte WinAnsi (CP1252) para el rango 0x80–0x9F, que en WinAnsi NO son los mismos
+ * puntos de código que en Unicode (a diferencia de 0xA0–0xFF, que sí coinciden 1:1 con Latin-1).
+ * Sin esto, cualquier "—" (U+2014, guion largo) o comilla tipográfica cae al `else out += '?'` de
+ * abajo — apareció como "N° ?" en un contrato real (fix-192-m, ronda 4): el folio faltante se
+ * imprimía con un guion largo de fallback, y ESE carácter era el que se perdía, no el número.
+ */
+const WINANSI_HIGH: Record<number, number> = {
+  0x2018: 0x91, // '
+  0x2019: 0x92, // '
+  0x201c: 0x93, // "
+  0x201d: 0x94, // "
+  0x2013: 0x96, // –
+  0x2014: 0x97, // —
+  0x2022: 0x95, // •
+  0x2026: 0x85, // …
+};
+
 export function escapePdfWinAnsi(str: string): string {
   let out = '';
   for (let i = 0; i < str.length; i++) {
-    const c = str.charCodeAt(i);
+    let c = str.charCodeAt(i);
+    if (WINANSI_HIGH[c] !== undefined) c = WINANSI_HIGH[c];
     if (c === 92) out += '\\\\';
     else if (c === 40) out += '\\(';
     else if (c === 41) out += '\\)';
@@ -40,6 +59,16 @@ export function wrapLines(text: string, maxChars: number): string[] {
   return result;
 }
 
+/**
+ * Anchos oficiales Adobe AFM para Helvetica (unidades /1000 em). Corregidos fix-192-m ronda 7:
+ * la tabla anterior tenía varios valores "engordados" respecto al AFM real (C 667→722, G 722→778,
+ * L 611→556, i/j/l 278→222, y la mayoría de minúsculas 55-60/1000 más anchas de lo real). Como
+ * `textWidth()` alimenta tanto el centrado (`TC`) como la justificación palabra-por-palabra
+ * (`TJustifiedLine`) del contrato, subestimar cuánto "adelgaza" el texto real dejaba las líneas
+ * justificadas sistemáticamente cortas del margen derecho — el texto se veía "casi" justificado
+ * pero nunca perfecto, en cualquier visor (esto no depende de qué PDF reader se use: son las
+ * métricas del glifo, no un parámetro de renderizado).
+ */
 export const HV_REG: Record<string, number> = {
   ' ': 278,
   '!': 278,
@@ -48,7 +77,7 @@ export const HV_REG: Record<string, number> = {
   $: 556,
   '%': 889,
   '&': 667,
-  "'": 222,
+  "'": 191,
   '(': 333,
   ')': 333,
   '*': 389,
@@ -76,16 +105,16 @@ export const HV_REG: Record<string, number> = {
   '@': 1015,
   A: 667,
   B: 667,
-  C: 667,
+  C: 722,
   D: 722,
   E: 667,
   F: 611,
-  G: 722,
+  G: 778,
   H: 722,
   I: 278,
   J: 500,
   K: 667,
-  L: 611,
+  L: 556,
   M: 833,
   N: 722,
   O: 778,
@@ -98,33 +127,33 @@ export const HV_REG: Record<string, number> = {
   V: 667,
   W: 944,
   X: 667,
-  Y: 611,
+  Y: 667,
   Z: 611,
   a: 556,
-  b: 611,
-  c: 556,
-  d: 611,
+  b: 556,
+  c: 500,
+  d: 556,
   e: 556,
-  f: 333,
-  g: 611,
-  h: 611,
-  i: 278,
-  j: 278,
-  k: 556,
-  l: 278,
-  m: 889,
-  n: 611,
-  o: 611,
-  p: 611,
-  q: 611,
+  f: 278,
+  g: 556,
+  h: 556,
+  i: 222,
+  j: 222,
+  k: 500,
+  l: 222,
+  m: 833,
+  n: 556,
+  o: 556,
+  p: 556,
+  q: 556,
   r: 333,
-  s: 556,
+  s: 500,
   t: 278,
-  u: 611,
-  v: 556,
-  w: 778,
-  x: 556,
-  y: 556,
+  u: 556,
+  v: 500,
+  w: 722,
+  x: 500,
+  y: 500,
   z: 500,
   Á: 667,
   É: 667,
@@ -135,21 +164,29 @@ export const HV_REG: Record<string, number> = {
   Ü: 722,
   á: 556,
   é: 556,
-  í: 278,
-  ó: 611,
-  ú: 611,
-  ñ: 611,
-  ü: 611,
+  í: 222,
+  ó: 556,
+  ú: 556,
+  ñ: 556,
+  ü: 556,
 };
 
 export const HV_BOLD: Record<string, number> = {
   ' ': 278,
+  '!': 333,
+  '"': 474,
+  '#': 556,
+  $: 556,
+  '%': 889,
+  '&': 722,
+  "'": 238,
   '(': 333,
   ')': 333,
+  '*': 389,
+  '+': 584,
+  ',': 278,
   '-': 333,
   '.': 278,
-  ',': 278,
-  ':': 333,
   '/': 278,
   '0': 556,
   '1': 556,
@@ -161,9 +198,16 @@ export const HV_BOLD: Record<string, number> = {
   '7': 556,
   '8': 556,
   '9': 556,
+  ':': 333,
+  ';': 333,
+  '<': 584,
+  '=': 584,
+  '>': 584,
+  '?': 611,
+  '@': 975,
   A: 722,
   B: 722,
-  C: 667,
+  C: 722,
   D: 722,
   E: 667,
   F: 611,
@@ -185,7 +229,7 @@ export const HV_BOLD: Record<string, number> = {
   V: 667,
   W: 944,
   X: 667,
-  Y: 611,
+  Y: 667,
   Z: 611,
   a: 556,
   b: 611,
@@ -210,7 +254,7 @@ export const HV_BOLD: Record<string, number> = {
   u: 611,
   v: 556,
   w: 778,
-  x: 611,
+  x: 556,
   y: 556,
   z: 500,
   Á: 722,
@@ -546,69 +590,53 @@ export function assemblePdf(
   H: number,
   logo?: AnyPdfImage | null,
   photo?: AnyPdfImage | null,
+  /** Tercer slot de imagen opcional (`/Im3`). Añadido para el contrato (fix-192-m), que necesita
+   * logo + foto carnet + firma a la vez — los dos slots originales ya estaban ambos ocupados. */
+  extra?: AnyPdfImage | null,
 ): Uint8Array {
   const imageObjs: string[] = [];
-  let logoRef = '';
-  let photoRef = '';
   let nextId = 5;
 
-  if (logo) {
-    if (logo.kind === 'png') {
-      const smaskRef = logo.alpha ? `${nextId + 1} 0 R` : '';
-      const smask = smaskRef ? ` /SMask ${smaskRef}` : '';
-      const a85rgb = encodeAscii85(logo.rgb);
+  /** Emite los objetos XObject de una imagen (+ su SMask de alpha si tiene) y devuelve su
+   * referencia PDF ("N 0 R"), o '' si no hay imagen. Compartido entre logo/photo/extra. */
+  const embedImage = (img: AnyPdfImage | null | undefined): string => {
+    if (!img) return '';
+    if (img.kind === 'jpg') {
+      const a85jpg = encodeAscii85(img.raw);
       imageObjs.push(
-        `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height}` +
-          ` /ColorSpace /DeviceRGB /BitsPerComponent 8${smask}` +
-          ` /Filter /ASCII85Decode /Length ${a85rgb.length} >>\nstream\n${a85rgb}\nendstream\nendobj`,
-      );
-      logoRef = `${nextId} 0 R`;
-      nextId++;
-      if (logo.alpha) {
-        const a85alpha = encodeAscii85(logo.alpha);
-        imageObjs.push(
-          `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height}` +
-            ` /ColorSpace /DeviceGray /BitsPerComponent 8` +
-            ` /Filter /ASCII85Decode /Length ${a85alpha.length} >>\nstream\n${a85alpha}\nendstream\nendobj`,
-        );
-        nextId++;
-      }
-    }
-  }
-
-  if (photo) {
-    if (photo.kind === 'png') {
-      const smaskRef = photo.alpha ? `${nextId + 1} 0 R` : '';
-      const smask = smaskRef ? ` /SMask ${smaskRef}` : '';
-      const a85rgb = encodeAscii85(photo.rgb);
-      imageObjs.push(
-        `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${photo.width} /Height ${photo.height}` +
-          ` /ColorSpace /DeviceRGB /BitsPerComponent 8${smask}` +
-          ` /Filter /ASCII85Decode /Length ${a85rgb.length} >>\nstream\n${a85rgb}\nendstream\nendobj`,
-      );
-      photoRef = `${nextId} 0 R`;
-      nextId++;
-      if (photo.alpha) {
-        const a85alpha = encodeAscii85(photo.alpha);
-        imageObjs.push(
-          `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${photo.width} /Height ${photo.height}` +
-            ` /ColorSpace /DeviceGray /BitsPerComponent 8` +
-            ` /Filter /ASCII85Decode /Length ${a85alpha.length} >>\nstream\n${a85alpha}\nendstream\nendobj`,
-        );
-        nextId++;
-      }
-    } else {
-      // JPEG: ASCII85 + DCT
-      const a85jpg = encodeAscii85(photo.raw);
-      imageObjs.push(
-        `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${photo.width} /Height ${photo.height}` +
+        `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height}` +
           ` /ColorSpace /DeviceRGB /BitsPerComponent 8` +
           ` /Filter [/ASCII85Decode /DCTDecode] /Length ${a85jpg.length} >>\nstream\n${a85jpg}\nendstream\nendobj`,
       );
-      photoRef = `${nextId} 0 R`;
+      const ref = `${nextId} 0 R`;
+      nextId++;
+      return ref;
+    }
+    const smaskRef = img.alpha ? `${nextId + 1} 0 R` : '';
+    const smask = smaskRef ? ` /SMask ${smaskRef}` : '';
+    const a85rgb = encodeAscii85(img.rgb);
+    imageObjs.push(
+      `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height}` +
+        ` /ColorSpace /DeviceRGB /BitsPerComponent 8${smask}` +
+        ` /Filter /ASCII85Decode /Length ${a85rgb.length} >>\nstream\n${a85rgb}\nendstream\nendobj`,
+    );
+    const ref = `${nextId} 0 R`;
+    nextId++;
+    if (img.alpha) {
+      const a85alpha = encodeAscii85(img.alpha);
+      imageObjs.push(
+        `${nextId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height}` +
+          ` /ColorSpace /DeviceGray /BitsPerComponent 8` +
+          ` /Filter /ASCII85Decode /Length ${a85alpha.length} >>\nstream\n${a85alpha}\nendstream\nendobj`,
+      );
       nextId++;
     }
-  }
+    return ref;
+  };
+
+  const logoRef = embedImage(logo);
+  const photoRef = embedImage(photo);
+  const extraRef = embedImage(extra);
 
   const pageObjs: string[] = [];
   const pageIds: number[] = [];
@@ -621,6 +649,7 @@ export function assemblePdf(
     let xobjDict = '';
     if (logoRef) xobjDict += ` /Im1 ${logoRef}`;
     if (photoRef) xobjDict += ` /Im2 ${photoRef}`;
+    if (extraRef) xobjDict += ` /Im3 ${extraRef}`;
 
     pageObjs.push(`${cId} 0 obj\n<< /Length ${s.length} >>\nstream\n${s}\nendstream\nendobj`);
     pageObjs.push(
