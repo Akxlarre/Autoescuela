@@ -1,13 +1,17 @@
-
 import { describe, it, expect } from 'vitest';
-import { getStatusVisual, getStatusLabel, getDotStyle, SessionStatus } from './schedule-status.utils';
+import {
+  getStatusVisual,
+  getStatusLabel,
+  getDotStyle,
+  SessionStatus,
+} from './schedule-status.utils';
 
 describe('schedule-status.utils', () => {
   describe('getStatusVisual', () => {
     it('should return correct visual for "in_progress"', () => {
       const visual = getStatusVisual('in_progress');
       expect(visual.label).toBe('En curso');
-      expect(visual.borderColor).toBe('var(--state-warning)');
+      expect(visual.borderColor).toBe('var(--state-info)');
       expect(visual.bgClass).toBe('bg-brand');
     });
 

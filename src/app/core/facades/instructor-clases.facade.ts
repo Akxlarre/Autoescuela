@@ -577,8 +577,8 @@ export class InstructorClasesFacade {
       scheduled: 'info',
       in_progress: 'warning',
       completed: 'success',
-      cancelled: 'error',
-      no_show: 'muted',
+      cancelled: 'danger',
+      no_show: 'warn',
     };
 
     const labelMap: Record<string, string> = {
@@ -586,7 +586,7 @@ export class InstructorClasesFacade {
       in_progress: 'En Curso',
       completed: 'Completada',
       cancelled: 'Cancelada',
-      no_show: 'Falta',
+      no_show: 'Ausente',
     };
 
     return {

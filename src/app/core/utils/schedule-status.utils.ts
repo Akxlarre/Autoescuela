@@ -1,16 +1,15 @@
-
 export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
 export interface StatusVisual {
   label: string;
-  borderColor: string;    // CSS var para border-left accent
-  dotBg: string;          // CSS var para dot background
-  dotBorder: string;      // CSS border para dot
-  textColor: string;      // Color del texto dentro del bloque
-  bgClass: string;        // Tailwind/token class para fondo del bloque
-  opacity: number;        // 0-1
-  interactive: boolean;   // ¿clickeable?
-  icon: string | null;    // Lucide icon name
+  borderColor: string; // CSS var para border-left accent
+  dotBg: string; // CSS var para dot background
+  dotBorder: string; // CSS border para dot
+  textColor: string; // Color del texto dentro del bloque
+  bgClass: string; // Tailwind/token class para fondo del bloque
+  opacity: number; // 0-1
+  interactive: boolean; // ¿clickeable?
+  icon: string | null; // Lucide icon name
 }
 
 export function getStatusVisual(status: SessionStatus): StatusVisual {
@@ -18,14 +17,14 @@ export function getStatusVisual(status: SessionStatus): StatusVisual {
     case 'in_progress':
       return {
         label: 'En curso',
-        borderColor: 'var(--state-warning)',
+        borderColor: 'var(--state-info)',
         dotBg: 'var(--color-primary)',
         dotBorder: '2px solid var(--color-primary)',
         textColor: 'var(--color-primary-text)',
         bgClass: 'bg-brand',
         opacity: 1.0,
         interactive: true,
-        icon: 'user'
+        icon: 'user',
       };
     case 'scheduled':
       return {
@@ -37,7 +36,7 @@ export function getStatusVisual(status: SessionStatus): StatusVisual {
         bgClass: 'bg-surface',
         opacity: 1.0,
         interactive: true,
-        icon: null
+        icon: null,
       };
     case 'completed':
       return {
@@ -49,31 +48,31 @@ export function getStatusVisual(status: SessionStatus): StatusVisual {
         bgClass: 'bg-surface',
         opacity: 0.6,
         interactive: true,
-        icon: 'check'
+        icon: 'check',
       };
     case 'cancelled':
       return {
         label: 'Cancelada',
-        borderColor: 'var(--border-subtle)',
+        borderColor: 'var(--state-error)',
         dotBg: 'transparent',
         dotBorder: '2px dashed var(--border-subtle)',
         textColor: 'var(--text-muted)',
         bgClass: 'bg-surface',
         opacity: 0.4,
         interactive: false,
-        icon: null
+        icon: null,
       };
     case 'no_show':
       return {
         label: 'No asistió',
-        borderColor: 'var(--state-error)',
+        borderColor: 'var(--state-warning)',
         dotBg: 'var(--state-error-bg)',
         dotBorder: '2px solid var(--state-error)',
         textColor: 'var(--text-muted)',
         bgClass: 'bg-surface',
         opacity: 0.5,
         interactive: false,
-        icon: 'x'
+        icon: 'x',
       };
     default:
       return {
@@ -85,7 +84,7 @@ export function getStatusVisual(status: SessionStatus): StatusVisual {
         bgClass: 'bg-surface',
         opacity: 1.0,
         interactive: false,
-        icon: null
+        icon: null,
       };
   }
 }
@@ -97,10 +96,10 @@ export function getStatusLabel(status: SessionStatus): string {
 export function getDotStyle(status: SessionStatus): Record<string, string> {
   const visual = getStatusVisual(status);
   const ring = { 'box-shadow': '0 0 0 3px var(--bg-surface)' };
-  
+
   return {
     background: visual.dotBg,
     border: visual.dotBorder,
-    ...ring
+    ...ring,
   };
 }
