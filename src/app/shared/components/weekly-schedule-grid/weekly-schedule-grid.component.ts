@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { getStatusVisual, getStatusLabel, getDotStyle } from '@core/utils/schedule-status.utils';
+import { getStatusVisual, getStatusLabel } from '@core/utils/schedule-status.utils';
 import { filterVisibleWeekDays } from '@core/utils/schedule-week-days.utils';
 import type {
   ScheduleBlock,
@@ -60,7 +60,7 @@ import type {
         <div class="flex items-center p-1 rounded-xl bg-elevated border border-border-subtle">
           <button
             aria-label="Semana anterior"
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer hover:bg-subtle"
             (click)="prevWeek.emit()"
             title="Semana anterior"
             data-llm-action="prev-week"
@@ -68,7 +68,7 @@ import type {
             <app-icon name="chevron-left" [size]="18" />
           </button>
           <button
-            class="item-title px-4 h-8 rounded-lg transition-colors mx-1 cursor-pointer"
+            class="item-title px-4 h-8 rounded-lg transition-colors mx-1 cursor-pointer hover:bg-subtle"
             (click)="today.emit()"
             data-llm-action="go-today"
           >
@@ -76,7 +76,7 @@ import type {
           </button>
           <button
             aria-label="Siguiente semana"
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary cursor-pointer hover:bg-subtle"
             (click)="nextWeek.emit()"
             title="Siguiente semana"
             data-llm-action="next-week"
@@ -270,13 +270,16 @@ export class WeeklyScheduleGridComponent {
   /** Cantidad de cards fantasma por columna durante el loading — solo variedad visual. */
   readonly skeletonColumnCounts = [2, 1, 2, 3, 1, 2];
 
-  readonly legendItems = (['scheduled', 'in_progress', 'completed', 'cancelled'] as const).map(
-    (s) => ({
+  readonly legendItems = (
+    ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'] as const
+  ).map((s) => {
+    const borderColor = getStatusVisual(s).borderColor;
+    return {
       label: getStatusLabel(s),
-      dotStyle: `background: ${getDotStyle(s)['background']}; border: ${getDotStyle(s)['border']};`,
+      dotStyle: `background: ${borderColor}; border: 2px solid ${borderColor};`,
       emphasis: s === 'in_progress',
-    }),
-  );
+    };
+  });
 
   times(n: number): number[] {
     return Array.from({ length: n }, (_, i) => i);
