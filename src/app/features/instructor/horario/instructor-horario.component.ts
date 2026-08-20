@@ -20,6 +20,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
+import { todayIso, toISODate } from '@core/utils/date.utils';
 import { LayoutService } from '@core/services/ui/layout.service';
 
 @Component({
@@ -218,7 +219,7 @@ export class InstructorHorarioComponent implements OnInit {
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
 
     // Also sync the day to the new week's Monday
-    this.selectedDate.set(this.currentWeekDate.split('T')[0]);
+    this.selectedDate.set(toISODate(date));
     this.selectedDayDate.set(null); // Clear desktop selection on week change
   }
 
@@ -243,12 +244,12 @@ export class InstructorHorarioComponent implements OnInit {
     const parts = this.selectedDate().split('-');
     const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
     dt.setDate(dt.getDate() + offset);
-    this.onMobileDaySelect(dt.toISOString().split('T')[0]);
+    this.onMobileDaySelect(toISODate(dt));
   }
 
   resetToToday() {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = todayIso();
     this.selectedDate.set(todayStr);
     this.selectedDayDate.set(todayStr);
     this.currentWeekDate = today.toISOString();

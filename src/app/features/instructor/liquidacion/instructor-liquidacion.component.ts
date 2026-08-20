@@ -25,7 +25,6 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     DatePipe,
     SectionHeroComponent,
     AlertCardComponent,
-    IconComponent,
     SkeletonBlockComponent,
     HorizontalBarChartComponent,
     BentoGridLayoutDirective,
@@ -61,7 +60,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             <!-- Breakdown Chart -->
             <div class="card p-6 shrink-0" appCardHover appScrollReveal>
               <h3
-                class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
+                class="font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
               >
                 Desglose de Horas Realizadas
               </h3>
@@ -74,14 +73,8 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               appCardHover
               [appScrollReveal]="{ delay: 0.1 }"
             >
-              <div
-                class="px-6 py-4 border-b border-border-subtle flex justify-between items-center shrink-0"
-              >
+              <div class="px-6 py-4 border-b border-border-subtle shrink-0">
                 <h3 class="text-lg font-bold text-text-primary">Registro Diario (Mes Actual)</h3>
-                <button class="btn-secondary text-xs" data-llm-action="export-pdf">
-                  <app-icon name="download" [size]="14" />
-                  Exportar PDF
-                </button>
               </div>
 
               <div class="overflow-x-auto overflow-y-auto flex-1 min-h-0">
