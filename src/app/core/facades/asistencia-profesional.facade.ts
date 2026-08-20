@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type {
   SesionProfesional,
   SesionAlumnoAsistencia,
@@ -444,6 +445,11 @@ export class AsistenciaProfesionalFacade {
         }
       }
 
+      const convalidationMap = await fetchConvalidationMap(
+        this.supabase.client,
+        (enrollments as { id: number }[]).map((e) => e.id),
+      );
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const alumnos: SesionAlumnoAsistencia[] = (enrollments as any[]).map((e) => {
         const u = e.students?.users;
@@ -466,6 +472,7 @@ export class AsistenciaProfesionalFacade {
           initials: initials || '?',
           status: (att?.status as AsistenciaStatus) ?? null,
           justification: att?.justification ?? null,
+          convalidatedLicense: convalidationMap.get(e.id) ?? null,
         };
       });
 
@@ -673,6 +680,11 @@ export class AsistenciaProfesionalFacade {
         (rows ?? []).filter((r) => r.enrollment_id === enrollmentId && r.status === 'present')
           .length;
 
+      const convalidationMap = await fetchConvalidationMap(
+        this.supabase.client,
+        (enrollments as { id: number }[]).map((e) => e.id),
+      );
+
       const resumen: ResumenAlumnoAsistencia[] = (enrollments as any[]).map((e) => {
         const u = e.students?.users;
         const nombre = [u?.paternal_last_name, u?.maternal_last_name, u?.first_names]
@@ -709,6 +721,7 @@ export class AsistenciaProfesionalFacade {
           pctTeoria,
           pctPractica,
           pctAsistencia,
+          convalidatedLicense: convalidationMap.get(e.id) ?? null,
         };
       });
 
@@ -832,6 +845,11 @@ export class AsistenciaProfesionalFacade {
         sigMap[sig.enrollment_id] = { id: sig.id, signedAt: sig.signed_at };
       }
 
+      const convalidationMap = await fetchConvalidationMap(
+        this.supabase.client,
+        ((enrollRes.data ?? []) as { id: number }[]).map((e) => e.id),
+      );
+
       const result: AlumnoFirmaSemana[] = ((enrollRes.data ?? []) as any[]).map((e) => {
         const u = e.students?.users;
         const nombre = [u?.paternal_last_name, u?.maternal_last_name, u?.first_names]
@@ -859,6 +877,7 @@ export class AsistenciaProfesionalFacade {
           signatureId: sig?.id ?? null,
           signedAt: sig?.signedAt ?? null,
           pctTeoriaSemana,
+          convalidatedLicense: convalidationMap.get(e.id) ?? null,
         };
       });
 

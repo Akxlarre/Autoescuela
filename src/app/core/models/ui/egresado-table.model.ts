@@ -30,4 +30,6 @@ export interface EgresadoTableRow {
   nroCertificado: string | null;
   /** Saldo pendiente de pago */
   saldoPendiente: number;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }

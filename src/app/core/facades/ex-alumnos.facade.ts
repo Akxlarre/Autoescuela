@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
@@ -170,11 +171,15 @@ export class ExAlumnosFacade {
     }
 
     const rows = (data as unknown as EgresadoRow[]) ?? [];
-    this._egresados.set(rows.map((r: EgresadoRow) => this.mapRow(r)));
+    const convalidationMap = await fetchConvalidationMap(
+      this.supabase.client,
+      rows.map((r) => r.id),
+    );
+    this._egresados.set(rows.map((r: EgresadoRow) => this.mapRow(r, convalidationMap)));
   }
 
   // ── Helpers privados ─────────────────────────────────────────────────────────
-  private mapRow(r: EgresadoRow): EgresadoTableRow {
+  private mapRow(r: EgresadoRow, convalidationMap: Map<number, 'A4' | 'A3'>): EgresadoTableRow {
     const u = r.students?.users;
 
     const nombre: string = u
@@ -206,6 +211,7 @@ export class ExAlumnosFacade {
       branchId,
       nroCertificado: null,
       saldoPendiente: r.pending_balance ?? 0,
+      convalidatedLicense: convalidationMap.get(r.id) ?? null,
     };
   }
 

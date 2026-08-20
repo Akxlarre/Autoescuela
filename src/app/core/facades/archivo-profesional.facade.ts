@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { calcAverage, getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type {
   ArchivoAlumnoRow,
   ArchivoCursoOption,
@@ -281,6 +282,8 @@ export class ArchivoFacade {
     const countPresent = (att: any[], enrollmentId: number): number =>
       att.filter((r) => r.enrollment_id === enrollmentId && r.status === 'present').length;
 
+    const convalidationMap = await fetchConvalidationMap(this.supabase.client, enrollmentIds);
+
     const rows: ArchivoAlumnoRow[] = (enrollments as any[]).map((e) => {
       const student = e.students;
       const user = student.users;
@@ -340,6 +343,7 @@ export class ArchivoFacade {
         notaPromedio,
         promedioAprobado,
         aprobado,
+        convalidatedLicense: convalidationMap.get(e.id) ?? null,
       };
     });
 
