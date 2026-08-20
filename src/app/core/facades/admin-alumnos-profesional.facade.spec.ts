@@ -141,6 +141,34 @@ describe('AdminAlumnosProfesionalFacade', () => {
     expect(row.estado).toBe('Activo');
   });
 
+  it('mapea convalidatedLicense desde license_validations cuando el alumno convalida (fix-195)', async () => {
+    mockTables({
+      enrollments: [makeProEnrollment()],
+      v_professional_attendance: [],
+      professional_module_grades: [],
+      license_validations: [{ enrollment_id: 100, convalidated_license: 'A4' }],
+    });
+
+    await facade.initialize();
+
+    const row = facade.alumnos()[0];
+    expect(row.convalidatedLicense).toBe('A4');
+  });
+
+  it('convalidatedLicense es null cuando el alumno no tiene registro de convalidación (fix-195)', async () => {
+    mockTables({
+      enrollments: [makeProEnrollment()],
+      v_professional_attendance: [],
+      professional_module_grades: [],
+      license_validations: [],
+    });
+
+    await facade.initialize();
+
+    const row = facade.alumnos()[0];
+    expect(row.convalidatedLicense).toBeNull();
+  });
+
   it('edge: alumno sin promoción ni notas no rompe (AC-E3)', async () => {
     mockTables({
       enrollments: [

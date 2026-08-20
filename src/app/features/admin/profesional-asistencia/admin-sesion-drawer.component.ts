@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -30,6 +31,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
     FormsModule,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     AsyncBtnComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
@@ -251,13 +253,20 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                           {{ alumno.initials }}
                         </div>
                         <div class="min-w-0">
-                          <p
-                            class="truncate text-sm font-medium text-text-primary"
-                            [pTooltip]="alumno.nombre"
-                            tooltipPosition="top"
-                          >
-                            {{ alumno.nombre }}
-                          </p>
+                          <div class="flex items-center gap-1.5">
+                            <p
+                              class="truncate text-sm font-medium text-text-primary"
+                              [pTooltip]="alumno.nombre"
+                              tooltipPosition="top"
+                            >
+                              {{ alumno.nombre }}
+                            </p>
+                            @if (alumno.convalidatedLicense) {
+                              <app-badge variant="info"
+                                >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                              >
+                            }
+                          </div>
                           <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                         </div>
                       </div>

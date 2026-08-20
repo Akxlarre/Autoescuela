@@ -1042,6 +1042,48 @@
   éste ya es distinto de su default vacío.
 - **Fuente:** `specs/fixes/fix-192-m-contrato-pdf-no-coincide-con-real` (rondas 10-11)
 
+### DG-077 — `license_validations` se escribe correctamente en la matrícula, pero ninguna vista la leía
+- **Trampa:** asumir que porque un alumno convalidado (A2+conv.A4, o A5+conv.A3) se matricula
+  bien y aparece con normalidad en todos los listados profesionales, la convalidación es visible
+  en algún lado. No lo era: `enrollment.facade.ts` sí escribe la fila en `license_validations`
+  (`enrollment_id`, `convalidated_license`) al marcar "convalida simultáneamente" en el paso 1 del
+  wizard, pero el `enrollment` en sí queda **idéntico** a uno normal — su `promotion_course_id`
+  siempre apunta al curso madre (A2/A5), nunca a `conv_a4`/`conv_a3`. Ningún SELECT de los facades
+  de listado (`admin-alumnos-profesional`, `ex-alumnos`, `asistencia-profesional`,
+  `evaluaciones-profesional`, `certificacion-profesional`, `archivo-profesional`) hacía join
+  contra `license_validations`.
+- **Realidad:** la única mención en pantalla era un toast efímero en el paso 5 del wizard, en el
+  momento mismo de matricular. Después de eso, secretaría/administración no tenía forma de saber
+  mirando ninguna vista quién estaba convalidando qué licencia.
+- **Regla de aplicabilidad:** cualquier facade nuevo que liste alumnos profesionales por
+  `enrollment_id` debe cruzar contra `license_validations` (helper: `fetchConvalidationMap()` en
+  `core/utils/convalidation.utils.ts`) si se espera que el operador distinga convalidados —
+  no basta con que el dato "exista en BD"; si ningún join lo trae, es invisible.
+- **Fuente:** `specs/fixes/fix-195-m-indicador-visual-convalidacion`
+
+### DG-078 — Clase Profesional no tenía NINGÚN mecanismo (manual ni automático) para pasar una matrícula a ex-alumno
+- **Trampa:** asumir que porque `marcarComoExAlumno()` existe en `admin-alumno-detalle.facade.ts`
+  y `ExAlumnosFacade` ya filtra y separa `class_b`/`professional` en dos listas, ambos grupos
+  quedan al día en "Ex-Alumnos" de la misma forma. No era así: el botón "Marcar como Ex-Alumno"
+  (fix-012-i) solo se muestra cuando `licenseGroup === 'class_b'`, y su gate
+  (`certificateEmailSent`) solo se calcula para ese mismo grupo — para profesional queda
+  hardcodeado en `false`, así que ni el botón aparece ni funcionaría si apareciera. Tampoco existía
+  ningún equivalente automático: el cron `auto_transition_promotion_status()` (pg_cron diario
+  06:00 UTC) transiciona `professional_promotions.status` a `finished` cuando `end_date <
+  CURRENT_DATE`, y el trigger `trg_cascade_promotion_status` ya propagaba ese cambio a
+  `promotion_courses`, pero ninguno de los dos tocaba `enrollments` — las matrículas quedaban
+  `active` para siempre, invisibles en "Ex-Alumnos Profesional" aunque la promoción llevara meses
+  terminada.
+- **Realidad:** cada feature nueva de Clase Profesional necesita verificarse contra su propio
+  Facade/trigger — no puede asumirse que un mecanismo construido para Clase B (botón manual gateado
+  por certificado enviado por email) tiene un equivalente para Profesional solo porque ambos
+  comparten la tabla `enrollments` y el filtro `status='completed'` en `ExAlumnosFacade`.
+- **Regla de aplicabilidad:** al extender un flujo de negocio que ya distingue `class_b` vs
+  `professional` en algún punto (gate de UI, columna `license_group`, Facade separado), verificar
+  explícitamente que el nuevo comportamiento cubre ambos grupos — o documentar por qué uno queda
+  fuera de scope.
+- **Fuente:** `specs/fixes/fix-196-m-promocion-finalizada-marca-ex-alumnos`
+
 ---
 
 ## Convención para agregar una entrada nueva

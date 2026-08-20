@@ -45,6 +45,8 @@ export interface ArchivoAlumnoRow {
   promedioAprobado: boolean | null;
   // Estado final: teoría ≥ 75% AND promedio ≥ 75
   aprobado: boolean;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }
 
 export interface ArchivoKpis {

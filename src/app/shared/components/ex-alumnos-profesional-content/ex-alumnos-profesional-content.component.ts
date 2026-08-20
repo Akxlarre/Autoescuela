@@ -181,10 +181,19 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                       {{ egresado.nroExpediente ?? '—' }}
                     </td>
                     <td>
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
-                        >{{ egresado.licencia }}</span
-                      >
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                          >{{ egresado.licencia }}</span
+                        >
+                        @if (egresado.convalidatedLicense) {
+                          <p-tag
+                            [value]="'Convalida ' + egresado.convalidatedLicense"
+                            severity="info"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5"
+                          ></p-tag>
+                        }
+                      </div>
                     </td>
                     <td class="text-xs text-text-secondary">
                       <div class="flex flex-col">
@@ -290,11 +299,20 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                           >
                         </div>
                       </div>
-                      <p-tag
-                        [value]="egresado.licencia"
-                        severity="secondary"
-                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                      ></p-tag>
+                      <div class="flex flex-col items-end gap-1 shrink-0">
+                        <p-tag
+                          [value]="egresado.licencia"
+                          severity="secondary"
+                          styleClass="text-2xs font-bold px-2 py-0.5"
+                        ></p-tag>
+                        @if (egresado.convalidatedLicense) {
+                          <p-tag
+                            [value]="'Convalida ' + egresado.convalidatedLicense"
+                            severity="info"
+                            styleClass="text-2xs font-bold px-2 py-0.5"
+                          ></p-tag>
+                        }
+                      </div>
                     </div>
 
                     <!-- Body -->

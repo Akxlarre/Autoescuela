@@ -18,6 +18,7 @@ describe('ExAlumnosFacade', () => {
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
       }),
     };
@@ -98,6 +99,7 @@ describe('ExAlumnosFacade', () => {
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [row], error: null }),
           }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
       }),
     };
@@ -136,6 +138,7 @@ describe('ExAlumnosFacade', () => {
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [row], error: null }),
           }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
       }),
     };
@@ -144,6 +147,46 @@ describe('ExAlumnosFacade', () => {
 
     const egresado = facade.egresadosClaseBList()[0];
     expect(egresado.branchId).toBe(3);
+  });
+
+  it('mapea convalidatedLicense desde license_validations para egresados profesionales (fix-195)', async () => {
+    const row = {
+      id: 300,
+      number: 'EXP-300',
+      pending_balance: 0,
+      updated_at: '2026-01-15T00:00:00Z',
+      license_group: 'professional',
+      courses: { name: 'Profesional A2', code: 'professional_a2' },
+      branches: { id: 1, name: 'Sede Central' },
+      students: {
+        id: 77,
+        users: {
+          first_names: 'Rosa',
+          paternal_last_name: 'Díaz',
+          maternal_last_name: null,
+          rut: '33.333.333-3',
+          email: 'rosa@correo.cl',
+        },
+      },
+    };
+    (supabaseSpy as any).client = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+          }),
+          in: vi.fn().mockResolvedValue({
+            data: [{ enrollment_id: 300, convalidated_license: 'A4' }],
+            error: null,
+          }),
+        }),
+      }),
+    };
+
+    await facade.loadEgresados();
+
+    const egresado = facade.egresadosProfesionalList()[0];
+    expect(egresado.convalidatedLicense).toBe('A4');
   });
 
   describe('loadStatistics — annualEgresadosTotal (fix-005-i, H-003)', () => {

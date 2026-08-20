@@ -38,4 +38,6 @@ export interface AlumnoProfesionalTableRow {
   saldo: number;
   /** enrollments.id para navegación/acciones */
   enrollmentId: number;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }

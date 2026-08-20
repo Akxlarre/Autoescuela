@@ -517,9 +517,16 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                             {{ fila.initials }}
                           </div>
                           <div class="min-w-0">
-                            <p class="font-bold text-text-primary text-xs truncate">
-                              {{ fila.nombre }}
-                            </p>
+                            <div class="flex items-center gap-1.5">
+                              <p class="font-bold text-text-primary text-xs truncate">
+                                {{ fila.nombre }}
+                              </p>
+                              @if (fila.convalidatedLicense) {
+                                <app-badge variant="info"
+                                  >Convalida {{ fila.convalidatedLicense }}</app-badge
+                                >
+                              }
+                            </div>
                             <p class="text-2xs text-text-muted">{{ fila.rut }}</p>
                           </div>
                         </div>
@@ -600,7 +607,14 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                         {{ fila.initials }}
                       </div>
                       <div class="min-w-0">
-                        <p class="item-title truncate">{{ fila.nombre }}</p>
+                        <div class="flex items-center gap-1.5">
+                          <p class="item-title truncate">{{ fila.nombre }}</p>
+                          @if (fila.convalidatedLicense) {
+                            <app-badge variant="info"
+                              >Convalida {{ fila.convalidatedLicense }}</app-badge
+                            >
+                          }
+                        </div>
                         <p class="text-2xs text-text-muted">{{ fila.rut }}</p>
                       </div>
                     </div>

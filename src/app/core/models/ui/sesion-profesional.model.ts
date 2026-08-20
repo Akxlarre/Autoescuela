@@ -27,6 +27,8 @@ export interface SesionAlumnoAsistencia {
   initials: string;
   status: AsistenciaStatus | null;
   justification: string | null;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }
 
 export interface PromocionOption {
@@ -56,6 +58,8 @@ export interface ResumenAlumnoAsistencia {
   pctTeoria: number;
   pctPractica: number;
   pctAsistencia: number;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }
 
 export interface WeekDay {
@@ -79,4 +83,6 @@ export interface AlumnoFirmaSemana {
   signedAt: string | null;
   /** % de sesiones teóricas completadas en la semana visible */
   pctTeoriaSemana: number;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }

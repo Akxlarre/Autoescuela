@@ -8,6 +8,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { calcAverage } from '@core/utils/professional-modules';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type {
   CertificacionProfesionalAlumnoRow,
   CertificacionProfesionalKpis,
@@ -566,6 +567,11 @@ export class CertificacionProfesionalFacade {
     const countPresent = (att: any[], enrollmentId: number): number =>
       att.filter((r) => r.enrollment_id === enrollmentId && r.status === 'present').length;
 
+    const convalidationMap = await fetchConvalidationMap(
+      this.supabase.client,
+      (enrollments as { id: number }[]).map((e) => e.id),
+    );
+
     const rows: CertificacionProfesionalAlumnoRow[] = (enrollments as any[]).map((e) => {
       const student = e.students;
       const user = student.users;
@@ -624,6 +630,7 @@ export class CertificacionProfesionalFacade {
         certificadoStatus: hasPdf ? 'generado' : 'pendiente',
         emailEnviado: cert ? emailSentSet.has(cert.id) : false,
         email: user.email ?? null,
+        convalidatedLicense: convalidationMap.get(e.id) ?? null,
       } satisfies CertificacionProfesionalAlumnoRow;
     });
 

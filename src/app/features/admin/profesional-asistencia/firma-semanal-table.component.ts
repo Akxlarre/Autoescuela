@@ -62,7 +62,14 @@ import type { AlumnoFirmaSemana } from '@core/models/ui/sesion-profesional.model
                 <div class="flex items-center gap-2">
                   <div class="initials-avatar">{{ alumno.initials }}</div>
                   <div>
-                    <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
+                    <div class="flex items-center gap-1.5">
+                      <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
+                      @if (alumno.convalidatedLicense) {
+                        <app-badge variant="info"
+                          >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                        >
+                      }
+                    </div>
                     <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                   </div>
                 </div>
