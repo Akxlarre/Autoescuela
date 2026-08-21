@@ -94,4 +94,6 @@ export interface LiveClassModel {
   durationMin: number;
   studentId: number | null;
   kmStart: number | null;
+  kmEnd?: number | null;
+  notes?: string | null;
 }

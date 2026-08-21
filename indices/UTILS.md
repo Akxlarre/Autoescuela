@@ -27,8 +27,8 @@
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
 | `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` |
 | `src/app/core/utils/class-schedule-timing.utils.ts` | `isClassStartOverdue` |
-| `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` — Map enrollmentId→convalidated_license desde `license_validations` (fix-195) |
 | `src/app/core/utils/consent-builder.utils.ts` | `ConsentBuilderInput`, `buildEnrollmentConsents`, `buildMedicalCertificateConsent`, `buildPsychTestConsent` |
+| `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |

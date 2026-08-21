@@ -103,6 +103,9 @@ interface RawSession {
   class_number: number | null;
   scheduled_at: string;
   status: string;
+  km_start: number | null;
+  km_end: number | null;
+  notes: string | null;
   enrollments: {
     students: {
       users: { first_names: string; paternal_last_name: string };
@@ -396,7 +399,7 @@ export class AgendaFacade {
       .select(
         `
         id, enrollment_id, instructor_id, vehicle_id,
-        class_number, scheduled_at, status,
+        class_number, scheduled_at, status, km_start, km_end, notes,
         enrollments!inner (
           branch_id,
           students!inner (
@@ -538,6 +541,9 @@ export class AgendaFacade {
         enrollmentId: s.enrollment_id,
         studentName,
         classNumber: s.class_number ?? undefined,
+        kmStart: s.km_start,
+        kmEnd: s.km_end,
+        notes: s.notes,
       });
     }
 

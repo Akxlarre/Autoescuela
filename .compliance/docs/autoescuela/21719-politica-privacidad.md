@@ -1,6 +1,6 @@
 # Política de Privacidad — Jorge Enrique Pérez Godoy Capacitación y Servicios EIRL
 
-**Última actualización:** 16 de agosto de 2026
+**Última actualización:** 21 de agosto de 2026
 **Entrada en vigencia:** 1 de diciembre de 2026 (vigencia de la Ley 21.719)
 
 > **Anexo 3 del Expediente de Cumplimiento Ley 21.719.**
@@ -33,6 +33,8 @@ médico), registramos la **dirección IP** desde la que lo otorgaste, junto a la
 evidencia que la ley nos exige poder mostrar de que tú diste ese consentimiento. No llevamos un registro
 general de tus accesos al sistema más allá de eso.
 
+**Imágenes:** nuestras instalaciones cuentan con **cámaras de seguridad**, debidamente señalizadas.
+
 **Si te capacitas a través de tu empleador:** además tratamos el nombre de la empresa y tu cargo, datos
 que nos entrega tu empleador para gestionar tu participación en el curso.
 
@@ -61,6 +63,7 @@ resguardo.
 | Informar a tu empleador tu asistencia y resultado, cuando él financia el curso | Ejecución del contrato entre tu empleador y nosotros |
 | Comunicarnos contigo sobre tu curso (correos, enlaces de clase) | Ejecución del contrato |
 | Registrar la dirección IP al otorgar un consentimiento en línea | Evidencia legal de que tú diste ese consentimiento |
+| Videovigilancia de nuestras instalaciones | Interés legítimo en la seguridad de personas y bienes |
 | Encuestas de satisfacción una vez egresado | Tu consentimiento — participar es voluntario |
 
 ## 4. Con quién compartimos los datos
@@ -102,6 +105,7 @@ Excepciones:
 | Documentación tributaria (boletas, pagos) | 6 años | Plazo del Código Tributario |
 | Datos de preinscripción sin matrícula concretada | 12 meses | No hay contrato que justifique conservarlos más |
 | Dirección IP asociada a un consentimiento | Mismo plazo que el consentimiento que respalda | Es evidencia de ese consentimiento, no un registro independiente |
+| Grabaciones de las cámaras de seguridad | 30 días | Plazo proporcional al fin de seguridad |
 
 ## 6. Tus derechos
 

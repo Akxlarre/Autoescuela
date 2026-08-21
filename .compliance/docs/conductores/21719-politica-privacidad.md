@@ -1,6 +1,6 @@
 # Política de Privacidad — Sociedad Comercial Chillán Capacita Limitada
 
-**Última actualización:** 16 de agosto de 2026
+**Última actualización:** 21 de agosto de 2026
 **Entrada en vigencia:** 1 de diciembre de 2026 (vigencia de la Ley 21.719)
 
 > **Anexo 3 del Expediente de Cumplimiento Ley 21.719.**
@@ -36,6 +36,8 @@ médico, test psicológico), registramos la **dirección IP** desde la que lo ot
 hora. Es la evidencia que la ley nos exige poder mostrar de que tú diste ese consentimiento. No llevamos
 un registro general de tus accesos al sistema más allá de eso.
 
+**Imágenes:** nuestras instalaciones cuentan con **cámaras de seguridad**, debidamente señalizadas.
+
 ### Datos sensibles
 
 Tratamos dos datos sensibles, ambos **solo con tu autorización expresa** y para nada más:
@@ -70,6 +72,7 @@ menores con especial resguardo.
 | Informar a MTT, la Municipalidad y SENCE lo que exige la normativa | Obligación legal |
 | Comunicarnos contigo sobre tu curso (correos, enlaces de clase, certificados) | Ejecución del contrato |
 | Registrar la dirección IP al otorgar un consentimiento en línea | Evidencia legal de que tú diste ese consentimiento |
+| Videovigilancia de nuestras instalaciones | Interés legítimo en la seguridad de personas y bienes |
 | Encuestas de satisfacción una vez egresado | Tu consentimiento — participar es voluntario |
 
 ## 4. Con quién compartimos los datos
@@ -111,6 +114,7 @@ Excepciones:
 | Datos de preinscripción sin matrícula concretada | 12 meses | No hay contrato que justifique conservarlos más |
 | Respuestas del cuestionario psicológico EPQ | 12 meses si no te matriculas; 5 años si te matriculas | Mismo plazo que la preinscripción o el expediente que lo contiene |
 | Dirección IP asociada a un consentimiento | Mismo plazo que el consentimiento que respalda | Es evidencia de ese consentimiento, no un registro independiente |
+| Grabaciones de las cámaras de seguridad | 30 días | Plazo proporcional al fin de seguridad |
 
 ## 6. Tus derechos
 

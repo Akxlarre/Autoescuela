@@ -44,12 +44,14 @@ export class CoursesFacade {
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
   private readonly _initialized = signal<boolean>(false);
+  private readonly _isSaving = signal<boolean>(false);
   private _lastBranchId: number | null = null;
 
   // ── Estado expuesto (readonly) ────────────────────────────────────────────
   readonly availableCourses = this._availableCourses.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly isSaving = this._isSaving.asReadonly();
 
   /** Map id → catalog item, derivado del array. Útil para JOINs en memoria. */
   readonly availableById = computed(() => {
@@ -92,6 +94,30 @@ export class CoursesFacade {
       this.toast.error('Error al cargar cursos del catálogo', errMsg);
     } finally {
       this._isLoading.set(false);
+    }
+  }
+
+  /** Actualiza el precio base de un curso existente. No crea ni desactiva cursos. */
+  async updateBasePrice(courseId: number, basePrice: number): Promise<boolean> {
+    this._isSaving.set(true);
+    try {
+      const { error } = await this.supabase.client
+        .from('courses')
+        .update({ base_price: basePrice })
+        .eq('id', courseId);
+
+      if (error) throw error;
+
+      this._availableCourses.update((courses) =>
+        courses.map((c) => (c.id === courseId ? { ...c, base_price: basePrice } : c)),
+      );
+      this.toast.success('Precio actualizado correctamente');
+      return true;
+    } catch (err: any) {
+      this.toast.error('Error al actualizar el precio', err?.message);
+      return false;
+    } finally {
+      this._isSaving.set(false);
     }
   }
 

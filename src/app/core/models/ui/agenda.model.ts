@@ -40,6 +40,11 @@ export interface AgendaSlot {
   enrollmentId?: number;
   studentName?: string;
   classNumber?: number;
+  /** Kilometraje de inicio/fin — registrados al finalizar la clase (status 'completed'). */
+  kmStart?: number | null;
+  kmEnd?: number | null;
+  /** Observaciones del instructor al finalizar la clase, si las registró. */
+  notes?: string | null;
 }
 
 // ─── Columna de un día ─────────────────────────────────────────────────────

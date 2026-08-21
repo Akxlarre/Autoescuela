@@ -20,7 +20,14 @@ describe('CoursesFacade', () => {
 
   const mockCourses = [
     { id: 1, name: 'Clase B', license_class: 'B', base_price: 350000, active: true, branch_id: 1 },
-    { id: 2, name: 'Clase B SENCE', license_class: 'B', base_price: 350000, active: true, branch_id: 1 },
+    {
+      id: 2,
+      name: 'Clase B SENCE',
+      license_class: 'B',
+      base_price: 350000,
+      active: true,
+      branch_id: 1,
+    },
   ];
 
   /**
@@ -138,7 +145,14 @@ describe('CoursesFacade', () => {
       await facade.loadAvailableCourses(1);
 
       const chain2 = buildSupabaseChain([
-        { id: 3, name: 'Profesional A2', license_class: 'A2', base_price: 800000, active: true, branch_id: 2 },
+        {
+          id: 3,
+          name: 'Profesional A2',
+          license_class: 'A2',
+          base_price: 800000,
+          active: true,
+          branch_id: 2,
+        },
       ]);
       supabaseSpy.client = chain2;
 
@@ -167,6 +181,53 @@ describe('CoursesFacade', () => {
       resolveQuery!({ data: mockCourses, error: null });
       await loadPromise;
       expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  describe('updateBasePrice(courseId, basePrice)', () => {
+    async function loadInitialCourses() {
+      const chain = buildSupabaseChain(mockCourses);
+      supabaseSpy.client = chain;
+      await facade.loadAvailableCourses(1);
+    }
+
+    function buildUpdateChain(error: any = null) {
+      const eqSpy = vi.fn().mockResolvedValue({ error });
+      const updateSpy = vi.fn().mockReturnValue({ eq: eqSpy });
+      return {
+        from: vi.fn().mockReturnValue({ update: updateSpy }),
+        _updateSpy: updateSpy,
+        _eqSpy: eqSpy,
+      };
+    }
+
+    it('AC-2/AC-3: actualiza base_price en BD y refleja el cambio en availableCourses()', async () => {
+      await loadInitialCourses();
+      const updateChain = buildUpdateChain();
+      supabaseSpy.client = updateChain;
+
+      const success = await facade.updateBasePrice(1, 400000);
+
+      expect(success).toBe(true);
+      expect(updateChain.from).toHaveBeenCalledWith('courses');
+      expect(updateChain._updateSpy).toHaveBeenCalledWith({ base_price: 400000 });
+      expect(updateChain._eqSpy).toHaveBeenCalledWith('id', 1);
+      expect(facade.availableCourses().find((c) => c.id === 1)?.base_price).toBe(400000);
+      // No toca el otro curso
+      expect(facade.availableCourses().find((c) => c.id === 2)?.base_price).toBe(350000);
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('en error: reporta via toast y NO muta el estado local', async () => {
+      await loadInitialCourses();
+      const updateChain = buildUpdateChain({ message: 'RLS denied' });
+      supabaseSpy.client = updateChain;
+
+      const success = await facade.updateBasePrice(1, 999999);
+
+      expect(success).toBe(false);
+      expect(facade.availableCourses().find((c) => c.id === 1)?.base_price).toBe(350000);
+      expect(toastSpy.error).toHaveBeenCalledWith('Error al actualizar el precio', 'RLS denied');
     });
   });
 });

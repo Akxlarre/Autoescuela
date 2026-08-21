@@ -730,17 +730,28 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         // uploadSignedContract persiste el contrato y hace goToStep(5) internamente
         await this.enrollment.uploadSignedContract(upload.file);
         // Pre-cargar descuentos para el siguiente paso de pago (fire-and-forget)
-        const pd = this.enrollment.personalData();
-        if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
+        this.loadStep4Discounts();
       } else if (this.enrollment.contractAccepted()) {
         // Re-entrada: contrato ya aceptado en sesión anterior → avanzar a pago
-        const pd = this.enrollment.personalData();
-        if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
+        this.loadStep4Discounts();
         this.enrollment.goToStep(5);
       }
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /** Descuentos elegibles para el step de pago: acotados a la sede y al curso ya seleccionados. */
+  private loadStep4Discounts(): void {
+    const pd = this.enrollment.personalData();
+    if (!pd) return;
+    const selectedCourse = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
+    if (!selectedCourse) return;
+    void this.payment.loadAvailableDiscounts(
+      pd.courseType,
+      selectedCourse.id,
+      this.activeBranchId(),
+    );
   }
 
   // ── Paso 5: Pago ──────────────────────────────────────────────────────────

@@ -516,6 +516,9 @@ export class DashboardComponent {
         vehiclePlate: cls.vehicle || '',
         studentName: cls.studentName,
         classNumber: 0,
+        kmStart: cls.kmStart,
+        kmEnd: cls.kmEnd,
+        notes: cls.notes,
       };
 
       this.agendaFacade.setSelectedSlot(slot);

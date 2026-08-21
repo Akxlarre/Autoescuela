@@ -118,6 +118,39 @@ type StatusConfig = {
                   </div>
                 </div>
               }
+
+              <!-- ── Kilometraje (solo clases completadas) ──────────── -->
+              @if (s.status === 'completed' && (s.kmStart != null || s.kmEnd != null)) {
+                <div class="grid grid-cols-2 gap-3">
+                  <app-stat-box
+                    label="Km inicio"
+                    [value]="s.kmStart != null ? s.kmStart + ' km' : '—'"
+                    variant="surface"
+                    [compact]="true"
+                    icon="gauge"
+                  />
+                  <app-stat-box
+                    label="Km fin"
+                    [value]="s.kmEnd != null ? s.kmEnd + ' km' : '—'"
+                    variant="surface"
+                    [compact]="true"
+                    icon="gauge"
+                  />
+                </div>
+                @if (distanceRecorrida(); as distancia) {
+                  <p class="text-xs text-text-muted -mt-2">
+                    Distancia recorrida: {{ distancia }} km
+                  </p>
+                }
+              }
+
+              <!-- ── Observaciones del instructor ───────────────────── -->
+              @if (s.status === 'completed' && s.notes) {
+                <div class="card p-4 flex flex-col gap-2">
+                  <span class="micro-label">Observaciones del instructor</span>
+                  <p class="text-sm text-text-secondary">{{ s.notes }}</p>
+                </div>
+              }
             </div>
           </ng-template>
         </app-drawer-content-loader>
@@ -157,6 +190,12 @@ export class AgendaSlotDetailDrawerComponent {
   private readonly drawer = inject(LayoutDrawerFacadeService);
 
   readonly slot = this.facade.selectedSlot;
+
+  readonly distanceRecorrida = computed<number | null>(() => {
+    const s = this.slot();
+    if (!s || s.kmStart == null || s.kmEnd == null) return null;
+    return s.kmEnd - s.kmStart;
+  });
 
   readonly statusCfg = computed<StatusConfig>(() => {
     switch (this.slot()?.status) {
