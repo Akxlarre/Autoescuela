@@ -1,14 +1,14 @@
 # Asignación ASG-i-002 — Migrar funciones de negocio del cliente a Edge Functions
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-08-20
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-21
+> **resulting_track:** 0011-m-print-flows-edge-functions
 
 ---
 
@@ -48,3 +48,11 @@ cliente y pase a ejecutarse server-side.
   el criterio de "qué es lógica de negocio sensible" según el proyecto.
 - Es candidata a `spec` si el listado de funciones a migrar termina siendo grande — el tipo
   sugerido (`fix`) es solo una primera estimación, ajustar según lo que encuentre la auditoría.
+
+**Corrección de alcance al reclamar (2026-08-21):** el dueño del negocio aclaró que el objetivo
+real, tal como lo pidió quien creó esta Asignación, era más acotado que "auditar toda lógica de
+negocio sensible": encontrar instancias de "Exportar como PDF/Excel" que generan el archivo como
+HTML en el cliente en vez de Edge Function. La auditoría hecha al reclamar encontró que los 8
+botones "Exportar" literales ya usan Edge Function; el hallazgo real fueron 3 flujos de
+**impresión** (no exportación) que sí arman HTML client-side. Ver
+`specs/specs/0011-m-print-flows-edge-functions/spec.md` §1 para el detalle completo.
