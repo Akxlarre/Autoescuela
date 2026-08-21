@@ -335,6 +335,8 @@ export class DashboardFacade {
     duration_min,
     status,
     km_start,
+    km_end,
+    notes,
     vehicles(id, brand, model, license_plate, current_km),
     instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
     enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name)))
@@ -377,6 +379,8 @@ export class DashboardFacade {
       durationMin: row.duration_min ?? 45,
       studentId: row.enrollments?.student_id ?? null,
       kmStart: row.km_start ?? null,
+      kmEnd: row.km_end ?? null,
+      notes: row.notes ?? null,
     } as LiveClassModel;
   }
 

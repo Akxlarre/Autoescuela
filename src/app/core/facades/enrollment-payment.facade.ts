@@ -152,8 +152,16 @@ export class EnrollmentPaymentFacade {
     this._discount.set({ enabled: false, amount: null, reason: '' });
   }
 
-  /** Carga descuentos activos vigentes, filtrando por tipo de curso. */
-  async loadAvailableDiscounts(courseType: string): Promise<void> {
+  /**
+   * Carga descuentos activos vigentes para la sede y el curso actuales.
+   * `courseId`/`branchId` acotan descuentos "curso específico" (incl. CONV) o "sede
+   * específica"; `null` en la fila de BD = sin esa restricción (aplica igual).
+   */
+  async loadAvailableDiscounts(
+    courseType: string,
+    courseId: number,
+    branchId: number,
+  ): Promise<void> {
     this._error.set(null);
 
     const today = new Date().toISOString().split('T')[0];
@@ -161,11 +169,11 @@ export class EnrollmentPaymentFacade {
 
     const { data, error } = await this.supabase.client
       .from('discounts')
-      .select('id, name, discount_type, value, applicable_to')
+      .select('id, name, discount_type, value, applicable_to, branch_id, course_id')
       .eq('status', 'active')
       .gte('valid_from', '0001-01-01')
       .or(`valid_until.is.null,valid_until.gte.${today}`)
-      .or(`applicable_to.eq.all,applicable_to.eq.${applicableFilter}`)
+      .or(`branch_id.is.null,branch_id.eq.${branchId}`)
       .order('name');
 
     if (error) {
@@ -173,13 +181,19 @@ export class EnrollmentPaymentFacade {
       return;
     }
 
-    const discounts: AvailableDiscount[] = (data ?? []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      discountType: row.discount_type as 'percentage' | 'fixed_amount',
-      value: row.value,
-      applicableTo: row.applicable_to ?? 'all',
-    }));
+    const discounts: AvailableDiscount[] = (data ?? [])
+      .filter((row: any) =>
+        row.course_id
+          ? row.course_id === courseId
+          : row.applicable_to === 'all' || row.applicable_to === applicableFilter,
+      )
+      .map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        discountType: row.discount_type as 'percentage' | 'fixed_amount',
+        value: row.value,
+        applicableTo: row.applicable_to ?? 'all',
+      }));
 
     this._availableDiscounts.set(discounts);
   }

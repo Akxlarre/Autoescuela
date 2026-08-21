@@ -27,7 +27,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
   template: `
     <div class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
-        <h3 class="text-base font-bold text-text-primary">Gestión de Cursos y Licencias</h3>
+        <h3 class="font-bold text-text-primary">Gestión de Cursos y Licencias</h3>
         @if (coursesFacade.availableCourses().length > 0) {
           <button
             type="button"
@@ -162,7 +162,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    class="accent-[var(--color-primary)] w-4 h-4"
+                    class="accent-(--color-primary) w-4 h-4"
                     [checked]="courseCtrl.get('priceOverride')?.value != null"
                     (change)="
                       courseCtrl
@@ -253,7 +253,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     <input
                       type="checkbox"
                       formControlName="highlighted"
-                      class="accent-[var(--color-primary)] w-4 h-4"
+                      class="accent-(--color-primary) w-4 h-4"
                     />
                     <span class="text-xs font-semibold text-text-primary"
                       >Destacar Curso en Web</span
@@ -296,7 +296,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 
       <div [formGroup]="pricingFooterGroup()" class="flex flex-col gap-6">
         <h3
-          class="text-base font-bold text-text-primary border-b pb-2 mt-6 mb-2 border-border-subtle"
+          class="font-bold text-text-primary border-b pb-2 mt-6 mb-2 border-border-subtle"
         >
           Términos de Pago y Garantía (Precios)
         </h3>
@@ -337,7 +337,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               <label class="field-label">Descripción *</label>
               <textarea
                 formControlName="description"
-                class="field-input min-h-[60px] resize-y"
+                class="field-input min-h-15 resize-y"
                 placeholder="Puedes reservar tu cupo con un pie inicial..."
               ></textarea>
               @if (
@@ -392,7 +392,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               <label class="field-label">Descripción *</label>
               <textarea
                 formControlName="description"
-                class="field-input min-h-[60px] resize-y"
+                class="field-input min-h-15 resize-y"
                 placeholder="Todo el material teórico e instructores certificados..."
               ></textarea>
               @if (

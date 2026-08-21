@@ -233,7 +233,7 @@ describe('EnrollmentPaymentFacade', () => {
       builder.order = vi.fn().mockResolvedValue({ data: [], error: null });
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
-      await facade.loadAvailableDiscounts('class_b');
+      await facade.loadAvailableDiscounts('class_b', 1, 1);
 
       expect(mockSupabase.client.from).toHaveBeenCalledWith('discounts');
     });
@@ -245,8 +245,40 @@ describe('EnrollmentPaymentFacade', () => {
         .mockResolvedValue({ data: null, error: { message: 'Connection failed' } });
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
-      await facade.loadAvailableDiscounts('class_b');
+      await facade.loadAvailableDiscounts('class_b', 1, 1);
       expect(facade.error()).toContain('Error al cargar descuentos');
+    });
+
+    it('excluye un descuento de curso específico que no coincide con el curso actual', async () => {
+      const builder = createMockQueryBuilder();
+      builder.order = vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            name: 'Solo A2',
+            discount_type: 'fixed_amount',
+            value: 5000,
+            applicable_to: 'professional',
+            branch_id: null,
+            course_id: 99,
+          },
+          {
+            id: 2,
+            name: 'General Profesional',
+            discount_type: 'percentage',
+            value: 10,
+            applicable_to: 'professional',
+            branch_id: null,
+            course_id: null,
+          },
+        ],
+        error: null,
+      });
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      await facade.loadAvailableDiscounts('professional_a3', 5, 1);
+
+      expect(facade.availableDiscounts().map((d) => d.id)).toEqual([2]);
     });
   });
 

@@ -89,6 +89,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `CursosSingularesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/cursos-singulares.facade.ts` |
 | `DashboardAlertsFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard-alerts.facade.ts` |
 | `DashboardFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard.facade.ts` |
+| `DiscountsFacade` | `SupabaseService`, `ToastService` | — | `src/app/core/facades/discounts.facade.ts` |
 | `DmsFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerService`, `ConfirmModalService`, `ToastService`, `DmsViewerService` | — | `src/app/core/facades/dms.facade.ts` |
 | `EnrollmentDocumentsFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/enrollment-documents.facade.ts` |
 | `EnrollmentPaymentFacade` | `ErrorSanitizerService`, `SupabaseService`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/enrollment-payment.facade.ts` |

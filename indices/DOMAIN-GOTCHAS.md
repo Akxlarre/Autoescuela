@@ -1084,6 +1084,26 @@
   fuera de scope.
 - **Fuente:** `specs/fixes/fix-196-m-promocion-finalizada-marca-ex-alumnos`
 
+### DG-079 — Una tabla con su lógica de consumo ya implementada no implica que exista forma de producir datos para ella
+- **Trampa:** verificar una feature revisando solo el lado que **lee** los datos (un Facade que
+  hace `SELECT ... WHERE status='active'`, un `@if (lista.length > 0)` en el template) y asumir
+  que si ese código está bien escrito y probado, la feature funciona de punta a punta. `discounts`
+  es el caso: la tabla existía desde `20260301000002_02_enrollments_and_courses.sql`, y el step de
+  pago de matrícula (`enrollment-payment.facade.ts`) ya sabía leerla, filtrarla por vigencia/tipo
+  de curso y aplicarla al monto — pero nadie construyó nunca un CRUD/UI que **insertara** filas en
+  esa tabla. El código de consumo pasaba tests, compilaba y no tenía bugs; simplemente no había
+  manera de que `availableDiscounts` dejara de estar vacío.
+- **Realidad:** una tabla con RLS definida, tipos declarados y un Facade que la consume es una
+  señal de que *alguien planeó* la feature completa, no de que está completa. El productor de
+  datos (formulario de alta, importador, seed, endpoint admin) es una pieza aparte que puede
+  faltar en silencio — no hay error, excepción, ni test que falle, solo una lista vacía que se
+  ve como "todavía no hay datos" en vez de "esto nunca se terminó de construir".
+- **Regla de aplicabilidad:** al auditar (UAT, code review, onboarding a un módulo) una feature que
+  depende de una tabla de catálogo/configuración (descuentos, plantillas, códigos, tarifas),
+  verificar explícitamente que existe una vía para crear/editar filas — no asumirlo porque el
+  lado de lectura está bien implementado.
+- **Fuente:** `specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud`
+
 ---
 
 ## Convención para agregar una entrada nueva

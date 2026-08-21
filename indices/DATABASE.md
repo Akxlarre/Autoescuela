@@ -861,6 +861,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `referral_code` | TEXT | sí | — | — |
 | `created_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `course_id` | INT | sí | — | → `courses.id` |
 
 **Policies:**
 

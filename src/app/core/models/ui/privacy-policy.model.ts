@@ -17,7 +17,7 @@
  * archivo hay que subir esta fecha**, o los consentimientos nuevos quedarán apuntando a
  * una versión que ya no es la que el titular leyó.
  */
-export const PRIVACY_POLICY_VERSION = '2026-08-17';
+export const PRIVACY_POLICY_VERSION = '2026-08-21';
 
 /**
  * País donde Supabase aloja la base de datos, tal como se le declara al titular.
@@ -159,7 +159,11 @@ const RETENTION_SECTION: PolicySection = {
           '12 meses',
           'No hay contrato que justifique conservarlos más',
         ],
-        ['Registros técnicos de acceso (IP)', '2 años', 'Suficiente para investigar un incidente'],
+        [
+          'Dirección IP asociada a un consentimiento',
+          'Mismo plazo que el consentimiento que respalda',
+          'Es evidencia de ese consentimiento, no un registro independiente',
+        ],
       ],
     },
   ],
@@ -275,7 +279,7 @@ const CONDUCTORES: PrivacyPolicyContent = {
   address: 'Carrera 74, Chillán, Región de Ñuble',
   businessLine: 'Educación extraescolar — Escuela de conducción',
   rightsEmail: 'conductorchillan@gmail.com',
-  lastUpdated: '16 de agosto de 2026',
+  lastUpdated: '21 de agosto de 2026',
   effectiveFrom: '1 de diciembre de 2026 (vigencia de la Ley 21.719)',
 
   enrollmentNotice:
@@ -328,7 +332,7 @@ const CONDUCTORES: PrivacyPolicyContent = {
             'Datos académicos: curso en que te matriculaste, asistencia, horas teóricas y prácticas cursadas, evaluaciones, observaciones de tu instructor y resultado del curso.',
             'Documentos de tu expediente: cédula de identidad, fotografía, Hoja de Vida del Conductor y certificado médico.',
             'Datos de pago: monto, medio de pago, número de boleta y estado de tu cuenta.',
-            'Datos técnicos: dirección IP y registro de tus accesos al sistema, con fines de seguridad.',
+            'Datos técnicos: dirección IP asociada a cada consentimiento que otorgas en línea (preinscripción, matrícula, certificado médico, test psicológico), como evidencia de que lo diste.',
             'Imágenes: nuestras instalaciones cuentan con cámaras de seguridad, debidamente señalizadas.',
             'Evaluación psicológica (solo cursos profesionales): si te preinscribes en línea a un curso profesional, las respuestas que das al cuestionario EPQ y el resultado de su evaluación.',
           ],
@@ -405,10 +409,6 @@ const CONDUCTORES: PrivacyPolicyContent = {
             [
               'Videovigilancia de nuestras instalaciones',
               'Interés legítimo en la seguridad de personas y bienes',
-            ],
-            [
-              'Registrar accesos al sistema para detectar usos indebidos',
-              'Interés legítimo en la seguridad, y nuestro deber legal de seguridad',
             ],
             [
               'Encuestas de satisfacción una vez egresado',
@@ -493,7 +493,7 @@ const AUTOESCUELA: PrivacyPolicyContent = {
   address: 'Maipón 418, Chillán, Región de Ñuble',
   businessLine: 'Educación extraescolar — Escuela de conducción',
   rightsEmail: 'otecchillan@gmail.com',
-  lastUpdated: '16 de agosto de 2026',
+  lastUpdated: '21 de agosto de 2026',
   effectiveFrom: '1 de diciembre de 2026 (vigencia de la Ley 21.719)',
 
   enrollmentNotice:
@@ -546,7 +546,7 @@ const AUTOESCUELA: PrivacyPolicyContent = {
             'Datos académicos: curso en que te matriculaste, asistencia, horas cursadas, evaluaciones, observaciones de tu relator o instructor y resultado del curso.',
             'Documentos de tu expediente: cédula de identidad, fotografía, Hoja de Vida del Conductor y certificado médico, según el curso de que se trate.',
             'Datos de pago: monto, medio de pago, número de boleta y estado de tu cuenta.',
-            'Datos técnicos: dirección IP y registro de tus accesos al sistema, con fines de seguridad.',
+            'Datos técnicos: dirección IP asociada a cada consentimiento que otorgas en línea (preinscripción, matrícula, certificado médico), como evidencia de que lo diste.',
             'Imágenes: nuestras instalaciones cuentan con cámaras de seguridad, debidamente señalizadas.',
           ],
         },
@@ -614,10 +614,6 @@ const AUTOESCUELA: PrivacyPolicyContent = {
             [
               'Videovigilancia de nuestras instalaciones',
               'Interés legítimo en la seguridad de personas y bienes',
-            ],
-            [
-              'Registrar accesos al sistema para detectar usos indebidos',
-              'Interés legítimo en la seguridad, y nuestro deber legal de seguridad',
             ],
             [
               'Encuestas de satisfacción una vez egresado',
