@@ -1,14 +1,14 @@
 # Asignación ASG-i-002 — Migrar funciones de negocio del cliente a Edge Functions
 
-> **status:** reclamada
-> **owner:** cualquiera
-> **tipo_sugerido:** fix
+> **status:** pendiente
+> **owner:** m
+> **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-08-20
 > **created_by:** i
-> **claimed_by:** m
-> **claimed_at:** 2026-08-21
-> **resulting_track:** 0011-m-print-flows-edge-functions
+> **claimed_by:** —
+> **claimed_at:** —
+> **resulting_track:** —
 
 ---
 
@@ -49,10 +49,26 @@ cliente y pase a ejecutarse server-side.
 - Es candidata a `spec` si el listado de funciones a migrar termina siendo grande — el tipo
   sugerido (`fix`) es solo una primera estimación, ajustar según lo que encuentre la auditoría.
 
-**Corrección de alcance al reclamar (2026-08-21):** el dueño del negocio aclaró que el objetivo
-real, tal como lo pidió quien creó esta Asignación, era más acotado que "auditar toda lógica de
-negocio sensible": encontrar instancias de "Exportar como PDF/Excel" que generan el archivo como
-HTML en el cliente en vez de Edge Function. La auditoría hecha al reclamar encontró que los 8
-botones "Exportar" literales ya usan Edge Function; el hallazgo real fueron 3 flujos de
-**impresión** (no exportación) que sí arman HTML client-side. Ver
-`specs/specs/0011-m-print-flows-edge-functions/spec.md` §1 para el detalle completo.
+**Corrección de alcance (2026-08-21):** el dueño del negocio aclaró que el objetivo real, tal como
+lo pidió quien creó esta Asignación, era más acotado que "auditar toda lógica de negocio
+sensible": encontrar instancias de "Exportar como PDF/Excel" que generan el archivo como HTML en
+el cliente en vez de Edge Function. Una auditoría preliminar encontró que los 8 botones
+"Exportar" literales del sistema ya usan Edge Function (`export-students`,
+`generate-financial-report`, `generate-cash-history-report`, `generate-audit-report`,
+`generate-class-book-pdf`, `generate-enrollment-sheet`, `generate-contract-pdf`, y el de
+servicios especiales) — ninguno pendiente ahí. El hallazgo real son **3 flujos de impresión**
+(no "exportación", aunque el mismo anti-patrón) que arman HTML client-side y lo imprimen vía
+`window.open()` + `window.print()` en vez de Edge Function:
+
+1. `core/utils/ficha-tecnica-print.util.ts` + `FichaTecnicaPrintService` — informe de clases
+   prácticas de un alumno real (botón "Imprimir Informe", `admin-ficha-tecnica-drawer`).
+2. `core/utils/route-sheet-print.util.ts` — Hoja de Ruta Diaria de un vehículo (RF-091, planilla
+   en blanco para llenar a mano).
+3. `core/utils/epq-print.util.ts` + `EpqPrintService` — cuestionario EPQ en blanco (81 preguntas)
+   para responder en papel.
+
+El dueño confirmó que los tres deben migrarse a Edge Function, aunque dos sean formularios en
+blanco sin dato de negocio y ninguno se llame literalmente "Exportar" — el criterio es "no usar
+HTML client-side para generar el documento", sin excepción. Candidata a `spec` (no `fix`): las 3
+migraciones implican decisión de diseño (Edge Function compartida vs. 3 separadas, qué pasa con
+el flujo de impresión de los 2 formularios en blanco).

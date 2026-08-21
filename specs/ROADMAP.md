@@ -16,7 +16,6 @@
 
 | ID | Título | Prioridad | Owner | Notas |
 |----|--------|-----------|-------|-------|
-| [0011](./specs/0011-m-print-flows-edge-functions/spec.md) | Migrar los flujos de impresión client-side a Edge Functions | P1 | Matías | Originado de ASG-i-002. 3 flujos: ficha técnica, hoja de ruta, EPQ en blanco. |
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |

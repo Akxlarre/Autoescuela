@@ -22,6 +22,7 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-092 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-092-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
+| ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -128,7 +129,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-21 |
 <!-- AUTO-GENERATED:END -->
 
 ---
