@@ -23,6 +23,8 @@
 | ASG-b-093 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
+| ASG-b-087 | Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores | `cualquiera` | fix | P1 | b | Rescatada de `claude/exciting-curie-2bdfdd` (sin mergear desde el 2026-08-03). Revalidada contra `main` el 2026-08-22 — ver la tabla al final del archivo. Ver `specs/assignments/ASG-b-087-*.md` |
+| ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente** — no posponer la 087 esperando esta. Ver `specs/assignments/ASG-b-088-*.md` |
 | ASG-b-094 | Override de `force-compact` muerto en `section-hero` (modo slim) | `cualquiera` | hotfix | P2 | b | Detectado al cerrar `hotfix-051-b`: el selector CSS apunta a `.shrink-0`, que el propio hotfix quitó del template. Ver `specs/assignments/ASG-b-094-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
