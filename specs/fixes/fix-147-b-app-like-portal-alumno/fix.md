@@ -194,15 +194,27 @@ real de la app, no `main` ni `documentElement`.
       el piso de 120px en móvil).
 - [x] Consola sin errores atribuibles a este cambio.
 
-### Pendiente / no verificable acá
+### Caso Profesional de `pruebas-online` — verificado con control negativo
 
-- [ ] **`pruebas-online` con alumno Profesional** (sin fila de stats). El seed solo trae un
-      alumno Clase B. El mecanismo quedó verificado **indirectamente** por el caso "fila 2 = 0px"
-      de `clases`/`pagos`, que es estructuralmente idéntico — pero no es el caso literal.
-- [ ] **`clases` con alumno sin matrícula** (alerta + panel coexistiendo). Mismo motivo.
-- [ ] **`force-compact` con drawer abierto:** ítem del checklist del rollout que **no aplica al
-      portal alumno** — ninguna de las 4 páginas inyecta `LayoutDrawerFacadeService`, igual que
-      `alumno/horario` en `fix-127-b`. Confirmado leyendo los 4 componentes, no agregado a ciegas.
+El caso que motivó el wrapper (alumno Profesional, sin fila de stats) no existe en el seed, así
+que se ejercitó el **mecanismo CSS** directamente sobre el DOM renderizado, con un control
+negativo que reproduce el bug que el wrapper evita:
+
+| Escenario | `grid-template-rows` | Alto de `.bento-fill` |
+|---|---|---|
+| Con stats (Clase B, estado real) | `62px 274px 340px` | 340px ✅ |
+| Wrapper vacío (= Profesional) | `62px 0px 614px` | **614px ✅** crece, no colapsa |
+| **Sin wrapper** (control negativo) | `62px 0px 614px` | **0px ❌ colapsada** |
+
+El control negativo es la parte que importa: **quitar el wrapper colapsa la celda a 0px**, que
+es exactamente el fallo de `fix-133-b`. Prueba que la mitigación es portante y no decorativa.
+
+### Pendiente
+
+- [ ] **`clases` con alumno sin matrícula** (alerta "Sin matrícula" + panel coexistiendo). No hay
+      cuenta de seed en ese estado. Riesgo bajo: la dirección peligrosa es el wrapper **vacío**
+      (ya verificada arriba y en el estado real de `clases`/`pagos`, donde la fila 2 mide 0px);
+      con la alerta presente el wrapper solo crece, que es el caso benigno.
 
 ### Ruido ambiental del contenedor (no del cambio)
 
