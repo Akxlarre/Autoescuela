@@ -190,7 +190,16 @@ Aplicar solo el modificador CSS produce una página que "llena la pantalla" pero
 - **Switch de layout por CONTENEDOR, NO por `lg:` de Tailwind.** Usar `isDesktopLayout() = maxVisible() === null` (= tier desktop). Con `lg:` el rail/columnas no se apilan cuando un drawer angosta `<main>` (spec 0030).
 - **Jerarquía por ancho, no por tamaño de fuente.** Si "se siente apretado", revisar qué panel es el protagonista (tabla ancha `flex-1` + rail angosto `<aside w-80>`) **antes** de achicar tipografías (spec 0030).
 - **QA geométrico ≠ mirada humana.** 13/13 ACs verdes no garantizan que se vea bien; validar visualmente con `/verify`.
-- **Nunca backticks dentro de comentarios de un `template` literal** — rompen el build y `ng serve` sirve un bundle stale en silencio (spec 0030).
+- **Nunca backticks dentro de comentarios de NINGÚN template literal del componente** — ni en
+  `template:` ni en `styles: []`. Aplica igual a comentarios HTML (`<!-- -->`) y CSS (`/* */`):
+  un backtick cierra el string antes de tiempo. **Regla práctica: si vas a nombrar una clase, un
+  selector o una propiedad dentro de un comentario que vive en un backtick, escribilo sin
+  comillas invertidas.** Síntoma que despista: `tsc` reporta errores de sintaxis en líneas que no
+  tienen relación con lo que editaste, y `ng serve` puede seguir sirviendo un bundle stale en
+  silencio.
+  > Alcance ampliado tras dos incidentes en una misma sesión: el primero en `template:` y el
+  > segundo en `styles: []`, porque la regla anterior solo nombraba `template` y se leyó como si
+  > `styles` estuviera exento. El hazard es el backtick, no el campo del decorador.
 - **Nunca corchetes en un binding de clase** (`[class.flex-[2]]`) — rompen el binding (spec 0031).
 
 ### Ejemplo mínimo
