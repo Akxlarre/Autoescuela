@@ -82,14 +82,42 @@ después.
 
 ## Test de Regresión
 
-<!-- Se completa durante la implementación. -->
+Obligatorios (la lógica de ventana de período es lógica nueva → TDD, escritos antes del código):
 
-Obligatorios (la lógica de ventana de período es lógica nueva → TDD):
+- [x] La ventana de 12 meses recorta la lista cuando no hay búsqueda activa.
+      → `period-window.utils.spec.ts` — "recorta los registros anteriores al corte".
+- [x] Con término de búsqueda activo, un registro **fuera** de la ventana **sí** aparece.
+      → `period-window.utils.spec.ts` — "con búsqueda activa devuelve también los registros
+      fuera de la ventana" + "la búsqueda activa manda incluso sobre la ventana más restrictiva".
+- [x] El export parte del dataset completo, no de la vista recortada por período.
+      → `servicios-especiales.facade.spec.ts` — "invoca la Edge Function solo con format y
+      branch_id". En esta página el export es **estructuralmente** inmune: corre server-side y
+      no recibe nada de la vista. ⚠️ Falta re-verificarlo en ex-alumnos, donde el export puede
+      partir de una lista en memoria.
+- [x] `fetchAlumnosConDeuda` aplica `.limit(200)`.
+      → `pagos.facade.spec.ts` — "aplica .limit(200) sobre la query de deudores" (verifica
+      también el `.order('pending_balance', desc)` previo).
 
-- [ ] La ventana de 12 meses recorta la lista cuando no hay búsqueda activa.
-- [ ] Con término de búsqueda activo, un registro **fuera** de la ventana **sí** aparece.
-- [ ] El export parte del dataset completo, no de la vista recortada por período.
-- [ ] `fetchAlumnosConDeuda` aplica `.limit(200)`.
+**Estado: 55/55 verdes** (12 util + 15 pagos + 28 servicios-especiales), `tsc --noEmit` limpio,
+`lint:arch` exit 0.
+
+## Progreso
+
+- [x] Núcleo funcional + tests (TDD)
+- [x] `app-period-selector` (Dumb compartido) — índices actualizados
+- [x] `.limit(200)` en deudores
+- [x] Consumidor 1/4: `servicios-especiales` — verificado en navegador
+- [ ] Consumidor 2/4: `ex-alumnos` Clase B — admin (tabla inline, ~600 líneas)
+- [ ] Consumidor 3/4: `ex-alumnos` Clase B — secretaría (duplicado del anterior)
+- [ ] Consumidor 4/4: `app-ex-alumnos-profesional-content`
+
+⚠️ Los 3 pendientes **sí tienen buscador de texto libre**, así que ahí es donde la regla no
+negociable (`hasActiveSearch`) se juega de verdad, y donde hay que confirmar de dónde parte el
+export. Cada uno necesita su propio test de que la búsqueda atraviesa la ventana.
+
+⚠️ **Nota de alcance:** el hook advierte "un fix = una causa raíz = un archivo tocado". La causa
+raíz es una sola, pero el fix ya toca 6 archivos y le faltan 3 páginas. Si al entrar a
+`ex-alumnos` el diff sigue creciendo, evaluar partirlo o convertirlo en spec.
 
 ## Verificación visual
 
