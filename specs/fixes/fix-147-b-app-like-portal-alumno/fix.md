@@ -226,6 +226,41 @@ por encima del panel explicando por qué está vacío.
 siguientes salieron sin `.bento-grid` y parecían un bug del producto. Acotar el mock al
 endpoint exacto (`/rest/v1/enrollments`) y dejar el escenario destructivo **al final**.
 
+### Verificación móvil (el uso principal de este portal)
+
+3 dispositivos con `isMobile`/`hasTouch` reales: **390×844**, **360×640** y **320×568**, sobre
+las 4 páginas + los edge cases (pagos vacío / lista larga, pagar con saldo, clases sin matrícula).
+
+- [x] **`contain: none` en los 3 dispositivos, en las 4 páginas.** El modo dual funciona: bajo
+      lg ninguna celda queda con alto forzado y todo mide su contenido natural.
+- [x] **Cero scroll horizontal** en toda la matriz (chequeado elemento por elemento dentro del
+      `.bento-grid`, buscando cualquier `right` que exceda el ancho del viewport).
+- [x] **Las listas crecen y la página scrollea nativamente**: `pagos` con 14 ítems mide
+      1161px (390) / 1267px (360) / **1551px (320)** y el shell scrollea. Nada recortado.
+- [x] **`pagar` apila correctamente**: las 2 columnas colapsan a una, el CTA queda full-width al
+      pie y el contenido crece a 539/551/583px con scroll nativo.
+- [x] **Colchón inferior verificado, no asumido.** Al quitar el `padding-bottom: 5rem` inline de
+      `pagos`/`pagar` quedó la duda de si en móvil hacía falta. Medido tras scrollear al fondo:
+      **16-18px** en las tres páginas — idéntico a `clases`, que **nunca tuvo ese inline** porque
+      el `.bento-grid` ya aporta `padding-bottom: 16px` propio del DS. O sea que quitarlo dejó a
+      estas dos páginas **consistentes con el resto de la app**, no cortas.
+- [x] **El centrado de estados vacíos no se rompe sin alto fijo.** Riesgo real: `flex-1` +
+      `justify-center` dentro de una celda con `contain:none` podía colapsar o descentrar. No
+      ocurre — con la columna flex de alto automático el hijo toma su alto natural y la card no
+      se estira.
+
+#### Hallazgos móviles PREEXISTENTES (fuera de la causa raíz de este fix)
+
+Ninguno es regresión — verificado con `git diff`, no supuesto:
+
+1. **Áreas táctiles bajo 44×44** (precedente `ASG-b-061`): las tabs de
+   `<app-tabs variant="segmented">` miden **94×32 / 73×32**, y el link "Inicio" de
+   `<app-section-hero>` mide **50×16**. Son componentes **compartidos** usados en toda la app;
+   corregirlos es transversal y no puede colgarse de este fix.
+2. **A 320×568 la fila de `clases` se aprieta**: la fecha trunca a "vie, 17…" y "45 min" parte en
+   dos líneas. El diff confirma que el markup de la fila **no se tocó** (solo cambió la
+   indentación al envolver el contenido en el scroller). A 360 y 390 se lee bien.
+
 ### Caso Profesional de `pruebas-online` — verificado con control negativo
 
 El caso que motivó el wrapper (alumno Profesional, sin fila de stats) no existe en el seed, así
