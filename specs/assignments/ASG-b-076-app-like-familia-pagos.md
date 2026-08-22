@@ -1,6 +1,6 @@
 # Asignación ASG-b-076 — App-like: familia "pagos" (`admin` + `secretaria`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

@@ -1,6 +1,6 @@
 # Asignación ASG-b-091 — Alumno con matrícula solo `completed` ve horario histórico sin aviso
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

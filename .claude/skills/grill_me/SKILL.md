@@ -10,5 +10,5 @@ Haz las preguntas **una a la vez**, esperando la respuesta antes de continuar. P
 Es el brazo activo del Critic Loop: sirve para **estresar lo que se PROPONE** antes de volverlo spec (distinto de `/onboarding`, que descubre lo que YA existe). Enfoca la propuesta como un cambio de proceso o una mejora del negocio autoescuela.
 
 - Si una pregunta se responde consultando tus `specs/` o `indices/` (glosario, blueprint, compliance, context map), **consúltalos en vez de preguntar**.
-- Si al estresar la propuesta detectas que rompe una **invariante de integridad** (`specs/eval/compliance_check.md`, Capa A), dilo y bloquéala. Si cruza **normativa** (Capa B), anexa la advertencia citada. No sigas grillando sobre una base que ya sabes inválida.
+- Si al estresar la propuesta detectas que rompe una **invariante de integridad** (`docs/compliance_check.md`, Capa A), dilo y bloquéala. Si cruza **normativa** (Capa B), anexa la advertencia citada. No sigas grillando sobre una base que ya sabes inválida.
 - Cuando el interrogatorio cierre y quede conocimiento afirmado por el equipo, **guárdalo en el acto** (Real-Time Sync) en el `.md` que corresponda.

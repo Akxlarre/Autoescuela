@@ -20,9 +20,10 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-092 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-092-*.md` |
+| ASG-b-093 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
+| ASG-b-094 | Override de `force-compact` muerto en `section-hero` (modo slim) | `cualquiera` | hotfix | P2 | b | Detectado al cerrar `hotfix-051-b`: el selector CSS apunta a `.shrink-0`, que el propio hotfix quitó del template. Ver `specs/assignments/ASG-b-094-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 

@@ -1,6 +1,6 @@
 # Asignación ASG-b-084 — App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

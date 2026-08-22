@@ -1,6 +1,6 @@
 # Asignación ASG-b-005 — Cobertura data-llm-* — Lote 2: terminar hero-tab + Config Web resto + varios
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

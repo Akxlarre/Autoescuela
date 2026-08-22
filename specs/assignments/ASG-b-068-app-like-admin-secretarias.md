@@ -1,6 +1,6 @@
 # Asignación ASG-b-068 — App-like: `/admin/secretarias`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

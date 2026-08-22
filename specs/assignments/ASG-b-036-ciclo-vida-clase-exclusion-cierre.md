@@ -1,6 +1,6 @@
 # Asignación ASG-b-036 — Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P1

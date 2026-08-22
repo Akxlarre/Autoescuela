@@ -1,7 +1,8 @@
 # Hotfix: Fondo inicial hardcodeado en $50.000 (asunción obsoleta)
 > id: hotfix-002-i-fondo-inicial-hardcodeado
 > refs: —
-> status: in_progress
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `cuadratura.facade.ts:133` (`fondoInicial = signal<number>(0)`) y en `detalle-cuadratura-modal.component.ts:66-70` (KPIs "Saldo Sistema"/"Diferencia" removidos, queda solo "Saldo Físico").
 > created: 2026-08-06
 
 ## Problema

@@ -1,6 +1,6 @@
 # Asignación ASG-b-001 — Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

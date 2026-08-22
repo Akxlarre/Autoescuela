@@ -1,6 +1,6 @@
 # Asignación ASG-b-050 — Poder borrar (¿o anular?) Servicios Especiales
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P3

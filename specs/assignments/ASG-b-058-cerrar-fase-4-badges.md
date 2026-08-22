@@ -1,6 +1,6 @@
 # Asignación ASG-b-058 — Cerrar la fase 4 del roadmap de badges (los 4 residuos)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P3

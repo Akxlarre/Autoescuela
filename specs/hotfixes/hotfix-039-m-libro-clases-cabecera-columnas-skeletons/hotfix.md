@@ -1,7 +1,8 @@
 # Hotfix: Cabecera 4/3 columnas + skeletons fieles al espaciado real (Libro de Clases)
 
 > id: hotfix-039-m-libro-clases-cabecera-columnas-skeletons
-> status: in-progress
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `libro-de-clases.component.ts:126` y `:133` — skeleton con 4 líneas (Autoescuela/Curso/ID/Promoción) a la izquierda y 3 (Fecha inicio/término/Dirección) a la derecha, coincidiendo con el contenido real.
 > created: 2026-07-22
 
 ## Problema

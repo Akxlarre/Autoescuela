@@ -1,7 +1,8 @@
 # Hotfix: Limpieza de UI en "Evaluación Práctica" (instructor)
 > id: hotfix-072-m-limpieza-ui-evaluacion-practica
 > refs: —
-> status: in_progress
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `instructor-evaluacion.component.ts`: sin `max-w-4xl`, back-button dice "Ficha Técnica" (`:47`) y la barra inferior usa `bg-surface ... justify-end gap-3` (`:248`).
 > created: 2026-08-13
 
 ## Problema
