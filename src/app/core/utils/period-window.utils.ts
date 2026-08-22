@@ -7,7 +7,12 @@ import { monthsAgoIso } from './date.utils';
  * porque la búsqueda y el export tienen que poder operar sobre todo el historial.
  * Ver `docs/research/listas-grandes-virtual-scroll.md` §2.1.
  */
-export type PeriodWindow = 'last-12-months' | 'all';
+export type PeriodWindow = 'last-12-months' | 'all' | `year-${string}`;
+
+/** Extrae el año de una ventana `year-YYYY`, o `null` si la ventana no es de ese tipo. */
+function windowYear(window: PeriodWindow): string | null {
+  return window.startsWith('year-') ? window.slice('year-'.length) : null;
+}
 
 /** Meses que abarca la ventana acotada. Igual para Clase B y Profesional (decisión del estrés-test). */
 export const PERIOD_WINDOW_MONTHS = 12;
@@ -22,7 +27,7 @@ export const DEFAULT_PERIOD_WINDOW: PeriodWindow = 'last-12-months';
  * @returns `null` cuando la ventana es "todo el historial" — no hay nada que recortar.
  */
 export function periodCutoffIso(window: PeriodWindow, cutoffIso?: string): string | null {
-  if (window === 'all') return null;
+  if (window !== 'last-12-months') return null; // 'all' y 'year-YYYY' no se expresan como corte
   return cutoffIso ?? monthsAgoIso(PERIOD_WINDOW_MONTHS);
 }
 
@@ -57,6 +62,15 @@ export function applyPeriodWindow<T>(
   { window, hasActiveSearch, dateOf, cutoffIso }: PeriodWindowOptions<T>,
 ): T[] {
   if (hasActiveSearch) return [...items];
+
+  const year = windowYear(window);
+  if (year !== null) {
+    return items.filter((item) => {
+      const fecha = dateOf(item);
+      if (!fecha) return true;
+      return fecha.slice(0, 4) === year;
+    });
+  }
 
   const cutoff = periodCutoffIso(window, cutoffIso);
   if (cutoff === null) return [...items];

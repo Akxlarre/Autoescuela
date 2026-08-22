@@ -84,6 +84,49 @@ describe('applyPeriodWindow — la búsqueda NUNCA queda atrapada por el períod
   });
 });
 
+describe('applyPeriodWindow — ventana de año concreto (fix-147-b, unificación con el filtro de año)', () => {
+  // En ex-alumnos Clase B ya existía un filtro por año. Se unificaron en UN solo control de
+  // tiempo: elegir un año es otra ventana, no un filtro aparte que compita con esta.
+  const de2024: Row = { id: 10, fecha: '2024-06-15' };
+  const de2026: Row = { id: 11, fecha: '2026-02-01' };
+
+  it('deja solo los registros del año elegido', () => {
+    const out = applyPeriodWindow([de2024, de2026], {
+      window: 'year-2024',
+      hasActiveSearch: false,
+      dateOf,
+      cutoffIso: CUTOFF,
+    });
+    expect(out.map((r) => r.id)).toEqual([de2024.id]);
+  });
+
+  it('un año viejo NO queda vacío por la ventana de 12 meses — es su propia ventana', () => {
+    // Regresión del bug que motivó la unificación: con dos controles compitiendo, elegir 2024
+    // devolvía 0 filas y el filtro de año parecía roto.
+    const out = applyPeriodWindow([de2024], {
+      window: 'year-2024',
+      hasActiveSearch: false,
+      dateOf,
+      cutoffIso: CUTOFF,
+    });
+    expect(out).toHaveLength(1);
+  });
+
+  it('la búsqueda activa también atraviesa la ventana de año', () => {
+    const out = applyPeriodWindow([de2024, de2026], {
+      window: 'year-2024',
+      hasActiveSearch: true,
+      dateOf,
+      cutoffIso: CUTOFF,
+    });
+    expect(out).toHaveLength(2);
+  });
+
+  it('periodCutoffIso devuelve null para una ventana de año (no es un corte, es un rango)', () => {
+    expect(periodCutoffIso('year-2024')).toBeNull();
+  });
+});
+
 describe('applyPeriodWindow — pureza', () => {
   it('no muta el arreglo original', () => {
     const items = [viejo, reciente];

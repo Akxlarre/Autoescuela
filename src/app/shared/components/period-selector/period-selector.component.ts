@@ -57,10 +57,21 @@ export class PeriodSelectorComponent {
   /** Etiqueta accesible; los consumidores la ajustan al contenido de su lista. */
   readonly ariaLabel = input('Período de la lista');
 
+  /**
+   * Años concretos que se ofrecen además de las dos ventanas base (ej. `['2026','2025']`).
+   *
+   * Existe para **unificar** el filtro de año que algunas listas ya tenían por separado
+   * (ex-alumnos Clase B). Dos controles de tiempo distintos se contradicen: con la ventana de
+   * 12 meses activa, elegir "2024" en el otro control devolvía 0 filas y parecía roto. Acá
+   * elegir un año **es** elegir una ventana, así que el conflicto no puede existir.
+   */
+  readonly years = input<readonly string[]>([]);
+
   readonly windowChange = output<PeriodWindow>();
 
   protected readonly options = computed(() => [
     { label: `Últimos ${PERIOD_WINDOW_MONTHS} meses`, value: 'last-12-months' as PeriodWindow },
     { label: 'Todo el historial', value: 'all' as PeriodWindow },
+    ...this.years().map((y) => ({ label: y, value: `year-${y}` as PeriodWindow })),
   ]);
 }
