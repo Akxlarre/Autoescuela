@@ -117,17 +117,49 @@ agrupador cuando queda vacío hereda el piso `--bento-row-min` (120px) en móvil
 
 ## Test de Regresión
 
-<!-- A completar. Checklist de cierre heredado del rollout app-like (aplica a las 4): -->
+### Verificado ✅
 
-- [ ] `force-compact` verificado con drawer abierto en cada página que sí se toque
-- [ ] Sin `.spec.ts` nuevo obligatorio — salvo que aparezca lógica de densidad nueva (ej. el
-      `computed()` que alterna el modificador del root en el caso "0 stats" de `pruebas-online`)
-- [ ] `npx tsc --noEmit` sin errores
-- [ ] `npm run test:ci` sin fallos
-- [ ] `npm run lint:arch` exit 0
-- [ ] `/verify` en 390×844, 1440×900 y 1440×768, cada página tocada
-- [ ] Si `pagar` queda exenta: excepción documentada en `indices/APP-LIKE-ROLLOUT.md` con el
-      criterio (#1) y la medición que la justifica
+- [x] **Sin `.spec.ts` nuevo** — el wrapper-siempre-presente resuelve el colapso de
+      `pruebas-online` sin introducir lógica de densidad, así que no hay decisión nueva que
+      testear (ver §Cambio 3 para por qué se prefirió al `computed()` de `fix-133-b`).
+- [x] `npx tsc --noEmit` — exit 0, sin errores.
+- [x] `npm run test:ci` — **177 test files, 2210 tests, 0 fallos** (2 files / 5 tests skipped,
+      preexistentes).
+- [x] `npm run lint:arch` — exit 0, 0 errores. Los warnings son **byte-idénticos** a los del
+      baseline sin este cambio, comprobado stasheando los 3 archivos y difeando el conteo por
+      regla. En particular **ARCH-19 (9 casos vs cuota 7) es deuda preexistente, no de este
+      fix** — su ejemplo vive en `matricula-steps/confirmation`, que este track no toca.
+- [x] **Compilación real de los 3 templates en el dev server** (`ng serve`, Angular 21/Vite).
+      Vale la pena registrarlo porque **`tsc --noEmit` NO valida templates de Angular**: un
+      estado intermedio de `alumno-clases` disparó `NG5002: Unexpected closing tag "section"`
+      visible solo en el navegador. Tras el rebuild el error desaparece y el balance del
+      template es 31/31 `<div>` y 1/1 `<section>`. Lección: en este rollout, `tsc` verde no
+      es evidencia de que el template compile.
+
+### 🚫 BLOQUEADO por la red del entorno — pendiente de correr en una máquina con acceso
+
+El `/verify` real y la medición de `pagar` **no se pudieron ejecutar en el contenedor remoto**:
+el navegador resuelve `https://skvekggejikzxhzsjmkz.supabase.co/auth/v1/token` con
+`net::ERR_TUNNEL_CONNECTION_FAILED` (política de red del sandbox). Sin login no hay sesión, y
+todo `/app/**` está detrás del guard de autenticación.
+
+Lo que quedó fuera de alcance verificable acá — **no asumir ninguno como cumplido**:
+
+- [ ] `/verify` en 390×844, 1440×900 y 1440×768, en las 3 páginas tocadas
+- [ ] `documentScrolls: false` en desktop y alto real (>0px, no colapsada) de cada `.bento-fill`
+- [ ] El caso que motivó el wrapper en `pruebas-online`: alumno **Profesional** (sin fila de
+      stats) — confirmar que los simuladores caen igual en la fila fill y no se colapsan
+- [ ] El caso equivalente en `clases`: alumno **sin matrícula** (alerta + panel coexistiendo)
+- [ ] `force-compact` con drawer abierto — ⚠️ ojo: ninguna de las 3 páginas inyecta
+      `LayoutDrawerFacadeService` hoy, igual que `alumno/horario` (`fix-127-b`), así que
+      probablemente este ítem del checklist **no aplique al portal alumno**. Confirmar en vez
+      de agregar el binding a ciegas.
+- [ ] **Medir el alto real de los 2 pasos de `/alumno/pagar`** y recién ahí decidir
+      implementación vs excepción (§Decisión de alcance). Sigue abierta.
+- [ ] Si `pagar` queda exenta: documentar la excepción en `indices/APP-LIKE-ROLLOUT.md` con el
+      criterio (#1) y la medición que la justifica.
+
+**Este fix NO debe cerrarse con `/fix-close` hasta completar esa lista.**
 
 ## Referencias
 
