@@ -1,14 +1,14 @@
 # Asignación ASG-b-094 — Override de `force-compact` muerto en `section-hero` (modo slim)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P2
 > **created:** 2026-08-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-22
+> **resulting_track:** hotfix-052-b-force-compact-selector-muerto-section-hero
 
 ---
 
