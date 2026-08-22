@@ -92,32 +92,65 @@ Obligatorios (la lógica de ventana de período es lógica nueva → TDD, escrit
 - [x] El export parte del dataset completo, no de la vista recortada por período.
       → `servicios-especiales.facade.spec.ts` — "invoca la Edge Function solo con format y
       branch_id". En esta página el export es **estructuralmente** inmune: corre server-side y
-      no recibe nada de la vista. ⚠️ Falta re-verificarlo en ex-alumnos, donde el export puede
-      partir de una lista en memoria.
+      no recibe nada de la vista.
+      → **Resuelto en ex-alumnos: no hay export.** Ni las páginas de Clase B ni el content de
+      Profesional tienen botón de exportar, y `ExAlumnosFacade` no tiene ningún método de
+      export. El riesgo de "planilla truncada en silencio" —el peor de los tres que la
+      asignación anticipaba— **no existe en ninguna de las 3 superficies**: la única que
+      exporta lo hace server-side.
 - [x] `fetchAlumnosConDeuda` aplica `.limit(200)`.
       → `pagos.facade.spec.ts` — "aplica .limit(200) sobre la query de deudores" (verifica
       también el `.order('pending_balance', desc)` previo).
 
-**Estado: 55/55 verdes** (12 util + 15 pagos + 28 servicios-especiales), `tsc --noEmit` limpio,
-`lint:arch` exit 0.
+Extra, no previsto en el contrato original:
 
-## Progreso
+- [x] `fechaEgreso` se mapea con precisión de día, no solo el año.
+      → `ex-alumnos.facade.spec.ts` — "mapea fechaEgreso con precisión de día".
+
+**Estado: suite completa `npm run test:ci` en verde — 2229 passed / 5 skipped (180 archivos).**
+`tsc --noEmit` limpio, `lint:arch` exit 0.
+
+## Progreso — COMPLETO
 
 - [x] Núcleo funcional + tests (TDD)
 - [x] `app-period-selector` (Dumb compartido) — índices actualizados
 - [x] `.limit(200)` en deudores
 - [x] Consumidor 1/4: `servicios-especiales` — verificado en navegador
-- [ ] Consumidor 2/4: `ex-alumnos` Clase B — admin (tabla inline, ~600 líneas)
-- [ ] Consumidor 3/4: `ex-alumnos` Clase B — secretaría (duplicado del anterior)
-- [ ] Consumidor 4/4: `app-ex-alumnos-profesional-content`
+- [x] Consumidor 2/4: `ex-alumnos` Clase B admin — verificado en navegador (incluye la nota
+      "Buscando en todo el historial" al escribir en el buscador)
+- [x] Consumidor 3/4: `ex-alumnos` Clase B secretaría — verificado en navegador
+- [x] Consumidor 4/4: `app-ex-alumnos-profesional-content` — verificado en navegador
 
-⚠️ Los 3 pendientes **sí tienen buscador de texto libre**, así que ahí es donde la regla no
-negociable (`hasActiveSearch`) se juega de verdad, y donde hay que confirmar de dónde parte el
-export. Cada uno necesita su propio test de que la búsqueda atraviesa la ventana.
+## Decisiones tomadas durante la implementación
 
-⚠️ **Nota de alcance:** el hook advierte "un fix = una causa raíz = un archivo tocado". La causa
-raíz es una sola, pero el fix ya toca 6 archivos y le faltan 3 páginas. Si al entrar a
-`ex-alumnos` el diff sigue creciendo, evaluar partirlo o convertirlo en spec.
+1. **Componente compartido, no inline.** 4 puntos de consumo; inlinearlo 4 veces es como se
+   llegó a los 221 overlines ad-hoc de `fix-078-b`.
+2. **Nota "Buscando en todo el historial"** en vez de deshabilitar el selector (decisión del
+   owner): un control que se apaga solo se lee como bug.
+3. **Unificar el filtro de año dentro del selector** (decisión del owner) en Clase B. No era
+   cosmético: eran dos controles de tiempo compitiendo, y con la ventana por defecto activa
+   elegir un año viejo devolvía 0 filas. El mismo bug silencioso que el fix combate, entrando
+   por otra puerta. En Profesional no aplica — ahí el otro filtro es por clase, no por tiempo.
+
+## Hallazgos
+
+- **`fechaEgreso` (corrección de precisión).** El row solo exponía `anio`, derivado de
+  `updated_at` descartando el día: alguien que egresó en diciembre quedaba fuera de la ventana
+  de 12 meses por hasta 11 meses de error. Se agregó el campo ISO completo.
+- **El riesgo de export truncado no existe** en 2 de las 3 superficies (no hay export) y es
+  estructuralmente imposible en la tercera (server-side).
+- **Trampa de backticks.** El comentario que agregué en `secretaria-ex-alumnos.component.ts`
+  llevaba backticks dentro del `template` literal y lo terminaba antes de tiempo — 3 errores de
+  `tsc` en lugares no relacionados. Es exactamente la trampa documentada en `visual-system.md`
+  (spec 0030). Quedó una nota en el propio comentario para el próximo que edite ahí.
+
+## Nota de alcance (para la revisión)
+
+El hook advierte "un fix = una causa raíz = un archivo tocado". Este fix toca **9 archivos**.
+La causa raíz **es una sola** y el diff es coherente, pero el volumen viene de que la misma
+lista existe duplicada en 2 páginas — deuda ya registrada como `ASG-b-096`. Si el revisor
+prefiere tratarlo como spec, el contenido ya está escrito y solo habría que reformularlo con
+ACs; no cambiaría una línea de código.
 
 ## Verificación visual
 
