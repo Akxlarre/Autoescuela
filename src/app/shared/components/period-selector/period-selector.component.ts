@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Select } from 'primeng/select';
-import { IconComponent } from '../icon/icon.component';
-import { PERIOD_WINDOW_MONTHS, type PeriodWindow } from '../../../core/utils/period-window.utils';
+import { IconComponent } from '@shared/components/icon/icon.component';
+import { PERIOD_WINDOW_MONTHS, type PeriodWindow } from '@core/utils/period-window.utils';
 
 /**
  * Selector de ventana de período para listas históricas acumulativas.
