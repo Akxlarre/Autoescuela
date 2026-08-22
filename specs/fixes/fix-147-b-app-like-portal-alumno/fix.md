@@ -73,7 +73,14 @@ agrupador cuando queda vacío hereda el piso `--bento-row-min` (120px) en móvil
   (la alerta **sube** por encima del panel a propósito: explica por qué el panel de abajo está
   vacío). Panel de tabs → `.bento-fill`; las tabs quedan `shrink-0` **fuera** del scroller (no
   se pierden al bajar el listado) y todo el `@if/@else if/@else` de contenido pasa a un único
-  `<div class="flex-1 min-h-0 overflow-y-auto">`.
+  `<div class="flex-1 min-h-0 overflow-y-auto flex flex-col">`.
+- **Estados vacíos centrados (hallazgo de la revisión visual, 2026-08-22).** Los 4 empty states
+  de los tabs (`Prácticas`/`Teoría` × `class_b`/`professional`) quedaban pegados arriba con un
+  hueco de ~300px debajo, dentro de una celda fill de 461px. Es la misma regla de
+  `visual-system.md` que ya se había aplicado en `pagos` y `pagar` — se había omitido acá.
+  Pasan a `flex-1 flex flex-col items-center justify-center`.
+  **La geometría no lo detecta:** `documentScrolls=false`, celda fill > 0 y `contain:size`
+  correcto daban verde en las 12 combinaciones. Solo se vio mirando la captura.
 
 ### 2. `/alumno/pagos`
 - **Archivo:** `src/app/features/alumno/pagos/alumno-pagos.component.ts`
@@ -195,6 +202,30 @@ real de la app, no `main` ni `documentElement`.
       el piso de 120px en móvil).
 - [x] Consola sin errores atribuibles a este cambio.
 
+### Edge cases verificados (revisión visual, 2026-08-22)
+
+11 escenarios capturados y **mirados uno por uno**, no solo medidos. Los estados de `pagos` se
+forzaron con el estado real del componente (Edge Function `student-payment` interceptada en el
+harness); `clases sin matrícula` vaciando `/rest/v1/enrollments`.
+
+| Escenario | `grid-template-rows` | Resultado |
+|---|---|---|
+| `pagos` sin pagos | `133 0 543` | empty state centrado ✅ |
+| `pagos` lista larga (14) | `138 0 538` | scroll interno ✅, página no desborda |
+| `pagos` Profesional con saldo | `133 **70** 473` | banner de aviso en la fila 2 ✅ |
+| `pagos` matrícula al día | `62 **98** 516` | card de estado en la fila 2 ✅ |
+| `clases` **sin matrícula** | `115 **100** 461` | alerta + panel coexisten ✅ |
+| `clases` / `pagos` / `pruebas-online` móvil | — | scroll nativo, `contain:none` ✅ |
+| `clases` / `pagos` / `pruebas-online` oscuro | — | tokens resuelven, contraste ok ✅ |
+
+`clases sin matrícula` era el caso que había quedado pendiente: **verificado**, con la alerta
+por encima del panel explicando por qué está vacío.
+
+⚠️ **Un intento fallido que dejó lección de método:** vaciar *todo* `/rest/v1/` para simular
+"sin matrícula" también vacía la query del usuario y **tumba la sesión** — las 7 capturas
+siguientes salieron sin `.bento-grid` y parecían un bug del producto. Acotar el mock al
+endpoint exacto (`/rest/v1/enrollments`) y dejar el escenario destructivo **al final**.
+
 ### Caso Profesional de `pruebas-online` — verificado con control negativo
 
 El caso que motivó el wrapper (alumno Profesional, sin fila de stats) no existe en el seed, así
@@ -209,13 +240,6 @@ negativo que reproduce el bug que el wrapper evita:
 
 El control negativo es la parte que importa: **quitar el wrapper colapsa la celda a 0px**, que
 es exactamente el fallo de `fix-133-b`. Prueba que la mitigación es portante y no decorativa.
-
-### Pendiente
-
-- [ ] **`clases` con alumno sin matrícula** (alerta "Sin matrícula" + panel coexistiendo). No hay
-      cuenta de seed en ese estado. Riesgo bajo: la dirección peligrosa es el wrapper **vacío**
-      (ya verificada arriba y en el estado real de `clases`/`pagos`, donde la fila 2 mide 0px);
-      con la alerta presente el wrapper solo crece, que es el caso benigno.
 
 ### Ruido ambiental del contenedor (no del cambio)
 

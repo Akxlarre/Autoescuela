@@ -112,7 +112,7 @@ type TabId = 'practice' | 'theory';
 
         <!-- Listado: único scroller de la celda. En desktop su alto lo dicta la fila
              fill del grid; bajo lg el contenido mide natural y scrollea la página. -->
-        <div class="flex-1 min-h-0 overflow-y-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
           <!-- ── Skeleton del listado ───────────────────────────────────────────── -->
           @if (loading()) {
             <div class="flex flex-col gap-3">
@@ -135,7 +135,9 @@ type TabId = 'practice' | 'theory';
           } @else if (activeTab() === 'practice') {
             @if (licenseGroup() === 'class_b') {
               @if (practiceSessions().length === 0) {
-                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <div
+                  class="flex-1 flex flex-col items-center justify-center gap-2 py-10 text-center"
+                >
                   <app-icon name="car" [size]="32" class="text-text-muted" />
                   <p class="text-sm text-text-muted m-0">
                     Aún no tienes clases prácticas registradas
@@ -185,7 +187,9 @@ type TabId = 'practice' | 'theory';
             } @else {
               <!-- Profesional: Prácticas -->
               @if (profPracticeSessions().length === 0) {
-                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <div
+                  class="flex-1 flex flex-col items-center justify-center gap-2 py-10 text-center"
+                >
                   <app-icon name="car" [size]="32" class="text-text-muted" />
                   <p class="text-sm text-text-muted m-0">Sin prácticas registradas aún</p>
                 </div>
@@ -219,7 +223,9 @@ type TabId = 'practice' | 'theory';
           } @else {
             @if (licenseGroup() === 'class_b') {
               @if (theorySessions().length === 0) {
-                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <div
+                  class="flex-1 flex flex-col items-center justify-center gap-2 py-10 text-center"
+                >
                   <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
                   <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
                 </div>
@@ -253,7 +259,9 @@ type TabId = 'practice' | 'theory';
             } @else {
               <!-- Profesional: Teoría -->
               @if (profTheorySessions().length === 0) {
-                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                <div
+                  class="flex-1 flex flex-col items-center justify-center gap-2 py-10 text-center"
+                >
                   <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
                   <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
                 </div>
