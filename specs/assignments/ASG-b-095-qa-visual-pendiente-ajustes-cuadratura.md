@@ -134,3 +134,74 @@ sembrar ese dato antes de poder verificar AC7 de verdad.
 2. **Formato inconsistente de moneda negativa** en la misma pantalla: la lista de la izquierda
    muestra `- $50.000` (signo antes del `$`, con espacio) y la fila del ajuste muestra
    `$-50.000` (signo después del `$`). Deberían usar el mismo formateo.
+
+---
+
+## ⚠️ Corrección a la sección anterior (2026-08-22, misma sesión)
+
+Dos afirmaciones del bloque "🛑 Bloqueado" de arriba **eran incorrectas**. Se dejan tachadas
+en vez de borradas porque el error en sí es la parte instructiva.
+
+### 1. ~~"No hay seed base, un stack local queda vacío"~~ → **FALSO**
+
+El seed **sí existe**, pero no donde `config.toml` dice. Está dentro de las migraciones:
+
+| Archivo | Qué siembra |
+|---|---|
+| `supabase/migrations/20260301000010_09b_seed_data.sql` | `roles`, `courses`, `branches` |
+| `supabase/migrations/20260313120001_seed_instructors_vehicles_dev.sql` | `users` (public), `instructors`, `vehicles`, `vehicle_assignments` |
+| `supabase/scripts/seed_dev_alumnos_clase_b.sql` + `..._profesional.sql` | alumnos de dev |
+
+**Por qué me lo perdí, y por qué le puede pasar a cualquiera:** `supabase/config.toml:60-65`
+declara `[db.seed] enabled = true` con `sql_paths = ["./seed.sql"]`, y **ese `seed.sql` no
+existe en el repo**. Buscar el seed donde la config dice que está da un resultado vacío y
+lleva a concluir que no hay seed. Vale la pena o borrar esa config colgante, o crear el
+`seed.sql` como agregador de lo que ya existe disperso.
+
+**Lo que sí falta de verdad** (versión acotada del hallazgo original): ninguna migración
+inserta en `auth.users`. Un stack local levanta con todo el dominio poblado pero **sin cuentas
+para loguearse** — `admin@test.com` y compañía viven solo en el `auth.users` del proyecto
+remoto. Es un hueco chico y se resuelve creando los usuarios en el Auth local, sin necesidad
+de traer nada de la nube.
+
+### 2. ~~"Un ajuste de prueba sería permanente e irreversible"~~ → **FALSO**
+
+La ausencia de policies UPDATE/DELETE en `cuadratura_adjustments` es real, pero **solo aplica
+a la app** (PostgREST respeta RLS). `indices/FLOWS-QA-AUDIT.md:688` documenta el canal
+correcto: el Supabase CLI ya está linkeado y autenticado con el login personal del owner, y
+`npx supabase db query --linked "SQL..."` ejecuta SQL admin vía la Management API —
+**salteando RLS, sin tocar ni exponer el JWT de `service_role`**. En la Fase 4 de esa
+auditoría se usó justamente para "inspeccionar/crear/borrar los datos necesarios para las
+pruebas de flujo".
+
+**Consecuencia práctica: el golden path SÍ es reversible.** Se puede registrar el ajuste por
+la UI, verificar que aparece en Contabilidad > Gastos, y después borrar las filas de
+`cuadratura_adjustments` y `expenses` por SQL. Lo mismo habilita AC7: sembrar un
+`cash_closings` cerrado dentro de la sede de una secretaria, verificar que no ve el botón, y
+limpiar.
+
+### Lo que queda realmente bloqueado
+
+El clasificador de seguridad del entorno **bloquea `npx supabase db query --linked`** para el
+agente (mismo bloqueo que la Fase 4 de FLOWS-QA-AUDIT documenta haber encontrado). Para
+desbloquear, alguna de estas:
+
+- Agregar una regla de permiso de Bash para ese comando.
+- Que un humano corra el SQL de siembra y de limpieza, y el agente haga la parte de UI.
+- Levantar el stack local (ver nota de puertos abajo) y crear ahí las cuentas de auth.
+
+**Nota de puertos para el camino local:** los puertos que declara `supabase/config.toml`
+(54321/54322/54323/54324/54327) están ocupados por otro proyecto del owner
+(`app-familiar-v2`) cuando ese stack está corriendo. Hay que bajarlo o reasignar puertos.
+
+### Sobre "traer los datos desde el cloud"
+
+**No hace falta y no conviene.** No hace falta porque el seed sintético que necesita un
+entorno local ya está en el repo (tabla de arriba). No conviene porque
+`supabase db dump --data-only --linked` bajaría a disco los datos personales reales de
+alumnos (RUT, nombre, email, teléfono) — el proyecto remoto tiene datos de producción reales,
+no solo seed (`indices/FLOWS-QA-AUDIT.md` §Fase 4 documenta matrículas y montos reales) — y
+este repo tiene un módulo entero de cumplimiento de la Ley 21.719 en `.compliance/`. Copiar
+producción a una máquina de desarrollo es exactamente el tipo de tratamiento que ese módulo
+busca controlar. Si en algún momento se necesita volumen realista, `ASG-b-088` ya define el
+camino correcto: **datos sintéticos sembrados**, no un dump de producción.
