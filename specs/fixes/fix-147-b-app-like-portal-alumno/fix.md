@@ -54,7 +54,8 @@ evidencia) e implementarla sí o sí (tocaría una página que quizás no lo pid
 
 ## Cambio
 
-**Patrón único aplicado a las 3 páginas tocadas:** root `--fill-screen-kpi --rows-fit`, un
+**Patrón único aplicado a las 4 páginas** (`pagar` incluida: la medición la trajo al alcance,
+ver §4): root `--fill-screen-kpi --rows-fit`, un
 wrapper-agrupador SIEMPRE presente en la fila 2 (los `@if` adentro) y una única celda
 `.bento-fill` con su propio scroller interno. `--rows-fit` no es decorativo: sin él, el wrapper
 agrupador cuando queda vacío hereda el piso `--bento-row-min` (120px) en móvil, donde no hay
@@ -107,67 +108,105 @@ agrupador cuando queda vacío hereda el piso `--bento-row-min` (120px) en móvil
   banner de simuladores → `.bento-fill` con el grid anidado como scroller
   (`flex-1 min-h-0 overflow-y-auto`) y el encabezado `shrink-0`.
 
-### 4. `/alumno/pagar`
+### 4. `/alumno/pagar` — SE IMPLEMENTA (la medición contradijo la hipótesis heredada)
+
 - **Archivo:** `src/app/features/alumno/pagar/alumno-pagar.component.ts`
-- **Qué cambia:** a determinar por medición (ver "Decisión de alcance" arriba). El resultado
-  esperado por defecto es **no tocar el archivo** y documentar la excepción.
-- Nota para cuando se mida: el stepper real tiene **2 nodos, no 3** (`steps()` = Resumen → Pago,
-  con `facadeStep` 1 y 3). La descripción heredada de "3 pasos" viene del audit; el paso 2 ya no
-  existe desde fix-017 (las 12 clases se agendan en la matrícula, el alumno no elige horarios).
+- **Medición con saldo pendiente real, ANTES del cambio** (`.shell-content`, el scroller real):
+
+  | Alto | Step 1 | Step 3 |
+  |---|---|---|
+  | 1440×900 | 823/823 ok | 823/823 ok |
+  | 1440×768 | **697/691 DESBORDA** | 691/691 ok |
+  | 1440×700 | **697/623 DESBORDA** | **656/623 DESBORDA** |
+
+  1440×768 es una resolución de laptop común y está en el checklist del rollout. La página
+  **NO califica** por el criterio #1 ("contenido que nunca produce overflow"): sí lo produce.
+
+- **Dos falsos negativos que casi cierran esto como exención — vale la pena que queden escritos:**
+  1. **La cuenta del seed no tiene saldo pendiente Clase B**, así que `/alumno/pagar` renderiza
+     solo hero + stepper (ninguna rama del `@if` entra). Medir así da "no desborda" con total
+     confianza y es una medición del vacío. Hubo que inyectar un `load-enrollment-status`
+     sintético (Edge Function interceptada en el harness, **sin tocar código de la app**) para
+     que apareciera la variante pesada de 2 columnas.
+  2. **El scroller de la app NO es `main` ni `documentElement`, es `.shell-content`.** Medir
+     overflow contra `main` da `scrollHeight === clientHeight` siempre → "no desborda" en todos
+     los casos. Se detectó porque el contenido (681px) no entraba en el contenedor (643px) y
+     aun así el chequeo daba negativo: la contradicción delató el método, no el layout.
+
+- **Qué cambia:** se aplicó **el canon bento (`--fill-screen-kpi --rows-fit`)**, no el patrón
+  custom de wizard que este mismo documento había pre-registrado. Motivo: el patrón de
+  `secretaria-matricula.component.scss` existe porque ese wizard **no es un `.bento-grid`**
+  (tiene shell propio, con `margin-right:-30px` para realinear su scrollbar). `pagar` **ya es
+  un `.bento-grid`** y su estructura es literalmente las 3 filas del canon: hero / stepper /
+  contenido del paso. Meterle el hack de wizard habría sido duplicar maquinaria para un caso
+  que el canon cubre. Concretamente: stepper + banner de error agrupados en el wrapper siempre
+  presente (el error es condicional y corría el contenido fuera de la fila fill); step 1 y
+  step 3 comparten la única celda `.bento-fill` (son mutuamente excluyentes); `bento-banner`
+  quitado de las ramas internas, que ya no son celdas del grid; card "Tu matrícula está al día"
+  centrada en el alto disponible; `style="padding-bottom: 5rem"` inline eliminado igual que en
+  `pagos`.
+- **Corrección al enunciado heredado:** el stepper tiene **2 nodos, no 3** (`steps()` =
+  Resumen → Pago, `facadeStep` 1 y 3). El paso intermedio no existe desde fix-017: las 12 clases
+  se agendan en la matrícula y el alumno no elige horarios.
 
 ## Test de Regresión
 
-### Verificado ✅
+### Estático
 
-- [x] **Sin `.spec.ts` nuevo** — el wrapper-siempre-presente resuelve el colapso de
-      `pruebas-online` sin introducir lógica de densidad, así que no hay decisión nueva que
-      testear (ver §Cambio 3 para por qué se prefirió al `computed()` de `fix-133-b`).
-- [x] `npx tsc --noEmit` — exit 0, sin errores.
-- [x] `npm run test:ci` — **177 test files, 2210 tests, 0 fallos** (2 files / 5 tests skipped,
-      preexistentes).
-- [x] `npm run lint:arch` — exit 0, 0 errores. Los warnings son **byte-idénticos** a los del
-      baseline sin este cambio, comprobado stasheando los 3 archivos y difeando el conteo por
-      regla. En particular **ARCH-19 (9 casos vs cuota 7) es deuda preexistente, no de este
-      fix** — su ejemplo vive en `matricula-steps/confirmation`, que este track no toca.
-- [x] **Compilación real de los 3 templates en el dev server** (`ng serve`, Angular 21/Vite).
-      Vale la pena registrarlo porque **`tsc --noEmit` NO valida templates de Angular**: un
-      estado intermedio de `alumno-clases` disparó `NG5002: Unexpected closing tag "section"`
-      visible solo en el navegador. Tras el rebuild el error desaparece y el balance del
-      template es 31/31 `<div>` y 1/1 `<section>`. Lección: en este rollout, `tsc` verde no
-      es evidencia de que el template compile.
+- [x] `npx tsc --noEmit` — exit 0.
+- [x] `npm run test:ci` — **177 test files, 2210 tests, 0 fallos**.
+- [x] `npm run lint:arch` — exit 0. Conteo de warnings por regla **idéntico** al baseline sin
+      este cambio (comprobado stasheando los archivos y difeando). ARCH-19 (9 casos vs cuota 7)
+      es deuda preexistente en `matricula-steps/confirmation`, que este track no toca.
+- [x] **Sin `.spec.ts` nuevo** — ninguna de las 4 páginas introdujo lógica de densidad (ver
+      §Cambio 3: se eligió el wrapper por sobre el `computed()` justamente para eso).
 
-### 🚫 BLOQUEADO por la red del entorno — pendiente de correr en una máquina con acceso
+> ⚠️ **`tsc --noEmit` NO valida templates de Angular.** Un estado intermedio de `alumno-clases`
+> tenía `NG5002: Unexpected closing tag "section"` y pasaba `tsc`, los 2210 tests y `lint:arch`
+> sin una queja: apareció solo al abrir el navegador. En este rollout, verde en estático no es
+> evidencia de que el template compile.
 
-El `/verify` real y la medición de `pagar` **no se pudieron ejecutar en el contenedor remoto**:
-el navegador resuelve `https://skvekggejikzxhzsjmkz.supabase.co/auth/v1/token` con
-`net::ERR_TUNNEL_CONNECTION_FAILED` (política de red del sandbox). Sin login no hay sesión, y
-todo `/app/**` está detrás del guard de autenticación.
+### Visual (navegador real, datos reales, tipografía de producción)
 
-Lo que quedó fuera de alcance verificable acá — **no asumir ninguno como cumplido**:
+Alumno `alumno@test.com` (Clase B, 2/12 prácticas). Medido sobre `.shell-content` — el scroller
+real de la app, no `main` ni `documentElement`.
 
-- [ ] `/verify` en 390×844, 1440×900 y 1440×768, en las 3 páginas tocadas
-- [ ] `documentScrolls: false` en desktop y alto real (>0px, no colapsada) de cada `.bento-fill`
-- [ ] El caso que motivó el wrapper en `pruebas-online`: alumno **Profesional** (sin fila de
-      stats) — confirmar que los simuladores caen igual en la fila fill y no se colapsan
-- [ ] El caso equivalente en `clases`: alumno **sin matrícula** (alerta + panel coexistiendo)
-- [ ] `force-compact` con drawer abierto — ⚠️ ojo: ninguna de las 3 páginas inyecta
-      `LayoutDrawerFacadeService` hoy, igual que `alumno/horario` (`fix-127-b`), así que
-      probablemente este ítem del checklist **no aplique al portal alumno**. Confirmar en vez
-      de agregar el binding a ciegas.
-- [ ] **Medir el alto real de los 2 pasos de `/alumno/pagar`** y recién ahí decidir
-      implementación vs excepción (§Decisión de alcance). Sigue abierta.
-- [ ] Si `pagar` queda exenta: documentar la excepción en `indices/APP-LIKE-ROLLOUT.md` con el
-      criterio (#1) y la medición que la justifica.
+| Página | 1440×900 | 1440×768 | 390×844 |
+|---|---|---|---|
+| `clases` | fill 561px, scroll interno ✅ | fill 429px, scroll interno ✅ | `contain:none`, scroll nativo ✅ |
+| `pagos` | fill 543px ✅ | fill 411px ✅ | `contain:none` ✅ |
+| `pruebas-online` | fill 340px ✅ | fill 208px, scroll interno ✅ | `contain:none` ✅ |
+| `pagar` | fill 506px ✅ | fill 374px ✅ | `contain:none` ✅ |
 
-**Este fix NO debe cerrarse con `/fix-close` hasta completar esa lista.**
+- [x] **`documentScrolls: false` en las 4 páginas y los 3 viewports.**
+- [x] Ninguna celda `.bento-fill` colapsada (todas > 0px) y `contain: size` solo en lg+.
+- [x] **`pagar` post-fix:** no desborda a 900/800/768/**700**, donde antes sí. El contenido
+      **scrollea, no se recorta**: a 1440×600 y 1440×520 el CTA "Pagar con Webpay" sigue siendo
+      alcanzable dentro del scroller (verificado con `scrollIntoView`, no asumido).
+- [x] **Tipografía de producción**: la primera pasada corrió con fuentes de fallback
+      (Google Fonts bloqueado) — se relayaron también `fonts.googleapis.com`/`fonts.gstatic.com`
+      y se re-midió. Las alturas se sostienen. Medir un layout con la tipografía equivocada
+      habría dado números que no son los de producción.
+- [x] **Caso "wrapper vacío" verificado en vivo:** en `clases` y `pagos` la fila 2 mide
+      **0px** (este alumno no tiene selector ni banner de estado) y la celda fill igual cae en
+      la fila 3 sin colapsar. Es exactamente el mecanismo que protege el caso Profesional de
+      `pruebas-online`, y confirma que `--rows-fit` hacía falta (sin él la fila vacía heredaría
+      el piso de 120px en móvil).
+- [x] Consola sin errores atribuibles a este cambio.
 
-## Referencias
+### Pendiente / no verificable acá
 
-- `indices/APP-LIKE-ROLLOUT.md` — filas de las 4 páginas, sección "Alumno" (líneas 106-111);
-  paso 12 del orden de rollout
-- `.claude/rules/visual-system.md` §"Patrón App-like" y §"Cuándo NO aplica el patrón"
-- `specs/fixes/fix-127-b-app-like-familia-horario/fix.md` — precedente del wrapper-agrupador
-  (aplica a `pagos`)
-- `specs/fixes/fix-133-b-app-like-piezas-sueltas/fix.md` — precedente del colapso por
-  auto-placement con 0 ítems en la fila KPI (aplica a `pruebas-online`)
-- Originado de Asignación ASG-b-079 (`specs/assignments/ASG-b-079-app-like-portal-alumno.md`)
+- [ ] **`pruebas-online` con alumno Profesional** (sin fila de stats). El seed solo trae un
+      alumno Clase B. El mecanismo quedó verificado **indirectamente** por el caso "fila 2 = 0px"
+      de `clases`/`pagos`, que es estructuralmente idéntico — pero no es el caso literal.
+- [ ] **`clases` con alumno sin matrícula** (alerta + panel coexistiendo). Mismo motivo.
+- [ ] **`force-compact` con drawer abierto:** ítem del checklist del rollout que **no aplica al
+      portal alumno** — ninguna de las 4 páginas inyecta `LayoutDrawerFacadeService`, igual que
+      `alumno/horario` en `fix-127-b`. Confirmado leyendo los 4 componentes, no agregado a ciegas.
+
+### Ruido ambiental del contenedor (no del cambio)
+
+`ERR_TUNNEL_CONNECTION_FAILED`→403 a Supabase hasta que se habilitó el host; Chromium no
+enruta HTTPS por el agent proxy (se resolvió interceptando en el harness y relayando por node,
+sin tocar la app); WebSocket de Realtime rechazado (el proxy no soporta upgrades); ícono Lucide
+`milestone` servido desde un CDN no relayado. Ninguno es reproducible fuera de este sandbox.
