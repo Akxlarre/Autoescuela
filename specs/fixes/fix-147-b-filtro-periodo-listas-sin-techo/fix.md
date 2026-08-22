@@ -2,8 +2,21 @@
 
 > id: fix-147-b-filtro-periodo-listas-sin-techo
 > refs: ASG-b-087
-> status: in_progress
+> status: superseded
+> superseded_by: 0038-b-filtro-periodo-listas-sin-techo
+> closed: 2026-08-22
 > created: 2026-08-22
+
+> ⚠️ **Track convertido a spec el 2026-08-22, a pedido del owner.**
+>
+> La implementación terminó tocando 9 archivos y 4 superficies, más allá de lo que el contrato
+> de un `fix` describe bien ("una causa raíz = un archivo", según el hook). El contrato vive
+> ahora en **[`specs/specs/0038-b-filtro-periodo-listas-sin-techo/`](../../specs/0038-b-filtro-periodo-listas-sin-techo/spec.md)**,
+> con 11 ACs verificables y su `acceptance.md`.
+>
+> **La conversión no cambió una línea de código** — el trabajo ya estaba hecho y verde. Este
+> archivo se conserva porque documenta el proceso de descubrimiento (las decisiones tomadas
+> sobre la marcha y los hallazgos), que la spec resume pero no reemplaza.
 
 ## Root Cause
 

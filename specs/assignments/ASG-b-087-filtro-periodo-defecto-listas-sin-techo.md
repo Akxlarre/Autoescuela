@@ -1,6 +1,6 @@
 # Asignación ASG-b-087 — Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
@@ -8,7 +8,7 @@
 > **created_by:** b
 > **claimed_by:** b
 > **claimed_at:** 2026-08-22
-> **resulting_track:** fix-147-b-filtro-periodo-listas-sin-techo
+> **resulting_track:** 0038-b-filtro-periodo-listas-sin-techo
 
 ---
 

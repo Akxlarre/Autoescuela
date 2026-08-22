@@ -24,7 +24,7 @@
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente** — no posponer la 087 esperando esta. Ver `specs/assignments/ASG-b-088-*.md` |
-| ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%); las 4 diferencias reales son triviales. Seguir el precedente de `0032-b` (pre-inscritos). ⚠️ Solapa con `fix-147-b` mientras ese track siga abierto. Ver `specs/assignments/ASG-b-096-*.md` |
+| ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%); las 4 diferencias reales son triviales. Seguir el precedente de `0032-b` (pre-inscritos). La spec `0038-b` ya dejó el selector de período duplicado en ambas: es código a **absorber**, no un bloqueo. Ver `specs/assignments/ASG-b-096-*.md` |
 | ASG-b-095 | QA visual pendiente de la cadena `0002-i` → `fix-018-i` (ajustes de cuadratura) | `cualquiera` | fix | P2 | b | El gap se difirió dos veces y quedó invisible (los 3 artefactos dicen `done`). El bloqueo declarado —"falta de Playwright MCP"— ya no aplica. Ver `specs/assignments/ASG-b-095-*.md` |
 | ASG-b-094 | Override de `force-compact` muerto en `section-hero` (modo slim) | `cualquiera` | hotfix | P2 | b | Detectado al cerrar `hotfix-051-b`: el selector CSS apunta a `.shrink-0`, que el propio hotfix quitó del template. Ver `specs/assignments/ASG-b-094-*.md` |
 
@@ -133,7 +133,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-087 | Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores | `b` | [fix-147-b-filtro-periodo-listas-sin-techo](fixes/fix-147-b-filtro-periodo-listas-sin-techo/fix.md) | 2026-08-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -229,6 +228,7 @@
 | ASG-b-050 | Poder borrar (¿o anular?) Servicios Especiales | [fix-022-i-borrar-servicio-especial](fixes/fix-022-i-borrar-servicio-especial/fix.md) | 2026-08-13 |
 | ASG-b-089 | Facade inyectado directamente en Dumb Components (`shared/components/**`) | [fix-146-b-facade-en-dumb-components](fixes/fix-146-b-facade-en-dumb-components/fix.md) | 2026-08-15 |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
+| ASG-b-087 | Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores | [0038-b-filtro-periodo-listas-sin-techo](specs/0038-b-filtro-periodo-listas-sin-techo/spec.md) | 2026-08-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
