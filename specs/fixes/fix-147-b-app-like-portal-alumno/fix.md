@@ -1,7 +1,8 @@
 # Fix: App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`)
 > id: fix-147-b-app-like-portal-alumno
 > refs: ASG-b-079
-> status: in_progress
+> status: done
+> closed: 2026-08-22
 > created: 2026-08-22
 
 ## Root Cause
