@@ -73,3 +73,64 @@ tests**, hace falta mirar.
 
 - `specs/specs/0002-i-cuadratura-editable-ajustes/acceptance.md` (§"Deuda técnica detectada")
 - `specs/fixes/fix-018-i-mejorar-visual-editar-cuadratura/fix.md` (§"No cubierto en esta pasada")
+
+---
+
+## Resultados de la QA visual parcial ejecutada (2026-08-22, por `b`)
+
+Se ejecutó la parte **read-only** de la QA pendiente con Playwright, sobre `ng serve` en :4210
+y el usuario `admin@test.com`. **No se ejecutó ninguna escritura** — el motivo está abajo, es el
+hallazgo más importante de esta pasada.
+
+### ✅ Verificado en navegador (antes solo por test unitario)
+
+| Ítem | Resultado |
+|---|---|
+| **AC1** — botón "Registrar ajuste" visible para Admin en cuadratura cerrada | ✅ Visible en el detalle del cierre del 06/08/2026 |
+| **AC4** — total vigente sin sobrescribir el snapshot original | ✅ "CIERRE TOTAL $0" (original intacto) y "Vigente: $-50.000" en una línea aparte, debajo |
+| **AC6** — cada ajuste muestra motivo, monto, autor y fecha | ✅ Los 4 presentes: badge "Gasto olvidado", `06/08/2026 03:58`, `$-50.000`, motivo, "Registrado por PEPITO ADMI" |
+| **Ítem 3** — revisión visual del drawer `RegistrarAjusteCuadraturaDrawerComponent` | ✅ Correcto. Tipo de ajuste, toggle Resta/Suma con iconos −/+, monto con prefijo `$`, motivo, CTA deshabilitado con el form vacío |
+| **Modo oscuro** | ✅ Aplica bien en el detalle y en el drawer (`body` en `rgb(9,9,11)`), todo legible |
+
+**Detalle a destacar del drawer** (no estaba documentado en ningún lado): tiene un callout
+ámbar que avisa *"Este ajuste se sumará a la cuadratura del 06/08/2026, no a la de hoy"*.
+Resuelve exactamente la confusión que AC2 intenta prevenir, y se ve bien en ambos temas.
+
+### 🛑 Bloqueado — NO ejecutar sin decisión explícita
+
+**El golden path funcional (ítem 1), AC-E1 y AC-E2 requieren un INSERT, y ese INSERT es
+permanente e irreversible contra la base de datos compartida.** Dos razones que se suman:
+
+1. `supabase/migrations/20260806010000_cuadratura_adjustments.sql` crea **solo** las policies
+   `select_cuadratura_adjustments` y `insert_cuadratura_adjustments`. **No hay UPDATE ni
+   DELETE** — la inmutabilidad es intencional (AC5), pero implica que un ajuste de prueba
+   **no se puede borrar desde la app**.
+2. `src/environments/` tiene **un solo** `environment.ts` y `angular.json` no define
+   `fileReplacements`, así que `ng serve` apunta al **mismo proyecto Supabase remoto** que el
+   resto del equipo — no a un Supabase local.
+
+Un ajuste de prueba dejaría, de forma permanente: una fila en `cuadratura_adjustments` y —si es
+"gasto olvidado"— una fila falsa en `expenses`, que es justamente el módulo de Contabilidad que
+el cliente mira. **Quien reclame esta asignación debe resolver esto primero**: levantar
+`npx supabase start` local, o sembrar un cierre desechable, o pedir autorización explícita del
+owner para ensuciar el ambiente compartido con un ajuste identificable.
+
+### ⚠️ AC7 (secretaria sin botón) — no verificable con el seed actual
+
+Se intentó con `secretaria@test.com` y `secretaria2@test.com`: **ninguna de las dos ve un cierre
+cerrado** en `/app/secretaria/contabilidad/historial-cuadraturas` (agosto muestra solo la sesión
+en curso, julio sale "Sin Actividad"). El cierre del 06/08 solo es visible para el admin.
+
+Sin una cuadratura **cerrada dentro del scope de sede de una secretaria** no se puede aislar el
+guard de rol del guard de estado (AC-E1 ya oculta el botón en cierres no cerrados). Hace falta
+sembrar ese dato antes de poder verificar AC7 de verdad.
+
+### 🐛 Hallazgos nuevos (fuera del alcance original, para triage)
+
+1. **Error de consola real**: `InvalidStateError: Transition was aborted because of invalid
+   state` (code 11) al operar los drawers de esta página. Es la View Transitions API abortando —
+   probablemente dos transiciones solapadas. No rompe la funcionalidad (el drawer abre igual,
+   con un retardo perceptible) pero ensucia la consola y sugiere una transición mal encadenada.
+2. **Formato inconsistente de moneda negativa** en la misma pantalla: la lista de la izquierda
+   muestra `- $50.000` (signo antes del `$`, con espacio) y la fila del ajuste muestra
+   `$-50.000` (signo después del `$`). Deberían usar el mismo formateo.
