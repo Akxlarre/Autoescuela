@@ -24,8 +24,8 @@ gap-6`). El alcance real es **2 tabs**, no 4.
 1. Reestructurar en 2 tabs: **"Datos"** (grid de 2 cards) y **"Ficha Técnica"** (tabla de clases
    + nota informativa).
 2. El botón "Evaluar"/"Ver detalles" sigue navegando a la página de evaluación tal cual (sin
-   cambios) — el usuario pidió cambiar eso a un Drawer, pero se separó a **ASG-b-092** (fuera de
-   alcance de este fix) porque no hay asignación previa que lo cubra y es una decisión de UX
+   cambios) — el usuario pidió cambiar eso a un Drawer, pero se separó a **ASG-i-003** (fuera de
+   alcance de este fix; se creó como `ASG-b-092` y se renumeró el 2026-08-22) porque no hay asignación previa que lo cubra y es una decisión de UX
    distinta a la reestructuración app-like.
 3. El Hero queda fuera de los tabs, siempre visible arriba (mismo criterio que Asistencia B).
 

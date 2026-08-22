@@ -20,7 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-092 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-092-*.md` |
+| ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | `cualquiera` | fix | P1 | b | Transversal: 58 archivos, 3+ portales. Medido en fix-147-b (tabs 94×32, back-link 50×16). Precedente `ASG-b-061`. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
