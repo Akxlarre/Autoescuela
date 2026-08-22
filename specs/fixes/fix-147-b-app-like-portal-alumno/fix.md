@@ -54,41 +54,66 @@ evidencia) e implementarla sí o sí (tocaría una página que quizás no lo pid
 
 ## Cambio
 
-<!-- A completar durante la implementación, una entrada por página tocada. -->
+**Patrón único aplicado a las 3 páginas tocadas:** root `--fill-screen-kpi --rows-fit`, un
+wrapper-agrupador SIEMPRE presente en la fila 2 (los `@if` adentro) y una única celda
+`.bento-fill` con su propio scroller interno. `--rows-fit` no es decorativo: sin él, el wrapper
+agrupador cuando queda vacío hereda el piso `--bento-row-min` (120px) en móvil, donde no hay
+`grid-template-rows` explícito, y deja una franja vacía.
 
 ### 1. `/alumno/clases`
 - **Archivo:** `src/app/features/alumno/clases/alumno-clases.component.ts`
-- **Plan heredado:** `--fill-screen-kpi` — hero=auto, selector=auto, card-de-tabs=fill
-  (`bento-fill flex flex-col h-full`).
-- **A verificar al implementar:** si el banner final (≈línea 265 del componente actual) es
-  mutuamente excluyente con el contenido o se suma como 4ta fila. Si se suma, agrupar en un
-  wrapper único como en `alumno/horario`.
-- **Parte no mecánica del track:** es la única de las 4 con tabs internas dentro de la celda que
-  crece. La combinación tabs + `.bento-fill` + scroll interno es lo que hay que resolver bien;
-  el resto es portar patrón conocido.
+- **Incógnita heredada RESUELTA — el banner final SÍ se suma como 4ta fila.** El panel
+  principal (`bento-banner card`) **no tiene `@if`**: se renderiza siempre. La alerta "Sin
+  matrícula activa" (`!loading() && !facade.data()`) por lo tanto no lo reemplaza, coexiste con
+  él. Confirmado leyendo el componente, no asumido.
+- **Qué cambia:** root → `--fill-screen-kpi --rows-fit`. Selector-matrícula + alerta
+  "Sin matrícula" agrupados en un wrapper `.bento-banner flex flex-col gap-3` siempre presente
+  (la alerta **sube** por encima del panel a propósito: explica por qué el panel de abajo está
+  vacío). Panel de tabs → `.bento-fill`; las tabs quedan `shrink-0` **fuera** del scroller (no
+  se pierden al bajar el listado) y todo el `@if/@else if/@else` de contenido pasa a un único
+  `<div class="flex-1 min-h-0 overflow-y-auto">`.
 
 ### 2. `/alumno/pagos`
 - **Archivo:** `src/app/features/alumno/pagos/alumno-pagos.component.ts`
-- **Plan heredado:** agrupar selector-matrícula + banner-de-estado en un wrapper único (para que
-  sean siempre 1 sola fila auto, con los `@if` adentro), historial-de-pagos como única celda
-  `.bento-fill` en `--fill-screen-kpi`.
-- **Precedente a copiar literal:** el wrapper-agrupador de
-  `fix-127-b-app-like-familia-horario` (ASG-b-070) — mismo problema de N filas auto variables
-  antes del fill. No rediseñarlo.
+- **Qué cambia:** root → `--fill-screen-kpi --rows-fit`. Selector + banner-de-estado + banner de
+  error agrupados en el wrapper siempre presente; el `@if (error) {...} @else {...}` se aplanó a
+  `@if (error) … @else if (enrollment) … @else if (…)`, preservando exactamente las mismas
+  condiciones. Historial → `.bento-fill` con `<h2>` `shrink-0` y scroller propio.
+- **Comportamiento preservado a propósito:** el historial sigue **oculto ante error**
+  (`@if (!facade.error())`). En ese estado no se renderiza celda `.bento-fill` alguna, así que
+  la fila fill queda simplemente vacía — no hay nada que `contain:size` pueda colapsar.
+- **Estado vacío centrado:** "Aún no se han registrado pagos" pasó a
+  `flex-1 flex flex-col items-center justify-center` por la regla de `visual-system.md`
+  (dentro de un `.bento-fill` la celda mide el resto del viewport y el mensaje quedaría arriba
+  con un hueco enorme debajo). El skeleton se dejó alineado arriba a propósito: representa una
+  lista que también empieza arriba.
+- **`style="padding-bottom: 5rem"` inline eliminado del root.** No es un patrón compartido —
+  existía solo en `pagos` y `pagar`, y no hay bottom-nav en `layout/` que lo justifique. Con
+  `--fill-screen-kpi` el root pasa a `height: calc(100vh - 120px)` y esos 80px se comían del
+  alto fijo, dejando una franja muerta al pie: exactamente lo contrario del patrón.
 
 ### 3. `/alumno/pruebas-online`
 - **Archivo:** `src/app/features/alumno/pruebas-online/alumno-pruebas-online.component.ts`
-- **Plan heredado:** `--fill-screen-kpi` — banner de stats=auto (fila KPI), banner de
-  simuladores=fill.
-- **Riesgo conocido (precedente `fix-133-b`):** si el grid de stats puede venir con 0 ítems, el
-  auto-placement de CSS Grid ubica el contenido en la fila `auto` en vez de la `fill` y
-  `.bento-fill` lo colapsa a ~0px con `contain:size`. Verificar el caso 0 y, si existe, alternar
-  el modificador del root vía `computed()` como en `vehicle-maintenances`.
+- **Riesgo heredado CONFIRMADO como real, resuelto sin lógica nueva.** El banner de stats es
+  `@if (!isProfessional())`: un alumno Profesional no tiene fila KPI, que es justo el caso que
+  en `fix-133-b` mandaba la celda `.bento-fill` a la fila `auto` y la colapsaba a ~0px.
+- **Resuelto con el wrapper siempre presente** (precedente `fix-127-b`) en vez del `computed()`
+  que alterna el modificador del root (precedente `fix-133-b`). Ambos sirven; se eligió el
+  wrapper porque **no introduce lógica de densidad nueva** y por lo tanto no obliga a un
+  `.spec.ts` nuevo, manteniendo el checklist del rollout como estaba previsto. El `computed()`
+  de `vehicle-maintenances` sigue siendo la opción correcta cuando la fila KPI depende de datos
+  de red (0..N ítems); acá depende de un `computed()` estable del tipo de licencia.
+- **Qué cambia:** root → `--fill-screen-kpi --rows-fit`; stats en wrapper siempre presente;
+  banner de simuladores → `.bento-fill` con el grid anidado como scroller
+  (`flex-1 min-h-0 overflow-y-auto`) y el encabezado `shrink-0`.
 
 ### 4. `/alumno/pagar`
 - **Archivo:** `src/app/features/alumno/pagar/alumno-pagar.component.ts`
 - **Qué cambia:** a determinar por medición (ver "Decisión de alcance" arriba). El resultado
   esperado por defecto es **no tocar el archivo** y documentar la excepción.
+- Nota para cuando se mida: el stepper real tiene **2 nodos, no 3** (`steps()` = Resumen → Pago,
+  con `facadeStep` 1 y 3). La descripción heredada de "3 pasos" viene del audit; el paso 2 ya no
+  existe desde fix-017 (las 12 clases se agendan en la matrícula, el alumno no elige horarios).
 
 ## Test de Regresión
 

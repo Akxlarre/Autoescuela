@@ -47,7 +47,12 @@ type TabId = 'practice' | 'theory';
     TabsComponent,
   ],
   template: `
-    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mis clases">
+    <section
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      appBentoReveal
+      appBentoGridLayout
+      aria-label="Mis clases"
+    >
       <!-- ── HERO ────────────────────────────────────────────────────────────── -->
       <app-section-hero
         icon="clipboard-list"
@@ -62,23 +67,40 @@ type TabId = 'practice' | 'theory';
         [loadingKpiCount]="2"
       />
 
-      <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
-      @if (context.enrollments().length > 1) {
-        <div class="bento-banner p-2">
-          <app-tabs
-            [tabs]="enrollmentTabs()"
-            [activeId]="activeEnrollmentStr()"
-            variant="pill"
-            (activeIdChange)="selectEnrollment(+$event)"
-          />
-        </div>
-      }
+      <!-- ── Selector de matrícula + alerta sin matrícula (1 sola fila auto) ────
+           Ambas son condicionales y PUEDEN COEXISTIR (el panel principal no tiene @if,
+           así que la alerta no lo reemplaza: se sumaba como 4ta fila). Agrupadas en un
+           wrapper SIEMPRE presente para que --fill-screen-kpi, que fija 3 filas de grid
+           (hero/auto/fill), siga colocando el panel de tabs en la fila fill — si el @if
+           envolvente ocultara el wrapper, el auto-placement correría el panel a la fila
+           "auto" y contain:size lo colapsaría a 0 (mismo mecanismo que fix-127-b).
+           La alerta sube acá a propósito: explica por qué el panel de abajo está vacío. -->
+      <div class="bento-banner flex flex-col gap-3">
+        @if (context.enrollments().length > 1) {
+          <div class="p-2">
+            <app-tabs
+              [tabs]="enrollmentTabs()"
+              [activeId]="activeEnrollmentStr()"
+              variant="pill"
+              (activeIdChange)="selectEnrollment(+$event)"
+            />
+          </div>
+        }
 
-      <!-- ── PANEL PRINCIPAL ──────────────────────────────────────────────────── -->
-      <div class="bento-banner card flex flex-col gap-4" appScrollReveal appCardHover>
-        <!-- Tabs -->
+        @if (!loading() && !facade.data()) {
+          <div appScrollReveal>
+            <app-alert-card severity="info" title="Sin matrícula activa">
+              Aún no tienes un curso activo. Consulta a la secretaría para iniciar tu matrícula.
+            </app-alert-card>
+          </div>
+        }
+      </div>
+
+      <!-- ── PANEL PRINCIPAL — celda protagonista (fila fill, scroll interno) ──── -->
+      <div class="bento-banner bento-fill card flex flex-col gap-4" appScrollReveal appCardHover>
+        <!-- Tabs — fijas: quedan fuera del scroller para no perderse al bajar el listado -->
         @if (!loading()) {
-          <div class="p-1 self-start">
+          <div class="p-1 self-start shrink-0">
             <app-tabs
               [tabs]="viewTabs()"
               [activeId]="activeTab()"
@@ -88,186 +110,181 @@ type TabId = 'practice' | 'theory';
           </div>
         }
 
-        <!-- ── Skeleton del listado ───────────────────────────────────────────── -->
-        @if (loading()) {
-          <div class="flex flex-col gap-3">
-            @for (_ of skeletonRows; track _) {
-              <div
-                class="flex items-center gap-3 py-3"
-                style="border-bottom: 1px solid var(--border-subtle)"
-              >
-                <app-skeleton-block variant="rect" width="36px" height="36px" />
-                <div class="flex flex-col gap-1.5 flex-1">
-                  <app-skeleton-block variant="text" width="40%" height="13px" />
-                  <app-skeleton-block variant="text" width="60%" height="11px" />
+        <!-- Listado: único scroller de la celda. En desktop su alto lo dicta la fila
+             fill del grid; bajo lg el contenido mide natural y scrollea la página. -->
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <!-- ── Skeleton del listado ───────────────────────────────────────────── -->
+          @if (loading()) {
+            <div class="flex flex-col gap-3">
+              @for (_ of skeletonRows; track _) {
+                <div
+                  class="flex items-center gap-3 py-3"
+                  style="border-bottom: 1px solid var(--border-subtle)"
+                >
+                  <app-skeleton-block variant="rect" width="36px" height="36px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="40%" height="13px" />
+                    <app-skeleton-block variant="text" width="60%" height="11px" />
+                  </div>
+                  <app-skeleton-block variant="rect" width="72px" height="22px" />
                 </div>
-                <app-skeleton-block variant="rect" width="72px" height="22px" />
-              </div>
-            }
-          </div>
+              }
+            </div>
 
-          <!-- ── Tab Prácticas ────────────────────────────────────────────────── -->
-        } @else if (activeTab() === 'practice') {
-          @if (licenseGroup() === 'class_b') {
-            @if (practiceSessions().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="car" [size]="32" class="text-text-muted" />
-                <p class="text-sm text-text-muted m-0">
-                  Aún no tienes clases prácticas registradas
-                </p>
-              </div>
-            } @else {
-              <div class="flex flex-col divide-y divide-border-subtle">
-                @for (session of practiceSessions(); track session.id) {
-                  <div
-                    class="flex items-center gap-3 py-3 first:pt-0"
-                    [class.opacity-60]="session.status === 'cancelled'"
-                    appAnimateIn
-                  >
-                    <!-- Número de clase -->
+            <!-- ── Tab Prácticas ────────────────────────────────────────────────── -->
+          } @else if (activeTab() === 'practice') {
+            @if (licenseGroup() === 'class_b') {
+              @if (practiceSessions().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                  <app-icon name="car" [size]="32" class="text-text-muted" />
+                  <p class="text-sm text-text-muted m-0">
+                    Aún no tienes clases prácticas registradas
+                  </p>
+                </div>
+              } @else {
+                <div class="flex flex-col divide-y divide-border-subtle">
+                  @for (session of practiceSessions(); track session.id) {
                     <div
-                      class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 text-xs font-bold"
-                      [style.background]="statusBg(session.status)"
-                      [style.color]="statusColor(session.status)"
+                      class="flex items-center gap-3 py-3 first:pt-0"
+                      [class.opacity-60]="session.status === 'cancelled'"
+                      appAnimateIn
                     >
-                      {{ session.classNumber }}
-                    </div>
+                      <!-- Número de clase -->
+                      <div
+                        class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 text-xs font-bold"
+                        [style.background]="statusBg(session.status)"
+                        [style.color]="statusColor(session.status)"
+                      >
+                        {{ session.classNumber }}
+                      </div>
 
-                    <!-- Detalle -->
-                    <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="item-title truncate">
-                          {{ formatDate(session.date) }}
-                          @if (session.time) {
-                            <span class="font-normal text-text-muted"> · {{ session.time }}</span>
+                      <!-- Detalle -->
+                      <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="item-title truncate">
+                            {{ formatDate(session.date) }}
+                            @if (session.time) {
+                              <span class="font-normal text-text-muted"> · {{ session.time }}</span>
+                            }
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-text-muted">
+                          <app-icon name="clock" [size]="10" />
+                          {{ session.durationMin }} min
+                        </div>
+                      </div>
+
+                      <!-- Estado -->
+                      <app-badge [variant]="statusVariant(session.status)" class="shrink-0">
+                        {{ statusLabel(session.status) }}
+                      </app-badge>
+                    </div>
+                  }
+                </div>
+              }
+            } @else {
+              <!-- Profesional: Prácticas -->
+              @if (profPracticeSessions().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                  <app-icon name="car" [size]="32" class="text-text-muted" />
+                  <p class="text-sm text-text-muted m-0">Sin prácticas registradas aún</p>
+                </div>
+              } @else {
+                <div class="flex flex-col divide-y divide-border-subtle">
+                  @for (s of profPracticeSessions(); track s.id) {
+                    <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
+                      <div
+                        class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
+                        [style.background]="attBg(s.attendanceStatus)"
+                        [style.color]="attColor(s.attendanceStatus)"
+                      >
+                        <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
+                      </div>
+                      <div class="flex flex-col gap-0.5 flex-1">
+                        <span class="item-title">
+                          {{ formatDate(s.date) }}
+                        </span>
+                        <span class="text-xs text-text-muted">Sesión práctica</span>
+                      </div>
+                      <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
+                        {{ attLabel(s.attendanceStatus) }}
+                      </app-badge>
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+            <!-- ── Tab Teoría ───────────────────────────────────────────────────── -->
+          } @else {
+            @if (licenseGroup() === 'class_b') {
+              @if (theorySessions().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                  <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
+                  <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
+                </div>
+              } @else {
+                <div class="flex flex-col divide-y divide-border-subtle">
+                  @for (s of theorySessions(); track s.id) {
+                    <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
+                      <div
+                        class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
+                        [style.background]="attBg(s.attendanceStatus)"
+                        [style.color]="attColor(s.attendanceStatus)"
+                      >
+                        <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
+                      </div>
+                      <div class="flex flex-col gap-0.5 flex-1">
+                        <span class="item-title">
+                          {{ formatDate(s.date) }}
+                          @if (s.time) {
+                            <span class="font-normal text-text-muted"> · {{ s.time }}</span>
                           }
                         </span>
+                        <span class="text-xs text-text-muted">Sesión de teoría</span>
                       </div>
-                      <div class="flex items-center gap-1 text-xs text-text-muted">
-                        <app-icon name="clock" [size]="10" />
-                        {{ session.durationMin }} min
-                      </div>
+                      <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
+                        {{ attLabel(s.attendanceStatus) }}
+                      </app-badge>
                     </div>
-
-                    <!-- Estado -->
-                    <app-badge [variant]="statusVariant(session.status)" class="shrink-0">
-                      {{ statusLabel(session.status) }}
-                    </app-badge>
-                  </div>
-                }
-              </div>
-            }
-          } @else {
-            <!-- Profesional: Prácticas -->
-            @if (profPracticeSessions().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="car" [size]="32" class="text-text-muted" />
-                <p class="text-sm text-text-muted m-0">Sin prácticas registradas aún</p>
-              </div>
+                  }
+                </div>
+              }
             } @else {
-              <div class="flex flex-col divide-y divide-border-subtle">
-                @for (s of profPracticeSessions(); track s.id) {
-                  <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
-                    <div
-                      class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
-                      <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
+              <!-- Profesional: Teoría -->
+              @if (profTheorySessions().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-10 text-center">
+                  <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
+                  <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
+                </div>
+              } @else {
+                <div class="flex flex-col divide-y divide-border-subtle">
+                  @for (s of profTheorySessions(); track s.id) {
+                    <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
+                      <div
+                        class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
+                        [style.background]="attBg(s.attendanceStatus)"
+                        [style.color]="attColor(s.attendanceStatus)"
+                      >
+                        <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
+                      </div>
+                      <div class="flex flex-col gap-0.5 flex-1">
+                        <span class="item-title">
+                          {{ formatDate(s.date) }}
+                        </span>
+                        <span class="text-xs text-text-muted">Sesión de teoría</span>
+                      </div>
+                      <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
+                        {{ attLabel(s.attendanceStatus) }}
+                      </app-badge>
                     </div>
-                    <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="item-title">
-                        {{ formatDate(s.date) }}
-                      </span>
-                      <span class="text-xs text-text-muted">Sesión práctica</span>
-                    </div>
-                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
-                      {{ attLabel(s.attendanceStatus) }}
-                    </app-badge>
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
             }
           }
-
-          <!-- ── Tab Teoría ───────────────────────────────────────────────────── -->
-        } @else {
-          @if (licenseGroup() === 'class_b') {
-            @if (theorySessions().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
-                <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
-              </div>
-            } @else {
-              <div class="flex flex-col divide-y divide-border-subtle">
-                @for (s of theorySessions(); track s.id) {
-                  <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
-                    <div
-                      class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
-                      <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
-                    </div>
-                    <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="item-title">
-                        {{ formatDate(s.date) }}
-                        @if (s.time) {
-                          <span class="font-normal text-text-muted"> · {{ s.time }}</span>
-                        }
-                      </span>
-                      <span class="text-xs text-text-muted">Sesión de teoría</span>
-                    </div>
-                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
-                      {{ attLabel(s.attendanceStatus) }}
-                    </app-badge>
-                  </div>
-                }
-              </div>
-            }
-          } @else {
-            <!-- Profesional: Teoría -->
-            @if (profTheorySessions().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
-                <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
-              </div>
-            } @else {
-              <div class="flex flex-col divide-y divide-border-subtle">
-                @for (s of profTheorySessions(); track s.id) {
-                  <div class="flex items-center gap-3 py-3 first:pt-0" appAnimateIn>
-                    <div
-                      class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
-                      <app-icon [name]="attIcon(s.attendanceStatus)" [size]="16" />
-                    </div>
-                    <div class="flex flex-col gap-0.5 flex-1">
-                      <span class="item-title">
-                        {{ formatDate(s.date) }}
-                      </span>
-                      <span class="text-xs text-text-muted">Sesión de teoría</span>
-                    </div>
-                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
-                      {{ attLabel(s.attendanceStatus) }}
-                    </app-badge>
-                  </div>
-                }
-              </div>
-            }
-          }
-        }
-      </div>
-
-      <!-- ── ALERTA SIN MATRÍCULA ────────────────────────────────────────────── -->
-      @if (!loading() && !facade.data()) {
-        <div class="bento-banner" appScrollReveal>
-          <app-alert-card severity="info" title="Sin matrícula activa">
-            Aún no tienes un curso activo. Consulta a la secretaría para iniciar tu matrícula.
-          </app-alert-card>
         </div>
-      }
+      </div>
     </section>
   `,
 })
