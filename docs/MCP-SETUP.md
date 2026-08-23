@@ -14,6 +14,16 @@ es defensa en profundidad: si alguien alguna vez reemplaza el placeholder por el
 mano (para probar algo rápido) en un archivo trackeado, ese error se sube al repo remoto. Si el
 server vive en config personal gitignoreada, el mismo error se queda local.
 
+## ⚠️ Si abrís la sesión desde la web (Claude Code remoto)
+
+El Playwright MCP de `.mcp.json` **no funciona tal cual en el contenedor remoto**: se lanza sin
+`--browser`, así que cae al canal `chrome` (que no está instalado), y aunque se resuelva eso,
+Chromium ahí no enruta HTTPS por el agent proxy y toda request externa muere con
+`ERR_CONNECTION_RESET`.
+
+Está diagnosticado y resuelto — no lo redescubras: **`docs/REMOTE-WEB-SESSIONS.md`**.
+En local no aplica nada de esto.
+
 ## Servers compartidos (`.mcp.json`, sin secretos)
 
 | Server | Para qué | Usado por |
