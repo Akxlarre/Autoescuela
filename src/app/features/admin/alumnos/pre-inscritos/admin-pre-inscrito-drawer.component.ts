@@ -310,9 +310,14 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       type="button"
                       class="btn-secondary w-full flex items-center justify-center gap-2"
                       data-llm-action="download-blank-psych-test"
+                      [disabled]="isPrintingBlankTest()"
                       (click)="printBlankTest(p)"
                     >
-                      <app-icon name="download" [size]="15" />
+                      @if (isPrintingBlankTest()) {
+                        <app-icon name="loader-circle" [size]="15" class="animate-spin" />
+                      } @else {
+                        <app-icon name="download" [size]="15" />
+                      }
                       Descargar / imprimir test
                     </button>
                   </div>
@@ -1204,6 +1209,7 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
   readonly contractPdfUrl = signal<string | null>(null);
   readonly isGeneratingContract = signal(false);
   readonly signedContractFile = signal<File | null>(null);
+  readonly isPrintingBlankTest = signal(false);
 
   // ── Computed ─────────────────────────────────────────────────────────────
   readonly questions = EPQ_QUESTIONS;
@@ -1315,8 +1321,13 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
   }
 
   /** Abre la ventana de impresión con el test EPQ en blanco para rendir en la sede. */
-  printBlankTest(p: PreInscritoTableRow): void {
-    this.facade.printBlankTest(p);
+  async printBlankTest(p: PreInscritoTableRow): Promise<void> {
+    this.isPrintingBlankTest.set(true);
+    try {
+      await this.facade.printBlankTest(p);
+    } finally {
+      this.isPrintingBlankTest.set(false);
+    }
   }
 
   protected formatConsentDate(iso: string | null): string {

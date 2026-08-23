@@ -128,7 +128,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-23 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -225,6 +224,7 @@
 | ASG-b-089 | Facade inyectado directamente en Dumb Components (`shared/components/**`) | [fix-146-b-facade-en-dumb-components](fixes/fix-146-b-facade-en-dumb-components/fix.md) | 2026-08-15 |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | [fix-147-b-app-like-portal-alumno](fixes/fix-147-b-app-like-portal-alumno/fix.md) | 2026-08-22 |
+| ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-23 |
 <!-- AUTO-GENERATED:END -->
 
 ---

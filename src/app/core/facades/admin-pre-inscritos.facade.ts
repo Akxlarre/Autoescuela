@@ -12,6 +12,7 @@ import type { Branch } from '@core/models/dto/branch.model';
 import type { Course } from '@core/models/dto/course.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { EpqPrintService } from '@core/services/ui/epq-print.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import type {
   PreInscritoTableRow,
   EvaluarTestPayload,
@@ -64,6 +65,7 @@ export class AdminPreInscritosFacade {
   private readonly branchFacade = inject(BranchFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly epqPrint = inject(EpqPrintService);
+  private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
   private readonly _preInscritos = signal<PreInscritoTableRow[]>([]);
@@ -136,15 +138,20 @@ export class AdminPreInscritosFacade {
   }
 
   /**
-   * Abre la ventana de impresión con el test EPQ en blanco para que un pre-inscrito
-   * que no lo respondió online pueda rendirlo en papel en la sede.
+   * Abre la ventana de impresión con el test EPQ en blanco (generado server-side vía Edge
+   * Function, spec 0011-m) para que un pre-inscrito que no lo respondió online pueda
+   * rendirlo en papel en la sede. Retorna si tuvo éxito.
    */
-  printBlankTest(row: PreInscritoTableRow): void {
-    this.epqPrint.printTest({
+  async printBlankTest(row: PreInscritoTableRow): Promise<boolean> {
+    const ok = await this.epqPrint.printTest({
       studentName: row.nombreCompleto,
       rut: row.rut,
       licencia: row.licencia,
     });
+    if (!ok) {
+      this.toast.error('No se pudo generar el test EPQ. Inténtalo de nuevo.');
+    }
+    return ok;
   }
 
   /**

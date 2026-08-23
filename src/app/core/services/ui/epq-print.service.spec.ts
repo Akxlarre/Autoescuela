@@ -1,41 +1,65 @@
+import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { EpqPrintService } from './epq-print.service';
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 describe('EpqPrintService', () => {
   let service: EpqPrintService;
+  let invoke: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    service = new EpqPrintService();
+    invoke = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        EpqPrintService,
+        { provide: SupabaseService, useValue: { client: { functions: { invoke } } } },
+      ],
+    });
+    service = TestBed.inject(EpqPrintService);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('retorna false cuando el navegador bloquea la ventana emergente', () => {
-    vi.spyOn(window, 'open').mockReturnValue(null);
-    expect(service.printTest({ studentName: 'Ana' })).toBe(false);
+  it('retorna false y no abre ventana si la Edge Function falla', async () => {
+    const openSpy = vi.spyOn(window, 'open');
+    invoke.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+    const ok = await service.printTest({ studentName: 'Ana' });
+
+    expect(ok).toBe(false);
+    expect(openSpy).not.toHaveBeenCalled();
   });
 
-  it('escribe el HTML del test y dispara la impresión', () => {
-    const print = vi.fn();
-    const focus = vi.fn();
-    const fakeWin = {
-      document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
-      history: { pushState: vi.fn() },
-      focus,
-      print,
-    } as unknown as Window;
+  it('espera el PDF y recién entonces abre la pestaña con el blob URL (sin about:blank intermedio)', async () => {
+    const fakeWin = { focus: vi.fn() } as unknown as Window;
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake-url');
 
-    vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+    const pdfBlob = new Blob(['%PDF-1.4'], { type: 'application/pdf' });
+    invoke.mockResolvedValue({ data: pdfBlob, error: null });
 
-    const ok = service.printTest({ studentName: 'Ana', rut: '1-9' });
+    const ok = await service.printTest({ studentName: 'Ana', rut: '1-9' });
+
     expect(ok).toBe(true);
-    expect(fakeWin.document.write).toHaveBeenCalledOnce();
-    const written = (fakeWin.document.write as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(written).toContain('Test Psicológico EPQ');
-    expect(written).toContain('Ana');
-    expect(focus).toHaveBeenCalled();
-    expect(print).toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith('generate-epq-pdf', {
+      body: { studentName: 'Ana', rut: '1-9' },
+    });
+    expect(openSpy).toHaveBeenCalledWith('blob:fake-url', '_blank');
+    expect(fakeWin.focus).toHaveBeenCalled();
+  });
+
+  it('retorna false si el navegador bloquea la ventana emergente (PDF ya generado, sin dónde mostrarlo)', async () => {
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake-url');
+
+    const pdfBlob = new Blob(['%PDF-1.4'], { type: 'application/pdf' });
+    invoke.mockResolvedValue({ data: pdfBlob, error: null });
+
+    const ok = await service.printTest({ studentName: 'Ana' });
+
+    expect(ok).toBe(false);
   });
 });

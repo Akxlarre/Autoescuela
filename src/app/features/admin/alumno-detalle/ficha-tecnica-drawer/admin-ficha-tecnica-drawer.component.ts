@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { FichaTecnicaPrintService } from '@core/services/ui/ficha-tecnica-print.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { AdminFichaTecnicaComponent } from '../components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminReprogramarClaseDrawerComponent } from '../reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
@@ -25,6 +26,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     <app-admin-ficha-tecnica
       class="flex-1 min-h-0 w-full block"
       [clases]="facade.clasesPracticas()"
+      [printing]="printing()"
       (imprimirFicha)="imprimirFicha()"
       (reprogramarRequested)="openReprogramarDrawer($event)"
     />
@@ -34,13 +36,24 @@ export class AdminFichaTecnicaDrawerComponent {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fichaTecnicaPrint = inject(FichaTecnicaPrintService);
+  private readonly toast = inject(ToastService);
 
-  protected imprimirFicha(): void {
-    const alumno = this.facade.alumno();
-    this.fichaTecnicaPrint.printFichaTecnica(this.facade.clasesPracticas(), {
-      studentName: alumno?.nombre,
-      matricula: alumno?.matricula,
-    });
+  private readonly _printing = signal(false);
+  protected readonly printing = this._printing.asReadonly();
+
+  protected async imprimirFicha(): Promise<void> {
+    const enrollmentId = this.facade.alumno()?.enrollmentId;
+    if (enrollmentId == null) return;
+
+    this._printing.set(true);
+    try {
+      const ok = await this.fichaTecnicaPrint.printFichaTecnica(enrollmentId);
+      if (!ok) {
+        this.toast.error('No se pudo generar la Ficha Técnica. Inténtalo de nuevo.');
+      }
+    } finally {
+      this._printing.set(false);
+    }
   }
 
   /** Reprogramar una clase — navega dentro del mismo drawer (push/back). */
