@@ -72,21 +72,41 @@ Ambos son idempotentes, abortan sin tocar nada si no encuentran su ancla exacta,
 ## Verificación obligatoria — las DOS direcciones
 
 Un guard "arreglado" que deje pasar escrituras reales es **peor** que el falso positivo. No
-alcanza con confirmar que lo que antes fallaba ahora pasa.
+alcanza con confirmar que lo que antes fallaba ahora pasa. Hay un test de regresión listo:
+
+```bash
+node scripts/harness/test-bash-guard-patch.js .claude/hooks/bash-guard.js
+```
+
+Cubre 7 casos: 4 escrituras reales que **deben** seguir bloqueadas y 3 comandos read-only que
+**deben** pasar. Resultado esperado:
+
+| Estado del hook | Resultado |
+|---|---|
+| Sin parchear | **5 pass · 2 fail** — los 2 falsos positivos se reproducen |
+| Parcheado | **7 pass · 0 fail** |
+
+Ya se ejecutó contra una copia parcheada (2026-08-22) con ese resultado exacto, así que el
+parche está validado antes de tocar el archivo real. Correrlo igual después de aplicar.
+
+Para `settings.json`, además:
 
 ```bash
 node --check .claude/hooks/bash-guard.js
 ```
 
-Después, contra el Bash Guard ya parcheado:
-
-1. **Debe seguir BLOQUEADO** — escribir un componente por Bash (`echo` redirigido a un archivo
-   `.ts` dentro de `src/app/`). Si esto pasa, el parche está mal y hay que revertirlo.
-2. **Debe PASAR** — encadenar `npx tsc --noEmit` con redirect y `npx vitest run` sobre specs de
-   `src/app/` en el mismo comando.
-
 Para el AC Verifier: cerrar un turno con un track activo cuyo `fix.md` tenga ítems `[ ]` sin
 marcar. No debe bloquear.
+
+## ⚠️ Los patchers son ESM
+
+El `package.json` del repo declara `"type": "module"`. La primera versión de estos scripts usaba
+`require()` y explotaba en runtime con `ReferenceError: require is not defined`. Corregido a
+`import fs from 'fs'` (misma convención que `scripts/assignments-sync.js`).
+
+Lección: `node --check` valida **sintaxis**, no el sistema de módulos — pasa igual sobre un
+script CJS en un paquete ESM. Para un script de un solo uso, la única verificación que sirve es
+**ejecutarlo contra una copia**.
 
 ## Reversión
 

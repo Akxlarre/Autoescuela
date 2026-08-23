@@ -33,7 +33,9 @@
  * Lo que NO cambia: sigue bloqueando escrituras reales de fuente vía Bash.
  * Verificá ambas direcciones después de aplicar (ver la asignación ASG-b-097).
  */
-const fs = require('fs');
+// ESM: el package.json del repo declara "type": "module" (misma convención que
+// scripts/assignments-sync.js). Con require() esto explota en runtime.
+import fs from 'fs';
 
 const target = process.argv[2];
 if (!target) {

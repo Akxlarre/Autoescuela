@@ -28,7 +28,9 @@
  * Efecto observable: un track que reporta progreso parcial deja de ser penalizado por
  * hacerlo, que es justo el comportamiento que se quiere fomentar.
  */
-const fs = require('fs');
+// ESM: el package.json del repo declara "type": "module" (misma convención que
+// scripts/assignments-sync.js). Con require() esto explota en runtime.
+import fs from 'fs';
 
 const target = process.argv[2];
 if (!target) {
