@@ -45,7 +45,11 @@ interface SimulatorLink {
     BadgeComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      appBentoReveal
+      appBentoGridLayout
+    >
       <!-- HERO -->
       <app-section-hero
         [animateOnInit]="false"
@@ -62,9 +66,16 @@ interface SimulatorLink {
         density="slim"
       />
 
-      <!-- FORMATO DEL EXAMEN (solo Clase B) -->
-      @if (!isProfessional()) {
-        <div class="bento-banner">
+      <!-- ── FORMATO DEL EXAMEN (solo Clase B) — fila auto ──────────────────────
+           Wrapper SIEMPRE presente (aunque quede vacío para Profesional) para que
+           --fill-screen-kpi, que fija 3 filas de grid (hero/auto/fill), siga colocando
+           los simuladores en la fila fill — si el @if envolvente ocultara el wrapper
+           entero, el auto-placement correría los simuladores a la fila "auto" y
+           contain:size los colapsaría a 0 (mismo mecanismo que fix-127-b y fix-133-b).
+           --rows-fit evita que el wrapper vacío herede el piso --bento-row-min en
+           móvil, donde no hay grid-template-rows explícito. -->
+      <div class="bento-banner">
+        @if (!isProfessional()) {
           <div class="card p-6">
             <p class="micro-label mb-4">Formato del Examen — Licencia Clase B</p>
             <div class="bento-grid">
@@ -82,13 +93,13 @@ interface SimulatorLink {
               }
             </div>
           </div>
-        </div>
-      }
+        }
+      </div>
 
-      <!-- SIMULADORES -->
-      <div class="bento-banner">
-        <div class="flex flex-col gap-4">
-          <div>
+      <!-- ── SIMULADORES — celda protagonista (fila fill, scroll interno) ─────── -->
+      <div class="bento-banner bento-fill flex flex-col">
+        <div class="flex flex-col gap-4 flex-1 min-h-0">
+          <div class="shrink-0">
             <h3 class="text-lg font-bold text-text-primary">Simuladores Recomendados</h3>
             <p class="text-sm text-text-muted mt-0.5">
               @if (isProfessional()) {
@@ -100,7 +111,7 @@ interface SimulatorLink {
             </p>
           </div>
 
-          <div class="bento-grid">
+          <div class="bento-grid flex-1 min-h-0 overflow-y-auto">
             @for (sim of activeSimulators(); track sim.name) {
               <a
                 [href]="sim.url"
