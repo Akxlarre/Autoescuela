@@ -1,14 +1,14 @@
 # Asignación ASG-b-095 — QA visual pendiente de la cadena `0002-i` → `fix-018-i` (ajustes de cuadratura)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-23
+> **resulting_track:** fix-148-b-qa-ajustes-cuadratura-completada
 
 ---
 
