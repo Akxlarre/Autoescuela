@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-097 | Aplicar 2 parches de harness sobre archivos protegidos (Bash Guard + AC Verifier) | `b` | hotfix | P2 | b | **Requiere una persona**: tocan `.claude/hooks/` y `settings.json`, que un agente no puede modificar por diseño. Scripts listos en `scripts/harness/`, idempotentes. Verificar las DOS direcciones del guard. Ver `specs/assignments/ASG-b-097-*.md` |
 | ASG-b-093 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
@@ -230,6 +229,7 @@
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
 | ASG-b-087 | Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores | [0038-b-filtro-periodo-listas-sin-techo](specs/0038-b-filtro-periodo-listas-sin-techo/spec.md) | 2026-08-22 |
 | ASG-b-094 | Override de `force-compact` muerto en `section-hero` (modo slim) | [hotfix-052-b-force-compact-selector-muerto-section-hero](hotfixes/hotfix-052-b-force-compact-selector-muerto-section-hero/hotfix.md) | 2026-08-22 |
+| ASG-b-097 | Aplicar 2 parches de harness sobre archivos protegidos | [hotfix-053-b-parches-harness-bash-guard-y-ac-verifier](hotfixes/hotfix-053-b-parches-harness-bash-guard-y-ac-verifier/hotfix.md) | 2026-08-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
