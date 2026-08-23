@@ -20,6 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-b-097 | Aplicar 2 parches de harness sobre archivos protegidos (Bash Guard + AC Verifier) | `b` | hotfix | P2 | b | **Requiere una persona**: tocan `.claude/hooks/` y `settings.json`, que un agente no puede modificar por diseño. Scripts listos en `scripts/harness/`, idempotentes. Verificar las DOS direcciones del guard. Ver `specs/assignments/ASG-b-097-*.md` |
 | ASG-b-093 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | `m` | spec | P1 | i | Alcance acotado a 3 flujos de impresión client-side (ficha técnica, hoja de ruta, EPQ) — ver nota de corrección de alcance en `specs/assignments/ASG-i-002-*.md` |
