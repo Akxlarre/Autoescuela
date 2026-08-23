@@ -38,9 +38,9 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-b-049 |
+| ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | **spec** | **P2** | b | ⚠️ **2026-08-23: fotos recibidas — formato CONFIRMADO como reglamentado** (formularios MTT timbrados por SEREMI Ñuble). No es diseño, es cumplimiento → pasar por `compliance-cl`. Columnas reales documentadas en el `.md`. Su pregunta de numeración se unificó en la D11 de ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
-| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-b-024 (el buscador debe encontrar por número) y ASG-b-045 |
+| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | **spec** | **P2** | b | ✅ **Grillada 2026-08-23** — 10 decisiones cerradas + evidencia física (carnet y formularios MTT). Subió de `fix`/Baja porque incorpora rename de dominio, orden por número y matching del buscador global. 🔴 **D11 abierta y bloqueante de su D1**: el correlativo real de la escuela no coincide con `get_next_enrollment_number()` (serie continua vs. reinicio por sede×grupo). Ver el `.md` antes de reclamar |
 
 ### Tanda auditoría "peor cliente posible" — 2026-08-03
 
