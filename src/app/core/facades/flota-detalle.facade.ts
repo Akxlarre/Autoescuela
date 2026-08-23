@@ -210,6 +210,26 @@ export class FlotaDetalleFacade {
   }
 
   /**
+   * Genera el PDF de la Hoja de Ruta Diaria (RF-091) del vehículo actual vía Edge Function
+   * (`generate-route-sheet-pdf`). Reemplaza el HTML client-side de `buildRouteSheetHtml`
+   * (spec 0011-m) — server-side, nunca se almacena. Retorna `null` si falla.
+   */
+  async generateRouteSheetPdf(vehicleId: number): Promise<Blob | null> {
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-route-sheet-pdf',
+        { body: { vehicle_id: vehicleId } },
+      );
+      if (error) throw error;
+      const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      return new Blob([rawBuffer], { type: 'application/pdf' });
+    } catch (e) {
+      this._error.set(this.sanitizer.sanitize(e).message ?? 'Error al generar la Hoja de Ruta');
+      return null;
+    }
+  }
+
+  /**
    * Registra un nuevo mantenimiento y recarga el detalle.
    */
   async createMaintenance(
