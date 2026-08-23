@@ -119,5 +119,26 @@
 - [x] Suite completa verde (2229/2229)
 - [x] `lint:arch` exit 0
 - [x] QA visual en navegador en las 4 superficies
-- [ ] Visto bueno visual del owner — **pendiente** (precedente spec 0030: 13/13 ACs verdes no
-      garantizan que se vea bien; el juicio humano es el que cierra)
+- [x] Visto bueno del owner — **otorgado 2026-08-23** ("me parecen correctos")
+
+### ⚠️ Procedencia del visto bueno (leer antes de citarlo como QA visual)
+
+El panel del navegador **no llegó a renderizar del lado del agente**: las capturas fallaron con
+*"the Browser pane is not displayed, so the page is not compositing frames"*, así que **el agente
+nunca llegó a mostrarle las pantallas al owner**. El visto bueno se dio sobre la descripción
+escrita de las 6 vistas y de los 3 comportamientos a juzgar, no sobre capturas presentadas.
+
+Queda registrado así a propósito. El precedente de la spec 0030 —13/13 ACs verdes y el owner
+rechazó la página **dos veces** por cómo se veía— es justamente sobre la diferencia entre
+verificación automática y mirada humana. Anotar "aprobado visualmente" cuando lo que hubo fue
+"aprobado sobre una descripción" borraría esa distinción y haría que este registro mienta la
+próxima vez que alguien lo consulte.
+
+**Si el owner abrió el panel por su cuenta y miró las pantallas**, esto se puede reescribir como
+QA visual plena. Mientras no se confirme, el ítem que sigue realmente pendiente es el mismo que
+señala la 0030: que un humano **mire** las 4 superficies.
+
+Lo que sí está verificado en navegador real por el agente (con capturas, sesión 2026-08-22):
+las 4 superficies renderizando, la nota "Buscando en todo el historial" apareciendo al escribir,
+el selector con sus opciones, y el modo oscuro. Eso es QA funcional y de renderizado — no
+sustituye el juicio estético.
