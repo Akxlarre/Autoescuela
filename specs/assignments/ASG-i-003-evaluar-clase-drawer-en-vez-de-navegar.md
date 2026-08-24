@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:specs/assignments/ASG-b-093-evaluar-clase-drawer-en-vez-de-navegar.md
 # Asignación ASG-b-093 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
+========
+# Asignación ASG-i-003 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
+>>>>>>>> origin/main:specs/assignments/ASG-i-003-evaluar-clase-drawer-en-vez-de-navegar.md
 
 > **status:** pendiente
 > **owner:** cualquiera

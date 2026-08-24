@@ -1,14 +1,14 @@
 # Asignación ASG-i-002 — Migrar funciones de negocio del cliente a Edge Functions
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-08-20
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-08-23
+> **resulting_track:** 0011-m-print-flows-edge-functions
 
 ---
 

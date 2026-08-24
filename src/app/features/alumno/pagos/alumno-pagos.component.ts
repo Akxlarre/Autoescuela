@@ -51,7 +51,11 @@ function toCompact(amount: number): { value: number; suffix: string } {
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
+    <div
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      appBentoReveal
+      appBentoGridLayout
+    >
       <!-- ── Cabecera ── -->
       <app-section-hero
         title="Pagos"
@@ -66,28 +70,34 @@ function toCompact(amount: number): { value: number; suffix: string } {
         (actionClick)="onHeroAction($event)"
       />
 
-      <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
-      @if (context.enrollments().length > 1) {
-        <div class="bento-banner p-2">
-          <app-tabs
-            [tabs]="enrollmentTabs()"
-            [activeId]="activeEnrollmentStr()"
-            variant="pill"
-            (activeIdChange)="selectEnrollment(+$event)"
-          />
-        </div>
-      }
+      <!-- ── Selector de matrícula + banner de estado (1 sola fila auto) ────────
+           Selector y banner-de-estado son condicionales independientes y PUEDEN
+           COEXISTIR (= 2 filas auto antes del fill). Agrupados en un wrapper SIEMPRE
+           presente para que --fill-screen-kpi, que fija 3 filas de grid (hero/auto/fill),
+           siga colocando el historial en la fila fill — si el @if envolvente ocultara el
+           wrapper, el auto-placement correría el historial a la fila "auto" y contain:size
+           lo colapsaría a 0 (mismo mecanismo que fix-127-b). -->
+      <div class="bento-banner flex flex-col gap-3">
+        @if (context.enrollments().length > 1) {
+          <div class="p-2">
+            <app-tabs
+              [tabs]="enrollmentTabs()"
+              [activeId]="activeEnrollmentStr()"
+              variant="pill"
+              (activeIdChange)="selectEnrollment(+$event)"
+            />
+          </div>
+        }
 
-      @if (facade.error()) {
-        <div class="flex items-start gap-3 p-4 rounded-lg bg-error-subtle" role="alert">
-          <app-icon name="alert-circle" [size]="16" class="text-error" />
-          <p class="text-sm text-error">{{ facade.error() }}</p>
-        </div>
-      } @else {
-        <!-- Aviso pago presencial para alumnos Profesional -->
-        @if (facade.enrollment(); as enroll) {
+        @if (facade.error()) {
+          <div class="flex items-start gap-3 p-4 rounded-lg bg-error-subtle" role="alert">
+            <app-icon name="alert-circle" [size]="16" class="text-error" />
+            <p class="text-sm text-error">{{ facade.error() }}</p>
+          </div>
+          <!-- Aviso pago presencial para alumnos Profesional -->
+        } @else if (facade.enrollment(); as enroll) {
           @if (!facade.isClassB() && enroll.pendingBalance > 0) {
-            <div class="bento-banner flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
+            <div class="flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
               <app-icon
                 name="info"
                 [size]="18"
@@ -110,7 +120,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
           !facade.isLoading() && !facade.status()?.hasPaymentPending && facade.status() !== null
         ) {
           <!-- Sin deuda pendiente y sin enrollment (ya completado) -->
-          <div class="bento-banner card p-6 flex items-center gap-4" appCardHover>
+          <div class="card p-6 flex items-center gap-4" appCardHover>
             <div
               class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-success-subtle"
             >
@@ -122,51 +132,64 @@ function toCompact(amount: number): { value: number; suffix: string } {
             </div>
           </div>
         }
+      </div>
 
-        <!-- ── Historial de pagos ── -->
-        <div class="bento-banner card p-5 flex flex-col gap-3" appCardHover>
-          <h2 class="text-sm font-semibold text-text-primary uppercase tracking-wide">
+      <!-- ── Historial de pagos — celda protagonista (fila fill, scroll interno) ──
+           Sigue oculto ante error, igual que antes de este fix: la fila fill queda vacía
+           y no hay nada que colapsar, porque no se renderiza celda .bento-fill alguna. -->
+      @if (!facade.error()) {
+        <div class="bento-banner bento-fill card p-5 flex flex-col gap-3" appCardHover>
+          <h2 class="text-sm font-semibold text-text-primary uppercase tracking-wide shrink-0">
             Historial de pagos
           </h2>
 
-          @if (facade.isLoading()) {
-            @for (i of [1, 2, 3]; track i) {
-              <app-skeleton-block variant="text" width="100%" height="52px" />
+          <!-- Único scroller de la celda: en desktop su alto lo dicta la fila fill. -->
+          <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
+            @if (facade.isLoading()) {
+              <!-- Skeleton alineado arriba a propósito: representa una lista que también
+                   empieza arriba; centrarlo mentiría sobre dónde aparecerá el contenido. -->
+              <div class="flex flex-col gap-3">
+                @for (i of [1, 2, 3]; track i) {
+                  <app-skeleton-block variant="text" width="100%" height="52px" />
+                }
+              </div>
+            } @else if (facade.payments().length === 0) {
+              <!-- Centrado en el alto disponible: dentro de un .bento-fill la celda mide
+                   el resto del viewport, y arriba quedaría con un hueco enorme debajo. -->
+              <div class="flex-1 flex flex-col items-center justify-center gap-2 py-8 text-center">
+                <app-icon name="receipt" [size]="28" class="text-text-muted" />
+                <p class="text-sm text-text-muted">Aún no se han registrado pagos.</p>
+              </div>
+            } @else {
+              <div class="flex flex-col divide-y divide-border-default">
+                @for (payment of facade.payments(); track payment.id) {
+                  <div class="flex items-center gap-3 py-3">
+                    <div
+                      class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-surface"
+                    >
+                      <app-icon [name]="paymentIcon(payment)" [size]="16" class="text-brand" />
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-text-primary">
+                        {{ paymentTypeLabel(payment) }}
+                      </p>
+                      <p class="text-xs text-text-muted">{{ formatDate(payment.date) }}</p>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-0.5 shrink-0">
+                      <span class="text-sm font-semibold text-success">
+                        {{ clp(payment.amount) }}
+                      </span>
+                      <app-badge [variant]="payment.status === 'paid' ? 'success' : 'warning'">
+                        {{ payment.status === 'paid' ? 'Pagado' : 'Pendiente' }}
+                      </app-badge>
+                    </div>
+                  </div>
+                }
+              </div>
             }
-          } @else if (facade.payments().length === 0) {
-            <div class="flex flex-col items-center gap-2 py-8 text-center">
-              <app-icon name="receipt" [size]="28" class="text-text-muted" />
-              <p class="text-sm text-text-muted">Aún no se han registrado pagos.</p>
-            </div>
-          } @else {
-            <div class="flex flex-col divide-y divide-border-default">
-              @for (payment of facade.payments(); track payment.id) {
-                <div class="flex items-center gap-3 py-3">
-                  <div
-                    class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-surface"
-                  >
-                    <app-icon [name]="paymentIcon(payment)" [size]="16" class="text-brand" />
-                  </div>
-
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-text-primary">
-                      {{ paymentTypeLabel(payment) }}
-                    </p>
-                    <p class="text-xs text-text-muted">{{ formatDate(payment.date) }}</p>
-                  </div>
-
-                  <div class="flex flex-col items-end gap-0.5 shrink-0">
-                    <span class="text-sm font-semibold text-success">
-                      {{ clp(payment.amount) }}
-                    </span>
-                    <app-badge [variant]="payment.status === 'paid' ? 'success' : 'warning'">
-                      {{ payment.status === 'paid' ? 'Pagado' : 'Pendiente' }}
-                    </app-badge>
-                  </div>
-                </div>
-              }
-            </div>
-          }
+          </div>
         </div>
       }
     </div>

@@ -1,6 +1,6 @@
 # Fix: Listas sin techo — filtro de período por defecto, con búsqueda y export que lo ignoran
 
-> id: fix-147-b-filtro-periodo-listas-sin-techo
+> id: fix-149-b-filtro-periodo-listas-sin-techo
 > refs: ASG-b-087
 > status: superseded
 > superseded_by: 0038-b-filtro-periodo-listas-sin-techo

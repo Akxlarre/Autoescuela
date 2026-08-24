@@ -1,12 +1,11 @@
-/**
- * EPQ Questions — Eysenck Personality Questionnaire (81 ítems Sí/No)
- * Compartido entre el formulario público (psych-test.component) y la
- * vista de evaluación administrativa (admin-pre-inscrito-drawer).
- *
- * Mantener sincronizado con `supabase/functions/_shared/epq-questions.ts` (Deno no puede
- * importar este archivo — es una copia exacta para `generate-epq-pdf`). Verificado por
- * `epq-questions.parity.spec.ts`.
- */
+// supabase/functions/_shared/epq-questions.ts
+//
+// Espejo exacto de `src/app/core/utils/epq-questions.const.ts` (EPQ_QUESTIONS) — mismas 81
+// preguntas, mismo orden, mismo texto. Deno no puede importar `src/app/` (runtime distinto),
+// así que esta copia existe solo para que `generate-epq-pdf` no dependa de Angular.
+// Si una cambia, la otra debe cambiar igual — verificado por
+// `src/app/core/utils/epq-questions.parity.spec.ts` (Vitest, corre en `npm run test:ci`).
+
 export const EPQ_QUESTIONS: readonly string[] = [
   '¿Se detiene a pensar las cosas antes de hacerlas?',
   '¿Tiene Ud. a menudo altibajos de ánimo?',
@@ -90,7 +89,3 @@ export const EPQ_QUESTIONS: readonly string[] = [
   '¿Alguna vez ha engañado a una persona solo para lograr algo que Ud. quiere?',
   '¿Cree Ud. que otras personas lo encuentran muy activo y despierto?',
 ] as const;
-
-export const EPQ_TOTAL = EPQ_QUESTIONS.length;
-export const EPQ_PAGE_SIZE = 14;
-export const EPQ_TOTAL_PAGES = Math.ceil(EPQ_TOTAL / EPQ_PAGE_SIZE);

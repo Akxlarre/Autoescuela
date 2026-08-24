@@ -103,12 +103,33 @@
 | Ruta | Componente | Contexto | Recomendación | Complejidad |
 |---|---|---|---|---|
 | `/alumno/horario` | `AlumnoHorarioComponent` | **Corregido 2026-08-02**: calendario de 7 días 100% hecho a mano (sin componente compartido), con hasta 4 celdas condicionales apiladas antes del calendario (hero, selector matrícula si 2+, "Próxima clase" si existe, calendario siempre, "Sin matrícula" si aplica) — pueden coexistir varias a la vez | Ningún modificador existente calza con "N filas auto variables + 1 fill". Reagrupar selector+próxima-clase+sin-matrícula dentro de UN wrapper `.bento-banner` (los `@if` quedan adentro, no como celdas de grid separadas) para que sea siempre 1 sola fila auto; el calendario semanal queda como única celda `.bento-fill` en `--fill-screen-kpi` | Media |
-| `/alumno/pagos` | `AlumnoPagosComponent` | **Verificado 2026-08-02:** hero + selector-matrícula (opcional) + banner de estado (opcional, 1 de 2 variantes mutuamente excluyentes: aviso saldo pendiente Profesional / "matrícula al día") + "Historial de pagos" (siempre, salvo error). Mismo problema que alumno/horario: selector+banner-estado pueden coexistir = 2 filas auto antes del fill | Agrupar selector + banner-de-estado en un wrapper único (mismo fix que alumno/horario), historial-de-pagos como única celda `.bento-fill` en `--fill-screen-kpi` | Media |
-| `/alumno/clases` | `AlumnoClasesComponent` | **Verificado 2026-08-02:** hero + selector-matrícula (opcional) + 1 card con TABS INTERNAS (Prácticas/Teoría, `activeTab` signal) + banner final condicional (probablemente empty-state) | `--fill-screen-kpi`: hero=auto, selector=auto, card-de-tabs=fill (`bento-fill flex flex-col h-full`). Verificar al implementar si el banner final (línea 265) es mutuamente excluyente con el contenido o se suma como 4ta fila — si se suma, agrupar como en alumno/horario | Media |
-| `/alumno/pruebas-online` | `AlumnoPruebasOnlineComponent` | **Verificado 2026-08-02:** hero + banner con grid anidado de `bento-square` (stats) + banner con grid anidado de `bento-wide` (lista de simuladores) — encaja bien como KPI-row + contenido | `--fill-screen-kpi`: banner de stats=auto (fila KPI), banner de simuladores=fill | Baja-Media |
+| ~~`/alumno/pagos`~~ | `AlumnoPagosComponent` | ✅ **Resuelto fix-147-b (2026-08-22).** | Ver `specs/fixes/fix-147-b-app-like-portal-alumno/fix.md`. | ~~Media~~ **Done** |
+| ~~`/alumno/clases`~~ | `AlumnoClasesComponent` | ✅ **Resuelto fix-147-b (2026-08-22).** | Ver `specs/fixes/fix-147-b-app-like-portal-alumno/fix.md`. | ~~Media~~ **Done** |
+| ~~`/alumno/pruebas-online`~~ | `AlumnoPruebasOnlineComponent` | ✅ **Resuelto fix-147-b (2026-08-22).** | Ver `specs/fixes/fix-147-b-app-like-portal-alumno/fix.md`. | ~~Media~~ **Done** |
 | `/alumno/dashboard` | `AlumnoDashboardComponent` | **Corregido 2026-08-02 — mucho más denso de lo que decía el audit:** hero + selector + 2 `bento-square` + columna izq/der 2 filas c/u (`bento-activity-lg`/`bento-alerts-lg`, esto SÍ confirma el patrón 2-col de admin/dashboard) + OTRA `.bento-banner` + 2 `bento-square` MÁS al final. Son ~9 celdas condicionales, no la versión simplificada del audit original | **Necesita una pasada dedicada aparte** — no alcancé a mapear las ~9 celdas en detalle en esta ronda. La base (2 columnas activity/alerts) sí reutiliza `--fill-screen-2` de admin/dashboard, pero hay que decidir qué pasa con las celdas extra (selector, 4 squares, banner final) antes de fijar el plan — mismo tipo de agrupamiento que alumno/horario probablemente aplique | **Alta** (subida desde Media) |
 | ~~`/instructor/alumnos/:id/ficha`~~ | `InstructorFichaComponent` | ✅ **Resuelto fix-027-i (2026-08-17, piloto ASG-b-084).** El audit original decía "4 `.bento-banner` secuenciales + un `.bento-grid` anidado" — lectura completa del código en la implementación mostró que esos 4 eran ramas mutuamente excluyentes de un `@if/@else if` (error/vacío/cargando/cargado), no secciones simultáneas, y no había `.bento-grid` anidado (era `flex flex-col`). El contenido real cargado tenía **2** bloques lógicos, no 4. | Reestructurado en 2 tabs ("Datos" / "Ficha Técnica") con `<app-tabs variant="segmented">` + panel único `.bento-fill`, replicando el patrón exacto de `AdminContabilidadAnticiposComponent`. `--fill-screen-kpi` en el grid raíz. Ver "Patrón final" en `specs/fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md` — sirve de referencia directa para ASG-b-085 (la ficha grande). | ~~Media~~ **Done** |
-| `/alumno/pagar` | `AlumnoPagarComponent` | **Revisado 2026-08-02:** stepper hand-rolled (no PrimeNG), 3 pasos: resumen de saldo, confirmación, pago Webpay — contenido de cada paso es corto (cards de resumen, no formularios largos como matrícula) | **Posible reversión:** a diferencia de `matricula` (formularios extensos por paso), acá el contenido por paso probablemente nunca produce overflow real → podría calificar de nuevo por el criterio #1 ("contenido corto sin overflow") en vez de necesitar el patrón full-height de matrícula. Verificar el alto real de cada paso antes de decidir — si nunca scrollea, dejar como excepción y no tocarlo | Baja |
+| ~~`/alumno/pagar`~~ | `AlumnoPagarComponent` | ✅ **Resuelto fix-147-b (2026-08-22).** | Ver `specs/fixes/fix-147-b-app-like-portal-alumno/fix.md`. | ~~Media~~ **Done** |
+
+### ⚠️ Cómo medir overflow sin darse un falso verde (fix-147-b, 2026-08-22)
+
+Dos errores de método que dieron "no desborda" con total confianza sobre una página que **sí**
+desbordaba. Aplican a cualquier pieza de este rollout donde haya que decidir implementación vs
+excepción por el criterio #1:
+
+1. **Medí contra `.shell-content`, no contra `main` ni `documentElement`.** Ese es el scroller
+   real de la app (`overflow-y: auto`). `main` está en `overflow: hidden`, así que
+   `scrollHeight === clientHeight` **siempre** y todo chequeo de overflow da negativo.
+2. **Asegurate de que la página esté renderizando su variante pesada.** La cuenta del seed
+   (`alumno@test.com`) no tiene saldo pendiente Clase B, así que `/alumno/pagar` dibuja solo
+   hero + stepper: ninguna rama del `@if` entra y se mide el vacío. Si la variante cara depende
+   de datos que el seed no tiene, inyectá la respuesta en el harness de QA (interceptar la
+   Edge Function en Playwright) — **sin tocar código de la app**.
+3. **Medí con la tipografía de producción.** Si Google Fonts no carga, el layout usa fuentes de
+   fallback con métricas distintas: las alturas medidas no son las reales.
+
+La señal de que el método está mal suele ser una **contradicción interna** (contenido de 681px
+"cabiendo" en un contenedor de 643px), no un error. Si los números no cierran entre sí,
+sospechá del instrumento antes que del layout.
 
 ## No aplica — excepciones justificadas (⛔ 5 rutas)
 

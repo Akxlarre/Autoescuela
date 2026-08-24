@@ -53,6 +53,6 @@
 
 ## T7 — Conversión de track
 
-- [x] **T7.1** — `fix-147-b` marcado `superseded`, apuntando a esta spec
+- [x] **T7.1** — `fix-149-b` marcado `superseded`, apuntando a esta spec
 - [x] **T7.2** — `ASG-b-087` re-apunta a `0038-b`
 - [x] **T7.3** — `ROADMAP.md` actualizado

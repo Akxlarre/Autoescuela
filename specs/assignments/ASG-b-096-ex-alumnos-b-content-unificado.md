@@ -14,7 +14,7 @@
 
 ## Contexto / Objetivo
 
-Detectado al implementar la spec `0038-b` (ex `fix-147-b`, ASG-b-087): para agregar el selector de período a
+Detectado al implementar la spec `0038-b` (ex `fix-149-b`, ASG-b-087): para agregar el selector de período a
 ex-alumnos Clase B hay que hacer **el mismo cambio dos veces** en dos archivos casi idénticos.
 
 Medición real (2026-08-22):
@@ -63,7 +63,7 @@ patrón, no inventar otro.
 
 ## Coordinación con la spec `0038-b` — YA NO BLOQUEA (actualizado 2026-08-22)
 
-> El track que originó esta nota era `fix-147-b`, **convertido a la spec
+> El track que originó esta nota era `fix-149-b`, **convertido a la spec
 > `0038-b-filtro-periodo-listas-sin-techo`** y ya cerrado (✅ PASA, 2229/2229 tests).
 > **El solape dejó de ser un riesgo de coordinación y pasó a ser trabajo concreto a absorber.**
 

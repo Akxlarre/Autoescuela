@@ -1104,6 +1104,29 @@
   lado de lectura está bien implementado.
 - **Fuente:** `specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud`
 
+### DG-080 — El correlativo de matrícula es por (sede × tipo de licencia) y se deriva de la ÚLTIMA FILA INSERTADA, no del número más alto
+- **Trampa:** dos supuestos distintos, y ambos se caen leyendo `get_next_enrollment_number()` una
+  sola vez. **(a)** que la serie es global o "por sede": en realidad es independiente por
+  **(sede × grupo de licencia)** — Clase B de cada sede y Profesional llevan contadores separados,
+  así que el mismo `0001` existe legítimamente varias veces en `enrollments`. **(b)** que el
+  siguiente número sale de `MAX(number)`: la función hace `ORDER BY e.id DESC LIMIT 1`, o sea toma
+  la fila **insertada más recientemente** de esa serie y le suma 1. Mientras las altas son
+  cronológicas las dos cosas coinciden, y por eso la diferencia no se nota nunca en uso normal.
+- **Realidad:** el formato es numérico puro con ceros a la izquierda (`0001`, y 5 dígitos desde
+  `10000`) — sin prefijo, sin año, sin código de sede. Los `status='draft'` no consumen número.
+  Como el siguiente valor se calcula con `v_last_number::INT + 1`, la función asume además que
+  **todo número existente en esa serie es casteable a entero**.
+- **Por qué importa:** el momento en que estos dos detalles dejan de ser inocuos es una **carga de
+  datos históricos** (migrar desde el registro en papel, empalmar con la numeración que la escuela
+  ya trae, importar otra sede). Ahí: insertar registros viejos *después* de los nuevos hace que el
+  correlativo se guíe por el histórico y retroceda o colisione; y un número heredado no numérico
+  (`A-123`, `2024-15`) hace fallar el cast con una excepción, no con un valor raro.
+- **Regla de aplicabilidad:** antes de insertar filas en `enrollments` por una vía que no sea el
+  alta normal de la app (seed, importador, script de migración, backfill), verificar el orden de
+  inserción por serie y el formato de los números que se cargan. Si se agrega una sede o un tipo
+  de licencia nuevo, asumir que arranca su propia serie en `0001` — no que continúa la de otra.
+- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`
+
 ---
 
 ## Convención para agregar una entrada nueva

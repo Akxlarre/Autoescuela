@@ -32,9 +32,14 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           type="button"
           class="btn-secondary"
           data-llm-action="imprimir-ficha-tecnica"
+          [disabled]="printing()"
           (click)="imprimirFicha.emit()"
         >
-          <app-icon name="printer" [size]="14" />
+          @if (printing()) {
+            <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+          } @else {
+            <app-icon name="printer" [size]="14" />
+          }
           Imprimir Informe
         </button>
       </div>
@@ -358,6 +363,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 })
 export class AdminFichaTecnicaComponent {
   clases = input.required<ClasePracticaUI[]>();
+  printing = input<boolean>(false);
   imprimirFicha = output<void>();
   reprogramarRequested = output<ClasePracticaUI>();
 }

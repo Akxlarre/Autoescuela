@@ -12,10 +12,10 @@
 **Origen:** `ASG-b-087`, derivada de la investigación `docs/research/listas-grandes-virtual-scroll.md`
 (§2, §2.1, §5.1 y §6) y estresada con `/grill_me` el 2026-08-03.
 
-**Convertida desde `fix-147-b`** el 2026-08-22, a pedido del owner: la implementación terminó
+**Convertida desde `fix-149-b`** el 2026-08-22, a pedido del owner: la implementación terminó
 tocando 9 archivos y 4 superficies distintas, más allá de lo que el contrato de un `fix` describe
 bien. **La conversión no cambió una línea de código** — solo reformula el contrato ya cumplido con
-ACs verificables. El track `fix-147-b` queda como `superseded` apuntando acá.
+ACs verificables. El track `fix-149-b` queda como `superseded` apuntando acá.
 
 **Persona afectada:** Admin y Secretaria (revisión de listas históricas: ex-alumnos Clase B,
 ex-alumnos Profesional, historial de ventas de servicios especiales).
