@@ -60,35 +60,9 @@ de mayor tráfico de todo el sistema** (ficha de alumno — matrículas, pagos, 
 - [ ] Realtime/SWR: si esta ficha tiene datos con Realtime, probar reset de scroll (ítem 6 de
       "Edge cases estresados")
 
-## Requisito heredado de ASG-b-049 (jerarquía del número de matrícula) — 2026-08-23
-
-> Escrito acá **a propósito**: `ASG-b-049` decidió (su D6) **excluir estas 2 rutas** de su propio
-> alcance, porque esta asignación reconstruye el hero y las secciones desde cero al pasarlas a
-> tabs — cualquier cambio que 049 hiciera hoy se reescribiría mañana, con un conflicto de merge en
-> el archivo más grande del repo. **A cambio, el requisito se construye acá, ya correcto.**
-
-Al reestructurar la ficha, el **número de matrícula** debe quedar jerarquizado por encima del
-nombre del alumno **dentro de los contextos donde el sujeto es una matrícula** (tab Matrículas,
-tab Pagos, drawers de matrícula). Forma canónica, tomada del carnet físico que emite la escuela:
-
-- Etiqueta **`.micro-label`** con el texto **"Matrícula"** sobre el valor.
-  ⚠️ `.kpi-label` está deprecada (`fix-078-b`) — no usarla.
-- Valor con **`.kpi-value`**, dentro de un contenedor con borde (el carnet lo muestra recuadrado).
-- **Nomenclatura:** el dato se llama **"Matrícula"**, nunca "Expediente" ni "Folio" — es la
-  palabra impresa en el carnet real. Si esta ficha usa "Expediente" para el **estado documental**,
-  ese pasa a llamarse **"Documentos"**.
-- En el encabezado de la ficha (que identifica a una **persona**, no a una matrícula) **manda el
-  nombre** — ahí no se invierte nada. Un alumno puede tener varias matrículas (`DG-029`; el
-  refuerzo Clase B consume número del mismo correlativo, spec `0006-m`), así que no existe "el"
-  número del alumno.
-
-Contexto completo, evidencia física y las 10 decisiones del grill:
-`specs/assignments/ASG-b-049-numero-matricula-dato-principal.md`.
-
 ## Referencias
 
 - `indices/APP-LIKE-ROLLOUT.md` — fila `/admin/alumnos/:id`
-- `specs/assignments/ASG-b-049-numero-matricula-dato-principal.md` — requisito de jerarquía de arriba
 - `specs/assignments/ASG-b-084-app-like-instructor-ficha-piloto.md` — patrón de tabs a reusar
 - Memoria de proyecto `project-asistencia-b-layout-dual-spec0030` — lección de QA geométrico vs
   mirada humana, aplicable directamente acá por el riesgo
