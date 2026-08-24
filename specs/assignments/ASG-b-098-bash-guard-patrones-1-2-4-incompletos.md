@@ -1,14 +1,14 @@
 # Asignación ASG-b-098 — El parche del Bash Guard arregló 1 de 4 patrones
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** hotfix
 > **priority:** P2
 > **created:** 2026-08-24
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-24
+> **resulting_track:** hotfix-054-b-bash-guard-patrones-1-2-4
 
 ---
 
