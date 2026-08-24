@@ -1,6 +1,6 @@
 # Asignación ASG-i-002 — Migrar funciones de negocio del cliente a Edge Functions
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1

@@ -24,6 +24,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
+import {
+  DEFAULT_PERIOD_WINDOW,
+  applyPeriodWindow,
+  type PeriodWindow,
+} from '@core/utils/period-window.utils';
 import { AdminExAlumnosTasasDrawerComponent } from './components/stats/admin-ex-alumnos-tasas-drawer.component';
 import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/admin-ex-alumnos-comentarios-drawer.component';
 import type {
@@ -44,6 +50,7 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
     CurrencyPipe,
     FormsModule,
     SelectModule,
+    PeriodSelectorComponent,
     TagModule,
     TooltipModule,
     TableModule,
@@ -95,15 +102,16 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
               (ngModelChange)="searchTerm.set($event)"
             />
           </div>
-          <p-select
-            [options]="yearSelectOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Todos los años"
-            class="h-9"
-            [ngModel]="filtroAnio()"
-            (ngModelChange)="filtroAnio.set($event)"
-            data-llm-description="Filter graduates by year"
+          <!-- fix-147-b: este selector REEMPLAZA al filtro de año suelto que había acá.
+               Eran dos controles de tiempo compitiendo: con la ventana por defecto activa,
+               elegir un año viejo devolvía 0 filas y parecía roto. Ahora elegir un año ES
+               elegir una ventana, así que no pueden contradecirse. -->
+          <app-period-selector
+            [window]="periodWindow()"
+            (windowChange)="periodWindow.set($event)"
+            [years]="availableYears()"
+            [searchActive]="hasActiveSearch()"
+            ariaLabel="Período de egreso"
           />
         </div>
 
@@ -501,25 +509,34 @@ export class AdminExAlumnosComponent {
 
   // ── Filtros locales ──────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
-  protected readonly filtroAnio = signal('');
+
+  /**
+   * Ventana de período (fix-147-b). Reemplaza al `filtroAnio` suelto: los años concretos son
+   * ahora opciones de ESTE control, no un segundo filtro de tiempo que pueda contradecirlo.
+   */
+  protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
+
+  protected readonly hasActiveSearch = computed(() => this.searchTerm().trim().length > 0);
 
   // ── Lista filtrada (cliente) ─────────────────────────────────────────────────
   protected readonly filteredEgresados = computed<EgresadoTableRow[]>(() => {
-    let results: EgresadoTableRow[] = this.facade.egresadosClaseBList();
+    // El período se aplica ANTES de la búsqueda y solo cuando no hay término activo:
+    // buscar tiene que encontrar al egresado sin importar cuándo egresó (ASG-b-087).
+    const enPeriodo = applyPeriodWindow(this.facade.egresadosClaseBList(), {
+      window: this.periodWindow(),
+      hasActiveSearch: this.hasActiveSearch(),
+      dateOf: (e: EgresadoTableRow) => e.fechaEgreso,
+    });
 
     const term = this.searchTerm().toLowerCase().trim();
-    if (term) {
-      results = results.filter(
-        (e: EgresadoTableRow) =>
-          e.nombre.toLowerCase().includes(term) ||
-          e.rut.toLowerCase().includes(term) ||
-          (e.nroExpediente?.toLowerCase().includes(term) ?? false),
-      );
-    }
-    if (this.filtroAnio()) {
-      results = results.filter((e: EgresadoTableRow) => String(e.anio) === this.filtroAnio());
-    }
-    return results;
+    if (!term) return enPeriodo;
+
+    return enPeriodo.filter(
+      (e: EgresadoTableRow) =>
+        e.nombre.toLowerCase().includes(term) ||
+        e.rut.toLowerCase().includes(term) ||
+        (e.nroExpediente?.toLowerCase().includes(term) ?? false),
+    );
   });
 
   // ── Densidad incremental de la vista tarjetas (mismo patrón que app-alumnos-list-content) ──
@@ -541,10 +558,8 @@ export class AdminExAlumnosComponent {
   }
 
   // ── Opciones de filtros dinámicas ────────────────────────────────────────────
-  readonly yearSelectOptions = computed(() =>
-    this.availableYears().map((y) => ({ label: y, value: y })),
-  );
-
+  // fix-147-b: `yearSelectOptions` se eliminó — `app-period-selector` arma sus propias
+  // opciones a partir de `availableYears`, que ahora se le pasa directo.
   protected readonly availableYears = computed<string[]>(() => {
     const years = this.facade
       .egresadosClaseBList()
@@ -599,7 +614,9 @@ export class AdminExAlumnosComponent {
 
   protected clearFilters(): void {
     this.searchTerm.set('');
-    this.filtroAnio.set('');
+    // Vuelve al DEFAULT, no a "todo el historial": limpiar filtros devuelve la vista a su
+    // estado inicial acotado, no la deja sin techo (fix-147-b).
+    this.periodWindow.set(DEFAULT_PERIOD_WINDOW);
     this.mobileShown.set(AdminExAlumnosComponent.CARDS_STEP);
   }
 }

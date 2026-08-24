@@ -1,6 +1,7 @@
 # Hotfix: Botón de acciones del hero slim se corta en viewports intermedios (~900-1000px)
-> id: hotfix-038-b-hero-slim-acciones-shrink0-overflow
-> status: in_progress
+> id: hotfix-051-b-hero-slim-acciones-shrink0-overflow
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `section-hero.component.ts:475` — el contenedor RIGHT del modo slim usa `shrink min-w-0`. ⚠️ Efecto colateral detectado al cerrar: el override de `force-compact` en `:150` sigue apuntando al selector viejo `.flex.items-center.gap-2.flex-wrap.shrink-0`, que ya no matchea a ningún elemento — ver ASG-b-094.
 > created: 2026-08-08
 
 ## Problema

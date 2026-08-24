@@ -149,6 +149,46 @@ describe('ExAlumnosFacade', () => {
     expect(egresado.branchId).toBe(3);
   });
 
+  it('mapea fechaEgreso con precisión de día, no solo el año (fix-147-b)', async () => {
+    // La ventana de período compara fechas completas. Con solo `anio`, alguien que egresó en
+    // diciembre quedaba fuera de la ventana de 12 meses por hasta 11 meses de error.
+    const row = {
+      id: 101,
+      number: 'EXP-201',
+      pending_balance: 0,
+      updated_at: '2025-12-28T18:30:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 1, name: 'Sede Centro' },
+      students: {
+        id: 56,
+        users: {
+          first_names: 'Ana',
+          paternal_last_name: 'Soto',
+          maternal_last_name: null,
+          rut: '33.333.333-3',
+          email: 'ana@correo.cl',
+        },
+      },
+    };
+    (supabaseSpy as any).client = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+          }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    };
+
+    await facade.loadEgresados();
+
+    const egresado = facade.egresadosClaseBList()[0];
+    expect(egresado.fechaEgreso).toBe('2025-12-28');
+    expect(egresado.anio).toBe(2025);
+  });
+
   it('mapea convalidatedLicense desde license_validations para egresados profesionales (fix-195)', async () => {
     const row = {
       id: 300,

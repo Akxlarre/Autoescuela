@@ -1,6 +1,6 @@
 # Asignación ASG-b-028 — 3 fixes cosméticos: label Agenda, texto RBAC, chips ambiguos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

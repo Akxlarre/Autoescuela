@@ -194,6 +194,8 @@ export class ExAlumnosFacade {
     const correo: string = u?.email ?? '—';
     const licencia: string = this.deriveLicencia(r.courses?.code ?? '', r.courses?.name ?? '');
     const anio: number | null = r.updated_at ? new Date(r.updated_at).getFullYear() : null;
+    // fix-147-b: la ventana de período necesita precisión de día, no solo el año.
+    const fechaEgreso: string | null = r.updated_at ? r.updated_at.slice(0, 10) : null;
     const sede: string = r.branches?.name ?? '—';
     const branchId: number | null = r.branches?.id ?? null;
 
@@ -207,6 +209,7 @@ export class ExAlumnosFacade {
       licencia,
       licenseGroup: r.license_group === 'professional' ? 'professional' : 'class_b',
       anio,
+      fechaEgreso,
       sede,
       branchId,
       nroCertificado: null,

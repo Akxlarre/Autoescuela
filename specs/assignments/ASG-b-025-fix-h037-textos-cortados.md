@@ -1,6 +1,6 @@
 # Asignación ASG-b-025 — Fix H-037: botones y títulos recortados a mitad de palabra
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

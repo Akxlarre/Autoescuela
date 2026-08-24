@@ -122,6 +122,34 @@ describe('PagosFacade', () => {
     });
   });
 
+  // ── fix-147-b: la lista de deudores no puede crecer sin techo ──
+  describe('fetchAlumnosConDeuda (fix-147-b)', () => {
+    it('aplica .limit(200) sobre la query de deudores', async () => {
+      const genericMock = supabaseSpy.client.from();
+      const limitSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
+      const neqSpy = vi.fn().mockReturnValue({ order: orderSpy });
+      const gtSpy = vi.fn().mockReturnValue({ neq: neqSpy });
+      const enrollmentsSelectSpy = vi.fn().mockReturnValue({ gt: gtSpy });
+
+      supabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'enrollments' ? { select: enrollmentsSelectSpy } : genericMock,
+      );
+      supabaseSpy.client.channel = vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      });
+
+      await facade.initialize();
+      await flushMicrotasks();
+
+      // Ordenada por saldo desc antes del recorte: si alguna vez hay que truncar,
+      // los que quedan fuera son los deudores más chicos, no unos al azar.
+      expect(orderSpy).toHaveBeenCalledWith('pending_balance', { ascending: false });
+      expect(limitSpy).toHaveBeenCalledWith(200);
+    });
+  });
+
   // ── spec 0025 (T2.2): notificación al alumno tras registrar un abono ──
   describe('registrarNuevoPago — notificación al alumno (spec 0025, AC1, AC-E1)', () => {
     let notificationsSpy: any;

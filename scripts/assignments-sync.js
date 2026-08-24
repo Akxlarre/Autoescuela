@@ -21,6 +21,9 @@ const SPECS_DIR = path.join(ROOT, 'specs');
 const ASSIGNMENTS_DIR = path.join(SPECS_DIR, 'assignments');
 const ASSIGNMENTS_MD = path.join(SPECS_DIR, 'ASSIGNMENTS.md');
 
+/** `--fix` corrige el drift en disco en vez de solo reportarlo. Ver rewriteAssignmentStatus(). */
+const FIX_MODE = process.argv.includes('--fix');
+
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
 const yellow = (s) => `\x1b[33m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
@@ -57,6 +60,25 @@ function locateTrack(trackId) {
   return null;
 }
 
+/**
+ * Con `--fix`, corrige en disco el `status:` del frontmatter de una Asignación para que
+ * coincida con el estado real de su track.
+ *
+ * Por qué existe: el sync ya detectaba este drift pero solo podía imprimirlo, así que la
+ * advertencia se repetía en cada corrida y la corrección había que hacerla a mano archivo por
+ * archivo. La fuente de verdad es el track, no el frontmatter — por eso la corrección va
+ * siempre en esa dirección y nunca al revés.
+ */
+function rewriteAssignmentStatus(assignment, newStatus) {
+  const filePath = path.join(ASSIGNMENTS_DIR, assignment.fileName);
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const updated = content.replace(
+    /^>\s*\*\*status:\*\*\s*.+$/m,
+    `> **status:** ${newStatus}`,
+  );
+  if (updated !== content) fs.writeFileSync(filePath, updated);
+}
+
 function parseAssignment(fileName) {
   // ASG-<autor>-<NNN>-slug — contador por autor, igual que los tracks (ver specs/AUTHORS.md)
   const idMatch = fileName.match(/^(ASG-[a-z]+-\d+)-/);
@@ -66,6 +88,7 @@ function parseAssignment(fileName) {
   const titleMatch = content.match(/^#\s*Asignación\s+ASG-[a-z]+-\d+\s*—\s*(.+)$/m);
   return {
     id,
+    fileName,
     title: titleMatch ? titleMatch[1].trim() : '(sin título)',
     status: readFrontmatterField(content, 'status'),
     owner: readFrontmatterField(content, 'owner'),
@@ -102,6 +125,7 @@ function main() {
   const reclamadas = [];
   const completadas = [];
   const drift = [];
+  const fixed = [];
 
   for (const a of assignments) {
     if (!a.resultingTrack || a.resultingTrack === '—') continue; // sigue en Pendientes (manual)
@@ -125,7 +149,12 @@ function main() {
         closed,
       });
       if (a.status !== 'completada') {
-        drift.push(`${a.id}: track ${a.resultingTrack} está status:done pero la Asignación dice status: ${a.status} (no bloquea — la tabla ya refleja "completada")`);
+        if (FIX_MODE) {
+          rewriteAssignmentStatus(a, 'completada');
+          fixed.push(`${a.id}: status ${a.status} → completada (track ${a.resultingTrack} está done)`);
+        } else {
+          drift.push(`${a.id}: track ${a.resultingTrack} está status:done pero la Asignación dice status: ${a.status} (no bloquea — corregible con: npm run assignments:sync -- --fix)`);
+        }
       }
     } else {
       reclamadas.push({
@@ -137,7 +166,12 @@ function main() {
         fecha: a.claimedAt || '—',
       });
       if (a.status === 'completada') {
-        drift.push(`${a.id}: la Asignación dice status: completada pero el track ${a.resultingTrack} sigue status:${trackStatus} (no bloquea — la tabla ya refleja "en curso")`);
+        if (FIX_MODE) {
+          rewriteAssignmentStatus(a, 'reclamada');
+          fixed.push(`${a.id}: status completada → reclamada (track ${a.resultingTrack} sigue ${trackStatus})`);
+        } else {
+          drift.push(`${a.id}: la Asignación dice status: completada pero el track ${a.resultingTrack} sigue status:${trackStatus} (no bloquea — corregible con: npm run assignments:sync -- --fix)`);
+        }
       }
     }
   }
@@ -167,6 +201,11 @@ function main() {
   console.log(bold('\n=== assignments-sync ===\n'));
   console.log(green(`✅ Reclamadas / En curso: ${reclamadas.length} fila(s)`));
   console.log(green(`✅ Completadas: ${completadas.length} fila(s)`));
+  if (fixed.length > 0) {
+    console.log(bold(`\n🔧 Drift corregido en disco (${fixed.length}) — el track es la fuente de verdad:`));
+    for (const f of fixed) console.log(green(`  ${f}`));
+  }
+
   if (drift.length > 0) {
     console.log(bold(`\n⚠️  Drift detectado (${drift.length}) — el campo status: de la Asignación no coincide con el track, la tabla usa el track como fuente de verdad:`));
     for (const d of drift) console.log(yellow(`  ${d}`));

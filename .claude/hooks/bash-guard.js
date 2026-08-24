@@ -25,7 +25,11 @@ process.stdin.on('end', () => {
     const fileCreationPatterns = [
       /(?:cat|echo|printf)\s.*>\s*.*src\/app\/.*\.(?:ts|html|scss)/,
       /tee\s.*src\/app\/.*\.(?:ts|html|scss)/,
-      />\s*.*src\/app\/.*\.(?:ts|html|scss)/,
+      // El `.*` NO puede cruzar separadores de comando (; | &), y los redirects de
+      // diagnostico (2>&1, /dev/null) no cuentan como escritura de archivo. Antes,
+      // CUALQUIER comando read-only que usara un redirect y mencionara mas adelante
+      // una ruta de fuente quedaba bloqueado. Ver ASG-b-097.
+      /(?<![0-9&])>>?\s*(?!\/dev\/null)[^;|&]*src\/app\/[^;|&]*\.(?:ts|html|scss)/,
       /(?:cat|echo|printf)\s.*>\s*.*supabase\/migrations\/.*\.sql/,
     ];
 

@@ -23,6 +23,8 @@
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | `cualquiera` | fix | P1 | b | Transversal: 58 archivos, 3+ portales. Medido en fix-147-b (tabs 94×32, back-link 50×16). Precedente `ASG-b-061`. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
+| ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
+| ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%). Precedente `0032-b`. La spec `0038-b` dejó el selector de período duplicado en ambas: es código a **absorber**, no un bloqueo. Ver `specs/assignments/ASG-b-096-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -224,6 +226,10 @@
 | ASG-b-089 | Facade inyectado directamente en Dumb Components (`shared/components/**`) | [fix-146-b-facade-en-dumb-components](fixes/fix-146-b-facade-en-dumb-components/fix.md) | 2026-08-15 |
 | ASG-b-084 | App-like: `/instructor/alumnos/:id/ficha` (piloto del patrón de tabs) | [fix-027-i-app-like-instructor-ficha-tabs](fixes/fix-027-i-app-like-instructor-ficha-tabs/fix.md) | 2026-08-17 |
 | ASG-b-079 | App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`) | [fix-147-b-app-like-portal-alumno](fixes/fix-147-b-app-like-portal-alumno/fix.md) | 2026-08-22 |
+| ASG-b-087 | Listas sin techo: filtro de período por defecto + búsqueda/export deben ignorarlo + límite en Deudores | [0038-b-filtro-periodo-listas-sin-techo](specs/0038-b-filtro-periodo-listas-sin-techo/spec.md) | 2026-08-22 |
+| ASG-b-094 | Override de `force-compact` muerto en `section-hero` (modo slim) | [hotfix-052-b-force-compact-selector-muerto-section-hero](hotfixes/hotfix-052-b-force-compact-selector-muerto-section-hero/hotfix.md) | 2026-08-22 |
+| ASG-b-097 | Aplicar 2 parches de harness sobre archivos protegidos | [hotfix-053-b-parches-harness-bash-guard-y-ac-verifier](hotfixes/hotfix-053-b-parches-harness-bash-guard-y-ac-verifier/hotfix.md) | 2026-08-22 |
+| ASG-b-095 | QA visual pendiente de la cadena `0002-i` → `fix-018-i` (ajustes de cuadratura) | [fix-148-b-qa-ajustes-cuadratura-completada](fixes/fix-148-b-qa-ajustes-cuadratura-completada/fix.md) | 2026-08-23 |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-23 |
 <!-- AUTO-GENERATED:END -->
 
