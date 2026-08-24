@@ -66,7 +66,6 @@
 | `/app/secretaria/profesional/pre-inscritos` | `SecretariaAlumnosPreInscritosComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/agenda` | `SecretariaAgendaComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/asistencia` | `SecretariaAsistenciaComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/asistencia/matriz` | `SecretariaAsistenciaMatrizComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/matricula` | `SecretariaMatriculaComponent` | `enrollmentDraftGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/pagos` | `SecretariaPagosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/contabilidad/cuadratura` | `SecretariaContabilidadCuadraturaComponent` | — | `src/app/app.routes.ts` |
@@ -76,7 +75,6 @@
 | `/app/secretaria/certificados` | `SecretariaCertificadosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/documentos` | `SecretariaDocumentosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/instructores` | `SecretariaInstructoresComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/comunicaciones` | `SecretariaComunicacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/observaciones` | `SecretariaObservacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/relatores` | `SecretariaProfesionalRelatoresComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/promociones` | `SecretariaProfesionalPromocionesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |

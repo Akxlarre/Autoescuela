@@ -76,7 +76,7 @@
 |---|---|---|---|---|
 | `/secretaria/dashboard` | `SecretariaDashboardComponent` | Mismo layout conceptual que `/admin/dashboard` (hero + KPIs + `app-live-classes-panel`), pero el root **no** tiene `--fill-screen-2` — el `.bento-fill` del panel ya existe pero no hace nada porque el padre no es fill-screen | Copiar literal el modificador `--fill-screen-2` que ya usa `DashboardComponent` de admin — patrón 100% resuelto, solo falta aplicarlo. Incluye portar `LayoutService`+`isDesktopTier`+`sliceByBudget` para `visibleActivities`/`visibleAlerts`/`liveClassesBudget` (hoy hardcodeado a `.slice(0,4)`/`.slice(0,3)`) | **Baja-Media** (subida 2026-08-02: los `computed()` de densidad que se portan necesitan `.spec.ts` propio, no existía antes en esta página) |
 | `/secretaria/pagos` | `SecretariaPagosComponent` (casi duplicado línea-por-línea de `AdminPagosComponent`) | **✅ Cerrado 2026-08-06 (fix-132-m / ASG-b-076)** — igual que admin/pagos | Misma solución aplicada: Deudores único bloque + paginador real desktop, drawer `PagosRecientesDrawerComponent` compartido (mismo componente que admin, no duplicado) | Alta (cerrado) |
-| `/secretaria/instructores` | `SecretariaInstructoresComponent` (casi duplicado línea-por-línea de `AdminInstructoresComponent`, mismo HTML/CSS, sin columna "Sede") | Igual que admin/instructores | Aplicar EXACTAMENTE la misma solución que `/admin/instructores` (ver detalle en esa fila) — mismo cambio, dos archivos, incluye su propio `.spec.ts` (misma lógica duplicada = mismo test duplicado, no se comparte por ser 2 componentes distintos) | **Baja-Media** (subida 2026-08-02, mismo motivo de tests que admin/instructores) |
+| `/secretaria/instructores` | `SecretariaInstructoresComponent` | Igual que admin/instructores | ✅ **Resuelto (fix-208-m):** ya no hay duplicado — re-exporta `AdminInstructoresComponent`, así que hereda automáticamente lo que se aplique en esa fila. Su `.spec.ts` duplicado se eliminó. | — |
 | `/secretaria/profesional/evaluaciones` | `SecretariaProfesionalNotasComponent` → wrapper delgado sobre `app-evaluaciones-profesional-content` (shared) | **✅ Cerrado 2026-08-10 (spec 0008-m / ASG-b-080)** — ruta renombrada de `/profesional/notas` (sin redirect), mismo Dumb compartido que admin. Nombre unificado a "Evaluaciones" en menú/título/ruta (antes decía "Calificaciones") | Cerrado — ver `specs/specs/0008-m-app-like-matriz-notas-evaluaciones/` | Alta (cerrado) |
 | `/secretaria/profesional/archivo` | `SecretariaProfesionalArchivoComponent` (wrappea al de admin) | — | Se resuelve automáticamente al arreglar `AdminProfesionalArchivoComponent` (ahora Media, no Alta) | Media |
 | `/secretaria/documentos` | `SecretariaDocumentosComponent` → `dms-list-content` (shared) | Igual que admin/documentos (mismo content) | Se resuelve junto con `/admin/documentos` | Media |
@@ -159,8 +159,6 @@ sospechá del instrumento antes que del layout.
 | `/alumno/ayuda` | `AlumnoAyudaComponent` | Stub "PLANO" |
 | `/alumno/notificaciones` | `AlumnoNotificacionesComponent` | Stub "PLANO" |
 | `/secretaria/notificaciones` | `SecretariaNotificacionesComponent` | Stub "PLANO" |
-| `/secretaria/comunicaciones` | `SecretariaComunicacionesComponent` | Placeholder "Próximamente" — módulo aún no construido |
-| `/secretaria/asistencia/matriz` | `SecretariaAsistenciaMatrizComponent` | Placeholder "Próximamente" |
 
 ## Edge cases estresados (2026-08-02) — antes de convertir a ASGs
 

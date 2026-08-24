@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
@@ -31,8 +31,10 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 export class SecretariaContabilidadLiquidacionesComponent implements OnInit {
   protected readonly facade = inject(LiquidacionesFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
     void this.facade.initialize();
   }
 

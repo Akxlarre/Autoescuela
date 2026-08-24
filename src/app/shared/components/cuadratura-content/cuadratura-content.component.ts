@@ -139,10 +139,10 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               >
                 <span>N° Boleta</span>
                 <span>Glosa / Alumno</span>
-                <span class="text-right">Clase B</span>
-                <span class="text-right">Clase A</span>
-                <span class="text-right">Sensom.</span>
-                <span class="text-right">Otros</span>
+                <span class="text-right">Efectivo</span>
+                <span class="text-right">Transf.</span>
+                <span class="text-right">Voucher</span>
+                <span class="text-right">Tarjeta</span>
                 <span class="text-right text-text-primary">Total</span>
                 <span></span>
               </div>
@@ -234,7 +234,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         {{ clp(fila.total) }}
                       </span>
                       <button
-                        class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto"
+                        class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto cursor-pointer"
                         [disabled]="cajaYaCerrada()"
                         [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
                         (click)="onEliminarIngreso(fila, $event)"
@@ -270,7 +270,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         <span class="item-title">{{ fila.glosa }}</span>
                       </div>
                       <button
-                        class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer"
                         [disabled]="cajaYaCerrada()"
                         aria-label="Eliminar ingreso"
                         (click)="onEliminarIngreso(fila, $event)"
@@ -283,22 +283,22 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         <span class="text-2xs text-text-muted uppercase">Conceptos</span>
                         <div class="flex flex-wrap gap-1 mt-0.5">
                           @if (fila.claseB > 0) {
-                            <span class="badge-mini">B</span>
+                            <span class="badge-mini">Efectivo</span>
                           }
                           @if (fila.claseA > 0) {
-                            <span class="badge-mini">A</span>
+                            <span class="badge-mini">Transf.</span>
                           }
                           @if (fila.sence > 0) {
-                            <span class="badge-mini">SIM</span>
+                            <span class="badge-mini">Voucher</span>
                           }
                           @if (fila.otros > 0) {
-                            <span class="badge-mini">+</span>
+                            <span class="badge-mini">Tarjeta</span>
                           }
                         </div>
                       </div>
                       <div class="flex flex-col items-end">
                         <span class="text-2xs text-text-muted uppercase">Total</span>
-                        <span class="text-base font-black">{{ clp(fila.total) }}</span>
+                        <span class="text-text-primary font-black">{{ clp(fila.total) }}</span>
                       </div>
                     </div>
                   </div>
@@ -390,6 +390,9 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       @if (categoryLabel(egreso); as label) {
                         <app-badge variant="neutral">{{ label }}</app-badge>
                       }
+                      @if (egreso.paymentMethod !== 'efectivo') {
+                        <app-badge variant="info">{{ paymentMethodLabel(egreso) }}</app-badge>
+                      }
                       <span class="text-compact font-medium text-text-primary truncate">
                         {{ egreso.descripcion }}
                       </span>
@@ -399,7 +402,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                     {{ clp(egreso.monto) }}
                   </span>
                   <button
-                    class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100"
+                    class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
                     [disabled]="cajaYaCerrada()"
                     aria-label="Eliminar egreso"
                     (click)="onEliminarEgreso(egreso)"
@@ -479,14 +482,14 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <div
               class="flex items-center justify-between text-compact font-semibold text-text-secondary"
             >
-              <span>Ingresos de Sistema</span>
-              <span class="tabular-nums text-brand">{{ clp(totalIngresosHoy()) }}</span>
+              <span>Ingresos en Efectivo</span>
+              <span class="tabular-nums text-brand">{{ clp(ingresosEfectivoHoy()) }}</span>
             </div>
             <div
               class="flex items-center justify-between text-compact font-semibold text-text-secondary"
             >
-              <span>Egresos / Retiros (-)</span>
-              <span class="tabular-nums text-warning">{{ clp(totalEgresosHoy()) }}</span>
+              <span>Egresos en Efectivo (-)</span>
+              <span class="tabular-nums text-warning">{{ clp(totalEgresosEfectivoHoy()) }}</span>
             </div>
             <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
               <span class="text-2xs font-black uppercase tracking-widest text-brand"
@@ -802,6 +805,8 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly ingresosEfectivoHoy = input<number>(0);
   readonly totalIngresosHoy = input.required<number>();
   readonly totalEgresosHoy = input.required<number>();
+  /** Solo egresos en efectivo — es lo que resta del arqueo físico (fix-211-m). */
+  readonly totalEgresosEfectivoHoy = input<number>(0);
   readonly saldoTeorico = input<number>(0);
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
@@ -859,7 +864,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   });
 
   protected readonly saldoComputado = computed(
-    () => this.fondoLocal() + this.ingresosEfectivoHoy() - this.totalEgresosHoy(),
+    () => this.fondoLocal() + this.ingresosEfectivoHoy() - this.totalEgresosEfectivoHoy(),
   );
 
   protected readonly diferencia = computed(() => this.totalArqueo() - this.saldoComputado());
@@ -940,6 +945,18 @@ export class CuadraturaContentComponent implements AfterViewInit {
     return CuadraturaContentComponent.CATEGORY_ICONS[egreso.category] ?? 'tag';
   }
 
+  private static readonly PAYMENT_METHOD_LABELS: Record<string, string> = {
+    transferencia: 'Transferencia',
+    tarjeta: 'Tarjeta',
+  };
+
+  /** Etiqueta del método de pago del egreso — solo se llama para métodos no-efectivo (fix-211-m). */
+  protected paymentMethodLabel(egreso: EgresoRow): string {
+    return (
+      CuadraturaContentComponent.PAYMENT_METHOD_LABELS[egreso.paymentMethod] ?? egreso.paymentMethod
+    );
+  }
+
   protected onCantidadChange(key: string, event: Event): void {
     const input = event.target as HTMLInputElement;
     const sanitized = input.value.replace(/\D/g, '');
@@ -969,12 +986,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   protected onEliminarIngreso(fila: IngresoRow, event: Event): void {
     event.stopPropagation();
-    const confirmado = window.confirm(
-      '¿Estás seguro de que deseas eliminar este movimiento?\nEsta acción no se puede deshacer y los saldos se recalcularán.',
-    );
-    if (confirmado) {
-      this.eliminarIngreso.emit(fila);
-    }
+    this.eliminarIngreso.emit(fila);
   }
 
   protected onEliminarEgreso(egreso: EgresoRow): void {

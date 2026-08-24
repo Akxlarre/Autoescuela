@@ -221,7 +221,7 @@ const SECRETARIA_NAV: NavGroup[] = [
       },
       {
         label: 'Evaluaciones',
-        icon: 'star',
+        icon: 'file-spreadsheet',
         routerLink: '/app/secretaria/profesional/evaluaciones',
         requiresProfessional: true,
       },
@@ -276,9 +276,9 @@ const SECRETARIA_NAV: NavGroup[] = [
         routerLink: '/app/secretaria/contabilidad/liquidaciones',
       },
       {
-        label: 'Comunicaciones',
-        icon: 'message-circle',
-        routerLink: '/app/secretaria/comunicaciones',
+        label: 'Cursos Singulares',
+        icon: 'book-open',
+        routerLink: '/app/secretaria/contabilidad/cursos',
       },
     ],
   },
@@ -287,6 +287,7 @@ const SECRETARIA_NAV: NavGroup[] = [
     items: [
       { label: 'Instructores', icon: 'user-check', routerLink: '/app/secretaria/instructores' },
       { label: 'DMS Documentos', icon: 'folder-open', routerLink: '/app/secretaria/documentos' },
+      { label: 'Sitio Web', icon: 'globe', routerLink: '/app/secretaria/configuracion-web' },
     ],
   },
 ];

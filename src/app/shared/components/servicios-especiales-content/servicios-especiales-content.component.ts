@@ -456,7 +456,11 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly kpis = input.required<ServiciosEspecialesKpis>();
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
-  readonly backRoute = input<string>('/app/dashboard');
+  /**
+   * Ruta del botón "volver". Sin default a propósito: un default con segmento de rol
+   * (`/app/dashboard`) era un 404 que cada consumidor heredaba en silencio (fix-202-m).
+   */
+  readonly backRoute = input.required<string>();
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');

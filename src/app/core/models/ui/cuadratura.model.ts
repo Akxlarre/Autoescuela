@@ -31,6 +31,8 @@ export interface EgresoRow {
   category: string | null;
   descripcion: string;
   monto: number;
+  /** Método de pago del egreso — determina si resta del efectivo esperado en el arqueo (fix-211-m). */
+  paymentMethod: 'efectivo' | 'transferencia' | 'tarjeta';
 }
 
 /** Datos del formulario para registrar un egreso desde el modal. */
@@ -40,6 +42,8 @@ export interface EgresoFormData {
   descripcion: string;
   /** Vehículo asociado al egreso (ej. carga de combustible). Opcional. */
   vehiculoId?: number | null;
+  /** Método de pago del egreso (fix-211-m) — determina si resta del efectivo del arqueo. */
+  metodoPago: 'efectivo' | 'transferencia' | 'tarjeta';
 }
 
 /** Payload que emite el componente al cerrar la caja. */

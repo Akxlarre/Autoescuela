@@ -441,9 +441,13 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   readonly egresados = input.required<EgresadoTableRow[]>();
   readonly isLoading = input(false);
-  readonly backRoute = input<string>('/app/admin/clase-profesional/alumnos');
+  /**
+   * Ruta del botón "volver" y prefijo de "Ver detalle". Sin default a propósito: un default
+   * con segmento de rol se le aplicaba en silencio al otro rol (fix-202-m).
+   */
+  readonly backRoute = input.required<string>();
   /** Prefijo de ruta para "Ver detalle" — misma ficha que Base Alumnos (admin vs secretaria). */
-  readonly basePath = input<string>('/app/admin');
+  readonly basePath = input.required<string>();
   /** Emite el egresado a re-matricular; el Smart muestra confirmación y navega al wizard (fix-020). */
   readonly reEnroll = output<EgresadoTableRow>();
 

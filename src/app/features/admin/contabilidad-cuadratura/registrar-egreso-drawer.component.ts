@@ -132,6 +132,22 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               }
             </div>
 
+            <!-- Método de Pago -->
+            <div class="flex flex-col gap-1.5">
+              <label for="egr-metodo-pago" class="field-label">
+                MÉTODO DE PAGO <span class="text-error">*</span>
+              </label>
+              <p-select
+                inputId="egr-metodo-pago"
+                formControlName="metodoPago"
+                [options]="metodoPagoOptions"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+                data-llm-description="Método con el que se pagó el egreso: determina si resta del efectivo del arqueo de caja"
+              />
+            </div>
+
             <!-- Descripción / Motivo -->
             <div class="flex flex-col gap-1.5">
               <label for="egr-descripcion" class="field-label">
@@ -273,6 +289,11 @@ export class RegistrarEgresoDrawerComponent {
     { label: 'Gasto Varios', value: 'gasto' },
     { label: 'Anticipo a Instructor', value: 'anticipo' },
   ];
+  readonly metodoPagoOptions = [
+    { label: 'Efectivo', value: 'efectivo' },
+    { label: 'Transferencia', value: 'transferencia' },
+    { label: 'Tarjeta', value: 'tarjeta' },
+  ];
 
   // ── Injections ───────────────────────────────────────────────────────────────
   protected readonly facade = inject(CuadraturaFacade);
@@ -291,6 +312,7 @@ export class RegistrarEgresoDrawerComponent {
     descripcion: ['', [Validators.required, Validators.minLength(3)]],
     // Opcional: no se persiste todavía (vehicle_id queda reservado para ASG-b-037).
     vehiculoId: [null as number | null],
+    metodoPago: ['efectivo' as 'efectivo' | 'transferencia' | 'tarjeta', Validators.required],
   });
 
   // ── Vehículos (selector "Vehículo / Patente" con instructor asignado) ────────
@@ -360,12 +382,13 @@ export class RegistrarEgresoDrawerComponent {
     this.saveError.set(null);
 
     try {
-      const { tipo, monto, descripcion, vehiculoId } = this.form.getRawValue();
+      const { tipo, monto, descripcion, vehiculoId, metodoPago } = this.form.getRawValue();
       const datos: EgresoFormData = {
         tipo: tipo as 'gasto' | 'anticipo' | 'combustible',
         monto: Number(monto),
         descripcion: descripcion ?? '',
         vehiculoId: vehiculoId ?? null,
+        metodoPago: metodoPago ?? 'efectivo',
       };
 
       const ok = await this.facade.registrarEgreso(datos);

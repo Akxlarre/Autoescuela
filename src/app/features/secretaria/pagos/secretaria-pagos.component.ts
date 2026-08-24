@@ -138,9 +138,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
               class="micro-label deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
             >
               <span>Alumno</span>
-              <span>RUT</span>
-              <span class="text-right">Total a Pagar</span>
-              <span class="text-right">Pagado</span>
+              <span class="dc-rut">RUT</span>
+              <span class="text-right dc-total">Total a Pagar</span>
+              <span class="text-right dc-pagado">Pagado</span>
               <span class="text-right">Saldo</span>
               <span class="text-right">Acciones</span>
             </div>
@@ -157,17 +157,19 @@ function toCompact(amount: number): { value: number; suffix: string } {
                       >RUT: {{ alumno.rut }}</span
                     >
                   </div>
-                  <span class="hidden lg:block text-sm text-text-secondary">{{ alumno.rut }}</span>
+                  <span class="hidden lg:block text-sm text-text-secondary dc-rut">{{
+                    alumno.rut
+                  }}</span>
                   <div
                     class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
                   >
-                    <div class="flex flex-col lg:block text-center lg:text-right">
+                    <div class="flex flex-col lg:block text-center lg:text-right dc-total">
                       <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                         >Total</span
                       >
                       <span class="text-sm text-text-primary">{{ clp(alumno.totalAPagar) }}</span>
                     </div>
-                    <div class="flex flex-col lg:block text-center lg:text-right">
+                    <div class="flex flex-col lg:block text-center lg:text-right dc-pagado">
                       <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                         >Pagado</span
                       >
@@ -376,6 +378,13 @@ function toCompact(amount: number): { value: number; suffix: string } {
       .deudores-compact .deudores-row {
         grid-template-columns: minmax(0, 1fr) auto auto !important;
       }
+      /* La grilla compacta deja 3 columnas: hay que esconder las 3 celdas sobrantes, o se
+         desbordan (fix-209-m). Va junto con la regla de arriba, nunca sola. */
+      .deudores-compact .dc-rut,
+      .deudores-compact .dc-total,
+      .deudores-compact .dc-pagado {
+        display: none !important;
+      }
       /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo. */
       .deudores-grid-cols {
         grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1.2fr;
@@ -529,6 +538,7 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
     void this.facade.initialize();
   }
 

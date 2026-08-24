@@ -1104,6 +1104,50 @@
   lado de lectura está bien implementado.
 - **Fuente:** `specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud`
 
+### DG-080 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
+- **Trampa:** dar por bueno que "Debe Haber en Caja" del arqueo (`CuadraturaFacade`) cuadra
+  contra el efectivo real solo porque los ingresos (`payments`) sí desglosan
+  `cash_amount`/`transfer_amount`/`card_amount`/`voucher_amount`. `expenses` e
+  `instructor_advances` no tenían columna `payment_method` — el formulario "Registrar Egreso"
+  tampoco la pedía — así que `totalEgresosHoy()` restaba el 100% de cualquier egreso del
+  efectivo esperado, incluyendo los pagados por transferencia o tarjeta de la empresa. El bug no
+  se manifestaba como error: el arqueo simplemente "no cuadraba" contra el efectivo físico real,
+  y nada en el código ni en los tests lo señalaba.
+- **Realidad:** cualquier tabla nueva cuyos montos participen en el cálculo de caja física
+  (egresos, anticipos, retiros, futuros tipos de movimiento) necesita su propio
+  `payment_method` — no basta con que `payments` (la única tabla de ingresos) lo tenga. El
+  arqueo de caja física nunca debe sumar/restar un monto sin saber si fue en efectivo.
+- **Regla de aplicabilidad:** antes de sumar o restar un monto de cualquier tabla nueva al
+  cálculo de `saldoTeoricoEfectivo`/`saldoComputado`, verificar que esa tabla distingue método
+  de pago — si no lo hace, agregar la columna (con default `'efectivo'` para no romper filas
+  existentes) antes de conectarla al arqueo, no después.
+- **Fuente:** `specs/fixes/fix-211-m-arqueo-caja-metodo-pago-egresos`
+
+### DG-081 — `if (branchId) query.eq('branch_id', branchId)` en un Facade que también ESCRIBE deja registros huérfanos cuando el admin está en "Todas las sedes"
+- **Trampa:** asumir que el patrón estándar de filtro branch-scoped (`resolveBranchScope()` →
+  `if (branchId) query.eq(...)`, documentado en `facades.md` §7) es seguro para **cualquier**
+  Facade branch-scoped, incluidos los que insertan filas (no solo los que leen). Es seguro para
+  lectura — `null` = "sin filtro, ver todo" es el comportamiento deseado para un admin en "Todas
+  las sedes". Pero si ese mismo Facade también hace `insert({ branch_id: getActiveBranchId() })`
+  (`CuadraturaFacade.registrarEgreso()`/`cerrarCaja()`), el `null` se escribe literal en la fila.
+  Como en SQL `NULL` nunca es igual a nada — ni siquiera a otro `NULL` — un `.eq('branch_id', 5)`
+  posterior para una sede específica nunca encuentra esa fila: queda huérfana, invisible en
+  cualquier vista por sede, solo visible de nuevo en "Todas las sedes". Sin error, sin excepción,
+  sin fila logueada como "descartada" — el dato simplemente desaparece del contexto donde
+  alguien esperaría encontrarlo.
+- **Realidad:** un Facade branch-scoped que solo lee puede vivir con `null` = "todas". Un Facade
+  branch-scoped que también escribe (mutaciones que se disparan desde una vista con selector de
+  sede) necesita exigir una sede concreta ANTES de permitir la escritura — con
+  `BranchGateComponent` + `BranchFacade.setRequiresSpecificBranch(true)` (patrón ya usado en el
+  wizard de Nueva Matrícula) — no basta con reutilizar el mismo query layer que usan las vistas
+  de solo lectura.
+- **Regla de aplicabilidad:** al auditar o extender un Facade branch-scoped, verificar si tiene
+  algún método de escritura (`insert`/`update`/`upsert`) que use `getActiveBranchId()` como valor
+  de columna. Si lo tiene, su Smart Component debe gatear la vista completa con
+  `BranchGateComponent` cuando `selectedBranchId() === null` — no alcanza con que las queries de
+  lectura "funcionen sin romper".
+- **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`
+
 ---
 
 ## Convención para agregar una entrada nueva
