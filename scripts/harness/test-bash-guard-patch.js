@@ -49,6 +49,47 @@ const cases = [
     0,
   ],
   ['PERMITIR: solo leer un componente', 'grep -n "input(" ' + SRC + 'shared/components/icon/icon.component.ts', 0],
+
+  // ── Casos agregados tras descubrir que el parche de ASG-b-097 fue INCOMPLETO ──────
+  // El patrón 3 quedó corregido, pero los patrones 1 y 4 arrastran el mismo defecto:
+  // `>` sin anclar y `.*` que cruza separadores de comando. La versión anterior de este
+  // test daba 7/7 sobre ese fix incompleto, porque ningún caso combinaba un verbo de
+  // escritura (echo/cat/printf) con un redirect de diagnóstico Y una ruta de fuente.
+  [
+    'PERMITIR (patrón 1): echo + redirect de diagnóstico + leer dos componentes',
+    'echo "chequeando"; ls ' + SRC + 'core/utils/x.spec.ts 2' + '>' + '/dev/null; grep -n "y" ' +
+      SRC + 'core/facades/z.facade.spec.ts',
+    0,
+  ],
+  [
+    'PERMITIR (patrón 4): echo + redirect + leer una migración',
+    'echo "revisando"; ls supabase/migrations 2' + '>' + '/dev/null; grep -c "create" ' +
+      'supabase/migrations/x.sql',
+    0,
+  ],
+  [
+    'BLOQUEAR (patrón 1 legítimo): echo redirigido a un componente',
+    'echo "export class X {}" ' + '>' + ' ' + SRC + 'features/b/b.component.ts',
+    2,
+  ],
+  [
+    'BLOQUEAR (patrón 4 legítimo): cat redirigido a una migración',
+    'cat plantilla ' + '>' + ' supabase/migrations/20260101_x.sql',
+    2,
+  ],
+  // El patrón 2 (tee) arrastra la misma clase de bug SIN necesitar un redirect: su `.*`
+  // también cruza separadores, así que un `tee` a un destino inocuo seguido de leer un
+  // componente queda bloqueado.
+  [
+    'PERMITIR (patrón 2): tee a un log y después leer un componente',
+    'ls | tee /tmp/salida.log; grep -n "input(" ' + SRC + 'shared/components/icon/icon.component.ts',
+    0,
+  ],
+  [
+    'BLOQUEAR (patrón 2 legítimo): tee directo a un componente',
+    'echo x | tee ' + SRC + 'features/c/c.component.ts',
+    2,
+  ],
 ];
 
 let ok = 0;
