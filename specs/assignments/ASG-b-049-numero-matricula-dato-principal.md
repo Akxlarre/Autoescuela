@@ -82,7 +82,7 @@ sigue siendo válida; su alcance se precisa.
 
 | # | Decisión | Fundamento |
 |---|---|---|
-| **D1** | **El número NO es único** → se muestra pelado y se desambigua por contexto; con sede "Todas", la sede acompaña como dato secundario. **No** se renumera la BD ni se inventa un prefijo. | `UNIQUE (number, branch_id, license_group)` en `20260312100001_*.sql`. Renumerar rompería la correspondencia con contratos ya emitidos. ⚠️ **Sujeto a D11 — si la serie real es única, esta decisión se cae.** |
+| **D1** | **El número NO es único** → se muestra pelado y se desambigua por contexto; con sede "Todas", la sede acompaña como dato secundario. **No** se renumera la BD ni se inventa un prefijo. | `UNIQUE (number, branch_id, license_group)` en `20260312100001_*.sql`. Renumerar rompería la correspondencia con contratos ya emitidos. ✅ **Confirmada por D11 (2026-08-23):** la serie es por sede, no única → el número sí se repite entre sedes y el constraint modela algo real. |
 | **D2** | En **listados de alumnos manda el nombre**. El número asciende a primario solo donde el contexto **ya es una matrícula** (ficha de matrícula, drawers, pagos, carnet). | El número identifica una *matrícula*, no una *persona*. `nroExpedientes` es un array por diseño: la spec `0006-m` decidió que el refuerzo Clase B **consuma número del mismo correlativo**, así que un alumno con refuerzo tiene 2 números indistinguibles entre sí. Ver `DG-029`. Fallback si el cliente insiste: encabezar con el más reciente (`sorted[0]`). |
 | **D3** | **Rename de dominio a "Matrícula"**. El estado documental pasa a llamarse **"Documentos"**. | El carnet impreso por la escuela dice literal `MATRICULA`. Hoy el mismo dato se llama de 4 formas (`Expediente`, `Folio`, `Matrícula N°`, `#0042`) y **"Expediente" nombra dos cosas distintas en la misma tabla**: la columna del número (`alumnos-list-content:377,401-404`) y el estado documental (`:447,601`), con un filtro rotulado "Expediente" (`:173`) que filtra el estado, no la columna. |
 | **D4** | "Más principal" = **orden + peso en listados** (`.item-title`, sin agrandar) **+ etiqueta/valor recuadrado en detalle** (`.micro-label` + `.kpi-value` en contenedor con borde). Orden por número por defecto en tablas **de matrículas** — nunca en las que replican formularios MTT, que van por apellido. | Es literalmente lo que hacen los dos artefactos físicos, cada uno en su contexto. ⚠️ *Corrección post-evidencia: el grill había descartado `.kpi-value`; el carnet muestra que en detalle es justamente el tratamiento correcto.* `.kpi-label` está **deprecada** (`fix-078-b`) → usar `.micro-label`. |
@@ -95,7 +95,38 @@ sigue siendo válida; su alcance se precisa.
 
 ---
 
-## 🔴 Pregunta bloqueante abierta — D11: el correlativo real no es el nuestro
+## 🟡 D11 — RESPONDIDA PARCIALMENTE por el dueño (2026-08-23)
+
+> Respuesta textual: *"es una serie por sede, son distintos y es como está en el código (…) eso
+> se realizará después, en la sincronización cuando el software empiece la marcha blanca y
+> empecemos desde el último que tienen"*.
+
+| Pregunta del grill | Estado | Respuesta |
+|---|---|---|
+| 1. ¿Serie única para toda la escuela o una por sede? | ✅ **Respondida** | **Una por sede.** Son series distintas. |
+| 2. ¿Distingue Clase B de Profesional? | 🟡 **A confirmar** | El dueño dijo "es como está en el código" pero con un *"no lo sé"* explícito. El código separa por (sede × grupo); **no tomarlo como confirmado por el cliente**. |
+| 3. ¿Último número vigente de cada serie? | ⏸️ **Diferida a propósito** | Se resuelve **en la marcha blanca**, arrancando desde el último que tenga la escuela. |
+
+**Consecuencias:**
+
+- **D1 NO se cae, queda confirmada.** La serie no es única a nivel escuela, así que el número
+  efectivamente se repite entre sedes: mostrarlo pelado y desambiguar por sede sigue siendo lo
+  correcto, y `UNIQUE (number, branch_id, license_group)` **sí modela algo que existe** (con la
+  reserva de la pregunta 2).
+- **Queda elegida la opción (A)** — seed de continuidad: la app continúa la serie real desde el
+  último número por sede. No se declara serie nueva.
+- **D11 deja de ser bloqueante de D1.** El track puede avanzar completo.
+
+⚠️ **Lo que sigue pendiente y NO es de este track:** la ejecución del empalme (opción A) en la
+sincronización de marcha blanca. El mecanismo de `get_next_enrollment_number()` tiene dos trampas
+que muerden exactamente en esa carga de datos —deriva el siguiente número de la **última fila
+insertada** (`ORDER BY e.id DESC`), no del número más alto, y castea `::INT`, así que un número
+heredado no numérico la hace fallar. Documentado en **`indices/DOMAIN-GOTCHAS.md` → DG-080**.
+
+<details>
+<summary>Enunciado original de D11 (se conserva por trazabilidad)</summary>
+
+### Pregunta bloqueante — el correlativo real no es el nuestro
 
 **El hallazgo más grande del grill, y no se ve sin la foto.**
 
@@ -123,6 +154,8 @@ declarada, el histórico vive solo en papel.
 > **Recomendación: investigar (1-3), apuntar a (A), y sacarlo como asignación propia.** Es un
 > asunto de **modelo de datos** con impacto en contratos y carnets ya emitidos — excede a
 > ASG-b-049, que es de jerarquía visual. Queda como **bloqueante de D1**, no del resto del track.
+
+</details>
 >
 > `ASG-b-045` ya tenía esta misma pregunta abierta ("¿Necesita numeración correlativa que coincida
 > con la del libro físico?" + "verificar si esa es la numeración que el libro físico usa, o si el
@@ -155,7 +188,7 @@ declarada, el histórico vive solo en papel.
 
 ## Hallazgos derivados — candidatos a asignación nueva
 
-1. **🆕 Modelo de numeración de matrícula vs. serie real de la escuela** (D11). Bloqueante de D1.
+1. ~~**Modelo de numeración de matrícula vs. serie real de la escuela** (D11). Bloqueante de D1.~~ ✅ **Respondida el 2026-08-23** (serie por sede; empalme por opción A en la marcha blanca). Ya no bloquea. Queda solo confirmar si distingue Clase B de Profesional.
    Resuelve también la pregunta 3 de `ASG-b-045`.
 2. **🆕 Carnet del alumno imprimible.** Es un artefacto real que la escuela ya emite y **ningún
    track cubre**. Todos sus datos ya están en el sistema: foto, nombres, apellidos, RUT,
@@ -166,7 +199,7 @@ declarada, el histórico vive solo en papel.
    estar reglamentado") queda **confirmada**. Debería revisarse contra el skill `compliance-cl`
    (DS 39 / normativa de escuelas de conductores) antes de diseñar nada.
 4. **📷 Falta la mitad izquierda del libro manuscrito** — no sabemos si ahí van N° de matrícula,
-   nombre y RUT. Pedirla junto con la respuesta de D11.
+   nombre y RUT. (D11 ya respondida; esta sigue pendiente por su cuenta.)
 
 ---
 
@@ -185,7 +218,7 @@ declarada, el histórico vive solo en papel.
 
 - **Leer la sección "Evidencia física" antes que nada.** Cambia la lectura de la anotación
   original: el número manda en gestión y carnet, no en los listados reglamentados.
-- **D11 bloquea D1, no el resto.** Se puede avanzar rename, jerarquía, copiar y buscador sin
+- ~~**D11 bloquea D1, no el resto.**~~ ✅ **D11 respondida el 2026-08-23 — ya no bloquea nada.** Se puede avanzar rename, jerarquía, copiar y buscador sin
   esperar la respuesta del cliente.
 - Se solapa con `ASG-b-024` (cerrada como `fix-075-b`): el buscador global quedó sin indexar el
   número — ese gap se cierra acá (D8).
