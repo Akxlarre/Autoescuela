@@ -41,7 +41,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | **spec** | **P2** | b | ⚠️ **2026-08-23: fotos recibidas — formato CONFIRMADO como reglamentado** (formularios MTT timbrados por SEREMI Ñuble). No es diseño, es cumplimiento → pasar por `compliance-cl`. Columnas reales documentadas en el `.md`. Su pregunta de numeración se unificó en la D11 de ASG-b-049 |
 | ASG-b-046 | Integración con Zoom API para clases teóricas Profesional | `b` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
-| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | **spec** | **P2** | b | ✅ **Grillada 2026-08-23** — 10 decisiones cerradas + evidencia física (carnet y formularios MTT). Subió de `fix`/Baja porque incorpora rename de dominio, orden por número y matching del buscador global. ✅ **D11 respondida por el dueño (2026-08-23) — ya NO bloquea**: la serie real es **por sede**, así que D1 queda confirmada y el constraint modela algo real. Pendiente solo confirmar si distingue Clase B de Profesional. El empalme con la numeración de papel se hace en la marcha blanca (opción A, seed de continuidad) — trampas del mecanismo en `DG-080`. Ver el `.md` antes de reclamar |
 
 ### Tanda auditoría "peor cliente posible" — 2026-08-03
 
@@ -130,6 +129,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-b-049 | El número de matrícula debe ser más principal que el nombre del alumno | `b` | [0039-b-matricula-dato-principal](specs/0039-b-matricula-dato-principal/spec.md) | 2026-08-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---

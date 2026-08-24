@@ -1,12 +1,15 @@
 # Asignación ASG-b-049 — El número de matrícula debe ser más principal que el nombre del alumno
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** spec ⚠️ *(era `fix` — cambiado, ver D9)*
 > **priority:** P2 ⚠️ *(era P3 — subido, ver D9)*
 > **created:** 2026-07-28
 > **created_by:** b
-> **grilled:** 2026-08-23 (`/grill_me`, 11 preguntas — 10 cerradas, 1 bloqueante abierta)
+> **grilled:** 2026-08-23 (`/grill_me`, 11 preguntas — 10 cerradas + D11 respondida el 2026-08-23)
+> **claimed_by:** b
+> **claimed_at:** 2026-08-24
+> **resulting_track:** 0039-b-matricula-dato-principal
 
 ---
 
