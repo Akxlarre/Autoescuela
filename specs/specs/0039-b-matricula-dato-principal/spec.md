@@ -38,8 +38,17 @@ alumno en pantalla"* sin traducir por nombre — que es el flujo real de trabajo
 
 ## 2. User Stories
 
-- **US1**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US2**: …
+- **US1**: Como **secretaria**, quiero **buscar un alumno tipeando su número de matrícula** en el
+  buscador global, para ir de *"leo un número en un papel"* a *"tengo al alumno en pantalla"* sin
+  traducir mentalmente a nombre. **Hoy es imposible.**
+- **US2**: Como **admin o secretaria**, quiero **leer el número de matrícula sin buscarlo** en los
+  listados, para reconocer al alumno por el dato con el que la escuela realmente lo identifica.
+- **US3**: Como **admin o secretaria**, quiero que en las pantallas de detalle el número se lea
+  como en el carnet —**etiqueta y valor destacado**— para confirmar de un vistazo que estoy en la
+  matrícula correcta antes de cobrar o firmar.
+- **US4**: Como **cualquier integrante del equipo**, quiero que el dato **se llame de una sola
+  forma** en toda la app, para dejar de traducir entre `Expediente`, `Folio` y `Matrícula N°` —
+  y para que un filtro rotulado "Expediente" no filtre otra cosa.
 
 ---
 
@@ -48,19 +57,67 @@ alumno en pantalla"* sin traducir por nombre — que es el flujo real de trabajo
 > Cada AC debe ser verificable empíricamente. Si no puedes escribir un test o un check
 > manual reproducible, el AC está mal formulado.
 
-- **AC1**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC2**: …
+### Bloque A — Rename de dominio (commit propio, primero)
+
+- **AC1**: Given cualquier pantalla de Admin, Secretaría o el flujo público, When se muestra el
+  número de matrícula, Then el rótulo visible es **"Matrícula"** — y no queda ninguna ocurrencia
+  de `Expediente`, `Folio` ni `Matrícula N°` referida a ese dato (verificable con grep sobre
+  `src/app`).
+- **AC2**: Given la lista de alumnos de Admin/Secretaría, When se abre el filtro que hoy se
+  rotula **"Expediente"** (`alumnos-list-content:173`), Then se rotula **"Documentos"** y sigue
+  filtrando el **estado documental** — el bug de nombre desaparece sin cambiar el comportamiento.
+- **AC3**: Given el modelo y el estado de UI, When se completa el rename, Then `AlumnoExpediente`
+  y el signal `selectedExpediente` quedan renombrados **sin ninguna migración SQL** — verificado:
+  `expediente` no existe como columna ni tabla, solo dentro de `COMMENT ON TABLE`.
+
+### Bloque B — Jerarquía en listados (Admin + Secretaría)
+
+- **AC4**: Given la lista de alumnos, When se renderiza una fila, Then el número de matrícula se
+  muestra con **`.item-title`** (deja de ser dato secundario `text-xs`/muted) y **el nombre
+  conserva la posición líder** de la fila.
+- **AC5**: Given la lista de alumnos, When se carga sin tocar filtros, Then el **orden por defecto
+  sigue siendo alfabético** — la lista es de *personas*, no de matrículas.
+  > ⚠️ **Corrige D4 tal como estaba escrita** ("orden por número por defecto en tablas de
+  > matrículas"): decidido con el owner el 2026-08-24. Ordenar por número mezclaría a la misma
+  > persona, porque un alumno con refuerzo tiene 2 números del mismo correlativo (`0006-m`).
+
+### Bloque C — Detalle (drawers, pagos)
+
+- **AC6**: Given una pantalla de detalle cuyo contexto **ya es una matrícula**, When se muestra el
+  número, Then se presenta como **etiqueta + valor recuadrado**: `.micro-label` con el texto
+  "Matrícula" sobre `.kpi-value`, dentro de un contenedor con borde — replicando el carnet físico.
+  **Prohibido `.kpi-label`** (deprecada en `fix-078-b`).
+- **AC7**: Given una pantalla de detalle, When el usuario activa la acción de copiar, Then el
+  número queda en el portapapeles y se confirma vía **`ToastService`** (nunca `MessageService`),
+  con `data-llm-action` y área táctil **≥44×44** desde el día uno.
+
+### Bloque D — Buscador global (Ctrl+K)
+
+- **AC8**: Given un alumno con matrícula `0042`, When se tipea `0042` en el buscador global,
+  Then aparece en los resultados.
+- **AC9**: Given ese mismo alumno, When se tipea `42` **sin ceros a la izquierda**, Then también
+  aparece — la comparación normaliza el padding.
+- **AC10**: Given un resultado encontrado por número, When se muestra en la lista, Then el número
+  es visible en el resultado (no solo el nombre), para confirmar por qué matcheó.
 
 ### Edge cases obligatorios
 
-> Sembrados desde el grill — **completar en Gherkin**, no borrar:
-
-- **AC-E1**: Padding del buscador — `42` **no** debe matchear `0420`, `142` ni `4200`. La
-  comparación normaliza ceros a la izquierda y exige **match completo**, nunca `includes` (D8).
-- **AC-E2**: Alumno con **2 matrículas** (refuerzo Clase B consume número del mismo correlativo,
-  spec `0006-m`) — `nroExpedientes` es un array por diseño. Ver `DG-029`.
-- **AC-E3**: Número **repetido entre sedes** (la serie es por sede — D11): con sede "Todas", la
-  sede acompaña como dato secundario para desambiguar.
+- **AC-E1**: Given alumnos con matrículas `0420`, `0142` y `4200`, When se tipea `42`, Then
+  **ninguno** matchea por número. La comparación exige **match completo** tras normalizar el
+  padding, nunca `includes` — sobre 4 dígitos `includes` da falsos positivos constantes (D8).
+- **AC-E2**: Given un alumno con **2 matrículas** (`nroExpedientes` es un array por diseño,
+  `DG-029`), When se busca por cualquiera de sus dos números, Then aparece **una sola vez** en los
+  resultados, no duplicado.
+- **AC-E3**: Given dos alumnos de **sedes distintas que comparten número** (la serie es por sede
+  — D11), When se busca ese número con la sede en "Todas", Then aparecen ambos y **la sede se
+  muestra** como dato secundario para desambiguar.
+- **AC-E4**: Given la guarda existente `q.length < 2` (`global-search.facade.ts:96`), When se
+  tipea **un solo carácter**, Then no se dispara búsqueda. **Consecuencia aceptada:** una
+  matrícula de 1 dígito solo se encuentra tipeándola con padding (`0007`), no como `7`. Si se
+  decide lo contrario, hay que bajar la guarda y medir el costo en resultados basura.
+- **AC-E5**: Given un alumno **sin matrícula** (`nroExpedientes` viene como `['—']`, ver
+  `admin-alumnos.facade.ts:471`), When se busca por número, Then ese alumno **nunca** matchea y
+  el `—` no se trata como valor buscable.
 
 ---
 
@@ -149,6 +206,16 @@ TypeScript/UI puro.
 - [ ] ⚠️ **Coordinar con `ASG-b-096`** (pendiente, pool abierto): quiere consolidar las 2 páginas
       de ex-alumnos B en un `*-content` compartido. Si alguien la reclama mientras corre el
       rename, hay conflicto. No bloquea hoy.
+- [ ] **Supuesto a confirmar — el buscador del instructor hereda el matching por número.**
+      `matches(fullName, rut)` (`global-search.facade.ts:102-105`) es **una sola función
+      compartida** por el branch `instructor` y el de `admin/secretaria`. Agregar el número solo
+      al branch admin cuesta *más* trabajo que agregarlo a la función. Se asume que el instructor
+      lo gana de rebote a costo cero, y que **eso no contradice D5**: D5 excluye la *jerarquía
+      visual del portal instructor*, no el buscador. Si se prefiere lo contrario, hay que
+      bifurcar `matches()` a propósito y decirlo acá.
+- [ ] **Verificar el techo de resultados.** Ambos branches cortan con `.slice(0, 5)`. Si un
+      número repetido entre sedes cae fuera del corte, AC-E3 no se cumple aunque la lógica de
+      matching esté bien. Revisar al planificar.
 - Originado de Asignación ASG-b-049 (`specs/assignments/ASG-b-049-numero-matricula-dato-principal.md`)
 
 ---
@@ -156,3 +223,5 @@ TypeScript/UI puro.
 ## Changelog
 
 - 2026-08-24 — draft inicial por b, desde `ASG-b-049` (grillada, 10 decisiones + D11 respondida)
+- 2026-08-24 — US1-US4 y AC1-AC10 + 5 edge cases escritos con el owner. Se **corrige D4**: el
+  listado de alumnos conserva orden alfabético (es lista de personas, no de matrículas)
