@@ -1,6 +1,6 @@
 # Asignación ASG-b-066 — App-like: familia "instructores" (`admin` + `secretaria`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

@@ -1,6 +1,6 @@
 # Asignación ASG-b-057 — Sprawl de la API pública del DS: 30+ clases bento y 9 variantes de botón
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P3

@@ -1,6 +1,6 @@
 # Asignación ASG-b-007 — Cobertura data-llm-* — Lote 4: shared/components parte 2
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

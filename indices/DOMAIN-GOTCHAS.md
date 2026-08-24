@@ -1104,7 +1104,30 @@
   lado de lectura está bien implementado.
 - **Fuente:** `specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud`
 
-### DG-080 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
+### DG-080 — El correlativo de matrícula es por (sede × tipo de licencia) y se deriva de la ÚLTIMA FILA INSERTADA, no del número más alto
+- **Trampa:** dos supuestos distintos, y ambos se caen leyendo `get_next_enrollment_number()` una
+  sola vez. **(a)** que la serie es global o "por sede": en realidad es independiente por
+  **(sede × grupo de licencia)** — Clase B de cada sede y Profesional llevan contadores separados,
+  así que el mismo `0001` existe legítimamente varias veces en `enrollments`. **(b)** que el
+  siguiente número sale de `MAX(number)`: la función hace `ORDER BY e.id DESC LIMIT 1`, o sea toma
+  la fila **insertada más recientemente** de esa serie y le suma 1. Mientras las altas son
+  cronológicas las dos cosas coinciden, y por eso la diferencia no se nota nunca en uso normal.
+- **Realidad:** el formato es numérico puro con ceros a la izquierda (`0001`, y 5 dígitos desde
+  `10000`) — sin prefijo, sin año, sin código de sede. Los `status='draft'` no consumen número.
+  Como el siguiente valor se calcula con `v_last_number::INT + 1`, la función asume además que
+  **todo número existente en esa serie es casteable a entero**.
+- **Por qué importa:** el momento en que estos dos detalles dejan de ser inocuos es una **carga de
+  datos históricos** (migrar desde el registro en papel, empalmar con la numeración que la escuela
+  ya trae, importar otra sede). Ahí: insertar registros viejos *después* de los nuevos hace que el
+  correlativo se guíe por el histórico y retroceda o colisione; y un número heredado no numérico
+  (`A-123`, `2024-15`) hace fallar el cast con una excepción, no con un valor raro.
+- **Regla de aplicabilidad:** antes de insertar filas en `enrollments` por una vía que no sea el
+  alta normal de la app (seed, importador, script de migración, backfill), verificar el orden de
+  inserción por serie y el formato de los números que se cargan. Si se agrega una sede o un tipo
+  de licencia nuevo, asumir que arranca su propia serie en `0001` — no que continúa la de otra.
+- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`
+
+### DG-081 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
 - **Trampa:** dar por bueno que "Debe Haber en Caja" del arqueo (`CuadraturaFacade`) cuadra
   contra el efectivo real solo porque los ingresos (`payments`) sí desglosan
   `cash_amount`/`transfer_amount`/`card_amount`/`voucher_amount`. `expenses` e
@@ -1123,7 +1146,7 @@
   existentes) antes de conectarla al arqueo, no después.
 - **Fuente:** `specs/fixes/fix-211-m-arqueo-caja-metodo-pago-egresos`
 
-### DG-081 — `if (branchId) query.eq('branch_id', branchId)` en un Facade que también ESCRIBE deja registros huérfanos cuando el admin está en "Todas las sedes"
+### DG-082 — `if (branchId) query.eq('branch_id', branchId)` en un Facade que también ESCRIBE deja registros huérfanos cuando el admin está en "Todas las sedes"
 - **Trampa:** asumir que el patrón estándar de filtro branch-scoped (`resolveBranchScope()` →
   `if (branchId) query.eq(...)`, documentado en `facades.md` §7) es seguro para **cualquier**
   Facade branch-scoped, incluidos los que insertan filas (no solo los que leen). Es seguro para
@@ -1147,6 +1170,7 @@
   `BranchGateComponent` cuando `selectedBranchId() === null` — no alcanza con que las queries de
   lectura "funcionen sin romper".
 - **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`
+
 
 ---
 

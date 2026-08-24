@@ -1,6 +1,6 @@
 # Asignación ASG-b-034 — Terminar la migración de `color-mix()` pendiente
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

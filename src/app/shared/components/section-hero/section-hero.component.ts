@@ -141,15 +141,21 @@ import type {
           flex: none !important;
         }
 
-        /* Contenedor RIGHT (chips + acciones): shrink-0 + align-items:flex-start
-           (forzado arriba) lo dejaban en su ancho natural (shrink-to-fit), que
-           en modo compacto suele exceder el ancho disponible. El ancestro
-           .overflow-hidden del slim mode recortaba el sobrante en vez de
-           dejarlo bajar de línea. Forzamos ancho completo + shrink habilitado
-           para que el wrap de sus hijos (chips, [role='group']) funcione. */
-        .flex.items-center.gap-2.flex-wrap.shrink-0 {
+        /* Contenedor RIGHT (chips + acciones): en modo compacto toma la fila completa,
+           para que el wrap de sus hijos (chips, [role='group']) se alinee a la izquierda
+           igual que la regla de [role='group'] de abajo. Sin esto queda shrink-to-fit y
+           desalineado respecto a su propio grupo de acciones.
+
+           ⚠️ Se selecciona por [data-hero-right], NO por la cadena de utilities de Tailwind.
+           Hasta hotfix-052-b este selector era .flex.items-center.gap-2.flex-wrap.shrink-0
+           y quedó MUERTO en silencio cuando hotfix-051-b cambió shrink-0 por shrink min-w-0
+           en el template: sin error ni warning, la regla simplemente dejó de aplicar. Un
+           selector hecho de utilities se rompe con cualquier edición del template.
+
+           flex-shrink:1 ya no hace falta acá: el template usa shrink desde hotfix-051-b.
+           (Sin backticks: este comentario vive dentro del template literal de styles[]. */
+        [data-hero-right] {
           width: 100% !important;
-          flex-shrink: 1 !important;
         }
 
         /* Grupo de acciones: alineación izquierda y gap consistente en móvil */
@@ -472,7 +478,7 @@ import type {
                  línea, debe encogerse al ancho disponible de la fila para que SU propio
                  flex-wrap interno (chips/acciones) se active — si no, toma su ancho natural
                  completo y el overflow-hidden del wrapper ancestro lo recorta (hotfix-001-b). -->
-            <div class="flex items-center gap-2 flex-wrap shrink min-w-0">
+            <div class="flex items-center gap-2 flex-wrap shrink min-w-0" data-hero-right>
               <ng-content />
 
               @if (chips().length) {

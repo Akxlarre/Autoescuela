@@ -1,6 +1,6 @@
 # Asignación ASG-b-060 — El CTA de `ConfirmModalService` ignora `severity: 'danger'` y sale en azul de marca
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1

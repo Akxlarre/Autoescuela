@@ -1,6 +1,6 @@
 # Asignación ASG-b-027 — Fix H-003: Ex-Alumnos B — conteo de egresados discrepante (2 vs 16)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

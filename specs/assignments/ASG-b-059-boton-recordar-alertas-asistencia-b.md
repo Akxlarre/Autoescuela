@@ -1,6 +1,6 @@
 # Asignación ASG-b-059 — Botón "Recordar" del rail de alertas no envía nada (stub que miente) + UX de los botones de alerta
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1

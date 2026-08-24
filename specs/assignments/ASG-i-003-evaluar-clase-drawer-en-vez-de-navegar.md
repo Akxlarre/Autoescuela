@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:specs/assignments/ASG-b-093-evaluar-clase-drawer-en-vez-de-navegar.md
+# Asignación ASG-b-093 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
+========
 # Asignación ASG-i-003 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
+>>>>>>>> origin/main:specs/assignments/ASG-i-003-evaluar-clase-drawer-en-vez-de-navegar.md
 
 > **status:** pendiente
 > **owner:** cualquiera
@@ -55,3 +59,19 @@ sin abandonar la ficha.
 
 - `src/app/features/instructor/ficha/instructor-ficha.component.ts`
 - Componente/ruta de evaluación de clase (a identificar)
+
+---
+
+## Nota de renumeración (2026-08-22)
+
+Esta asignación nació como `ASG-b-092`, chocando con `ASG-b-092-organismos-carpeta-por-rol`
+(creada antes, el 2026-08-15, y referenciada desde `ASG-b-089`). Se renumeró a `ASG-b-093`.
+
+⚠️ **Pendiente de reconciliar al mergear `fixes_final_boss`:** esa rama resolvió la misma
+colisión de otra forma (commit `47efcc7c`, 2026-08-19), renombrando este archivo a
+`ASG-i-001`. Ese ID ya está tomado en `main` por `ASG-i-001-ortografia-y-voseo-argentino`
+(mergeado en el PR #126), así que la rama arrastra hoy **dos** `ASG-i-001`. Al mergear hay
+que **descartar el rename de esa rama** y conservar este archivo — de lo contrario vuelven
+dos colisiones a la vez. Se mantuvo el prefijo `b` a pesar de que `created_by` es `i`
+(decisión del owner, 2026-08-22) para no consumir un número del contador de Ignacio que él
+pueda estar usando en paralelo.

@@ -1,6 +1,6 @@
 # Asignación ASG-b-029 — Fix H-022 + H-030: vista previa de contrato y contenido genérico
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

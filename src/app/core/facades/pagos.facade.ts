@@ -268,7 +268,11 @@ export class PagosFacade {
       )
       .gt('pending_balance', 0)
       .neq('status', 'draft')
-      .order('pending_balance', { ascending: false });
+      .order('pending_balance', { ascending: false })
+      // Techo server-side (fix-147-b): sin esto la lista crece sin límite con el historial.
+      // Mismo patrón que fetchPagosRecientes. Al venir ordenada por saldo descendente, el
+      // recorte deja fuera a los deudores más chicos, que son los menos accionables.
+      .limit(200);
     if (branchId !== null) q = q.eq('branch_id', branchId);
     const { data } = await q;
 

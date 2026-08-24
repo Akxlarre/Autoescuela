@@ -55,6 +55,7 @@
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
+| `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `applyPeriodWindow` — ventana de período para listas históricas acumulativas (fix-147-b). Filtro de **renderizado**, no de query: el dataset completo se sigue trayendo de BD. ⚠️ `applyPeriodWindow` devuelve la lista completa cuando `hasActiveSearch` es `true` — regla no negociable de ASG-b-087: si el período atrapara a la búsqueda, buscar a alguien con matrícula vieja daría "0 resultados" y eso se lee como "no existe". Los registros sin fecha se conservan a propósito. Acepta `cutoffIso` explícito para tests deterministas. Consumido por `app-period-selector`. |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |

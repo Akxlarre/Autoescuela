@@ -23,10 +23,17 @@ process.stdin.on('end', () => {
     // 1. Bloquear creación de archivos fuente via Bash
     // ═══════════════════════════════════════════════════════════════════════
     const fileCreationPatterns = [
-      /(?:cat|echo|printf)\s.*>\s*.*src\/app\/.*\.(?:ts|html|scss)/,
-      /tee\s.*src\/app\/.*\.(?:ts|html|scss)/,
-      />\s*.*src\/app\/.*\.(?:ts|html|scss)/,
-      /(?:cat|echo|printf)\s.*>\s*.*supabase\/migrations\/.*\.sql/,
+      // Anclado (ASG-b-098): `tee` no usa redirect, pero su `.*` cruzaba separadores de
+      // comando igual — un tee a un log seguido de leer un componente se bloqueaba.
+      /tee\s[^;|&]*src\/app\/[^;|&]*\.(?:ts|html|scss)/,
+      // El `.*` NO puede cruzar separadores de comando (; | &), y los redirects de
+      // diagnostico (2>&1, /dev/null) no cuentan como escritura de archivo. Antes,
+      // CUALQUIER comando read-only que usara un redirect y mencionara mas adelante
+      // una ruta de fuente quedaba bloqueado. Ver ASG-b-097.
+      /(?<![0-9&])>>?\s*(?!\/dev\/null)[^;|&]*src\/app\/[^;|&]*\.(?:ts|html|scss)/,
+      // Espeja al patrón de src/app (ASG-b-098): agnóstico del verbo, no cruza separadores
+      // y no confunde 2>&1 ni /dev/null con una escritura.
+      /(?<![0-9&])>>?\s*(?!\/dev\/null)[^;|&]*supabase\/migrations\/[^;|&]*\.sql/,
     ];
 
     for (const pattern of fileCreationPatterns) {

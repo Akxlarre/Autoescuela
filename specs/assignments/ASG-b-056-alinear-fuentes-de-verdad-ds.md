@@ -1,6 +1,6 @@
 # Asignación ASG-b-056 — Alinear las fuentes de verdad del DS (la doc contradice al código)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

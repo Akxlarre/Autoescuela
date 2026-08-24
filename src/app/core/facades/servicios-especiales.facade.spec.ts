@@ -597,4 +597,25 @@ describe('ServiciosEspecialesFacade', () => {
       expect(facade.error()).toBe('FK inesperada');
     });
   });
+
+  // ── fix-147-b: el export no puede quedar truncado por la ventana de período ──
+  describe('exportarHistorial — inmune a los filtros de UI (fix-147-b)', () => {
+    it('invoca la Edge Function solo con format y branch_id, sin ningún filtro de la vista', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: 3 });
+      // Respuesta con la forma que espera el branch 'excel' — sin esto la facade loguea un
+      // error real al destructurar `headers`, y el test ensuciaría stderr sin motivo.
+      mockSupabase.client.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
+
+      await facade.exportarHistorial('excel');
+
+      // La ventana de período (fix-147-b) es un filtro de RENDERIZADO. El export corre
+      // server-side y no recibe nada de la vista, así que un Excel nunca puede salir
+      // truncado en silencio por lo que el usuario tenga seleccionado en pantalla.
+      expect(mockSupabase.client.functions.invoke).toHaveBeenCalledWith('export-special-services', {
+        body: { format: 'excel', branch_id: 3 },
+      });
+    });
+  });
 });

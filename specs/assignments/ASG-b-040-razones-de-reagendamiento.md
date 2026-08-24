@@ -1,6 +1,6 @@
 # Asignación ASG-b-040 — Razones de reagendamiento (enum + "otro")
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

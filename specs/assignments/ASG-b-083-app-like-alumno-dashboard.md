@@ -1,6 +1,6 @@
 # Asignación ASG-b-083 — App-like: `/alumno/dashboard`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P2
