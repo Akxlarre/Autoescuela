@@ -138,6 +138,31 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       12-13 archivos, hoy warnings — migrar y correr `lint:arch -- --strict` para que ARCH-11
       las trate como error
 
+## Paridad admin/secretaria — pares que aún duplican su template
+
+Auditoría del 2026-08-24 (fix-201-m … fix-209-m). De los 24 pares de vistas admin/secretaria,
+**6 duplican el template** en vez de compartir un `*-content` o re-exportar. Esos 6 concentraron
+5 de los 6 bugs funcionales encontrados; los 18 que reutilizan no produjeron ninguno. Los
+pendientes:
+
+- [ ] **`pagos`** (638 vs 566 líneas) — el más caro y el único que ya produjo un bug
+      (fix-209-m: modo compacto aplicado a medias). No se puede resolver con un re-export
+      porque sí difiere por rol (`AuthFacade.branchId` vs `BranchFacade`, y el modal de
+      reporte sin selector de sede en secretaria) → requiere extraer a
+      `shared/components/pagos-deudores-content/` con esas diferencias como inputs.
+- [ ] **`ex-alumnos`** (~600 líneas duplicadas) — hoy equivalentes, sin bug. El riesgo es que
+      el próximo cambio a un lado desincronice al otro sin que nada avise.
+- [ ] **`profesional-evaluaciones` / `profesional-notas`** — componentes byte-idénticos salvo el
+      nombre. Colapsables a un re-export de 10 líneas, como se hizo en fix-208-m con
+      `instructores`.
+- [ ] `agenda` y `notificaciones` — duplicados pero triviales (wrappers de ~60 líneas y stubs
+      "PLANO" respectivamente). Baja prioridad.
+
+Criterio aprendido en fix-208-m: **si la única diferencia entre los dos roles se puede resolver
+dentro del componente (p. ej. `isAdmin() && …`), el re-export de 10 líneas gana por lejos sobre
+extraer a un `*-content`.** Extraer solo se justifica cuando los roles difieren de verdad en
+datos o en composición.
+
 ## Infraestructura de guardrails
 
 - [ ] `Architect Guard` hook (`.claude/hooks/pre-write-guard.js`, protegido — requiere

@@ -20,13 +20,31 @@ import type { CashClosing } from '@core/models/dto/cash-closing.model';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
-export function mapPaymentToIngreso(p: Payment): IngresoRow {
+/** Datos de la matrícula asociada, traídos vía join para enriquecer la glosa (fix-211-m). */
+export interface PaymentEnrollmentInfo {
+  number: string | null;
+  license_group: string | null;
+}
+
+function buildPaymentGlosa(
+  type: string | null | undefined,
+  enrollment?: PaymentEnrollmentInfo | null,
+): string {
+  const concepto = mapConcepto(type) ?? '—';
+  if (concepto !== 'Matrícula' || !enrollment?.number) return concepto;
+  const tipoCurso = enrollment.license_group === 'professional' ? 'Clase Profesional' : 'Clase B';
+  return `Matrícula #${enrollment.number} — ${tipoCurso}`;
+}
+
+export function mapPaymentToIngreso(
+  p: Payment & { enrollments?: PaymentEnrollmentInfo | null },
+): IngresoRow {
   return {
     id: p.id,
     source: 'payment',
     enrollmentId: p.enrollment_id ?? null,
     nBoleta: p.document_number ?? null,
-    glosa: mapConcepto(p.type) ?? '—',
+    glosa: buildPaymentGlosa(p.type, p.enrollments),
     claseB: p.cash_amount ?? 0,
     claseA: p.transfer_amount ?? 0,
     sence: p.voucher_amount ?? 0,
@@ -105,6 +123,7 @@ function mapExpenseToEgreso(e: Expense): EgresoRow {
     category: e.category ?? null,
     descripcion: e.description,
     monto: e.amount,
+    paymentMethod: e.payment_method,
   };
 }
 
@@ -115,6 +134,7 @@ function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
     category: null,
     descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
     monto: a.amount,
+    paymentMethod: a.payment_method,
   };
 }
 
@@ -164,8 +184,12 @@ export class CuadraturaFacade {
   );
   readonly totalIngresosHoy = computed(() => this._pagosHoy().reduce((sum, p) => sum + p.total, 0));
   readonly totalEgresosHoy = computed(() => this._gastosHoy().reduce((sum, e) => sum + e.monto, 0));
+  /** Solo egresos pagados en efectivo — es lo único que sale físicamente de la caja (fix-211-m). */
+  readonly totalEgresosEfectivoHoy = computed(() =>
+    this._gastosHoy().reduce((sum, e) => sum + (e.paymentMethod === 'efectivo' ? e.monto : 0), 0),
+  );
   readonly saldoTeoricoEfectivo = computed(
-    () => this.fondoInicial() + this.ingresosEfectivoHoy() - this.totalEgresosHoy(),
+    () => this.fondoInicial() + this.ingresosEfectivoHoy() - this.totalEgresosEfectivoHoy(),
   );
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
@@ -273,7 +297,7 @@ export class CuadraturaFacade {
 
     let query: any = this.supabase.client
       .from('payments')
-      .select('*, enrollments!inner(branch_id)')
+      .select('*, enrollments!inner(branch_id, number, license_group)')
       .in('status', ['paid', 'completado'])
       .eq('payment_date', today);
 
@@ -485,6 +509,7 @@ export class CuadraturaFacade {
           vehicle_id: datos.vehiculoId ?? null,
           branch_id: this.getActiveBranchId(),
           registered_by: user.dbId,
+          payment_method: datos.metodoPago,
         });
       } else {
         await this.supabase.client.from('instructor_advances').insert({
@@ -492,6 +517,7 @@ export class CuadraturaFacade {
           amount: datos.monto,
           reason: datos.descripcion,
           registered_by: user.dbId,
+          payment_method: datos.metodoPago,
         });
       }
       this.toast.success('Egreso registrado correctamente.');

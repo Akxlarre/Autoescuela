@@ -415,13 +415,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'asistencia/matriz',
-            loadComponent: () =>
-              import('./features/secretaria/asistencia-matriz/secretaria-asistencia-matriz.component').then(
-                (m) => m.SecretariaAsistenciaMatrizComponent,
-              ),
-          },
-          {
             path: 'matricula',
             loadComponent: () =>
               import('./features/secretaria/matricula/secretaria-matricula.component').then(
@@ -465,6 +458,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'contabilidad/cursos',
+            loadComponent: () =>
+              import('./features/admin/contabilidad-cursos/admin-contabilidad-cursos.component').then(
+                (m) => m.AdminContabilidadCursosComponent,
+              ),
+          },
+          {
             path: 'certificados',
             loadComponent: () =>
               import('./features/secretaria/certificados/secretaria-certificados.component').then(
@@ -483,13 +483,6 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/secretaria/instructores/secretaria-instructores.component').then(
                 (m) => m.SecretariaInstructoresComponent,
-              ),
-          },
-          {
-            path: 'comunicaciones',
-            loadComponent: () =>
-              import('./features/secretaria/comunicaciones/secretaria-comunicaciones.component').then(
-                (m) => m.SecretariaComunicacionesComponent,
               ),
           },
           {

@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
@@ -48,6 +49,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 })
 export class SecretariaAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly deleteTarget = signal<AlumnoTableRow | null>(null);
   protected readonly hasHistory = signal(false);
@@ -58,6 +60,7 @@ export class SecretariaAlumnosComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
     this.facade.initialize();
   }
 

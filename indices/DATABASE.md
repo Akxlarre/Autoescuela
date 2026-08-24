@@ -963,6 +963,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `vehicle_id` | INT | sí | — | → `vehicles.id` |
+| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
 
 **Policies:**
 
@@ -1013,6 +1014,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `deducted_on` | DATE | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
 
 **Policies:**
 

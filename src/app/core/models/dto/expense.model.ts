@@ -9,4 +9,5 @@ export interface Expense {
   receipt_url?: string | null;
   registered_by?: number | null;
   created_at: string;
+  payment_method: 'efectivo' | 'transferencia' | 'tarjeta';
 }

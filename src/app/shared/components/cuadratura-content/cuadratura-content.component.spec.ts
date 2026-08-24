@@ -20,6 +20,7 @@ describe('CuadraturaContentComponent.categoryLabel', () => {
     category,
     descripcion: 'crn',
     monto: 25_000,
+    paymentMethod: 'efectivo',
   });
 
   it('mapea "combustible" a la etiqueta "Combustible"', () => {
@@ -60,6 +61,7 @@ describe('CuadraturaContentComponent.categoryIcon', () => {
     category,
     descripcion: 'crn',
     monto: 25_000,
+    paymentMethod: 'efectivo',
   });
 
   it('mapea "combustible" al ícono "fuel"', () => {
@@ -82,3 +84,13 @@ describe('CuadraturaContentComponent.categoryIcon', () => {
     expect(component['categoryIcon'](mkEgreso('otros'))).toBe('tag');
   });
 });
+
+// ─── fix-211-m: saldoComputado no debe verse afectado por egresos no-efectivo ─
+//
+// La fórmula de saldoComputado (fondoLocal + ingresosEfectivoHoy - totalEgresosEfectivoHoy)
+// es idéntica a CuadraturaFacade.saldoTeoricoEfectivo, ya cubierta por
+// cuadratura.facade.spec.ts > 'saldoTeoricoEfectivo resta solo egresos en efectivo (fix-211-m)'.
+// No se agrega un test separado a nivel de componente: setear inputs signal-based vía
+// fixture.componentRef.setInput() en este componente falla con NG0303 en el entorno de test
+// actual (misma limitación documentada en alert-card.component.spec.ts — requiere
+// @analogjs/vite-plugin-angular para compilar templates con inputs signal).

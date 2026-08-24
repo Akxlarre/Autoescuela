@@ -87,16 +87,20 @@ Renderizan *"Pendiente calcar desde mockup"* con badge PLANO:
 | Pagos | `/secretaria/pagos` | Admin ya tiene `AdminPagosComponent` real |
 | Calificaciones | `/secretaria/profesional/notas` | |
 | Libro de Clases | `/secretaria/libro-de-clases` | Admin tiene la real |
-| Comunicaciones | `/secretaria/comunicaciones` | **Redundante** con "Comunicación"→`observaciones` (real) |
+| ~~Comunicaciones~~ | ~~`/secretaria/comunicaciones`~~ | ✅ **Resuelto (fix-205-m)** — era redundante con "Comunicación"→`observaciones` (real). Página, ruta e ítem de menú eliminados. |
 
 ### 🟡 Otros
 
-- **`/secretaria/configuracion-web`** reúsa `AdminConfiguracionWebComponent`, **no está en el
+- ~~**`/secretaria/configuracion-web`** reúsa `AdminConfiguracionWebComponent`, **no está en el
   menú** pero es alcanzable por URL. ¿Debe una secretaria editar la web pública? Revisar
-  menor privilegio.
-- **Rutas huérfanas/duplicadas** (stubs no enlazadas): `asistencia/matriz`,
+  menor privilegio.~~ → ✅ **Resuelto (fix-207-m):** decisión del dueño (2026-08-24) — sí debe
+  poder editarla; se agregó el ítem "Sitio Web" al sidebar de secretaria, igual que en admin.
+- **Rutas huérfanas/duplicadas** (stubs no enlazadas): ~~`asistencia/matriz`~~ → ✅ **eliminada
+  (fix-210-m):** era un placeholder "Próximamente" sin un solo link en el código y sin
+  equivalente en admin. No confundirla con la matriz semanal de Clase Profesional
+  (`week-matrix.component.ts`) ni con la matriz de notas, que sí existen y las tienen ambos roles.
   `asistencia/profesional` (colisiona conceptualmente con `profesional/asistencia`, real),
-  `profesional/pre-inscritos`.
+  `profesional/pre-inscritos` (se alcanza embebida desde Alumnos Prof., no es huérfana real).
 - **String de rol `secretary` (BD/edge) vs `secretaria` (frontend).** El topbar tiene un
   defensivo `role === 'secretary' || role === 'secretaria'` (línea ~272) que delata la
   fricción. Unificar el mapeo en `AuthFacade`.

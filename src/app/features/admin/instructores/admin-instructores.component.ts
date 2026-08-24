@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
@@ -541,10 +542,24 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(InstructoresFacade);
   protected readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly authFacade = inject(AuthFacade);
   private readonly gsap = inject(GsapAnimationsService);
 
-  /** Columna "Sede" solo tiene sentido cuando se ven instructores de varias sedes a la vez. */
-  protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
+  /**
+   * Esta página la comparten admin y secretaria (fix-208-m): secretaria la consume vía
+   * `SecretariaInstructoresComponent`, que solo re-exporta este componente.
+   */
+  private readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+
+  /**
+   * Columna "Sede" solo tiene sentido cuando se ven instructores de varias sedes a la vez.
+   * El `isAdmin()` no es redundante: las secretarias NO usan `BranchFacade`
+   * (`branch.facade.ts:23`), así que su `selectedBranchId()` queda en su default `null` y la
+   * columna aparecería indebidamente. Mismo patrón que `admin/documentos`.
+   */
+  protected readonly showSedeColumn = computed(
+    () => this.isAdmin() && this.branchFacade.selectedBranchId() === null,
+  );
 
   protected sedeLabel(branchId: number | null, bothBranches: boolean): string {
     if (bothBranches) return 'Ambas';
