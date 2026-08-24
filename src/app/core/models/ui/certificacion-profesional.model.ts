@@ -72,6 +72,8 @@ export interface CertificacionProfesionalAlumnoRow {
   emailEnviado: boolean;
   /** Email del alumno — usado para el envío masivo. null si no tiene email registrado. */
   email: string | null;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }
 
 /** KPIs de certificación profesional. */

@@ -2,6 +2,10 @@
  * EPQ Questions — Eysenck Personality Questionnaire (81 ítems Sí/No)
  * Compartido entre el formulario público (psych-test.component) y la
  * vista de evaluación administrativa (admin-pre-inscrito-drawer).
+ *
+ * Mantener sincronizado con `supabase/functions/_shared/epq-questions.ts` (Deno no puede
+ * importar este archivo — es una copia exacta para `generate-epq-pdf`). Verificado por
+ * `epq-questions.parity.spec.ts`.
  */
 export const EPQ_QUESTIONS: readonly string[] = [
   '¿Se detiene a pensar las cosas antes de hacerlas?',

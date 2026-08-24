@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { FileDropzoneDirective } from '@core/directives/file-dropzone.directive';
+import { SafePipe } from '@core/pipes/safe.pipe';
 import {
   EnrollmentContractData,
   SignedContractUpload,
@@ -13,7 +13,7 @@ import {
 @Component({
   selector: 'app-contract-step',
   standalone: true,
-  imports: [DatePipe, IconComponent, AsyncBtnComponent, FileDropzoneDirective],
+  imports: [IconComponent, AsyncBtnComponent, FileDropzoneDirective, SafePipe],
   templateUrl: './contract.component.html',
   styleUrl: './contract.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

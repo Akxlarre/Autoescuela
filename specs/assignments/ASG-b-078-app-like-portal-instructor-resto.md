@@ -1,6 +1,6 @@
 # Asignación ASG-b-078 — App-like: portal instructor (resto — `dashboard`, `alumnos`, `liquidacion`, `ensayos-teoricos`, `notificaciones`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

@@ -1,6 +1,6 @@
 # Asignación ASG-b-039 — Botón "Registrar egreso" accesible + atajo para carga de combustible
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

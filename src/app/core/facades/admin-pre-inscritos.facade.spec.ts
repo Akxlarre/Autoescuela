@@ -5,6 +5,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { EpqPrintService } from '@core/services/ui/epq-print.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 type TableConfig = {
@@ -52,7 +53,8 @@ function createMockSupabase(tables: Record<string, TableConfig>) {
 
 function setup(tables: Record<string, TableConfig> = {}) {
   const mockSupabase = createMockSupabase(tables);
-  const mockEpq = { printTest: vi.fn() };
+  const mockEpq = { printTest: vi.fn().mockResolvedValue(true) };
+  const mockToast = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: SupabaseService, useValue: mockSupabase },
@@ -69,10 +71,11 @@ function setup(tables: Record<string, TableConfig> = {}) {
       },
       { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
       { provide: EpqPrintService, useValue: mockEpq },
+      { provide: ToastService, useValue: mockToast },
       { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn((e: Error) => e) } },
     ],
   });
-  return { facade: TestBed.inject(AdminPreInscritosFacade), mockSupabase, mockEpq };
+  return { facade: TestBed.inject(AdminPreInscritosFacade), mockSupabase, mockEpq, mockToast };
 }
 
 function rawPreInscrito(overrides: Record<string, unknown> = {}) {
@@ -360,13 +363,30 @@ describe('AdminPreInscritosFacade', () => {
     });
   });
 
-  it('printBlankTest delega en EpqPrintService con los datos del pre-inscrito', () => {
+  it('printBlankTest delega en EpqPrintService con los datos del pre-inscrito', async () => {
     const { facade, mockEpq } = setup();
-    facade.printBlankTest({ nombreCompleto: 'Pedro Pérez', rut: '1-9', licencia: 'A4' } as any);
+    const ok = await facade.printBlankTest({
+      nombreCompleto: 'Pedro Pérez',
+      rut: '1-9',
+      licencia: 'A4',
+    } as any);
+    expect(ok).toBe(true);
     expect(mockEpq.printTest).toHaveBeenCalledWith({
       studentName: 'Pedro Pérez',
       rut: '1-9',
       licencia: 'A4',
     });
+  });
+
+  it('printBlankTest muestra un toast de error si EpqPrintService falla', async () => {
+    const { facade, mockEpq, mockToast } = setup();
+    mockEpq.printTest.mockResolvedValueOnce(false);
+    const ok = await facade.printBlankTest({
+      nombreCompleto: 'Pedro Pérez',
+      rut: '1-9',
+      licencia: 'A4',
+    } as any);
+    expect(ok).toBe(false);
+    expect(mockToast.error).toHaveBeenCalled();
   });
 });

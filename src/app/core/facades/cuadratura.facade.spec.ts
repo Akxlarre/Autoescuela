@@ -183,10 +183,58 @@ describe('CuadraturaFacade', () => {
     ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (facade as any)._gastosHoy.set([
-      { id: 1, tipo: 'expense', descripcion: 'Insumos', monto: 10_000 },
+      { id: 1, tipo: 'expense', descripcion: 'Insumos', monto: 10_000, paymentMethod: 'efectivo' },
     ]);
 
     // saldo = 0 (fondoInicial) + 150.000 - 10.000 = 140.000
+    expect(facade.saldoTeoricoEfectivo()).toBe(140_000);
+  });
+
+  it('totalEgresosEfectivoHoy excluye egresos con payment_method distinto de efectivo (fix-211-m)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (facade as any)._gastosHoy.set([
+      { id: 1, tipo: 'expense', descripcion: 'Bencina', monto: 10_000, paymentMethod: 'efectivo' },
+      {
+        id: 2,
+        tipo: 'expense',
+        descripcion: 'Seguro',
+        monto: 20_000,
+        paymentMethod: 'transferencia',
+      },
+      { id: 3, tipo: 'advance', descripcion: 'Anticipo', monto: 5_000, paymentMethod: 'tarjeta' },
+    ]);
+
+    expect(facade.totalEgresosEfectivoHoy()).toBe(10_000);
+    expect(facade.totalEgresosHoy()).toBe(35_000);
+  });
+
+  it('saldoTeoricoEfectivo resta solo egresos en efectivo, no el total (fix-211-m)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (facade as any)._pagosHoy.set([
+      {
+        id: 1,
+        nBoleta: '10001',
+        glosa: 'Test',
+        claseB: 150_000,
+        claseA: 0,
+        sence: 0,
+        otros: 0,
+        total: 150_000,
+      },
+    ]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (facade as any)._gastosHoy.set([
+      { id: 1, tipo: 'expense', descripcion: 'Bencina', monto: 10_000, paymentMethod: 'efectivo' },
+      {
+        id: 2,
+        tipo: 'expense',
+        descripcion: 'Seguro',
+        monto: 20_000,
+        paymentMethod: 'transferencia',
+      },
+    ]);
+
+    // saldo = 0 (fondoInicial) + 150.000 (efectivo) - 10.000 (solo el egreso en efectivo) = 140.000
     expect(facade.saldoTeoricoEfectivo()).toBe(140_000);
   });
 
@@ -266,6 +314,7 @@ describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
       tipo: 'combustible',
       monto: 25_000,
       descripcion: 'Camioneta ABC-123',
+      metodoPago: 'efectivo',
     });
 
     expect(insertSpy).toHaveBeenCalledWith(
@@ -275,7 +324,12 @@ describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
   });
 
   it('inserta en expenses con category=null cuando tipo es "gasto" (sin cambio de comportamiento previo)', async () => {
-    await facade.registrarEgreso({ tipo: 'gasto', monto: 10_000, descripcion: 'Insumos' });
+    await facade.registrarEgreso({
+      tipo: 'gasto',
+      monto: 10_000,
+      descripcion: 'Insumos',
+      metodoPago: 'efectivo',
+    });
 
     expect(insertSpy).toHaveBeenCalledWith(
       'expenses',
@@ -284,7 +338,12 @@ describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
   });
 
   it('inserta en instructor_advances (sin category) cuando tipo es "anticipo"', async () => {
-    await facade.registrarEgreso({ tipo: 'anticipo', monto: 15_000, descripcion: 'Anticipo Juan' });
+    await facade.registrarEgreso({
+      tipo: 'anticipo',
+      monto: 15_000,
+      descripcion: 'Anticipo Juan',
+      metodoPago: 'efectivo',
+    });
 
     expect(insertSpy).toHaveBeenCalledWith(
       'instructor_advances',
@@ -313,6 +372,41 @@ describe('mapPaymentToIngreso', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = mapPaymentToIngreso({ ...basePayment, type: 'enrollment' } as any);
     expect(row.glosa).toBe('Matrícula');
+  });
+
+  it('enriquece la glosa con número de matrícula y "Clase B" cuando viene el join de enrollments (fix-211-m)', () => {
+    const row = mapPaymentToIngreso({
+      ...basePayment,
+      type: 'enrollment',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      enrollments: { number: 'MAT-2026-001', license_group: 'class_b' },
+    } as any);
+    expect(row.glosa).toBe('Matrícula #MAT-2026-001 — Clase B');
+  });
+
+  it('enriquece la glosa con "Clase Profesional" cuando license_group es professional (fix-211-m)', () => {
+    const row = mapPaymentToIngreso({
+      ...basePayment,
+      type: 'enrollment',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      enrollments: { number: 'MAT-2026-002', license_group: 'professional' },
+    } as any);
+    expect(row.glosa).toBe('Matrícula #MAT-2026-002 — Clase Profesional');
+  });
+
+  it('cae a "Matrícula" a secas si no viene el join de enrollments (fix-211-m)', () => {
+    const row = mapPaymentToIngreso({ ...basePayment, type: 'enrollment' } as any);
+    expect(row.glosa).toBe('Matrícula');
+  });
+
+  it('no enriquece glosas que no son "Matrícula" aunque venga el join (fix-211-m)', () => {
+    const row = mapPaymentToIngreso({
+      ...basePayment,
+      type: 'online',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      enrollments: { number: 'MAT-2026-003', license_group: 'class_b' },
+    } as any);
+    expect(row.glosa).toBe('Online');
   });
 
   it('traduce type "online" a "Online" en glosa (H-023)', () => {

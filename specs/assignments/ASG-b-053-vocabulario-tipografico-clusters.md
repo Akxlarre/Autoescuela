@@ -1,6 +1,6 @@
 # Asignación ASG-b-053 — Vocabulario tipográfico: promover los clusters repetidos a clases del DS
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

@@ -156,61 +156,30 @@
         }
       </div>
 
-      <!-- ── Vista previa del contrato ── -->
-      <div
-        class="bg-base border border-border-default rounded-xl p-6 h-64 overflow-y-auto prose prose-sm max-w-none shadow-inner scrollbar-thin"
-      >
-        <h3 class="text-center font-bold text-text-primary uppercase font-display text-sm">
-          Contrato de Prestación de Servicios Educacionales
-        </h3>
-        <p class="text-xs text-justify leading-relaxed text-text-secondary">
-          En Chillán, a {{ data().contractGeneration.generatedAt | date: 'dd/MM/yyyy' }}, entre
-          <strong class="text-text-primary">ESCUELA DE CONDUCTORES CHILLÁN</strong>, en adelante "La
-          Escuela", y el alumno individualizado en el Paso 1, en adelante "El Alumno", se conviene
-          el siguiente contrato:
-        </p>
-        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
-          Primera: Objeto del Contrato
-        </p>
-        <p class="text-xs text-justify leading-relaxed text-text-secondary">
-          La Escuela se obliga a impartir a El Alumno un curso de conducción correspondiente a la
-          clase seleccionada, comprometiéndose a entregar los conocimientos teóricos y prácticos
-          necesarios de acuerdo a la normativa vigente del Ministerio de Transportes y
-          Telecomunicaciones.
-        </p>
-        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
-          Segunda: Obligaciones del Alumno
-        </p>
-        <p class="text-xs text-justify leading-relaxed text-text-secondary">
-          El Alumno se obliga a asistir puntualmente a las clases programadas. La inasistencia no
-          avisada con al menos 24 horas de anticipación facultará a La Escuela a dar por realizada
-          la clase sin derecho a recuperación. Asimismo, El Alumno debe mantener un comportamiento
-          respetuoso con los instructores y cuidar el material y vehículos de enseñanza.
-        </p>
-        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
-          Tercera: Vigencia y Devoluciones
-        </p>
-        <p class="text-xs text-justify leading-relaxed text-text-secondary">
-          El presente contrato tiene una vigencia de 90 días corridos a contar de esta fecha. Una
-          vez iniciado el curso o transcurridos 10 días desde la firma, no se realizarán
-          devoluciones de dinero bajo ninguna circunstancia, salvo fuerza mayor debidamente
-          acreditada.
-        </p>
-        @if (data().isProfessional) {
-          <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
-            Cuarta: Evaluaciones y Examen Final
+      <!-- ── Vista previa del contrato ──
+           Embebe el PDF real ya generado (mismo documento que se descarga, cero riesgo de
+           divergir del contrato físico) en vez de duplicar el texto legal en HTML — ver
+           fix-199-m. -->
+      @if (data().contractGeneration.status === 'generated' && data().contractGeneration.pdfUrl) {
+        <div
+          class="bg-base border border-border-default rounded-xl h-96 overflow-hidden shadow-inner"
+        >
+          <iframe
+            [src]="data().contractGeneration.pdfUrl | safe: 'resourceUrl'"
+            class="w-full h-full border-0"
+            title="Vista previa del contrato"
+          ></iframe>
+        </div>
+      } @else {
+        <div
+          class="bg-base border border-border-default rounded-xl p-6 h-64 flex flex-col items-center justify-center gap-2 text-center shadow-inner"
+        >
+          <app-icon name="file-text" [size]="28" class="text-text-muted" />
+          <p class="text-sm text-text-secondary">
+            Genera el PDF para ver la vista previa del contrato.
           </p>
-          <p class="text-xs text-justify leading-relaxed text-text-secondary">
-            El Alumno deberá rendir las evaluaciones parciales del curso y el examen final teórico y
-            práctico exigidos por la normativa vigente para la clase profesional contratada. La
-            aprobación de dichas evaluaciones es requisito para la obtención del certificado del
-            curso.
-          </p>
-        }
-        <p class="mt-6 italic text-xs text-text-muted text-center">
-          — Vista previa. El PDF descargable es el documento oficial. —
-        </p>
-      </div>
+        </div>
+      }
 
       <!-- ── Admin: Instrucciones + Subida (solo cuando PDF generado) ── -->
       @if (!isPublic() && data().contractGeneration.status === 'generated') {

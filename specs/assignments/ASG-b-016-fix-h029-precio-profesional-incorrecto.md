@@ -1,6 +1,6 @@
 # Asignación ASG-b-016 — Fix H-029: precio Profesional A2 muestra $180.000 en vez de $800.000
 
-> **status:** claimed
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1

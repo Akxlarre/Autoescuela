@@ -1,7 +1,8 @@
 # Hotfix: SkeletonBlockComponent sin `display:block` — space-y-* no surte efecto en toda la app
 
 > id: hotfix-040-m-skeleton-block-display-inline
-> status: in-progress
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `skeleton-block.component.ts:35` — `:host { display: block }` presente.
 > created: 2026-07-22
 
 ## Problema

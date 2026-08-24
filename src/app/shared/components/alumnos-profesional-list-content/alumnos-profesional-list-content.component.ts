@@ -247,11 +247,23 @@ interface SemaforoInfo {
                     </td>
                     <td class="text-xs text-text-muted font-mono">{{ alumno.nroMatricula }}</td>
                     <td>
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
-                      >
-                        {{ alumno.promocion }}
-                      </span>
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                        >
+                          {{ alumno.promocion }}
+                        </span>
+                        @if (alumno.convalidatedLicense) {
+                          <p-tag
+                            [value]="'Convalida ' + alumno.convalidatedLicense"
+                            severity="info"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5"
+                            pTooltip="Este alumno convalida simultáneamente la licencia {{
+                              alumno.convalidatedLicense
+                            }}"
+                          ></p-tag>
+                        }
+                      </div>
                     </td>
                     <td>
                       <div class="flex items-center gap-2">
@@ -384,12 +396,19 @@ interface SemaforoInfo {
                     <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
                       <div class="flex flex-col">
                         <span class="text-2xs text-text-muted mb-0.5">Promoción</span>
-                        <div class="flex items-center">
+                        <div class="flex items-center gap-1.5 flex-wrap">
                           <p-tag
                             [value]="alumno.promocion"
                             severity="secondary"
                             styleClass="text-2xs font-bold px-1.5 py-0.5"
                           ></p-tag>
+                          @if (alumno.convalidatedLicense) {
+                            <p-tag
+                              [value]="'Convalida ' + alumno.convalidatedLicense"
+                              severity="info"
+                              styleClass="text-2xs font-bold px-1.5 py-0.5"
+                            ></p-tag>
+                          }
                         </div>
                       </div>
                       <div class="flex flex-col">

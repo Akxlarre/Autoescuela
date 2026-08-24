@@ -1,6 +1,6 @@
 # Asignación ASG-b-071 — App-like: familia "documentos" (`admin` + `secretaria`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

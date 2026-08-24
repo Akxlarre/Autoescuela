@@ -1,6 +1,6 @@
 # Asignación ASG-b-014 — Fix H-025 + H-012: certificado B sin validar 12 prácticas + falta indicador de criterio
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1

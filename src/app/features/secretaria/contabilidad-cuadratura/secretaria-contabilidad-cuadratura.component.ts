@@ -1,15 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { CuadraturaContentComponent } from '@shared/components/cuadratura-content/cuadratura-content.component';
-import { EgresoModalComponent } from '@shared/components/egreso-modal/egreso-modal.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
-import type {
-  CierrePayload,
-  EgresoFormData,
-  IngresoRow,
-  EgresoRow,
-} from '@core/models/ui/cuadratura.model';
+import { RegistrarEgresoDrawerComponent } from '@features/admin/contabilidad-cuadratura/registrar-egreso-drawer.component';
+import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
 
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -17,7 +12,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 @Component({
   selector: 'app-secretaria-contabilidad-cuadratura',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CuadraturaContentComponent, EgresoModalComponent],
+  imports: [CuadraturaContentComponent],
   template: `
     <app-cuadratura-content
       [pagosHoy]="facade.pagosHoy()"
@@ -26,6 +21,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
       [ingresosEfectivoHoy]="facade.ingresosEfectivoHoy()"
       [totalIngresosHoy]="facade.totalIngresosHoy()"
       [totalEgresosHoy]="facade.totalEgresosHoy()"
+      [totalEgresosEfectivoHoy]="facade.totalEgresosEfectivoHoy()"
       [saldoTeorico]="facade.saldoTeoricoEfectivo()"
       [cajaYaCerrada]="facade.cajaYaCerrada()"
       [isLoading]="facade.isLoading()"
@@ -34,19 +30,11 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
       [isDrawerOpen]="layoutDrawer.isOpen()"
       (fondoInicialChange)="facade.fondoInicial.set($event)"
       (guardarCierre)="onGuardarCierre($event)"
-      (abrirIngreso)="openIngresoDrawer()"
-      (abrirEgreso)="egresoModalOpen.set(true)"
+      (abrirIngreso)="abrirDrawerIngreso()"
+      (abrirEgreso)="abrirDrawerEgreso()"
       (eliminarIngreso)="onEliminarIngreso($event)"
       (eliminarEgreso)="onEliminarEgreso($event)"
       (exportRequested)="facade.exportar($event)"
-    />
-
-    <!-- ── Modal: Registrar Egreso ──────────────────────────────────────────── -->
-    <app-egreso-modal
-      [isOpen]="egresoModalOpen()"
-      [isSaving]="facade.isSaving()"
-      (guardar)="onEgresoGuardado($event)"
-      (cerrado)="egresoModalOpen.set(false)"
     />
   `,
 })
@@ -55,10 +43,10 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly pagosFacade = inject(PagosFacade);
-
-  protected readonly egresoModalOpen = signal(false);
+  private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
     this.facade.initialize();
   }
 
@@ -66,17 +54,16 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
     await this.facade.cerrarCaja(payload);
   }
 
-  protected openIngresoDrawer(): void {
+  protected abrirDrawerIngreso(): void {
     this.pagosFacade.seleccionarParaPago(null);
+    // Sin initialize(), alumnosConDeuda() está vacío y el drawer en modo global no puede
+    // poblar el <select> de alumno (fix-080-m).
     void this.pagosFacade.initialize();
-    this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
+    this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Ingreso', 'trending-up');
   }
 
-  protected async onEgresoGuardado(datos: EgresoFormData): Promise<void> {
-    const ok = await this.facade.registrarEgreso(datos);
-    if (ok) {
-      this.egresoModalOpen.set(false);
-    }
+  protected abrirDrawerEgreso(): void {
+    this.layoutDrawer.open(RegistrarEgresoDrawerComponent, 'Registrar Egreso', 'trending-down');
   }
 
   protected async onEliminarIngreso(row: IngresoRow): Promise<void> {

@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
@@ -170,11 +171,15 @@ export class ExAlumnosFacade {
     }
 
     const rows = (data as unknown as EgresadoRow[]) ?? [];
-    this._egresados.set(rows.map((r: EgresadoRow) => this.mapRow(r)));
+    const convalidationMap = await fetchConvalidationMap(
+      this.supabase.client,
+      rows.map((r) => r.id),
+    );
+    this._egresados.set(rows.map((r: EgresadoRow) => this.mapRow(r, convalidationMap)));
   }
 
   // ── Helpers privados ─────────────────────────────────────────────────────────
-  private mapRow(r: EgresadoRow): EgresadoTableRow {
+  private mapRow(r: EgresadoRow, convalidationMap: Map<number, 'A4' | 'A3'>): EgresadoTableRow {
     const u = r.students?.users;
 
     const nombre: string = u
@@ -189,6 +194,8 @@ export class ExAlumnosFacade {
     const correo: string = u?.email ?? '—';
     const licencia: string = this.deriveLicencia(r.courses?.code ?? '', r.courses?.name ?? '');
     const anio: number | null = r.updated_at ? new Date(r.updated_at).getFullYear() : null;
+    // fix-147-b: la ventana de período necesita precisión de día, no solo el año.
+    const fechaEgreso: string | null = r.updated_at ? r.updated_at.slice(0, 10) : null;
     const sede: string = r.branches?.name ?? '—';
     const branchId: number | null = r.branches?.id ?? null;
 
@@ -202,10 +209,12 @@ export class ExAlumnosFacade {
       licencia,
       licenseGroup: r.license_group === 'professional' ? 'professional' : 'class_b',
       anio,
+      fechaEgreso,
       sede,
       branchId,
       nroCertificado: null,
       saldoPendiente: r.pending_balance ?? 0,
+      convalidatedLicense: convalidationMap.get(r.id) ?? null,
     };
   }
 

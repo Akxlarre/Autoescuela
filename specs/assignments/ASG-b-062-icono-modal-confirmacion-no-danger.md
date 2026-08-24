@@ -1,6 +1,6 @@
 # Asignación ASG-b-062 — El ícono del modal de confirmación es `alert-triangle` incluso para `info`/`success`/`secondary`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2

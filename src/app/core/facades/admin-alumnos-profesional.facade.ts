@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { MODULE_COUNT } from '@core/utils/professional-modules';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
 import type {
   AlumnoProfesionalTableRow,
@@ -275,7 +276,7 @@ export class AdminAlumnosProfesionalFacade {
 
       const enrollmentIds = filtered.map((e) => e.id);
 
-      const [attRes, gradesRes] = await Promise.all([
+      const [attRes, gradesRes, convalidationMap] = await Promise.all([
         this.supabase.client
           .from('v_professional_attendance')
           .select('enrollment_id, attendance_flag')
@@ -284,6 +285,7 @@ export class AdminAlumnosProfesionalFacade {
           .from('professional_module_grades')
           .select('enrollment_id, passed')
           .in('enrollment_id', enrollmentIds),
+        fetchConvalidationMap(this.supabase.client, enrollmentIds),
       ]);
 
       const flagMap = new Map<number, SemaforoAsistencia>();
@@ -305,7 +307,7 @@ export class AdminAlumnosProfesionalFacade {
         }
       }
 
-      const rows = filtered.map((e) => this.mapRow(e, flagMap, passedMap));
+      const rows = filtered.map((e) => this.mapRow(e, flagMap, passedMap, convalidationMap));
       this._alumnos.set(rows);
     } catch (err) {
       this._error.set(
@@ -321,6 +323,7 @@ export class AdminAlumnosProfesionalFacade {
     e: RawProEnrollment,
     flagMap: Map<number, SemaforoAsistencia>,
     passedMap: Map<number, number>,
+    convalidationMap: Map<number, 'A4' | 'A3'>,
   ): AlumnoProfesionalTableRow {
     const u = e.students.users;
     const course = e.promotion_courses?.courses ?? null;
@@ -340,6 +343,7 @@ export class AdminAlumnosProfesionalFacade {
       estado: this.deriveStatus(e.status),
       saldo: e.pending_balance ?? 0,
       enrollmentId: e.id,
+      convalidatedLicense: convalidationMap.get(e.id) ?? null,
     };
   }
 

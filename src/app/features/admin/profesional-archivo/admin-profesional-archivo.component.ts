@@ -17,6 +17,7 @@ import { ArchivoFacade } from '@core/facades/archivo-profesional.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
@@ -33,6 +34,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -374,9 +376,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             <div class="flex items-center gap-2.5">
                               <div class="initials-avatar">{{ alumno.initials }}</div>
                               <div class="min-w-0">
-                                <p class="text-sm font-medium text-text-primary truncate">
-                                  {{ alumno.nombre }}
-                                </p>
+                                <div class="flex items-center gap-1.5">
+                                  <p class="text-sm font-medium text-text-primary truncate">
+                                    {{ alumno.nombre }}
+                                  </p>
+                                  @if (alumno.convalidatedLicense) {
+                                    <app-badge variant="info"
+                                      >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                                    >
+                                  }
+                                </div>
                                 <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                               </div>
                             </div>
@@ -490,9 +499,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       <div class="flex items-center gap-3 min-w-0">
                         <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
                         <div class="min-w-0 flex flex-col">
-                          <p class="item-title truncate">
-                            {{ alumno.nombre }}
-                          </p>
+                          <div class="flex items-center gap-1.5">
+                            <p class="item-title truncate">
+                              {{ alumno.nombre }}
+                            </p>
+                            @if (alumno.convalidatedLicense) {
+                              <app-badge variant="info"
+                                >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                              >
+                            }
+                          </div>
                           <p class="text-2xs text-text-muted">{{ alumno.rut }}</p>
                         </div>
                       </div>

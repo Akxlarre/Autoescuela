@@ -20,7 +20,7 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
-      backRoute="/app/dashboard"
+      backRoute="/app/admin/dashboard"
       (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
       (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
       (exportarHistorial)="onExportar($event)"

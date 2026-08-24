@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, output, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -28,6 +28,19 @@ export class PaymentComponent {
   discountAmountInput = signal('');
   discountReason = signal('');
   discountError = signal<string | null>(null);
+
+  /** Label del descuento aplicado: nombre + porcentaje/monto si es predefinido, o el reason crudo si es manual. */
+  appliedDiscountLabel = computed<string>(() => {
+    const { discount, selectedDiscountId, availableDiscounts } = this.data();
+    const predefined = availableDiscounts.find((d) => d.id === selectedDiscountId);
+    if (!predefined) return discount.reason;
+
+    const valueLabel =
+      predefined.discountType === 'percentage'
+        ? `${predefined.value}%`
+        : `$${predefined.value.toLocaleString('es-CL')}`;
+    return `${predefined.name} (${valueLabel})`;
+  });
 
   setPaymentMethod(method: PaymentMethod): void {
     this.dataChange.emit({ ...this.data(), paymentMethod: method });

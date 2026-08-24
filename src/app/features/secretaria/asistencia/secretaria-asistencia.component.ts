@@ -45,6 +45,7 @@ import type {
       [isLoadingCiclos]="ciclos.isLoading()"
       [isLoadingCycle]="ciclos.isLoadingCycle()"
       [isLoadingAddable]="ciclos.isLoadingAddable()"
+      [sendingClassId]="ciclos.sendingClassId()"
       (markAttendance)="onMarkAttendance($event)"
       (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
       (removeSchedule)="facade.removeSchedule($event)"

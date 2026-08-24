@@ -304,7 +304,14 @@ const PAGE_SIZE = 10;
                       [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                     >
                       <td class="px-4 py-2 font-medium text-text-primary">
-                        {{ alumno.nombre }}
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ alumno.nombre }}</span>
+                          @if (alumno.convalidatedLicense) {
+                            <app-badge variant="info"
+                              >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                            >
+                          }
+                        </div>
                       </td>
                       <td class="px-4 py-2 text-brand">
                         {{ alumno.rut }}
@@ -579,9 +586,16 @@ const PAGE_SIZE = 10;
                 >
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <p class="item-title truncate m-0">
-                        {{ alumno.nombre }}
-                      </p>
+                      <div class="flex items-center gap-1.5">
+                        <p class="item-title truncate m-0">
+                          {{ alumno.nombre }}
+                        </p>
+                        @if (alumno.convalidatedLicense) {
+                          <app-badge variant="info"
+                            >Convalida {{ alumno.convalidatedLicense }}</app-badge
+                          >
+                        }
+                      </div>
                       <p class="text-xs text-brand m-0">{{ alumno.rut }}</p>
                       <p class="text-xs text-text-muted m-0 truncate">{{ alumno.promocion }}</p>
                     </div>

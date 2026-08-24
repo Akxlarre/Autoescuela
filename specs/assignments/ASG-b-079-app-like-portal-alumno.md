@@ -1,14 +1,14 @@
 # Asignación ASG-b-079 — App-like: portal alumno (`clases`, `pagos`, `pruebas-online`, `pagar`)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-22
+> **resulting_track:** fix-147-b-app-like-portal-alumno
 
 ---
 

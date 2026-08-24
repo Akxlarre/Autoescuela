@@ -19,6 +19,7 @@ import {
   roundGrade,
 } from '@core/utils/professional-modules';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import {
   buildLanding,
   type CourseLite,
@@ -310,6 +311,8 @@ export class EvaluacionesProfesionalFacade {
       // Verificar si alguna nota está confirmada
       const hasConfirmed = (gradesData ?? []).some((g) => g.status === 'confirmed');
 
+      const convalidationMap = await fetchConvalidationMap(this.supabase.client, enrollmentIds);
+
       // Construir filas
       const filas: FilaEvaluacion[] = (enrollments ?? []).map((enr) => {
         const row = enr as unknown as EnrollmentRow;
@@ -347,6 +350,7 @@ export class EvaluacionesProfesionalFacade {
           notas,
           promedio,
           promedioAprobado: promedio !== null ? isPassing(promedio) : null,
+          convalidatedLicense: convalidationMap.get(enr.id) ?? null,
         };
       });
 

@@ -1,6 +1,6 @@
 # Asignación ASG-b-024 — Fix H-031: buscador global (Ctrl+K) no indexa alumnos ni instructores
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

@@ -1042,6 +1042,136 @@
   éste ya es distinto de su default vacío.
 - **Fuente:** `specs/fixes/fix-192-m-contrato-pdf-no-coincide-con-real` (rondas 10-11)
 
+### DG-077 — `license_validations` se escribe correctamente en la matrícula, pero ninguna vista la leía
+- **Trampa:** asumir que porque un alumno convalidado (A2+conv.A4, o A5+conv.A3) se matricula
+  bien y aparece con normalidad en todos los listados profesionales, la convalidación es visible
+  en algún lado. No lo era: `enrollment.facade.ts` sí escribe la fila en `license_validations`
+  (`enrollment_id`, `convalidated_license`) al marcar "convalida simultáneamente" en el paso 1 del
+  wizard, pero el `enrollment` en sí queda **idéntico** a uno normal — su `promotion_course_id`
+  siempre apunta al curso madre (A2/A5), nunca a `conv_a4`/`conv_a3`. Ningún SELECT de los facades
+  de listado (`admin-alumnos-profesional`, `ex-alumnos`, `asistencia-profesional`,
+  `evaluaciones-profesional`, `certificacion-profesional`, `archivo-profesional`) hacía join
+  contra `license_validations`.
+- **Realidad:** la única mención en pantalla era un toast efímero en el paso 5 del wizard, en el
+  momento mismo de matricular. Después de eso, secretaría/administración no tenía forma de saber
+  mirando ninguna vista quién estaba convalidando qué licencia.
+- **Regla de aplicabilidad:** cualquier facade nuevo que liste alumnos profesionales por
+  `enrollment_id` debe cruzar contra `license_validations` (helper: `fetchConvalidationMap()` en
+  `core/utils/convalidation.utils.ts`) si se espera que el operador distinga convalidados —
+  no basta con que el dato "exista en BD"; si ningún join lo trae, es invisible.
+- **Fuente:** `specs/fixes/fix-195-m-indicador-visual-convalidacion`
+
+### DG-078 — Clase Profesional no tenía NINGÚN mecanismo (manual ni automático) para pasar una matrícula a ex-alumno
+- **Trampa:** asumir que porque `marcarComoExAlumno()` existe en `admin-alumno-detalle.facade.ts`
+  y `ExAlumnosFacade` ya filtra y separa `class_b`/`professional` en dos listas, ambos grupos
+  quedan al día en "Ex-Alumnos" de la misma forma. No era así: el botón "Marcar como Ex-Alumno"
+  (fix-012-i) solo se muestra cuando `licenseGroup === 'class_b'`, y su gate
+  (`certificateEmailSent`) solo se calcula para ese mismo grupo — para profesional queda
+  hardcodeado en `false`, así que ni el botón aparece ni funcionaría si apareciera. Tampoco existía
+  ningún equivalente automático: el cron `auto_transition_promotion_status()` (pg_cron diario
+  06:00 UTC) transiciona `professional_promotions.status` a `finished` cuando `end_date <
+  CURRENT_DATE`, y el trigger `trg_cascade_promotion_status` ya propagaba ese cambio a
+  `promotion_courses`, pero ninguno de los dos tocaba `enrollments` — las matrículas quedaban
+  `active` para siempre, invisibles en "Ex-Alumnos Profesional" aunque la promoción llevara meses
+  terminada.
+- **Realidad:** cada feature nueva de Clase Profesional necesita verificarse contra su propio
+  Facade/trigger — no puede asumirse que un mecanismo construido para Clase B (botón manual gateado
+  por certificado enviado por email) tiene un equivalente para Profesional solo porque ambos
+  comparten la tabla `enrollments` y el filtro `status='completed'` en `ExAlumnosFacade`.
+- **Regla de aplicabilidad:** al extender un flujo de negocio que ya distingue `class_b` vs
+  `professional` en algún punto (gate de UI, columna `license_group`, Facade separado), verificar
+  explícitamente que el nuevo comportamiento cubre ambos grupos — o documentar por qué uno queda
+  fuera de scope.
+- **Fuente:** `specs/fixes/fix-196-m-promocion-finalizada-marca-ex-alumnos`
+
+### DG-079 — Una tabla con su lógica de consumo ya implementada no implica que exista forma de producir datos para ella
+- **Trampa:** verificar una feature revisando solo el lado que **lee** los datos (un Facade que
+  hace `SELECT ... WHERE status='active'`, un `@if (lista.length > 0)` en el template) y asumir
+  que si ese código está bien escrito y probado, la feature funciona de punta a punta. `discounts`
+  es el caso: la tabla existía desde `20260301000002_02_enrollments_and_courses.sql`, y el step de
+  pago de matrícula (`enrollment-payment.facade.ts`) ya sabía leerla, filtrarla por vigencia/tipo
+  de curso y aplicarla al monto — pero nadie construyó nunca un CRUD/UI que **insertara** filas en
+  esa tabla. El código de consumo pasaba tests, compilaba y no tenía bugs; simplemente no había
+  manera de que `availableDiscounts` dejara de estar vacío.
+- **Realidad:** una tabla con RLS definida, tipos declarados y un Facade que la consume es una
+  señal de que *alguien planeó* la feature completa, no de que está completa. El productor de
+  datos (formulario de alta, importador, seed, endpoint admin) es una pieza aparte que puede
+  faltar en silencio — no hay error, excepción, ni test que falle, solo una lista vacía que se
+  ve como "todavía no hay datos" en vez de "esto nunca se terminó de construir".
+- **Regla de aplicabilidad:** al auditar (UAT, code review, onboarding a un módulo) una feature que
+  depende de una tabla de catálogo/configuración (descuentos, plantillas, códigos, tarifas),
+  verificar explícitamente que existe una vía para crear/editar filas — no asumirlo porque el
+  lado de lectura está bien implementado.
+- **Fuente:** `specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud`
+
+### DG-080 — El correlativo de matrícula es por (sede × tipo de licencia) y se deriva de la ÚLTIMA FILA INSERTADA, no del número más alto
+- **Trampa:** dos supuestos distintos, y ambos se caen leyendo `get_next_enrollment_number()` una
+  sola vez. **(a)** que la serie es global o "por sede": en realidad es independiente por
+  **(sede × grupo de licencia)** — Clase B de cada sede y Profesional llevan contadores separados,
+  así que el mismo `0001` existe legítimamente varias veces en `enrollments`. **(b)** que el
+  siguiente número sale de `MAX(number)`: la función hace `ORDER BY e.id DESC LIMIT 1`, o sea toma
+  la fila **insertada más recientemente** de esa serie y le suma 1. Mientras las altas son
+  cronológicas las dos cosas coinciden, y por eso la diferencia no se nota nunca en uso normal.
+- **Realidad:** el formato es numérico puro con ceros a la izquierda (`0001`, y 5 dígitos desde
+  `10000`) — sin prefijo, sin año, sin código de sede. Los `status='draft'` no consumen número.
+  Como el siguiente valor se calcula con `v_last_number::INT + 1`, la función asume además que
+  **todo número existente en esa serie es casteable a entero**.
+- **Por qué importa:** el momento en que estos dos detalles dejan de ser inocuos es una **carga de
+  datos históricos** (migrar desde el registro en papel, empalmar con la numeración que la escuela
+  ya trae, importar otra sede). Ahí: insertar registros viejos *después* de los nuevos hace que el
+  correlativo se guíe por el histórico y retroceda o colisione; y un número heredado no numérico
+  (`A-123`, `2024-15`) hace fallar el cast con una excepción, no con un valor raro.
+- **Regla de aplicabilidad:** antes de insertar filas en `enrollments` por una vía que no sea el
+  alta normal de la app (seed, importador, script de migración, backfill), verificar el orden de
+  inserción por serie y el formato de los números que se cargan. Si se agrega una sede o un tipo
+  de licencia nuevo, asumir que arranca su propia serie en `0001` — no que continúa la de otra.
+- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`
+
+### DG-081 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
+- **Trampa:** dar por bueno que "Debe Haber en Caja" del arqueo (`CuadraturaFacade`) cuadra
+  contra el efectivo real solo porque los ingresos (`payments`) sí desglosan
+  `cash_amount`/`transfer_amount`/`card_amount`/`voucher_amount`. `expenses` e
+  `instructor_advances` no tenían columna `payment_method` — el formulario "Registrar Egreso"
+  tampoco la pedía — así que `totalEgresosHoy()` restaba el 100% de cualquier egreso del
+  efectivo esperado, incluyendo los pagados por transferencia o tarjeta de la empresa. El bug no
+  se manifestaba como error: el arqueo simplemente "no cuadraba" contra el efectivo físico real,
+  y nada en el código ni en los tests lo señalaba.
+- **Realidad:** cualquier tabla nueva cuyos montos participen en el cálculo de caja física
+  (egresos, anticipos, retiros, futuros tipos de movimiento) necesita su propio
+  `payment_method` — no basta con que `payments` (la única tabla de ingresos) lo tenga. El
+  arqueo de caja física nunca debe sumar/restar un monto sin saber si fue en efectivo.
+- **Regla de aplicabilidad:** antes de sumar o restar un monto de cualquier tabla nueva al
+  cálculo de `saldoTeoricoEfectivo`/`saldoComputado`, verificar que esa tabla distingue método
+  de pago — si no lo hace, agregar la columna (con default `'efectivo'` para no romper filas
+  existentes) antes de conectarla al arqueo, no después.
+- **Fuente:** `specs/fixes/fix-211-m-arqueo-caja-metodo-pago-egresos`
+
+### DG-082 — `if (branchId) query.eq('branch_id', branchId)` en un Facade que también ESCRIBE deja registros huérfanos cuando el admin está en "Todas las sedes"
+- **Trampa:** asumir que el patrón estándar de filtro branch-scoped (`resolveBranchScope()` →
+  `if (branchId) query.eq(...)`, documentado en `facades.md` §7) es seguro para **cualquier**
+  Facade branch-scoped, incluidos los que insertan filas (no solo los que leen). Es seguro para
+  lectura — `null` = "sin filtro, ver todo" es el comportamiento deseado para un admin en "Todas
+  las sedes". Pero si ese mismo Facade también hace `insert({ branch_id: getActiveBranchId() })`
+  (`CuadraturaFacade.registrarEgreso()`/`cerrarCaja()`), el `null` se escribe literal en la fila.
+  Como en SQL `NULL` nunca es igual a nada — ni siquiera a otro `NULL` — un `.eq('branch_id', 5)`
+  posterior para una sede específica nunca encuentra esa fila: queda huérfana, invisible en
+  cualquier vista por sede, solo visible de nuevo en "Todas las sedes". Sin error, sin excepción,
+  sin fila logueada como "descartada" — el dato simplemente desaparece del contexto donde
+  alguien esperaría encontrarlo.
+- **Realidad:** un Facade branch-scoped que solo lee puede vivir con `null` = "todas". Un Facade
+  branch-scoped que también escribe (mutaciones que se disparan desde una vista con selector de
+  sede) necesita exigir una sede concreta ANTES de permitir la escritura — con
+  `BranchGateComponent` + `BranchFacade.setRequiresSpecificBranch(true)` (patrón ya usado en el
+  wizard de Nueva Matrícula) — no basta con reutilizar el mismo query layer que usan las vistas
+  de solo lectura.
+- **Regla de aplicabilidad:** al auditar o extender un Facade branch-scoped, verificar si tiene
+  algún método de escritura (`insert`/`update`/`upsert`) que use `getActiveBranchId()` como valor
+  de columna. Si lo tiene, su Smart Component debe gatear la vista completa con
+  `BranchGateComponent` cuando `selectedBranchId() === null` — no alcanza con que las queries de
+  lectura "funcionen sin romper".
+- **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`
+
+
 ---
 
 ## Convención para agregar una entrada nueva

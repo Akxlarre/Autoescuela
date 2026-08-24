@@ -14,6 +14,8 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { FormsModule } from '@angular/forms';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
+import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
+import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-precios/precios-cursos-drawer.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
@@ -271,6 +273,48 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
 
+            <!-- Precios de Cursos card -->
+            @if (isAdmin()) {
+              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Precios de Cursos</p>
+                  <p class="text-xs text-text-muted">
+                    Edita el precio base de los cursos existentes por sede
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  data-llm-action="open-course-prices-manager"
+                  (click)="abrirPreciosCursos()"
+                >
+                  <app-icon name="dollar-sign" [size]="14" />
+                  <span>Editar Precios</span>
+                </button>
+              </div>
+            }
+
+            <!-- Descuentos Predefinidos card -->
+            @if (isAdmin()) {
+              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Descuentos Predefinidos</p>
+                  <p class="text-xs text-text-muted">
+                    Crea y administra los descuentos disponibles al matricular
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  data-llm-action="open-discounts-manager"
+                  (click)="abrirDescuentos()"
+                >
+                  <app-icon name="tag" [size]="14" />
+                  <span>Administrar Descuentos</span>
+                </button>
+              </div>
+            }
+
             <!-- Branch details and switcher -->
             @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
@@ -472,6 +516,14 @@ export class AjustesDrawerComponent {
 
   abrirGeneradorHorario(): void {
     this.layoutDrawer.push(ConfiguradorHorariosDrawerComponent, 'Horarios Base', 'calendar-clock');
+  }
+
+  abrirDescuentos(): void {
+    this.layoutDrawer.push(DescuentosDrawerComponent, 'Descuentos', 'tag');
+  }
+
+  abrirPreciosCursos(): void {
+    this.layoutDrawer.push(PreciosCursosDrawerComponent, 'Precios de Cursos', 'dollar-sign');
   }
 
   navigateToAuditoria(): void {

@@ -59,12 +59,10 @@ Header artesanal `<div class="p-6"><div class="flex items-center gap-3 mb-6">`, 
 | `/app/secretaria/dashboard` | `features/secretaria/dashboard/secretaria-dashboard.component.ts:7` | ⚠️ es un **dashboard** sin construir |
 | `/app/secretaria/pagos` | `features/secretaria/pagos/secretaria-pagos.component.ts:7` | ¿delegar a contenido de pagos? |
 | `/app/secretaria/notificaciones` | `features/secretaria/notificaciones/secretaria-notificaciones.component.ts:7` | |
-| `/app/secretaria/comunicaciones` | `features/secretaria/comunicaciones/secretaria-comunicaciones.component.ts:7` | el equivalente admin (`tareas`) es la referencia |
 | `/app/secretaria/ex-alumnos` | `features/secretaria/ex-alumnos/secretaria-ex-alumnos.component.ts:7` | admin/ex-alumnos ya es bento → mirror |
 | `/app/secretaria/libro-de-clases` | `features/secretaria/libro-de-clases/secretaria-libro-de-clases.component.ts:7` | admin/libro-de-clases ya es bento → mirror |
 | `/app/secretaria/profesional/notas` | `features/secretaria/profesional-notas/secretaria-profesional-notas.component.ts:7` | |
 | `/app/secretaria/asistencia/profesional` | `features/secretaria/asistencia-profesional/secretaria-asistencia-profesional.component.ts` | |
-| `/app/secretaria/asistencia/matriz` | `features/secretaria/asistencia-matriz/secretaria-asistencia-matriz.component.ts` | |
 | `/app/secretaria/alumnos/pre-inscritos` | `features/secretaria/alumnos-pre-inscritos/secretaria-alumnos-pre-inscritos.component.ts` | admin/pre-inscritos ya usa section-hero → mirror |
 | `/app/alumno/notificaciones` | `features/alumno/notificaciones/alumno-notificaciones.component.ts:7` | |
 | `/app/alumno/ayuda` | `features/alumno/ayuda/alumno-ayuda.component.ts:7` | |

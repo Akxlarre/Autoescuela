@@ -1,6 +1,6 @@
 # Asignación ASG-b-003 — Fix H-040: Realtime sin limpiar + polling prohibido en Dashboard
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2

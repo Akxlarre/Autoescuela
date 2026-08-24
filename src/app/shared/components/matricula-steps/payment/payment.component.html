@@ -94,7 +94,7 @@
               <app-icon name="tag" [size]="18" class="text-success shrink-0" />
               <div>
                 <p class="text-sm font-bold text-success">Descuento aplicado</p>
-                <p class="text-xs text-text-secondary">{{ data().discount.reason }}</p>
+                <p class="text-xs text-text-secondary">{{ appliedDiscountLabel() }}</p>
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -105,9 +105,11 @@
                 type="button"
                 aria-label="Quitar descuento"
                 (click)="clearDiscount()"
-                class="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-colors"
+                data-llm-action="remove-discount"
+                class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5"
               >
-                <app-icon name="x" [size]="12" />
+                <app-icon name="trash-2" [size]="12" />
+                Quitar
               </button>
             </div>
           </div>
@@ -124,7 +126,7 @@
                     <button
                       type="button"
                       (click)="selectPredefinedDiscount(disc.id)"
-                      class="px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all"
+                      class="cursor-pointer px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all"
                       [class.border-brand]="data().selectedDiscountId === disc.id"
                       [class.bg-brand]="data().selectedDiscountId === disc.id"
                       [class.text-surface]="data().selectedDiscountId === disc.id"

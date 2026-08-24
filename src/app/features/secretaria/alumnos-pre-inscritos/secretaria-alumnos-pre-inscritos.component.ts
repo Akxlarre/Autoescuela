@@ -29,7 +29,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       [heroKpis]="heroKpis()"
       [maxVisible]="maxVisible()"
       [showSede]="false"
-      backRoute="/app/secretaria/clase-profesional/alumnos"
+      backRoute="/app/secretaria/profesional/alumnos"
       backLabel="Alumnos Profesional"
       [embedded]="embedded()"
       (closeRequested)="closeRequested.emit()"

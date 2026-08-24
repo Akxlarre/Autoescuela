@@ -1,6 +1,6 @@
 # Asignación ASG-b-055 — Escala tipográfica: eliminar los tamaños ilegibles y cerrar el ratchet ARCH-17
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

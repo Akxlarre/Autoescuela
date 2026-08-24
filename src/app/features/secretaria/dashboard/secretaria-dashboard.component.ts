@@ -447,6 +447,9 @@ export class SecretariaDashboardComponent implements OnInit {
         vehiclePlate: cls.vehicle || '',
         studentName: cls.studentName,
         classNumber: 0,
+        kmStart: cls.kmStart,
+        kmEnd: cls.kmEnd,
+        notes: cls.notes,
       };
       this.agendaFacade.setSelectedSlot(slot);
       const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';

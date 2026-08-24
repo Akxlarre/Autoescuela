@@ -1,6 +1,6 @@
 # Asignación ASG-b-022 — Fix H-007: skeletons faltantes en Agenda y Libro de Clases
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2

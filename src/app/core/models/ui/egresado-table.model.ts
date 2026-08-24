@@ -22,6 +22,14 @@ export interface EgresadoTableRow {
   licenseGroup: 'class_b' | 'professional';
   /** Año de egreso derivado de updated_at */
   anio: number | null;
+  /**
+   * Fecha de egreso completa (ISO `YYYY-MM-DD`), derivada de `updated_at`.
+   *
+   * Existe además de `anio` porque la ventana de período (fix-147-b) necesita precisión de día:
+   * con solo el año, alguien que egresó en diciembre quedaba fuera de la ventana de 12 meses
+   * por hasta 11 meses de error.
+   */
+  fechaEgreso: string | null;
   /** Nombre de la sede */
   sede: string;
   /** branches.id — para precargar la sede al re-matricular (admin) */
@@ -30,4 +38,6 @@ export interface EgresadoTableRow {
   nroCertificado: string | null;
   /** Saldo pendiente de pago */
   saldoPendiente: number;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }

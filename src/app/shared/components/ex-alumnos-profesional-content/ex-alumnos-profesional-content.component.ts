@@ -28,6 +28,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
+import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
+import {
+  DEFAULT_PERIOD_WINDOW,
+  applyPeriodWindow,
+  type PeriodWindow,
+} from '@core/utils/period-window.utils';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 /**
@@ -52,6 +58,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
+    PeriodSelectorComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -104,6 +111,15 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
             placeholder="Todas las clases"
             class="h-9"
             data-llm-description="Filter professional graduates by license class"
+          />
+          <!-- fix-147-b: acá NO hay filtro de año que unificar (a diferencia de Clase B);
+               el filtro de clase es una faceta independiente, así que el selector se suma. -->
+          <app-period-selector
+            [window]="periodWindow"
+            (windowChange)="periodWindow = $event"
+            [years]="availableYears()"
+            [searchActive]="searchTerm.trim().length > 0"
+            ariaLabel="Período de egreso"
           />
         </div>
 
@@ -181,10 +197,19 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                       {{ egresado.nroExpediente ?? '—' }}
                     </td>
                     <td>
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
-                        >{{ egresado.licencia }}</span
-                      >
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                          >{{ egresado.licencia }}</span
+                        >
+                        @if (egresado.convalidatedLicense) {
+                          <p-tag
+                            [value]="'Convalida ' + egresado.convalidatedLicense"
+                            severity="info"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5"
+                          ></p-tag>
+                        }
+                      </div>
                     </td>
                     <td class="text-xs text-text-secondary">
                       <div class="flex flex-col">
@@ -290,11 +315,20 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                           >
                         </div>
                       </div>
-                      <p-tag
-                        [value]="egresado.licencia"
-                        severity="secondary"
-                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                      ></p-tag>
+                      <div class="flex flex-col items-end gap-1 shrink-0">
+                        <p-tag
+                          [value]="egresado.licencia"
+                          severity="secondary"
+                          styleClass="text-2xs font-bold px-2 py-0.5"
+                        ></p-tag>
+                        @if (egresado.convalidatedLicense) {
+                          <p-tag
+                            [value]="'Convalida ' + egresado.convalidatedLicense"
+                            severity="info"
+                            styleClass="text-2xs font-bold px-2 py-0.5"
+                          ></p-tag>
+                        }
+                      </div>
                     </div>
 
                     <!-- Body -->
@@ -423,9 +457,13 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   readonly egresados = input.required<EgresadoTableRow[]>();
   readonly isLoading = input(false);
-  readonly backRoute = input<string>('/app/admin/clase-profesional/alumnos');
+  /**
+   * Ruta del botón "volver" y prefijo de "Ver detalle". Sin default a propósito: un default
+   * con segmento de rol se le aplicaba en silencio al otro rol (fix-202-m).
+   */
+  readonly backRoute = input.required<string>();
   /** Prefijo de ruta para "Ver detalle" — misma ficha que Base Alumnos (admin vs secretaria). */
-  readonly basePath = input<string>('/app/admin');
+  readonly basePath = input.required<string>();
   /** Emite el egresado a re-matricular; el Smart muestra confirmación y navega al wizard (fix-020). */
   readonly reEnroll = output<EgresadoTableRow>();
 
@@ -435,6 +473,8 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   protected readonly skeletonRows = Array(6).fill(0);
   searchTerm = '';
   selectedClase = '';
+  /** Ventana de período del historial (fix-147-b). */
+  periodWindow: PeriodWindow = DEFAULT_PERIOD_WINDOW;
 
   /** Densidad incremental de la vista tarjetas (mismo patrón que app-alumnos-list-content). */
   private static readonly CARDS_STEP = 6;
@@ -469,7 +509,16 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
 
   filtered(): EgresadoTableRow[] {
     const term = this.searchTerm.toLowerCase().trim();
-    return this.egresados().filter((e) => {
+
+    // El período se aplica antes, y solo cuando no hay búsqueda: buscar tiene que encontrar al
+    // egresado sin importar cuándo egresó (fix-147-b / ASG-b-087).
+    const enPeriodo = applyPeriodWindow(this.egresados(), {
+      window: this.periodWindow,
+      hasActiveSearch: term.length > 0,
+      dateOf: (e: EgresadoTableRow) => e.fechaEgreso,
+    });
+
+    return enPeriodo.filter((e) => {
       const matchSearch =
         !term ||
         e.nombre.toLowerCase().includes(term) ||
@@ -479,6 +528,14 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
       return matchSearch && matchClase;
     });
   }
+
+  /** Años presentes en el dataset, para las opciones del selector de período. */
+  readonly availableYears = computed<string[]>(() => {
+    const years = this.egresados()
+      .map((e) => e.anio)
+      .filter((y): y is number => y !== null);
+    return [...new Set(years)].sort((a, b) => b - a).map(String);
+  });
 
   visibleCards(): EgresadoTableRow[] {
     return sliceByBudget(this.filtered(), this.mobileShown);

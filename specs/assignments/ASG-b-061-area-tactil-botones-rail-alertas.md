@@ -1,6 +1,6 @@
 # Asignación ASG-b-061 — Área táctil de los botones del rail de alertas por debajo de 44×44px
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2

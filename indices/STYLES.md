@@ -288,22 +288,22 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 447 | `#38bdf8` |
-| `--text-muted` | 393 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 266 | `var(--color-primary-text)` |
+| `--ds-brand` | 449 | `#38bdf8` |
+| `--text-muted` | 395 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 268 | `var(--color-primary-text)` |
 | `--text-secondary` | 232 | `rgba(255, 255, 255, 0.78)` |
 | `--state-error` | 230 | `#f87171` |
-| `--border-subtle` | 219 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 218 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 197 | `#18181b` |
 | `--state-success` | 176 | `#4ade80` |
 | `--color-primary` | 144 | `#38bdf8` |
-| `--border-default` | 136 | `rgba(255, 255, 255, 0.28)` |
+| `--border-default` | 138 | `rgba(255, 255, 255, 0.28)` |
 | `--state-warning` | 128 | `#fbbf24` |
 | `--bg-elevated` | 77 | `#27272a` |
-| `--text-sm` | 64 | `0.875rem` |
+| `--text-sm` | 68 | `0.875rem` |
 | `--bg-subtle` | 58 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 57 | `200ms` |
-| `--radius-md` | 55 | `10px` |
+| `--radius-md` | 57 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 50 | `var(--border-subtle)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
@@ -318,8 +318,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 245 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 170 | `src/styles/tokens/_variables.scss` |
+| `.card` | 247 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 174 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 152 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
@@ -423,7 +423,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 52 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 890 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 910 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -431,7 +431,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 12 | `font-bold text-lg text-text-primary` |
+| 14 | `font-bold text-lg text-text-primary` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 12 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 11 | `text-2xl font-semibold text-text-primary` |
@@ -441,11 +441,11 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 10 | `text-text-muted mb-0.5 uppercase tracking-tighter font-bold` |
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |
+| 9 | `text-xs font-semibold text-text-muted mb-1 block` |
 | 9 | `m-0 font-semibold text-text-primary` |
 | 8 | `text-xs font-semibold uppercase tracking-wider` |
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
-| 6 | `text-text-secondary font-semibold text-xs tracking-wider` |
 
 
 <!-- AUTO-GENERATED:END -->

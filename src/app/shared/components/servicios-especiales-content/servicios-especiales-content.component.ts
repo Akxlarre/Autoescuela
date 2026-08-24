@@ -28,6 +28,12 @@ import type {
   VentaServicio,
 } from '@core/models/ui/servicios-especiales.model';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
+import {
+  DEFAULT_PERIOD_WINDOW,
+  applyPeriodWindow,
+  type PeriodWindow,
+} from '@core/utils/period-window.utils';
 
 type ServicioColor = 'indigo' | 'orange' | 'green';
 
@@ -50,6 +56,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     SelectModule,
     MenuModule,
     StableWidthDirective,
+    PeriodSelectorComponent,
     EliminarServicioModalComponent,
   ],
   template: `
@@ -208,6 +215,12 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 placeholder="Todos los servicios"
                 styleClass="w-full h-10"
                 class="min-w-0"
+              />
+
+              <app-period-selector
+                [window]="periodWindow()"
+                (windowChange)="periodWindow.set($event)"
+                ariaLabel="Período del historial de ventas"
               />
               <div class="relative shrink-0">
                 <button
@@ -456,7 +469,11 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly kpis = input.required<ServiciosEspecialesKpis>();
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
-  readonly backRoute = input<string>('/app/dashboard');
+  /**
+   * Ruta del botón "volver". Sin default a propósito: un default con segmento de rol
+   * (`/app/dashboard`) era un 404 que cada consumidor heredaba en silencio (fix-202-m).
+   */
+  readonly backRoute = input.required<string>();
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -488,10 +505,26 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
     this.mostrarInactivos() ? this.catalogo() : this.catalogo().filter((s) => s.activo),
   );
 
+  /**
+   * Ventana de período del historial (fix-147-b). Filtro de renderizado: el dataset completo
+   * sigue en `ventas()`, y el export corre server-side (Edge Function `export-special-services`,
+   * que solo recibe `format` y `branch_id`), así que nunca queda truncado por esta ventana.
+   */
+  protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
+
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.ventas();
-    return !filtro ? all : all.filter((v) => String(v.servicioId) === filtro);
+    const porServicio = !filtro ? all : all.filter((v) => String(v.servicioId) === filtro);
+
+    // Esta vista no tiene buscador de texto libre — solo el filtro por tipo de servicio, que
+    // es una faceta independiente. Si alguna vez gana un buscador, pasar aquí `hasActiveSearch`
+    // para que el término no quede atrapado por la ventana (ver period-window.utils.ts).
+    return applyPeriodWindow(porServicio, {
+      window: this.periodWindow(),
+      hasActiveSearch: false,
+      dateOf: (v) => v.fecha,
+    });
   });
 
   protected readonly mesActualLabel = computed(() => {

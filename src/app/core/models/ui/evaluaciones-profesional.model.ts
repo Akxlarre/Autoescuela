@@ -29,6 +29,8 @@ export interface FilaEvaluacion {
   promedio: number | null;
   /** true si el promedio es >= 75 */
   promedioAprobado: boolean | null;
+  /** license_validations.convalidated_license — null si no convalida (fix-195) */
+  convalidatedLicense?: 'A4' | 'A3' | null;
 }
 
 /** Estado de avance de un curso en el aterrizaje (tarjeta de curso). */

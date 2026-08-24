@@ -1,6 +1,7 @@
 # Hotfix: class duplicado en dms-list-content (case 'school')
 > id: hotfix-038-b-class-duplicado-dms-list-content
-> status: in_progress
+> status: done
+> closed: 2026-08-22 — cierre tardío (el auto-cierre de hotfix no corrió). Verificado en `dms-list-content.component.ts:474` — un solo atributo `class` con las utilities fusionadas (`w-10 h-10 rounded-lg ... bg-error-subtle text-error`).
 > created: 2026-08-10
 
 ## Problema

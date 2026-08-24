@@ -47,7 +47,7 @@
 | `route_incidents` | M4 - Acad. B | `id`, `vehicle_id` | `vehicle_id`, `instructor_id`, `class_b_session_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CR | ✅ Definida |
 | `lecturers` | M5 - Prof. | `id`, `rut` | Ninguna | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `lecturer_monthly_hours` | M5 - Prof. | `id`, `period` | `lecturer_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
-| `professional_promotions` | M5 - Prof. | `id`, `code`, `updated_at` (timestamptz, default now()) | `branch_id` | Admin: CRUD, Sec: CRUD, Stu: R | ✅ Definida · `20260415000001`: añadida columna `updated_at` con trigger `trg_professional_promotions_updated_at` → `set_updated_at()`. · `20260415000002`: trigger `trg_cascade_promotion_status` → `cascade_promotion_status_to_courses()`: propaga cambios de `status` a todos los `promotion_courses` hijos (cubre UI manual y pg_cron). |
+| `professional_promotions` | M5 - Prof. | `id`, `code`, `updated_at` (timestamptz, default now()) | `branch_id` | Admin: CRUD, Sec: CRUD, Stu: R | ✅ Definida · `20260415000001`: añadida columna `updated_at` con trigger `trg_professional_promotions_updated_at` → `set_updated_at()`. · `20260415000002`: trigger `trg_cascade_promotion_status` → `cascade_promotion_status_to_courses()`: propaga cambios de `status` a todos los `promotion_courses` hijos (cubre UI manual y pg_cron). · `20260820100000` (fix-196-m): la misma función, cuando el nuevo status es `finished`, además marca `enrollments.status = 'completed'` (ex-alumno) en las matrículas `active` de esa promoción — mismo efecto que `marcarComoExAlumno()` (fix-012-i) pero automático, aplicado a Clase Profesional. |
 | `promotion_courses` | M5 - Prof. | `id`, `code` (opcional, ej: "PC-A2-001"), `promotion_id` | `promotion_id`, `course_id` | Admin: CRUD, Sec: CRUD, Stu: R | ✅ Definida · `20260325100000`: eliminado `lecturer_id` — reemplazado por tabla intersección `promotion_course_lecturers`. · `20260326100000`: eliminada columna `enrolled_students` — conteo derivado en runtime desde tabla `enrollments` vía `promotion_course_id`. · `20260329100000`: eliminada columna `template_id` y tablas `professional_schedule_templates`/`template_blocks`. Trigger `trg_generate_professional_course_sessions` reescrito: genera sesiones L-S (solo fecha, sin horario) automáticamente desde `start_date`/`end_date` de la promoción padre. |
 | `promotion_course_lecturers` | M5 - Prof. | `id`, `promotion_course_id`, `lecturer_id`, `role` (`theory`\|`practice`\|`both`\|NULL) | `promotion_course_id` (CASCADE), `lecturer_id` (RESTRICT) · UNIQUE(`promotion_course_id`, `lecturer_id`) | Admin: CRUD, Sec: CRU, resto: R | ✅ Definida (`20260325100000`) · Migra automáticamente los `lecturer_id` existentes con `role=NULL`. |
 | `professional_theory_sessions`| M5 - Prof. | `id`, `date` | `promotion_course_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Stu: R | ✅ Definida |
@@ -861,6 +861,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `referral_code` | TEXT | sí | — | — |
 | `created_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `course_id` | INT | sí | — | → `courses.id` |
 
 **Policies:**
 
@@ -961,6 +963,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `vehicle_id` | INT | sí | — | → `vehicles.id` |
+| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
 
 **Policies:**
 
@@ -1011,6 +1014,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `deducted_on` | DATE | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
 
 **Policies:**
 

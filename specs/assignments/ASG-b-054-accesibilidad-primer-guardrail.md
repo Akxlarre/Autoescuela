@@ -1,6 +1,6 @@
 # Asignación ASG-b-054 — Accesibilidad: 94 botones sin nombre accesible + foco en menús + primer guardrail a11y
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

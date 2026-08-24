@@ -1,6 +1,6 @@
 # Asignación ASG-b-081 — App-like: `/admin/clase-profesional/archivo` + `/secretaria/profesional/archivo`
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

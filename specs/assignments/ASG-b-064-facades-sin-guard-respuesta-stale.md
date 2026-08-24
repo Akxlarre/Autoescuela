@@ -1,6 +1,6 @@
 # Asignación ASG-b-064 — Ningún Facade descarta respuestas "stale" ante cambios rápidos de filtro/sede
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
