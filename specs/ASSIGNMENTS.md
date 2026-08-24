@@ -20,6 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-b-098 | El parche del Bash Guard (ASG-b-097) arregló 1 de 4 patrones | `b` | hotfix | P2 | b | **Requiere una persona** (`.claude/hooks/` protegido). Patcher y test listos en `scripts/harness/`. El test viejo daba 7/7 sobre un fix parcial; extendido a 13 casos, el hook vigente da 10/3. Ver `specs/assignments/ASG-b-098-*.md` |
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | `cualquiera` | fix | P1 | b | Transversal: 58 archivos, 3+ portales. Medido en fix-147-b (tabs 94×32, back-link 50×16). Precedente `ASG-b-061`. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
