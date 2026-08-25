@@ -1,6 +1,6 @@
 # Spec 0004-i — App-like: cuadratura (`admin` + `secretaria`)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-08-24
 > **Owner:** i
 > **Priority:** P2
