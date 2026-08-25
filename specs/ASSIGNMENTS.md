@@ -128,7 +128,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-i-001 | Revisar ortografía y voseo argentino | `m` | [fix-215-m-ortografia-voseo-app](fixes/fix-215-m-ortografia-voseo-app/fix.md) | 2026-08-25 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -233,6 +232,7 @@
 | ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | [0003-i-app-like-reportes-contables](specs/0003-i-app-like-reportes-contables/spec.md) | 2026-08-24 |
 | ASG-b-098 | El parche del Bash Guard arregló 1 de 4 patrones | [hotfix-054-b-bash-guard-patrones-1-2-4](hotfixes/hotfix-054-b-bash-guard-patrones-1-2-4/hotfix.md) | 2026-08-24 |
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | [fix-150-b-areas-tactiles-compartidos](fixes/fix-150-b-areas-tactiles-compartidos/fix.md) | 2026-08-25 |
+| ASG-i-001 | Revisar ortografía y voseo argentino | [fix-215-m-ortografia-voseo-app](fixes/fix-215-m-ortografia-voseo-app/fix.md) | 2026-08-25 |
 <!-- AUTO-GENERATED:END -->
 
 ---

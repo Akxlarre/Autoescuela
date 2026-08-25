@@ -140,7 +140,7 @@ const TYPE_ICON: Record<string, string> = {
       </div>
     } @else {
       <p class="text-sm text-center py-8 text-text-muted">
-        Seleccioná una tarea para ver el detalle.
+        Selecciona una tarea para ver el detalle.
       </p>
     }
   `,

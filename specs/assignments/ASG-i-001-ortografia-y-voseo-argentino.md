@@ -1,6 +1,6 @@
 # Asignación ASG-i-001 — Revisar ortografía y voseo argentino
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
