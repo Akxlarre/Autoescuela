@@ -406,7 +406,7 @@ export class PreInscritosContentComponent implements AfterViewInit {
   readonly maxVisible = input<number | null>(null);
   readonly showSede = input(false);
   readonly title = input('Pre-inscritos Clase Profesional');
-  readonly subtitle = input('Gestion de pre-inscripciones online pendientes de revision');
+  readonly subtitle = input('Gestión de pre-inscripciones online pendientes de revisión');
   readonly backRoute = input('');
   readonly backLabel = input('Alumnos Profesional');
   /**
