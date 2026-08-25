@@ -40,7 +40,7 @@ import {
     compareWithBaseline,
     DS_RULES,
 } from './lib/class-discipline.js';
-import { findIconOnlyButtonsWithoutLabel } from './lib/a11y-guardrails.js';
+import { findIconOnlyButtonsWithoutLabel, findHandRolledTapAreas } from './lib/a11y-guardrails.js';
 import { extractBentoClasses, diffBentoClasses } from './check-bento-classes.js';
 import { findReservedTailwindClassCollisions } from './lib/tailwind-bare-utilities.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
@@ -260,6 +260,11 @@ const RULES = {
         doc: 'indices/STYLES.md (§Cómo elegir: bento + botones) + fix-084-b (ASG-b-057)',
         fix: 'Antes de agregar una clase .bento-* nueva a _bento-grid.scss, revisá si alguna de las 34 existentes ya resuelve el caso (ver tabla de decisión). Si es legítima, sumala a scripts/lib/bento-classes.allowlist.json con la justificación.',
     },
+    'ARCH-23': {
+        name: 'Área táctil de 44px reimplementada a mano',
+        doc: 'indices/STYLES.md (§Area tactil) + fix-150-b (ASG-b-093)',
+        fix: 'Usá el primitivo .tap-area del DS (src/tailwind.css) en vez de escribir a mano un ::before invisible con min-height: 44px. Si el control es btn-sm, ya lo trae solo y no hace falta ninguna clase extra. Precedente: .rail-action-btn (fix-095-b) fue exactamente esta copia ad-hoc, consolidada en fix-150-b.',
+    },
     'ARCH-22': {
         name: 'Clase del DS colisiona con utilidad bare de Tailwind',
         doc: 'indices/STYLES.md (§Clases Semánticas Globales) + fix-115-b',
@@ -357,6 +362,17 @@ function checkIconOnlyButtons(filePath, content) {
             'ARCH-20',
             filePath,
             `Botón icon-only (ícono "${icon}") sin nombre accesible (aria-label/title/pButton label).`,
+        );
+    }
+}
+
+/** ARCH-23 — error duro, sin ratchet: arranca en CERO (fix-150-b consolidó la única copia). */
+function checkHandRolledTapAreas(filePath, content) {
+    for (const selector of findHandRolledTapAreas(content)) {
+        reportError(
+            'ARCH-23',
+            filePath,
+            `Área táctil de 44px reimplementada a mano en ${selector} — el primitivo .tap-area del DS ya hace esto.`,
         );
     }
 }
@@ -668,6 +684,9 @@ function analyzeTypeScript(filePath) {
 
     // ── Regla 20: botones icon-only sin nombre accesible (error duro) ────────
     checkIconOnlyButtons(filePath, content);
+
+    // ── Regla 23: área táctil de 44px reimplementada a mano (error duro) ──────
+    checkHandRolledTapAreas(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
@@ -720,6 +739,9 @@ function analyzeTemplate(filePath) {
 
     // ── Regla 20: botones icon-only sin nombre accesible (error duro) ────────
     checkIconOnlyButtons(filePath, content);
+
+    // ── Regla 23: área táctil de 44px reimplementada a mano (error duro) ──────
+    checkHandRolledTapAreas(filePath, content);
 }
 
 // ─── Análisis de Estilos SCSS ───────────────────────────────────────────────
@@ -734,6 +756,9 @@ function analyzeStyles(filePath) {
             '@keyframes detectado en archivo de estilos',
         );
     }
+
+    // ── Regla 23: área táctil de 44px reimplementada a mano (error duro) ──────
+    checkHandRolledTapAreas(filePath, content);
 }
 
 // ─── Recorrido de directorios ─────────────────────────────────────────────────

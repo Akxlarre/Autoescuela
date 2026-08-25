@@ -416,7 +416,7 @@ import type {
               @if (backRoute()) {
                 <a
                   [routerLink]="backRoute()"
-                  class="group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 no-underline whitespace-nowrap"
+                  class="tap-area group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 no-underline whitespace-nowrap"
                   [attr.aria-label]="'Volver a ' + backLabel()"
                   data-llm-nav="back"
                 >
@@ -431,7 +431,7 @@ import type {
               } @else if (backClickable()) {
                 <button
                   type="button"
-                  class="group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 whitespace-nowrap border-0 bg-transparent p-0 cursor-pointer"
+                  class="tap-area group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 whitespace-nowrap border-0 bg-transparent p-0 cursor-pointer"
                   [attr.aria-label]="'Volver a ' + backLabel()"
                   data-llm-nav="back"
                   (click)="backClicked.emit()"
@@ -752,7 +752,7 @@ import type {
             @if (backRoute()) {
               <a
                 [routerLink]="backRoute()"
-                class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm shrink-0 whitespace-nowrap"
+                class="tap-area group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm shrink-0 whitespace-nowrap"
                 [attr.aria-label]="'Volver a ' + backLabel()"
                 data-llm-nav="back"
               >
@@ -766,7 +766,7 @@ import type {
             } @else if (backClickable()) {
               <button
                 type="button"
-                class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all shadow-sm shrink-0 whitespace-nowrap"
+                class="tap-area group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all shadow-sm shrink-0 whitespace-nowrap"
                 [attr.aria-label]="'Volver a ' + backLabel()"
                 data-llm-nav="back"
                 (click)="backClicked.emit()"

@@ -454,6 +454,51 @@
   padding: 0.375rem 0.75rem;
   gap: 0.375rem;
   font-size: var(--text-xs);
+
+  /* Un boton compacto es, por definicion, el que queda bajo 44px de alto: por eso el
+     área táctil se resuelve ACA (en el primitivo de tamano) y no en los 39 call sites.
+     Ver .tap-area abajo para el mecanismo y el porque del media query. */
+  @apply tap-area;
+}
+
+/* Área táctil mínima de 44x44 en punteros gruesos (fix-150-b / ASG-b-093).
+   Canon del proyecto para subir un control a 44x44 SIN cambiar su tamaño visual:
+   un ::before invisible (sin fondo ni borde) centrado sobre el control, que solo
+   crece en ALTO. No desplaza el flujo del layout ni reabre la densidad compacta
+   deliberada de fix-086-m.
+
+   Por qué solo en alto: en los 4 controles medidos el eje que falla siempre es el
+   vertical (tabs 94x32 y 73x32, back-link 50x16, btn-sm ~71x30). El ancho visual ya
+   supera 44px, y extenderlo también en X hace que dos controles contiguos de una
+   toolbar se roben el click entre sí. Misma conclusión empírica que fix-095-b.
+
+   Por qué `any-pointer: coarse` y no siempre: 44x44 es guía táctil (Apple/Google HIG,
+   WCAG 2.5.5 AAA). Con mouse no aporta nada y sí agrega riesgo de robarle el click al
+   vecino de arriba. `any-pointer` (no `pointer`) para cubrir también el laptop híbrido
+   con pantalla táctil, donde el puntero PRIMARIO es el trackpad pero el dedo también
+   se usa. En desktop sin touch la regla no se emite: cero cambio de comportamiento.
+
+   TRAMPA (medida en vivo, no teórica): si un ANCESTRO recorta (cualquier overflow que
+   no sea visible), el ::before se recorta con él y el hit-area real queda MENOR a 44px
+   aunque el computed style del pseudo siga diciendo 44px. Pasa siempre en un scroller
+   horizontal, porque overflow-y no puede quedar visible si overflow-x es auto: computa
+   a auto. Verificar SIEMPRE con document.elementFromPoint(), no con getComputedStyle:
+   en app-tabs el hit-area medido era 40px, no 44px, hasta reservarle el alto al
+   contenedor. Implementación de referencia: .tabs-segmented-row / .tabs-pill-row en
+   shared/components/tabs/tabs.component.ts. */
+@utility tap-area {
+  @media (any-pointer: coarse) {
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      top: 50%;
+      min-height: 44px;
+      transform: translateY(-50%);
+    }
+  }
 }
 
 /* Hover de fila/item de lista — primitivo único (fix-119-b). Reutiliza el mismo token

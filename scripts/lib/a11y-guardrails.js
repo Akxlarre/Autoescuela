@@ -10,9 +10,12 @@
  *
  *   ARCH-20  findIconOnlyButtonsWithoutLabel — <button> con <app-icon>, sin texto visible,
  *            sin aria-label, sin [title] ni pButton label="..." → sin nombre accesible.
+ *   ARCH-23  findHandRolledTapAreas — área táctil de 44px reimplementada a mano con un
+ *            ::before/::after invisible, en vez de usar el primitivo .tap-area del DS
+ *            (fix-150-b / ASG-b-093).
  *
- * A diferencia de ARCH-15/16/17 (ratchets con backlog pre-existente), ARCH-20 arranca en
- * CERO y es ERROR duro desde el día uno — no hay backlog legítimo que tolerar en a11y.
+ * A diferencia de ARCH-15/16/17 (ratchets con backlog pre-existente), estas reglas arrancan
+ * en CERO y son ERROR duro desde el día uno — no hay backlog legítimo que tolerar en a11y.
  *
  * Micro-suite: `node scripts/lib/a11y-guardrails.test.mjs`
  */
@@ -75,6 +78,40 @@ export function findIconOnlyButtonsWithoutLabel(content) {
       block.match(/<app-icon\s+name="([^"]+)"/)?.[1] ??
       (/<app-icon\s+\[name\]=/.test(block) ? '(dinámico)' : '?');
     hits.push(icon);
+  }
+  return hits;
+}
+
+/**
+ * ARCH-23 — área táctil de 44px reimplementada a mano (fix-150-b / ASG-b-093).
+ *
+ * El canon del proyecto para subir un control a 44x44 sin cambiar su tamaño visual es un
+ * ::before invisible centrado, limitado a punteros gruesos. Vive UNA sola vez, en el
+ * primitivo `.tap-area` de `src/tailwind.css` (y `btn-sm` lo aplica solo).
+ *
+ * Por qué existe la regla: ese mecanismo ya se escribió a mano una vez — `.rail-action-btn`
+ * en `asistencia-clase-b-content.component.ts` (fix-095-b) — y fix-150-b tuvo que
+ * consolidarlo. Es el mismo patrón de ARCH-21/ARCH-22: congelar el primitivo y bloquear la
+ * copia ad-hoc, no adivinar intenciones.
+ *
+ * Criterio de aplicabilidad (deliberadamente angosto, para no generar falsos positivos):
+ * solo marca la reimplementación INVISIBLE, o sea un `::before`/`::after` cuyo bloque
+ * declara `min-height: 44px` (o su equivalente en rem). NO marca un `min-height: 44px`
+ * aplicado directo al control — eso es dimensionar de verdad, una decisión de diseño
+ * legitima y distinta (ej. los CTA de `_public-enrollment.scss`).
+ */
+const TAP_AREA_44 = String.raw`min-(?:height|width)\s*:\s*(?:44px|2\.75rem)`;
+const HAND_ROLLED_TAP_AREA_RE = new RegExp(
+  String.raw`([.#&][\w-]*)?\s*::(before|after)\s*\{[^}]*` + TAP_AREA_44 + String.raw`[^}]*\}`,
+  'g',
+);
+
+export function findHandRolledTapAreas(content) {
+  const hits = [];
+  let m;
+  HAND_ROLLED_TAP_AREA_RE.lastIndex = 0;
+  while ((m = HAND_ROLLED_TAP_AREA_RE.exec(content)) !== null) {
+    hits.push(`${m[1] ?? '(selector)'}::${m[2]}`);
   }
   return hits;
 }

@@ -2,7 +2,7 @@
  * Micro-suite de a11y-guardrails.js. Sin framework: `node scripts/lib/a11y-guardrails.test.mjs`
  * Exit 1 si algún caso falla.
  */
-import { findIconOnlyButtonsWithoutLabel } from './a11y-guardrails.js';
+import { findIconOnlyButtonsWithoutLabel, findHandRolledTapAreas } from './a11y-guardrails.js';
 
 let failures = 0;
 function check(name, cond) {
@@ -113,6 +113,70 @@ check(
     `<button (click)="a()"><app-icon name="x" /></button>
      <button aria-label="ok"><app-icon name="check" /></button>
      <button (click)="b()"><app-icon name="trash-2" /></button>`,
+  ).length === 2,
+);
+
+// ── ARCH-23: area tactil de 44px reimplementada a mano ───────────────────────
+
+// Control positivo REAL: el CSS exacto de .rail-action-btn (fix-095-b) que fix-150-b
+// consolido en .tap-area. Si este caso deja de marcarse, la regla no sirve para nada.
+const RAIL_ACTION_BTN_FIX_095 = `
+  .rail-action-btn {
+    position: relative;
+  }
+  .rail-action-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    min-height: 44px;
+    transform: translateY(-50%);
+  }
+`;
+check(
+  'ARCH-23: marca el ::before de 44px de fix-095-b (control positivo real)',
+  findHandRolledTapAreas(RAIL_ACTION_BTN_FIX_095).length === 1,
+);
+check(
+  'ARCH-23: reporta el selector para poder ubicarlo',
+  findHandRolledTapAreas(RAIL_ACTION_BTN_FIX_095)[0] === '.rail-action-btn::before',
+);
+check(
+  'ARCH-23: tambien marca ::after',
+  findHandRolledTapAreas(`.x::after { content: ''; min-height: 44px; }`).length === 1,
+);
+check(
+  'ARCH-23: tambien marca min-width (eje horizontal)',
+  findHandRolledTapAreas(`.x::before { content: ''; min-width: 44px; }`).length === 1,
+);
+check(
+  'ARCH-23: acepta la forma en rem (2.75rem)',
+  findHandRolledTapAreas(`.x::before { content: ''; min-height: 2.75rem; }`).length === 1,
+);
+check(
+  'ARCH-23: el orden de las declaraciones no importa',
+  findHandRolledTapAreas(`.x::before { min-height: 44px; content: ''; }`).length === 1,
+);
+
+// ── ARCH-23: casos que NO deben marcarse ─────────────────────────────────────
+check(
+  'ARCH-23: min-height directo en el control NO se marca (dimensionar de verdad es legitimo)',
+  findHandRolledTapAreas(`.cta-btn { min-height: 44px; padding: 1rem; }`).length === 0,
+);
+check(
+  'ARCH-23: un ::before sin los 44px NO se marca',
+  findHandRolledTapAreas(`.dot::before { content: ''; width: 8px; height: 8px; }`).length === 0,
+);
+check(
+  'ARCH-23: otra medida en un ::before NO se marca',
+  findHandRolledTapAreas(`.x::before { content: ''; min-height: 20px; }`).length === 0,
+);
+check(
+  'ARCH-23: cuenta cada reimplementacion por separado',
+  findHandRolledTapAreas(
+    `.a::before { content: ''; min-height: 44px; }
+     .b::before { content: ''; min-height: 44px; }`,
   ).length === 2,
 );
 
