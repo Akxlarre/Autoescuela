@@ -172,7 +172,7 @@ const PAGE_SIZE_MOBILE = 6;
             <app-empty-state
               icon="users"
               message="No hay pre-inscritos con los filtros aplicados"
-              subtitle="Ajusta la busqueda o los filtros para ver mas resultados."
+              subtitle="Ajusta la búsqueda o los filtros para ver más resultados."
               actionLabel="Limpiar filtros"
               actionIcon="refresh-cw"
               (action)="resetFiltros()"

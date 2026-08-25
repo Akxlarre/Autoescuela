@@ -129,7 +129,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   }
                 } @else if (facade.inscriptos().length === 0) {
                   <div class="px-4 py-8 text-center">
-                    <p class="text-sm text-text-muted">Sin inscriptos registrados.</p>
+                    <p class="text-sm text-text-muted">Sin inscritos registrados.</p>
                   </div>
                 } @else {
                   @for (alumno of facade.inscriptos(); track alumno.enrollmentId) {
