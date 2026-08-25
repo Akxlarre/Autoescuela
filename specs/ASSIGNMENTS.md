@@ -21,7 +21,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
-| ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | `cualquiera` | fix | P1 | b | Transversal: 58 archivos, 3+ portales. Medido en fix-147-b (tabs 94×32, back-link 50×16). Precedente `ASG-b-061`. Ver `specs/assignments/ASG-b-093-*.md` |
 | ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
 | ASG-i-004 | Migrar funciones de negocio del cliente a Edge Functions | `cualquiera` | fix | P1 | i | **Renumerada desde `ASG-i-002`** (chocaba con la completada `0011-m-print-flows-edge-functions`). Auditoría más amplia que su predecesora — excluye los 3 flujos de impresión ya migrados. Ver `specs/assignments/ASG-i-004-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
@@ -234,6 +233,7 @@
 | ASG-b-095 | QA visual pendiente de la cadena `0002-i` → `fix-018-i` (ajustes de cuadratura) | [fix-148-b-qa-ajustes-cuadratura-completada](fixes/fix-148-b-qa-ajustes-cuadratura-completada/fix.md) | 2026-08-23 |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-23 |
 | ASG-b-098 | El parche del Bash Guard arregló 1 de 4 patrones | [hotfix-054-b-bash-guard-patrones-1-2-4](hotfixes/hotfix-054-b-bash-guard-patrones-1-2-4/hotfix.md) | 2026-08-24 |
+| ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | [fix-150-b-areas-tactiles-compartidos](fixes/fix-150-b-areas-tactiles-compartidos/fix.md) | 2026-08-25 |
 <!-- AUTO-GENERATED:END -->
 
 ---

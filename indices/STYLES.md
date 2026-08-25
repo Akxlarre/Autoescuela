@@ -178,7 +178,42 @@ variantes por tipo (`btn-primary-sm` no existe). Aplica `padding: 0.375rem 0.75r
 font-size: var(--text-xs)`. **Declarado en `src/tailwind.css` DESPUÉS de todas las utilities `btn-*`
 base** — necesario para ganar la cascada (misma especificidad de clase única). **PROHIBIDO** seguir
 mutilando `btn-*` a mano con `text-xs`/`px-*`/`py-*`/`rounded-*` sueltos (ARCH-16/AP-013) — usar
-`btn-sm` para cualquier botón compacto nuevo.
+`btn-sm` para cualquier botón compacto nuevo. Desde fix-150-b `btn-sm` **también aplica
+`tap-area`** (área táctil de 44px en touch, sin cambiar el tamaño visual) — ver sección
+"Área táctil" abajo.
+
+### Área táctil (`tap-area`) — mínimo 44×44 en touch (fix-150-b / ASG-b-093)
+
+Primitivo único para subir un control a 44×44 **sin cambiar su tamaño visual**: un `::before`
+invisible centrado que solo crece en **alto**, y solo bajo `@media (any-pointer: coarse)`.
+
+| Situación | Qué usar |
+|---|---|
+| Es un `btn-*` compacto (`btn-sm`) | **Nada** — `btn-sm` ya aplica `tap-area` solo |
+| Cualquier otro control bajo 44px de alto (tab, link, chip clickeable) | `class="tap-area ..."` |
+| Querés que el control **se vea** más grande | `min-height` directo, NO `tap-area` (son cosas distintas) |
+
+**Por qué solo en alto:** en los controles medidos el eje que falla siempre es el vertical
+(tabs 94×32 y 73×32, back-link 50×16, `btn-sm` ~71×30). El ancho ya supera 44px, y extenderlo
+también en X hace que dos controles contiguos de una toolbar se roben el toque entre sí.
+
+**Por qué `any-pointer: coarse`:** 44×44 es guía táctil (Apple/Google HIG, WCAG 2.5.5 AAA; el
+mínimo obligatorio de WCAG 2.5.8 AA es 24×24, y estos controles ya lo cumplían). Con mouse no
+aporta y sí agrega riesgo de robarle el click al vecino. `any-pointer` en vez de `pointer`
+cubre el laptop híbrido con pantalla táctil, donde el puntero *primario* es el trackpad.
+
+> ⚠️ **Trampa verificada en vivo, no teórica:** si un **ancestro recorta** (cualquier `overflow`
+> distinto de `visible`), el `::before` se recorta con él y el hit-area real queda **menor a
+> 44px**, aunque el computed style del pseudo siga diciendo `44px`. Pasa siempre en un scroller
+> horizontal, porque `overflow-y` no puede quedar `visible` si `overflow-x` es `auto`: computa a
+> `auto`. En `app-tabs` el hit-area medido era **40px, no 44px**, hasta reservarle alto al
+> contenedor. **Verificar con `document.elementFromPoint()`, nunca con `getComputedStyle`.**
+> Implementación de referencia: `.tabs-segmented-row` / `.tabs-pill-row` en
+> `shared/components/tabs/tabs.component.ts`.
+
+**Guardrail `ARCH-23`** (`scripts/lib/a11y-guardrails.js`): bloquea reimplementar este mecanismo
+a mano (un `::before`/`::after` con `min-height: 44px` fuera de `tailwind.css`). Precedente:
+`.rail-action-btn` (fix-095-b) fue exactamente esa copia ad-hoc, consolidada en fix-150-b.
 
 ### Badge de estado (`badge-*`)
 

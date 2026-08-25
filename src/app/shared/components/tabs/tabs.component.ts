@@ -140,7 +140,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
 
     @if (variant() === 'segmented') {
       <div
-        class="flex gap-1 self-start p-1 rounded-lg bg-subtle"
+        class="tabs-segmented-row flex gap-1 self-start p-1 rounded-lg bg-subtle"
         [class.flex-wrap]="wrap()"
         [class.overflow-x-auto]="!wrap()"
         [class.custom-scrollbar-hidden]="!wrap()"
@@ -149,7 +149,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         @for (tab of tabs(); track tab.id) {
           <button
             role="tab"
-            class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0 flex items-center justify-center gap-1.5 shrink-0"
+            class="tap-area px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0 flex items-center justify-center gap-1.5 shrink-0"
             [style.background]="activeId() === tab.id ? 'var(--bg-surface)' : 'transparent'"
             [style.color]="activeId() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'"
             [style.box-shadow]="
@@ -181,12 +181,15 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
     }
 
     @if (variant() === 'pill') {
-      <div class="flex flex-wrap gap-2 overflow-x-auto custom-scrollbar-hidden" role="tablist">
+      <div
+        class="tabs-pill-row flex flex-wrap gap-2 overflow-x-auto custom-scrollbar-hidden"
+        role="tablist"
+      >
         @for (tab of tabs(); track tab.id) {
           <button
             type="button"
             role="tab"
-            class="relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5"
+            class="tap-area relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5"
             [class.text-brand]="activeId() === tab.id"
             [class.text-text-muted]="activeId() !== tab.id"
             [class.hover:text-text-primary]="activeId() !== tab.id"
@@ -267,6 +270,35 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         padding: 0.875rem 1rem;
         font-size: var(--text-sm);
         font-weight: 500;
+      }
+      /* fix-150-b: los contenedores de tabs son scrollers horizontales
+         (overflow-x: auto). En CSS, overflow-y NO puede quedar visible si overflow-x
+         es auto: computa a auto tambien, y el scroller RECORTA verticalmente. Eso
+         recortaba el ::before de 44px de .tap-area contra el borde del contenedor:
+         medido en vivo, el hit-area real quedaba en 40px pese a que el computed style
+         del pseudo-elemento decía 44px. La geometria del pseudo no alcanza: hay que
+         reservarle el alto al contenedor.
+
+         Segmented: el boton mide 32px, así que necesita 6px arriba y abajo. El
+         contenedor pasa de 40px a 44px SOLO en punteros gruesos (tiene fondo propio,
+         así que el margin negativo no sirve para esconder el crecimiento).
+
+         Pill: el boton mide 40px y solo necesita 2px por lado. Como el contenedor no
+         tiene fondo, el margin negativo cancela el efecto en el layout externo y el
+         cambio es imperceptible.
+
+         El row-gap solo aplica si alguien activa el input wrap (hoy nadie lo usa):
+         con dos filas apiladas, hit-areas de 44px sobre botones de 32px se solaparían
+         en el gap de 4px y una fila le robaría el toque a la otra. */
+      @media (any-pointer: coarse) {
+        .tabs-segmented-row {
+          padding-block: 6px;
+          row-gap: 0.75rem;
+        }
+        .tabs-pill-row {
+          padding-block: 2px;
+          margin-block: -2px;
+        }
       }
       .tab-line-active {
         background: radial-gradient(
