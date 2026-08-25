@@ -131,7 +131,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | `i` | [0003-i-app-like-reportes-contables](specs/0003-i-app-like-reportes-contables/spec.md) | 2026-08-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -233,6 +232,7 @@
 | ASG-b-097 | Aplicar 2 parches de harness sobre archivos protegidos | [hotfix-053-b-parches-harness-bash-guard-y-ac-verifier](hotfixes/hotfix-053-b-parches-harness-bash-guard-y-ac-verifier/hotfix.md) | 2026-08-22 |
 | ASG-b-095 | QA visual pendiente de la cadena `0002-i` → `fix-018-i` (ajustes de cuadratura) | [fix-148-b-qa-ajustes-cuadratura-completada](fixes/fix-148-b-qa-ajustes-cuadratura-completada/fix.md) | 2026-08-23 |
 | ASG-i-002 | Migrar funciones de negocio del cliente a Edge Functions | [0011-m-print-flows-edge-functions](specs/0011-m-print-flows-edge-functions/spec.md) | 2026-08-23 |
+| ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | [0003-i-app-like-reportes-contables](specs/0003-i-app-like-reportes-contables/spec.md) | 2026-08-24 |
 | ASG-b-098 | El parche del Bash Guard arregló 1 de 4 patrones | [hotfix-054-b-bash-guard-patrones-1-2-4](hotfixes/hotfix-054-b-bash-guard-patrones-1-2-4/hotfix.md) | 2026-08-24 |
 <!-- AUTO-GENERATED:END -->
 

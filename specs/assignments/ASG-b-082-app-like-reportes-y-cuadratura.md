@@ -1,6 +1,6 @@
 # Asignación ASG-b-082 — App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
