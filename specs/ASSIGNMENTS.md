@@ -26,6 +26,7 @@
 | ASG-i-004 | Migrar funciones de negocio del cliente a Edge Functions | `cualquiera` | fix | P1 | i | **Renumerada desde `ASG-i-002`** (chocaba con la completada `0011-m-print-flows-edge-functions`). Auditoría más amplia que su predecesora — excluye los 3 flujos de impresión ya migrados. Ver `specs/assignments/ASG-i-004-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
 | ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%). Precedente `0032-b`. La spec `0038-b` dejó el selector de período duplicado en ambas: es código a **absorber**, no un bloqueo. Ver `specs/assignments/ASG-b-096-*.md` |
+| ASG-i-005 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. Ver `specs/assignments/ASG-i-005-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
