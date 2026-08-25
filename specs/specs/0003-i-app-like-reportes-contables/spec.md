@@ -1,6 +1,6 @@
 # Spec 0003-i — App-like: reportes contables (`admin` + `secretaria`)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-08-24
 > **Owner:** i
 > **Priority:** P2

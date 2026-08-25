@@ -14,6 +14,8 @@ export interface LayoutDrawerState {
   icon?: string;
   actions?: LayoutDrawerAction[];
   badge?: string | null;
+  /** Ancho fijo en px para este drawer (desktop). Si no se especifica, usa el default (45% del viewport, mín. 400px). */
+  width?: number;
 }
 
 /**
@@ -52,14 +54,21 @@ export class LayoutDrawerService {
   readonly badge = computed(() => this._state().badge ?? null);
   /** True cuando hay un estado previo al que se puede volver (back). */
   readonly canGoBack = computed(() => this._history().length > 0);
+  readonly width = computed(() => this._state().width);
 
   /**
    * Abre el drawer arquitectónico inyectando un componente dinámico.
    * Limpia el historial previo (entrada de nivel raíz).
    */
-  open(component: Type<any>, title: string, icon?: string, actions?: LayoutDrawerAction[]): void {
+  open(
+    component: Type<any>,
+    title: string,
+    icon?: string,
+    actions?: LayoutDrawerAction[],
+    width?: number,
+  ): void {
     this._history.set([]);
-    this._state.set({ isOpen: true, component, title, icon, actions });
+    this._state.set({ isOpen: true, component, title, icon, actions, width });
   }
 
   /**

@@ -871,7 +871,11 @@ export class GsapAnimationsService {
    * @param drawerEl  Elemento host del layout drawer
    * @param backdropEl Elemento backdrop (solo necesario en mobile)
    */
-  animateLayoutDrawerEnter(drawerEl: HTMLElement, backdropEl: HTMLElement | null): void {
+  animateLayoutDrawerEnter(
+    drawerEl: HTMLElement,
+    backdropEl: HTMLElement | null,
+    widthOverride?: number,
+  ): void {
     const isMobile = window.innerWidth < 768;
     const panelEl = drawerEl.querySelector('[data-drawer-panel]') as HTMLElement;
 
@@ -918,7 +922,7 @@ export class GsapAnimationsService {
       }
     } else {
       // ── DESKTOP: layout-shift animando el width ───────────────────────────
-      const targetWidth = Math.max(400, window.innerWidth * 0.45);
+      const targetWidth = widthOverride ?? Math.max(400, window.innerWidth * 0.45);
 
       if (!this.shouldAnimate()) {
         gsap.set(drawerEl, {

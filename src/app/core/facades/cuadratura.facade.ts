@@ -153,6 +153,27 @@ export class CuadraturaFacade {
   readonly fondoInicial = signal<number>(0);
   /** Preset de tipo consumido una sola vez por RegistrarEgresoDrawerComponent al abrirse (fix-006-i). */
   readonly egresoTipoPreset = signal<EgresoFormData['tipo'] | null>(null);
+
+  // ── Estado del Arqueo Físico (spec 0004-i) ─────────────────────────────────
+  // Sube desde cuadratura-content.component.ts: el conteo de billetes/monedas ahora vive en
+  // ArqueoCierreDrawerComponent, un componente separado renderizado vía LayoutDrawerFacadeService
+  // (NgComponentOutlet, no es hijo de cuadratura-content) — sin un lugar compartido, el botón
+  // "Cerrar Caja" del Hero (que se quedó en cuadratura-content) no podría leer si el arqueo
+  // habilita el cierre. Mutable público, mismo patrón que fondoInicial/egresoTipoPreset arriba.
+  readonly cantidades = signal<Record<string, number>>({
+    bill20000: 0,
+    bill10000: 0,
+    bill5000: 0,
+    bill2000: 0,
+    bill1000: 0,
+    coin500: 0,
+    coin100: 0,
+    coin50: 0,
+    coin10: 0,
+  });
+  readonly notasArqueo = signal<string>('');
+  readonly realizarArqueo = signal<boolean>(false);
+
   private readonly _pagosHoy = signal<IngresoRow[]>([]);
   private readonly _gastosHoy = signal<EgresoRow[]>([]);
   private readonly _cajaYaCerrada = signal<boolean>(false);
@@ -191,6 +212,38 @@ export class CuadraturaFacade {
   readonly saldoTeoricoEfectivo = computed(
     () => this.fondoInicial() + this.ingresosEfectivoHoy() - this.totalEgresosEfectivoHoy(),
   );
+
+  // ── Computed del Arqueo Físico (spec 0004-i, movidos desde cuadratura-content) ──
+  readonly totalArqueo = computed(() => {
+    const c = this.cantidades();
+    return (
+      c['bill20000'] * 20_000 +
+      c['bill10000'] * 10_000 +
+      c['bill5000'] * 5_000 +
+      c['bill2000'] * 2_000 +
+      c['bill1000'] * 1_000 +
+      c['coin500'] * 500 +
+      c['coin100'] * 100 +
+      c['coin50'] * 50 +
+      c['coin10'] * 10
+    );
+  });
+
+  readonly diferenciaArqueo = computed(() => this.totalArqueo() - this.saldoTeoricoEfectivo());
+
+  readonly puedeCerrarCaja = computed(() => {
+    if (this._cajaYaCerrada() || this._isSaving()) return false;
+    if (!this.realizarArqueo()) return true;
+    if (this.diferenciaArqueo() === 0) return true;
+    return this.notasArqueo().trim().length > 0;
+  });
+
+  readonly colorDiferenciaArqueo = computed(() => {
+    const d = this.diferenciaArqueo();
+    if (d === 0) return 'var(--state-success)';
+    if (d < 0) return 'var(--state-error)';
+    return 'var(--state-warning)';
+  });
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
@@ -568,13 +621,55 @@ export class CuadraturaFacade {
     }
   }
 
-  async cerrarCaja(payload: CierrePayload): Promise<boolean> {
+  /**
+   * Arma el CierrePayload a partir del estado de arqueo propio del Facade (spec 0004-i —
+   * antes lo armaba cuadratura-content.component.ts en onGuardarCierre(), ahora que el
+   * conteo vive en ArqueoCierreDrawerComponent el Facade es el único lugar que tiene
+   * todas las piezas juntas).
+   */
+  private buildCierrePayload(): CierrePayload {
+    const c = this.cantidades();
+    const conArqueo = this.realizarArqueo();
+    return {
+      bill20000: conArqueo ? c['bill20000'] : 0,
+      bill10000: conArqueo ? c['bill10000'] : 0,
+      bill5000: conArqueo ? c['bill5000'] : 0,
+      bill2000: conArqueo ? c['bill2000'] : 0,
+      bill1000: conArqueo ? c['bill1000'] : 0,
+      coin500: conArqueo ? c['coin500'] : 0,
+      coin100: conArqueo ? c['coin100'] : 0,
+      coin50: conArqueo ? c['coin50'] : 0,
+      coin10: conArqueo ? c['coin10'] : 0,
+      notes: this.notasArqueo(),
+      arqueoTotal: conArqueo ? this.totalArqueo() : this.saldoTeoricoEfectivo(),
+    };
+  }
+
+  /** Limpia el estado de arqueo tras cerrar caja exitosamente — no debe arrastrarse al día siguiente. */
+  private resetArqueoState(): void {
+    this.cantidades.set({
+      bill20000: 0,
+      bill10000: 0,
+      bill5000: 0,
+      bill2000: 0,
+      bill1000: 0,
+      coin500: 0,
+      coin100: 0,
+      coin50: 0,
+      coin10: 0,
+    });
+    this.notasArqueo.set('');
+    this.realizarArqueo.set(false);
+  }
+
+  async cerrarCaja(): Promise<boolean> {
     const user = this.auth.currentUser();
     if (!user) return false;
     this._isSaving.set(true);
     try {
       const today = toISODate(new Date());
       const pagos = this._pagosHoy();
+      const payload = this.buildCierrePayload();
       await this.supabase.client.from('cash_closings').insert({
         date: today,
         branch_id: this.getActiveBranchId(),
@@ -604,6 +699,7 @@ export class CuadraturaFacade {
         notes: payload.notes || null,
       });
       this.toast.success('Caja cerrada correctamente.');
+      this.resetArqueoState();
       void this.refreshSilently();
       return true;
     } catch {

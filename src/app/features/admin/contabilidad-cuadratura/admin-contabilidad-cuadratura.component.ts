@@ -16,7 +16,8 @@ import { CuadraturaContentComponent } from '@shared/components/cuadratura-conten
 import { BranchGateComponent } from '@shared/components/branch-gate/branch-gate.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { RegistrarEgresoDrawerComponent } from './registrar-egreso-drawer.component';
-import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
+import { ArqueoCierreDrawerComponent } from './arqueo-cierre-drawer.component';
+import type { IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
 
 @Component({
   selector: 'app-admin-contabilidad-cuadratura',
@@ -46,8 +47,13 @@ import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadr
         [isSaving]="facade.isSaving()"
         [isExporting]="facade.isExporting()"
         [isDrawerOpen]="layoutDrawer.isOpen()"
-        (fondoInicialChange)="facade.fondoInicial.set($event)"
-        (guardarCierre)="onGuardarCierre($event)"
+        [realizarArqueo]="facade.realizarArqueo()"
+        [diferenciaArqueo]="facade.diferenciaArqueo()"
+        [notasArqueo]="facade.notasArqueo()"
+        [puedeCerrarCaja]="facade.puedeCerrarCaja()"
+        [colorDiferencia]="facade.colorDiferenciaArqueo()"
+        (cerrarCaja)="onCerrarCaja()"
+        (abrirArqueo)="abrirDrawerArqueo()"
         (abrirIngreso)="abrirDrawerIngreso()"
         (abrirEgreso)="abrirDrawerEgreso()"
         (eliminarIngreso)="onEliminarIngreso($event)"
@@ -92,8 +98,29 @@ export class AdminContabilidadCuadraturaComponent {
     });
   }
 
-  protected async onGuardarCierre(payload: CierrePayload): Promise<void> {
-    await this.facade.cerrarCaja(payload);
+  protected async onCerrarCaja(): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cerrar Caja',
+      message: 'Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Cerrar Caja',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    await this.facade.cerrarCaja();
+  }
+
+  /** Ancho reducido (spec 0004-i, feedback visual): a 45% del viewport comprimía demasiado
+   *  Ingresos/Egresos de fondo — el contenido de este Drawer (fondo + resumen + toggle +
+   *  contador opcional) cabe cómodo en 440px fijos. */
+  protected abrirDrawerArqueo(): void {
+    this.layoutDrawer.open(
+      ArqueoCierreDrawerComponent,
+      'Arqueo y Cierre Operativo',
+      'wallet',
+      undefined,
+      440,
+    );
   }
 
   protected abrirDrawerIngreso(): void {

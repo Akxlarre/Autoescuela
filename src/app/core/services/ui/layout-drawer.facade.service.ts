@@ -20,8 +20,8 @@ export class LayoutDrawerFacadeService {
   readonly badge = this.layoutDrawer.badge;
   readonly canGoBack = this.layoutDrawer.canGoBack;
 
-  open(component: Type<any>, title: string, icon?: string, actions?: any[]): void {
-    this.layoutDrawer.open(component, title, icon, actions);
+  open(component: Type<any>, title: string, icon?: string, actions?: any[], width?: number): void {
+    this.layoutDrawer.open(component, title, icon, actions, width);
   }
 
   /** Navega a un nuevo componente dentro del drawer sin cerrarlo. */

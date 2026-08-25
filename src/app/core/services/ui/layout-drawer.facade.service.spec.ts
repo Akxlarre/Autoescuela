@@ -43,6 +43,7 @@ describe('LayoutDrawerFacadeService', () => {
       'Unit Test',
       'icon-test',
       undefined,
+      undefined,
     );
   });
 

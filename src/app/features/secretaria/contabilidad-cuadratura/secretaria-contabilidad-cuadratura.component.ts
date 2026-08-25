@@ -4,7 +4,8 @@ import { PagosFacade } from '@core/facades/pagos.facade';
 import { CuadraturaContentComponent } from '@shared/components/cuadratura-content/cuadratura-content.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { RegistrarEgresoDrawerComponent } from '@features/admin/contabilidad-cuadratura/registrar-egreso-drawer.component';
-import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
+import { ArqueoCierreDrawerComponent } from '@features/admin/contabilidad-cuadratura/arqueo-cierre-drawer.component';
+import type { IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
 
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -28,8 +29,13 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
       [isSaving]="facade.isSaving()"
       [isExporting]="facade.isExporting()"
       [isDrawerOpen]="layoutDrawer.isOpen()"
-      (fondoInicialChange)="facade.fondoInicial.set($event)"
-      (guardarCierre)="onGuardarCierre($event)"
+      [realizarArqueo]="facade.realizarArqueo()"
+      [diferenciaArqueo]="facade.diferenciaArqueo()"
+      [notasArqueo]="facade.notasArqueo()"
+      [puedeCerrarCaja]="facade.puedeCerrarCaja()"
+      [colorDiferencia]="facade.colorDiferenciaArqueo()"
+      (cerrarCaja)="onCerrarCaja()"
+      (abrirArqueo)="abrirDrawerArqueo()"
       (abrirIngreso)="abrirDrawerIngreso()"
       (abrirEgreso)="abrirDrawerEgreso()"
       (eliminarIngreso)="onEliminarIngreso($event)"
@@ -50,8 +56,27 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
     this.facade.initialize();
   }
 
-  protected async onGuardarCierre(payload: CierrePayload): Promise<void> {
-    await this.facade.cerrarCaja(payload);
+  protected async onCerrarCaja(): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cerrar Caja',
+      message: 'Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Cerrar Caja',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    await this.facade.cerrarCaja();
+  }
+
+  /** Ancho reducido (spec 0004-i, feedback visual) — ver mismo comentario en el wrapper admin. */
+  protected abrirDrawerArqueo(): void {
+    this.layoutDrawer.open(
+      ArqueoCierreDrawerComponent,
+      'Arqueo y Cierre Operativo',
+      'wallet',
+      undefined,
+      440,
+    );
   }
 
   protected abrirDrawerIngreso(): void {

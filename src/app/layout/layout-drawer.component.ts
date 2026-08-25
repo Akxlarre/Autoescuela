@@ -166,6 +166,7 @@ export class LayoutDrawerComponent implements OnDestroy {
   readonly actions = this.layoutDrawer.actions;
   readonly badge = this.layoutDrawer.badge;
   readonly canGoBack = this.layoutDrawer.canGoBack;
+  readonly width = this.layoutDrawer.width;
 
   private isCurrentlyVisible = false;
 
@@ -182,7 +183,11 @@ export class LayoutDrawerComponent implements OnDestroy {
           const backdropEl = this.el.nativeElement.querySelector(
             '[data-drawer-backdrop]',
           ) as HTMLElement;
-          this.gsapService.animateLayoutDrawerEnter(this.el.nativeElement, backdropEl ?? null);
+          this.gsapService.animateLayoutDrawerEnter(
+            this.el.nativeElement,
+            backdropEl ?? null,
+            this.width(),
+          );
         }, 0);
       } else if (!open && this.isCurrentlyVisible) {
         this.isCurrentlyVisible = false;
