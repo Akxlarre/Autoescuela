@@ -136,6 +136,40 @@ $bp-lg: 1024px;
         grid-template-rows: auto auto minmax(0, 1fr);
       }
     }
+
+    /* Variante para Hero + fila fija corta (ej. filtros/toolbar) + UNA sección
+       de contenido variable (puede incluir sub-secciones condicionales por rol,
+       ej. Gastos Fijos admin-only en spec 0003-i) que scrollea internamente si
+       excede su presupuesto + Card que SIEMPRE mantiene un alto mínimo
+       garantizado (280px) para su propio contenido.
+       Fila 1 = hero (auto). Fila 2 = fila fija corta (auto — se asume liviana,
+       ej. una barra de filtros de una sola línea; si crece mucho, considerar
+       otra variante). Fila 3 = sección variable (minmax(0,1fr) — cede espacio
+       primero, scrollea con overflow-y-auto propio si no alcanza, ver clase de
+       scroll interno en el componente consumidor). Fila 4 = card protagonista
+       (.bento-fill, minmax(280px,1fr) — nunca colapsa a 0, a diferencia de
+       --fill-screen-kpi/-2 que asumen que las filas fijas SIEMPRE entran en el
+       viewport). La celda .bento-fill ancla a la ÚLTIMA fila del template vía
+       `grid-row: -2` (robusto sin importar cambios futuros en las filas
+       previas). Ver spec 0003-i-app-like-reportes-contables (bug real
+       encontrado en /verify: sin el mínimo garantizado, el panel de tabs
+       colapsaba a 0px cuando el contenido fijo excedía el viewport). */
+    &.bento-grid--fill-screen-4 {
+      @container layoutmain (min-width: #{$bp-lg}) {
+        height: calc(100vh - 120px);
+        /* Categorías y el panel protagonista reparten el resto del alto por igual
+           (1fr:1fr, mismo peso) — Categorías no debe verse apretada (spec 0003-i,
+           feedback visual: darle más peso o más piso al panel le robaba espacio a
+           Categorías). El piso de Categorías (100px) solo evita que colapse a 0px
+           en viewports muy bajos (~768px de alto); el piso del panel (280px) es su
+           mínimo histórico, sin inflar más allá para no volver a apretar arriba. */
+        grid-template-rows: auto auto minmax(100px, 1fr) minmax(280px, 1fr);
+
+        > .bento-fill {
+          grid-row: -2;
+        }
+      }
+    }
   }
 }
 
@@ -158,7 +192,8 @@ $bp-lg: 1024px;
 @container layoutmain (min-width: #{$bp-lg}) {
   .bento-grid--fill-screen > .bento-fill,
   .bento-grid--fill-screen-2 > .bento-fill,
-  .bento-grid--fill-screen-kpi > .bento-fill {
+  .bento-grid--fill-screen-kpi > .bento-fill,
+  .bento-grid--fill-screen-4 > .bento-fill {
     contain: size;
     min-height: 0;
   }

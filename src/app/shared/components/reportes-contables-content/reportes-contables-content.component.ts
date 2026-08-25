@@ -20,6 +20,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { RentabilidadCursosComponent } from '@shared/components/rentabilidad-cursos/rentabilidad-cursos.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import {
   RANGOS_REPORTE,
   computeDateRange,
@@ -35,6 +36,12 @@ import {
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 
+/**
+ * Sección activa dentro del panel único de tabs (spec 0003-i). "evolucion" es el default.
+ * Hero/Filtros/Categorías/Gastos Fijos quedan fijos, fuera de este switch — no son tabs.
+ */
+type ReporteTab = 'evolucion' | 'detalle' | 'rentabilidad' | 'gastos-fijos';
+
 @Component({
   selector: 'app-reportes-contables-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +54,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     DateInputComponent,
     BentoGridLayoutDirective,
     RentabilidadCursosComponent,
+    TabsComponent,
   ],
   styles: [
     `
@@ -162,6 +170,20 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         white-space: nowrap;
       }
 
+      /* ── Categorías: fila propia con scroll interno (spec 0003-i) ─────────── */
+      /* Ingresos+Gastos por categoría pueden medir más que el alto disponible en
+         el shell fill-screen en algunos breakpoints. En vez de colapsar la fila
+         del panel de tabs a 0px (bug encontrado en /verify), esta sección scrollea
+         internamente y le cede alto mínimo garantizado al panel de tabs. Filtros
+         quedó en su propia fila separada (feedback visual, 2026-08-25) — ya no
+         comparte scroll con Categorías. Ver .bento-grid--fill-screen-4. */
+      @container layoutmain (min-width: 1024px) {
+        .reportes-categorias-scroll {
+          min-height: 0;
+          overflow-y: auto;
+        }
+      }
+
       /* ── Export dropdown ────────────────────────────────────────────────── */
       .export-menu {
         min-width: 200px;
@@ -193,7 +215,11 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     `,
   ],
   template: `
-    <div class="bento-grid bento-grid--rows-fit" appBentoGridLayout #bentoGrid>
+    <div
+      class="bento-grid bento-grid--fill-screen-4 bento-grid--rows-fit"
+      appBentoGridLayout
+      #bentoGrid
+    >
       <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
       <div class="bento-banner relative overflow-visible">
         <app-section-hero
@@ -232,7 +258,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         }
       </div>
 
-      <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
+      <!-- ── Barra de filtros (fila propia, fija — spec 0003-i) ───────────────── -->
       <div class="bento-banner">
         <div class="card p-4 flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
           <!-- Rango -->
@@ -275,6 +301,17 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
             Aplicar
           </button>
 
+          <!-- ── Tabs (Evolución Mensual / Detalle Diario / Rentabilidad / Gastos Fijos
+               —admin only—) — spec 0003-i. Hero, Filtros y Categorías quedan fijos fuera
+               de este switch; Gastos Fijos SÍ es tab (a diferencia de la primera pasada). ── -->
+          <app-tabs
+            style="width: auto; flex: 0 0 auto"
+            [tabs]="tabOptions()"
+            [activeId]="activeTab()"
+            variant="segmented"
+            (activeIdChange)="setActiveTab($event)"
+          />
+
           <!-- Período activo (info contextual) -->
           @if (!isLoading() && kpis()) {
             <div class="flex items-center gap-2 ml-auto">
@@ -288,9 +325,10 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         </div>
       </div>
 
-      <!-- ── Categorías (Ingresos + Gastos) ────────────────────────────────── -->
+      <!-- ── Categorías (Ingresos + Gastos) — fila propia, scroll interno si no entra
+           (spec 0003-i, feedback visual). ── -->
       @if (!isLoading()) {
-        <div class="bento-banner">
+        <div class="bento-banner reportes-categorias-scroll">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Ingresos por Categoría -->
             <div class="card p-5 flex flex-col gap-4">
@@ -389,231 +427,241 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         </div>
       }
 
-      <!-- ── Gastos Fijos del Período — solo admin (fix-010-i, H-014): fixed_expenses
-           es RLS admin-only, así que la secretaría ni ve ni puede registrar gastos fijos. -->
-      @if (!isLoading() && isAdmin()) {
-        <div class="bento-banner">
-          <div class="card p-0 flex flex-col overflow-hidden shadow-sm">
-            <div
-              class="flex items-center justify-between px-6 py-4 border-b"
-              style="border-color: var(--border-muted)"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
-                >
-                  <app-icon name="lock" [size]="16" color="var(--state-error)" />
-                </div>
-                <div>
-                  <h2 class="text-sm font-bold" style="color: var(--text-primary)">
-                    Gastos Fijos del Período
-                  </h2>
-                  <p class="text-xs" style="color: var(--text-muted)">
-                    Arriendo, sueldos, servicios y otros
-                  </p>
-                </div>
-              </div>
-              <button
-                class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
-                data-llm-action="abrir-registrar-gasto-fijo"
-                (click)="registrarGastoClick.emit()"
-              >
-                <app-icon name="plus" [size]="14" />
-                Registrar Gasto Fijo
-              </button>
-            </div>
-
-            @if (gastosFijos().length === 0) {
-              <div class="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
-                <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
-                <p class="text-sm font-medium" style="color: var(--text-primary)">
-                  Sin gastos fijos en este período
-                </p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  Registra arriendo, sueldos u otros gastos estructurales para calcular el neto
-                  real.
-                </p>
-              </div>
-            } @else {
-              <div class="overflow-x-auto">
-                <table class="report-table">
-                  <thead>
-                    <tr>
-                      <th class="report-th">Fecha</th>
-                      <th class="report-th">Categoría</th>
-                      <th class="report-th">Descripción</th>
-                      <th class="report-th align-right">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (gasto of gastosFijos(); track gasto.id) {
-                      <tr>
-                        <td class="report-td text-xs" style="color: var(--text-muted)">
-                          {{ formatDate(gasto.date) }}
-                        </td>
-                        <td class="report-td">
-                          <app-badge variant="error">{{ gasto.categoryLabel }}</app-badge>
-                        </td>
-                        <td class="report-td text-sm" style="color: var(--text-secondary)">
-                          {{ gasto.description }}
-                        </td>
-                        <td
-                          class="report-td align-right text-sm font-semibold"
-                          style="color: var(--state-error)"
-                        >
-                          {{ clp(gasto.amount) }}
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                  <tfoot class="report-tfoot">
-                    <tr>
-                      <td
-                        class="report-td font-bold"
-                        colspan="3"
-                        style="color: var(--text-primary)"
-                      >
-                        Total Gastos Fijos
-                      </td>
-                      <td
-                        class="report-td align-right font-black"
-                        style="color: var(--state-error)"
-                      >
-                        {{ clp(totalGastosFijos()) }}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+      <!-- ── Panel único de tabs (celda .bento-fill, sin importar la tab activa) — spec 0003-i:
+           Evolución Mensual / Detalle Diario / Rentabilidad / Gastos Fijos (admin only).
+           Mismo patrón que fix-027-i. ── -->
+      @if (!isLoading()) {
+        <div class="bento-banner bento-fill card p-5 overflow-hidden flex flex-col h-full">
+          @switch (activeTab()) {
+            @case ('evolucion') {
+              <!-- ── Evolución Mensual ─────────────────────────────────────────────── -->
+              <div class="flex-1 min-h-0 overflow-y-auto">
+                <h2 class="font-semibold text-text-primary" style="margin-bottom: var(--space-4)">
+                  Evolución Mensual
+                </h2>
+                @if (evolucionMensual().length) {
+                  <div class="overflow-x-auto w-full">
+                    <table class="report-table">
+                      <thead>
+                        <tr>
+                          <th class="report-th">Mes</th>
+                          <th class="report-th align-right">Ingresos</th>
+                          <th class="report-th align-right">Gastos</th>
+                          <th class="report-th align-right">Neto</th>
+                          <th class="report-th align-right">Margen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of evolucionMensual(); track row.mes) {
+                          <tr>
+                            <td class="report-td font-medium">
+                              {{ row.mes }}
+                            </td>
+                            <td class="report-td align-right text-success">
+                              {{ clp(row.ingresos) }}
+                            </td>
+                            <td class="report-td align-right text-error">
+                              {{ clp(row.gastos) }}
+                            </td>
+                            <td class="report-td align-right text-brand font-semibold">
+                              {{ clp(row.neto) }}
+                            </td>
+                            <td class="report-td align-right">
+                              <span class="margen-badge">{{ pct(row.margen) }}</span>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
               </div>
             }
-          </div>
-        </div>
-      }
+            @case ('detalle') {
+              <!-- ── Detalle Diario ───────────────────────────────────────────────── -->
+              <div class="flex-1 min-h-0 overflow-y-auto">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <h2 class="font-semibold text-text-primary">Detalle Diario</h2>
+                  <span class="text-sm text-brand font-medium">
+                    {{ diasConMovimientos() }} días con movimientos
+                  </span>
+                </div>
 
-      <!-- ── Evolución Mensual ───────────────────────────────────────────────── -->
-      @if (!isLoading() && evolucionMensual().length) {
-        <div class="bento-banner">
-          <div class="card p-5">
-            <h2 class="font-semibold text-text-primary" style="margin-bottom: var(--space-4)">
-              Evolución Mensual
-            </h2>
-            <div class="overflow-x-auto w-full">
-              <table class="report-table">
-                <thead>
-                  <tr>
-                    <th class="report-th">Mes</th>
-                    <th class="report-th align-right">Ingresos</th>
-                    <th class="report-th align-right">Gastos</th>
-                    <th class="report-th align-right">Neto</th>
-                    <th class="report-th align-right">Margen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of evolucionMensual(); track row.mes) {
-                    <tr>
-                      <td class="report-td font-medium">
-                        {{ row.mes }}
-                      </td>
-                      <td class="report-td align-right text-success">
-                        {{ clp(row.ingresos) }}
-                      </td>
-                      <td class="report-td align-right text-error">
-                        {{ clp(row.gastos) }}
-                      </td>
-                      <td class="report-td align-right text-brand font-semibold">
-                        {{ clp(row.neto) }}
-                      </td>
-                      <td class="report-td align-right">
-                        <span class="margen-badge">{{ pct(row.margen) }}</span>
-                      </td>
-                    </tr>
+                @if (detalleDiario().length) {
+                  <div class="overflow-x-auto w-full">
+                    <table class="report-table">
+                      <thead>
+                        <tr>
+                          <th class="report-th">Fecha</th>
+                          <th class="report-th align-right">Operaciones</th>
+                          <th class="report-th align-right">Ingresos</th>
+                          <th class="report-th align-right">Gastos</th>
+                          <th class="report-th align-right">Neto</th>
+                          <th class="report-th align-right">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of detalleDiario(); track row.fecha) {
+                          <tr>
+                            <td class="report-td text-sm">
+                              {{ row.fecha }}
+                            </td>
+                            <td class="report-td align-right text-error">
+                              {{ row.operaciones }}
+                            </td>
+                            <td class="report-td align-right text-success">
+                              +{{ clp(row.ingresos) }}
+                            </td>
+                            <td class="report-td align-right text-error">-{{ clp(row.gastos) }}</td>
+                            <td class="report-td align-right text-brand font-semibold">
+                              {{ clp(row.neto) }}
+                            </td>
+                            <td class="report-td align-right">
+                              <button
+                                class="btn-ver-detalle"
+                                (click)="verDetalle.emit(row.fecha)"
+                                data-llm-action="view-daily-detail"
+                              >
+                                Ver detalle
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot class="report-tfoot">
+                        <tr>
+                          <td class="report-td font-bold">TOTAL</td>
+                          <td class="report-td align-right text-error font-bold">
+                            {{ totalesDiario().operaciones }}
+                          </td>
+                          <td class="report-td align-right text-success font-bold">
+                            +{{ clp(totalesDiario().ingresos) }}
+                          </td>
+                          <td class="report-td align-right text-error font-bold">
+                            -{{ clp(totalesDiario().gastos) }}
+                          </td>
+                          <td class="report-td align-right text-brand font-bold">
+                            {{ clp(totalesDiario().neto) }}
+                          </td>
+                          <td class="report-td"></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+            @case ('rentabilidad') {
+              <!-- ── Rentabilidad Estimada por Tipo de Curso ─────────────────────── -->
+              <div class="flex-1 min-h-0 overflow-y-auto">
+                <app-rentabilidad-cursos />
+              </div>
+            }
+            @case ('gastos-fijos') {
+              <!-- ── Gastos Fijos del Período — solo admin (fix-010-i, H-014):
+                   fixed_expenses es RLS admin-only. El tab ya está filtrado por isAdmin()
+                   en tabOptions(), pero se repite el @if acá como defensa en profundidad
+                   (mismo criterio que el resto del proyecto para datos admin-only). ── -->
+              @if (isAdmin()) {
+                <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
+                  <div
+                    class="flex items-center justify-between px-6 py-4 border-b"
+                    style="border-color: var(--border-muted)"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
+                      >
+                        <app-icon name="lock" [size]="16" color="var(--state-error)" />
+                      </div>
+                      <div>
+                        <h2 class="text-sm font-bold" style="color: var(--text-primary)">
+                          Gastos Fijos del Período
+                        </h2>
+                        <p class="text-xs" style="color: var(--text-muted)">
+                          Arriendo, sueldos, servicios y otros
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
+                      data-llm-action="abrir-registrar-gasto-fijo"
+                      (click)="registrarGastoClick.emit()"
+                    >
+                      <app-icon name="plus" [size]="14" />
+                      Registrar Gasto Fijo
+                    </button>
+                  </div>
+
+                  @if (gastosFijos().length === 0) {
+                    <div
+                      class="px-6 py-10 flex flex-col items-center justify-center text-center gap-2"
+                    >
+                      <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
+                      <p class="text-sm font-medium" style="color: var(--text-primary)">
+                        Sin gastos fijos en este período
+                      </p>
+                      <p class="text-xs" style="color: var(--text-muted)">
+                        Registra arriendo, sueldos u otros gastos estructurales para calcular el
+                        neto real.
+                      </p>
+                    </div>
+                  } @else {
+                    <div class="overflow-x-auto">
+                      <table class="report-table">
+                        <thead>
+                          <tr>
+                            <th class="report-th">Fecha</th>
+                            <th class="report-th">Categoría</th>
+                            <th class="report-th">Descripción</th>
+                            <th class="report-th align-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (gasto of gastosFijos(); track gasto.id) {
+                            <tr>
+                              <td class="report-td text-xs" style="color: var(--text-muted)">
+                                {{ formatDate(gasto.date) }}
+                              </td>
+                              <td class="report-td">
+                                <app-badge variant="error">{{ gasto.categoryLabel }}</app-badge>
+                              </td>
+                              <td class="report-td text-sm" style="color: var(--text-secondary)">
+                                {{ gasto.description }}
+                              </td>
+                              <td
+                                class="report-td align-right text-sm font-semibold"
+                                style="color: var(--state-error)"
+                              >
+                                {{ clp(gasto.amount) }}
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                        <tfoot class="report-tfoot">
+                          <tr>
+                            <td
+                              class="report-td font-bold"
+                              colspan="3"
+                              style="color: var(--text-primary)"
+                            >
+                              Total Gastos Fijos
+                            </td>
+                            <td
+                              class="report-td align-right font-black"
+                              style="color: var(--state-error)"
+                            >
+                              {{ clp(totalGastosFijos()) }}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- ── Detalle Diario ─────────────────────────────────────────────────── -->
-      @if (!isLoading() && detalleDiario().length) {
-        <div class="bento-banner">
-          <div class="card p-5">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <h2 class="font-semibold text-text-primary">Detalle Diario</h2>
-              <span class="text-sm text-brand font-medium">
-                {{ diasConMovimientos() }} días con movimientos
-              </span>
-            </div>
-
-            <div class="overflow-x-auto w-full">
-              <table class="report-table">
-                <thead>
-                  <tr>
-                    <th class="report-th">Fecha</th>
-                    <th class="report-th align-right">Operaciones</th>
-                    <th class="report-th align-right">Ingresos</th>
-                    <th class="report-th align-right">Gastos</th>
-                    <th class="report-th align-right">Neto</th>
-                    <th class="report-th align-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of detalleDiario(); track row.fecha) {
-                    <tr>
-                      <td class="report-td text-sm">
-                        {{ row.fecha }}
-                      </td>
-                      <td class="report-td align-right text-error">
-                        {{ row.operaciones }}
-                      </td>
-                      <td class="report-td align-right text-success">+{{ clp(row.ingresos) }}</td>
-                      <td class="report-td align-right text-error">-{{ clp(row.gastos) }}</td>
-                      <td class="report-td align-right text-brand font-semibold">
-                        {{ clp(row.neto) }}
-                      </td>
-                      <td class="report-td align-right">
-                        <button
-                          class="btn-ver-detalle"
-                          (click)="verDetalle.emit(row.fecha)"
-                          data-llm-action="view-daily-detail"
-                        >
-                          Ver detalle
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-                <tfoot class="report-tfoot">
-                  <tr>
-                    <td class="report-td font-bold">TOTAL</td>
-                    <td class="report-td align-right text-error font-bold">
-                      {{ totalesDiario().operaciones }}
-                    </td>
-                    <td class="report-td align-right text-success font-bold">
-                      +{{ clp(totalesDiario().ingresos) }}
-                    </td>
-                    <td class="report-td align-right text-error font-bold">
-                      -{{ clp(totalesDiario().gastos) }}
-                    </td>
-                    <td class="report-td align-right text-brand font-bold">
-                      {{ clp(totalesDiario().neto) }}
-                    </td>
-                    <td class="report-td"></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- ── Rentabilidad Estimada por Tipo de Curso ───────────────── -->
-      @if (!isLoading()) {
-        <div class="bento-banner">
-          <div class="card p-6">
-            <app-rentabilidad-cursos />
-          </div>
+                </div>
+              }
+            }
+          }
         </div>
       }
     </div>
@@ -692,6 +740,29 @@ export class ReportesContablesContentComponent {
       },
     ];
   });
+
+  // ── Tabs (Evolución Mensual / Detalle Diario / Rentabilidad / Gastos Fijos) —
+  // spec 0003-i (feedback visual, 2026-08-25). Hero, Filtros y Categorías quedan
+  // fijos, fuera de este sistema de tabs. Gastos Fijos SÍ es tab (a diferencia de
+  // la primera pasada) — se filtra por isAdmin() porque fixed_expenses es RLS
+  // admin-only (fix-010-i, H-014): secretaría no debe ver ni el botón del tab.
+  protected readonly tabOptions = computed<TabOption[]>(() => {
+    const base: TabOption[] = [
+      { id: 'evolucion', label: 'Evolución Mensual' },
+      { id: 'detalle', label: 'Detalle Diario' },
+      { id: 'rentabilidad', label: 'Rentabilidad' },
+    ];
+    if (this.isAdmin()) {
+      base.push({ id: 'gastos-fijos', label: 'Gastos Fijos' });
+    }
+    return base;
+  });
+
+  protected readonly activeTab = signal<ReporteTab>('evolucion');
+
+  protected setActiveTab(tabId: string): void {
+    this.activeTab.set(tabId as ReporteTab);
+  }
 
   // ── Estado local del formulario de filtros ────────────────────────────────
   protected readonly rangos = RANGOS_REPORTE;
@@ -777,6 +848,12 @@ export class ReportesContablesContentComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
+  /**
+   * Decisión (spec 0003-i, T4.1): el stagger corre una sola vez en la carga inicial,
+   * igual que el piloto `fix-027-i-app-like-instructor-ficha-tabs`. Cambiar de tab
+   * NO vuelve a animar el panel — es consistente con el resto del rollout app-like
+   * y evita un flash de reveal cada vez que el usuario navega entre tabs.
+   */
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);

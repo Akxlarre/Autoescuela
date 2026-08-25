@@ -1,6 +1,6 @@
 # Spec 0003-i — App-like: reportes contables (`admin` + `secretaria`)
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-08-24
 > **Owner:** i
 > **Priority:** P2
@@ -30,8 +30,10 @@ pasa a ser su propio panel con scroll interno, consistente con el resto del roll
 
 ## 2. User Stories
 
-- **US1**: Como Admin/Secretaria, quiero navegar los reportes contables por tabs en vez de
-  hacer scroll por 7 secciones seguidas, para encontrar el reporte que necesito más rápido.
+- **US1**: Como Admin/Secretaria, quiero que Hero, Filtros y Categorías se sigan viendo igual
+  que hoy, y navegar por tabs (Evolución Mensual/Detalle Diario/Rentabilidad, y Gastos Fijos si
+  soy admin) en vez de hacer scroll para llegar a esas secciones, para encontrar el reporte que
+  necesito más rápido sin perder lo que ya funciona bien.
 - **US2**: Como Admin/Secretaria en desktop, quiero que la página de reportes ocupe toda la
   pantalla sin que el documento scrollee, para tener una experiencia app-like consistente con
   el resto del sistema.
@@ -43,14 +45,21 @@ pasa a ser su propio panel con scroll interno, consistente con el resto del roll
 ## 3. Acceptance Criteria (Gherkin)
 
 - **AC1**: Given estoy en `/admin/contabilidad/reportes` en desktop (lg+), When la página
-  carga, Then las 7 secciones de reportes están agrupadas en tabs, sin scroll de documento.
+  carga, Then veo Hero, Filtros y Categorías exactamente como hoy (sin cambios de posición ni
+  de contenido), con los 4 tabs (Evolución Mensual, Detalle Diario, Rentabilidad, Gastos Fijos)
+  compactos en la misma línea que "Mes actual"/"Aplicar", y un único panel debajo que muestra
+  el contenido de la tab activa, sin scroll de documento.
+- **AC1b**: Given soy secretaria (no admin), When entro a `/secretaria/contabilidad/reportes`,
+  Then veo solo 3 tabs (sin "Gastos Fijos" — `fixed_expenses` es RLS admin-only, fix-010-i).
 - **AC2**: Given estoy en cualquiera de los 4 puntos de entrada (`admin`/`secretaria` ×
-  desktop/mobile), When navego entre tabs, Then no se pierde ningún reporte de los 7
-  originales.
+  desktop/mobile), When navego entre tabs, Then no se pierde ninguna de las 7 secciones
+  originales (3 fijas — Hero/Filtros/Categorías — + 4 en tabs para admin, 3 para secretaria).
 - **AC3**: Given estoy en mobile, When abro la página de reportes, Then el comportamiento es
   scroll nativo normal (sin fill-screen forzado).
 - **AC4**: Given hay un drawer abierto sobre la página de reportes, When se activa
-  `force-compact`, Then el layout no se rompe.
+  `force-compact`, Then el layout no se rompe. **Nota (T4.2):** esta ruta no maneja
+  `force-compact` hoy (no hay drawer en su flujo actual) — AC no aplica, documentado en
+  `tasks.md`.
 
 ### Edge cases obligatorios
 
@@ -97,8 +106,10 @@ pasa a ser su propio panel con scroll interno, consistente con el resto del roll
 ## 7. UX y flujos (preliminar)
 
 - Pantalla(s) afectada(s): `/admin/contabilidad/reportes`, `/secretaria/contabilidad/reportes`.
-- Flujo principal (happy path): usuario entra a la página, ve tabs agrupando las 7 secciones,
-  navega entre ellas sin perder contexto de scroll entre tabs.
+- Flujo principal (happy path): usuario entra a la página, ve Hero/Filtros/Categorías igual que
+  siempre, y navega por tabs compactas en la fila de Filtros (Evolución Mensual/Detalle
+  Diario/Rentabilidad, +Gastos Fijos si es admin) en un panel único debajo, sin perder contexto
+  de scroll de documento.
 - Estados especiales (loading, error, vacío): heredados de cada sección existente — no se
   espera que cambien, solo el contenedor que las agrupa.
 
@@ -112,8 +123,13 @@ pasa a ser su propio panel con scroll interno, consistente con el resto del roll
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] Definir en `plan.md` cómo se agrupan las 7 secciones en tabs (cuántos tabs, qué entra en
-  cada uno) — requiere leer las 784 líneas completas y catalogar cada sección primero.
+- [x] Agrupación de tabs definida y **corregida tras QA visual real** (2026-08-24 → 25):
+  primera pasada tenía Hero+Filtros+Categorías+Gastos Fijos todos fijos, lo que en /verify
+  resultó ser más alto (954px) que el viewport disponible (680-780px), colapsando el panel de
+  tabs a 0px — bug real, no cosmético. Estructura final (2026-08-25, decisión del usuario sobre
+  el render real): Hero y Filtros cada uno en su propia fila fija; Categorías en su propia fila
+  con scroll interno si no entra; Gastos Fijos pasó a ser un **4º tab** (filtrado por
+  `isAdmin()`, ya no fijo) en vez de sección fija — ver `plan.md` §5.
 - [ ] Confirmar que ningún otro punto del sistema linkea directo a una sección específica por
   anchor/fragment que se rompería al mover a tabs.
 - Originado de Asignación `ASG-b-082` (`specs/assignments/ASG-b-082-app-like-reportes-y-cuadratura.md`),
@@ -124,3 +140,10 @@ pasa a ser su propio panel con scroll interno, consistente con el resto del roll
 ## Changelog
 
 - 2026-08-24 — draft inicial por i
+- 2026-08-24 — agrupación de tabs corregida tras revisar mockup real: Hero/Filtros/Categorías/
+  Gastos Fijos fijos, solo Evolución Mensual/Detalle Diario/Rentabilidad pasan a tabs (antes
+  la spec asumía las 7 secciones agrupadas en tabs)
+- 2026-08-25 — segunda corrección tras `/verify` en navegador real: el bloque fijo de la
+  primera pasada (954px) no entraba en el viewport disponible, colapsando el panel de tabs a
+  0px. Estructura final: Filtros separado de Categorías (cada uno su fila), Gastos Fijos pasa
+  de sección fija a 4º tab (filtrado por rol). AC1/AC1b/AC2/AC4 actualizados

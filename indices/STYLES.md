@@ -355,6 +355,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
 | `.bento-grid--fill-screen` | — |
 | `.bento-grid--fill-screen-2` | — |
+| `.bento-grid--fill-screen-4` | Hero (auto) + 1 fila fija corta (auto, ej. filtros/toolbar) + 1 sección variable con piso mínimo propio para no colapsar en viewports bajos (`minmax(100px,1fr)`) + `.bento-fill` protagonista con su propio piso mínimo (`minmax(280px,1fr)`, mismo peso `1fr` que la sección de arriba — no le robes peso relativo, aunque el panel "se vea corto": probado en spec 0003-i, dárselo apretó la sección de arriba). `.bento-fill` ancla a la última fila vía `grid-row: -2` (robusto sin importar cambios en las filas previas). Origen: spec 0003-i (`reportes-contables-content`) — pasó por varias iteraciones tras `/verify` real y feedback visual directo: primero colapsaba a 0px (4 filas "auto" sin garantía), después un intento de darle más peso al panel (`2fr`) apretó la sección de arriba — revertido a `1fr:1fr` |
 | `.bento-grid--fill-screen-kpi` | — |
 | `.bento-grid--forms` | — |
 | `.bento-grid--four-equal` | — |
