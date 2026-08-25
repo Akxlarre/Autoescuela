@@ -19,6 +19,8 @@
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
+| [0003-i](./specs/0003-i-app-like-reportes-contables/spec.md) | App-like: reportes contables (`admin` + `secretaria`) | P2 | i | Draft. Originado de `ASG-b-082`, dividida en 2 specs a pedido del usuario (junto con `0004-i`). |
+| [0004-i](./specs/0004-i-app-like-cuadratura/spec.md) | App-like: cuadratura (`admin` + `secretaria`) | P2 | i | Draft. Originado de `ASG-b-082`, dividida en 2 specs a pedido del usuario (junto con `0003-i`). No romper el contador táctil de billetes/monedas. |
 
 ---
 
