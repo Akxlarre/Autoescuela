@@ -1,14 +1,14 @@
 # Asignación ASG-b-093 — Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-08-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-08-24
+> **resulting_track:** fix-150-b-areas-tactiles-compartidos
 
 ---
 
