@@ -1,4 +1,16 @@
-# Asignación ASG-i-005 — El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad
+# Asignación ASG-i-004 — El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad
+
+> ⚠️ **Este `ASG-i-004` es sobre el filtro de mes en Rentabilidad — NO tiene relación con
+> "Migrar funciones de negocio del cliente a Edge Functions".** Ese fue un `ASG-i-004`
+> distinto (título literal "Migrar funciones de negocio del cliente a Edge Functions"),
+> eliminado el 2026-08-25 por ser un duplicado fantasma de `ASG-i-002` (ver nota completa
+> en `specs/ASSIGNMENTS.md` → Convenciones). Si buscabas ese tema, es `ASG-i-002` /
+> `0011-m-print-flows-edge-functions`, no este archivo.
+>
+> **Renombrada de `ASG-i-005` a `ASG-i-004` el 2026-08-25** para ocupar el número que
+> había quedado libre al eliminar el `ASG-i-004` fantasma de arriba. Excepción puntual a
+> "los IDs nunca se reutilizan": ese `ASG-i-004` nunca fue una asignación real, así que
+> no hay contenido histórico que perder al reasignar el número.
 
 > **status:** pendiente
 > **owner:** cualquiera
@@ -55,6 +67,6 @@ reciba datos reales filtrados por rango — y `mesActual` es un `computed()` que
 
 ## Notas para quien la reclame
 
-- No asumas que el cálculo de rentabilidad ya existe en algún lado — confirmá con el dueño antes
+- No asumas que el cálculo de rentabilidad ya existe en algún lado — confirma con el dueño antes
   de diseñar el query. Si el dato no existe en BD, esto puede ser más grande que un `fix` simple
   (evaluar `spec` en vez de `fix` si implica modelo de datos nuevo).
