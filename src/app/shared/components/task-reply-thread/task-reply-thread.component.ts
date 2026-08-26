@@ -47,7 +47,7 @@ import type { TaskReply, TaskStatus } from '@core/models/ui/task.model';
                   · {{ formatAge(reply.created_at) }}
                 </span>
               </p>
-              <p class="text-sm text-text-primary break-words whitespace-pre-wrap">
+              <p class="text-sm text-text-primary wrap-break-word whitespace-pre-wrap">
                 {{ reply.body }}
               </p>
             </li>
