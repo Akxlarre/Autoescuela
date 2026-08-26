@@ -3,6 +3,7 @@
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md)
 > **Status:** done
 > **Created:** 2026-08-26
+> **Closed:** 2026-08-26 — confirmado por el usuario ("cierra la spec")
 
 ---
 
@@ -92,9 +93,8 @@
 
 - [x] **T5.1** — Actualizar `indices/COMPONENTS.md` y `indices/APP-LIKE-ROLLOUT.md`
 - [x] **T5.2** — Generar `acceptance.md` con evidencia
-- [ ] **T5.3** — Marcar spec como `done` en `ROADMAP.md` — pendiente, a pedido explícito del
-      usuario ("no hagas commit") no se tocó `specs/.active` ni `ROADMAP.md`/estado final; queda
-      para cuando el usuario confirme el cierre.
+- [x] **T5.3** — Marcar spec como `done` en `ROADMAP.md` — confirmado por el usuario ("cierra la
+      spec"), 2026-08-26.
 
 ---
 

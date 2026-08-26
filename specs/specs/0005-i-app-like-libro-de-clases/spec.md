@@ -1,6 +1,6 @@
 # Spec 0005-i — App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases`
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-08-26
 > **Owner:** i
 > **Priority:** P2

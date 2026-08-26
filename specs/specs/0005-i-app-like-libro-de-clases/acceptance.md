@@ -147,9 +147,8 @@ Sin scope creep detectado.
 - [x] `lint:arch` limpio
 - [x] Sin deuda crítica abierta (deuda menor documentada, no bloqueante)
 
-**Cerrado por:** i (pendiente de cierre formal — a pedido explícito del usuario no se hizo commit
-ni se tocó `ROADMAP.md`/`specs/.active` en esta sesión; implementación completa y verificada,
-lista para cierre cuando el usuario lo confirme)
+**Cerrado por:** i — confirmado explícitamente por el usuario ("cierra la spec") tras verificar
+visualmente el fix de la segunda iteración con datos reales (6 alumnos, 6 semanas de asistencia).
 **Fecha:** 2026-08-26
 
 ---
