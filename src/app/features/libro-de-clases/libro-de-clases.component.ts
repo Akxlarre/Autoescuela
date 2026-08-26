@@ -45,7 +45,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen-4" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
       <app-section-hero
         density="slim"
@@ -193,206 +193,229 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </div>
 
         @if (activeSection() === 'cabecera') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon name="file-text" [size]="18" class="mr-2 inline-block align-text-bottom" />
-              Libro de Control de Clases
-            </h2>
-            @if (facade.cabecera(); as cab) {
-              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="space-y-2 text-sm">
-                  <p>
-                    <span class="font-medium text-text-secondary">Autoescuela:</span>
-                    {{ cab.branchName }}
-                  </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">Curso:</span> {{ cab.courseName }}
-                  </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">ID:</span>
-                    {{ cab.bookId || '—' }}
-                  </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">Promoción:</span>
-                    {{ cab.promotionName }} ({{ cab.promotionCode }})
-                  </p>
-                </div>
-                <div class="space-y-2 text-sm">
-                  <p>
-                    <span class="font-medium text-text-secondary">Fecha inicio:</span>
-                    {{ formatDate(cab.startDate) }}
-                  </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">Fecha término:</span>
-                    {{ formatDate(cab.endDate) }}
-                  </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">Dirección:</span>
-                    {{ cab.branchAddress || '—' }}
-                  </p>
-                </div>
-              </div>
-              <div class="mt-4 border-t pt-4 border-border-default">
-                <h3 class="mb-3 text-sm font-semibold text-text-secondary">
-                  <app-icon name="edit-3" [size]="14" class="mr-1 inline-block align-text-bottom" />
-                  Datos del Libro de Clases
-                </h3>
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon
+                  name="file-text"
+                  [size]="18"
+                  class="mr-2 inline-block align-text-bottom"
+                />
+                Libro de Control de Clases
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              @if (facade.cabecera(); as cab) {
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label class="mb-1 block text-xs font-medium text-text-secondary"
-                      >Código Autorizado por SENCE</label
-                    >
-                    <input
-                      type="text"
-                      class="ldc-input"
-                      placeholder="Ej: 1237920905"
-                      [ngModel]="editSenceCode()"
-                      (ngModelChange)="editSenceCode.set($event)"
-                      data-llm-description="input for SENCE authorized code"
+                  <div class="space-y-2 text-sm">
+                    <p>
+                      <span class="font-medium text-text-secondary">Autoescuela:</span>
+                      {{ cab.branchName }}
+                    </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">Curso:</span>
+                      {{ cab.courseName }}
+                    </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">ID:</span>
+                      {{ cab.bookId || '—' }}
+                    </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">Promoción:</span>
+                      {{ cab.promotionName }} ({{ cab.promotionCode }})
+                    </p>
+                  </div>
+                  <div class="space-y-2 text-sm">
+                    <p>
+                      <span class="font-medium text-text-secondary">Fecha inicio:</span>
+                      {{ formatDate(cab.startDate) }}
+                    </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">Fecha término:</span>
+                      {{ formatDate(cab.endDate) }}
+                    </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">Dirección:</span>
+                      {{ cab.branchAddress || '—' }}
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 border-t pt-4 border-border-default">
+                  <h3 class="mb-3 text-sm font-semibold text-text-secondary">
+                    <app-icon
+                      name="edit-3"
+                      [size]="14"
+                      class="mr-1 inline-block align-text-bottom"
                     />
-                    @if (cab.senceCodeUpdatedAt) {
-                      <p class="mt-1 text-xs text-text-muted">
-                        Última modificación: {{ cab.senceCodeUpdatedByName || '—' }} ·
-                        {{ formatTimestamp(cab.senceCodeUpdatedAt) }}
-                      </p>
+                    Datos del Libro de Clases
+                  </h3>
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-text-secondary"
+                        >Código Autorizado por SENCE</label
+                      >
+                      <input
+                        type="text"
+                        class="ldc-input"
+                        placeholder="Ej: 1237920905"
+                        [ngModel]="editSenceCode()"
+                        (ngModelChange)="editSenceCode.set($event)"
+                        data-llm-description="input for SENCE authorized code"
+                      />
+                      @if (cab.senceCodeUpdatedAt) {
+                        <p class="mt-1 text-xs text-text-muted">
+                          Última modificación: {{ cab.senceCodeUpdatedByName || '—' }} ·
+                          {{ formatTimestamp(cab.senceCodeUpdatedAt) }}
+                        </p>
+                      }
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-text-secondary"
+                        >Horario</label
+                      >
+                      <input
+                        type="text"
+                        class="ldc-input"
+                        placeholder="Ej: L-V 17:30-22:30, S 9:00-14:00"
+                        [ngModel]="editHorario()"
+                        (ngModelChange)="editHorario.set($event)"
+                        data-llm-description="input for class schedule"
+                      />
+                    </div>
+                  </div>
+                  <div class="mt-3 flex items-center gap-3">
+                    <app-async-btn
+                      label="Guardar"
+                      [loading]="facade.isSaving()"
+                      loadingLabel="Guardando..."
+                      [disabled]="!hasEditableChanges()"
+                      (click)="onSaveClassBook()"
+                      data-llm-action="save-class-book-fields"
+                    />
+                    @if (!hasEditableChanges()) {
+                      <span class="text-xs text-text-muted">Sin cambios</span>
                     }
                   </div>
-                  <div>
-                    <label class="mb-1 block text-xs font-medium text-text-secondary"
-                      >Horario</label
-                    >
-                    <input
-                      type="text"
-                      class="ldc-input"
-                      placeholder="Ej: L-V 17:30-22:30, S 9:00-14:00"
-                      [ngModel]="editHorario()"
-                      (ngModelChange)="editHorario.set($event)"
-                      data-llm-description="input for class schedule"
-                    />
-                  </div>
                 </div>
-                <div class="mt-3 flex items-center gap-3">
-                  <app-async-btn
-                    label="Guardar"
-                    [loading]="facade.isSaving()"
-                    loadingLabel="Guardando..."
-                    [disabled]="!hasEditableChanges()"
-                    (click)="onSaveClassBook()"
-                    data-llm-action="save-class-book-fields"
-                  />
-                  @if (!hasEditableChanges()) {
-                    <span class="text-xs text-text-muted">Sin cambios</span>
-                  }
-                </div>
-              </div>
-            }
+              }
+            </div>
           </section>
         }
 
         @if (activeSection() === 'profesores') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon name="users" [size]="18" class="mr-2 inline-block align-text-bottom" />
-              Profesores por Módulo
-              <span class="section-meta">{{ facade.profesores().length }} módulos</span>
-            </h2>
-            <div class="mt-4 overflow-x-auto">
-              <table class="ldc-table">
-                <thead>
-                  <tr>
-                    <th class="w-12">N°</th>
-                    <th>Módulo</th>
-                    <th>Nombre Profesor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (prof of facade.profesores(); track prof.moduleNumber) {
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon name="users" [size]="18" class="mr-2 inline-block align-text-bottom" />
+                Profesores por Módulo
+                <span class="section-meta">{{ facade.profesores().length }} módulos</span>
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              <div class="overflow-x-auto">
+                <table class="ldc-table">
+                  <thead>
                     <tr>
-                      <td class="text-center">{{ prof.moduleNumber }}</td>
-                      <td>{{ prof.moduleName }}</td>
-                      <td>{{ prof.lecturerName }}</td>
+                      <th class="w-12">N°</th>
+                      <th>Módulo</th>
+                      <th>Nombre Profesor</th>
                     </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (prof of facade.profesores(); track prof.moduleNumber) {
+                      <tr>
+                        <td class="text-center">{{ prof.moduleNumber }}</td>
+                        <td>{{ prof.moduleName }}</td>
+                        <td>{{ prof.lecturerName }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         }
 
         @if (activeSection() === 'alumnos') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon
-                name="list-checks"
-                [size]="18"
-                class="mr-2 inline-block align-text-bottom"
-              />
-              Lista de Clase
-              <span class="ml-2 text-sm font-normal text-text-muted"
-                >({{ facade.totalAlumnos() }} alumnos)</span
-              >
-            </h2>
-            <div class="mt-4 overflow-x-auto">
-              <table class="ldc-table">
-                <thead>
-                  <tr>
-                    <th class="w-12">N°</th>
-                    <th>Apellido, Nombre</th>
-                    <th>RUN</th>
-                    <th>Teléfono</th>
-                    <th>Licencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon
+                  name="list-checks"
+                  [size]="18"
+                  class="mr-2 inline-block align-text-bottom"
+                />
+                Lista de Clase
+                <span class="ml-2 text-sm font-normal text-text-muted"
+                  >({{ facade.totalAlumnos() }} alumnos)</span
+                >
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              <div class="overflow-x-auto">
+                <table class="ldc-table">
+                  <thead>
                     <tr>
-                      <td class="text-center">{{ alumno.numero }}</td>
-                      <td>{{ alumno.nombre }}</td>
-                      <td class="font-mono text-xs">{{ alumno.rut }}</td>
-                      <td>{{ alumno.telefono || '—' }}</td>
-                      <td class="text-center">{{ alumno.licenciaPostulada }}</td>
+                      <th class="w-12">N°</th>
+                      <th>Apellido, Nombre</th>
+                      <th>RUN</th>
+                      <th>Teléfono</th>
+                      <th>Licencia</th>
                     </tr>
-                  }
-                  @if (facade.alumnos().length === 0) {
-                    <tr>
-                      <td colspan="5" class="py-6 text-center text-text-muted">
-                        Sin alumnos inscritos
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+                      <tr>
+                        <td class="text-center">{{ alumno.numero }}</td>
+                        <td>{{ alumno.nombre }}</td>
+                        <td class="font-mono text-xs">{{ alumno.rut }}</td>
+                        <td>{{ alumno.telefono || '—' }}</td>
+                        <td class="text-center">{{ alumno.licenciaPostulada }}</td>
+                      </tr>
+                    }
+                    @if (facade.alumnos().length === 0) {
+                      <tr>
+                        <td colspan="5" class="py-6 text-center text-text-muted">
+                          Sin alumnos inscritos
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         }
 
         @if (activeSection() === 'asistencia') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon
-                name="calendar-check"
-                [size]="18"
-                class="mr-2 inline-block align-text-bottom"
-              />
-              Control de Asistencia (Firma Diaria)
-              <span class="section-meta">{{ facade.asistenciaSemanal().length }} semanas</span>
-            </h2>
-            <div class="mt-3 flex flex-wrap gap-3">
-              <span class="flex items-center gap-1.5 text-xs text-text-secondary"
-                ><span class="attendance-present">P</span> Presente</span
-              >
-              <span class="flex items-center gap-1.5 text-xs text-text-secondary"
-                ><span class="attendance-absent">A</span> Ausente</span
-              >
-              <span class="flex items-center gap-1.5 text-xs text-text-secondary"
-                ><span class="attendance-excused">J</span> Justificado</span
-              >
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon
+                  name="calendar-check"
+                  [size]="18"
+                  class="mr-2 inline-block align-text-bottom"
+                />
+                Control de Asistencia (Firma Diaria)
+                <span class="section-meta">{{ totalWeeks() }} semanas</span>
+              </h2>
+              <div class="mt-3 flex flex-wrap gap-3">
+                <span class="flex items-center gap-1.5 text-xs text-text-secondary"
+                  ><span class="attendance-present">P</span> Presente</span
+                >
+                <span class="flex items-center gap-1.5 text-xs text-text-secondary"
+                  ><span class="attendance-absent">A</span> Ausente</span
+                >
+                <span class="flex items-center gap-1.5 text-xs text-text-secondary"
+                  ><span class="attendance-excused">J</span> Justificado</span
+                >
+              </div>
             </div>
-            @if (facade.asistenciaSemanal().length === 0) {
-              <p class="mt-4 text-sm text-text-muted">Sin sesiones registradas</p>
-            }
-            @for (semana of facade.asistenciaSemanal(); track semana.weekStartDate) {
-              <div class="mt-4">
+
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              @if (totalWeeks() === 0) {
+                <p class="text-sm text-text-muted">Sin sesiones registradas</p>
+              } @else if (visibleWeek(); as semana) {
                 <h3 class="mb-2 text-sm font-semibold text-text-secondary">
                   {{ semana.weekLabel }}
                 </h3>
@@ -443,171 +466,213 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     </tbody>
                   </table>
                 </div>
+              }
+            </div>
+
+            @if (totalWeeks() > 1) {
+              <div
+                class="shrink-0 flex items-center justify-between px-6 py-3 border-t border-border-default"
+              >
+                <button
+                  type="button"
+                  class="flex items-center justify-center w-8 h-8 rounded-lg text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+                  [disabled]="selectedWeekIndex() === 0"
+                  (click)="weekPrev()"
+                  aria-label="Semana anterior"
+                  data-llm-action="asistencia-semana-anterior"
+                >
+                  <app-icon name="chevron-left" [size]="16" />
+                </button>
+                <span class="micro-label"
+                  >Semana {{ selectedWeekIndex() + 1 }} de {{ totalWeeks() }}</span
+                >
+                <button
+                  type="button"
+                  class="flex items-center justify-center w-8 h-8 rounded-lg text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+                  [disabled]="selectedWeekIndex() === totalWeeks() - 1"
+                  (click)="weekNext()"
+                  aria-label="Semana siguiente"
+                  data-llm-action="asistencia-semana-siguiente"
+                >
+                  <app-icon name="chevron-right" [size]="16" />
+                </button>
               </div>
             }
           </section>
         }
 
         @if (activeSection() === 'calendario') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon name="calendar" [size]="18" class="mr-2 inline-block align-text-bottom" />
-              Calendario de Clases
-              <span class="section-meta">{{ facade.calendario().length }} clases</span>
-            </h2>
-            <div class="mt-4 overflow-x-auto">
-              <table class="ldc-table">
-                <thead>
-                  <tr>
-                    <th class="w-12">N°</th>
-                    <th>Fecha</th>
-                    <th>Asignatura</th>
-                    <th class="w-20 text-center">Horas</th>
-                    <th>Profesor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (clase of facade.calendario(); track clase.numero) {
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon name="calendar" [size]="18" class="mr-2 inline-block align-text-bottom" />
+                Calendario de Clases
+                <span class="section-meta">{{ facade.calendario().length }} clases</span>
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              <div class="overflow-x-auto">
+                <table class="ldc-table">
+                  <thead>
                     <tr>
-                      <td class="text-center">{{ clase.numero }}</td>
-                      <td>{{ formatDate(clase.fecha) }}</td>
-                      <td>{{ clase.asignatura }}</td>
-                      <td class="text-center">{{ clase.horas }}</td>
-                      <td>{{ clase.profesor }}</td>
+                      <th class="w-12">N°</th>
+                      <th>Fecha</th>
+                      <th>Asignatura</th>
+                      <th class="w-20 text-center">Horas</th>
+                      <th>Profesor</th>
                     </tr>
-                  }
-                  @if (facade.calendario().length === 0) {
-                    <tr>
-                      <td colspan="5" class="py-6 text-center text-text-muted">
-                        Sin clases programadas
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (clase of facade.calendario(); track clase.numero) {
+                      <tr>
+                        <td class="text-center">{{ clase.numero }}</td>
+                        <td>{{ formatDate(clase.fecha) }}</td>
+                        <td>{{ clase.asignatura }}</td>
+                        <td class="text-center">{{ clase.horas }}</td>
+                        <td>{{ clase.profesor }}</td>
+                      </tr>
+                    }
+                    @if (facade.calendario().length === 0) {
+                      <tr>
+                        <td colspan="5" class="py-6 text-center text-text-muted">
+                          Sin clases programadas
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         }
 
         @if (activeSection() === 'evaluaciones') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon
-                name="clipboard-list"
-                [size]="18"
-                class="mr-2 inline-block align-text-bottom"
-              />
-              Evaluaciones Clase Profesional
-              <span class="section-meta">Escala MTT · Mín. 75</span>
-            </h2>
-            <div class="mt-4 overflow-x-auto">
-              <table class="ldc-table ldc-table-compact">
-                <thead>
-                  <tr>
-                    <th class="w-12">N°</th>
-                    <th class="min-w-45">Apellido, Nombre</th>
-                    @for (modName of moduleHeaders(); track $index) {
-                      <th class="w-20 text-center text-2xs">{{ modName }}</th>
-                    }
-                    <th class="w-20 text-center font-bold">Nota Final</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (fila of facade.evaluaciones(); track fila.rut; let idx = $index) {
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon
+                  name="clipboard-list"
+                  [size]="18"
+                  class="mr-2 inline-block align-text-bottom"
+                />
+                Evaluaciones Clase Profesional
+                <span class="section-meta">Escala MTT · Mín. 75</span>
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              <div class="overflow-x-auto">
+                <table class="ldc-table ldc-table-compact">
+                  <thead>
                     <tr>
-                      <td class="text-center">{{ idx + 1 }}</td>
-                      <td class="text-xs">{{ fila.nombre }}</td>
-                      @for (nota of fila.notas; track $index) {
-                        <td class="text-center">
-                          @if (nota !== null) {
-                            <span [class.text-error]="nota < 75">{{ nota }}</span>
+                      <th class="w-12">N°</th>
+                      <th class="min-w-45">Apellido, Nombre</th>
+                      @for (modName of moduleHeaders(); track $index) {
+                        <th class="w-20 text-center text-2xs">{{ modName }}</th>
+                      }
+                      <th class="w-20 text-center font-bold">Nota Final</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (fila of facade.evaluaciones(); track fila.rut; let idx = $index) {
+                      <tr>
+                        <td class="text-center">{{ idx + 1 }}</td>
+                        <td class="text-xs">{{ fila.nombre }}</td>
+                        @for (nota of fila.notas; track $index) {
+                          <td class="text-center">
+                            @if (nota !== null) {
+                              <span [class.text-error]="nota < 75">{{ nota }}</span>
+                            } @else {
+                              <span class="text-text-muted">—</span>
+                            }
+                          </td>
+                        }
+                        <td class="text-center font-semibold">
+                          @if (fila.notaFinal !== null) {
+                            <span
+                              [class.text-success]="fila.aprobado"
+                              [class.text-error]="!fila.aprobado"
+                              >{{ fila.notaFinal }}</span
+                            >
                           } @else {
                             <span class="text-text-muted">—</span>
                           }
                         </td>
-                      }
-                      <td class="text-center font-semibold">
-                        @if (fila.notaFinal !== null) {
-                          <span
-                            [class.text-success]="fila.aprobado"
-                            [class.text-error]="!fila.aprobado"
-                            >{{ fila.notaFinal }}</span
-                          >
-                        } @else {
-                          <span class="text-text-muted">—</span>
-                        }
-                      </td>
-                    </tr>
-                  }
-                  @if (facade.evaluaciones().length === 0) {
-                    <tr>
-                      <td
-                        [attr.colspan]="MODULE_COUNT + 3"
-                        class="py-6 text-center text-text-muted"
-                      >
-                        Sin evaluaciones registradas
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+                      </tr>
+                    }
+                    @if (facade.evaluaciones().length === 0) {
+                      <tr>
+                        <td
+                          [attr.colspan]="MODULE_COUNT + 3"
+                          class="py-6 text-center text-text-muted"
+                        >
+                          Sin evaluaciones registradas
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         }
 
         @if (activeSection() === 'resumen') {
-          <section class="bento-banner card p-6" appCardHover>
-            <h2 class="text-lg font-semibold text-text-primary">
-              <app-icon
-                name="bar-chart-2"
-                [size]="18"
-                class="mr-2 inline-block align-text-bottom"
-              />
-              Asistencia Clase Profesional
-              <span class="section-meta">{{ facade.resumenAsistencia().length }} alumnos</span>
-            </h2>
-            <div class="mt-4 overflow-x-auto">
-              <table class="ldc-table">
-                <thead>
-                  <tr>
-                    <th class="w-12">N°</th>
-                    <th>Apellido, Nombre</th>
-                    <th class="w-32 text-center">% Asistencia<br />Clase Práctica</th>
-                    <th class="w-32 text-center">% Asistencia<br />Clase Teórica</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (r of facade.resumenAsistencia(); track r.nombre; let idx = $index) {
+          <section class="bento-banner bento-fill card p-0 flex flex-col min-h-0" appCardHover>
+            <div class="p-6 pb-4 shrink-0">
+              <h2 class="text-lg font-semibold text-text-primary">
+                <app-icon
+                  name="bar-chart-2"
+                  [size]="18"
+                  class="mr-2 inline-block align-text-bottom"
+                />
+                Asistencia Clase Profesional
+                <span class="section-meta">{{ facade.resumenAsistencia().length }} alumnos</span>
+              </h2>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+              <div class="overflow-x-auto">
+                <table class="ldc-table">
+                  <thead>
                     <tr>
-                      <td class="text-center">{{ idx + 1 }}</td>
-                      <td>{{ r.nombre }}</td>
-                      <td class="text-center font-mono">
-                        <span
-                          [class.text-success]="r.pctPractica >= 75"
-                          [class.text-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
-                          [class.text-error]="r.pctPractica < 50"
-                          >{{ r.pctPractica }}%</span
-                        >
-                      </td>
-                      <td class="text-center font-mono">
-                        <span
-                          [class.text-success]="r.pctTeorica >= 75"
-                          [class.text-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
-                          [class.text-error]="r.pctTeorica < 50"
-                          >{{ r.pctTeorica }}%</span
-                        >
-                      </td>
+                      <th class="w-12">N°</th>
+                      <th>Apellido, Nombre</th>
+                      <th class="w-32 text-center">% Asistencia<br />Clase Práctica</th>
+                      <th class="w-32 text-center">% Asistencia<br />Clase Teórica</th>
                     </tr>
-                  }
-                  @if (facade.resumenAsistencia().length === 0) {
-                    <tr>
-                      <td colspan="4" class="py-6 text-center text-text-muted">
-                        Sin datos de asistencia
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (r of facade.resumenAsistencia(); track r.nombre; let idx = $index) {
+                      <tr>
+                        <td class="text-center">{{ idx + 1 }}</td>
+                        <td>{{ r.nombre }}</td>
+                        <td class="text-center font-mono">
+                          <span
+                            [class.text-success]="r.pctPractica >= 75"
+                            [class.text-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
+                            [class.text-error]="r.pctPractica < 50"
+                            >{{ r.pctPractica }}%</span
+                          >
+                        </td>
+                        <td class="text-center font-mono">
+                          <span
+                            [class.text-success]="r.pctTeorica >= 75"
+                            [class.text-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
+                            [class.text-error]="r.pctTeorica < 50"
+                            >{{ r.pctTeorica }}%</span
+                          >
+                        </td>
+                      </tr>
+                    }
+                    @if (facade.resumenAsistencia().length === 0) {
+                      <tr>
+                        <td colspan="4" class="py-6 text-center text-text-muted">
+                          Sin datos de asistencia
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         }
@@ -619,6 +684,21 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       /* Permite que cada fila mida según su contenido real (hero slim, secciones
          variables) en vez de imponer un piso de 120px por fila. */
       --bento-row-min: auto;
+    }
+
+    /* Ajuste local sobre --fill-screen-4 (spec 0005-i, feedback visual post-implementación):
+       la fila 3 del modificador (minmax(100px, 1fr)) fue pensada para una sección de contenido
+       VARIABLE que compite por el espacio sobrante — acá esa fila la ocupa el subnav, que es un
+       control corto de altura fija. Con 1fr, el subnav se estiraba para repartirse el alto
+       sobrante junto con la card protagonista (fila 4), dejando un hueco vacío enorme arriba y
+       abajo del subnav. Fijar esa fila a auto (sin fr) la saca de la repartición de espacio sobrante —
+       todo el sobrante va íntegro a la card de la sección activa, que es donde corresponde. Scope
+       vía Angular ViewEncapsulation (no toca el SCSS global de bento-grid — otras páginas que sí
+       usan la fila 3 como sección variable, ej. Categorías en spec 0003-i, no se ven afectadas). */
+    @container layoutmain (min-width: 1024px) {
+      .bento-grid--fill-screen-4 {
+        grid-template-rows: auto auto auto minmax(280px, 1fr);
+      }
     }
 
     .ldc-table {
@@ -732,6 +812,16 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
   /** Sección visible del subnav — reemplaza el `openSections: Set<string>` del acordeón. */
   readonly activeSection = signal<string>('cabecera');
 
+  /** Índice de semana visible en "Control de Asistencia (Firma Diaria)" — paginación por semana
+   *  (spec 0005-i, AC3): reemplaza el listado de todas las semanas apiladas. Estado de UI puro,
+   *  no vive en el Facade porque `asistenciaSemanal()` ya trae todas las semanas completas. */
+  readonly selectedWeekIndex = signal(0);
+  readonly totalWeeks = computed(() => this.facade.asistenciaSemanal().length);
+  readonly visibleWeek = computed(() => {
+    const semanas = this.facade.asistenciaSemanal();
+    return semanas[this.selectedWeekIndex()] ?? null;
+  });
+
   readonly heroActions = computed<SectionHeroAction[]>(() => {
     if (!this.facade.hasDatos() || this.facade.isLoadingSections()) return [];
     return [
@@ -815,6 +905,13 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
         this.editHorario.set(cab.horario);
       }
     });
+
+    // Reset de página al cambiar los datos de asistencia (nueva promoción/curso seleccionado) —
+    // evita quedar apuntando a un índice de semana que ya no existe (spec 0005-i).
+    effect(() => {
+      this.facade.asistenciaSemanal();
+      this.selectedWeekIndex.set(0);
+    });
   }
 
   ngOnInit(): void {
@@ -847,6 +944,14 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
 
   onSectionChange(id: string): void {
     this.activeSection.set(id);
+  }
+
+  weekPrev(): void {
+    this.selectedWeekIndex.update((i) => Math.max(0, i - 1));
+  }
+
+  weekNext(): void {
+    this.selectedWeekIndex.update((i) => Math.min(this.totalWeeks() - 1, i + 1));
   }
 
   formatDate(dateStr: string): string {
