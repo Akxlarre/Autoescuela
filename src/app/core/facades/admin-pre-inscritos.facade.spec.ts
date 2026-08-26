@@ -242,7 +242,7 @@ describe('AdminPreInscritosFacade', () => {
       licenseObtainedDate: '2020-01-01',
     };
 
-    it('pago total → payment_status paid y pending_balance 0', async () => {
+    it('enrollment se crea siempre en estado "sin pagar" (el trigger de BD aplica el pago)', async () => {
       const { facade, mockSupabase } = setup(matriculaTables());
       await facade.initialize();
       const res = await facade.completarMatricula({
@@ -254,15 +254,16 @@ describe('AdminPreInscritosFacade', () => {
       const insertMock = mockSupabase._builders.get('enrollments').insert;
       expect(insertMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          payment_status: 'paid',
-          pending_balance: 0,
+          total_paid: 0,
+          payment_status: 'pending',
+          pending_balance: 90000, // basePrice - discountAmount, antes del pago
           registration_channel: 'in_person',
           registered_by: 9,
         }),
       );
     });
 
-    it('abono parcial → partial con saldo pendiente; método "pendiente" → pending', async () => {
+    it('abono parcial y método "pendiente" también crean el enrollment en estado "sin pagar"', async () => {
       const { facade, mockSupabase } = setup(matriculaTables());
       await facade.initialize();
       await facade.completarMatricula({
@@ -272,7 +273,11 @@ describe('AdminPreInscritosFacade', () => {
       } as any);
       const insertMock = mockSupabase._builders.get('enrollments').insert;
       expect(insertMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ payment_status: 'partial', pending_balance: 50000 }),
+        expect.objectContaining({
+          total_paid: 0,
+          payment_status: 'pending',
+          pending_balance: 90000,
+        }),
       );
 
       await facade.completarMatricula({
@@ -281,7 +286,11 @@ describe('AdminPreInscritosFacade', () => {
         paymentMethod: 'pendiente',
       } as any);
       expect(insertMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ payment_status: 'pending', pending_balance: 90000 }),
+        expect.objectContaining({
+          total_paid: 0,
+          payment_status: 'pending',
+          pending_balance: 90000,
+        }),
       );
     });
 
@@ -292,6 +301,40 @@ describe('AdminPreInscritosFacade', () => {
       expect(res).toBeNull();
       expect(facade.error()).toBe('Pre-inscrito no encontrado');
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
+
+    it('inserta un pago en payments cuando el método no es pendiente', async () => {
+      const { facade, mockSupabase } = setup(matriculaTables());
+      await facade.initialize();
+      await facade.completarMatricula({
+        ...basePayload,
+        totalPaid: 90000,
+        paymentMethod: 'efectivo',
+      } as any);
+      const insertMock = mockSupabase._builders.get('payments').insert;
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollment_id: 500,
+          type: 'enrollment',
+          total_amount: 90000,
+          cash_amount: 90000,
+          transfer_amount: 0,
+          card_amount: 0,
+          status: 'paid',
+          registered_by: 9,
+        }),
+      );
+    });
+
+    it('método "pendiente" → no inserta fila en payments', async () => {
+      const { facade, mockSupabase } = setup(matriculaTables());
+      await facade.initialize();
+      await facade.completarMatricula({
+        ...basePayload,
+        totalPaid: 0,
+        paymentMethod: 'pendiente',
+      } as any);
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('payments');
     });
   });
 

@@ -64,7 +64,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
               class="p-8 text-center border rounded-xl border-dashed border-border-subtle bg-elevated"
             >
               <p class="text-text-muted text-sm">
-                No hay cards de cursos. Hacé clic en "Agregar Curso" para crear una.
+                No hay cards de cursos. Haz clic en "Agregar Curso" para crear una.
               </p>
             </div>
           }
@@ -295,9 +295,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
       }
 
       <div [formGroup]="pricingFooterGroup()" class="flex flex-col gap-6">
-        <h3
-          class="font-bold text-text-primary border-b pb-2 mt-6 mb-2 border-border-subtle"
-        >
+        <h3 class="font-bold text-text-primary border-b pb-2 mt-6 mb-2 border-border-subtle">
           Términos de Pago y Garantía (Precios)
         </h3>
         <div class="bento-grid bento-grid--forms bento-grid--forms">

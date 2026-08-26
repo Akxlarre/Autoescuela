@@ -875,9 +875,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           <!-- Fecha emisión HVC -->
                           @if (doc.key === 'hvc' && docHvcFile()) {
                             <app-date-input
+                              label="Fecha de emisión"
                               [value]="docHvcIssueDate()"
                               (valueChange)="docHvcIssueDate.set($event)"
-                              data-llm-description="HVC issue date"
+                              data-llm-description="Fecha de emisión del documento Hoja de Vida del Conductor"
                             />
                           }
                           <input
@@ -1262,7 +1263,12 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
     required: boolean;
     accept: string;
   }[] = [
-    { key: 'carnet', label: 'Foto carnet', required: true, accept: 'image/*' },
+    {
+      key: 'carnet',
+      label: 'Foto carnet (para credencial física)',
+      required: true,
+      accept: 'image/*',
+    },
     { key: 'hvc', label: 'Hoja de vida del conductor', required: true, accept: '.pdf,.jpg,.png' },
     { key: 'cedula', label: 'Cédula de identidad', required: false, accept: '.pdf,.jpg,.png' },
     { key: 'licencia', label: 'Licencia de conducir', required: false, accept: '.pdf,.jpg,.png' },
@@ -1316,8 +1322,17 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
 
   onPromoChange(value: number): void {
     this.selectedPromoId.set(value);
-    this.selectedPromoCourseId.set(null);
-    this.selectedCourseId.set(null);
+    // La promoción ya viene filtrada por la licencia elegida en la pre-inscripción
+    // (ver AdminPreInscritosFacade.mapToPromocionOption), así que si resuelve a un
+    // único curso, no hace falta que el operador lo vuelva a elegir a mano.
+    const courses = this.facade.promociones().find((p) => p.id === value)?.courses ?? [];
+    if (courses.length === 1) {
+      this.selectedPromoCourseId.set(courses[0].promotionCourseId);
+      this.selectedCourseId.set(courses[0].courseId);
+    } else {
+      this.selectedPromoCourseId.set(null);
+      this.selectedCourseId.set(null);
+    }
   }
 
   /** Abre la ventana de impresión con el test EPQ en blanco para rendir en la sede. */

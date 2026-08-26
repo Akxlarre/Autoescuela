@@ -172,7 +172,7 @@ const PAGE_SIZE_MOBILE = 6;
             <app-empty-state
               icon="users"
               message="No hay pre-inscritos con los filtros aplicados"
-              subtitle="Ajusta la busqueda o los filtros para ver mas resultados."
+              subtitle="Ajusta la búsqueda o los filtros para ver más resultados."
               actionLabel="Limpiar filtros"
               actionIcon="refresh-cw"
               (action)="resetFiltros()"
@@ -406,7 +406,7 @@ export class PreInscritosContentComponent implements AfterViewInit {
   readonly maxVisible = input<number | null>(null);
   readonly showSede = input(false);
   readonly title = input('Pre-inscritos Clase Profesional');
-  readonly subtitle = input('Gestion de pre-inscripciones online pendientes de revision');
+  readonly subtitle = input('Gestión de pre-inscripciones online pendientes de revisión');
   readonly backRoute = input('');
   readonly backLabel = input('Alumnos Profesional');
   /**

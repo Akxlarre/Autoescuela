@@ -255,8 +255,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_audit_log | SELECT | `auth_user_role() = 'admin'` | — |
+| select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
 | insert_audit_log | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
+
+> `select_audit_log` ampliada en `fix-224-m` (2026-08-25): antes era `auth_user_role() = 'admin'`
+> a secas — ninguna secretaria podía leer NINGUNA fila, ni siquiera las suyas propias, por lo que
+> el widget "Actividad reciente" de su dashboard quedaba permanentemente vacío pese a que
+> `log_change()` sí registraba sus acciones. Ahora cualquier usuario puede ver además las filas
+> donde él mismo es el actor (`user_id = auth_user_id()`).
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
 

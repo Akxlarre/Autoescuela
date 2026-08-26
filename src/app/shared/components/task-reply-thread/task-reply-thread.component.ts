@@ -47,7 +47,7 @@ import type { TaskReply, TaskStatus } from '@core/models/ui/task.model';
                   · {{ formatAge(reply.created_at) }}
                 </span>
               </p>
-              <p class="text-sm text-text-primary break-words whitespace-pre-wrap">
+              <p class="text-sm text-text-primary wrap-break-word whitespace-pre-wrap">
                 {{ reply.body }}
               </p>
             </li>
@@ -61,7 +61,7 @@ import type { TaskReply, TaskStatus } from '@core/models/ui/task.model';
           <textarea
             #replyInput
             class="flex-1 resize-none rounded-lg border border-border-default px-3 py-2 text-sm bg-surface text-text-primary min-h-16 focus:outline-none focus:ring-2"
-            placeholder="Escribí tu respuesta…"
+            placeholder="Escribe tu respuesta…"
             [attr.maxlength]="500"
             [value]="draftBody()"
             (input)="draftBody.set($any($event).target.value)"

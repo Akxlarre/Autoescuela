@@ -543,11 +543,14 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           </app-badge>
                         </td>
                         <td class="py-3 pl-4">
-                          <!-- justify-end (fix-159): la columna Acciones puede quedar más
-                               ancha que su contenido (colgroup fijo, ver arriba) — alinear
-                               a la derecha evita que los botones floten lejos del borde
-                               derecho de la tabla. -->
-                          <div class="flex items-center justify-end gap-2">
+                          <!-- Alineado a la izquierda (fix-221): con colgroup + table-layout:
+                               fixed (fix-159) el ancho de esta columna es fijo, así que alinear
+                               a la izquierda no reintroduce el hueco original de fix-159 (ese
+                               aparecía por table-layout:auto sin ancho propio, no por la
+                               alineación). Mantiene el contenido pegado a la columna Estado en
+                               vez de flotar lejos de su cabecera, para botones y para el texto
+                               "Finalizada" por igual. -->
+                          <div class="flex items-center gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
@@ -564,8 +567,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               <!-- Marcar inasistencia (solo si ya pasó la hora) -->
                               @if (isPastStartTime(row.scheduledAt)) {
                                 <button
-                                  aria-label="Marcar inasistencia"
-                                  class="p-1.5 rounded-md transition-colors cursor-pointer text-error"
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-error border-error bg-error/10"
                                   pTooltip="Marcar inasistencia"
                                   tooltipPosition="top"
                                   [disabled]="isSaving()"
@@ -574,7 +576,8 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                                     markAttendance.emit({ sessionId: row.id, status: 'ausente' })
                                   "
                                 >
-                                  <app-icon name="x-circle" [size]="16" />
+                                  <app-icon name="x-circle" [size]="12" />
+                                  Ausente
                                 </button>
                               }
                             }
@@ -584,7 +587,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               >
                               <!-- Finalizar clase -->
                               <button
-                                class="btn-success-soft btn-sm font-semibold border flex items-center cursor-pointer"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-success border-success bg-success/10"
                                 [disabled]="isSaving()"
                                 pTooltip="Finalizar clase"
                                 tooltipPosition="top"
@@ -597,7 +600,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="btn-ghost btn-sm"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
                                 (click)="openJustifyModal(row.id)"
@@ -607,13 +610,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.justificacion) {
                               <button
-                                class="btn-ghost btn-sm flex items-center"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
                                 [pTooltip]="row.justificacion"
                                 tooltipPosition="top"
                                 data-llm-action="view-justification"
                                 (click)="openViewMotivo(row.justificacion)"
                               >
-                                <app-icon name="info" [size]="14" />
+                                <app-icon name="info" [size]="12" />
                                 Ver motivo
                               </button>
                             }

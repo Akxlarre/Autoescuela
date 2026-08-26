@@ -263,17 +263,13 @@ export class AdminPreInscritosFacade {
           promotion_course_id: payload.promotionCourseId,
           base_price: payload.basePrice,
           discount: payload.discountAmount,
-          total_paid: payload.totalPaid,
-          pending_balance: Math.max(
-            0,
-            payload.basePrice - payload.discountAmount - payload.totalPaid,
-          ),
-          payment_status:
-            payload.paymentMethod === 'pendiente'
-              ? 'pending'
-              : payload.totalPaid >= payload.basePrice - payload.discountAmount
-                ? 'paid'
-                : 'partial',
+          // Estado "sin pagar": el trigger check_payment_within_pending_balance exige
+          // que pending_balance refleje el saldo ANTES del pago que se inserta justo
+          // después (3b). recalculate_enrollment_balance (AFTER INSERT en payments)
+          // sincroniza total_paid/pending_balance/payment_status una vez creado el pago.
+          total_paid: 0,
+          pending_balance: Math.max(0, payload.basePrice - payload.discountAmount),
+          payment_status: 'pending',
           status: 'active',
           docs_complete: false,
           contract_accepted: false,
@@ -284,6 +280,26 @@ export class AdminPreInscritosFacade {
         .single();
 
       if (enrollError) throw enrollError;
+
+      // 3b. Registrar el pago en `payments` (mismas columnas que usa la RPC
+      // confirm_enrollment_with_payment) para que Cuadratura de Caja lo vea.
+      if (payload.paymentMethod !== 'pendiente') {
+        const { error: paymentError } = await this.supabase.client.from('payments').insert({
+          enrollment_id: enrollment.id,
+          type: 'enrollment',
+          total_amount: payload.totalPaid,
+          cash_amount: payload.paymentMethod === 'efectivo' ? payload.totalPaid : 0,
+          transfer_amount: payload.paymentMethod === 'transferencia' ? payload.totalPaid : 0,
+          card_amount: payload.paymentMethod === 'tarjeta' ? payload.totalPaid : 0,
+          voucher_amount: 0,
+          status: 'paid',
+          payment_date: new Date().toISOString().slice(0, 10),
+          requires_receipt: true,
+          registered_by: currentUser?.dbId ?? null,
+        });
+
+        if (paymentError) throw paymentError;
+      }
 
       // 4. Marcar pre-inscripción como pendiente de contrato
       const { error: preRegError } = await this.supabase.client

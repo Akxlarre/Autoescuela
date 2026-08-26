@@ -243,7 +243,7 @@ export class AsistenciaClaseBFacade {
       title: 'Eliminar horario',
       message: `Se cancelarán todas las clases prácticas agendadas de ${
         alerta?.alumnoName ?? 'este alumno'
-      }. Podés reactivarlas después desde la misma alerta.`,
+      }. Puedes reactivarlas después desde la misma alerta.`,
       confirmLabel: 'Eliminar horario',
       cancelLabel: 'Cancelar',
       severity: 'danger',

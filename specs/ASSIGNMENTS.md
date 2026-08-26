@@ -21,11 +21,9 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
-| ASG-i-001 | Revisar ortografía y voseo argentino en toda la app | `cualquiera` | fix | P1 | i | Ver precedente `ASG-b-021`. Ver `specs/assignments/ASG-i-001-*.md` |
-| ASG-i-004 | Migrar funciones de negocio del cliente a Edge Functions | `cualquiera` | fix | P1 | i | **Renumerada desde `ASG-i-002`** (chocaba con la completada `0011-m-print-flows-edge-functions`). Auditoría más amplia que su predecesora — excluye los 3 flujos de impresión ya migrados. Ver `specs/assignments/ASG-i-004-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
 | ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%). Precedente `0032-b`. La spec `0038-b` dejó el selector de período duplicado en ambas: es código a **absorber**, no un bloqueo. Ver `specs/assignments/ASG-b-096-*.md` |
-| ASG-i-005 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. Ver `specs/assignments/ASG-i-005-*.md` |
+| ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. **Renombrada desde `ASG-i-005`** (2026-08-25) para ocupar el número liberado al eliminar el `ASG-i-004` fantasma — ver nota en Convenciones. Ver `specs/assignments/ASG-i-004-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -234,6 +232,7 @@
 | ASG-b-082 | App-like: familia "reportes contables" + "cuadratura" (`admin` + `secretaria`) | [0003-i-app-like-reportes-contables](specs/0003-i-app-like-reportes-contables/spec.md) | 2026-08-24 |
 | ASG-b-098 | El parche del Bash Guard arregló 1 de 4 patrones | [hotfix-054-b-bash-guard-patrones-1-2-4](hotfixes/hotfix-054-b-bash-guard-patrones-1-2-4/hotfix.md) | 2026-08-24 |
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | [fix-150-b-areas-tactiles-compartidos](fixes/fix-150-b-areas-tactiles-compartidos/fix.md) | 2026-08-25 |
+| ASG-i-001 | Revisar ortografía y voseo argentino | [fix-215-m-ortografia-voseo-app](fixes/fix-215-m-ortografia-voseo-app/fix.md) | 2026-08-25 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -248,6 +247,22 @@
   > asignaciones con el mismo ID — el mismo fallo silencioso que los tracks ya habían resuelto
   > en julio con el código de autor. Las 51 asignaciones previas (todas de `b`) se renombraron
   > conservando su número: `ASG-001` → `ASG-b-001`.
+  > **El `ASG-i-004` original (Edge Functions) fue eliminado el 2026-08-25** — no era una
+  > asignación nueva: era el contenido de `ASG-i-002` de **antes** de su corrección de
+  > alcance del 21-08 (auditoría amplia de "toda lógica de negocio sensible" en vez de los
+  > 3 flujos de impresión que terminó cubriendo `ASG-i-002`, ya completada como
+  > `0011-m-print-flows-edge-functions`). Apareció el 24-08 con una nota de "renumerada por
+  > choque de ID", pero el choque real fue un `git pull`/merge sobre una rama que todavía
+  > tenía la versión pre-corrección de `ASG-i-002`, resuelto (por un Claude, sin el contexto
+  > de que la corrección de alcance YA era la resolución legítima) preservando ambas
+  > versiones como asignaciones distintas en vez de descartar la copia vieja. Ver
+  > `ASG-i-002` para el trabajo real y su historial completo. **El número `ASG-i-004` fue
+  > reasignado el mismo día** a la asignación del filtro de Rentabilidad (antes
+  > `ASG-i-005`) por decisión explícita del dueño — excepción puntual a "nunca se
+  > reutiliza" porque el `ASG-i-004` original nunca fue trabajo real, así que no hay
+  > historial que perder. No es precedente para reutilizar IDs en otros casos: solo aplica
+  > cuando el ID liberado corresponde a una entrada fantasma como esta, no a trabajo
+  > completado o descartado legítimamente.
 - **`Asignado a`:** código de autor de `specs/AUTHORS.md` (`m` Matías, `b` Benjamín, `i` Ignacio), o `cualquiera` si es un pool abierto para quien la tome primero.
 - **`Tipo sugerido`:** `spec` (feature nueva) / `fix` (bug con AC afectados) / `hotfix` (fix urgente simple) — quien reclama puede cambiarlo con `--as=` si al leer el contexto no coincide.
 - **Reclamar:** solo se puede reclamar una asignación con `Asignado a: cualquiera`, o una asignada específicamente a tu propio código de autor. Una vez `Reclamada`, nadie más puede tomarla.
