@@ -543,11 +543,14 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           </app-badge>
                         </td>
                         <td class="py-3 pl-4">
-                          <!-- justify-end (fix-159): la columna Acciones puede quedar más
-                               ancha que su contenido (colgroup fijo, ver arriba) — alinear
-                               a la derecha evita que los botones floten lejos del borde
-                               derecho de la tabla. -->
-                          <div class="flex items-center justify-end gap-2">
+                          <!-- Alineado a la izquierda (fix-221): con colgroup + table-layout:
+                               fixed (fix-159) el ancho de esta columna es fijo, así que alinear
+                               a la izquierda no reintroduce el hueco original de fix-159 (ese
+                               aparecía por table-layout:auto sin ancho propio, no por la
+                               alineación). Mantiene el contenido pegado a la columna Estado en
+                               vez de flotar lejos de su cabecera, para botones y para el texto
+                               "Finalizada" por igual. -->
+                          <div class="flex items-center gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
