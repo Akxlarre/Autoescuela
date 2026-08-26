@@ -1171,6 +1171,26 @@
   lectura "funcionen sin romper".
 - **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`
 
+### DG-083 — Una policy RLS de SELECT solo-admin en una tabla que también alimenta un widget de otro rol deja ese widget permanentemente vacío, sin error
+- **Trampa:** asumir que si un widget se renderiza para un rol (ej. "Actividad reciente" en el
+  dashboard de secretaria) y la query no tira error, es que "simplemente no hay datos todavía".
+  `audit_log` tenía una única policy `select_audit_log FOR SELECT USING (auth_user_role() =
+  'admin')` — ninguna secretaria podía leer NINGUNA fila, ni siquiera las suyas propias, sin
+  importar cuántas acciones reales hiciera. El trigger `log_change()` sí registraba sus acciones
+  (solo excluye explícitamente al actor `admin`, no a `secretaria`/`instructor` — ver DG-041 y
+  siguientes), así que el dato existía en la tabla, pero era invisible para ese rol por RLS. La
+  consecuencia es indistinguible de "no hay actividad reciente" — sin error, sin fila vacía
+  explicable, el widget queda muerto para siempre para ese rol.
+- **Realidad:** RLS filtra en silencio. Un componente compartido entre roles (Smart Component +
+  Facade reutilizados en `features/admin/` y `features/secretaria/`) que consulta una tabla con
+  policy restrictiva por rol puede renderizarse perfectamente para el rol excluido y jamás mostrar
+  nada — el bug no aparece en logs de consola ni en Network (la request es 200 OK, solo con
+  `data: []`).
+- **Regla de aplicabilidad:** al agregar o auditar un widget/Facade compartido entre roles, no
+  basta con probarlo como admin. Verificar la policy de `SELECT` de cada tabla que consulta contra
+  CADA rol que vaya a usar ese componente — si la policy es `auth_user_role() = 'admin'` a secas,
+  ningún otro rol verá nunca ninguna fila, aunque el Facade/query esté perfecto.
+- **Fuente:** `specs/fixes/fix-224-m-secretaria-lee-sus-propias-acciones-audit-log`
 
 ---
 
