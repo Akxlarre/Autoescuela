@@ -626,8 +626,11 @@ export class InstructoresFacade {
         },
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar instructor');
+      // fix-029-i: relanzamos el error ORIGINAL (no un Error re-envuelto con el mensaje
+      // genérico del sanitizer) — así el catch abajo puede leer error.context (el Response
+      // crudo de un FunctionsHttpError) y recuperar el mensaje de negocio real del Edge
+      // Function, en vez de perderlo. Ver DOMAIN-GOTCHAS DG-085.
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       this._vehiclesLoaded = false;
@@ -638,15 +641,40 @@ export class InstructoresFacade {
       );
       return true;
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al actualizar instructor';
+      const msg = await this.resolveEditarInstructorErrorMessage(err);
       this.toast.error('Error', msg);
       return false;
     } finally {
       this._isSubmitting.set(false);
     }
+  }
+
+  /**
+   * fix-029-i: `functions.invoke()` de Supabase, cuando el Edge Function responde con status
+   * no-2xx, retorna un `FunctionsHttpError` cuyo `.message` es genérico ("Edge Function
+   * returned a non-2xx status code") — el mensaje de negocio real queda en `error.context`
+   * (el `Response` crudo), sin leer. `ErrorSanitizerService.sanitize()` no lo reconoce (no es
+   * `HttpErrorResponse` de Angular ni trae `.code`) y cae a un mensaje genérico, ocultando del
+   * usuario errores reales como "email ya usado por otro instructor".
+   */
+  private async resolveEditarInstructorErrorMessage(err: unknown): Promise<string> {
+    const context = (err as { context?: unknown } | null)?.context;
+    if (context && typeof (context as Response).json === 'function') {
+      try {
+        const body = await (context as Response).json();
+        if (typeof body?.error === 'string') {
+          if (body.error.includes('users_email_key')) {
+            return 'Ya existe otro usuario registrado con ese correo electrónico.';
+          }
+          return body.error;
+        }
+      } catch {
+        // Body no parseable como JSON — seguimos al fallback del sanitizer.
+      }
+    }
+    return err instanceof Error
+      ? this.sanitizer.sanitize(err).message
+      : 'Error al actualizar instructor';
   }
 
   /**

@@ -368,6 +368,56 @@ describe('TasksFacade', () => {
     });
   });
 
+  // ── loadRecipients() — fix-030-i ────────────────────────────────────────────
+
+  describe('loadRecipients() como secretaria — fix-030-i', () => {
+    beforeEach(() => {
+      mockAuth.currentUser.mockReturnValue(SECRETARY_USER); // branchId: 1
+      mockBranch.selectedBranchId.mockReturnValue(1);
+    });
+
+    it('excluye un instructor de OTRA sede sin both_branches, incluye uno de la misma sede y uno con both_branches=true', async () => {
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return createMockQueryBuilder([
+            {
+              id: 30,
+              first_names: 'Carlos',
+              paternal_last_name: 'Muñoz',
+              branch_id: 1, // misma sede que la secretaria
+              roles: { name: 'instructor' },
+            },
+            {
+              id: 40,
+              first_names: 'Roberto',
+              paternal_last_name: 'Soto',
+              branch_id: 2, // otra sede, sin both_branches
+              roles: { name: 'instructor' },
+            },
+            {
+              id: 50,
+              first_names: 'Julio',
+              paternal_last_name: 'Verstappen',
+              branch_id: 2, // otra sede, CON both_branches
+              roles: { name: 'instructor' },
+            },
+          ]);
+        }
+        if (table === 'instructors') {
+          return createMockQueryBuilder([{ user_id: 50 }]);
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await facade.loadRecipients();
+
+      const ids = facade.recipients().map((r) => r.dbId);
+      expect(ids).toContain(30); // misma sede
+      expect(ids).toContain(50); // both_branches
+      expect(ids).not.toContain(40); // otra sede, sin grant → excluido
+    });
+  });
+
   // ── updateStatus() — AC2, AC3 ───────────────────────────────────────────────
 
   describe('updateStatus()', () => {

@@ -307,4 +307,66 @@ describe('AgendaFacade', () => {
       expect(facade.selectedInstructorId()).toBeNull();
     });
   });
+
+  describe('loadInstructors() incluye instructores both_branches=true de OTRA sede — fix-028-i', () => {
+    function buildInstructorRow(id: number, name: string): any {
+      return { id, users: { first_names: name, paternal_last_name: 'Test' } };
+    }
+
+    /**
+     * Mismo patrón que `instructores.facade.spec.ts` (spec 0004-m, AC6): la tabla `instructors`
+     * responde distinto según cuál `.eq()` se use — `users.branch_id` (query principal) vs
+     * `both_branches` (segunda query del fix). El resto de tablas usa el mock flexible normal.
+     */
+    function mockInstructorsTwoQueries(byBranchRows: any[], bothBranchesRows: any[]) {
+      const origFrom = supabaseSpy.client.from;
+      const eqCols: string[] = [];
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table !== 'instructors') return origFrom(table);
+        const builder: any = {
+          select: vi.fn(() => builder),
+          neq: vi.fn(() => builder),
+          eq: vi.fn((col: string) => {
+            eqCols.push(col);
+            builder._rows = col === 'both_branches' ? bothBranchesRows : byBranchRows;
+            return builder;
+          }),
+          then: (resolve: any) =>
+            Promise.resolve({ data: builder._rows ?? byBranchRows, error: null }).then(resolve),
+        };
+        return builder;
+      });
+      return { eqCols };
+    }
+
+    it('con sede seleccionada, incluye instructores both_branches=true de OTRA sede', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockInstructorsTwoQueries([buildInstructorRow(1, 'Juan')], [buildInstructorRow(2, 'Camila')]);
+
+      await facade.initialize();
+
+      const ids = facade.instructors().map((i) => i.id);
+      expect(ids).toContain(1);
+      expect(ids).toContain(2);
+    });
+
+    it('dedup: un instructor both_branches=true de la MISMA sede no aparece duplicado', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockInstructorsTwoQueries([buildInstructorRow(1, 'Juan')], [buildInstructorRow(1, 'Juan')]);
+
+      await facade.initialize();
+
+      const ids = facade.instructors().map((i) => i.id);
+      expect(ids.filter((id) => id === 1)).toHaveLength(1);
+    });
+
+    it('con "Todas las sedes" (branchId null), no ejecuta la segunda query de both_branches', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      const { eqCols } = mockInstructorsTwoQueries([], []);
+
+      await facade.initialize();
+
+      expect(eqCols).not.toContain('both_branches');
+    });
+  });
 });

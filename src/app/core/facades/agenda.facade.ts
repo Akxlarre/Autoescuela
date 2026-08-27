@@ -464,15 +464,33 @@ export class AgendaFacade {
     if (branchId !== null) query = query.eq('users.branch_id', branchId);
 
     const { data } = await query;
+    let rows = (data as unknown as RawInstructor[]) ?? [];
 
-    const filters: AgendaInstructorFilter[] = ((data as unknown as RawInstructor[]) ?? []).map(
-      (i) => ({
-        id: i.id,
-        name: i.users
-          ? `${i.users.first_names} ${i.users.paternal_last_name}`
-          : `Instructor ${i.id}`,
-      }),
-    );
+    // fix-028-i: un instructor `both_branches=true` de OTRA sede también debe aparecer en el
+    // picker. PostgREST rechaza mezclar una columna de recurso embebido (`users.branch_id`) con
+    // una columna raíz (`both_branches`) en un solo `.or()` (PGRST100) — mismo patrón ya usado
+    // en `InstructoresFacade.fetchData()` (spec 0004-m, AC6): segunda query + merge client-side.
+    if (branchId !== null) {
+      const { data: bothBranchesData } = await this.supabase.client
+        .from('instructors')
+        .select('id, users!inner ( first_names, paternal_last_name )')
+        .eq('active', true)
+        .neq('type', 'theory')
+        .eq('both_branches', true);
+
+      const seenIds = new Set(rows.map((r) => r.id));
+      for (const extra of (bothBranchesData as unknown as RawInstructor[]) ?? []) {
+        if (!seenIds.has(extra.id)) {
+          rows = [...rows, extra];
+          seenIds.add(extra.id);
+        }
+      }
+    }
+
+    const filters: AgendaInstructorFilter[] = rows.map((i) => ({
+      id: i.id,
+      name: i.users ? `${i.users.first_names} ${i.users.paternal_last_name}` : `Instructor ${i.id}`,
+    }));
 
     this._instructors.set(filters);
     // fix-010-i (H-010): `loadInstructors()` solo corre en un cambio de sede real
