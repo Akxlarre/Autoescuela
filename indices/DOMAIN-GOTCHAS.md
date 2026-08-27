@@ -1192,6 +1192,60 @@
   ningún otro rol verá nunca ninguna fila, aunque el Facade/query esté perfecto.
 - **Fuente:** `specs/fixes/fix-224-m-secretaria-lee-sus-propias-acciones-audit-log`
 
+### DG-084 — Un Facade nuevo que filtra por sede se olvida del grant `both_branches`/`can_access_both_branches`, y nada lo avisa
+- **Trampa:** escribir `if (branchId !== null) query = query.eq('users.branch_id', branchId)` (o
+  la variante `.eq('branch_id', branchId)` sobre una tabla con columna raíz) como el patrón
+  "obvio" de scope multi-sede, copiado de un Facade más viejo que nunca soportó el grant. Compila
+  sin error, el linter no lo detecta, y funciona perfecto en el caso de prueba más común (mismo
+  usuario, misma sede) — el hueco solo aparece cuando alguien con el grant activado consulta
+  desde la sede que NO es su `branch_id` de origen.
+- **Realidad:** `AgendaFacade.loadInstructors()` filtraba instructores solo por
+  `users.branch_id`, ignorando `instructors.both_branches` — un instructor con "Trabaja/opera en
+  ambas sedes" activado solo aparecía en el picker de Agenda de su sede de origen, no en la otra,
+  para cualquier secretaria anclada a una sede específica (branchId ≠ null). Admin con "Todas las
+  sedes" no lo sufría porque ahí el filtro se salta entero — lo que ocultó el bug en todo QA hecho
+  como admin. El patrón correcto (segunda query `.eq('both_branches', true)` + merge client-side,
+  dedupe por `id` — PostgREST rechaza mezclar una columna de recurso embebido con una columna raíz
+  en un solo `.or()`, PGRST100) ya existía en `InstructoresFacade.fetchData()` desde spec 0004-m,
+  pero `AgendaFacade` nunca se actualizó para seguirlo — quedó huérfano de esa spec.
+- **Regla de aplicabilidad:** cualquier query que filtre por sede (`branch_id`, `users.branch_id`,
+  o equivalente) sobre una entidad que tenga grant de "ambas sedes" (`instructors.both_branches`,
+  `vehicles.both_branches`, `users.can_access_both_branches`) debe aplicar ese grant explícito, no
+  asumir que "filtrar por sede" es solo un `.eq()`. Al auditar o crear un Facade nuevo con scope
+  multi-sede, buscar si la tabla consultada (o su tabla `users`/`instructors`/`vehicles` embebida)
+  tiene una de esas columnas de grant — si la tiene y el Facade no la usa, es el mismo bug.
+- **Fuente:** `specs/fixes/fix-028-i-agenda-both-branches-instructor-picker`
+
+---
+
+### DG-085 — `functions.invoke()` en un fallo no-2xx retorna un `error.message` genérico; el mensaje de negocio real está sin leer en `error.context`
+- **Trampa:** hacer `if (error) throw new Error(sanitizer.sanitize(error).message ?? '...')`
+  tras un `this.supabase.client.functions.invoke(...)` y asumir que ese mensaje refleja lo que
+  el Edge Function realmente respondió. Compila, no rompe nada visible, y en pruebas manuales
+  superficiales "sí muestra un toast" — solo que con un texto genérico que oculta el error de
+  negocio real (ej. "email ya usado por otro usuario" queda como "Ha ocurrido un error
+  inesperado").
+- **Realidad:** cuando el Edge Function responde con status no-2xx, el SDK de Supabase retorna
+  `data: null` y un `error` de tipo `FunctionsHttpError` cuyo `.message` es **siempre** el string
+  fijo `"Edge Function returned a non-2xx status code"` — nunca el body real. El body que el
+  Edge Function sí envió (`errorResponse(mensaje, status)` → `{"error": "..."}`) solo es
+  recuperable leyendo `await error.context.json()` (`context` es el `Response` crudo). Además,
+  `ErrorSanitizerService.sanitize()` no reconoce `FunctionsHttpError` — su chequeo de HTTP busca
+  `error.name === 'HttpErrorResponse'` (el nombre que usa Angular `HttpClient`, no Supabase
+  Functions) y `error.code` (que un `FunctionsHttpError` no trae) — así que cae al mensaje
+  genérico por defecto del sanitizer. Verificado en vivo con `@supabase/supabase-js` directo:
+  editar un instructor con email duplicado devuelve `error.context.status === 500` y
+  `await error.context.json()` → `{"error":"Error al actualizar usuario: duplicate key value
+  violates unique constraint \"users_email_key\""}`, ninguno de los cuales llegaba al usuario.
+- **Regla de aplicabilidad:** cualquier `catch`/manejo de error tras un `functions.invoke()` que
+  pueda fallar con un body JSON informativo (casi todo Edge Function del proyecto que usa
+  `errorResponse()`) debe leer `error.context.json()` antes de mostrar el mensaje al usuario, con
+  fallback a `ErrorSanitizerService.sanitize()` solo si ese body no es parseable. Auditado en
+  ~30 archivos que llaman `functions.invoke()` — este fix corrigió solo
+  `InstructoresFacade.editarInstructor()` (el caso reportado en UAT); el resto queda con la misma
+  trampa latente hasta que se toque cada call site individualmente.
+- **Fuente:** `specs/fixes/fix-029-i-edge-function-error-swallowed`
+
 ---
 
 ## Convención para agregar una entrada nueva

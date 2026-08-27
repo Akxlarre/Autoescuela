@@ -476,6 +476,49 @@ describe('InstructoresFacade', () => {
         expect.objectContaining({ body: expect.objectContaining({ bothBranches: true }) }),
       );
     });
+
+    it('editarInstructor() con email duplicado — fix-029-i: lee error.context y muestra el mensaje de negocio real, no el genérico del sanitizer', async () => {
+      const duplicateEmailError = Object.assign(
+        new Error('Edge Function returned a non-2xx status code'),
+        {
+          name: 'FunctionsHttpError',
+          context: {
+            status: 500,
+            json: vi.fn().mockResolvedValue({
+              error:
+                'Error al actualizar usuario: duplicate key value violates unique constraint "users_email_key"',
+            }),
+          },
+        },
+      );
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({ data: null, error: duplicateEmailError }),
+      };
+
+      const ok = await facade.editarInstructor(1, 10, {
+        firstNames: 'Juan',
+        paternalLastName: 'Perez',
+        maternalLastName: '',
+        phone: '',
+        email: 'ocupado@test.cl',
+        currentEmail: 'juan@test.cl',
+        type: 'practice',
+        licenseNumber: '',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        active: true,
+        vehicleId: null,
+        currentVehicleId: null,
+        branchId: 1,
+        bothBranches: false,
+      } as any);
+
+      expect(ok).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'Error',
+        'Ya existe otro usuario registrado con ese correo electrónico.',
+      );
+    });
   });
 
   describe('enviarInvitacion — fix-168-m', () => {

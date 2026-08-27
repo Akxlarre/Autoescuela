@@ -67,17 +67,17 @@ Flujo público de auto-matrícula (wizard 6-7 pasos), Clase B y Profesional.
 - [ ] Filtrar/buscar alumno por nombre, curso, estado → resultados correctos
 - [ ] Ver ficha de alumno → progreso de clases, asistencia, pagos, documentos coherentes con lo matriculado
 - [ ] Archivar un alumno sin historial (pagos/clases) → confirmación simple
-- [ ] Archivar un alumno **con historial** → exige escribir "borrarlo", advertencia contable
+- [x] Archivar un alumno **con historial** → exige escribir "borrarlo", advertencia contable — verificado 2026-08-26, el flujo exige escribir "borrarlo" y advierte impacto contable antes de confirmar.
 - [ ] Ver alumno archivado en "Papelera" → restaurar → vuelve a la lista activa
 - [ ] Como **Admin** con sede "Todas las escuelas" → ve columna Sede y alumnos de todas las sedes
 - [ ] Como **Secretaria** → solo ve alumnos de su propia sede (nunca de otra)
-- [ ] Reprogramar una clase (Clase B) desde la ficha del alumno → slot anterior libera, nuevo slot ocupa
+- [ ] Reprogramar una clase (Clase B) desde la ficha del alumno → slot anterior libera, nuevo slot ocupa (caso NO probado como distinto del reagendado masivo de abajo — pendiente)
 - [ ] Marcar inasistencia 2 veces consecutivas (mismo class_number seguido) → sistema cancela clases futuras automáticamente (penalización)
 - [ ] Justificar una inasistencia → deja de contar para la penalización, queda marcada "Justificada" en la grilla
-- [ ] Reagendar clases penalizadas (flujo 2 pasos: selección → agendamiento masivo) → sesiones quedan reprogramadas correctamente
+- [x] Reagendar clases penalizadas (flujo 2 pasos: selección → agendamiento masivo) → sesiones quedan reprogramadas correctamente — verificado 2026-08-26, ambos pasos (selección de clases penalizadas → agendamiento masivo) completan y las sesiones quedan reprogramadas.
 - [ ] Alumno Profesional: cargar notas en Evaluaciones (grilla módulo × alumno), guardar borrador y confirmar (irreversible) → validar que no se puede editar tras confirmar
-- [ ] Generar carnet/certificado de un alumno elegible (asistencia + nota + pago completo) → PDF correcto
-- [ ] Intentar generar certificado de alumno **no elegible** → bloqueado con motivo claro
+- [ ] Generar carnet/certificado de un alumno elegible (asistencia + nota + pago completo) → PDF correcto (solo se probó el caso NO elegible, abajo)
+- [x] Intentar generar certificado de alumno **no elegible** → bloqueado con motivo claro — verificado 2026-08-26.
 
 ---
 
@@ -128,13 +128,13 @@ Valida la regla de negocio central del producto (`docs/PRODUCT-VISION.md` §Trip
 
 ## Paquete 6 — Administración, Roles y Multi-Sede (Admin) — Owner: I
 
-- [ ] Crear instructor nuevo → aparece disponible en Agenda y en pickers de horario
-- [ ] Crear instructor con "ambas sedes" habilitado → aparece en el picker de ambas sedes, no solo la de origen
+- [x] Crear instructor nuevo → aparece disponible en Agenda y en pickers de horario — verificado 2026-08-26 al crear "UAT Instructor Prueba" para probar el caso siguiente.
+- [x] Crear instructor con "ambas sedes" habilitado → aparece en el picker de ambas sedes, no solo la de origen — bug encontrado y cerrado: [fix-028-i-agenda-both-branches-instructor-picker](../specs/fixes/fix-028-i-agenda-both-branches-instructor-picker/fix.md). Verificado 2026-08-26/27: el instructor con `both_branches=true` ahora aparece también en el picker de Agenda de la sede que NO es la de origen.
 - [ ] Crear secretaria nueva, asignarla a una sede → al loguearse, solo ve datos de esa sede
-- [ ] Editar email de un usuario (alumno/instructor/secretaria) a uno ya usado por otro → debe rechazar sin desincronizar Auth/tabla pública
+- [x] Editar email de un usuario (alumno/instructor/secretaria) a uno ya usado por otro → debe rechazar sin desincronizar Auth/tabla pública — bug encontrado y cerrado: [fix-029-i-edge-function-error-swallowed](../specs/fixes/fix-029-i-edge-function-error-swallowed/fix.md). El rechazo en BD ya funcionaba (sin desincronización), pero el error real no llegaba al usuario. Verificado 2026-08-27: el toast ahora muestra "Ya existe otro usuario registrado con ese correo electrónico."
 - [ ] Ver Auditoría (`AuditoriaFacade`) → acciones críticas (crear/editar/eliminar) quedan registradas con usuario y fecha correctos
 - [ ] Filtrar auditoría por sede, secretaria, acción → resultados correctos y branch-scoped
-- [ ] Notificaciones: una acción de negocio (ej. nueva matrícula) genera notificación al rol correspondiente → aparece en tiempo real sin recargar
+- [ ] Notificaciones: una acción de negocio (ej. nueva matrícula) genera notificación al rol correspondiente → aparece en tiempo real sin recargar (solo evidencia histórica/estructural revisada, falta prueba cross-tab en vivo)
 - [ ] Tareas internas: crear tarea/observación dirigida a un usuario → destinatario la ve y puede responder/marcar estado
 
 ---
@@ -174,3 +174,5 @@ Valida la regla de negocio central del producto (`docs/PRODUCT-VISION.md` §Trip
 | 2 | 3 / 5 | Vehículo con SOAP/revisión técnica vencida no bloquea agendamiento | Alta | No existe UI para cargar/editar documentos de vehículo (SOAP, Revisión Técnica, etc.) — `FlotaFacade.upsertVehicleDocument()` existe pero ningún componente lo llama. Sin datos reales, tampoco hay validación de bloqueo al agendar. Hueco de punta a punta. | [fix-153-m-vehiculo-documentos-sin-ui-de-carga](../specs/fixes/fix-153-m-vehiculo-documentos-sin-ui-de-carga/fix.md) |
 | 3 | 3 | Navegación de agenda permite pasar el límite máximo de semanas configurado | Media | `AgendaFacade.goToNextWeek()` avanzaba `weekStart` sin chequear el límite — el único freno era el botón deshabilitado, cuyo estado dependía de un fetch async lento. Clics rápidos y repetidos se colaban antes de que se deshabilitara, y sin request-guard los fetches encolados se pisaban entre sí (efecto "agenda navegando sola" con delay tras soltar el mouse). | [fix-162-m-agenda-navegacion-semanas-fantasma-sin-limite](../specs/fixes/fix-162-m-agenda-navegacion-semanas-fantasma-sin-limite/fix.md) |
 | 4 | 4 | No existe forma de crear descuentos predefinidos para matrícula | Media | La tabla `discounts` y el consumo en el step de pago de matrícula (`selectPredefinedDiscount`, `enrollment-payment.facade.ts`) ya existen y funcionan, pero nunca se construyó un CRUD/UI en Admin para poblar esa tabla — solo el descuento manual es usable hoy. | [fix-197-m-descuentos-predefinidos-sin-crud](../specs/fixes/fix-197-m-descuentos-predefinidos-sin-crud/fix.md) |
+| 5 | 6 | Instructor con `both_branches=true` no aparece en el picker de Agenda de la sede que NO es la de origen | Alta | `AgendaFacade.loadInstructors()` filtraba solo por `users.branch_id`, ignorando el grant `instructors.both_branches` — quedó huérfano del patrón (segunda query + merge) que sí aplican `InstructoresFacade`/`AdminAlumnoDetalleFacade` desde spec 0004-m. Invisible en QA hecho como Admin porque "Todas las sedes" salta el filtro entero. | [fix-028-i-agenda-both-branches-instructor-picker](../specs/fixes/fix-028-i-agenda-both-branches-instructor-picker/fix.md) |
+| 6 | 6 | Editar un instructor con un email ya usado por otro usuario no muestra el error real (feedback genérico/ausente) | Media | `functions.invoke()` de Supabase, en un fallo no-2xx, retorna un `FunctionsHttpError` con `.message` genérico ("Edge Function returned a non-2xx status code") — el body real (`{"error":"...duplicate key..."}"`) queda sin leer en `error.context`. `ErrorSanitizerService` tampoco reconoce ese tipo de error. La BD sí rechazaba correctamente el duplicado (sin desincronizar Auth), pero el usuario no se enteraba del motivo. Mismo patrón presente en ~29 archivos más que usan `functions.invoke()` (ver DOMAIN-GOTCHAS DG-085) — solo se corrigió el call site reportado. | [fix-029-i-edge-function-error-swallowed](../specs/fixes/fix-029-i-edge-function-error-swallowed/fix.md) |
