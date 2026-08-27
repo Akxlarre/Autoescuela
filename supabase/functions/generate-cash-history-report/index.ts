@@ -89,6 +89,7 @@ Deno.serve(async (req: Request) => {
       .from('cash_closings')
       .select(
         `date, balance, arqueo_amount, difference, total_income, total_expenses,
+         opening_amount, cash_amount, cash_expenses,
          users(first_names, paternal_last_name)`,
       )
       .eq('closed', true)
@@ -103,8 +104,6 @@ Deno.serve(async (req: Request) => {
     const { data: rawCierres, error: qErr } = await q;
     if (qErr) throw qErr;
 
-    const FONDO_INICIAL = 50_000;
-
     const cierres: CierreRow[] = (rawCierres ?? []).map((r: any) => {
       const saldoSistema = r.balance ?? 0;
       const saldoFisico = r.arqueo_amount ?? 0;
@@ -115,12 +114,20 @@ Deno.serve(async (req: Request) => {
       const estado: 'Cuadrado' | 'Sobrante' | 'Faltante' =
         diferencia === 0 ? 'Cuadrado' : diferencia > 0 ? 'Sobrante' : 'Faltante';
 
+      // fix-226-m: fondo de apertura real (opening_amount, spec 0012-m); 0 en cierres previos.
+      const totalEgresos = r.total_expenses ?? 0;
+      const cashExpenses =
+        r.cash_expenses ??
+        Math.max(0, (r.opening_amount ?? 0) + (r.cash_amount ?? 0) - saldoSistema);
+
       return {
         fecha: r.date,
         cajero,
-        fondoInicial: FONDO_INICIAL,
+        fondoInicial: r.opening_amount ?? 0,
         totalIngresos: r.total_income ?? 0,
-        totalEgresos: r.total_expenses ?? 0,
+        totalEgresos,
+        cashExpenses,
+        nonCashExpenses: Math.max(0, totalEgresos - cashExpenses),
         saldoSistema,
         saldoFisico,
         diferencia,
@@ -171,6 +178,10 @@ interface CierreRow {
   fondoInicial: number;
   totalIngresos: number;
   totalEgresos: number;
+  /** Egreso pagado en efectivo (afecta arqueo). fix-226-m. */
+  cashExpenses: number;
+  /** Egreso pagado con tarjeta/transferencia (no afecta arqueo). fix-226-m. */
+  nonCashExpenses: number;
   saldoSistema: number;
   saldoFisico: number;
   diferencia: number;

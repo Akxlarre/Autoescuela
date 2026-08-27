@@ -63,9 +63,27 @@ interface DenominacionRow {
           </div>
         </div>
 
-        <!-- 2. Numeric KPI (hotfix-002-i: Saldo Sistema/Diferencia quitados — dependían de un
-             fondo inicial que no se persiste por cierre, mostraban cifras engañosas) -->
+        <!-- 2. Numeric KPIs — Fondo de apertura + Saldo físico contado.
+             (fix-226-m: se restauró el Fondo de apertura, ahora que se persiste de verdad
+             en cash_closings.opening_amount desde spec 0012-m. hotfix-002-i lo había quitado
+             cuando el dato era un 50.000 hardcodeado y engañoso.) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          @if (d.fondoInicial !== null) {
+            <app-kpi-card-variant
+              label="Fondo de Apertura"
+              [value]="d.fondoInicial"
+              prefix="$"
+              icon="wallet"
+              color="default"
+            />
+          } @else {
+            <div class="card p-3 flex flex-col gap-1 bg-elevated">
+              <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
+                >Fondo de Apertura</span
+              >
+              <span class="item-title text-text-muted">No registrado</span>
+            </div>
+          }
           <app-kpi-card-variant
             label="Saldo Físico"
             [value]="d.saldoFisico"
@@ -96,46 +114,89 @@ interface DenominacionRow {
                   >
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4">
-                  <div class="flex flex-col">
-                    <span
-                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
-                      >Ingresos Registrados</span
-                    >
-                    <span class="text-lg font-black tabular-nums tracking-tight text-success"
-                      >+ {{ formatAmt(d.totalIngresos) }}</span
+                <!-- fix-226-m: libro de conciliación explícito. El arqueo solo cuenta EFECTIVO
+                     (fondo + ingresos efectivo − egresos efectivo = saldo teórico); el egreso
+                     pagado con tarjeta/transferencia se muestra aparte porque no toca la caja. -->
+                <div class="flex flex-col gap-2 text-sm tabular-nums">
+                  <div class="flex items-center justify-between">
+                    <span class="text-text-secondary">Fondo de apertura</span>
+                    @if (d.fondoInicial !== null) {
+                      <span class="font-semibold text-text-primary">{{
+                        formatAmt(d.fondoInicial)
+                      }}</span>
+                    } @else {
+                      <span class="text-text-muted">No registrado</span>
+                    }
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-text-secondary">Ingresos en efectivo</span>
+                    <span class="font-semibold text-success"
+                      >+ {{ formatAmt(d.ingresosEfectivo) }}</span
                     >
                   </div>
-                  <div class="flex flex-col">
-                    <span
-                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
-                      >Egresos / Gastos</span
+                  <div class="flex items-center justify-between">
+                    <span class="text-text-secondary">Egresos en efectivo</span>
+                    <span class="font-semibold text-error">− {{ formatAmt(d.cashExpenses) }}</span>
+                  </div>
+
+                  <div class="border-t border-border-muted/50 my-1"></div>
+
+                  <div class="flex items-center justify-between">
+                    <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
+                      >Saldo teórico (sistema)</span
                     >
-                    <span class="text-lg font-black tabular-nums tracking-tight text-error"
-                      >- {{ formatAmt(d.totalEgresos) }}</span
+                    <span class="font-black text-text-primary">{{
+                      formatAmt(d.saldoSistema)
+                    }}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
+                      >Saldo físico contado</span
                     >
+                    <span class="font-black text-text-primary">{{ formatAmt(d.saldoFisico) }}</span>
                   </div>
                   <div
-                    class="flex flex-col p-3 rounded-xl bg-surface border border-border-muted/30 shadow-subtle"
+                    class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border-muted/30 shadow-subtle mt-1"
                   >
-                    <span
-                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
-                      >Cierre Total</span
+                    <span class="text-2xs font-bold uppercase tracking-wider text-text-muted"
+                      >Diferencia</span
                     >
                     <span
-                      class="text-xl font-black tabular-nums tracking-tighter"
+                      class="text-lg font-black tracking-tighter"
                       [class.text-error]="d.estadoDiferencia === 'shortage'"
                       [class.text-warning]="d.estadoDiferencia === 'surplus'"
                       [class.text-success]="d.estadoDiferencia === 'balanced'"
                     >
-                      {{ formatAmt(d.saldoFisico) }}
+                      {{ d.diferencia > 0 ? '+ ' : d.diferencia < 0 ? '− ' : ''
+                      }}{{ formatAmt(d.diferencia) }}
                     </span>
-                    @if (facade.ajustesCierre().length > 0) {
-                      <span class="text-2xs font-semibold tabular-nums text-text-muted mt-1">
-                        Vigente: {{ formatAmt(facade.totalVigente()) }}
-                      </span>
-                    }
                   </div>
+                  @if (facade.ajustesCierre().length > 0) {
+                    <div class="flex items-center justify-between text-2xs text-text-muted mt-1">
+                      <span>Saldo vigente (con ajustes)</span>
+                      <span class="font-semibold">{{ formatAmt(facade.totalVigente()) }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Egreso total del día — contexto, no afecta el arqueo -->
+                <div
+                  class="flex flex-col gap-1 pt-3 border-t border-dashed border-border-muted/60 text-2xs text-text-muted"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="uppercase tracking-wider font-semibold"
+                      >Total egresos del día</span
+                    >
+                    <span class="tabular-nums font-semibold text-text-secondary">{{
+                      formatAmt(d.totalEgresos)
+                    }}</span>
+                  </div>
+                  @if (d.nonCashExpenses > 0) {
+                    <p class="leading-relaxed">
+                      {{ formatAmt(d.nonCashExpenses) }} pagados con tarjeta / transferencia — no
+                      afectan el arqueo de caja.
+                    </p>
+                  }
                 </div>
               </div>
             </div>
@@ -288,14 +349,16 @@ interface DenominacionRow {
               } @else {
                 <app-icon name="download" [size]="15" />
                 Exportar
-                <app-icon name="chevron-down" [size]="13" />
+                <app-icon name="chevron-up" [size]="13" />
               }
             </button>
 
             @if (exportMenuOpen()) {
               <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+              <!-- fix-226-m: abre hacia ARRIBA (bottom-full) — el botón vive al fondo de un
+                   drawer scrolleable, un menú top-full quedaba recortado bajo el borde. -->
               <div
-                class="absolute top-full mt-2 right-0 z-20 min-w-50 bg-surface border border-border-muted rounded-lg shadow-[0_8px_24px_rgb(0_0_0/12%)] overflow-hidden"
+                class="absolute bottom-full mb-2 right-0 z-20 min-w-50 bg-surface border border-border-muted rounded-lg shadow-[0_8px_24px_rgb(0_0_0/12%)] overflow-hidden"
               >
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { formatCLP } from '@core/utils/date.utils';
@@ -108,7 +109,7 @@ const MONEDAS = [
             class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 disabled:opacity-40"
             [style.background]="facade.realizarArqueo() ? 'var(--ds-brand)' : 'var(--border-muted)'"
             [disabled]="facade.cajaYaCerrada()"
-            (click)="facade.realizarArqueo.update((v) => !v)"
+            (click)="onToggleArqueo()"
             data-llm-action="toggle-arqueo-efectivo"
           >
             <span
@@ -244,7 +245,7 @@ const MONEDAS = [
               placeholder="Ej: Faltan $500 por vuelto mal dado..."
               [disabled]="facade.cajaYaCerrada()"
               [value]="facade.notasArqueo()"
-              (input)="facade.notasArqueo.set(getInputValue($event))"
+              (input)="onNotasChange($event)"
             ></textarea>
           </div>
         }
@@ -253,11 +254,20 @@ const MONEDAS = [
       <ng-container ngProjectAs="[drawer-form-footer]">
         <button
           type="button"
-          class="btn-primary"
+          class="btn-secondary"
           data-llm-action="cerrar-drawer-arqueo"
           (click)="layoutDrawer.close()"
         >
-          Listo
+          Cerrar panel
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          data-llm-action="cerrar-caja"
+          [disabled]="!facade.puedeCerrarCaja() || facade.isSaving()"
+          (click)="onCerrarCaja()"
+        >
+          {{ facade.isSaving() ? 'Cerrando...' : 'Cerrar Caja' }}
         </button>
       </ng-container>
     </app-drawer-form>
@@ -304,6 +314,7 @@ const MONEDAS = [
 export class ArqueoCierreDrawerComponent {
   protected readonly facade = inject(CuadraturaFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly billetes = BILLETES;
   protected readonly monedas = MONEDAS;
@@ -313,6 +324,7 @@ export class ArqueoCierreDrawerComponent {
     const raw = (event.target as HTMLInputElement).value.replace(/\D/g, '');
     const fondo = raw === '' ? 0 : parseInt(raw, 10) || 0;
     this.facade.fondoInicial.set(fondo);
+    this.facade.guardarBorrador();
   }
 
   protected onCantidadChange(key: string, event: Event): void {
@@ -321,6 +333,17 @@ export class ArqueoCierreDrawerComponent {
     if (sanitized !== input.value) input.value = sanitized;
     const val = sanitized === '' ? 0 : parseInt(sanitized, 10);
     this.facade.cantidades.update((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
+    this.facade.guardarBorrador();
+  }
+
+  protected onToggleArqueo(): void {
+    this.facade.realizarArqueo.update((v) => !v);
+    this.facade.guardarBorrador();
+  }
+
+  protected onNotasChange(event: Event): void {
+    this.facade.notasArqueo.set(this.getInputValue(event));
+    this.facade.guardarBorrador();
   }
 
   protected selectAll(event: Event): void {
@@ -329,5 +352,19 @@ export class ArqueoCierreDrawerComponent {
 
   protected getInputValue(event: Event): string {
     return (event.target as HTMLTextAreaElement).value;
+  }
+
+  protected async onCerrarCaja(): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cerrar Caja',
+      message: 'Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Cerrar Caja',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    const success = await this.facade.cerrarCaja();
+    if (success) this.layoutDrawer.close();
   }
 }

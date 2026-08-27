@@ -1192,6 +1192,47 @@
   ningún otro rol verá nunca ninguna fila, aunque el Facade/query esté perfecto.
 - **Fuente:** `specs/fixes/fix-224-m-secretaria-lee-sus-propias-acciones-audit-log`
 
+### DG-084 — El arqueo de caja solo cuadra contra EFECTIVO; `cash_closings.total_expenses` mezcla todos los métodos de pago
+- **Trampa:** en cualquier vista/reporte de cierre de caja (Historial de Cuadratura, edge
+  functions `generate-cash-*-report`), restar `total_expenses` de los ingresos para "conciliar"
+  la caja. `total_expenses` suma **todos** los egresos del día sin importar el método
+  (`expenses.payment_method` / `instructor_advances.payment_method`, existentes desde fix-211-m).
+  Un egreso pagado con tarjeta o transferencia **no sale físicamente de la caja**, así que
+  incluirlo hace que la aritmética no cierre contra el arqueo físico (ej. `0 ingresos − 84.000
+  egresos ≠ 15.000 de saldo físico`).
+- **Realidad:** el número que cuadra contra el conteo físico es
+  `balance = opening_amount + cash_amount − cash_expenses`, donde `cash_expenses` (columna
+  agregada por fix-226-m) es el subtotal de egresos con `payment_method = 'efectivo'`.
+  `opening_amount` (fondo de apertura, columna de spec 0012-m) es un dato **real persistido por
+  cierre** — hasta fix-226-m el historial y las 2 edge functions lo hardcodeaban a `50_000`,
+  mostrando un fondo inventado. Para cierres previos a fix-226-m `cash_expenses` es `NULL` y se
+  deriva como `opening_amount + cash_amount − balance`.
+- **Regla de aplicabilidad:** al mostrar o exportar la conciliación de un cierre de caja, separar
+  siempre "egreso efectivo" (afecta arqueo) de "egreso tarjeta/transferencia" (no afecta), y usar
+  `opening_amount` / `cash_expenses` de la fila `cash_closings` — nunca un fondo hardcodeado ni
+  `total_expenses` a secas.
+- **Fuente:** `specs/fixes/fix-226-m-historial-cuadratura-fondo-egresos-drawer-export`
+  (ver también fix-211-m y spec 0012-m).
+
+### DG-085 — Un canal Realtime con varios `postgres_changes` muere entero si UNA de sus tablas no está en `supabase_realtime`
+- **Trampa:** encadenar varios `.on('postgres_changes', { table: X }, …)` en un mismo
+  `supabase.client.channel(...)` y asumir que cada binding es independiente. Si **cualquiera** de
+  esas tablas no está en la publicación `supabase_realtime`, el servidor falla ese binding y el
+  canal **deja de entregar eventos para TODOS sus bindings** — incluidos los de tablas que sí
+  están publicadas. El `subscribe()` igual reporta `SUBSCRIBED`; no hay error en consola ni en
+  Network. Síntoma: la Uv no refresca en vivo y "recargar la página" lo arregla.
+- **Realidad:** verificado con Playwright contra la BD real (fix-227-m): un canal
+  `[students, class_b_sessions, payments]` con solo `class_b_sessions` publicada → 0 eventos; el
+  mismo trío publicado, o un canal de 1 binding a `class_b_sessions`, → eventos OK. La publicación
+  se maneja con `ALTER PUBLICATION supabase_realtime ADD TABLE …` en migración (idempotente vía
+  `pg_publication_tables`); no hay toggle en el código Angular.
+- **Regla de aplicabilidad:** al crear o extender un `channel()` con `postgres_changes`, para
+  **cada** tabla del canal confirmar que existe su `ALTER PUBLICATION supabase_realtime ADD TABLE`
+  en `supabase/migrations/` (o en `indices/DATABASE.md` como "Realtime habilitado"). Si falta,
+  agregarla en la misma entrega. Alternativa si no se puede publicar una tabla: un canal por
+  tabla, así el fallo queda aislado.
+- **Fuente:** `specs/fixes/fix-227-m-dashboard-clases-actuales-no-refresca-realtime`.
+
 ---
 
 ## Convención para agregar una entrada nueva

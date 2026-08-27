@@ -8,7 +8,7 @@
 | `branches` | M1 - Usuarios | `id`, `slug`, `has_professional` (BOOL, def false) | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `20260403110000`: añadida `has_professional`; branch 2 (Conductores Chillán) = true |
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida · `20260612120000`: COMMENT ON COLUMN `users.gender` y `professional_pre_registrations.gender` — valores M/F/X (ley REC Chile 2022). |
-| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). |
+| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
 | `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false), `max_classes_per_day` (INT, default 1) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. · **`20260513000001`:** `schedule_blocks` cambiado de rangos continuos a **slots exactos** (cada elemento `{"from","to"}` es un slot de 45 min, no un rango). Nuevos horarios L-V: 08:30-09:15 · 09:20-10:05 · 10:10-10:55 · 11:00-11:45 · 11:50-12:35 · 12:40-13:25 · 15:00-15:45 · 15:50-16:35 · 16:40-17:25 · 17:30-18:15 · 18:20-19:05 · 19:10-19:55 · 20:00-20:45. Aplica a ambas sedes. · **`20260613000000`:** `max_classes_per_day` añadido para permitir agendamientos intensivos. |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
@@ -16,7 +16,7 @@
 | `notifications` | M2 - Notif. | `id`, `recipient_id` | `recipient_id` | Admin: CRUD, Sec: CRUD, Inst: R (self), Stu: R (self) | ✅ Definida |
 | `notification_templates` | M2 - Notif. | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R | ✅ Definida |
 | `alert_config` | M2 - Notif. | `id`, `alert_type` | `branch_id` | Admin: CRUD, Sec: R | ✅ Definida |
-| `payments` | M3 - Finanzas | `id`, `enrollment_id`| `enrollment_id`, `receipt_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida |
+| `payments` | M3 - Finanzas | `id`, `enrollment_id`| `enrollment_id`, `receipt_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
 | `payment_denominations` | M3 - Finanzas | `id`, `payment_id` | `payment_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `expenses` | M3 - Finanzas | `id`, `branch_id` | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `fixed_expenses` | M3 - Finanzas | `id`, `branch_id`, `category` (salary\|utility\|insurance\|repair\|rent\|other), `description`, `amount`, `date`, `created_by`, `created_at` | `branch_id`, `date` | Admin: CRUD. Sec: Sin acceso (RLS) | ✅ Definida |
@@ -159,6 +159,7 @@
 | `20260315100000_enable_realtime_class_b_sessions.sql` | Habilita Supabase Realtime en `class_b_sessions` (`ALTER PUBLICATION supabase_realtime ADD TABLE`). Permite que secretarias/admin reciban actualizaciones en vivo de slots ocupados durante matrícula. |
 | `20260624120000_rls_branch_scope_students_instructors.sql` | **Spec 0017.** Recrea `select_students` y `select_instructors` aplicando `branch_visible(<sede del user dueño>)` a la rama `secretary` (antes `IN ('admin','secretary')` sin filtro de sede → fuga multi-sede). Reutiliza `can_access_both_branches` (RF-013): `branch_visible` ya lo honra, así que la secretaria con grant ve todas las sedes. Ramas admin/instructor/student preservadas de `20260301000011`. `select_enrollments` y `select_users` SIN cambios (este último por fix-002). |
 | `20260625120000_enable_realtime_users.sql` | **Spec 0017 / AC-E3.** Habilita Supabase Realtime en `users` (`ALTER PUBLICATION supabase_realtime ADD TABLE`, idempotente vía `pg_publication_tables`). Permite que `AuthFacade` refleje el otorgar/revocar del grant `can_access_both_branches` en caliente (sin re-login) suscribiéndose a su propia fila (`id=eq.{dbId}`). Realtime respeta RLS. |
+| `20260827160000_enable_realtime_students_payments.sql` | **fix-227-m.** Agrega `students` y `payments` a la publicación `supabase_realtime` (idempotente vía `pg_publication_tables`). `DashboardFacade.setupRealtime()` tiene un canal con 3 bindings `postgres_changes` (`students`, `class_b_sessions`, `payments`); como `students`/`payments` no estaban en la publicación, el canal completo dejaba de entregar eventos (incluido `class_b_sessions`) aunque reportara `SUBSCRIBED` → el dashboard no refrescaba "Clases Actuales" / KPIs en vivo. Ver `DOMAIN-GOTCHAS.md` §Realtime multi-binding. |
 
 ## GRANTs Data API (Supabase PostgREST)
 
@@ -307,6 +308,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `voucher_amount` | INTEGER | sí | `0` | — |
 | `total_income` | INTEGER | sí | — | — |
 | `total_expenses` | INTEGER | sí | — | — |
+| `cash_expenses` | INTEGER | sí | — | — |
 | `balance` | INTEGER | sí | — | — |
 | `payments_count` | INTEGER | sí | — | — |
 | `qty_bill_20000` | SMALLINT | sí | `0` | — |
@@ -325,6 +327,27 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `closed_by` | INT | sí | — | → `users.id` |
 | `closed_at` | TIMESTAMPTZ | sí | — | — |
 | `notes` | TEXT | sí | — | — |
+| `branch_id_key` | INT (generado) | NO | `COALESCE(branch_id, -1)` | — |
+| `opening_amount` | INTEGER | sí | — | — |
+| `arqueo_enabled` | BOOLEAN | sí | — | — |
+
+> **Borrador de arqueo (spec 0012-m):** `status` ahora también toma el valor `'draft'` — la
+> misma fila que representa el cierre del día se usa para el borrador autoguardado del drawer
+> "Arqueo y Cierre" (fondo, cantidades, notas, toggle), y pasa a `'closed'` recién al confirmar
+> el cierre. `branch_id_key` es una columna **generada** (`GENERATED ALWAYS AS ... STORED`) que
+> normaliza `branch_id NULL` a `-1` — necesaria porque `onConflict` de PostgREST/supabase-js no
+> acepta un índice sobre expresión (`COALESCE`) como target, solo columnas reales. El
+> `UNIQUE INDEX ux_cash_closings_date_branch` vive sobre `(date, branch_id_key)`, y todo upsert
+> desde el cliente usa `{ onConflict: 'date,branch_id_key' }`. `opening_amount`/`arqueo_enabled`
+> persisten el fondo de apertura y el toggle de arqueo físico — ninguno se deriva de otra tabla.
+>
+> **`cash_expenses` (fix-226-m):** snapshot al cierre del subtotal de egresos pagados **en
+> efectivo** (`expenses` + `instructor_advances` con `payment_method = 'efectivo'`) — lo único
+> que baja el saldo físico de la caja (fix-211-m). Separado de `total_expenses` (que suma todos
+> los métodos) para que el Historial de Cuadratura y los reportes muestren "egreso efectivo"
+> (afecta arqueo) vs "egreso tarjeta/transferencia" (no afecta) sin depender de la identidad
+> `balance = opening_amount + cash_amount − cash_expenses`. Null en cierres previos al fix →
+> el cliente usa esa identidad como fallback derivado.
 
 **Policies:**
 
@@ -332,8 +355,15 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
-| update_cash_closings | UPDATE | `auth_user_role() = 'admin'` | — |
+| update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'draft' AND branch_visible(branch_id))` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visible(branch_id))` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
+
+> ⚠️ `update_cash_closings` (spec 0012-m) declara `WITH CHECK` **distinto** del `USING` a
+> propósito: `USING` exige que la fila VIEJA sea `'draft'` (una secretaria nunca puede tocar una
+> fila ya `'closed'`), pero `WITH CHECK` no repite esa condición sobre la fila NUEVA — si lo
+> hiciera, la propia transición `draft → closed` que hace `cerrarCaja()` quedaría bloqueada por
+> su propia policy (bug real encontrado en QA manual, 403 reproducido y corregido antes de
+> cerrar la spec). Sin `WITH CHECK` explícito, Postgres reutiliza el `USING` para ambos casos.
 
 ### `certificate_batches` — 🔒 RLS
 

@@ -186,6 +186,7 @@ export class CuadraturaFacade {
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
+  private _borradorTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
   readonly pagosHoy = this._pagosHoy.asReadonly();
@@ -463,16 +464,37 @@ export class CuadraturaFacade {
     this._gastosHoy.set([...gastos, ...anticipos]);
   }
 
+  /**
+   * Trae la fila de `cash_closings` de hoy (si existe) sin filtrar por status — a diferencia
+   * de antes (spec 0012-m), un borrador (`status='draft'`) también puede estar ahí. Solo una
+   * fila `status='closed'` cuenta como caja cerrada; un borrador restaura el estado de arqueo
+   * pero deja la caja operable (AC5).
+   */
   private async checkCajaStatus(today: string, branchId: number | null): Promise<void> {
-    let query: any = this.supabase.client
-      .from('cash_closings')
-      .select('*')
-      .eq('date', today)
-      .eq('closed', true);
+    let query: any = this.supabase.client.from('cash_closings').select('*').eq('date', today);
     if (branchId) query = query.eq('branch_id', branchId);
     const { data } = await query.maybeSingle();
-    this._cajaYaCerrada.set(data !== null);
-    this._cierreHoy.set(data);
+
+    const cerrada = data?.status === 'closed';
+    this._cajaYaCerrada.set(cerrada);
+    this._cierreHoy.set(cerrada ? data : null);
+
+    if (data?.status === 'draft') {
+      this.fondoInicial.set(data.opening_amount ?? 0);
+      this.realizarArqueo.set(data.arqueo_enabled ?? false);
+      this.notasArqueo.set(data.notes ?? '');
+      this.cantidades.set({
+        bill20000: data.qty_bill_20000 ?? 0,
+        bill10000: data.qty_bill_10000 ?? 0,
+        bill5000: data.qty_bill_5000 ?? 0,
+        bill2000: data.qty_bill_2000 ?? 0,
+        bill1000: data.qty_bill_1000 ?? 0,
+        coin500: data.qty_coin_500 ?? 0,
+        coin100: data.qty_coin_100 ?? 0,
+        coin50: data.qty_coin_50 ?? 0,
+        coin10: data.qty_coin_10 ?? 0,
+      });
+    }
   }
 
   async eliminarIngreso(row: IngresoRow): Promise<boolean> {
@@ -645,6 +667,57 @@ export class CuadraturaFacade {
     };
   }
 
+  /**
+   * Arma el payload de borrador a partir del estado crudo de los signals de arqueo — a
+   * diferencia de `buildCierrePayload()`, NO zerea las cantidades cuando `realizarArqueo` está
+   * apagado: el borrador debe restaurar exactamente lo que la secretaria dejó tipeado, aunque
+   * haya apagado el toggle a mitad de camino (spec 0012-m, AC2).
+   */
+  private buildBorradorPayload(): Record<string, unknown> {
+    const c = this.cantidades();
+    return {
+      date: toISODate(new Date()),
+      branch_id: this.getActiveBranchId(),
+      status: 'draft',
+      closed: false,
+      opening_amount: this.fondoInicial(),
+      arqueo_enabled: this.realizarArqueo(),
+      qty_bill_20000: c['bill20000'],
+      qty_bill_10000: c['bill10000'],
+      qty_bill_5000: c['bill5000'],
+      qty_bill_2000: c['bill2000'],
+      qty_bill_1000: c['bill1000'],
+      qty_coin_500: c['coin500'],
+      qty_coin_100: c['coin100'],
+      qty_coin_50: c['coin50'],
+      qty_coin_10: c['coin10'],
+      notes: this.notasArqueo() || null,
+    };
+  }
+
+  /**
+   * Autoguardado del borrador de arqueo (spec 0012-m). Debounced: se llama en cada
+   * `(input)`/`(click)` del drawer de Arqueo y Cierre, pero solo escribe tras ~800ms sin
+   * actividad. Falla silenciosa (mismo criterio que `refreshSilently()` del patrón SWR) — un
+   * error de red no debe interrumpir a la secretaria a mitad del conteo.
+   */
+  guardarBorrador(): void {
+    if (this._cajaYaCerrada()) return;
+    if (this._borradorTimer) clearTimeout(this._borradorTimer);
+    this._borradorTimer = setTimeout(() => void this.persistirBorrador(), 800);
+  }
+
+  private async persistirBorrador(): Promise<void> {
+    if (!this.auth.currentUser()) return;
+    try {
+      await this.supabase.client
+        .from('cash_closings')
+        .upsert(this.buildBorradorPayload(), { onConflict: 'date,branch_id_key' });
+    } catch {
+      // Fallo silencioso — el próximo cambio reintenta (mismo criterio que refreshSilently()).
+    }
+  }
+
   /** Limpia el estado de arqueo tras cerrar caja exitosamente — no debe arrastrarse al día siguiente. */
   private resetArqueoState(): void {
     this.cantidades.set({
@@ -667,37 +740,52 @@ export class CuadraturaFacade {
     if (!user) return false;
     this._isSaving.set(true);
     try {
+      if (this._borradorTimer) {
+        clearTimeout(this._borradorTimer);
+        this._borradorTimer = null;
+      }
       const today = toISODate(new Date());
       const pagos = this._pagosHoy();
       const payload = this.buildCierrePayload();
-      await this.supabase.client.from('cash_closings').insert({
-        date: today,
-        branch_id: this.getActiveBranchId(),
-        closed_by: user.dbId,
-        closed_at: new Date().toISOString(),
-        status: 'closed',
-        closed: true,
-        cash_amount: pagos.reduce((s, p) => s + p.claseB, 0),
-        transfer_amount: pagos.reduce((s, p) => s + p.claseA, 0),
-        card_amount: pagos.reduce((s, p) => s + p.otros, 0),
-        voucher_amount: pagos.reduce((s, p) => s + p.sence, 0),
-        total_income: this.totalIngresosHoy(),
-        total_expenses: this.totalEgresosHoy(),
-        balance: this.saldoTeoricoEfectivo(),
-        payments_count: pagos.length,
-        arqueo_amount: payload.arqueoTotal,
-        difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
-        qty_bill_20000: payload.bill20000,
-        qty_bill_10000: payload.bill10000,
-        qty_bill_5000: payload.bill5000,
-        qty_bill_2000: payload.bill2000,
-        qty_bill_1000: payload.bill1000,
-        qty_coin_500: payload.coin500,
-        qty_coin_100: payload.coin100,
-        qty_coin_50: payload.coin50,
-        qty_coin_10: payload.coin10,
-        notes: payload.notes || null,
-      });
+      // upsert (no insert plano, spec 0012-m): si ya existía un borrador para hoy/sede, se
+      // actualiza la MISMA fila (mismo id) en vez de crear una duplicada.
+      await this.supabase.client.from('cash_closings').upsert(
+        {
+          date: today,
+          branch_id: this.getActiveBranchId(),
+          closed_by: user.dbId,
+          closed_at: new Date().toISOString(),
+          status: 'closed',
+          closed: true,
+          opening_amount: this.fondoInicial(),
+          arqueo_enabled: this.realizarArqueo(),
+          cash_amount: pagos.reduce((s, p) => s + p.claseB, 0),
+          transfer_amount: pagos.reduce((s, p) => s + p.claseA, 0),
+          card_amount: pagos.reduce((s, p) => s + p.otros, 0),
+          voucher_amount: pagos.reduce((s, p) => s + p.sence, 0),
+          total_income: this.totalIngresosHoy(),
+          total_expenses: this.totalEgresosHoy(),
+          // Snapshot del egreso pagado en efectivo — lo único que baja el saldo físico
+          // (fix-211-m). El historial lo usa para separar egreso-efectivo de egreso-tarjeta
+          // sin depender de una identidad algebraica sobre `balance` (fix-226-m).
+          cash_expenses: this.totalEgresosEfectivoHoy(),
+          balance: this.saldoTeoricoEfectivo(),
+          payments_count: pagos.length,
+          arqueo_amount: payload.arqueoTotal,
+          difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
+          qty_bill_20000: payload.bill20000,
+          qty_bill_10000: payload.bill10000,
+          qty_bill_5000: payload.bill5000,
+          qty_bill_2000: payload.bill2000,
+          qty_bill_1000: payload.bill1000,
+          qty_coin_500: payload.coin500,
+          qty_coin_100: payload.coin100,
+          qty_coin_50: payload.coin50,
+          qty_coin_10: payload.coin10,
+          notes: payload.notes || null,
+        },
+        { onConflict: 'date,branch_id_key' },
+      );
       this.toast.success('Caja cerrada correctamente.');
       this.resetArqueoState();
       void this.refreshSilently();

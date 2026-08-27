@@ -49,12 +49,25 @@ function mapAdjustmentToRow(
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
-function mapCierreToHistorial(
+export function mapCierreToHistorial(
   row: CashClosing & { users?: { first_names: string; paternal_last_name: string } | null },
 ): HistorialCierre {
   const saldoSistema = row.balance ?? 0;
   const saldoFisico = row.arqueo_amount ?? 0;
   const diferencia = row.difference ?? saldoFisico - saldoSistema;
+
+  // Fondo de apertura real (spec 0012-m). `null` en cierres previos — la UI muestra
+  // "No registrado" en vez del `50_000` hardcodeado que enmascaraba el dato (fix-226-m).
+  const fondoInicial = row.opening_amount ?? null;
+
+  const totalEgresos = row.total_expenses ?? 0;
+  // Egreso pagado en efectivo (lo único que baja el saldo físico, fix-211-m). Snapshot en
+  // `cash_expenses` desde fix-226-m; para cierres anteriores (columna null) se deriva de la
+  // identidad del cierre: balance = opening_amount + cash_amount − egresoEfectivo.
+  const cashExpenses =
+    row.cash_expenses ??
+    Math.max(0, (row.opening_amount ?? 0) + (row.cash_amount ?? 0) - saldoSistema);
+  const nonCashExpenses = Math.max(0, totalEgresos - cashExpenses);
 
   const cajero = row.users
     ? `${row.users.first_names} ${row.users.paternal_last_name}`.trim()
@@ -72,13 +85,16 @@ function mapCierreToHistorial(
     // El historial solo trae `.eq('closed', true)` — este campo documenta esa garantía
     // en vez de asumirla implícitamente (spec 0002-i, AC-E1).
     closed: row.closed ?? true,
-    fondoInicial: 50_000,
+    fondoInicial,
     saldoSistema,
     saldoFisico,
     diferencia,
     cajero,
     totalIngresos: row.total_income ?? 0,
-    totalEgresos: row.total_expenses ?? 0,
+    ingresosEfectivo: row.cash_amount ?? 0,
+    totalEgresos,
+    cashExpenses,
+    nonCashExpenses,
     estadoDiferencia,
     qtyBill20000: row.qty_bill_20000 ?? 0,
     qtyBill10000: row.qty_bill_10000 ?? 0,
@@ -106,6 +122,8 @@ function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][
     'Fondo Inicial',
     'Total Ingresos',
     'Total Egresos',
+    'Egresos Efectivo',
+    'Egresos Tarjeta/Transf.',
     'Saldo Sistema',
     'Saldo Fisico',
     'Diferencia',
@@ -114,9 +132,11 @@ function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][
   const rows = cierres.map((c) => [
     c.fecha,
     c.cajero,
-    c.fondoInicial,
+    c.fondoInicial ?? 'No registrado',
     c.totalIngresos,
     c.totalEgresos,
+    c.cashExpenses,
+    c.nonCashExpenses,
     c.saldoSistema,
     c.saldoFisico,
     c.diferencia,
