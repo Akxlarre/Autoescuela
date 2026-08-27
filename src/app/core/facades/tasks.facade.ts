@@ -363,6 +363,27 @@ export class TasksFacade {
     const { data, error } = await query;
     if (error) return;
 
+    // fix-030-i: el SELECT de `users` de arriba NO está scopeado por sede para una secretaria
+    // (verificado en vivo: una secretaria de sede 1 puede leer un usuario de sede 2) — el
+    // comentario original asumía lo contrario. La policy tasks_insert SÍ exige, para un
+    // destinatario instructor, que sea de la MISMA sede que la secretaria (o tenga el grant
+    // both_branches). Sin este post-filtro, el picker ofrece instructores de otra sede que el
+    // INSERT rechaza después con 403 (DG-084/DG-085/DG-086: mismo patrón — Facade asume un scope
+    // de sede sin verificarlo). Nota: BranchFacade.selectedBranchId() nunca se inicializa para
+    // una secretaria (no llama loadBranches(), ver facades.md §7) — usamos currentUser.branchId,
+    // su sede de anclaje real.
+    const secretaryBranchId = fromRole === 'secretary' ? currentUser.branchId : null;
+    let bothBranchesInstructorIds: Set<number> | null = null;
+    if (secretaryBranchId != null) {
+      const { data: bothBranchesRows } = await this.supabase.client
+        .from('instructors')
+        .select('user_id')
+        .eq('both_branches', true);
+      bothBranchesInstructorIds = new Set(
+        ((bothBranchesRows ?? []) as Array<{ user_id: number }>).map((r) => r.user_id),
+      );
+    }
+
     const options: RecipientOption[] = (
       (data ?? []) as unknown as Array<{
         id: number;
@@ -377,6 +398,12 @@ export class TasksFacade {
         const roleName = rolesData?.name ?? '';
         const taskRole = ROLE_NAME_TO_TASK_ROLE[roleName] ?? null;
         if (!taskRole || !canSendTo(fromRole, taskRole)) return null;
+
+        if (taskRole === 'instructor' && bothBranchesInstructorIds) {
+          const sameBranch = u.branch_id === secretaryBranchId;
+          if (!sameBranch && !bothBranchesInstructorIds.has(u.id)) return null;
+        }
+
         return {
           dbId: u.id,
           name: `${u.first_names} ${u.paternal_last_name}`.trim(),

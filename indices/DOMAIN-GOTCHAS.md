@@ -1248,6 +1248,30 @@
 
 ---
 
+### DG-086 — Un comentario en el código que asume "la RLS ya scopea esto" sin verificarlo empíricamente puede estar simplemente equivocado
+- **Trampa:** confiar en un comentario in-line que justifica "no hace falta filtrar por sede acá
+  porque la policy RLS de la tabla ya lo hace" — y no volver a verificarlo cuando se reutiliza
+  ese query para un caso nuevo (ej. listar instructores, no solo admins). El comentario puede
+  haber sido cierto para el caso que originalmente motivó escribirlo y falso para el caso que lo
+  hereda sin que nadie lo note, porque compila y no hay error visible hasta que la escritura
+  posterior (INSERT/UPDATE) choca con una policy distinta.
+- **Realidad:** `TasksFacade.loadRecipients()` traía candidatos de `users` sin filtro de sede para
+  una secretaria, con un comentario explícito: *"secretary's RLS policy already scopes results"*.
+  Verificado en vivo: **falso** — una secretaria de sede 1 puede `SELECT` sin restricción un
+  usuario de sede 2 (no hay policy de `users` que lo bloquee). El picker de destinatarios de
+  "Nueva comunicación" ofrecía entonces instructores de cualquier sede; la policy `tasks_insert`
+  (correcta, sí exige `to_user` de la misma sede) rechazaba el `INSERT` después con 403 — el
+  picker prometía algo que el guardado nunca iba a cumplir.
+- **Regla de aplicabilidad:** cuando un comentario justifica omitir un filtro de sede citando una
+  policy RLS de OTRA tabla o de un caso distinto (ej. "ya lo filtra la policy de X" al construir
+  un query sobre Y), verificar esa afirmación empíricamente (una query de prueba autenticada como
+  ese rol) antes de confiar en ella — especialmente al reutilizar el query para un tipo de
+  destinatario/entidad nuevo. Aplica el mismo criterio de DG-084 (same-branch OR both_branches)
+  al post-filtrar candidatos que luego se usan en un INSERT con su propia policy de sede.
+- **Fuente:** `specs/fixes/fix-030-i-tasks-recipient-picker-no-branch-filter`
+
+---
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
