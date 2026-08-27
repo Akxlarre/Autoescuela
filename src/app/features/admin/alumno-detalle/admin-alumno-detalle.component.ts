@@ -1104,11 +1104,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     () => this.facade.progresoPractico().requeridas - this.facade.progresoPractico().completadas,
   );
 
-  /** Cuántas de las primeras 6 clases prácticas están completadas (firmadas). */
-  private readonly primeras6Completadas = computed(
-    () => this.facade.clasesPracticas().filter((c) => c.numero <= 6 && c.completada).length,
-  );
-
   readonly enrollmentTabs = computed(() => {
     return this.facade.enrollmentSummaries().map((enr) => ({
       id: String(enr.id),
@@ -1224,7 +1219,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         menu: buildCarnetMenu({
           initialPath: this.facade.licenseInitialPath(),
           fullPath: this.facade.licenseFullPath(),
-          primeras6Completadas: this.primeras6Completadas(),
           isReinforcement: alumno.isReinforcement,
         }),
       });

@@ -124,7 +124,7 @@ Deno.serve(async (req: Request) => {
     // ── Egresos del día (expenses) ─────────────────────────────────────────────
     let expQ = adminClient
       .from('expenses')
-      .select('id, description, amount, created_at')
+      .select('id, description, amount, created_at, payment_method')
       .eq('date', date)
       .order('created_at', { ascending: true });
     if (branchId !== null) expQ = expQ.eq('branch_id', branchId);
@@ -132,7 +132,7 @@ Deno.serve(async (req: Request) => {
     // ── Anticipos del día (instructor_advances) ────────────────────────────────
     const advQ = adminClient
       .from('instructor_advances')
-      .select('id, reason, description, amount, created_at')
+      .select('id, reason, description, amount, created_at, payment_method')
       .eq('date', date)
       .order('created_at', { ascending: true });
 
@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
         `date, closed, closed_at, status, notes,
          cash_amount, transfer_amount, card_amount, voucher_amount,
          total_income, total_expenses, balance, payments_count,
-         arqueo_amount, difference,
+         opening_amount, arqueo_amount, difference,
          qty_bill_20000, qty_bill_10000, qty_bill_5000, qty_bill_2000, qty_bill_1000,
          qty_coin_500, qty_coin_100, qty_coin_50, qty_coin_10`,
       )
@@ -155,7 +155,9 @@ Deno.serve(async (req: Request) => {
     const { data: cierreData } = await cierreQ.maybeSingle();
 
     // ── Normalizar datos ───────────────────────────────────────────────────────
-    const FONDO_INICIAL = 50_000;
+    // fix-226-m: fondo de apertura real (cash_closings.opening_amount, spec 0012-m) en vez
+    // del 50.000 hardcodeado. Null en cierres previos / caja aún abierta → 0.
+    const fondoInicial = cierreData?.opening_amount ?? 0;
 
     const ingresosPagos: IngresoRow[] = (rawPayments ?? []).map((p: any) => ({
       hora: formatTimeCL(p.created_at),
@@ -199,19 +201,26 @@ Deno.serve(async (req: Request) => {
         descripcion: e.description ?? '—',
         tipo: 'Gasto' as const,
         monto: e.amount ?? 0,
+        metodoPago: e.payment_method ?? 'efectivo',
       })),
       ...(advRes.data ?? []).map((a: any) => ({
         hora: formatTimeCL(a.created_at),
         descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
         tipo: 'Anticipo' as const,
         monto: a.amount ?? 0,
+        metodoPago: a.payment_method ?? 'efectivo',
       })),
     ].sort((a, b) => a.hora.localeCompare(b.hora));
 
     const totalIngresos = ingresos.reduce((s, i) => s + i.total, 0);
     const totalEfectivo = ingresos.reduce((s, i) => s + i.efectivo, 0);
     const totalEgresos = egresos.reduce((s, e) => s + e.monto, 0);
-    const saldoTeorico = FONDO_INICIAL + totalEfectivo - totalEgresos;
+    // Solo el egreso pagado en efectivo baja el saldo físico de la caja (fix-211-m / fix-226-m).
+    const totalEgresosEfectivo = egresos.reduce(
+      (s, e) => s + (e.metodoPago === 'efectivo' ? e.monto : 0),
+      0,
+    );
+    const saldoTeorico = fondoInicial + totalEfectivo - totalEgresosEfectivo;
 
     const reportData: ReportData = {
       fecha: date,
@@ -219,10 +228,11 @@ Deno.serve(async (req: Request) => {
       generatedBy,
       ingresos,
       egresos,
-      fondoInicial: FONDO_INICIAL,
+      fondoInicial,
       totalIngresos,
       totalEfectivo,
       totalEgresos,
+      totalEgresosEfectivo,
       saldoTeorico,
       cierre: cierreData
         ? {
@@ -289,6 +299,7 @@ interface EgresoRow {
   descripcion: string;
   tipo: 'Gasto' | 'Anticipo';
   monto: number;
+  metodoPago: string;
 }
 
 interface CierreInfo {
@@ -317,6 +328,8 @@ interface ReportData {
   totalIngresos: number;
   totalEfectivo: number;
   totalEgresos: number;
+  /** Subconjunto de `totalEgresos` pagado en efectivo — lo único que baja el saldo físico. */
+  totalEgresosEfectivo: number;
   saldoTeorico: number;
   cierre: CierreInfo | null;
 }
@@ -351,6 +364,11 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
   rows.push(['  — Efectivo', d.totalEfectivo]);
   rows.push(['  — Otros Métodos', d.totalIngresos - d.totalEfectivo]);
   rows.push(['Total Egresos del Día', d.totalEgresos]);
+  rows.push(['  — En Efectivo (afecta arqueo)', d.totalEgresosEfectivo]);
+  rows.push([
+    '  — Tarjeta / Transferencia (no afecta arqueo)',
+    d.totalEgresos - d.totalEgresosEfectivo,
+  ]);
   rows.push(['Saldo Teórico en Efectivo', d.saldoTeorico]);
   if (d.cierre) {
     rows.push(['Total Físico Arqueado', d.cierre.arqueoTotal]);
@@ -562,7 +580,7 @@ function buildPdf(data: ReportData): Uint8Array {
     {
       label: 'Total Egresos',
       value: clp(data.totalEgresos),
-      sub: `${data.egresos.length} registros`,
+      sub: `${clp(data.totalEgresosEfectivo)} en efectivo`,
       accent: [0.72, 0.4, 0.08],
     },
     {
@@ -743,7 +761,13 @@ function buildPdf(data: ReportData): Uint8Array {
     R(M, y - 13, CW, 15, true);
     black();
     rgb(0.72, 0.4, 0.08);
-    T(CW + M - 200, y - 9, `Total egresos del día: ${clp(data.totalEgresos)}`, 7.5, true);
+    T(
+      CW + M - 240,
+      y - 9,
+      `Total egresos del día: ${clp(data.totalEgresos)}  (${clp(data.totalEgresosEfectivo)} en efectivo)`,
+      7.5,
+      true,
+    );
     black();
     y -= 16;
   }

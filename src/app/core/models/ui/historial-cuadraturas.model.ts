@@ -6,7 +6,12 @@ export interface HistorialCierre {
   fecha: string;
   /** Siempre `true` en este modelo — el historial solo trae cierres cerrados (spec 0002-i). */
   closed: boolean;
-  fondoInicial: number;
+  /**
+   * Fondo de apertura real del día (`cash_closings.opening_amount`, spec 0012-m).
+   * `null` en cierres previos a 0012-m — la UI muestra "No registrado" en vez de un
+   * default falso (fix-226-m borró el `50_000` hardcodeado que enmascaraba el dato).
+   */
+  fondoInicial: number | null;
   /** Saldo teórico del sistema (balance = fondoInicial + ingresos - egresos) */
   saldoSistema: number;
   /** Saldo físico contado en arqueo */
@@ -16,7 +21,18 @@ export interface HistorialCierre {
   /** Nombre del cajero que cerró la caja */
   cajero: string;
   totalIngresos: number;
+  /** Ingresos cobrados en efectivo (`cash_closings.cash_amount`) — lo que entra físicamente a la caja. */
+  ingresosEfectivo: number;
+  /** Total de egresos del día — TODOS los métodos de pago. */
   totalEgresos: number;
+  /**
+   * Subconjunto de `totalEgresos` pagado en efectivo — lo único que baja el saldo físico
+   * de la caja (fix-211-m). Viene de `cash_closings.cash_expenses`; para cierres previos a
+   * fix-226-m (columna `null`) se deriva como `fondoInicial + cash_amount − saldoSistema`.
+   */
+  cashExpenses: number;
+  /** Derivado: `totalEgresos − cashExpenses` — egreso pagado con tarjeta/transferencia, no afecta el arqueo. */
+  nonCashExpenses: number;
   /** Derivado: 'balanced' | 'surplus' | 'shortage' */
   estadoDiferencia: 'balanced' | 'surplus' | 'shortage';
 

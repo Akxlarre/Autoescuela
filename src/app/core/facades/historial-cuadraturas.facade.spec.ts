@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { HistorialCuadraturasFacade } from './historial-cuadraturas.facade';
+import { HistorialCuadraturasFacade, mapCierreToHistorial } from './historial-cuadraturas.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -86,7 +86,10 @@ describe('HistorialCuadraturasFacade', () => {
     diferencia: 0,
     cajero: 'Ana Pérez',
     totalIngresos: 150_000,
+    ingresosEfectivo: 120_000,
     totalEgresos: 50_000,
+    cashExpenses: 50_000,
+    nonCashExpenses: 0,
     estadoDiferencia: 'balanced',
     qtyBill20000: 0,
     qtyBill10000: 0,
@@ -281,6 +284,66 @@ describe('HistorialCuadraturasFacade', () => {
       expect(adjustmentsInsert).toHaveBeenCalledWith(
         expect.objectContaining({ tipo: 'correccion_manual', expense_id: null }),
       );
+    });
+  });
+
+  // ─── fix-226-m: fondo de apertura real + egreso efectivo vs no-efectivo ────
+
+  describe('mapCierreToHistorial', () => {
+    const baseRow: any = {
+      id: 7,
+      branch_id: 2,
+      date: '2026-08-27',
+      closed: true,
+      balance: 15_000,
+      arqueo_amount: 14_827,
+      difference: -173,
+      total_income: 0,
+      total_expenses: 84_000,
+      cash_amount: 0,
+      users: { first_names: 'María', paternal_last_name: 'Torres' },
+    };
+
+    it('usa opening_amount real cuando viene, y null cuando falta', () => {
+      expect(mapCierreToHistorial({ ...baseRow, opening_amount: 99_000 }).fondoInicial).toBe(
+        99_000,
+      );
+      expect(mapCierreToHistorial({ ...baseRow, opening_amount: null }).fondoInicial).toBeNull();
+      expect(mapCierreToHistorial({ ...baseRow }).fondoInicial).toBeNull();
+    });
+
+    it('usa cash_expenses persistido y deriva nonCashExpenses del total', () => {
+      const ui = mapCierreToHistorial({
+        ...baseRow,
+        opening_amount: 50_000,
+        cash_expenses: 34_000,
+      });
+      expect(ui.cashExpenses).toBe(34_000);
+      expect(ui.nonCashExpenses).toBe(84_000 - 34_000);
+    });
+
+    it('cashExpenses cae al fallback derivado (opening + cash_amount − balance) cuando la columna es null', () => {
+      // opening 50.000 + cash_amount 20.000 − balance 36.000 = 34.000 de egreso efectivo
+      const ui = mapCierreToHistorial({
+        ...baseRow,
+        opening_amount: 50_000,
+        cash_amount: 20_000,
+        balance: 36_000,
+        cash_expenses: null,
+      });
+      expect(ui.cashExpenses).toBe(34_000);
+      expect(ui.nonCashExpenses).toBe(84_000 - 34_000);
+    });
+
+    it('el libro de conciliación cuadra: fondo + ingresosEfectivo − cashExpenses === saldoSistema', () => {
+      const ui = mapCierreToHistorial({
+        ...baseRow,
+        opening_amount: 50_000,
+        cash_amount: 20_000,
+        balance: 36_000,
+        cash_expenses: 34_000,
+      });
+      expect((ui.fondoInicial ?? 0) + ui.ingresosEfectivo - ui.cashExpenses).toBe(ui.saldoSistema);
     });
   });
 });

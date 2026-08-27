@@ -69,6 +69,20 @@ function formatCLP(value: number): string {
     CardHoverDirective,
   ],
   styles: `
+    /* fix-226-m: .bento-grid--fill-screen-kpi solo fija height + grid-template-rows
+       ("auto auto minmax(0,1fr)") dentro de @container layoutmain >= 1024px. Al abrir un
+       drawer que angosta <main> por debajo de eso (típico en 1440px con un drawer de
+       ~450px), el grid cae al default de .bento-grid (grid-auto-rows: minmax(120px, auto)):
+       el hero density="slim" (~64px reales) se estira a 120px y aparece un hueco enorme
+       entre el hero y el calendario. Colapsar a filas "auto" bajo 1024px lo elimina — ahí
+       la vista es la lista móvil y scrollea nativa. Misma técnica que
+       admin-auditoria.component.ts:344 (un bloque styles de Angular no vive en ningún
+       @layer, gana por cascada sobre la regla base sin !important). */
+    @container layoutmain (max-width: 1023px) {
+      .bento-grid.bento-grid--fill-screen-kpi {
+        grid-template-rows: auto auto auto;
+      }
+    }
     .cal-cell {
       min-height: 120px;
       padding: 0.5rem;

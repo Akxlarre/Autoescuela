@@ -6,8 +6,6 @@ export interface CarnetMenuState {
   initialPath: string | null;
   /** Ruta del carnet de 12 clases ya generado, o null si aún no existe. */
   fullPath: string | null;
-  /** Cuántas de las primeras 6 clases prácticas están completadas (firmadas). */
-  primeras6Completadas: number;
   /**
    * true = curso "Refuerzo Clase B" (6 clases en total, nunca llega a 12) — spec 0006-m.
    * El carnet de 6 clases sigue disponible (idéntico al de Clase B estándar); el de 12
@@ -16,24 +14,17 @@ export interface CarnetMenuState {
   isReinforcement?: boolean;
 }
 
-/** Total de clases de la primera etapa que habilitan el carnet completo. */
-const PRIMERA_ETAPA = 6;
-
 /**
  * Construye los ítems del menú desplegable "Carnet" (Clase B) según el estado del
- * alumno. Reglas (fix-019):
- *  - El carnet de 6 clases siempre se puede generar; "Generar" pasa a "Volver a
- *    generar" una vez emitido.
+ * alumno. Reglas (fix-019, hotfix-093):
+ *  - Ambos carnets (6 y 12 clases) siempre se pueden generar; "Generar" pasa a
+ *    "Volver a generar" una vez emitido cada uno.
  *  - "Ver" de cada carnet sólo se habilita cuando ese carnet ya existe.
- *  - El carnet de 12 clases sólo se habilita cuando el alumno completó sus
- *    primeras 6 clases; mientras tanto indica cuántas faltan.
  *
  * Función pura (Data In → Data Out): testeable sin Angular.
  */
 export function buildCarnetMenu(state: CarnetMenuState): SectionHeroMenuItem[] {
-  const { initialPath, fullPath, primeras6Completadas, isReinforcement = false } = state;
-  const puede12 = primeras6Completadas >= PRIMERA_ETAPA;
-  const faltan = Math.max(0, PRIMERA_ETAPA - primeras6Completadas);
+  const { initialPath, fullPath, isReinforcement = false } = state;
 
   const items: SectionHeroMenuItem[] = [
     { id: 'carnet-6-header', label: 'Carnet 6 clases', header: true },
@@ -54,8 +45,6 @@ export function buildCarnetMenu(state: CarnetMenuState): SectionHeroMenuItem[] {
       id: 'generar-carnet-12',
       label: fullPath ? 'Volver a generar Carnet 12 clases' : 'Generar Carnet 12 clases',
       icon: fullPath ? 'refresh-cw' : 'file-plus',
-      disabled: !puede12,
-      hint: puede12 ? undefined : `faltan ${faltan} de las primeras 6 clases`,
     },
     { id: 'ver-carnet-12', label: 'Ver Carnet 12 clases', icon: 'eye', disabled: !fullPath },
   );

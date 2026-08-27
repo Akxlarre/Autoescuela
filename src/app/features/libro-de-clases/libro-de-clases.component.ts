@@ -828,7 +828,8 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
       {
         id: 'export-pdf',
         label: this.facade.isExporting() ? 'Generando PDF...' : 'Exportar PDF',
-        icon: 'download',
+        icon: this.facade.isExporting() ? 'loader-circle' : 'download',
+        loading: this.facade.isExporting(),
         primary: true,
       },
     ];

@@ -467,6 +467,256 @@ describe('mapSingularSaleToIngreso', () => {
   });
 });
 
+// ─── spec 0012-m: persistir borrador de Arqueo y Cierre de Caja ───────────────
+
+describe('CuadraturaFacade.guardarBorrador — autoguardado con debounce (spec 0012-m)', () => {
+  let facade: CuadraturaFacade;
+  let upsertSpy: ReturnType<typeof vi.fn>;
+
+  const mockUser = {
+    id: 'user-uuid',
+    dbId: 1,
+    name: 'Admin Test',
+    initials: 'AT',
+    role: 'admin' as const,
+    branch_id: 1,
+    firstLogin: false,
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    upsertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        {
+          provide: SupabaseService,
+          useValue: {
+            client: {
+              from: (table: string) => ({
+                upsert: (payload: unknown, opts: unknown) => upsertSpy(table, payload, opts),
+              }),
+            },
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => mockUser } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+
+    facade = TestBed.inject(CuadraturaFacade);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('hace upsert con status "draft" y los valores actuales de los signals', async () => {
+    facade.fondoInicial.set(50_000);
+    facade.notasArqueo.set('Conteo parcial');
+    facade.realizarArqueo.set(true);
+    facade.cantidades.update((c) => ({ ...c, bill20000: 2 }));
+
+    facade.guardarBorrador();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    const [table, payload, opts] = upsertSpy.mock.calls[0];
+    expect(table).toBe('cash_closings');
+    expect(payload).toMatchObject({
+      status: 'draft',
+      closed: false,
+      opening_amount: 50_000,
+      arqueo_enabled: true,
+      notes: 'Conteo parcial',
+      qty_bill_20000: 2,
+    });
+    expect(opts).toEqual({ onConflict: 'date,branch_id_key' });
+  });
+
+  it('llamadas sucesivas dentro de la ventana de debounce solo disparan una escritura', async () => {
+    facade.guardarBorrador();
+    await vi.advanceTimersByTimeAsync(300);
+    facade.guardarBorrador();
+    await vi.advanceTimersByTimeAsync(300);
+    facade.guardarBorrador();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('un error en el upsert no lanza excepción no capturada (AC-E3)', async () => {
+    upsertSpy.mockResolvedValueOnce({ data: null, error: { message: 'network down' } });
+
+    expect(() => facade.guardarBorrador()).not.toThrow();
+    await expect(vi.advanceTimersByTimeAsync(1000)).resolves.not.toThrow();
+  });
+});
+
+describe('CuadraturaFacade — restaurar borrador al cargar el día (spec 0012-m)', () => {
+  let facade: CuadraturaFacade;
+
+  const mockUser = {
+    id: 'user-uuid',
+    dbId: 1,
+    name: 'Admin Test',
+    initials: 'AT',
+    role: 'admin' as const,
+    branch_id: 1,
+    firstLogin: false,
+  };
+
+  function setup(cashClosingRow: unknown) {
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        {
+          provide: SupabaseService,
+          useValue: {
+            client: {
+              from: () => ({
+                select: () => ({
+                  eq: () => ({
+                    eq: () => ({
+                      maybeSingle: () => Promise.resolve({ data: cashClosingRow, error: null }),
+                    }),
+                    maybeSingle: () => Promise.resolve({ data: cashClosingRow, error: null }),
+                  }),
+                }),
+              }),
+            },
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => mockUser } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+    facade = TestBed.inject(CuadraturaFacade);
+  }
+
+  it('restaura fondoInicial/cantidades/notasArqueo/realizarArqueo cuando la fila es status="draft"', async () => {
+    setup({
+      status: 'draft',
+      closed: false,
+      opening_amount: 30_000,
+      arqueo_enabled: true,
+      notes: 'A medio contar',
+      qty_bill_20000: 2,
+      qty_bill_10000: 1,
+      qty_bill_5000: 0,
+      qty_bill_2000: 0,
+      qty_bill_1000: 0,
+      qty_coin_500: 3,
+      qty_coin_100: 0,
+      qty_coin_50: 0,
+      qty_coin_10: 0,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (facade as any).checkCajaStatus('2026-08-27', 1);
+
+    expect(facade.fondoInicial()).toBe(30_000);
+    expect(facade.realizarArqueo()).toBe(true);
+    expect(facade.notasArqueo()).toBe('A medio contar');
+    expect(facade.cantidades()).toEqual({
+      bill20000: 2,
+      bill10000: 1,
+      bill5000: 0,
+      bill2000: 0,
+      bill1000: 0,
+      coin500: 3,
+      coin100: 0,
+      coin50: 0,
+      coin10: 0,
+    });
+  });
+
+  it('NO marca cajaYaCerrada=true para una fila status="draft" (AC5)', async () => {
+    setup({ status: 'draft', closed: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (facade as any).checkCajaStatus('2026-08-27', 1);
+    expect(facade.cajaYaCerrada()).toBe(false);
+  });
+
+  it('mantiene cajaYaCerrada=true para una fila status="closed" (sin regresión)', async () => {
+    setup({ status: 'closed', closed: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (facade as any).checkCajaStatus('2026-08-27', 1);
+    expect(facade.cajaYaCerrada()).toBe(true);
+  });
+
+  it('estado en blanco cuando no hay ninguna fila para hoy', async () => {
+    setup(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (facade as any).checkCajaStatus('2026-08-27', 1);
+    expect(facade.cajaYaCerrada()).toBe(false);
+    expect(facade.fondoInicial()).toBe(0);
+  });
+});
+
+describe('CuadraturaFacade.cerrarCaja — upsert, no duplica fila de borrador (spec 0012-m)', () => {
+  let facade: CuadraturaFacade;
+  let upsertSpy: ReturnType<typeof vi.fn>;
+
+  const mockUser = {
+    id: 'user-uuid',
+    dbId: 1,
+    name: 'Admin Test',
+    initials: 'AT',
+    role: 'admin' as const,
+    branch_id: 1,
+    firstLogin: false,
+  };
+
+  beforeEach(() => {
+    upsertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        {
+          provide: SupabaseService,
+          useValue: {
+            client: {
+              from: (table: string) => ({
+                upsert: (payload: unknown, opts: unknown) => upsertSpy(table, payload, opts),
+              }),
+            },
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => mockUser } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+
+    facade = TestBed.inject(CuadraturaFacade);
+  });
+
+  it('hace upsert (no insert plano) con onConflict "date,branch_id_key"', async () => {
+    const ok = await facade.cerrarCaja();
+
+    expect(ok).toBe(true);
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    const [table, payload, opts] = upsertSpy.mock.calls[0];
+    expect(table).toBe('cash_closings');
+    expect(payload).toMatchObject({ status: 'closed', closed: true });
+    expect(opts).toEqual({ onConflict: 'date,branch_id_key' });
+  });
+
+  it('persiste cash_expenses = totalEgresosEfectivoHoy (fix-226-m)', async () => {
+    (facade as any)._gastosHoy.set([
+      { id: 1, tipo: 'expense', descripcion: 'Bencina', monto: 34_000, paymentMethod: 'efectivo' },
+      { id: 2, tipo: 'expense', descripcion: 'Repuesto', monto: 50_000, paymentMethod: 'tarjeta' },
+    ]);
+
+    await facade.cerrarCaja();
+
+    const [, payload] = upsertSpy.mock.calls[0];
+    expect(payload).toMatchObject({ total_expenses: 84_000, cash_expenses: 34_000 });
+  });
+});
+
 // ─── fix-024-i: ventas de Servicios Especiales en Caja Diaria ─────────────────
 
 describe('mapSpecialServiceSaleToIngreso', () => {
