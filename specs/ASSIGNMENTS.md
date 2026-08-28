@@ -75,8 +75,6 @@
 > clases (086, mismo patrón de tabs que 084/085) + fillers (068, 073). Reasignar solo si alguien
 > queda bloqueado — no reordenar sin avisar al resto por el solape ya armado.
 
-| ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | spec | Alta | b | 1654 líneas, máximo tráfico. No reclamar sin haber hecho ASG-b-084 antes. QA visual exhaustivo obligatorio. Ver `specs/assignments/ASG-b-085-*.md` |
-
 ### Tanda auditoría fresca del DS — 2026-08-03
 
 > Auditoría completa del Design System más allá de `lint:arch` (`indices/DS-AUDIT-2026-08-03.md`,
@@ -127,6 +125,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
 <!-- AUTO-GENERATED:END -->
 
 ---
