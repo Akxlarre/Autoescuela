@@ -31,6 +31,7 @@
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
+| `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` — arma los 4 KPIs del hero de Cuadratura Diaria (cuadratura en efectivo que cuadra: apertura + ingresos efvo. − egresos efvo. = saldo). Consumido por `app-cuadratura-content` (fix-230-m) |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |

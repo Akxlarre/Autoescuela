@@ -8,11 +8,20 @@
 // 06:00 UTC, DESPUÉS de `auto_transition_promotion_status()` (mismo horario) para que el
 // conteo de `in_progress` ya refleje la transición planned→in_progress del día.
 //
-// Por cada promoción que falte para completar el colchón (cadencia 14 días desde la última
-// `start_date` existente):
+// fix-228-m: la reserva del slot (contar colchón + decidir si falta una promoción +
+// INSERT del placeholder) vive en la función atómica `reserve_next_promotion_slot()`
+// (migración `20260829110000_...`), protegida con `pg_advisory_xact_lock`. Antes, este
+// archivo calculaba `missing` con dos SELECT sueltos y recién insertaba varios pasos
+// async después (fetch de feriados externo) — una segunda invocación solapada podía leer
+// el mismo conteo desactualizado y crear una promoción de más. Ahora cada iteración pide
+// un slot ya reservado/insertado atómicamente; si el RPC no devuelve fila, el colchón ya
+// está completo (por esta invocación o por otra concurrente) y el loop corta ahí.
+//
+// Por cada slot reservado:
 //   1. Calcula `end_date` con recuperación de feriados (AC6, mismo algoritmo que
 //      `core/utils/promotion-end-date.utils.ts`, portado en `_shared/holidays.ts`).
-//   2. INSERT `professional_promotions` (status='planned', branch_id=2).
+//   2. UPDATE `professional_promotions` (name + end_date reales sobre el placeholder ya
+//      insertado por el RPC).
 //   3. Por cada curso profesional (type='professional', is_convalidation=false): INSERT
 //      `promotion_courses` (dispara el trigger `generate_sessions_from_promotion()`, que
 //      genera las sesiones L-S del rango [start_date, end_date] — por eso end_date debe
@@ -20,11 +29,8 @@
 //      los 2 puntos de creación perezosa existentes en el flujo manual).
 //   4. Cancela sesiones que caen en feriados dentro del rango extendido.
 //
-// Idempotente por `start_date` (AC-E1): si ya existe una promoción con ese `start_date`, se
-// salta sin duplicar y la cadena avanza igual desde esa fila existente.
-//
 // Body: sin parámetros (invocada por cron sin payload).
-// Respuesta: { created: number, missing: number }
+// Respuesta: { created: number }
 //
 // @ts-nocheck
 
@@ -45,22 +51,10 @@ function jsonResponse(data: unknown, status = 200) {
 }
 
 const BRANCH_ID = 2;
-// Solo defensa ante tabla vacía (branch_id=2 sin ninguna promoción previa) — no se espera
-// que disparen nunca en producción. Ambos valores derivan de la misma promoción real
-// (start_date=2026-07-27, code=275, confirmado por el owner 2026-08-07).
-const FALLBACK_ANCHOR_START_DATE = '2026-07-27';
-const FALLBACK_ANCHOR_CODE = 275;
 
 function licenseClassToSuffix(licenseClass: string): string {
   const m = licenseClass.match(/[2-5]/);
   return m ? m[0] : '';
-}
-
-/** Suma `days` días calendario a una fecha ISO (YYYY-MM-DD), sin desfase de timezone. */
-function addDaysIso(iso: string, days: number): string {
-  const d = new Date(`${iso}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
 }
 
 const MONTH_NAMES = [
@@ -114,40 +108,7 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // 1. ¿Cuántas faltan para completar el colchón (1 in_progress + 2 planned)?
-    const [{ count: activeCount }, { count: plannedCount }] = await Promise.all([
-      supabase
-        .from('professional_promotions')
-        .select('id', { count: 'exact', head: true })
-        .eq('branch_id', BRANCH_ID)
-        .eq('status', 'in_progress'),
-      supabase
-        .from('professional_promotions')
-        .select('id', { count: 'exact', head: true })
-        .eq('branch_id', BRANCH_ID)
-        .eq('status', 'planned'),
-    ]);
-
-    const missing = Math.max(0, 1 - (activeCount ?? 0)) + Math.max(0, 2 - (plannedCount ?? 0));
-    if (missing === 0) {
-      return jsonResponse({ created: 0, missing: 0 });
-    }
-
-    // 2. Ancla de la cadencia: MAX(start_date) y MAX(code numérico) existentes.
-    const { data: allPromos } = await supabase
-      .from('professional_promotions')
-      .select('start_date, code')
-      .eq('branch_id', BRANCH_ID)
-      .order('start_date', { ascending: false });
-
-    let lastStart: string = allPromos?.[0]?.start_date ?? FALLBACK_ANCHOR_START_DATE;
-    const numericCodes = (allPromos ?? [])
-      .map((p) => p.code as string | null)
-      .filter((c): c is string => !!c && /^\d+$/.test(c))
-      .map(Number);
-    let lastCode = numericCodes.length > 0 ? Math.max(...numericCodes) : FALLBACK_ANCHOR_CODE;
-
-    // 3. Cursos profesionales relevantes (mismo filtro que loadProfessionalCourses()).
+    // Cursos profesionales relevantes (mismo filtro que loadProfessionalCourses()).
     const { data: courses } = await supabase
       .from('courses')
       .select('id, license_class')
@@ -156,45 +117,36 @@ Deno.serve(async (req: Request) => {
 
     let created = 0;
 
-    for (let i = 0; i < missing; i++) {
-      const nextStart = addDaysIso(lastStart, 14);
-
-      // Idempotencia (AC-E1): si ya existe, no duplicar — avanzar la cadena igual.
-      const { data: existing } = await supabase
-        .from('professional_promotions')
-        .select('id, code')
-        .eq('branch_id', BRANCH_ID)
-        .eq('start_date', nextStart)
+    // fix-228-m: cada iteración pide un slot ya reservado/insertado atómicamente por
+    // reserve_next_promotion_slot() (advisory lock). Si no devuelve fila, el colchón
+    // (1 in_progress + 2 planned) ya está completo — corta el loop. Tope defensivo de 10
+    // iteraciones: el colchón real nunca necesita más de 2-3 slots por corrida.
+    for (let i = 0; i < 10; i++) {
+      const { data: slot, error: slotError } = await supabase
+        .rpc('reserve_next_promotion_slot', { p_branch_id: BRANCH_ID })
         .maybeSingle();
+      if (slotError) throw slotError;
+      if (!slot) break;
 
-      if (existing) {
-        lastStart = nextStart;
-        if (existing.code && /^\d+$/.test(existing.code)) lastCode = Number(existing.code);
-        continue;
-      }
+      const promoId = slot.promotion_id as number;
+      const nextCode = slot.reserved_code as string;
+      const nextStart = slot.reserved_start_date as string;
 
-      const nextCode = String(lastCode + 1);
-
-      // Feriados y end_date se resuelven ANTES del insert (AC6): se fetchea el año completo,
-      // no se puede filtrar por end_date todavía porque aún no existe.
+      // Feriados y end_date se resuelven DESPUÉS de reservar el slot (AC6): se fetchea el
+      // año completo, no se puede filtrar por end_date todavía porque aún no existe.
       const holidays = await fetchHolidaysForYears(nextStart);
       const nextEnd = computePromotionEndDate(nextStart, new Set(holidays));
 
-      const { data: promo, error: promoError } = await supabase
+      const { error: updateError } = await supabase
         .from('professional_promotions')
-        .insert({
-          code: nextCode,
+        .update({
           name: `Promoción ${nextCode} (${formatStartDateLabel(nextStart)})`,
-          start_date: nextStart,
           end_date: nextEnd,
-          status: 'planned',
-          current_day: 0,
-          branch_id: BRANCH_ID,
         })
-        .select('id')
-        .single();
-      if (promoError) throw promoError;
+        .eq('id', promoId);
+      if (updateError) throw updateError;
 
+      const promo = { id: promoId };
       const createdPcIds: number[] = [];
       for (const course of courses ?? []) {
         const suffix = licenseClassToSuffix(course.license_class ?? '');
@@ -232,11 +184,9 @@ Deno.serve(async (req: Request) => {
       }
 
       created++;
-      lastStart = nextStart;
-      lastCode = Number(nextCode);
     }
 
-    return jsonResponse({ created, missing });
+    return jsonResponse({ created });
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
