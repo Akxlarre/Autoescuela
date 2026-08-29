@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import type { PromocionTableRow } from '@core/models/ui/promocion-table.model';
+import type { PromocionTableRow, PromocionStatus } from '@core/models/ui/promocion-table.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -27,6 +27,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -34,6 +35,14 @@ import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-draw
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 import { getCourseColor } from '@core/utils/course-colors';
+
+/** Prioridad de estado para el orden de la lista: activas primero, planificadas al final. */
+const STATUS_ORDER: Record<PromocionStatus, number> = {
+  in_progress: 0,
+  finished: 1,
+  cancelled: 2,
+  planned: 3,
+};
 
 @Component({
   selector: 'app-admin-profesional-promociones',
@@ -43,6 +52,7 @@ import { getCourseColor } from '@core/utils/course-colors';
     DatePipe,
     FormsModule,
     SelectModule,
+    TableModule,
     TagModule,
     ButtonModule,
     TooltipModule,
@@ -67,9 +77,9 @@ import { getCourseColor } from '@core/utils/course-colors';
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Cards ─────────────────────────────────────────────────────────── -->
+      <!-- ── Tabla / Tarjetas (Dual-Viewport) ─────────────────────────────── -->
       <div
-        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col w-full h-full"
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col w-full h-full dual-viewport-container"
         appCardHover
       >
         <!-- Toolbar -->
@@ -85,7 +95,7 @@ import { getCourseColor } from '@core/utils/course-colors';
               placeholder="Buscar por nombre o código..."
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               [ngModel]="searchTerm()"
-              (ngModelChange)="searchTerm.set($event); currentPage.set(1)"
+              (ngModelChange)="searchTerm.set($event)"
               data-llm-description="Search promotions by name or code"
             />
           </div>
@@ -95,8 +105,9 @@ import { getCourseColor } from '@core/utils/course-colors';
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
+            [showClear]="true"
             [ngModel]="filtroEstado()"
-            (ngModelChange)="filtroEstado.set($event); currentPage.set(1)"
+            (ngModelChange)="filtroEstado.set($event)"
             class="h-9"
             data-llm-description="filter promotions by status"
           />
@@ -108,113 +119,139 @@ import { getCourseColor } from '@core/utils/course-colors';
 
         <!-- Contenido -->
         @if (facade.isLoading()) {
-          <div class="p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto">
-            <div class="bento-grid promo-grid">
-              @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
-                <div
-                  class="p-4 rounded-xl border border-(--border-subtle) bento-wide"
-                  data-col-span="4"
-                >
-                  <div class="flex items-center gap-3 mb-4">
-                    <app-skeleton-block variant="circle" width="40px" height="40px" />
-                    <div class="flex-1 flex flex-col gap-2">
-                      <app-skeleton-block variant="text" width="70%" height="13px" />
-                      <app-skeleton-block variant="text" width="40%" height="11px" />
-                    </div>
-                    <app-skeleton-block variant="rect" width="60px" height="20px" />
-                  </div>
-                  <app-skeleton-block variant="text" width="90%" height="11px" class="mb-3" />
-                  <div class="flex flex-wrap gap-2">
-                    <app-skeleton-block variant="rect" width="30px" height="18px" />
-                    <app-skeleton-block variant="rect" width="30px" height="18px" />
+          <!-- VISTA Desktop: Tabla skeleton (oculta cuando se comprime) -->
+          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full p-4">
+            <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+              <app-skeleton-block variant="text" width="24%" height="11px" />
+              <app-skeleton-block variant="text" width="18%" height="11px" />
+              <app-skeleton-block variant="text" width="12%" height="11px" />
+              <app-skeleton-block variant="text" width="16%" height="11px" />
+              <app-skeleton-block variant="text" width="10%" height="11px" />
+            </div>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                <div class="flex items-center gap-3 w-[24%]">
+                  <app-skeleton-block variant="circle" width="36px" height="36px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="75%" height="12px" />
+                    <app-skeleton-block variant="text" width="45%" height="10px" />
                   </div>
                 </div>
-              }
-            </div>
+                <app-skeleton-block variant="text" width="18%" height="12px" />
+                <app-skeleton-block variant="text" width="12%" height="12px" />
+                <div class="flex items-center gap-1">
+                  <app-skeleton-block variant="rect" width="28px" height="18px" />
+                  <app-skeleton-block variant="rect" width="28px" height="18px" />
+                </div>
+                <app-skeleton-block variant="rect" width="64px" height="20px" />
+                <div class="flex items-center gap-1 ml-auto">
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                </div>
+              </div>
+            }
           </div>
-        } @else if (filteredPromociones().length === 0) {
-          <div class="flex-1 flex flex-col items-center justify-center">
-            <app-empty-state
-              icon="calendar-x"
-              message="No se encontraron promociones"
-              subtitle="Intenta cambiar los términos de búsqueda o filtros."
-              actionLabel="Limpiar Filtros"
-              actionIcon="filter-x"
-              (action)="limpiarFiltros()"
-            />
+
+          <!-- VISTA Mobile: Tarjetas skeleton (visible cuando se comprime) -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4">
+            @for (card of [1, 2, 3]; track card) {
+              <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="circle" width="40px" height="40px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="70%" height="13px" />
+                    <app-skeleton-block variant="text" width="40%" height="11px" />
+                  </div>
+                  <app-skeleton-block variant="rect" width="60px" height="20px" />
+                </div>
+                <app-skeleton-block variant="text" width="90%" height="11px" />
+                <div class="flex flex-wrap gap-2">
+                  <app-skeleton-block variant="rect" width="30px" height="18px" />
+                  <app-skeleton-block variant="rect" width="30px" height="18px" />
+                </div>
+              </div>
+            }
           </div>
         } @else {
-          <div class="p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto">
-            <div class="bento-grid promo-grid">
-              @for (promo of paginatedPromociones(); track promo.id) {
-                <div
-                  class="promo-card p-4 rounded-xl border border-(--border-subtle) relative bento-wide"
-                  data-col-span="4"
-                >
-                  <!-- Header: icono + nombre/código + estado -->
-                  <div class="flex items-start justify-between gap-3 mb-3">
-                    <div class="flex items-center gap-3 min-w-0">
+          <!-- VISTA Desktop: Tabla clásica con paginación (oculta cuando se comprime) -->
+          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <p-table
+              [value]="filteredPromociones()"
+              [rows]="10"
+              [paginator]="true"
+              [scrollable]="true"
+              scrollHeight="flex"
+              styleClass="p-datatable-sm h-full flex flex-col"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} promociones"
+            >
+              <ng-template pTemplate="header">
+                <tr class="micro-label text-left">
+                  <th class="pl-6 py-4">Promoción</th>
+                  <th>Fechas</th>
+                  <th>Alumnos</th>
+                  <th>Cursos</th>
+                  <th>Estado</th>
+                  <th class="pr-6 text-right">Acciones</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-promo>
+                <tr class="list-item-hover transition-colors border-b border-border-subtle">
+                  <!-- Promoción -->
+                  <td class="pl-6 py-4">
+                    <div class="flex items-center gap-3">
                       <div
-                        class="w-10 h-10 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
+                        class="w-9 h-9 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
                       >
-                        <app-icon name="calendar" [size]="18" />
+                        <app-icon name="calendar" [size]="16" />
                       </div>
                       <div class="flex flex-col min-w-0">
-                        <h3 class="item-title truncate">
-                          {{ promo.name }}
-                        </h3>
+                        <span class="item-title truncate">{{ promo.name }}</span>
                         <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
                       </div>
                     </div>
+                  </td>
+                  <!-- Fechas -->
+                  <td class="text-xs text-text-muted whitespace-nowrap">
+                    {{ promo.startDate | date: 'dd/MM/yyyy' }} →
+                    {{ promo.endDate | date: 'dd/MM/yyyy' }}
+                  </td>
+                  <!-- Alumnos -->
+                  <td class="text-xs text-text-secondary whitespace-nowrap">
+                    {{ promo.totalEnrolled }} / {{ promo.maxStudents }}
+                  </td>
+                  <!-- Cursos -->
+                  <td>
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (curso of promo.cursos; track curso.id) {
+                        <span
+                          class="course-badge"
+                          [style.background]="getCourseColor(curso.courseCode)"
+                          [pTooltip]="
+                            curso.courseName +
+                            ': ' +
+                            curso.enrolledStudents +
+                            '/' +
+                            curso.maxStudents +
+                            ' alumnos'
+                          "
+                        >
+                          {{ curso.courseCode }}
+                        </span>
+                      }
+                    </div>
+                  </td>
+                  <!-- Estado -->
+                  <td>
                     <p-tag
                       [value]="statusLabel(promo.status)"
                       [severity]="statusSeverity(promo.status)"
-                      styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                      styleClass="text-xs font-bold px-2 py-0.5"
                     ></p-tag>
-                  </div>
-
-                  <!-- Meta: fechas + alumnos -->
-                  <div class="flex items-center gap-4 flex-wrap mb-3">
-                    <span class="flex items-center gap-1.5 text-xs text-text-muted">
-                      <app-icon name="calendar" [size]="12" />
-                      {{ promo.startDate | date: 'dd/MM/yyyy' }} →
-                      {{ promo.endDate | date: 'dd/MM/yyyy' }}
-                    </span>
-                    <span class="flex items-center gap-1.5 text-xs text-text-secondary">
-                      <app-icon name="users" [size]="12" />
-                      {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
-                    </span>
-                  </div>
-
-                  <!-- Cursos -->
-                  <div class="flex flex-wrap gap-1.5 mb-3">
-                    @for (curso of promo.cursos; track curso.id) {
-                      <span
-                        class="course-badge"
-                        [style.background]="getCourseColor(curso.courseCode)"
-                        [pTooltip]="
-                          curso.courseName +
-                          ': ' +
-                          curso.enrolledStudents +
-                          '/' +
-                          curso.maxStudents +
-                          ' alumnos'
-                        "
-                      >
-                        {{ curso.courseCode }}
-                      </span>
-                    }
-                  </div>
-
-                  <!-- Footer: acciones -->
-                  <div
-                    class="flex items-center justify-between pt-3"
-                    style="border-top: 1px dashed var(--border-subtle)"
-                  >
-                    <span class="text-2xs uppercase font-bold text-text-muted">
-                      {{ promo.cursos.length }} curso(s)
-                    </span>
-                    <div class="inline-flex items-center gap-0.5">
+                  </td>
+                  <!-- Acciones -->
+                  <td class="pr-6 text-right">
+                    <div class="inline-flex items-center justify-end gap-0.5">
                       <button
                         aria-label="Ver detalle"
                         pButton
@@ -236,40 +273,124 @@ import { getCourseColor } from '@core/utils/course-colors';
                         <app-icon name="edit" [size]="16" />
                       </button>
                     </div>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="6" class="p-0">
+                    <app-empty-state
+                      icon="calendar-x"
+                      message="No se encontraron promociones"
+                      subtitle="Intenta cambiar los términos de búsqueda o filtros."
+                      actionLabel="Limpiar Filtros"
+                      actionIcon="filter-x"
+                      (action)="limpiarFiltros()"
+                    />
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+
+          <!-- VISTA Mobile: Tarjetas apiladas (visible cuando se comprime / drawer abierto) -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
+            @for (promo of filteredPromociones(); track promo.id) {
+              <div class="promo-card p-4 rounded-xl border border-(--border-subtle) relative">
+                <!-- Header: icono + nombre/código + estado -->
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="w-10 h-10 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="calendar" [size]="18" />
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <h3 class="item-title truncate">{{ promo.name }}</h3>
+                      <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
+                    </div>
+                  </div>
+                  <p-tag
+                    [value]="statusLabel(promo.status)"
+                    [severity]="statusSeverity(promo.status)"
+                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                  ></p-tag>
+                </div>
+
+                <!-- Meta: fechas + alumnos -->
+                <div class="flex items-center gap-4 flex-wrap mb-3">
+                  <span class="flex items-center gap-1.5 text-xs text-text-muted">
+                    <app-icon name="calendar" [size]="12" />
+                    {{ promo.startDate | date: 'dd/MM/yyyy' }} →
+                    {{ promo.endDate | date: 'dd/MM/yyyy' }}
+                  </span>
+                  <span class="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <app-icon name="users" [size]="12" />
+                    {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
+                  </span>
+                </div>
+
+                <!-- Cursos -->
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                  @for (curso of promo.cursos; track curso.id) {
+                    <span
+                      class="course-badge"
+                      [style.background]="getCourseColor(curso.courseCode)"
+                      [pTooltip]="
+                        curso.courseName +
+                        ': ' +
+                        curso.enrolledStudents +
+                        '/' +
+                        curso.maxStudents +
+                        ' alumnos'
+                      "
+                    >
+                      {{ curso.courseCode }}
+                    </span>
+                  }
+                </div>
+
+                <!-- Footer: acciones -->
+                <div
+                  class="flex items-center justify-between pt-3"
+                  style="border-top: 1px dashed var(--border-subtle)"
+                >
+                  <span class="text-2xs uppercase font-bold text-text-muted">
+                    {{ promo.cursos.length }} curso(s)
+                  </span>
+                  <div class="inline-flex items-center gap-0.5">
+                    <button
+                      aria-label="Ver detalle"
+                      pButton
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                      pTooltip="Ver detalle"
+                      (click)="openVerDrawer(promo)"
+                      data-llm-action="ver-promocion"
+                    >
+                      <app-icon name="eye" [size]="16" />
+                    </button>
+                    <button
+                      aria-label="Editar promoción"
+                      pButton
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                      pTooltip="Editar promoción"
+                      (click)="openEditarDrawer(promo)"
+                      data-llm-action="editar-promocion"
+                    >
+                      <app-icon name="edit" [size]="16" />
+                    </button>
                   </div>
                 </div>
-              }
-            </div>
-
-            <!-- Paginación -->
-            @if (filteredPromociones().length > 0) {
-              <div
-                class="flex items-center justify-between mt-4 pt-4"
-                style="border-top: 1px solid var(--border-subtle);"
-              >
-                <p class="text-xs text-text-muted">
-                  Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
-                  {{ filteredPromociones().length }} promociones
-                </p>
-                <div class="flex items-center gap-2">
-                  <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() === 1"
-                    (click)="currentPage.set(currentPage() - 1)"
-                    data-llm-action="pagina-anterior-promociones"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() >= totalPages()"
-                    (click)="currentPage.set(currentPage() + 1)"
-                    data-llm-action="pagina-siguiente-promociones"
-                  >
-                    Siguiente
-                  </button>
-                </div>
               </div>
+            } @empty {
+              <app-empty-state
+                icon="calendar-x"
+                message="No se encontraron promociones"
+                subtitle="Intenta cambiar los términos de búsqueda o filtros."
+                actionLabel="Limpiar Filtros"
+                actionIcon="filter-x"
+                (action)="limpiarFiltros()"
+              />
             }
           </div>
         }
@@ -277,10 +398,6 @@ import { getCourseColor } from '@core/utils/course-colors';
     </div>
   `,
   styles: `
-    .promo-grid {
-      gap: var(--space-4);
-    }
-
     .promo-card {
       background: var(--bg-base);
       transition: all var(--duration-fast);
@@ -305,24 +422,24 @@ import { getCourseColor } from '@core/utils/course-colors';
       cursor: default;
     }
 
-    .pagination-btn {
-      padding: 6px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--duration-fast);
+    /* Container Queries para Dual-Viewport Render — idéntico a
+       app-admin-profesional-relatores para consistencia entre listados. */
+    .dual-viewport-container {
+      container-type: inline-size;
+      container-name: promoContainer;
     }
-    .pagination-btn:hover:not(:disabled) {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
+
+    .show-on-squeeze {
+      display: none;
     }
-    .pagination-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+
+    @container promoContainer (max-width: 850px) {
+      .hide-on-squeeze {
+        display: none !important;
+      }
+      .show-on-squeeze {
+        display: block !important;
+      }
     }
   `,
 })
@@ -357,7 +474,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected limpiarFiltros(): void {
     this.searchTerm.set('');
     this.filtroEstado.set(null);
-    this.currentPage.set(1);
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
@@ -402,8 +518,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   // ── Filtros locales ────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
   protected readonly filtroEstado = signal<string | null>(null);
-  protected readonly currentPage = signal(1);
-  private readonly pageSize = 6;
 
   readonly estadoOptions = [
     { label: 'Planificada', value: 'planned' },
@@ -412,7 +526,7 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
     { label: 'Cancelada', value: 'cancelled' },
   ];
 
-  // ── Lista filtrada ─────────────────────────────────────────────────────────
+  // ── Lista filtrada + ordenada (activas primero, planificadas al final) ─────
   protected readonly filteredPromociones = computed<PromocionTableRow[]>(() => {
     let results = this.facade.promociones();
 
@@ -425,24 +539,13 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
     if (this.filtroEstado()) {
       results = results.filter((p) => p.status === this.filtroEstado());
     }
-    return results;
+
+    // Orden estable: prioridad de estado; dentro de cada grupo se respeta el
+    // orden del facade (start_date desc).
+    return [...results].sort(
+      (a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99),
+    );
   });
-
-  // ── Paginación ─────────────────────────────────────────────────────────────
-  protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredPromociones().length / this.pageSize)),
-  );
-
-  protected readonly paginatedPromociones = computed<PromocionTableRow[]>(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredPromociones().slice(start, start + this.pageSize);
-  });
-
-  protected readonly paginationStart = computed(() => (this.currentPage() - 1) * this.pageSize + 1);
-
-  protected readonly paginationEnd = computed(() =>
-    Math.min(this.currentPage() * this.pageSize, this.filteredPromociones().length),
-  );
 
   protected statusLabel(status: string): string {
     const map: Record<string, string> = {
