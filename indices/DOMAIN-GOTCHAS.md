@@ -1307,6 +1307,36 @@
   tabla, así el fallo queda aislado.
 - **Fuente:** `specs/fixes/fix-227-m-dashboard-clases-actuales-no-refresca-realtime`.
 
+### DG-089 — Un Edge Function "contar → decidir → insertar" sin lock es una condición de carrera si hay `await` de por medio
+- **Trampa:** en una Edge Function que mantiene un "colchón" o cupo (leer un `count`, calcular
+  cuántas filas faltan, e insertarlas), asumir que como cada corrida individual es correcta,
+  el conjunto también lo es. Si entre el `count` y el `insert` hay CUALQUIER `await` — sobre
+  todo un `fetch()` externo lento (feriados, APIs de terceros) — se abre una ventana en la que
+  una segunda invocación (retry del disparador, invocación duplicada, corridas manuales
+  superpuestas) puede leer el mismo conteo desactualizado y decidir insertar también. El
+  síntoma en producción de `auto-create-next-promotions` (fix-228-m) fue acumular 3
+  promociones `planned` de más sobre un colchón de 2 — sin ningún error visible, cada corrida
+  individual "hizo bien su cuenta". No fue posible reconstruir el trigger exacto (sin logs
+  retenidos de pg_net ni del dashboard de Edge Functions para esos días); el fix no depende de
+  saber la causa exacta, cierra la ventana en sí.
+- **Realidad:** dos SELECT de conteo separados por un `await` externo NO son atómicos entre
+  invocaciones, aunque cada uno individualmente sea correcto. La solución no es "contar mejor"
+  ni reintentar con más cuidado — es hacer que "contar + decidir + reservar (INSERT)" sea una
+  sola operación atómica del lado de Postgres (`pg_advisory_xact_lock` al inicio de una función
+  `SECURITY DEFINER`, reservando la fila ahí mismo, antes de que el resto de la Edge Function
+  haga su trabajo async/lento) — ver `reserve_next_promotion_slot()` en
+  `supabase/migrations/20260829110000_promotions_unique_start_date_and_lock_fn.sql`. Un
+  `UNIQUE` constraint como capa adicional ayuda a que un fallo residual sea un error visible en
+  vez de una fila duplicada silenciosa, pero no reemplaza el lock: sin él, dos invocaciones
+  pueden calcular fechas de inicio *distintas* y ambas insertar limpiamente, sin violar ningún
+  constraint.
+- **Regla de aplicabilidad:** cualquier función (Edge Function, RPC, cron) que mantenga un
+  invariante de tipo "debe existir N filas de tipo X" mediante count-then-insert, con al menos
+  un `await` (fetch externo, múltiples round-trips a la BD) entre el conteo y el insert, debe
+  mover el conteo+decisión+reserva a una función Postgres con advisory lock — no confiar en que
+  "el cron solo corre una vez al día" como garantía de no-concurrencia.
+- **Fuente:** `specs/fixes/fix-228-m-auto-create-promotions-race-condition`.
+
 
 
 ## Convención para agregar una entrada nueva
