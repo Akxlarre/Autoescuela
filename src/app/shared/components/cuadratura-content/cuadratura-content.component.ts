@@ -159,9 +159,15 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto flex flex-col">
                   @if (!isLoading() && pagosHoy().length === 0) {
                     <!-- Empty state: centrado en el alto disponible cuando la card
-                         llena la pantalla; caja de ~200px cuando la card es de
-                         alto natural (drawer abierto) — fix-230-m. -->
-                    <div class="flex flex-1 items-center justify-center min-h-50">
+                         llena la pantalla (fix-230-m). Con el drawer abierto (fix-232-m)
+                         SIN min-height forzado — el modo compacto no tiene "resto de
+                         viewport" que llenar, y los 200px fijos sacaban a Egresos
+                         completo del viewport (medido: Ingresos vacío llegaba a 481px
+                         de alto por sí solo). -->
+                    <div
+                      class="flex flex-1 items-center justify-center"
+                      [class.min-h-50]="!isDrawerOpen()"
+                    >
                       <app-empty-state message="No hay ingresos registrados hoy." />
                     </div>
                   } @else {
@@ -401,92 +407,168 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
               </div>
 
               <!-- Header de columnas fijo (no scrollea con las filas), simétrico
-                   con el de Ingresos: se ve también con la lista vacía. -->
-              <div
-                class="shrink-0 px-6 py-3 grid grid-cols-[1fr_116px_84px_24px] gap-3 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
-              >
-                <span>Motivo</span>
-                <span>Método</span>
-                <span class="text-right">Monto</span>
-                <span></span>
+                   con el de Ingresos: se ve también con la lista vacía. Se oculta
+                   junto con la tabla desktop cuando el drawer angosta main
+                   (fix-231-m) — antes solo Ingresos hacía este switch y Egresos
+                   quedaba comprimido en formato tabla dentro de un main angosto. -->
+              <div class="hidden sm:block shrink-0" [class.!hidden]="isDrawerOpen()">
+                <div
+                  class="px-6 py-3 grid grid-cols-[1fr_116px_84px_24px] gap-3 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
+                >
+                  <span>Motivo</span>
+                  <span>Método</span>
+                  <span class="text-right">Monto</span>
+                  <span></span>
+                </div>
               </div>
 
               <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
                 @if (!isLoading() && gastosHoy().length === 0) {
                   <!-- Empty state: centrado en el alto disponible cuando la card
-                       llena la pantalla; caja de ~200px cuando la card es de alto
-                       natural (drawer abierto) — fix-230-m. -->
-                  <div class="flex flex-1 items-center justify-center min-h-50">
+                       llena la pantalla (fix-230-m). Con el drawer abierto (fix-232-m)
+                       SIN min-height forzado — mismo motivo que Ingresos. -->
+                  <div
+                    class="flex flex-1 items-center justify-center"
+                    [class.min-h-50]="!isDrawerOpen()"
+                  >
                     <app-empty-state message="No hay egresos registrados hoy." />
                   </div>
                 } @else {
-                  @if (isLoading()) {
-                    <div class="divide-y divide-border-muted/50">
+                  <!-- Vista Desktop (Table) -->
+                  <div class="hidden sm:block" [class.!hidden]="isDrawerOpen()">
+                    @if (isLoading()) {
+                      <div class="divide-y divide-border-muted/50">
+                        @for (i of [1, 2]; track i) {
+                          <div
+                            class="px-6 py-3.5 grid grid-cols-[1fr_116px_84px_24px] gap-3 items-center"
+                          >
+                            <app-skeleton-block variant="text" width="80%" height="14px" />
+                            <app-skeleton-block variant="text" width="64px" height="14px" />
+                            <app-skeleton-block
+                              variant="text"
+                              width="60px"
+                              height="14px"
+                              class="ml-auto"
+                            />
+                            <div></div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <div class="divide-y divide-border-muted/50">
+                        @for (egreso of gastosHoy(); track egreso.id + egreso.tipo) {
+                          <div
+                            class="px-6 py-3 grid grid-cols-[1fr_116px_84px_24px] gap-3 items-start group hover:bg-subtle transition-colors"
+                          >
+                            <span class="flex items-start gap-2 min-w-0">
+                              @if (categoryIcon(egreso); as icon) {
+                                <!-- El ícono de color ya identifica la categoría; su
+                                     nombre va en title/aria en vez de un badge que
+                                     robaba ancho a la descripción (fix-230-m). -->
+                                <span
+                                  class="flex items-center justify-center w-6 h-6 rounded-md bg-warning/10 shrink-0 mt-px"
+                                  [attr.title]="categoryLabel(egreso)"
+                                  [attr.aria-label]="categoryLabel(egreso)"
+                                >
+                                  <app-icon
+                                    [name]="icon"
+                                    [size]="12"
+                                    color="var(--state-warning)"
+                                  />
+                                </span>
+                              }
+                              <span
+                                class="text-compact font-medium text-text-primary line-clamp-2 min-w-0"
+                              >
+                                {{ egreso.descripcion }}
+                              </span>
+                            </span>
+                            <span class="min-w-0">
+                              <app-badge
+                                [variant]="egreso.paymentMethod === 'efectivo' ? 'neutral' : 'info'"
+                              >
+                                {{ paymentMethodLabel(egreso) }}
+                              </app-badge>
+                            </span>
+                            <span
+                              class="text-compact text-right font-bold text-text-primary tabular-nums"
+                            >
+                              {{ clp(egreso.monto) }}
+                            </span>
+                            <button
+                              class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
+                              [disabled]="cajaYaCerrada()"
+                              aria-label="Eliminar egreso"
+                              (click)="onEliminarEgreso(egreso)"
+                            >
+                              <app-icon name="x" [size]="14" />
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Vista Mobile (Cards) — activada por Container Query o Drawer
+                       abierto, simétrica con la de Ingresos (fix-231-m). -->
+                  <div class="sm:hidden flex flex-col gap-3 p-4" [class.!flex]="isDrawerOpen()">
+                    @if (isLoading()) {
                       @for (i of [1, 2]; track i) {
                         <div
-                          class="px-6 py-3.5 grid grid-cols-[1fr_116px_84px_24px] gap-3 items-center"
+                          class="p-4 rounded-xl border border-border-muted/50 flex flex-col gap-3"
                         >
-                          <app-skeleton-block variant="text" width="80%" height="14px" />
-                          <app-skeleton-block variant="text" width="64px" height="14px" />
-                          <app-skeleton-block
-                            variant="text"
-                            width="60px"
-                            height="14px"
-                            class="ml-auto"
-                          />
-                          <div></div>
+                          <app-skeleton-block variant="text" width="60%" height="16px" />
+                          <div class="flex justify-between">
+                            <app-skeleton-block variant="text" width="30%" height="14px" />
+                            <app-skeleton-block variant="text" width="30%" height="14px" />
+                          </div>
                         </div>
                       }
-                    </div>
-                  } @else {
-                    <div class="divide-y divide-border-muted/50">
+                    } @else {
                       @for (egreso of gastosHoy(); track egreso.id + egreso.tipo) {
-                        <div
-                          class="px-6 py-3 grid grid-cols-[1fr_116px_84px_24px] gap-3 items-start group hover:bg-subtle transition-colors"
-                        >
-                          <span class="flex items-start gap-2 min-w-0">
-                            @if (categoryIcon(egreso); as icon) {
-                              <!-- El ícono de color ya identifica la categoría; su
-                                   nombre va en title/aria en vez de un badge que
-                                   robaba ancho a la descripción (fix-230-m). -->
-                              <span
-                                class="flex items-center justify-center w-6 h-6 rounded-md bg-warning/10 shrink-0 mt-px"
-                                [attr.title]="categoryLabel(egreso)"
-                                [attr.aria-label]="categoryLabel(egreso)"
-                              >
-                                <app-icon [name]="icon" [size]="12" color="var(--state-warning)" />
-                              </span>
-                            }
-                            <span
-                              class="text-compact font-medium text-text-primary line-clamp-2 min-w-0"
-                            >
-                              {{ egreso.descripcion }}
+                        <div class="card-mobile-egreso">
+                          <div class="flex justify-between items-start gap-2">
+                            <span class="flex items-start gap-2 min-w-0">
+                              @if (categoryIcon(egreso); as icon) {
+                                <span
+                                  class="flex items-center justify-center w-6 h-6 rounded-md bg-warning/10 shrink-0 mt-px"
+                                  [attr.title]="categoryLabel(egreso)"
+                                  [attr.aria-label]="categoryLabel(egreso)"
+                                >
+                                  <app-icon
+                                    [name]="icon"
+                                    [size]="12"
+                                    color="var(--state-warning)"
+                                  />
+                                </span>
+                              }
+                              <span class="item-title">{{ egreso.descripcion }}</span>
                             </span>
-                          </span>
-                          <span class="min-w-0">
+                            <button
+                              class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer shrink-0"
+                              [disabled]="cajaYaCerrada()"
+                              aria-label="Eliminar egreso"
+                              (click)="onEliminarEgreso(egreso)"
+                            >
+                              <app-icon name="x" [size]="14" />
+                            </button>
+                          </div>
+                          <div
+                            class="flex items-center justify-between mt-2 pt-2 border-t border-border-muted/30"
+                          >
                             <app-badge
                               [variant]="egreso.paymentMethod === 'efectivo' ? 'neutral' : 'info'"
                             >
                               {{ paymentMethodLabel(egreso) }}
                             </app-badge>
-                          </span>
-                          <span
-                            class="text-compact text-right font-bold text-text-primary tabular-nums"
-                          >
-                            {{ clp(egreso.monto) }}
-                          </span>
-                          <button
-                            class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
-                            [disabled]="cajaYaCerrada()"
-                            aria-label="Eliminar egreso"
-                            (click)="onEliminarEgreso(egreso)"
-                          >
-                            <app-icon name="x" [size]="14" />
-                          </button>
+                            <span class="text-text-primary font-black">{{
+                              clp(egreso.monto)
+                            }}</span>
+                          </div>
                         </div>
                       }
-                    </div>
-                  }
+                    }
+                  </div>
                 }
               </div>
 
@@ -550,19 +632,44 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
       background: var(--bg-subtle);
     }
 
-    /* ── Ingresos + Egresos: alto de las cards (fix-230-m) ──────────────────
+    .card-mobile-egreso {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-muted);
+      border-radius: 12px;
+      padding: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .card-mobile-egreso:active {
+      transform: scale(0.98);
+      background: var(--bg-subtle);
+    }
+
+    /* ── Ingresos + Egresos: alto de las cards ───────────────────────────────
        Dos modos, segun si el shell esta en app-like / fill-screen o no:
 
        fill-screen ON  (contenedor main >= lg, SIN drawer que lo angoste): la
        celda bento-fill tiene alto definido (_bento-grid.scss lo da solo dentro
        de @container layoutmain min-width 1024px). Ahi las cards reparten ese
-       alto por flex-grow (Ingresos 3 : Egresos 2) y scrollean internamente.
+       alto por flex-grow y scrollean internamente.
 
        fill-screen OFF (drawer abierto que angosta main a menos de 1024px, o
-       pantalla chica): NO hay alto que repartir. Con flex 3 1 0% las cards
+       pantalla chica): NO hay alto que repartir. Con flex-basis 0% las cards
        colapsan a su alto minimo y dejan un hueco enorme abajo (el bug
        pre-refactor que reaparecia en la card de Egresos). Por eso el DEFAULT es
-       flex none: cada card toma su alto natural y el panel/pagina scrollea. */
+       flex none: cada card toma su alto natural y el panel/pagina scrollea.
+
+       fix-234-m: el reparto ERA 3:2 (Ingresos "protagonista") — con datos vacios
+       eso le dejaba a Egresos una porcion tan chica (ej. 271px de 682px totales)
+       que header (86.5px) + footer (109px) por si solos casi agotaban su alto
+       asignado, comprimiendo el area de filas/empty-state a ~10px: el mensaje
+       "No hay egresos registrados hoy." (67px) quedaba scrolleable pero
+       invisible — nunca goteaba a la vista. Reportado por el owner: las dos
+       cards deben verse del mismo tamaño, no una mas chica que la otra.
+       Reparto ahora 1:1 (flex: 1 1 0% ambas) + min-height que garantiza
+       header + una linea de empty-state + footer SIEMPRE quepan, sin importar
+       cuanto space real reparta el flex-grow (mismo criterio que
+       minmax(280px, 1fr) en .bento-grid--fill-screen-4, ver _bento-grid.scss). */
     .cuadratura-stack-ingresos,
     .cuadratura-stack-egresos {
       flex: none;
@@ -571,11 +678,21 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
     }
 
     @container layoutmain (min-width: 1024px) {
-      .cuadratura-stack-ingresos {
-        flex: 3 1 0%;
-      }
+      /* flex-shrink 0 a proposito (fix-234-m verify): con flex-shrink 1 (ej. el
+         "flex: 1 1 0%" original de este fix) y datos reales, el min-height de
+         280px se convertia en TECHO — con 4 ingresos el area de filas necesitaba
+         243px + header/footer (~438px totales) y el shrink igual comprimia la
+         card al piso de 280px, dejando el area de filas en 0px visibles (peor
+         que el bug original: 0px en vez de 9.9px). flex-basis auto respeta el
+         alto real del contenido; sin shrink, la card nunca se compacta por
+         debajo de su propio contenido — si no entra, crece el .bento-fill
+         (ya sin contain:size desde fix-233-m) y scrollea la pagina, nunca
+         recorta. min-height 280px solo entra a tallar con datos vacios/pocos,
+         para que ambas cards se vean parejas en vez de a su alto minimo real. */
+      .cuadratura-stack-ingresos,
       .cuadratura-stack-egresos {
-        flex: 2 1 0%;
+        flex: 1 0 auto;
+        min-height: 280px;
       }
     }
 
