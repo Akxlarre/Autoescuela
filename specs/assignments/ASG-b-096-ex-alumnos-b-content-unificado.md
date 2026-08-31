@@ -1,6 +1,6 @@
 # Asignación ASG-b-096 — Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2

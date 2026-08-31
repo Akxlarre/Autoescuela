@@ -1,7 +1,8 @@
 # Spec 0007-i — Consolidar Ex-Alumnos Clase B en un `*-content` compartido
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-08-31
+> **Closed:** 2026-08-31
 > **Owner:** i
 > **Priority:** P2
 
