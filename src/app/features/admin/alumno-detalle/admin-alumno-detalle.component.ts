@@ -70,6 +70,15 @@ export function resolveListadoRoute(
   return esProfesional ? '/app/secretaria/profesional/alumnos' : '/app/secretaria/alumnos';
 }
 
+/**
+ * Ruta del listado de Pagos del portal activo. Esta ficha se rutea tanto bajo
+ * `/app/admin/alumnos/:id` como bajo `/app/secretaria/alumnos/:id`, así que el
+ * "Ver todo el historial" de la card de pagos no puede ser un literal (fix-235-m).
+ */
+export function resolvePagosRoute(isAdmin: boolean): string {
+  return isAdmin ? '/app/admin/pagos' : '/app/secretaria/pagos';
+}
+
 /** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
 export function resolveListadoLabel(
   licenseGroup: 'class_b' | 'professional' | undefined,
@@ -131,11 +140,13 @@ export function resolveListadoLabel(
 
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
-        <!-- fix visual (2026-08-30): 1 sola fila full-width (.bento-banner.bento-fill) con
-             3 columnas horizontales, misma forma que el contenido real cargado — evita un
-             salto de layout entre skeleton y datos. -->
+        <!-- hotfix-096-m: 1 sola fila full-width (.bento-banner.bento-fill) con 3 columnas
+             horizontales, misma forma que el contenido real POST-rediseño (0006-i) — evita
+             salto de layout entre skeleton y datos. Col 1 = perfil + acciones, Col 2 = una
+             card "Clases Prácticas" (cabecera % + barra + grilla de clases), Col 3 = Estado
+             Financiero con botón "Ver todo el historial" abajo. -->
         <div class="bento-banner bento-fill ficha-3col-row gap-5 min-h-0">
-          <!-- Info Personal -->
+          <!-- Columna 1: Info Personal + acciones -->
           <div class="bento-card ficha-3col-aside ficha-3col-h100 flex flex-col w-full">
             <div class="flex flex-col gap-5 p-5 md:p-6">
               <div class="flex items-center gap-4">
@@ -161,42 +172,70 @@ export function resolveListadoLabel(
                   <app-skeleton-block variant="text" width="60%" height="14px" />
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Tarjetas de Progreso (x2) — columna central, apiladas -->
-          <div class="ficha-3col-grow ficha-3col-scroll min-w-0 flex flex-col gap-5">
-            @for (_ of [1, 2]; track $index) {
-              <div class="bento-card">
-                <div class="bento-card__body bento-card__body--spread">
-                  <div class="flex items-start justify-between w-full">
-                    <div class="flex flex-col gap-2">
-                      <app-skeleton-block variant="text" width="140px" height="20px" />
-                      <app-skeleton-block variant="text" width="90px" height="12px" />
-                    </div>
-                    <div class="flex flex-col items-end gap-2">
-                      <app-skeleton-block variant="text" width="60px" height="32px" />
-                      <app-skeleton-block variant="text" width="50px" height="10px" />
-                    </div>
-                  </div>
-                  <div class="w-full mt-4">
+              <div class="h-px bg-border-subtle w-full"></div>
+              <!-- Zona de acciones: grid de 6 botones + 2 full-width -->
+              <div class="flex flex-col gap-2">
+                <div class="grid grid-cols-2 gap-2">
+                  @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
                     <app-skeleton-block
                       variant="rect"
                       width="100%"
-                      height="16px"
-                      borderRadius="9999px"
+                      height="36px"
+                      borderRadius="10px"
                     />
-                    <div class="flex items-center justify-between mt-2">
-                      <app-skeleton-block variant="text" width="40px" height="12px" />
-                      <app-skeleton-block variant="text" width="80px" height="12px" />
-                    </div>
-                  </div>
+                  }
                 </div>
+                <app-skeleton-block variant="rect" width="100%" height="36px" borderRadius="10px" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" borderRadius="10px" />
               </div>
-            }
+            </div>
           </div>
 
-          <!-- Estado Financiero (Historial de Pagos) -->
+          <!-- Columna 2: Progreso — una card "Clases Prácticas" (cabecera % + barra + grilla) -->
+          <div class="ficha-3col-grow ficha-3col-scroll min-w-0 flex flex-col gap-5">
+            <div class="bento-card ficha-3col-grow shrink-0 flex flex-col gap-4">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="160px" height="22px" />
+                  <app-skeleton-block variant="text" width="90px" height="12px" />
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                  <app-skeleton-block variant="text" width="70px" height="34px" />
+                  <app-skeleton-block variant="text" width="80px" height="10px" />
+                </div>
+              </div>
+              <div class="w-full">
+                <app-skeleton-block
+                  variant="rect"
+                  width="100%"
+                  height="16px"
+                  borderRadius="9999px"
+                />
+                <div class="flex items-center justify-between mt-2">
+                  <app-skeleton-block variant="text" width="40px" height="12px" />
+                  <app-skeleton-block variant="text" width="90px" height="12px" />
+                </div>
+              </div>
+              <!-- 12 tiles: el caso dominante es una matrícula completa de 12 clases
+                   (solo las de refuerzo traen 6) — dibujar 12 evita el salto de layout
+                   al resolver la data en el 99% de los casos. -->
+              <div
+                class="grid gap-4 flex-1 content-center"
+                style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))"
+              >
+                @for (_ of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; track $index) {
+                  <app-skeleton-block
+                    variant="rect"
+                    width="100%"
+                    height="64px"
+                    borderRadius="12px"
+                  />
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 3: Estado Financiero (Historial de Pagos) -->
           <div
             class="bento-card ficha-3col-aside ficha-3col-aside--pagos ficha-3col-h100 p-0! flex flex-col w-full"
           >
@@ -219,6 +258,13 @@ export function resolveListadoLabel(
                 <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
                 <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
               </div>
+              <app-skeleton-block
+                variant="rect"
+                width="100%"
+                height="40px"
+                borderRadius="10px"
+                class="mt-auto"
+              />
             </div>
           </div>
         </div>
@@ -825,6 +871,7 @@ export function resolveListadoLabel(
             [pagos]="facade.historialPagos()"
             [totalPagado]="alumno.totalPagado"
             [saldoPendiente]="alumno.saldoPendiente"
+            [historialPagosRoute]="pagosRoute()"
           />
         </div>
 
@@ -1194,6 +1241,10 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   protected readonly listadoRoute = computed<string>(() =>
     resolveListadoRoute(this.isAdmin(), this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),
   );
+
+  // "Ver todo el historial" de la card de pagos → listado de Pagos del portal
+  // activo, no uno fijo. Ver resolvePagosRoute arriba (fix-235-m).
+  protected readonly pagosRoute = computed<string>(() => resolvePagosRoute(this.isAdmin()));
 
   protected readonly listadoLabel = computed<string>(() =>
     resolveListadoLabel(this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),

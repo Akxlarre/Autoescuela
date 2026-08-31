@@ -1,4 +1,18 @@
-import { resolveListadoRoute, resolveListadoLabel } from './admin-alumno-detalle.component';
+import {
+  resolveListadoRoute,
+  resolveListadoLabel,
+  resolvePagosRoute,
+} from './admin-alumno-detalle.component';
+
+describe('resolvePagosRoute — "Ver todo el historial" consciente del portal (fix-235-m)', () => {
+  it('admin → listado de Pagos de admin', () => {
+    expect(resolvePagosRoute(true)).toBe('/app/admin/pagos');
+  });
+
+  it('secretaria → listado de Pagos de secretaria (no /app/admin)', () => {
+    expect(resolvePagosRoute(false)).toBe('/app/secretaria/pagos');
+  });
+});
 
 describe('resolveListadoRoute — botón "volver" consciente del contexto', () => {
   it('admin + alumno class_b vuelve al listado de Clase B', () => {

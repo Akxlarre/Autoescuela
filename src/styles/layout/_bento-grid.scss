@@ -621,3 +621,29 @@ $bp-lg: 1024px;
   min-width: 45% !important;
   border-bottom-width: 1px !important;
 }
+
+/* Fix-233-m: el fill-screen (height fijo + `.bento-fill` con `contain: size`) está
+   gateado SOLO por `@container layoutmain (min-width: 1024px)` — el ancho real de
+   `main` — sin mirar `.force-compact` en absoluto. En monitores anchos (1680px+) el
+   drawer angosta `main` pero no siempre lo baja de 1024px, así que el container
+   query sigue matcheando con el drawer abierto: `.bento-fill` queda `contain: size`
+   a una altura fija repartida 3:2 entre cards, y cada card recorta su contenido con
+   `overflow: hidden` en vez de crecer. Verificado en Cuadratura Diaria a 1920×1080.
+   Estos overrides no dependen del container query (aplican siempre que haya
+   `.force-compact`). `!important` explícito porque en la práctica NO ganaron solo
+   por mayor especificidad (3 clases vs. 2) — mismo patrón ya usado arriba en esta
+   sección (`grid-column: 1 / -1 !important`, `min-width: 45% !important`). */
+.bento-grid.force-compact {
+  &.bento-grid--fill-screen,
+  &.bento-grid--fill-screen-2,
+  &.bento-grid--fill-screen-kpi,
+  &.bento-grid--fill-screen-4 {
+    height: fit-content !important;
+    grid-template-rows: none !important;
+  }
+
+  > .bento-fill {
+    contain: none !important;
+    min-height: 0 !important;
+  }
+}

@@ -20,13 +20,13 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
          (no reproducido en Chromium desktop) producía una caja vacía gigante en vez de
          ceder al alto natural con scroll nativo de página. Mismo gate por @container que
          .ficha-3col-* en el componente padre. -->
-    <div class="bento-card !p-0 flex flex-col w-full ficha-pagos-h100">
+    <div class="bento-card p-0! flex flex-col w-full ficha-pagos-h100">
       <!-- Header -->
       <div
         class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
       >
         <div class="flex flex-col">
-          <h2 class="text-base font-bold text-text-primary m-0">Estado Financiero</h2>
+          <h2 class="font-bold text-text-primary m-0">Estado Financiero</h2>
           <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
             >Control de Pagos</span
           >
@@ -94,7 +94,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
                   }
                 </div>
                 <span
-                  class="inas-badge !px-2 !py-0.5 !text-2xs"
+                  class="inas-badge px-2! py-0.5! text-2xs!"
                   [class.inas-badge--approved]="pago.estado === 'Pagado'"
                   [class.inas-badge--pending]="pago.estado === 'Pendiente'"
                 >
@@ -107,7 +107,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- Footer -->
         <a
-          routerLink="/app/admin/pagos"
+          [routerLink]="historialPagosRoute()"
           class="btn-secondary w-full mt-auto flex items-center justify-center gap-2 no-underline"
         >
           <app-icon name="external-link" [size]="14" />
@@ -174,4 +174,7 @@ export class AdminHistorialPagosComponent {
   pagos = input.required<PagoUI[]>();
   totalPagado = input.required<number>();
   saldoPendiente = input.required<number>();
+  /** Ruta del listado de Pagos del portal activo — la ficha vive tanto en /app/admin
+   *  como en /app/secretaria, así que el "Ver todo el historial" no puede ser fijo. */
+  historialPagosRoute = input.required<string>();
 }
