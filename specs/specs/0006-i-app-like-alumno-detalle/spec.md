@@ -1,6 +1,9 @@
 # Spec 0006-i — App-like: Ficha de Alumno (`/admin/alumnos/:id` + `/secretaria/alumnos/:id`)
 
-> **Status:** draft
+> **Status:** done (2026-08-30 — el diseño con pestañas descrito en este documento fue
+> **descartado** tras feedback del owner; ver el bloque "Changelog (pivote final, 2026-08-30)"
+> en [tasks.md](./tasks.md) para el diseño realmente implementado — 3 columnas horizontales
+> `--fill-screen`, sin tabs)
 > **Created:** 2026-08-28
 > **Owner:** i
 > **Priority:** P2 (marcada Alta en la tabla de ASSIGNMENTS.md, P2 en el frontmatter de la

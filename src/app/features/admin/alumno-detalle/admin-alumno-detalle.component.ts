@@ -100,7 +100,7 @@ export function resolveListadoLabel(
   ],
   template: `
     <div
-      class="bento-grid"
+      class="bento-grid bento-grid--fill-screen"
       appBentoReveal
       appBentoGridLayout
       [class.force-compact]="layoutDrawer.isOpen()"
@@ -131,85 +131,94 @@ export function resolveListadoLabel(
 
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
-        <!-- Info Personal -->
-        <div class="bento-card bento-tall flex flex-col h-full w-full">
-          <div class="flex flex-col gap-5 p-5 md:p-6 h-full">
-            <div class="flex items-center gap-4">
-              <app-skeleton-block variant="circle" width="56px" height="56px" />
-              <div class="flex flex-col gap-2 flex-1 min-w-0">
-                <app-skeleton-block variant="text" width="70%" height="16px" />
-                <app-skeleton-block variant="text" width="40%" height="12px" />
-                <app-skeleton-block variant="text" width="30%" height="10px" />
-              </div>
-            </div>
-            <div class="h-px bg-border-subtle w-full"></div>
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="40px" height="10px" />
-                <app-skeleton-block variant="text" width="80%" height="14px" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="60px" height="10px" />
-                <app-skeleton-block variant="text" width="50%" height="14px" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="100px" height="10px" />
-                <app-skeleton-block variant="text" width="60%" height="14px" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. Tarjetas de Progreso (x2) -->
-        @for (_ of [1, 2]; track $index) {
-          <div class="bento-card bento-wide">
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col gap-2">
-                  <app-skeleton-block variant="text" width="140px" height="20px" />
-                  <app-skeleton-block variant="text" width="90px" height="12px" />
-                </div>
-                <div class="flex flex-col items-end gap-2">
-                  <app-skeleton-block variant="text" width="60px" height="32px" />
-                  <app-skeleton-block variant="text" width="50px" height="10px" />
+        <!-- fix visual (2026-08-30): 1 sola fila full-width (.bento-banner.bento-fill) con
+             3 columnas horizontales, misma forma que el contenido real cargado — evita un
+             salto de layout entre skeleton y datos. -->
+        <div class="bento-banner bento-fill ficha-3col-row gap-5 min-h-0">
+          <!-- Info Personal -->
+          <div class="bento-card ficha-3col-aside ficha-3col-h100 flex flex-col w-full">
+            <div class="flex flex-col gap-5 p-5 md:p-6">
+              <div class="flex items-center gap-4">
+                <app-skeleton-block variant="circle" width="56px" height="56px" />
+                <div class="flex flex-col gap-2 flex-1 min-w-0">
+                  <app-skeleton-block variant="text" width="70%" height="16px" />
+                  <app-skeleton-block variant="text" width="40%" height="12px" />
+                  <app-skeleton-block variant="text" width="30%" height="10px" />
                 </div>
               </div>
-              <div class="w-full mt-4">
-                <app-skeleton-block
-                  variant="rect"
-                  width="100%"
-                  height="16px"
-                  borderRadius="9999px"
-                />
-                <div class="flex items-center justify-between mt-2">
-                  <app-skeleton-block variant="text" width="40px" height="12px" />
-                  <app-skeleton-block variant="text" width="80px" height="12px" />
+              <div class="h-px bg-border-subtle w-full"></div>
+              <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="40px" height="10px" />
+                  <app-skeleton-block variant="text" width="80%" height="14px" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="60px" height="10px" />
+                  <app-skeleton-block variant="text" width="50%" height="14px" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="100px" height="10px" />
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
                 </div>
               </div>
             </div>
           </div>
-        }
 
-        <!-- Estado Financiero (Historial de Pagos) -->
-        <div class="bento-card bento-tall p-0! flex flex-col h-full w-full overflow-hidden">
+          <!-- Tarjetas de Progreso (x2) — columna central, apiladas -->
+          <div class="ficha-3col-grow ficha-3col-scroll min-w-0 flex flex-col gap-5">
+            @for (_ of [1, 2]; track $index) {
+              <div class="bento-card">
+                <div class="bento-card__body bento-card__body--spread">
+                  <div class="flex items-start justify-between w-full">
+                    <div class="flex flex-col gap-2">
+                      <app-skeleton-block variant="text" width="140px" height="20px" />
+                      <app-skeleton-block variant="text" width="90px" height="12px" />
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                      <app-skeleton-block variant="text" width="60px" height="32px" />
+                      <app-skeleton-block variant="text" width="50px" height="10px" />
+                    </div>
+                  </div>
+                  <div class="w-full mt-4">
+                    <app-skeleton-block
+                      variant="rect"
+                      width="100%"
+                      height="16px"
+                      borderRadius="9999px"
+                    />
+                    <div class="flex items-center justify-between mt-2">
+                      <app-skeleton-block variant="text" width="40px" height="12px" />
+                      <app-skeleton-block variant="text" width="80px" height="12px" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Estado Financiero (Historial de Pagos) -->
           <div
-            class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
+            class="bento-card ficha-3col-aside ficha-3col-aside--pagos ficha-3col-h100 p-0! flex flex-col w-full"
           >
-            <div class="flex flex-col gap-1">
-              <app-skeleton-block variant="text" width="130px" height="16px" />
-              <app-skeleton-block variant="text" width="100px" height="10px" />
+            <div
+              class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
+            >
+              <div class="flex flex-col gap-1">
+                <app-skeleton-block variant="text" width="130px" height="16px" />
+                <app-skeleton-block variant="text" width="100px" height="10px" />
+              </div>
+              <app-skeleton-block variant="circle" width="32px" height="32px" />
             </div>
-            <app-skeleton-block variant="circle" width="32px" height="32px" />
-          </div>
-          <div class="flex flex-col gap-5 p-5 flex-1 min-h-0">
-            <div class="grid grid-cols-1 gap-4">
-              <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
-              <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
-            </div>
-            <div class="h-px bg-border-subtle w-full my-1"></div>
-            <div class="flex flex-col gap-3">
-              <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
-              <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
+            <div class="ficha-3col-grow flex flex-col gap-5 p-5">
+              <div class="grid grid-cols-1 gap-4">
+                <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
+              </div>
+              <div class="h-px bg-border-subtle w-full my-1"></div>
+              <div class="flex flex-col gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
+              </div>
             </div>
           </div>
         </div>
@@ -242,140 +251,590 @@ export function resolveListadoLabel(
           </div>
         }
 
-        <!-- Bento Item 1: Info Personal (común) -->
-        <div class="bento-card bento-tall" appCardHover>
-          <div class="flex flex-col gap-5">
-            <div class="flex items-center gap-4">
-              <div
-                class="w-14 h-14 rounded-full bg-elevated border border-border-default flex items-center justify-center text-text-muted shrink-0"
-                aria-hidden="true"
-              >
-                <app-icon name="user" [size]="24" />
-              </div>
-              <div class="flex flex-col min-w-0">
-                <span
-                  class="font-bold text-text-primary truncate"
-                  [pTooltip]="alumno.nombre"
-                  tooltipPosition="top"
-                  >{{ alumno.nombre }}</span
+        <!-- fix visual (2026-08-30): "no es necesario que quede app-like [en vertical],
+             hazlo diferenciando en horizontal como antes" — 1 fila full-width
+             (.bento-banner.bento-fill) con 3 columnas horizontales (Info Personal /
+             Progreso / Estado Financiero), llenando el resto del viewport en vez de
+             dejar espacio vacío debajo. Cada columna scrollea internamente si su
+             contenido crece (evita que "Estado Financiero" alargue la página entera
+             al acumular pagos — el problema original que motivó tocar esta ficha). -->
+        <div class="bento-banner bento-fill ficha-3col-row gap-5 min-h-0">
+          <!-- Columna 1: Info Personal -->
+          <div class="bento-card ficha-3col-aside ficha-3col-h100 flex flex-col" appCardHover>
+            <div class="ficha-3col-grow ficha-3col-scroll flex flex-col gap-5">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-14 h-14 rounded-full bg-elevated border border-border-default flex items-center justify-center text-text-muted shrink-0"
+                  aria-hidden="true"
                 >
-                <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
-                <span class="item-title mt-0.5" data-llm-info="matricula"
-                  >Matrícula #{{ alumno.matricula }}</span
-                >
-                <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
-                  >ESTADO: {{ alumno.estado }}</span
-                >
+                  <app-icon name="user" [size]="24" />
+                </div>
+                <div class="flex flex-col min-w-0">
+                  <span
+                    class="font-bold text-text-primary truncate"
+                    [pTooltip]="alumno.nombre"
+                    tooltipPosition="top"
+                    >{{ alumno.nombre }}</span
+                  >
+                  <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
+                  <span class="item-title mt-0.5" data-llm-info="matricula"
+                    >Matrícula #{{ alumno.matricula }}</span
+                  >
+                  <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
+                    >ESTADO: {{ alumno.estado }}</span
+                  >
+                </div>
               </div>
-            </div>
 
-            <div class="h-px bg-border-subtle w-full"></div>
+              <div class="h-px bg-border-subtle w-full"></div>
 
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1" data-llm-info="email">
-                <span class="kpi-label">EMAIL</span>
-                <span class="text-sm font-medium text-text-primary break-all">{{
-                  alumno.email
-                }}</span>
+              <!-- ficha-contact-info (2026-08-30, feedback visual): con el drawer abierto
+                   (force-compact, columna angosta apilada) este bloque queda con mucho aire
+                   alrededor — se agranda el texto solo en ese modo (ver styles: abajo). -->
+              <div class="ficha-contact-info flex flex-col gap-4">
+                <div class="flex flex-col gap-1" data-llm-info="email">
+                  <span class="kpi-label">EMAIL</span>
+                  <span class="text-sm font-medium text-text-primary break-all">{{
+                    alumno.email
+                  }}</span>
+                </div>
+                <div class="flex flex-col gap-1" data-llm-info="phone">
+                  <span class="kpi-label">TELÉFONO</span>
+                  <span class="text-sm font-medium text-text-primary">{{ alumno.telefono }}</span>
+                </div>
+                <div class="flex flex-col gap-1" data-llm-info="ingreso">
+                  <span class="kpi-label">FECHA DE INGRESO</span>
+                  <span class="text-sm font-medium text-text-primary">{{
+                    alumno.fechaIngreso
+                  }}</span>
+                </div>
               </div>
-              <div class="flex flex-col gap-1" data-llm-info="phone">
-                <span class="kpi-label">TELÉFONO</span>
-                <span class="text-sm font-medium text-text-primary">{{ alumno.telefono }}</span>
-              </div>
-              <div class="flex flex-col gap-1" data-llm-info="ingreso">
-                <span class="kpi-label">FECHA DE INGRESO</span>
-                <span class="text-sm font-medium text-text-primary">{{ alumno.fechaIngreso }}</span>
-              </div>
-            </div>
 
-            <div class="h-px bg-border-subtle w-full"></div>
+              <div class="h-px bg-border-subtle w-full"></div>
 
-            <!-- ── Acciones operativas (Editar/Eliminar viven en el header) ── -->
-            <div class="flex flex-col gap-2">
-              <div class="grid grid-cols-2 gap-2">
-                @for (action of secondaryActions(); track action.id) {
+              <!-- ── Acciones operativas (Editar/Eliminar viven en el header) ── -->
+              <div class="flex flex-col gap-2">
+                <div class="grid grid-cols-2 gap-2">
+                  @for (action of secondaryActions(); track action.id) {
+                    <button
+                      type="button"
+                      class="btn-secondary w-full justify-center gap-1.5"
+                      [disabled]="action.disabled ?? false"
+                      [attr.data-llm-action]="action.id"
+                      [attr.aria-haspopup]="action.menu ? 'menu' : null"
+                      [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
+                      (click)="
+                        action.menu
+                          ? toggleCardMenu(action.id, $event)
+                          : handleHeroAction(action.id)
+                      "
+                    >
+                      @if (action.icon) {
+                        <app-icon
+                          [name]="action.icon"
+                          [size]="14"
+                          [class.animate-spin]="action.loading"
+                        />
+                      }
+                      <span class="truncate min-w-0">{{ action.label }}</span>
+                      @if (action.menu) {
+                        <app-icon
+                          name="chevron-down"
+                          [size]="12"
+                          class="shrink-0 card-menu-chevron"
+                          [class.card-menu-chevron--open]="openCardMenuId() === action.id"
+                        />
+                      }
+                    </button>
+                  }
+
+                  <!-- Nuevos (Fase 1 — solo UI, sin lógica todavía) -->
                   <button
                     type="button"
                     class="btn-secondary w-full justify-center gap-1.5"
-                    [disabled]="action.disabled ?? false"
-                    [attr.data-llm-action]="action.id"
-                    [attr.aria-haspopup]="action.menu ? 'menu' : null"
-                    [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
-                    (click)="
-                      action.menu ? toggleCardMenu(action.id, $event) : handleHeroAction(action.id)
-                    "
+                    data-llm-action="ver-inasistencias"
+                    (click)="openInasistenciasPanel()"
                   >
-                    @if (action.icon) {
-                      <app-icon
-                        [name]="action.icon"
-                        [size]="14"
-                        [class.animate-spin]="action.loading"
-                      />
-                    }
-                    <span class="truncate min-w-0">{{ action.label }}</span>
-                    @if (action.menu) {
-                      <app-icon
-                        name="chevron-down"
-                        [size]="12"
-                        class="shrink-0 card-menu-chevron"
-                        [class.card-menu-chevron--open]="openCardMenuId() === action.id"
-                      />
-                    }
+                    <app-icon name="alert-triangle" [size]="14" />
+                    <span class="truncate min-w-0">Inasistencias</span>
                   </button>
-                }
+                  <button
+                    type="button"
+                    class="btn-secondary w-full justify-center gap-1.5"
+                    data-llm-action="ver-ficha-tecnica"
+                    (click)="openFichaTecnicaPanel()"
+                  >
+                    <app-icon name="file-text" [size]="14" />
+                    <span class="truncate min-w-0">Ficha Técnica</span>
+                  </button>
+                </div>
 
-                <!-- Nuevos (Fase 1 — solo UI, sin lógica todavía) -->
+                <!-- spec 0009-m (AC6): evidencia del consentimiento, en solo lectura -->
                 <button
                   type="button"
                   class="btn-secondary w-full justify-center gap-1.5"
-                  data-llm-action="ver-inasistencias"
-                  (click)="openInasistenciasPanel()"
+                  data-llm-action="ver-consentimientos"
+                  (click)="openConsentimientosPanel()"
                 >
-                  <app-icon name="alert-triangle" [size]="14" />
-                  <span class="truncate min-w-0">Inasistencias</span>
+                  <app-icon name="shield" [size]="14" />
+                  <span class="truncate min-w-0">Consentimientos</span>
                 </button>
+
+                <!-- fix-009-i: Historial de Reagendamientos — fila completa, abre drawer -->
                 <button
                   type="button"
                   class="btn-secondary w-full justify-center gap-1.5"
-                  data-llm-action="ver-ficha-tecnica"
-                  (click)="openFichaTecnicaPanel()"
+                  data-llm-action="ver-reagendamientos"
+                  (click)="openReagendamientosPanel()"
                 >
-                  <app-icon name="file-text" [size]="14" />
-                  <span class="truncate min-w-0">Ficha Técnica</span>
+                  <app-icon name="calendar-clock" [size]="14" />
+                  <span class="truncate min-w-0">Reagendamientos</span>
                 </button>
               </div>
-
-              <!-- spec 0009-m (AC6): evidencia del consentimiento, en solo lectura -->
-              <button
-                type="button"
-                class="btn-secondary w-full justify-center gap-1.5"
-                data-llm-action="ver-consentimientos"
-                (click)="openConsentimientosPanel()"
-              >
-                <app-icon name="shield" [size]="14" />
-                <span class="truncate min-w-0">Consentimientos</span>
-              </button>
-
-              <!-- fix-009-i: Historial de Reagendamientos — fila completa, abre drawer -->
-              <button
-                type="button"
-                class="btn-secondary w-full justify-center gap-1.5"
-                data-llm-action="ver-reagendamientos"
-                (click)="openReagendamientosPanel()"
-              >
-                <app-icon name="calendar-clock" [size]="14" />
-                <span class="truncate min-w-0">Reagendamientos</span>
-              </button>
             </div>
           </div>
+
+          <!-- Columna 2: Progreso (Clases Prácticas / Profesional) — scroll interno propio
+               si el contenido crece más que el alto disponible de la fila. -->
+          <div class="ficha-3col-grow ficha-3col-scroll min-w-0 flex flex-col gap-5">
+            <!-- ── PROGRESO: CLASE B ── -->
+            @if (alumno.licenseGroup === 'class_b') {
+              <!-- Clases Prácticas (ocupa 2 filas: progreso + grilla completa de las 12 clases) -->
+              <!-- shrink-0 (2026-08-30): sin esto, el flex-shrink:1 por defecto +
+                   overflow:hidden de .bento-card activan la "trampa min-height:auto"
+                   de flexbox — la card se encoge para caber en la columna en vez de
+                   mantener su alto real y dejar que la columna (overflow-y-auto)
+                   scrollee. Con shrink-0 la card conserva su alto natural cuando el
+                   contenido excede el alto disponible. flex-1 (2026-08-30, feedback
+                   visual): es la ÚNICA card de esta columna (a diferencia de las 3 de
+                   Profesional) — que además CREZCA para llenar el resto de la columna
+                   cuando el contenido entra de sobra, en vez de quedar más corta que
+                   las columnas vecinas. -->
+              <div class="bento-card ficha-3col-grow shrink-0 flex flex-col gap-4" appCardHover>
+                <!-- Cabecera + KPI -->
+                <div class="flex items-start justify-between w-full">
+                  <div class="flex flex-col">
+                    <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
+                    <span class="text-xs text-brand font-medium">
+                      {{ facade.progresoPractico().completadas }} de
+                      {{ facade.progresoPractico().requeridas }} clases
+                    </span>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="kpi-value text-brand text-3xl"
+                      >{{ facade.porcentajePracticas() }}%</span
+                    >
+                    <span class="kpi-label">Completado</span>
+                  </div>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div class="w-full">
+                  <div
+                    class="progress-track"
+                    role="progressbar"
+                    [attr.aria-valuenow]="facade.porcentajePracticas()"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      class="progress-fill-brand transition-all duration-700"
+                      [style.width.%]="facade.porcentajePracticas()"
+                    >
+                      @if (facade.porcentajePracticas() > 15) {
+                        <span class="progress-label-inline">
+                          {{ facade.progresoPractico().completadas }} /
+                          {{ facade.progresoPractico().requeridas }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between mt-2 kpi-label">
+                    <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
+                    <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
+                  </div>
+                </div>
+
+                <!-- Grilla completa: las 12 clases. fix visual (2026-08-30): esta card
+                     antes era un bento-wide (6/12 columnas, ~600px) — "grid-cols-2" fijo
+                     le sobraba espacio. Ahora vive en la columna angosta central de un
+                     layout de 3 columnas (~300-450px), y un breakpoint de VIEWPORT
+                     (sm:/lg:) no sirve porque no correlaciona con el ancho real de esta
+                     columna (ver gotcha de visual-system.md). auto-fit/minmax mide el
+                     espacio disponible del propio contenedor, sin depender del viewport:
+                     1 columna si no entra una tarjeta de 160px, 2 si entran. -->
+                <!-- content-center (2026-08-30, feedback visual): con la card ahora
+                     flex-1 (llena la columna), sobra alto cuando las 12 clases entran
+                     de sobra — centrar en vez de pegar arriba reparte el espacio extra
+                     arriba y abajo en lugar de dejarlo todo como hueco al final. -->
+                <!-- fix visual (2026-08-30): tarjetas de clase agrandadas (feedback:
+                     "sobra espacio, que las clases se vean más grandes") — min-tile
+                     160px→200px, padding/gap/ícono/texto subidos un escalón. -->
+                <div
+                  class="grid gap-4 flex-1 content-center"
+                  style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))"
+                >
+                  @for (clase of facade.clasesPracticas(); track clase.numero) {
+                    <div
+                      class="flex items-center gap-3.5 px-4 py-4 rounded-xl border min-w-0"
+                      [class.bg-success/5]="clase.completada"
+                      [class.border-success/20]="clase.completada"
+                      [class.bg-error/5]="!clase.completada && clase.ausente"
+                      [class.border-error/20]="!clase.completada && clase.ausente"
+                      [class.bg-warning/5]="!clase.completada && !clase.ausente && clase.cancelada"
+                      [class.border-warning/20]="
+                        !clase.completada && !clase.ausente && clase.cancelada
+                      "
+                      [class.bg-brand/5]="
+                        !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                      "
+                      [class.border-brand/20]="
+                        !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                      "
+                      [class.bg-subtle]="
+                        !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                      "
+                      [class.border-border-subtle]="
+                        !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                      "
+                    >
+                      @if (clase.completada) {
+                        <span
+                          class="w-9 h-9 rounded-full bg-success/15 flex items-center justify-center shrink-0"
+                        >
+                          <app-icon name="check" [size]="16" class="text-success" />
+                        </span>
+                      } @else if (clase.ausente) {
+                        <span
+                          class="w-9 h-9 rounded-full bg-error/15 flex items-center justify-center shrink-0"
+                        >
+                          <app-icon name="x" [size]="16" class="text-error" />
+                        </span>
+                      } @else if (clase.cancelada) {
+                        <span
+                          class="w-9 h-9 rounded-full bg-warning/15 flex items-center justify-center shrink-0"
+                        >
+                          <app-icon name="ban" [size]="16" class="text-warning" />
+                        </span>
+                      } @else if (clase.fecha) {
+                        <span
+                          class="w-9 h-9 rounded-full bg-brand/15 flex items-center justify-center shrink-0"
+                        >
+                          <app-icon name="calendar-clock" [size]="16" class="text-brand" />
+                        </span>
+                      } @else {
+                        <span
+                          class="w-9 h-9 rounded-full bg-border-subtle flex items-center justify-center shrink-0"
+                        >
+                          <app-icon name="clock" [size]="16" class="text-text-muted" />
+                        </span>
+                      }
+                      <div class="flex flex-col gap-0.5 min-w-0">
+                        <div class="flex items-center gap-1.5">
+                          <span
+                            class="text-sm font-bold shrink-0"
+                            [class.text-success]="clase.completada"
+                            [class.text-error]="!clase.completada && clase.ausente"
+                            [class.text-warning]="
+                              !clase.completada && !clase.ausente && clase.cancelada
+                            "
+                            [class.text-brand]="
+                              !clase.completada &&
+                              !clase.ausente &&
+                              !clase.cancelada &&
+                              !!clase.fecha
+                            "
+                            [class.text-text-muted]="
+                              !clase.completada &&
+                              !clase.ausente &&
+                              !clase.cancelada &&
+                              !clase.fecha
+                            "
+                            >Clase #{{ clase.numero }}</span
+                          >
+                          @if (clase.fecha) {
+                            <span class="text-xs text-text-secondary shrink-0">{{
+                              clase.fecha
+                            }}</span>
+                            @if (clase.hora) {
+                              <span class="text-xs text-text-muted shrink-0">{{
+                                clase.hora.split('-')[0]
+                              }}</span>
+                            }
+                          }
+                        </div>
+                        @if (clase.ausente) {
+                          <span class="text-xs text-error font-semibold">
+                            {{ clase.justificada ? 'Inasistencia — Justificada' : 'Inasistencia' }}
+                          </span>
+                        } @else if (clase.cancelada) {
+                          <span class="text-xs text-warning font-semibold"
+                            >Cancelada — pendiente reagendar</span
+                          >
+                        } @else if (clase.instructor) {
+                          <span class="text-xs text-text-muted truncate">{{
+                            clase.instructor
+                          }}</span>
+                        } @else {
+                          <span class="text-xs text-text-muted italic">Sin agendar</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- ── PROGRESO: CLASE PROFESIONAL ── -->
+            @if (alumno.licenseGroup === 'professional') {
+              <!-- Asistencia Teórica Prof -->
+              <div class="bento-card shrink-0" appCardHover>
+                <div class="bento-card__body bento-card__body--spread">
+                  <div class="flex items-start justify-between w-full">
+                    <div class="flex flex-col">
+                      <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
+                      <span class="text-xs text-brand font-medium">
+                        {{ facade.progresoTeoriaProf().asistidas }} de
+                        {{ facade.progresoTeoriaProf().totales }} sesiones
+                      </span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                      <span
+                        class="kpi-value text-3xl"
+                        [class.text-success]="facade.elegibilidadProf().teoria"
+                        [class.text-error]="
+                          !facade.elegibilidadProf().teoria &&
+                          facade.progresoTeoriaProf().totales > 0
+                        "
+                        [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
+                      >
+                        {{
+                          facade.progresoTeoriaProf().pct !== null
+                            ? facade.progresoTeoriaProf().pct + '%'
+                            : '—'
+                        }}
+                      </span>
+                      <span class="kpi-label">Mín. 75%</span>
+                    </div>
+                  </div>
+                  <div class="w-full mt-4">
+                    <div
+                      class="progress-track"
+                      role="progressbar"
+                      [attr.aria-valuenow]="facade.progresoTeoriaProf().pct ?? 0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      <div
+                        class="transition-all duration-700"
+                        [class.progress-fill-success]="facade.elegibilidadProf().teoria"
+                        [class.progress-fill-warning]="!facade.elegibilidadProf().teoria"
+                        [style.width.%]="facade.progresoTeoriaProf().pct ?? 0"
+                      >
+                        @if ((facade.progresoTeoriaProf().pct ?? 0) > 15) {
+                          <span class="progress-label-inline">
+                            {{ facade.progresoTeoriaProf().asistidas }} /
+                            {{ facade.progresoTeoriaProf().totales }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 kpi-label">
+                      <span
+                        [class.text-success]="facade.elegibilidadProf().teoria"
+                        [class.text-error]="
+                          !facade.elegibilidadProf().teoria &&
+                          facade.progresoTeoriaProf().totales > 0
+                        "
+                        [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
+                      >
+                        {{ facade.progresoTeoriaProf().asistidas }} asistidas
+                      </span>
+                      <span class="text-text-muted"
+                        >{{
+                          facade.progresoTeoriaProf().totales -
+                            facade.progresoTeoriaProf().asistidas
+                        }}
+                        inasistencias</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Asistencia Práctica Prof -->
+              <div class="bento-card shrink-0" appCardHover>
+                <div class="bento-card__body bento-card__body--spread">
+                  <div class="flex items-start justify-between w-full">
+                    <div class="flex flex-col">
+                      <span class="text-lg font-bold text-text-primary">Asistencia Práctica</span>
+                      <span class="text-xs text-text-secondary font-medium">
+                        {{ facade.progresoPracticaProf().asistidas }} de
+                        {{ facade.progresoPracticaProf().totales }} sesiones
+                      </span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                      <span
+                        class="kpi-value text-3xl"
+                        [class.text-success]="facade.elegibilidadProf().practica"
+                        [class.text-warning]="
+                          !facade.elegibilidadProf().practica &&
+                          facade.progresoPracticaProf().totales > 0
+                        "
+                        [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
+                      >
+                        {{
+                          facade.progresoPracticaProf().pct !== null
+                            ? facade.progresoPracticaProf().pct + '%'
+                            : '—'
+                        }}
+                      </span>
+                      <span class="kpi-label">Req. 100%</span>
+                    </div>
+                  </div>
+                  <div class="w-full mt-4">
+                    <div
+                      class="progress-track"
+                      role="progressbar"
+                      [attr.aria-valuenow]="facade.progresoPracticaProf().pct ?? 0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      <div
+                        class="transition-all duration-700"
+                        [class.progress-fill-success]="facade.elegibilidadProf().practica"
+                        [class.progress-fill-warning]="!facade.elegibilidadProf().practica"
+                        [style.width.%]="facade.progresoPracticaProf().pct ?? 0"
+                      >
+                        @if ((facade.progresoPracticaProf().pct ?? 0) > 15) {
+                          <span class="progress-label-inline">
+                            {{ facade.progresoPracticaProf().asistidas }} /
+                            {{ facade.progresoPracticaProf().totales }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 kpi-label">
+                      <span
+                        [class.text-success]="facade.elegibilidadProf().practica"
+                        [class.text-warning]="
+                          !facade.elegibilidadProf().practica &&
+                          facade.progresoPracticaProf().totales > 0
+                        "
+                        [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
+                      >
+                        {{ facade.progresoPracticaProf().asistidas }} asistidas
+                      </span>
+                      <span class="text-text-muted"
+                        >{{
+                          facade.progresoPracticaProf().totales -
+                            facade.progresoPracticaProf().asistidas
+                        }}
+                        inasistencias</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nota promedio + Elegibilidad Prof -->
+              <div class="bento-card shrink-0" appCardHover>
+                <div class="bento-card__body bento-card__body--spread">
+                  <div class="flex items-start justify-between w-full">
+                    <div class="flex flex-col">
+                      <span class="text-lg font-bold text-text-primary">Nota Promedio</span>
+                      <span class="text-xs text-text-muted font-medium">Módulos del curso</span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                      <span
+                        class="kpi-value text-3xl"
+                        [class.text-success]="facade.elegibilidadProf().nota"
+                        [class.text-error]="
+                          !facade.elegibilidadProf().nota && facade.notaPromedioProf() !== null
+                        "
+                        [class.text-text-muted]="facade.notaPromedioProf() === null"
+                      >
+                        {{ facade.notaPromedioProf() !== null ? facade.notaPromedioProf() : '—' }}
+                      </span>
+                      <span class="kpi-label">Mín. 75 de 100</span>
+                    </div>
+                  </div>
+
+                  <div class="flex gap-2 mt-4 flex-wrap">
+                    <span
+                      class="elig-badge"
+                      [attr.data-met]="facade.elegibilidadProf().teoria"
+                      data-llm-description="criterio elegibilidad: asistencia teórica mínima 75%"
+                    >
+                      <app-icon
+                        [name]="facade.elegibilidadProf().teoria ? 'circle-check' : 'circle-x'"
+                        [size]="12"
+                        [ariaHidden]="true"
+                      />
+                      Teoría ≥75%
+                    </span>
+                    <span
+                      class="elig-badge"
+                      [attr.data-met]="facade.elegibilidadProf().nota"
+                      data-llm-description="criterio elegibilidad: nota promedio mínima 75"
+                    >
+                      <app-icon
+                        [name]="facade.elegibilidadProf().nota ? 'circle-check' : 'circle-x'"
+                        [size]="12"
+                        [ariaHidden]="true"
+                      />
+                      Nota ≥75
+                    </span>
+                    <span
+                      class="elig-badge"
+                      [attr.data-met]="facade.elegibilidadProf().pago"
+                      data-llm-description="criterio elegibilidad: pago completo sin saldo pendiente"
+                    >
+                      <app-icon
+                        [name]="facade.elegibilidadProf().pago ? 'circle-check' : 'circle-x'"
+                        [size]="12"
+                        [ariaHidden]="true"
+                      />
+                      Pago completo
+                    </span>
+                    <span
+                      class="elig-badge"
+                      [attr.data-met]="facade.elegibilidadProf().practica"
+                      data-llm-description="criterio elegibilidad: asistencia práctica 100% (flexible)"
+                    >
+                      <app-icon
+                        [name]="facade.elegibilidadProf().practica ? 'circle-check' : 'circle-x'"
+                        [size]="12"
+                        [ariaHidden]="true"
+                      />
+                      Práctica 100%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Columna 3: Historial de Pagos (común) — su propio template ya trae
+               header fijo + lista con overflow-y-auto/flex-1 min-h-0 lista para scroll
+               interno; solo hacía falta que el ancestro (esta columna) le diera una
+               altura acotada, que ahora viene de .bento-fill (fila que llena el resto
+               del viewport). Antes crecía sin límite y estiraba la página entera. -->
+          <app-admin-historial-pagos
+            class="bento-tall ficha-3col-aside ficha-3col-aside--pagos ficha-3col-h100 flex flex-col"
+            [pagos]="facade.historialPagos()"
+            [totalPagado]="alumno.totalPagado"
+            [saldoPendiente]="alumno.saldoPendiente"
+          />
         </div>
 
         <!-- Dropdown de Carnet/Contrato — hermano fuera de .bento-card a propósito:
              la card tiene overflow:hidden (bordes redondeados) + appCardHover (transform
              GSAP en hover), y un transform ancestro se vuelve containing block de un
              position:fixed, recortando el panel igual que si fuera absolute. Viviendo
-             aquí, fuera de cualquier ancestro con overflow/transform, el fixed se
-             posiciona relativo al viewport sin recortes (ver fix-056-m). -->
+             aquí, fuera de cualquier ancestro con overflow/transform (incluida la fila
+             .bento-fill), el fixed se posiciona relativo al viewport sin recortes (ver
+             fix-056-m). -->
         @if (openCardMenuId() && openCardMenuItems(); as menuItems) {
           <div
             class="card-action-menu"
@@ -411,398 +870,6 @@ export function resolveListadoLabel(
             }
           </div>
         }
-
-        <!-- ── PROGRESO: CLASE B ── -->
-        @if (alumno.licenseGroup === 'class_b') {
-          <!-- Clases Prácticas (ocupa 2 filas: progreso + grilla completa de las 12 clases) -->
-          <div
-            class="bento-card bento-wide flex flex-col gap-4"
-            data-row-span-md="2"
-            data-row-span="2"
-            appCardHover
-          >
-            <!-- Cabecera + KPI -->
-            <div class="flex items-start justify-between w-full">
-              <div class="flex flex-col">
-                <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
-                <span class="text-xs text-brand font-medium">
-                  {{ facade.progresoPractico().completadas }} de
-                  {{ facade.progresoPractico().requeridas }} clases
-                </span>
-              </div>
-              <div class="flex flex-col items-end">
-                <span class="kpi-value text-brand text-3xl"
-                  >{{ facade.porcentajePracticas() }}%</span
-                >
-                <span class="kpi-label">Completado</span>
-              </div>
-            </div>
-
-            <!-- Barra de progreso -->
-            <div class="w-full">
-              <div
-                class="progress-track"
-                role="progressbar"
-                [attr.aria-valuenow]="facade.porcentajePracticas()"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              >
-                <div
-                  class="progress-fill-brand transition-all duration-700"
-                  [style.width.%]="facade.porcentajePracticas()"
-                >
-                  @if (facade.porcentajePracticas() > 15) {
-                    <span class="progress-label-inline">
-                      {{ facade.progresoPractico().completadas }} /
-                      {{ facade.progresoPractico().requeridas }}
-                    </span>
-                  }
-                </div>
-              </div>
-              <div class="flex items-center justify-between mt-2 kpi-label">
-                <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
-                <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
-              </div>
-            </div>
-
-            <!-- Grilla completa: las 12 clases en 2 columnas -->
-            <div class="h-px bg-border-subtle w-full"></div>
-            <span class="kpi-label">Detalle de clases</span>
-            <div class="grid grid-cols-2 gap-3 flex-1 content-start">
-              @for (clase of facade.clasesPracticas(); track clase.numero) {
-                <div
-                  class="flex items-center gap-3 px-3 py-3 rounded-xl border min-w-0"
-                  [class.bg-success/5]="clase.completada"
-                  [class.border-success/20]="clase.completada"
-                  [class.bg-error/5]="!clase.completada && clase.ausente"
-                  [class.border-error/20]="!clase.completada && clase.ausente"
-                  [class.bg-warning/5]="!clase.completada && !clase.ausente && clase.cancelada"
-                  [class.border-warning/20]="!clase.completada && !clase.ausente && clase.cancelada"
-                  [class.bg-brand/5]="
-                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
-                  "
-                  [class.border-brand/20]="
-                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
-                  "
-                  [class.bg-subtle]="
-                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
-                  "
-                  [class.border-border-subtle]="
-                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
-                  "
-                >
-                  @if (clase.completada) {
-                    <span
-                      class="w-7 h-7 rounded-full bg-success/15 flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="check" [size]="13" class="text-success" />
-                    </span>
-                  } @else if (clase.ausente) {
-                    <span
-                      class="w-7 h-7 rounded-full bg-error/15 flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="x" [size]="13" class="text-error" />
-                    </span>
-                  } @else if (clase.cancelada) {
-                    <span
-                      class="w-7 h-7 rounded-full bg-warning/15 flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="ban" [size]="13" class="text-warning" />
-                    </span>
-                  } @else if (clase.fecha) {
-                    <span
-                      class="w-7 h-7 rounded-full bg-brand/15 flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="calendar-clock" [size]="13" class="text-brand" />
-                    </span>
-                  } @else {
-                    <span
-                      class="w-7 h-7 rounded-full bg-border-subtle flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="clock" [size]="13" class="text-text-muted" />
-                    </span>
-                  }
-                  <div class="flex flex-col min-w-0">
-                    <div class="flex items-center gap-1.5">
-                      <span
-                        class="text-xs font-bold shrink-0"
-                        [class.text-success]="clase.completada"
-                        [class.text-error]="!clase.completada && clase.ausente"
-                        [class.text-warning]="
-                          !clase.completada && !clase.ausente && clase.cancelada
-                        "
-                        [class.text-brand]="
-                          !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
-                        "
-                        [class.text-text-muted]="
-                          !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
-                        "
-                        >Clase #{{ clase.numero }}</span
-                      >
-                      @if (clase.fecha) {
-                        <span class="text-xs text-text-secondary shrink-0">{{ clase.fecha }}</span>
-                        @if (clase.hora) {
-                          <span class="text-xs text-text-muted shrink-0">{{
-                            clase.hora.split('-')[0]
-                          }}</span>
-                        }
-                      }
-                    </div>
-                    @if (clase.ausente) {
-                      <span class="text-2xs text-error font-semibold">
-                        {{ clase.justificada ? 'Inasistencia — Justificada' : 'Inasistencia' }}
-                      </span>
-                    } @else if (clase.cancelada) {
-                      <span class="text-2xs text-warning font-semibold"
-                        >Cancelada — pendiente reagendar</span
-                      >
-                    } @else if (clase.instructor) {
-                      <span class="text-2xs text-text-muted truncate">{{ clase.instructor }}</span>
-                    } @else {
-                      <span class="text-2xs text-text-muted italic">Sin agendar</span>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- ── PROGRESO: CLASE PROFESIONAL ── -->
-        @if (alumno.licenseGroup === 'professional') {
-          <!-- Asistencia Teórica Prof -->
-          <div class="bento-card bento-wide" appCardHover>
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col">
-                  <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
-                  <span class="text-xs text-brand font-medium">
-                    {{ facade.progresoTeoriaProf().asistidas }} de
-                    {{ facade.progresoTeoriaProf().totales }} sesiones
-                  </span>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span
-                    class="kpi-value text-3xl"
-                    [class.text-success]="facade.elegibilidadProf().teoria"
-                    [class.text-error]="
-                      !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
-                    "
-                    [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
-                  >
-                    {{
-                      facade.progresoTeoriaProf().pct !== null
-                        ? facade.progresoTeoriaProf().pct + '%'
-                        : '—'
-                    }}
-                  </span>
-                  <span class="kpi-label">Mín. 75%</span>
-                </div>
-              </div>
-              <div class="w-full mt-4">
-                <div
-                  class="progress-track"
-                  role="progressbar"
-                  [attr.aria-valuenow]="facade.progresoTeoriaProf().pct ?? 0"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                >
-                  <div
-                    class="transition-all duration-700"
-                    [class.progress-fill-success]="facade.elegibilidadProf().teoria"
-                    [class.progress-fill-warning]="!facade.elegibilidadProf().teoria"
-                    [style.width.%]="facade.progresoTeoriaProf().pct ?? 0"
-                  >
-                    @if ((facade.progresoTeoriaProf().pct ?? 0) > 15) {
-                      <span class="progress-label-inline">
-                        {{ facade.progresoTeoriaProf().asistidas }} /
-                        {{ facade.progresoTeoriaProf().totales }}
-                      </span>
-                    }
-                  </div>
-                </div>
-                <div class="flex items-center justify-between mt-2 kpi-label">
-                  <span
-                    [class.text-success]="facade.elegibilidadProf().teoria"
-                    [class.text-error]="
-                      !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
-                    "
-                    [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
-                  >
-                    {{ facade.progresoTeoriaProf().asistidas }} asistidas
-                  </span>
-                  <span class="text-text-muted"
-                    >{{
-                      facade.progresoTeoriaProf().totales - facade.progresoTeoriaProf().asistidas
-                    }}
-                    inasistencias</span
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Asistencia Práctica Prof -->
-          <div class="bento-card bento-wide" appCardHover>
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col">
-                  <span class="text-lg font-bold text-text-primary">Asistencia Práctica</span>
-                  <span class="text-xs text-text-secondary font-medium">
-                    {{ facade.progresoPracticaProf().asistidas }} de
-                    {{ facade.progresoPracticaProf().totales }} sesiones
-                  </span>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span
-                    class="kpi-value text-3xl"
-                    [class.text-success]="facade.elegibilidadProf().practica"
-                    [class.text-warning]="
-                      !facade.elegibilidadProf().practica &&
-                      facade.progresoPracticaProf().totales > 0
-                    "
-                    [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
-                  >
-                    {{
-                      facade.progresoPracticaProf().pct !== null
-                        ? facade.progresoPracticaProf().pct + '%'
-                        : '—'
-                    }}
-                  </span>
-                  <span class="kpi-label">Req. 100%</span>
-                </div>
-              </div>
-              <div class="w-full mt-4">
-                <div
-                  class="progress-track"
-                  role="progressbar"
-                  [attr.aria-valuenow]="facade.progresoPracticaProf().pct ?? 0"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                >
-                  <div
-                    class="transition-all duration-700"
-                    [class.progress-fill-success]="facade.elegibilidadProf().practica"
-                    [class.progress-fill-warning]="!facade.elegibilidadProf().practica"
-                    [style.width.%]="facade.progresoPracticaProf().pct ?? 0"
-                  >
-                    @if ((facade.progresoPracticaProf().pct ?? 0) > 15) {
-                      <span class="progress-label-inline">
-                        {{ facade.progresoPracticaProf().asistidas }} /
-                        {{ facade.progresoPracticaProf().totales }}
-                      </span>
-                    }
-                  </div>
-                </div>
-                <div class="flex items-center justify-between mt-2 kpi-label">
-                  <span
-                    [class.text-success]="facade.elegibilidadProf().practica"
-                    [class.text-warning]="
-                      !facade.elegibilidadProf().practica &&
-                      facade.progresoPracticaProf().totales > 0
-                    "
-                    [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
-                  >
-                    {{ facade.progresoPracticaProf().asistidas }} asistidas
-                  </span>
-                  <span class="text-text-muted"
-                    >{{
-                      facade.progresoPracticaProf().totales -
-                        facade.progresoPracticaProf().asistidas
-                    }}
-                    inasistencias</span
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nota promedio + Elegibilidad Prof -->
-          <div class="bento-card bento-wide" appCardHover>
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col">
-                  <span class="text-lg font-bold text-text-primary">Nota Promedio</span>
-                  <span class="text-xs text-text-muted font-medium">Módulos del curso</span>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span
-                    class="kpi-value text-3xl"
-                    [class.text-success]="facade.elegibilidadProf().nota"
-                    [class.text-error]="
-                      !facade.elegibilidadProf().nota && facade.notaPromedioProf() !== null
-                    "
-                    [class.text-text-muted]="facade.notaPromedioProf() === null"
-                  >
-                    {{ facade.notaPromedioProf() !== null ? facade.notaPromedioProf() : '—' }}
-                  </span>
-                  <span class="kpi-label">Mín. 75 de 100</span>
-                </div>
-              </div>
-
-              <div class="flex gap-2 mt-4 flex-wrap">
-                <span
-                  class="elig-badge"
-                  [attr.data-met]="facade.elegibilidadProf().teoria"
-                  data-llm-description="criterio elegibilidad: asistencia teórica mínima 75%"
-                >
-                  <app-icon
-                    [name]="facade.elegibilidadProf().teoria ? 'circle-check' : 'circle-x'"
-                    [size]="12"
-                    [ariaHidden]="true"
-                  />
-                  Teoría ≥75%
-                </span>
-                <span
-                  class="elig-badge"
-                  [attr.data-met]="facade.elegibilidadProf().nota"
-                  data-llm-description="criterio elegibilidad: nota promedio mínima 75"
-                >
-                  <app-icon
-                    [name]="facade.elegibilidadProf().nota ? 'circle-check' : 'circle-x'"
-                    [size]="12"
-                    [ariaHidden]="true"
-                  />
-                  Nota ≥75
-                </span>
-                <span
-                  class="elig-badge"
-                  [attr.data-met]="facade.elegibilidadProf().pago"
-                  data-llm-description="criterio elegibilidad: pago completo sin saldo pendiente"
-                >
-                  <app-icon
-                    [name]="facade.elegibilidadProf().pago ? 'circle-check' : 'circle-x'"
-                    [size]="12"
-                    [ariaHidden]="true"
-                  />
-                  Pago completo
-                </span>
-                <span
-                  class="elig-badge"
-                  [attr.data-met]="facade.elegibilidadProf().practica"
-                  data-llm-description="criterio elegibilidad: asistencia práctica 100% (flexible)"
-                >
-                  <app-icon
-                    [name]="facade.elegibilidadProf().practica ? 'circle-check' : 'circle-x'"
-                    [size]="12"
-                    [ariaHidden]="true"
-                  />
-                  Práctica 100%
-                </span>
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Bento Item 3: Historial de Pagos (común) — colocado aquí (no al final del DOM)
-             para que en modo force-compact (flex-column) aparezca junto a Info Personal /
-             Clases Prácticas, igual que ya lo posiciona grid-auto-flow:dense en modo grid. -->
-        <app-admin-historial-pagos
-          class="bento-tall w-full h-full block"
-          [pagos]="facade.historialPagos()"
-          [totalPagado]="alumno.totalPagado"
-          [saldoPendiente]="alumno.saldoPendiente"
-        />
       }
     </div>
 
@@ -827,31 +894,90 @@ export function resolveListadoLabel(
     />
   `,
   styles: `
-    /* El header (app-section-hero, density="slim") solo mide ~64-70px de alto,
-       pero .bento-grid base fuerza grid-auto-rows: minmax(120px, auto) en TODA
-       fila implícita (incluida la primera) — a diferencia de los listados
-       (app-alumnos-list-content / app-alumnos-profesional-list-content), que
-       usan .bento-grid--fill-screen y por eso su fila 1 ya es "auto" en vez de
-       min 120px. Esta página no adopta el modificador --fill-screen completo
-       (cambiaría el resto del grid a modo app-like con scroll interno, fuera
-       de alcance aquí) — solo se sobreescribe grid-template-rows para que la
-       PRIMERA fila (el header) sea "auto" y no reserve 120px de alto vacío.
-       Los estilos de componente de Angular no están dentro de ningún @layer,
-       así que ganan por cascada sobre la regla base (@layer bento.grid) sin
-       necesitar !important ni tocar _bento-grid.scss. */
-    .bento-grid {
-      grid-template-rows: auto;
+    /* fix visual (2026-08-30): adopta .bento-grid--fill-screen (hero auto + 1 fila que
+       llena el resto del viewport en desktop, lg+) en vez del parche puntual anterior
+       que solo corregía el alto de la primera fila. El contenido (Info Personal /
+       Progreso / Historial de Pagos) vive en un único .bento-banner.bento-fill de 3
+       columnas horizontales — vuelve a verse "como antes" (diferenciación horizontal,
+       no vertical), pero ahora esa fila llena el resto del viewport en vez de dejar
+       espacio vacío debajo, y el historial de pagos scrollea internamente en vez de
+       poder crecer sin límite y estirar la página entera. Mobile no se ve afectado
+       (--fill-screen solo aplica dentro de @container layoutmain min-width:1024px). */
+    @container layoutmain (min-width: 1024px) {
+      /* Con selector de matrícula (2+ enrollments) se inserta una fila fija extra
+         entre el hero y el contenido — el modificador base solo define 2 filas
+         (hero + fill), así que este caso necesita su propio override de 3. */
+      .bento-grid--fill-screen.has-enrollment-selector {
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
     }
 
-    /* Cuando hay selector de matrícula (2+ enrollments), la fila 2 (el
-       selector de pills, ~44px de alto) también cae bajo grid-auto-rows:
-       minmax(120px, auto) de la base .bento-grid, dejando ~76px de espacio
-       vacío antes de la fila 3 (cards de contenido). Se extiende el mismo
-       "auto" que ya tiene la fila del header a esta segunda fila explícita;
-       las filas de contenido siguen siendo implícitas y conservan el
-       minmax(120px, auto) de la base sin cambios. */
-    .bento-grid.has-enrollment-selector {
-      grid-template-rows: auto auto;
+    /* fix (2026-08-30): la fila de 3 columnas usaba lg:flex-row (breakpoint de VIEWPORT).
+       Con un drawer abierto (force-compact), <main> se angosta pero el VIEWPORT sigue
+       ≥1024px — lg:flex-row seguía activo y comprimía las 3 columnas en el espacio
+       reducido, solapando contenido (mismo gotcha ya documentado en visual-system.md:
+       "switch por CONTENEDOR, no por viewport"). @container mide el ancho real de
+       .layoutmain (el mismo que usa isDesktopLayout() en otras páginas app-like). */
+    .ficha-3col-row {
+      display: flex;
+      flex-direction: column;
+    }
+    .ficha-3col-aside {
+      flex-shrink: 0;
+    }
+    @container layoutmain (min-width: 1024px) {
+      .ficha-3col-row {
+        flex-direction: row;
+      }
+      .ficha-3col-aside {
+        width: 320px;
+      }
+      .ficha-3col-aside--pagos {
+        width: 340px;
+      }
+    }
+
+    /* fix bug real (2026-08-30, reportado en dispositivo físico — Galaxy S20 Ultra):
+       las 3 columnas usaban utilities de Tailwind SIN scope (h-full, flex-1,
+       overflow-y-auto) para el alto/scroll interno que solo tiene sentido en
+       desktop (donde .bento-fill les da una altura definida vía contain:size).
+       En mobile ningún ancestro define una altura — height:100% sobre una cadena de
+       ancestros sin altura definida es ambiguo por spec y algunos motores (confirmado
+       en un dispositivo real, no reproducido en Chromium desktop/Playwright) lo
+       resuelven produciendo cajas vacías gigantes en vez de simplemente ceder al alto
+       natural del contenido con scroll nativo de página. Mismo principio que
+       .ficha-3col-row/.ficha-3col-aside arriba: todo lo que dependa de una altura
+       "llena la pantalla" va detrás del container query de 1024px. */
+    @container layoutmain (min-width: 1024px) {
+      .ficha-3col-h100 {
+        height: 100%;
+      }
+      .ficha-3col-scroll {
+        min-height: 0;
+        overflow-y: auto;
+      }
+      /* Sin flex-shrink: se deja que .shrink-0 (Tailwind) siga controlando eso —
+         evita que este flex shorthand le gane por cascada (estilos de componente,
+         sin @layer, ganan sobre @layer utilities de Tailwind pase lo que pase). */
+      .ficha-3col-grow {
+        flex-grow: 1;
+        flex-basis: 0%;
+        min-height: 0;
+      }
+    }
+
+    /* fix visual (2026-08-30): con el drawer abierto, force-compact apila la columna
+       Info Personal a ancho completo — el bloque de contacto (email/teléfono/fecha de
+       ingreso) queda con mucho aire de sobra. Se agranda SOLO en ese modo (en el layout
+       normal de 3 columnas angostas ya está bien proporcionado). */
+    .force-compact .ficha-contact-info {
+      gap: var(--space-5);
+    }
+    .force-compact .ficha-contact-info .text-sm {
+      font-size: var(--text-lg);
+    }
+    .force-compact .ficha-contact-info .kpi-label {
+      font-size: var(--text-sm);
     }
 
     .kpi-label {

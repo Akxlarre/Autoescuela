@@ -12,7 +12,15 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TooltipModule, CommonModule, RouterLink, IconComponent, StatBoxComponent],
   template: `
-    <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
+    <!-- fix bug real (2026-08-30, dispositivo físico — Galaxy S20 Ultra): h-full/flex-1/
+         overflow-y-auto SIN scope solo tienen sentido dentro del layout de 3 columnas de
+         AdminAlumnoDetalleComponent en desktop (donde .bento-fill le da a este host una
+         altura definida). En mobile, ningún ancestro define altura — height:100% en
+         cascada sobre ancestros sin altura definida es ambiguo y en algún motor real
+         (no reproducido en Chromium desktop) producía una caja vacía gigante en vez de
+         ceder al alto natural con scroll nativo de página. Mismo gate por @container que
+         .ficha-3col-* en el componente padre. -->
+    <div class="bento-card !p-0 flex flex-col w-full ficha-pagos-h100">
       <!-- Header -->
       <div
         class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
@@ -31,7 +39,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       </div>
 
       <!-- Content -->
-      <div class="flex flex-col gap-5 p-5 flex-1 min-h-0">
+      <div class="flex flex-col gap-5 p-5 ficha-pagos-grow">
         <!-- Totals Section -->
         <div class="grid grid-cols-1 gap-4">
           <app-stat-box
@@ -50,7 +58,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
         <div class="h-px bg-border-subtle w-full my-1"></div>
 
         <!-- History List -->
-        <div class="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
+        <div class="flex flex-col gap-3 ficha-pagos-grow ficha-pagos-scroll custom-scrollbar pr-1">
           @if (pagos().length === 0) {
             <div class="flex flex-col items-center justify-center gap-3 py-8 opacity-40">
               <app-icon name="receipt" [size]="32" />
@@ -109,6 +117,24 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
     </div>
   `,
   styles: `
+    /* fix bug real (2026-08-30, dispositivo físico — Galaxy S20 Ultra): ver comentario
+       en el template junto a ficha-pagos-h100. Mismo @container que usa el padre
+       (AdminAlumnoDetalleComponent) para .ficha-3col-*. */
+    @container layoutmain (min-width: 1024px) {
+      .ficha-pagos-h100 {
+        height: 100%;
+      }
+      .ficha-pagos-grow {
+        flex-grow: 1;
+        flex-basis: 0%;
+        min-height: 0;
+      }
+      .ficha-pagos-scroll {
+        min-height: 0;
+        overflow-y: auto;
+      }
+    }
+
     .inas-badge {
       flex-shrink: 0;
       display: inline-flex;
