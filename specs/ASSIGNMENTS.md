@@ -22,7 +22,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
-| ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `cualquiera` | spec | P2 | b | 573 de ~600 líneas idénticas (~93%). Precedente `0032-b`. La spec `0038-b` dejó el selector de período duplicado en ambas: es código a **absorber**, no un bloqueo. Ver `specs/assignments/ASG-b-096-*.md` |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. **Renombrada desde `ASG-i-005`** (2026-08-25) para ocupar el número liberado al eliminar el `ASG-i-004` fantasma — ver nota en Convenciones. Ver `specs/assignments/ASG-i-004-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
@@ -126,6 +125,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | `i` | [0007-i-ex-alumnos-content-unificado](specs/0007-i-ex-alumnos-content-unificado/spec.md) | 2026-08-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---
