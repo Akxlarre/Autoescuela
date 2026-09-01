@@ -100,6 +100,20 @@
   font-family: var(--font-body);
 }
 
+/* p-datepicker — celdas de año/mes (fix-152-b): a diferencia del resto del panel
+   (forzado a claro vía _primeng-overrides.scss bajo [data-mode='dark']), el estado de
+   reposo de .p-yearpicker-year/.p-monthpicker-month nunca declara color — queda a cargo
+   del preset de PrimeNG, que sí reacciona al modo oscuro del navegador. El wizard público
+   no debe depender de eso jamás. */
+[data-public-theme] {
+  .p-yearpicker-year:not(.p-highlight),
+  .p-monthpicker-month:not(.p-highlight),
+  [data-pc-section='year']:not(.p-highlight),
+  [data-pc-section='month']:not(.p-highlight) {
+    color: var(--text-secondary) !important;
+  }
+}
+
 /* ────────────────────────────────────────────────────────────
    2. SEDE AZUL (branchId 1) — Sky + Indigo
    ──────────────────────────────────────────────────────────── */
