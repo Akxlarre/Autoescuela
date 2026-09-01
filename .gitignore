@@ -65,3 +65,11 @@ docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx
 docs/2TESTPSICOLOGICO.doc
 .claude/settings.local.json
+
+# Descargas generadas por la propia app (reportes Excel/PDF: Historial_Ventas,
+# Cuadratura, Nomina, ReporteContable, etc.). Caen en la raíz del repo cuando se
+# prueba la app desde ng serve y no son parte del código fuente.
+# Anclados con "/" para que NO afecten los documentos versionados bajo docs/.
+/*.xlsx
+/*.csv
+/*.pdf
