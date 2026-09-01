@@ -100,17 +100,107 @@
   font-family: var(--font-body);
 }
 
-/* p-datepicker — celdas de año/mes (fix-152-b): a diferencia del resto del panel
-   (forzado a claro vía _primeng-overrides.scss bajo [data-mode='dark']), el estado de
-   reposo de .p-yearpicker-year/.p-monthpicker-month nunca declara color — queda a cargo
-   del preset de PrimeNG, que sí reacciona al modo oscuro del navegador. El wizard público
-   no debe depender de eso jamás. */
+/* p-datepicker — fuga de modo oscuro al tema claro forzado (fix-152-b).
+
+   CAUSA RAÍZ: los tokens de PrimeNG se declaran como --p-x: var(--ds-token) en :root,
+   y CSS resuelve ese var() EN :root — el valor ya cocinado (oscuro) es el que hereda.
+   Que este bloque redefina --bg-surface/--text-* más adentro llega tarde: el token de
+   PrimeNG ya quedó fijado con el valor de dark mode. Por eso hay que pisar la propiedad
+   final (color/background-color) en el elemento, no confiar en re-declarar el token.
+
+   El cuerpo del panel se salvaba solo porque _primeng-overrides.scss ya trae una regla
+   explícita `background-color: var(--bg-surface) !important` sobre .p-datepicker-panel.
+   Ninguna otra pieza la tenía: con dark mode activo, 41 de 44 nodos de texto del panel
+   quedaban en #f4f4f5 sobre blanco (contraste ≈1:1, invisibles).
+
+   POR QUÉ ESTA REGLA ES CATEGÓRICA Y NO UNA LISTA DE SELECTORES: enumerar clases ya
+   falló dos veces en este mismo fix (primero las celdas de año/mes, después el header).
+   En vez de perseguir el próximo selector, se ancla el color EN EL PANEL y se obliga a
+   todo su contenido a heredarlo. Así queda cubierto también lo que hoy no se ve —
+   footer de botones, semanas ISO, cualquier vista que PrimeNG agregue después.
+
+   El estado deshabilitado NO necesita color propio: PrimeNG ya lo distingue con
+   `opacity: .6` sobre .p-disabled — mismo mecanismo que usa el datepicker del admin
+   (verificado ahí en modo oscuro: días habilitados y deshabilitados comparten color y
+   solo cambian en opacidad). Mantenerlo así deja los dos datepickers consistentes. */
 [data-public-theme] {
-  .p-yearpicker-year:not(.p-highlight),
-  .p-monthpicker-month:not(.p-highlight),
-  [data-pc-section='year']:not(.p-highlight),
-  [data-pc-section='month']:not(.p-highlight) {
-    color: var(--text-secondary) !important;
+  .p-datepicker-panel {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+
+    /* Todo el contenido hereda del panel en vez de leer su propio --p-* ya resuelto
+       en oscuro. Se excluyen los estados que necesitan su propio contraste (día
+       seleccionado / resaltado), que traen fondo de marca y texto pensado para él. */
+    *:not(.p-datepicker-day-selected):not(.p-highlight) {
+      color: inherit !important;
+    }
+
+    /* Superficies que PrimeNG pinta con token propio: el header salía como una barra
+       negra dentro del panel blanco, con los chevrons como recuadros blancos encima. */
+    .p-datepicker-header {
+      background-color: transparent !important;
+      border-bottom-color: var(--border-default) !important;
+    }
+
+    .p-datepicker-prev-button,
+    .p-datepicker-next-button {
+      background-color: transparent !important;
+    }
+
+    /* HOVER — misma fuga, tercer lugar donde aparece.
+       Las reglas de :hover de _primeng-overrides.scss usan
+       `var(--p-content-hover-background, var(--bg-elevated))`. El fallback claro NUNCA
+       entra porque el token sí existe: vale #27272a en oscuro (y #fafafa en claro), y
+       como se resolvió en :root llega hasta acá con el valor oscuro → al pasar el mouse
+       aparecía una caja casi negra sobre el panel blanco.
+
+       No se copia el #fafafa del modo claro tal cual: con el texto en --ds-brand (#0ea5e9)
+       eso da 2.69:1 y las letras se siguen leyendo mal. Se usa el tinte de marca del propio
+       tema público + el tono oscuro de marca para el texto, que conserva el acento de
+       color y además cumple AA (≈5.5:1). Ambas variantes de sede (azul/roja) definen
+       --color-primary-muted y --color-primary-dark, así que sirve para las dos. */
+    .p-datepicker-day:hover:not(.p-disabled):not(.p-highlight):not(.p-datepicker-day-selected),
+    .p-yearpicker-year:hover:not(.p-disabled):not(.p-highlight),
+    .p-monthpicker-month:hover:not(.p-disabled):not(.p-highlight),
+    .p-datepicker-select-month:hover,
+    .p-datepicker-select-year:hover,
+    .p-datepicker-prev-button:hover,
+    .p-datepicker-next-button:hover {
+      background-color: var(--color-primary-muted) !important;
+      color: var(--color-primary-dark) !important;
+    }
+
+    /* SELECCIONADO — cuarta aparición de la fuga, y la más engañosa: este estado estaba
+       EXCLUIDO de la regla de `color: inherit` de arriba, con el argumento de que "trae su
+       propio contraste". Ese supuesto nunca se había medido, y era falso:
+       `--p-datepicker-date-selected-background` quedaba fijado en #38bdf8 — el shade de
+       marca de MODO OSCURO (brand-400) — con texto blanco encima → 2.14:1, peor que varios
+       de los estados que sí se habían corregido.
+
+       Se usa brand-700 en vez de brand-500: con texto blanco, brand-500 da 2.77:1 y
+       brand-600 da 4.10:1; ambos siguen por debajo de AA. brand-700 llega a 5.93:1.
+       (Se excluye además del :hover de arriba para que al pasar el mouse el día elegido
+       no pierda su estado visual de "seleccionado".) */
+    .p-datepicker-day-selected,
+    .p-datepicker-day.p-highlight,
+    .p-yearpicker-year.p-highlight,
+    .p-monthpicker-month.p-highlight {
+      background-color: var(--color-primary-dark) !important;
+      color: var(--color-primary-text) !important;
+    }
+
+    /* FOCO DE TECLADO — quinta y última aparición de la fuga. El anillo salía en #38bdf8
+       (otra vez el brand-400 de modo oscuro): 2.14:1 contra el panel blanco, por debajo
+       del 3:1 que exige WCAG 1.4.11 para indicadores no textuales. Con --color-primary-dark
+       sube a 5.93:1. Se lleva a 2px siguiendo la convención de foco del propio DS
+       (_primeng-overrides.scss usa `outline: 2px` en los controles del topbar).
+
+       Nota de verificación: este estado NO se puede comprobar con `element.focus()` —
+       :focus-visible no se activa con foco programático. Hay que navegar con teclado real. */
+    :focus-visible {
+      outline: 2px solid var(--color-primary-dark) !important;
+      outline-offset: 1px !important;
+    }
   }
 }
 
