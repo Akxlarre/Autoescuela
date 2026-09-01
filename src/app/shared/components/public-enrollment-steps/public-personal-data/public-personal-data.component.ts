@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -566,6 +567,17 @@ export class PublicPersonalDataComponent {
   protected readonly _birthDateInvalid = signal(false);
   protected readonly _submitting = signal(false);
   protected readonly _isLoading = computed(() => this.loading() || this._submitting());
+
+  constructor() {
+    // El padre resetea `loading()` a `false` tanto en éxito (avanza de paso) como en error
+    // (ej. email duplicado) — cuando eso pasa, liberamos también nuestro latch local para que
+    // el usuario pueda reintentar sin recargar la página (fix-151-b).
+    effect(() => {
+      if (!this.loading()) {
+        this._submitting.set(false);
+      }
+    });
+  }
 
   // Anti-Race-Condition para Autofill
   private _lastEmitted: EnrollmentPersonalData | null = null;
