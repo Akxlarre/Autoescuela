@@ -69,9 +69,20 @@ describe('StudentHorarioFacade', () => {
       const { weekStart, weekEnd } = facade.weekMeta();
       const monday = new Date(weekStart + 'T12:00:00');
       expect(monday.getDay()).toBe(1); // lunes
-      const diff =
-        (new Date(weekEnd + 'T12:00:00').getTime() - monday.getTime()) / (24 * 3600 * 1000);
-      expect(diff).toBe(6);
+
+      // Comparación por CALENDARIO, no por milisegundos. Restar timestamps y dividir por 24h
+      // asume que todos los días duran 24 horas, y en la semana del cambio de hora eso es falso:
+      // Chile entra en horario de verano el primer domingo de septiembre, así que esa semana
+      // dura 6 días menos 1 hora y la división daba 5.958333 en vez de 6 (fix-155-b).
+      // setDate() hace aritmética de calendario y es inmune al salto, igual que el addDaysToIso()
+      // del facade — pero acá se usa el Date nativo a propósito, para no verificar la
+      // implementación contra sí misma.
+      const expectedEnd = new Date(monday);
+      expectedEnd.setDate(expectedEnd.getDate() + 6);
+      const yyyy = expectedEnd.getFullYear();
+      const mm = String(expectedEnd.getMonth() + 1).padStart(2, '0');
+      const dd = String(expectedEnd.getDate()).padStart(2, '0');
+      expect(weekEnd).toBe(`${yyyy}-${mm}-${dd}`);
     });
 
     it('goToNextWeek/goToPrevWeek desplazan 7 días y goToToday vuelve a la semana actual', () => {
