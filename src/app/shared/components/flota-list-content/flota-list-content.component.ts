@@ -51,6 +51,11 @@ import type {
 } from '@core/models/ui/vehicle-table.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatCLP } from '@core/utils/date.utils';
+import {
+  vehicleDocWarningLabel,
+  type VehicleDocWarningInfo,
+} from '@core/utils/vehicle-document-status.utils';
+import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
 
 /**
  * FlotaListContentComponent — Dumb Component (Organismo)
@@ -272,11 +277,25 @@ import { formatCLP } from '@core/utils/date.utils';
                       {{ clp(v.combustibleMes) }}
                     </td>
                     <td>
-                      <p-tag
-                        [severity]="statusSeverity(v.status)"
-                        [value]="statusLabel(v.status)"
-                        styleClass="text-2xs font-bold px-2 py-0.5"
-                      />
+                      <div class="flex items-center gap-1.5">
+                        <p-tag
+                          [severity]="statusSeverity(v.status)"
+                          [value]="statusLabel(v.status)"
+                          styleClass="text-2xs font-bold px-2 py-0.5"
+                        />
+                        @if (docWarning(v); as w) {
+                          <app-icon
+                            name="alert-triangle"
+                            [size]="15"
+                            [color]="
+                              hasExpiredDoc(v) ? 'var(--state-error)' : 'var(--state-warning)'
+                            "
+                            [pTooltip]="docWarningLabel(v)"
+                            tooltipPosition="top"
+                            [attr.aria-label]="docWarningLabel(v)"
+                          />
+                        }
+                      </div>
                     </td>
                     <td class="pr-6 text-right">
                       <div
@@ -356,11 +375,23 @@ import { formatCLP } from '@core/utils/date.utils';
                     >
                       {{ v.licensePlate }}
                     </span>
-                    <p-tag
-                      [value]="statusLabel(v.status)"
-                      [severity]="statusSeverity(v.status)"
-                      styleClass="text-2xs px-1.5"
-                    />
+                    <div class="flex items-center gap-1.5">
+                      @if (docWarning(v); as w) {
+                        <app-icon
+                          name="alert-triangle"
+                          [size]="15"
+                          [color]="hasExpiredDoc(v) ? 'var(--state-error)' : 'var(--state-warning)'"
+                          [pTooltip]="docWarningLabel(v)"
+                          tooltipPosition="top"
+                          [attr.aria-label]="docWarningLabel(v)"
+                        />
+                      }
+                      <p-tag
+                        [value]="statusLabel(v.status)"
+                        [severity]="statusSeverity(v.status)"
+                        styleClass="text-2xs px-1.5"
+                      />
+                    </div>
                   </div>
                   <div class="p-4 space-y-3">
                     <p class="item-title">
@@ -637,5 +668,35 @@ export class FlotaListContentComponent {
       ({ available: 'success', maintenance: 'warn', out_of_service: 'danger' }[status] as any) ||
       'info'
     );
+  }
+
+  // ── Advertencia de documentos vencidos / por vencer (fix-153-b) ─────────────
+  // El dato ya viene resuelto en cada fila: FlotaFacade trae vehicle_documents en su
+  // select y mapToTableRow() ya calcula el DocStatus con resolveDocStatus(). Acá solo
+  // se agrega, sin recalcular nada ni pedir datos de nuevo.
+
+  /** Documentos vencidos y por vencer de un vehículo, o null si están todos al día. */
+  docWarning(v: VehicleTableRow): VehicleDocWarningInfo | null {
+    const expiredDocs: string[] = [];
+    const expiringSoonDocs: string[] = [];
+    for (const d of v.documents ?? []) {
+      if (d.status === 'expired') expiredDocs.push(this.docTypeLabel(d.type));
+      else if (d.status === 'expiring_soon') expiringSoonDocs.push(this.docTypeLabel(d.type));
+    }
+    return expiredDocs.length || expiringSoonDocs.length ? { expiredDocs, expiringSoonDocs } : null;
+  }
+
+  /** `true` si hay al menos un documento ya vencido (rojo); si no, la advertencia es ámbar. */
+  hasExpiredDoc(v: VehicleTableRow): boolean {
+    return (this.docWarning(v)?.expiredDocs.length ?? 0) > 0;
+  }
+
+  /** Tooltip con los documentos concretos afectados — misma redacción que usa el agendamiento. */
+  docWarningLabel(v: VehicleTableRow): string {
+    return vehicleDocWarningLabel(v.licensePlate, this.docWarning(v));
+  }
+
+  private docTypeLabel(type: string): string {
+    return VEHICLE_DOC_TYPES.find((d) => d.value === type)?.label ?? type;
   }
 }

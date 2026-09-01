@@ -1,14 +1,14 @@
 # Asignación ASG-b-099 — Listado de Flota no destaca vehículos con documentos vencidos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** Media
 > **created:** 2026-08-31
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-09-01
+> **resulting_track:** fix-153-b-flota-listado-alerta-documento-vencido
 
 ---
 
@@ -32,7 +32,16 @@ Objetivo: que el listado de Flota (no solo el Dashboard, no solo el detalle del 
 destaque visualmente qué vehículos tienen SOAP/Revisión Técnica/Permiso de
 Circulación/Seguro vencidos, sin tener que entrar a cada uno.
 
-## Root cause conocida
+## Resultado (2026-09-01) ✅
+
+Resuelta en `fix-153-b`. **La root cause que sigue abajo era más pesimista que la realidad:**
+`FlotaFacade.fetchVehiclesData()` ya traía `vehicle_documents(type, expiry_date, status, file_url)`
+en su `select`, y `mapToTableRow()` ya resolvía el estado con `resolveDocStatus()`. El dato ya
+viajaba en cada fila del listado — el componente simplemente nunca lo leía. **No hizo falta tocar
+el facade ni agregar ninguna query**, así que tampoco hubo riesgo de que el cálculo divergiera del
+que ya usan los otros consumidores (que era la preocupación central del "Alcance sugerido").
+
+## Root cause conocida (hipótesis original — ver corrección arriba)
 
 `src/app/shared/components/flota-list-content/flota-list-content.component.ts` no tiene
 ninguna lógica de vencimiento — cero referencias a "vencid"/expiración en todo el archivo.
