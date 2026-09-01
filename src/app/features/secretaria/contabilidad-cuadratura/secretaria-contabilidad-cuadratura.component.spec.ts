@@ -50,9 +50,13 @@ describe('SecretariaContabilidadCuadraturaComponent', () => {
   });
 
   // ─── fix-080: Registrar Pago carga alumnos con deuda desde Caja Diaria ─────
-  describe('openIngresoDrawer (fix-080)', () => {
+  // El método se llamaba openIngresoDrawer() hasta eb91d035, que unificó la nomenclatura de los
+  // handlers de drawer (abrirDrawerArqueo/Ingreso/Egreso). El rename no llegó a este spec y el
+  // cast a `as any` — necesario porque los métodos son protected — impidió que TypeScript lo
+  // detectara, así que el test falló en silencio hasta fix-154-b.
+  describe('abrirDrawerIngreso (fix-080)', () => {
     it('llama pagosFacade.seleccionarParaPago(null) e initialize() antes de abrir el drawer', () => {
-      (component as any).openIngresoDrawer();
+      (component as any).abrirDrawerIngreso();
 
       expect(pagosFacadeSpy.seleccionarParaPago).toHaveBeenCalledWith(null);
       expect(pagosFacadeSpy.initialize).toHaveBeenCalled();
