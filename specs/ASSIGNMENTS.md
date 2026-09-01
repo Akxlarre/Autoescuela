@@ -23,7 +23,6 @@
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | `cualquiera` | spec | P2 | b | Continuación de ASG-b-087, pero **independiente**. Rescatada de una rama sin mergear. Ver `specs/assignments/ASG-b-088-*.md` |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. **Renombrada desde `ASG-i-005`** (2026-08-25) para ocupar el número liberado al eliminar el `ASG-i-004` fantasma — ver nota en Convenciones. Ver `specs/assignments/ASG-i-004-*.md` |
-| ASG-b-099 | Listado de vehículos (Flota) no destaca visualmente los que tienen documentos vencidos | `cualquiera` | fix | Media | b | Detectado en UAT Paquete 5. El Dashboard sí detecta el vehículo con SOAP vencido correctamente, pero el listado de Flota no conecta esa señal a la card. Ver `specs/assignments/ASG-b-099-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -233,6 +232,7 @@
 | ASG-i-001 | Revisar ortografía y voseo argentino | [fix-215-m-ortografia-voseo-app](fixes/fix-215-m-ortografia-voseo-app/fix.md) | 2026-08-25 |
 | ASG-b-086 | App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases` | [0005-i-app-like-libro-de-clases](specs/0005-i-app-like-libro-de-clases/spec.md) | 2026-08-26 |
 | ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | [0007-i-ex-alumnos-content-unificado](specs/0007-i-ex-alumnos-content-unificado/spec.md) | 2026-08-31 |
+| ASG-b-099 | Listado de Flota no destaca vehículos con documentos vencidos | [fix-153-b-flota-listado-alerta-documento-vencido](fixes/fix-153-b-flota-listado-alerta-documento-vencido/fix.md) | 2026-09-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
