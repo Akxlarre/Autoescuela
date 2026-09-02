@@ -12,15 +12,15 @@
 > "los IDs nunca se reutilizan": ese `ASG-i-004` nunca fue una asignación real, así que
 > no hay contenido histórico que perder al reasignar el número.
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-25
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-02
+> **resulting_track:** fix-237-m-conectar-filtro-mes-rentabilidad-cursos
 
 ---
 
