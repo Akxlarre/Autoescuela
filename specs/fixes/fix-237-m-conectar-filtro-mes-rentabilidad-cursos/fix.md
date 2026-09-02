@@ -1,7 +1,8 @@
 # Fix: El filtro de fechas no afecta la pestaña Rentabilidad + UX del filtro en Reportes Contables
 
 > id: fix-237-m-conectar-filtro-mes-rentabilidad-cursos
-> status: in-progress
+> status: done
+> closed: 2026-09-02
 > created: 2026-09-02
 > refs: ASG-i-004 (specs/assignments/ASG-i-004-conectar-filtro-mes-rentabilidad-cursos.md)
 
@@ -83,7 +84,18 @@ Bugs de UX del filtro reportados por el dueño en la misma pantalla (mismo fix):
 - **AC-9:** El guard contra respuestas fuera de orden (`createRequestGuard`) protege `fetchReporte()`
   — dos cambios de filtro rápidos aplican siempre el resultado del más reciente.
 
-## Cambio (plan)
+## Estado — implementado 2026-09-02
+
+Todos los ACs cumplidos. Tests: `reportes-contables.utils.spec.ts` (43 → +7 casos de
+`computeRentabilidadCursos`) + `reportes-contables.facade.spec.ts` (8 → +4: rentabilidad
+expuesta, `queryClassCounts` invocado, SWR sin skeleton con datos previos, skeleton en 1ª
+carga) = **59 verdes**. `tsc -p tsconfig.app.json` limpio. `npm run lint:arch` 0 errores.
+`/verify` (Playwright, sesión admin): la tab Rentabilidad muestra datos reales por tipo de
+curso y cambia con el filtro (probado "Mes actual" → "Mes anterior": pasa de 1 fila Clase B a
+Clase B + Profesional, label "Septiembre 2026" → "Agosto 2026"); no hay botón "Aplicar"; el
+cambio de rango recarga solo y los paneles no quedan en blanco; consola sin errores.
+
+## Cambio (plan → implementado)
 
 ### Núcleo funcional — `core/utils/reportes-contables.utils.ts`
 

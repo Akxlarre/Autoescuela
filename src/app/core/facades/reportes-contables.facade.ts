@@ -10,6 +10,8 @@ import type {
   ReporteContable,
 } from '@core/models/ui/reportes-contables.model';
 import { GASTO_FIJO_CATEGORIES, computeDateRange } from '@core/models/ui/reportes-contables.model';
+import type { ClassCountsByGroup } from '@core/models/ui/reportes-contables.model';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
@@ -45,6 +47,17 @@ export class ReportesContablesFacade {
   );
   private _initialized = false;
 
+  /** Guard anti respuestas fuera de orden para `fetchReporte()` (regla facades §7). */
+  private readonly reporteGuard = createRequestGuard();
+
+  /**
+   * Las promociones Clase Profesional viven siempre en la sede 2 (Conductores
+   * Chillán) — invariante del proyecto (`auto-create-next-promotions`,
+   * `auth_can_enroll_course_type`). Se usa para no contar sesiones profesionales
+   * cuando el reporte está filtrado por otra sede.
+   */
+  private static readonly PROFESSIONAL_BRANCH_ID = 2;
+
   // ── 2. Estado público (readonly) ───────────────────────────────────────────
   public readonly isLoading = this._isLoading.asReadonly();
   public readonly isExporting = this._isExporting.asReadonly();
@@ -58,6 +71,7 @@ export class ReportesContablesFacade {
   public readonly gastosCategoria = computed(() => this._reporte()?.gastosCategoria ?? []);
   public readonly evolucionMensual = computed(() => this._reporte()?.evolucionMensual ?? []);
   public readonly detalleDiario = computed(() => this._reporte()?.detalleDiario ?? []);
+  public readonly rentabilidadCursos = computed(() => this._reporte()?.rentabilidadCursos ?? []);
   public readonly diasConMovimientos = computed(() => this._reporte()?.diasConMovimientos ?? 0);
   public readonly escuela = computed(() => this._reporte()?.escuela ?? '');
 
@@ -108,14 +122,34 @@ export class ReportesContablesFacade {
     }
   }
 
-  /** Aplica nuevos filtros y recarga el reporte mostrando skeleton. */
+  /**
+   * Aplica nuevos filtros y recarga el reporte.
+   * SWR: si ya hay datos en pantalla, el refresco es silencioso (los datos previos
+   * quedan visibles hasta que llegan los nuevos — no se muestra skeleton ni se
+   * desmonta nada). El skeleton completo solo en la primera carga (`initialize()`).
+   */
   async aplicarFiltros(filtros: FiltrosReporte): Promise<void> {
     this._filtros.set(filtros);
+
+    if (this._reporte() !== null) {
+      await this.refreshSilently();
+      return;
+    }
+
     this._isLoading.set(true);
     try {
       await this.fetchReporte();
     } finally {
       this._isLoading.set(false);
+    }
+  }
+
+  /** Refresca el reporte sin tocar `_isLoading` (SWR / post-acción). */
+  private async refreshSilently(): Promise<void> {
+    try {
+      await this.fetchReporte();
+    } catch {
+      // Fail silencioso — los datos stale siguen visibles.
     }
   }
 
@@ -186,16 +220,19 @@ export class ReportesContablesFacade {
   // ── Privado ───────────────────────────────────────────────────────────────
 
   private async fetchReporte(): Promise<void> {
+    const requestToken = this.reporteGuard.next();
     const { desde, hasta } = this._filtros();
     const branchId = this._effectiveBranchId();
 
     try {
-      const [paymentsResult, singularsResult, expensesResult, fixedResult] = await Promise.all([
-        this.queryPayments(desde, hasta),
-        this.querySingularSales(desde, hasta),
-        this.queryExpenses(desde, hasta, branchId),
-        this.queryFixedExpenses(desde, hasta, branchId),
-      ]);
+      const [paymentsResult, singularsResult, expensesResult, fixedResult, classCounts] =
+        await Promise.all([
+          this.queryPayments(desde, hasta),
+          this.querySingularSales(desde, hasta),
+          this.queryExpenses(desde, hasta, branchId),
+          this.queryFixedExpenses(desde, hasta, branchId),
+          this.queryClassCounts(desde, hasta, branchId),
+        ]);
 
       if (paymentsResult.error) throw paymentsResult.error;
       if (singularsResult.error) throw singularsResult.error;
@@ -226,6 +263,10 @@ export class ReportesContablesFacade {
         'id' | 'category' | 'description' | 'amount' | 'date'
       >[];
 
+      // Si ya se disparó una fetch más reciente mientras esta esperaba, descartar
+      // (guard anti respuestas fuera de orden — regla facades §7).
+      if (!this.reporteGuard.isCurrent(requestToken)) return;
+
       // Mapear a GastoFijoRow para display
       const labelMap = Object.fromEntries(GASTO_FIJO_CATEGORIES.map((c) => [c.value, c.label]));
       this._gastosFijos.set(
@@ -239,13 +280,24 @@ export class ReportesContablesFacade {
         })),
       );
 
-      // Concatenar para buildReporte (los fixed se tratan igual que operacionales)
+      // Concatenar para buildReporte (los fixed se tratan igual que operacionales
+      // para KPIs / categorías / evolución). La estimación de rentabilidad por curso
+      // usa SOLO `operationalExpenses` (sin fijos) — se pasa aparte.
       const allExpenses: ExpenseRow[] = [
         ...operationalExpenses,
         ...fixedRaw.map((r) => ({ amount: r.amount, category: r.category, date: r.date })),
       ];
 
-      this._reporte.set(buildReporte(payments, allExpenses, this._escuelaLabel(), branchId));
+      this._reporte.set(
+        buildReporte(
+          payments,
+          allExpenses,
+          this._escuelaLabel(),
+          branchId,
+          classCounts,
+          operationalExpenses,
+        ),
+      );
       this._error.set(null);
     } catch (err) {
       const msg =
@@ -313,5 +365,49 @@ export class ReportesContablesFacade {
     }
 
     return query;
+  }
+
+  /**
+   * Cuenta clases prácticas completadas por tipo de curso en el rango — insumo para
+   * el prorrateo de gastos directos de la pestaña Rentabilidad (fix-237-m).
+   * Best-effort: si falla, devuelve `{}` y el prorrateo cae al fallback por ingresos.
+   */
+  private async queryClassCounts(
+    desde: string,
+    hasta: string,
+    branchId: number | null,
+  ): Promise<ClassCountsByGroup> {
+    const counts: ClassCountsByGroup = {};
+    try {
+      // Clase B: sesiones completadas en el rango (join a enrollments para la sede).
+      let classB = this.supabase.client
+        .from('class_b_sessions')
+        .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('scheduled_at', `${desde}T00:00:00`)
+        .lte('scheduled_at', `${hasta}T23:59:59`);
+      if (branchId !== null) {
+        classB = classB.eq('enrollments.branch_id', branchId);
+      }
+      const { count: classBCount } = await classB;
+      counts['class_b'] = classBCount ?? 0;
+
+      // Profesional: las promociones viven siempre en la sede 2. Si el reporte
+      // filtra otra sede, no hay clases profesionales que contar.
+      if (branchId === null || branchId === ReportesContablesFacade.PROFESSIONAL_BRANCH_ID) {
+        const { count: profCount } = await this.supabase.client
+          .from('professional_practice_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .gte('date', desde)
+          .lte('date', hasta);
+        counts['professional'] = profCount ?? 0;
+      } else {
+        counts['professional'] = 0;
+      }
+    } catch {
+      // best-effort — sin conteo, el prorrateo de vehículo usa el fallback por ingresos.
+    }
+    return counts;
   }
 }

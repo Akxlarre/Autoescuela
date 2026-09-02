@@ -20,6 +20,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { RentabilidadCursosComponent } from '@shared/components/rentabilidad-cursos/rentabilidad-cursos.component';
+import type { RentabilidadCurso } from '@core/models/ui/reportes-contables.model';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import {
   RANGOS_REPORTE,
@@ -274,32 +275,22 @@ type ReporteTab = 'evolucion' | 'detalle' | 'rentabilidad' | 'gastos-fijos';
           />
 
           @if (localRango() === 'personalizado') {
-            <!-- Desde -->
+            <!-- Desde/Hasta — el reporte se recarga solo cuando ambas están puestas
+                 y desde <= hasta (sin botón "Aplicar", fix-237-m). -->
             <app-date-input
               [value]="localDesde()"
-              (valueChange)="localDesde.set($event)"
+              (valueChange)="onCustomDateChange('desde', $event)"
               placeholder="Desde"
               data-llm-description="fecha de inicio del rango del reporte"
             />
 
-            <!-- Hasta -->
             <app-date-input
               [value]="localHasta()"
-              (valueChange)="localHasta.set($event)"
+              (valueChange)="onCustomDateChange('hasta', $event)"
               placeholder="Hasta"
               data-llm-description="fecha de fin del rango del reporte"
             />
           }
-
-          <!-- Aplicar -->
-          <button
-            class="btn-primary h-9 px-4 flex items-center gap-2"
-            (click)="onAplicar()"
-            data-llm-action="apply-report-filters"
-          >
-            <app-icon name="search" [size]="14" />
-            Aplicar
-          </button>
 
           <!-- ── Tabs (Evolución Mensual / Detalle Diario / Rentabilidad / Gastos Fijos
                —admin only—) — spec 0003-i. Hero, Filtros y Categorías quedan fijos fuera
@@ -326,8 +317,9 @@ type ReporteTab = 'evolucion' | 'detalle' | 'rentabilidad' | 'gastos-fijos';
       </div>
 
       <!-- ── Categorías (Ingresos + Gastos) — fila propia, scroll interno si no entra
-           (spec 0003-i, feedback visual). ── -->
-      @if (!isLoading()) {
+           (spec 0003-i, feedback visual). SWR (fix-237-m): si ya hay reporte, se
+           mantiene montado durante el refresco silencioso en vez de quedar en blanco. ── -->
+      @if (!isLoading() || kpis()) {
         <div class="bento-banner reportes-categorias-scroll">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Ingresos por Categoría -->
@@ -429,8 +421,9 @@ type ReporteTab = 'evolucion' | 'detalle' | 'rentabilidad' | 'gastos-fijos';
 
       <!-- ── Panel único de tabs (celda .bento-fill, sin importar la tab activa) — spec 0003-i:
            Evolución Mensual / Detalle Diario / Rentabilidad / Gastos Fijos (admin only).
-           Mismo patrón que fix-027-i. ── -->
-      @if (!isLoading()) {
+           Mismo patrón que fix-027-i. SWR (fix-237-m): se mantiene montado con los datos
+           previos durante el refresco silencioso por cambio de filtro. ── -->
+      @if (!isLoading() || kpis()) {
         <div class="bento-banner bento-fill card p-5 overflow-hidden flex flex-col h-full">
           @switch (activeTab()) {
             @case ('evolucion') {
@@ -553,8 +546,11 @@ type ReporteTab = 'evolucion' | 'detalle' | 'rentabilidad' | 'gastos-fijos';
             }
             @case ('rentabilidad') {
               <!-- ── Rentabilidad Estimada por Tipo de Curso ─────────────────────── -->
-              <div class="flex-1 min-h-0 overflow-y-auto">
-                <app-rentabilidad-cursos />
+              <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
+                <app-rentabilidad-cursos
+                  [datos]="rentabilidadCursos()"
+                  [periodoLabel]="periodoLabel()"
+                />
               </div>
             }
             @case ('gastos-fijos') {
@@ -679,6 +675,7 @@ export class ReportesContablesContentComponent {
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
   readonly gastosFijos = input<GastoFijoRow[]>([]);
+  readonly rentabilidadCursos = input<RentabilidadCurso[]>([]);
   /** fix-010-i (H-014): "Gastos Fijos del Período" es admin-only (RLS de fixed_expenses). */
   readonly isAdmin = input<boolean>(false);
   readonly filtros = input.required<FiltrosReporte>();
@@ -815,6 +812,25 @@ export class ReportesContablesContentComponent {
     return `${d}/${m}/${y}`;
   }
 
+  /**
+   * Label del período activo para la pestaña Rentabilidad (fix-237-m).
+   * Deriva del `filtros()` real, no de la fecha de hoy: si el rango cae dentro de
+   * un mismo mes → "Mes Año"; si abarca varios → "DD/MM/YYYY – DD/MM/YYYY".
+   */
+  protected readonly periodoLabel = computed(() => {
+    const { desde, hasta } = this.filtros();
+    if (!desde || !hasta) return '';
+    const [dy, dm] = desde.split('-');
+    const [hy, hm] = hasta.split('-');
+    if (dy === hy && dm === hm) {
+      const mes = new Date(Number(dy), Number(dm) - 1, 1).toLocaleDateString('es-CL', {
+        month: 'long',
+      });
+      return `${mes.charAt(0).toUpperCase() + mes.slice(1)} ${dy}`;
+    }
+    return `${this.formatDate(desde)} – ${this.formatDate(hasta)}`;
+  });
+
   // ── Handlers ─────────────────────────────────────────────────────────────
   protected onHeroAction(id: string): void {
     if (id === 'exportar' && !this.isExporting()) {
@@ -827,16 +843,33 @@ export class ReportesContablesContentComponent {
     this.exportRequested.emit(format);
   }
 
+  /**
+   * fix-237-m: sin botón "Aplicar". Un rango preset recarga al instante; el rango
+   * "Personalizado" recarga solo cuando Desde y Hasta están ambas puestas y
+   * `desde <= hasta` (ver `onCustomDateChange`).
+   */
   protected onRangoChange(rango: RangoReporte): void {
     this.localRango.set(rango);
     if (rango !== 'personalizado') {
       const [desde, hasta] = computeDateRange(rango);
       this.localDesde.set(desde);
       this.localHasta.set(hasta);
+      this.emitirFiltros();
     }
   }
 
-  protected onAplicar(): void {
+  protected onCustomDateChange(campo: 'desde' | 'hasta', value: string): void {
+    if (campo === 'desde') this.localDesde.set(value);
+    else this.localHasta.set(value);
+
+    const desde = this.localDesde();
+    const hasta = this.localHasta();
+    if (desde && hasta && desde <= hasta) {
+      this.emitirFiltros();
+    }
+  }
+
+  private emitirFiltros(): void {
     this.aplicarFiltros.emit({
       rango: this.localRango(),
       desde: this.localDesde(),

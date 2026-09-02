@@ -1337,6 +1337,30 @@
   "el cron solo corre una vez al día" como garantía de no-concurrencia.
 - **Fuente:** `specs/fixes/fix-228-m-auto-create-promotions-race-condition`.
 
+### DG-090 — "Rentabilidad por tipo de curso" es una estimación por prorrateo, no un dato real
+- **Trampa:** `expenses` NO tiene ningún campo que atribuya un gasto a un tipo de curso
+  (`license_group`). Solo tiene `category` (`fuel`, `rent`, `materials`, …). Por lo tanto la
+  tabla "Rentabilidad Estimada por Tipo de Curso" de Reportes Contables NO puede mostrar un
+  margen real por curso — cualquier número de "gastos directos por curso" es una estimación.
+- **Realidad (fix-237-m, confirmado con el dueño):** los *ingresos* por tipo de curso sí son
+  reales (`payments` agrupados por `enrollments.license_group` + standalone + complement +
+  special_service, vía `computeIngresosCategoria`). Los *gastos directos* se estiman con un
+  prorrateo híbrido en `computeRentabilidadCursos()`:
+  - `fuel` + `repair` del período → se reparten por **nº de clases prácticas completadas** de
+    cada tipo (`class_b_sessions` para Clase B, `professional_practice_sessions` para
+    Profesional; los demás tipos no consumen vehículo → 0). Si no hay clases contadas, cae al
+    fallback por participación en ingresos para no perder el gasto.
+  - `materials` → se reparte por participación en ingresos.
+  - Gastos fijos (`rent`, `salary`, `utility`, `insurance`, aseo, otros) y pagos a instructores
+    **NO entran**. Ojo: `repair` también es categoría de `fixed_expenses`, por eso
+    `buildReporte()` recibe `directExpenses` (solo tabla `expenses`) aparte del `expenses`
+    general que sí incluye los fijos para KPIs/categorías/evolución.
+- **Regla de aplicabilidad:** si algún día se pide "rentabilidad exacta por curso", requiere
+  cambio de modelo de datos (columna de tipo de curso en `expenses` + UI de registro que la
+  pida) — es una spec, no un ajuste del cálculo. Profesional se asume siempre sede 2
+  (`PROFESSIONAL_BRANCH_ID`), mismo invariante que `auto-create-next-promotions`.
+- **Fuente:** `specs/fixes/fix-237-m-conectar-filtro-mes-rentabilidad-cursos`.
+
 
 
 ## Convención para agregar una entrada nueva

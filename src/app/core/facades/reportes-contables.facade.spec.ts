@@ -169,6 +169,94 @@ describe('ReportesContablesFacade', () => {
     });
   });
 
+  describe('rentabilidad por tipo de curso (fix-237-m)', () => {
+    it('expone rentabilidadCursos derivado de payments + expenses del rango', async () => {
+      const { facade } = setup({
+        tables: {
+          payments: {
+            data: [
+              {
+                total_amount: 600_000,
+                type: 'enrollment',
+                payment_date: '2026-04-01',
+                enrollments: { branch_id: 1, license_group: 'class_b' },
+              },
+              {
+                total_amount: 400_000,
+                type: 'enrollment',
+                payment_date: '2026-04-02',
+                enrollments: { branch_id: 2, license_group: 'professional' },
+              },
+            ],
+            error: null,
+          },
+          expenses: {
+            data: [{ amount: 100_000, category: 'fuel', date: '2026-04-01' }],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      const filas = facade.rentabilidadCursos();
+      expect(filas.map((f) => f.tipoCurso).sort()).toEqual(['Clase B', 'Profesional']);
+      // sin conteo de clases (mock cuenta 0) → fuel se reparte por ingresos 60/40
+      const total = filas.reduce((s, f) => s + f.gastosDirectos, 0);
+      expect(total).toBe(100_000);
+    });
+
+    it('consulta class_b_sessions y professional_practice_sessions para el conteo', async () => {
+      const { facade, mockSupabase } = setup();
+      await facade.initialize();
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('class_b_sessions');
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('professional_practice_sessions');
+    });
+  });
+
+  describe('SWR al aplicar filtros (fix-237-m)', () => {
+    it('con datos previos, aplicarFiltros NO muestra skeleton (isLoading queda en false)', async () => {
+      const { facade } = setup({
+        tables: {
+          payments: {
+            data: [
+              {
+                total_amount: 1000,
+                type: 'enrollment',
+                payment_date: '2026-04-01',
+                enrollments: { branch_id: 1, license_group: 'class_b' },
+              },
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      expect(facade.kpis()).not.toBeNull();
+
+      const p = facade.aplicarFiltros({
+        rango: 'mes_anterior',
+        desde: '2026-03-01',
+        hasta: '2026-03-31',
+      });
+      // Durante el refresco silencioso el skeleton NO aparece.
+      expect(facade.isLoading()).toBe(false);
+      await p;
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.filtros().rango).toBe('mes_anterior');
+    });
+
+    it('primera carga SIN datos previos SÍ usa skeleton', async () => {
+      const { facade } = setup();
+      const p = facade.aplicarFiltros({
+        rango: 'mes_actual',
+        desde: '2026-04-01',
+        hasta: '2026-04-30',
+      });
+      expect(facade.isLoading()).toBe(true);
+      await p;
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
   describe('manejo de errores del reporte', () => {
     it('error en una query → señal de error saneada + toast, sin reventar', async () => {
       const { facade, mockToast } = setup({
