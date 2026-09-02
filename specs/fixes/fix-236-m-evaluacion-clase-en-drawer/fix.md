@@ -1,7 +1,8 @@
 # Fix: "Evaluar clase" navega a página completa en vez de abrir un Drawer
 
 > id: fix-236-m-evaluacion-clase-en-drawer
-> status: in_progress
+> status: done
+> closed: 2026-09-02
 > created: 2026-09-02
 > refs: ASG-i-003 (specs/assignments/ASG-i-003-evaluar-clase-drawer-en-vez-de-navegar.md)
 
@@ -55,19 +56,31 @@ Ninguno — fix autónomo de navegación/UX reportado por el dueño. ACs de regr
 
 ## Cambio
 
-_(Detalle fino — incl. wrap del componente actual vs extraer el form a un `*-content`
-compartido — se decide en el plan. Esbozo:)_
+**Decisión (wrap vs extraer):** se **envolvió el componente tal cual**. `InstructorEvaluacionComponent`
+ya derivaba todo su estado de `InstructorClasesFacade.selectedClass()`; su única atadura a la ruta
+era leer `:sessionId`/`:id` de `ActivatedRoute` y navegar en `goBack()`. Extraer un `*-content`
+no aportaba nada.
 
-- **`instructor-evaluacion.component.ts`**: aceptar `sessionId` (+ `studentId`, `readonly`) por
-  los `data` del `LayoutDrawerFacadeService` / `input()` en vez de `ActivatedRoute`. Quitar
-  breadcrumb / `<h1>` de página si estorban dentro del drawer.
-- **`instructor-ficha.component.ts`**: `routerLink` → `(click)="abrirEvaluacion(session)"` que
-  llama `layoutDrawer.open(...)` (desktop tabla + mobile card, Evaluar + Ver).
-- **`instructor-horario.component.ts`**: reemplazar `router.navigate(['.../evaluacion/...'])`
-  por la misma apertura de drawer.
-- **`app.routes.ts`**: eliminar la entrada `:id/evaluacion/:sessionId`.
-- Índices: actualizar `COMPONENTS.md` / `USAGE-MAP.md` si el componente cambia de rol
-  (ruta → drawer).
+- **`core/facades/instructor-clases.facade.ts`** (punto de entrada único):
+  - `openEvaluacionDrawer(sessionId)` → `await loadClassDetail(sessionId)` + `import()` diná­mico
+    del componente + `layoutDrawer.open(InstructorEvaluacionComponent, 'Evaluación Práctica',
+    'clipboard-pen')`. Inyecta `LayoutDrawerFacadeService`.
+  - `evaluationSavedTick` (signal readonly) — se incrementa al final de `saveEvaluation()` con
+    éxito. Reemplaza el refresh que antes daba la re-navegación de vuelta a la ficha.
+- **`features/instructor/evaluacion/instructor-evaluacion.component.ts`**: fuera `ActivatedRoute`,
+  `Router`, `OnInit`, `ngOnInit`, `studentId`. `goBack()` → `drawer.close()`. Template: fuera
+  breadcrumb + `<h1>` (el header lo pone el host del drawer); grid `lg:grid-cols-3` → `flex-col`
+  (el drawer es angosto); padding de página → `pb-6`.
+- **`features/instructor/ficha/instructor-ficha.component.ts`**: 4 `<a [routerLink]>` (Evaluar/Ver,
+  desktop tabla + mobile card) → `<button (click)="clasesFacade.openEvaluacionDrawer(row.sessionId)">`.
+  Fuera `RouterLink`. `effect()` sobre `evaluationSavedTick` → `loadStudentDetail()` silencioso.
+- **`features/instructor/horario/instructor-horario.component.ts`**: rama `completed` de
+  `onBlockClick()` → `clasesFacade.openEvaluacionDrawer(block.sessionId)` (antes `router.navigate`).
+  `effect()` sobre `evaluationSavedTick` → `fetchWeeklySchedule()`.
+- **`app.routes.ts`**: eliminada la entrada `:id/evaluacion/:sessionId` (sin callers).
+- **Tests:** `instructor-clases.facade.spec.ts` — 3 casos nuevos (`evaluationSavedTick` sube al
+  guardar / no sube si falla; `openEvaluacionDrawer` carga detalle + abre drawer).
+- **Índices:** `COMPONENTS.md`, `APP-LIKE-ROLLOUT.md`, `FACADES.md` actualizados (ruta→drawer).
 
 ## Test de Regresión
 

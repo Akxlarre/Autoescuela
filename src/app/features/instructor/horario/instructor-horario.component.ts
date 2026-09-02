@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   OnInit,
+  effect,
   inject,
   viewChild,
   signal,
@@ -11,6 +12,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
+import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WeeklyScheduleGridComponent } from '@shared/components/weekly-schedule-grid/weekly-schedule-grid.component';
 import { DailyScheduleTimelineComponent } from '@shared/components/daily-schedule-timeline/daily-schedule-timeline.component';
@@ -92,7 +94,19 @@ export class InstructorHorarioComponent implements OnInit {
     return this._localLoading() || this.facade.isLoading();
   });
   private router = inject(Router);
+  private readonly clasesFacade = inject(InstructorClasesFacade);
   private currentWeekDate: string = new Date().toISOString();
+
+  constructor() {
+    // fix-236-m: evaluar/ver una clase completada abre el Drawer en vez de navegar, así que
+    // la grilla queda montada y no se refresca sola. Recargamos la semana en silencio cuando
+    // InstructorClasesFacade avisa que se guardó una evaluación.
+    effect(() => {
+      const tick = this.clasesFacade.evaluationSavedTick();
+      if (tick === 0) return;
+      this.facade.fetchWeeklySchedule(this.currentWeekDate);
+    });
+  }
 
   /** Switch grilla/timeline por ancho de CONTENEDOR (fix-145-b), no por viewport `md:` —
    *  la grilla necesita ~900px reales de <main>, que un drawer abierto puede angostar aunque
@@ -260,10 +274,8 @@ export class InstructorHorarioComponent implements OnInit {
     if (!block.sessionId) return;
 
     if (block.status === 'completed') {
-      if (!block.studentId) return;
-      this.router.navigate([
-        `/app/instructor/alumnos/${block.studentId}/evaluacion/${block.sessionId}`,
-      ]);
+      // fix-236-m: abre la evaluación en el Drawer lateral en vez de navegar a otra página.
+      this.clasesFacade.openEvaluacionDrawer(block.sessionId);
     } else if (block.status === 'scheduled') {
       this.router.navigate(['/app/instructor/clase/iniciar'], {
         queryParams: { sessionId: block.sessionId },

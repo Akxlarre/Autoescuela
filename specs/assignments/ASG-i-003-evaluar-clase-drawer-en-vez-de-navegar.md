@@ -1,6 +1,6 @@
 # Asignación ASG-i-003 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

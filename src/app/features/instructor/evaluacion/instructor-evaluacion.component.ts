@@ -1,15 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
   effect,
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
@@ -36,28 +35,12 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     StableWidthDirective,
   ],
   template: `
-    <div class="px-6 py-6 pb-20 space-y-6">
-      <!-- Breadcrumb simple -->
-      <div class="flex items-center gap-2 text-sm text-text-muted">
-        <button
-          class="hover:text-text-primary flex items-center gap-1 cursor-pointer"
-          (click)="goBack()"
-        >
-          <app-icon name="arrow-left" [size]="14" />
-          Ficha Técnica
-        </button>
-        <span>/</span>
-        <span class="text-text-primary font-medium">Evaluación Práctica</span>
-      </div>
-
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-2xl font-bold text-text-primary">Evaluación Práctica</h1>
-          @if (readonlyMode()) {
-            <app-badge variant="info">Modo lectura</app-badge>
-          }
-        </div>
-        <p class="text-sm text-text-muted mt-1">
+    <div class="pb-6 space-y-6">
+      <div class="flex items-center gap-2">
+        @if (readonlyMode()) {
+          <app-badge variant="info">Modo lectura</app-badge>
+        }
+        <p class="text-sm text-text-muted">
           {{
             readonlyMode()
               ? 'Evaluación ya registrada — solo lectura'
@@ -76,9 +59,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           <p class="text-sm">{{ clasesFacade.error() }}</p>
         </div>
       } @else if (accessibleClass(); as cls) {
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="flex flex-col gap-6">
           <!-- Sidebar Info -->
-          <div class="lg:col-span-1 space-y-6">
+          <div class="space-y-6">
             <div class="card p-5">
               <h3 class="micro-label mb-4 border-b border-border-subtle pb-2">
                 Información Clase #{{ cls.classNumber }}
@@ -109,7 +92,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           </div>
 
           <!-- Formulario de Evaluación (un solo paso continuo) -->
-          <div class="lg:col-span-2">
+          <div>
             <form
               [formGroup]="evalForm"
               (ngSubmit)="submit(cls.sessionId)"
@@ -278,15 +261,13 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     </div>
   `,
 })
-export class InstructorEvaluacionComponent implements OnInit {
+export class InstructorEvaluacionComponent {
   public clasesFacade = inject(InstructorClasesFacade);
   private fb = inject(FormBuilder);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  private drawer = inject(LayoutDrawerFacadeService);
 
   public evalForm: FormGroup;
   public isSubmitting = signal(false);
-  private studentId: string | null = null;
 
   public checklistItems: EvaluationChecklistItem[] = [...EVALUATION_CHECKLIST_ITEMS].map(
     (item: Omit<EvaluationChecklistItem, 'checked'>) => ({ ...item, checked: true }),
@@ -339,19 +320,6 @@ export class InstructorEvaluacionComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
-    this.route.params.subscribe((params) => {
-      this.studentId = params['id'];
-      const sessionIdStr = params['sessionId'];
-      if (sessionIdStr) {
-        const sessionId = parseInt(sessionIdStr, 10);
-        if (!isNaN(sessionId)) {
-          this.clasesFacade.loadClassDetail(sessionId);
-        }
-      }
-    });
-  }
-
   onChecklistChange(items: EvaluationChecklistItem[]) {
     this.checklistItems = items;
   }
@@ -365,11 +333,7 @@ export class InstructorEvaluacionComponent implements OnInit {
   }
 
   goBack() {
-    if (this.studentId) {
-      this.router.navigate(['/app/instructor/alumnos', this.studentId, 'ficha']);
-    } else {
-      this.router.navigate(['/app/instructor/dashboard']);
-    }
+    this.drawer.close();
   }
 
   async submit(sessionId: number) {

@@ -541,6 +541,29 @@ describe('InstructorClasesFacade', () => {
         );
       });
 
+      it('incrementa evaluationSavedTick tras guardar con éxito (fix-236-m)', async () => {
+        const updateChain = makeThenableChain({ error: null });
+        const refreshChain = makeThenableChain({ data: [], error: null });
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValueOnce(updateChain)
+          .mockReturnValueOnce(refreshChain);
+
+        expect(facade.evaluationSavedTick()).toBe(0);
+
+        await facade.saveEvaluation({
+          sessionId: 5,
+          grade: 6.5,
+          checklist: ['freno'],
+          observations: 'Bien',
+          kmEnd: 13000,
+          studentSignature: null,
+          instructorSignature: null,
+        } as any);
+
+        expect(facade.evaluationSavedTick()).toBe(1);
+      });
+
       it('propaga el error si Supabase falla al guardar', async () => {
         supabaseMock.client.from = vi
           .fn()
@@ -557,6 +580,57 @@ describe('InstructorClasesFacade', () => {
             instructorSignature: null,
           } as any),
         ).rejects.toBeTruthy();
+      });
+
+      it('NO incrementa evaluationSavedTick si el guardado falla (fix-236-m)', async () => {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ error: { message: 'save failed' } }));
+
+        await expect(
+          facade.saveEvaluation({
+            sessionId: 5,
+            grade: 6.5,
+            checklist: [],
+            observations: '',
+            kmEnd: 13000,
+            studentSignature: null,
+            instructorSignature: null,
+          } as any),
+        ).rejects.toBeTruthy();
+
+        expect(facade.evaluationSavedTick()).toBe(0);
+      });
+    });
+
+    describe('openEvaluacionDrawer (fix-236-m)', () => {
+      it('carga el detalle de la clase y abre el Drawer con InstructorEvaluacionComponent', async () => {
+        supabaseMock.client.from = vi.fn().mockReturnValue(
+          makeThenableChain({
+            data: {
+              id: 5,
+              status: 'completed',
+              class_number: 3,
+              enrollments: {
+                id: 10,
+                number: 'M-1',
+                students: {
+                  id: 1,
+                  users: { id: 2, first_names: 'Ana', paternal_last_name: 'Díaz' },
+                },
+              },
+            },
+            error: null,
+          }),
+        );
+        const layoutDrawer = (facade as any).layoutDrawer;
+        const openSpy = vi.spyOn(layoutDrawer, 'open');
+
+        await facade.openEvaluacionDrawer(5);
+
+        expect(facade.selectedClass()?.sessionId).toBe(5);
+        expect(openSpy).toHaveBeenCalledOnce();
+        expect(openSpy.mock.calls[0][1]).toBe('Evaluación Práctica');
       });
     });
 
