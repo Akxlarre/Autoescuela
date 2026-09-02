@@ -2,11 +2,7 @@
 // Resumen financiero y Total Neto por rango de fechas
 
 export type RangoReporte =
-  | 'mes_actual'
-  | 'mes_anterior'
-  | 'trimestre'
-  | 'anio_actual'
-  | 'personalizado';
+  'mes_actual' | 'mes_anterior' | 'trimestre' | 'anio_actual' | 'personalizado';
 
 export interface RangoOption {
   label: string;
@@ -67,15 +63,35 @@ export interface DetalleDiario {
   neto: number;
 }
 
+/**
+ * Fila de la tabla "Rentabilidad Estimada por Tipo de Curso".
+ * `gastosDirectos` es una ESTIMACIÓN por prorrateo (fuel+repair por nº de clases
+ * prácticas del tipo, materials por participación en ingresos) — no un dato exacto:
+ * `expenses` no atribuye el gasto a un tipo de curso. Ver fix-237-m.
+ */
+export interface RentabilidadCurso {
+  tipoCurso: string;
+  ingresos: number;
+  gastosDirectos: number;
+  margenNeto: number;
+  rentabilidadPorcentaje: number; // 0–100
+  /** CSS custom property o color de dataviz, ej: 'var(--state-info)', '#7c3aed' */
+  colorVisual: string;
+}
+
 export interface ReporteContable {
   kpis: ReporteKpis;
   ingresosCategoria: CategoriaIngreso[];
   gastosCategoria: CategoriaGasto[];
   evolucionMensual: EvolucionMensual[];
   detalleDiario: DetalleDiario[];
+  rentabilidadCursos: RentabilidadCurso[];
   diasConMovimientos: number;
   escuela: string;
 }
+
+/** Nº de clases prácticas realizadas por tipo de curso (license_group) en un rango. */
+export type ClassCountsByGroup = Partial<Record<string, number>>;
 
 // ── Gastos Fijos (admin-only, tabla fixed_expenses) ───────────────────────────
 

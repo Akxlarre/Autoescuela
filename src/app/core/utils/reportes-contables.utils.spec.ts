@@ -6,6 +6,7 @@ import {
   computeGastosCategoria,
   computeIngresosCategoria,
   computeKpis,
+  computeRentabilidadCursos,
   filterPaymentsByBranch,
   mapSingularSaleToPaymentRow,
   type ExpenseRow,
@@ -339,5 +340,101 @@ describe('cursos singulares (standalone) en el reporte', () => {
     const dia = computeDetalleDiario(payments, []).find((d) => d.fecha === '2026-04-10');
     expect(dia?.ingresos).toBe(320_000);
     expect(dia?.operaciones).toBe(2);
+  });
+});
+
+// ── fix-237-m: rentabilidad estimada por tipo de curso ────────────────────────
+
+describe('computeRentabilidadCursos', () => {
+  it('agrupa ingresos por tipo de curso sin desglose por sede', () => {
+    const payments = [
+      mkPayment(300_000, 'enrollment', 'class_b', 1, '2026-04-01'),
+      mkPayment(100_000, 'enrollment', 'class_b', 2, '2026-04-02'),
+      mkPayment(400_000, 'enrollment', 'professional', 2, '2026-04-03'),
+    ];
+    const filas = computeRentabilidadCursos(payments, [], {});
+    const claseB = filas.find((f) => f.tipoCurso === 'Clase B');
+    const prof = filas.find((f) => f.tipoCurso === 'Profesional');
+    expect(claseB?.ingresos).toBe(400_000);
+    expect(prof?.ingresos).toBe(400_000);
+    expect(filas).toHaveLength(2);
+  });
+
+  it('reparte fuel+repair por nº de clases y materials por ingresos; el TOTAL cuadra exacto', () => {
+    const payments = [
+      mkPayment(600_000, 'enrollment', 'class_b', 1, '2026-04-01'),
+      mkPayment(400_000, 'enrollment', 'professional', 2, '2026-04-02'),
+    ];
+    const expenses: ExpenseRow[] = [
+      mkExpense(100_000, 'fuel'),
+      mkExpense(20_000, 'repair'),
+      mkExpense(50_000, 'materials'),
+      mkExpense(999_999, 'rent'), // gasto fijo — NO debe entrar
+      mkExpense(888_888, 'salary'), // gasto fijo — NO debe entrar
+    ];
+    // Clase B hizo 3 clases, Profesional 1 → pool vehículo (120k) se reparte 90k / 30k
+    const filas = computeRentabilidadCursos(payments, expenses, { class_b: 3, professional: 1 });
+    const claseB = filas.find((f) => f.tipoCurso === 'Clase B')!;
+    const prof = filas.find((f) => f.tipoCurso === 'Profesional')!;
+
+    // materials (50k) por ingresos: 60% / 40% → 30k / 20k
+    expect(claseB.gastosDirectos).toBe(90_000 + 30_000);
+    expect(prof.gastosDirectos).toBe(30_000 + 20_000);
+
+    const totalGastos = filas.reduce((s, f) => s + f.gastosDirectos, 0);
+    expect(totalGastos).toBe(100_000 + 20_000 + 50_000); // fuel+repair+materials exacto
+    expect(claseB.margenNeto).toBe(claseB.ingresos - claseB.gastosDirectos);
+  });
+
+  it('sin clases contadas → el pool de vehículo cae al fallback por ingresos', () => {
+    const payments = [
+      mkPayment(700_000, 'enrollment', 'class_b', 1, '2026-04-01'),
+      mkPayment(300_000, 'enrollment', 'professional', 2, '2026-04-02'),
+    ];
+    const expenses: ExpenseRow[] = [mkExpense(100_000, 'fuel')];
+    const filas = computeRentabilidadCursos(payments, expenses, {});
+    const claseB = filas.find((f) => f.tipoCurso === 'Clase B')!;
+    const prof = filas.find((f) => f.tipoCurso === 'Profesional')!;
+    expect(claseB.gastosDirectos + prof.gastosDirectos).toBe(100_000);
+    expect(claseB.gastosDirectos).toBe(70_000); // 70% de participación en ingresos
+  });
+
+  it('un tipo sin clases prácticas solo recibe su share de materiales; sin NaN/Infinity', () => {
+    const payments = [
+      mkPayment(500_000, 'enrollment', 'class_b', 1, '2026-04-01'),
+      mkPayment(500_000, 'special_service', null, 1, '2026-04-02'),
+    ];
+    const expenses: ExpenseRow[] = [mkExpense(80_000, 'fuel'), mkExpense(40_000, 'materials')];
+    const filas = computeRentabilidadCursos(payments, expenses, { class_b: 4 });
+    const psico = filas.find((f) => f.tipoCurso === 'Psicotécnico / Servicios')!;
+    // toda la bencina va a Clase B (única con clases); psico solo materiales (50% → 20k)
+    expect(psico.gastosDirectos).toBe(20_000);
+    expect(Number.isFinite(psico.rentabilidadPorcentaje)).toBe(true);
+  });
+
+  it('ingresos en cero no producen NaN en el porcentaje', () => {
+    const filas = computeRentabilidadCursos(
+      [mkPayment(0, 'enrollment', 'class_b', 1, '2026-04-01')],
+      [mkExpense(10_000, 'fuel')],
+      {},
+    );
+    expect(filas[0].rentabilidadPorcentaje).toBe(0);
+  });
+
+  it('sin pagos → devuelve arreglo vacío', () => {
+    expect(computeRentabilidadCursos([], [mkExpense(10_000, 'fuel')], {})).toEqual([]);
+  });
+
+  it('buildReporte expone rentabilidadCursos y usa solo gastos operacionales', () => {
+    const reporte = buildReporte(
+      [mkPayment(100_000, 'enrollment', 'class_b', 1, '2026-04-01')],
+      [mkExpense(10_000, 'fuel'), mkExpense(5_000, 'rent')], // "todos" los gastos
+      'Escuela',
+      1,
+      { class_b: 2 },
+      [mkExpense(10_000, 'fuel')], // solo operacionales para rentabilidad
+    );
+    expect(reporte.rentabilidadCursos).toHaveLength(1);
+    expect(reporte.rentabilidadCursos[0].gastosDirectos).toBe(10_000);
   });
 });

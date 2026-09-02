@@ -2,6 +2,7 @@
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
 import type {
@@ -18,6 +19,7 @@ export class InstructorClasesFacade {
   private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
+  private layoutDrawer = inject(LayoutDrawerFacadeService);
 
   private _todayClasses = signal<InstructorClassRow[]>([]);
   private _selectedClass = signal<InstructorClassRow | null>(null);
@@ -25,6 +27,17 @@ export class InstructorClasesFacade {
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
   private _initialized = false;
+
+  /**
+   * Contador que se incrementa tras guardar una evaluación con éxito. Los Smart
+   * Components que muestran listas de clases (ficha del alumno, horario semanal) —
+   * cuyo estado vive en OTRO Facade que este no puede refrescar — hacen `effect()`
+   * sobre esto para recargar en silencio su propia data. fix-236-m: la evaluación
+   * pasó de página enrutada (donde el `goBack()` re-disparaba la carga del padre) a
+   * Drawer (el padre queda montado y no se entera solo).
+   */
+  private _evaluationSavedTick = signal(0);
+  readonly evaluationSavedTick = this._evaluationSavedTick.asReadonly();
 
   // Realtime channel
   private channel: any = null;
@@ -148,6 +161,21 @@ export class InstructorClasesFacade {
       console.error('Error fetching today classes:', err);
       this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar clases');
     }
+  }
+
+  /**
+   * Abre la evaluación de una clase en el Drawer lateral (fix-236-m). Único punto de
+   * entrada: reemplaza la navegación a la ruta `/instructor/alumnos/:id/evaluacion/:sessionId`
+   * desde la ficha del alumno y el horario semanal. Carga el detalle ANTES de abrir para
+   * que `InstructorEvaluacionComponent` (sin `input()`, se monta vía `NgComponentOutlet`)
+   * ya encuentre `selectedClass()` poblado. El modo lectura lo deriva el propio componente
+   * desde `canEvaluate` de la clase seleccionada.
+   */
+  async openEvaluacionDrawer(sessionId: number): Promise<void> {
+    await this.loadClassDetail(sessionId);
+    const { InstructorEvaluacionComponent } =
+      await import('../../features/instructor/evaluacion/instructor-evaluacion.component');
+    this.layoutDrawer.open(InstructorEvaluacionComponent, 'Evaluación Práctica', 'clipboard-pen');
   }
 
   async loadClassDetail(sessionId: number): Promise<void> {
@@ -419,6 +447,7 @@ export class InstructorClasesFacade {
       if (updateError) throw updateError;
 
       await this.refreshSilently();
+      this._evaluationSavedTick.update((n) => n + 1);
     } catch (err: any) {
       console.error('Error saving evaluation:', err);
       throw err;

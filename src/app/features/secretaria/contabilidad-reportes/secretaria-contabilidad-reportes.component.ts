@@ -17,6 +17,7 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [detalleDiario]="facade.detalleDiario()"
       [diasConMovimientos]="facade.diasConMovimientos()"
       [escuela]="facade.escuela()"
+      [rentabilidadCursos]="facade.rentabilidadCursos()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
       [filtros]="facade.filtros()"

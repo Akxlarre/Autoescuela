@@ -4,14 +4,17 @@ import {
   DestroyRef,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe } from '@angular/common';
 
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
+import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -33,7 +36,6 @@ type FichaTab = 'datos' | 'ficha-tecnica';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
     DatePipe,
     DecimalPipe,
     IconComponent,
@@ -348,32 +350,26 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                             </td>
                             <td class="p-4 text-center w-28">
                               @if (row.canEvaluate) {
-                                <a
-                                  [routerLink]="[
-                                    '/app/instructor/alumnos',
-                                    detail.studentId,
-                                    'evaluacion',
-                                    row.sessionId,
-                                  ]"
-                                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-brand"
+                                <button
+                                  type="button"
+                                  (click)="clasesFacade.openEvaluacionDrawer(row.sessionId)"
+                                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-brand cursor-pointer"
                                   style="color: var(--color-primary-text)"
                                   data-llm-action="evaluate-class"
                                 >
                                   <app-icon name="clipboard-pen" [size]="12" />
                                   Evaluar
-                                </a>
+                                </button>
                               } @else if (row.status === 'completed') {
-                                <a
-                                  [routerLink]="[
-                                    '/app/instructor/alumnos',
-                                    detail.studentId,
-                                    'evaluacion',
-                                    row.sessionId,
-                                  ]"
-                                  class="text-xs font-medium transition-colors hover:underline"
+                                <button
+                                  type="button"
+                                  (click)="clasesFacade.openEvaluacionDrawer(row.sessionId)"
+                                  class="text-xs font-medium transition-colors hover:underline cursor-pointer"
                                   [style.color]="'var(--text-muted)'"
-                                  >Ver</a
+                                  data-llm-action="view-evaluation"
                                 >
+                                  Ver
+                                </button>
                               } @else {
                                 <span class="text-xs" [style.color]="'var(--text-muted)'">-</span>
                               }
@@ -460,33 +456,26 @@ type FichaTab = 'datos' | 'ficha-tecnica';
 
                         <!-- CTA móvil -->
                         @if (row.canEvaluate) {
-                          <a
-                            [routerLink]="[
-                              '/app/instructor/alumnos',
-                              detail.studentId,
-                              'evaluacion',
-                              row.sessionId,
-                            ]"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all bg-brand"
+                          <button
+                            type="button"
+                            (click)="clasesFacade.openEvaluacionDrawer(row.sessionId)"
+                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all bg-brand cursor-pointer"
                             style="color: var(--color-primary-text)"
                             data-llm-action="evaluate-class"
                           >
                             <app-icon name="clipboard-pen" [size]="14" />
                             Evaluar Clase
-                          </a>
+                          </button>
                         } @else if (row.status === 'completed') {
-                          <a
-                            [routerLink]="[
-                              '/app/instructor/alumnos',
-                              detail.studentId,
-                              'evaluacion',
-                              row.sessionId,
-                            ]"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
+                          <button
+                            type="button"
+                            (click)="clasesFacade.openEvaluacionDrawer(row.sessionId)"
+                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary cursor-pointer"
+                            data-llm-action="view-evaluation"
                           >
                             <app-icon name="eye" [size]="14" />
                             Ver Detalles
-                          </a>
+                          </button>
                         } @else if (row.status === 'in_progress') {
                           <span
                             class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
@@ -527,9 +516,25 @@ type FichaTab = 'datos' | 'ficha-tecnica';
 })
 export class InstructorFichaComponent implements OnInit {
   protected readonly facade = inject(InstructorAlumnosFacade);
+  protected readonly clasesFacade = inject(InstructorClasesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Alumno cuyo detalle está cargado — para recargar en silencio tras guardar una evaluación. */
+  private readonly currentStudentId = signal<number | null>(null);
+
+  constructor() {
+    // fix-236-m: la evaluación ahora se guarda desde el Drawer, no navegando de vuelta a
+    // esta ficha, así que el `ngOnInit` ya no se re-dispara. Refrescamos el detalle en
+    // silencio cuando `InstructorClasesFacade` avisa que se guardó una evaluación.
+    effect(() => {
+      const tick = this.clasesFacade.evaluationSavedTick();
+      if (tick === 0) return;
+      const studentId = untracked(this.currentStudentId);
+      if (studentId !== null) this.facade.loadStudentDetail(studentId);
+    });
+  }
 
   protected readonly heroActions: SectionHeroAction[] = [];
   protected readonly heroContextLine = 'Ficha Técnica del Alumno';
@@ -564,6 +569,7 @@ export class InstructorFichaComponent implements OnInit {
     this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = parseInt(params['id'], 10);
       if (!isNaN(id)) {
+        this.currentStudentId.set(id);
         this.facade.loadStudentDetail(id);
       }
     });

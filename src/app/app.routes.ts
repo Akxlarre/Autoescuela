@@ -624,13 +624,9 @@ export const routes: Routes = [
                     (m) => m.InstructorFichaComponent,
                   ),
               },
-              {
-                path: ':id/evaluacion/:sessionId',
-                loadComponent: () =>
-                  import('./features/instructor/evaluacion/instructor-evaluacion.component').then(
-                    (m) => m.InstructorEvaluacionComponent,
-                  ),
-              },
+              // fix-236-m: la evaluación de clase dejó de ser una página enrutada — ahora
+              // se abre en el Drawer lateral vía InstructorClasesFacade.openEvaluacionDrawer()
+              // desde la ficha del alumno y el horario semanal (únicos puntos de entrada).
             ],
           },
           {

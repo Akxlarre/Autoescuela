@@ -7,8 +7,10 @@
 import type {
   CategoriaGasto,
   CategoriaIngreso,
+  ClassCountsByGroup,
   DetalleDiario,
   EvolucionMensual,
+  RentabilidadCurso,
   ReporteContable,
   ReporteKpis,
 } from '@core/models/ui/reportes-contables.model';
@@ -292,6 +294,108 @@ export function computeDetalleDiario(
     });
 }
 
+// ── Rentabilidad estimada por tipo de curso (fix-237-m) ──────────────────────
+//
+// NO es un dato exacto: `expenses` no atribuye el gasto a un tipo de curso. Se
+// estima por prorrateo híbrido, confirmado con el dueño (2026-09-02):
+//   • Bencina (`fuel`) + Reparaciones (`repair`) → se reparten por nº de clases
+//     prácticas realizadas de cada tipo de curso (Clase B y Profesional consumen
+//     vehículo; psicotécnico/singulares casi no). Si no hay clases contadas en el
+//     período, se reparte por participación en ingresos (fallback, no perder el gasto).
+//   • Materiales (`materials`) → se reparten por participación en ingresos.
+//   • Gastos fijos y pagos a instructores NO entran.
+
+/** Categorías de `expenses` que se reparten por nº de clases prácticas. */
+const RENTABILIDAD_VEHICLE_CATEGORIES = ['fuel', 'repair'] as const;
+/** Categoría de `expenses` que se reparte por participación en ingresos. */
+const RENTABILIDAD_MATERIAL_CATEGORY = 'materials';
+
+/**
+ * Reparte `total` entre las claves de `weights` proporcionalmente a su peso,
+ * redondeando a enteros y absorbiendo el residuo en la última clave para que
+ * la suma de las partes sea exactamente `total`.
+ */
+function allocateByWeight(
+  total: number,
+  keys: string[],
+  weightOf: (key: string) => number,
+): Map<string, number> {
+  const result = new Map<string, number>();
+  if (total === 0 || keys.length === 0) {
+    for (const k of keys) result.set(k, 0);
+    return result;
+  }
+  const totalWeight = keys.reduce((s, k) => s + weightOf(k), 0);
+  // Sin pesos → reparto equitativo, para no perder `total` en el redondeo.
+  const weight = (k: string) => (totalWeight === 0 ? 1 : weightOf(k));
+  const denom = totalWeight === 0 ? keys.length : totalWeight;
+  let allocated = 0;
+  keys.forEach((k, i) => {
+    if (i === keys.length - 1) {
+      result.set(k, total - allocated);
+      return;
+    }
+    const part = Math.round((total * weight(k)) / denom);
+    result.set(k, part);
+    allocated += part;
+  });
+  return result;
+}
+
+/**
+ * Construye la tabla "Rentabilidad Estimada por Tipo de Curso" para el rango.
+ * `classCounts` mapea `license_group` (`class_b`, `professional`, …) → nº de
+ * clases prácticas realizadas en el período.
+ */
+export function computeRentabilidadCursos(
+  payments: PaymentRow[],
+  expenses: ExpenseRow[],
+  classCounts: ClassCountsByGroup = {},
+): RentabilidadCurso[] {
+  // 1. Ingresos por tipo de curso (sin desglose por sede).
+  const ingresosMap = new Map<string, number>();
+  for (const p of payments) {
+    const key = incomeCategoryKey(p, false);
+    ingresosMap.set(key, (ingresosMap.get(key) ?? 0) + p.total_amount);
+  }
+  if (ingresosMap.size === 0) return [];
+
+  const keys = Array.from(ingresosMap.keys()).sort(
+    (a, b) => (ingresosMap.get(b) ?? 0) - (ingresosMap.get(a) ?? 0),
+  );
+  const totalIngresos = keys.reduce((s, k) => s + (ingresosMap.get(k) ?? 0), 0);
+
+  // 2. Pools de gasto directo.
+  const vehiclePool = expenses
+    .filter((e) => RENTABILIDAD_VEHICLE_CATEGORIES.includes((e.category ?? '') as never))
+    .reduce((s, e) => s + e.amount, 0);
+  const materialPool = expenses
+    .filter((e) => (e.category ?? '') === RENTABILIDAD_MATERIAL_CATEGORY)
+    .reduce((s, e) => s + e.amount, 0);
+
+  // 3. Reparto: vehículo por nº de clases (fallback a ingresos), materiales por ingresos.
+  const totalClasses = keys.reduce((s, k) => s + (classCounts[k] ?? 0), 0);
+  const vehicleAlloc = allocateByWeight(vehiclePool, keys, (k) =>
+    totalClasses > 0 ? (classCounts[k] ?? 0) : (ingresosMap.get(k) ?? 0),
+  );
+  const materialAlloc = allocateByWeight(materialPool, keys, (k) => ingresosMap.get(k) ?? 0);
+
+  // 4. Filas.
+  return keys.map((key) => {
+    const ingresos = ingresosMap.get(key) ?? 0;
+    const gastosDirectos = (vehicleAlloc.get(key) ?? 0) + (materialAlloc.get(key) ?? 0);
+    const margenNeto = ingresos - gastosDirectos;
+    return {
+      tipoCurso: incomeCategoryLabel(key, false),
+      ingresos,
+      gastosDirectos,
+      margenNeto,
+      rentabilidadPorcentaje: ingresos > 0 ? Math.round((margenNeto / ingresos) * 1000) / 10 : 0,
+      colorVisual: incomeBarColor(key),
+    };
+  });
+}
+
 /**
  * Punto de entrada principal: construye el `ReporteContable` completo
  * a partir de los arrays raw y el contexto de sede.
@@ -301,6 +405,14 @@ export function buildReporte(
   expenses: ExpenseRow[],
   escuela: string,
   branchId: number | null,
+  classCounts: ClassCountsByGroup = {},
+  /**
+   * Gastos SOLO operacionales (tabla `expenses`), sin los `fixed_expenses`.
+   * La estimación de rentabilidad por curso excluye gastos fijos, y `repair`
+   * también es categoría de `fixed_expenses` — por eso necesita su propio input.
+   * Default: `expenses` (para callers/tests que no distinguen).
+   */
+  directExpenses: ExpenseRow[] = expenses,
 ): ReporteContable {
   const showBranch = branchId === null;
   const detalleDiario = computeDetalleDiario(payments, expenses);
@@ -311,6 +423,7 @@ export function buildReporte(
     gastosCategoria: computeGastosCategoria(expenses),
     evolucionMensual: computeEvolucionMensual(payments, expenses),
     detalleDiario,
+    rentabilidadCursos: computeRentabilidadCursos(payments, directExpenses, classCounts),
     diasConMovimientos: detalleDiario.length,
     escuela,
   };
