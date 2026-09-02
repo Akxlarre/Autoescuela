@@ -12,7 +12,7 @@
 > "los IDs nunca se reutilizan": ese `ASG-i-004` nunca fue una asignación real, así que
 > no hay contenido histórico que perder al reasignar el número.
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
