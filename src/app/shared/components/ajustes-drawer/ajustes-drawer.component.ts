@@ -213,44 +213,47 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </button>
             </div>
 
-            <!-- Límite de Visualización de Agenda -->
-            <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-              <div class="space-y-0.5">
-                <p class="item-title">Límite de Visualización de Agenda</p>
-                <p class="text-xs text-text-muted">
-                  Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar clases
-                </p>
+            @if (canManageSiteConfig()) {
+              <!-- Límite de Visualización de Agenda -->
+              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Límite de Visualización de Agenda</p>
+                  <p class="text-xs text-text-muted">
+                    Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar
+                    clases
+                  </p>
+                </div>
+                <select
+                  class="w-full cursor-pointer rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-subtle focus:border-brand"
+                  [ngModel]="agendaSettings.visibilityMonths()"
+                  (ngModelChange)="onVisibilityMonthsChange($event)"
+                  data-llm-description="Selector del límite de meses visibles en la Agenda"
+                >
+                  <option [ngValue]="2">2 meses</option>
+                  <option [ngValue]="3">3 meses</option>
+                  <option [ngValue]="4">4 meses</option>
+                </select>
               </div>
-              <select
-                class="w-full cursor-pointer rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-subtle focus:border-brand"
-                [ngModel]="agendaSettings.visibilityMonths()"
-                (ngModelChange)="onVisibilityMonthsChange($event)"
-                data-llm-description="Selector del límite de meses visibles en la Agenda"
-              >
-                <option [ngValue]="2">2 meses</option>
-                <option [ngValue]="3">3 meses</option>
-                <option [ngValue]="4">4 meses</option>
-              </select>
-            </div>
 
-            <!-- Website Landing Config card -->
-            <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-              <div class="space-y-0.5">
-                <p class="item-title">Landing Pages en Caliente</p>
-                <p class="text-xs text-text-muted">
-                  Personaliza la web promocional y tarifas de venta en vivo
-                </p>
+              <!-- Website Landing Config card -->
+              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Landing Pages en Caliente</p>
+                  <p class="text-xs text-text-muted">
+                    Personaliza la web promocional y tarifas de venta en vivo
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand-muted py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-text"
+                  data-llm-nav="config-web-editor"
+                  (click)="navigateToConfigWeb()"
+                >
+                  <app-icon name="globe" [size]="14" />
+                  <span>Ir al Editor Visual de Sede ↗</span>
+                </button>
               </div>
-              <button
-                type="button"
-                class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand-muted py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-text"
-                data-llm-nav="config-web-editor"
-                (click)="navigateToConfigWeb()"
-              >
-                <app-icon name="globe" [size]="14" />
-                <span>Ir al Editor Visual de Sede ↗</span>
-              </button>
-            </div>
+            }
 
             <!-- Horarios Config card -->
             @if (isAdmin()) {
@@ -438,6 +441,12 @@ export class AjustesDrawerComponent {
 
   protected readonly currentUser = this.auth.currentUser;
   protected readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+
+  /** Configuración de sede (agenda global + editor web): solo admin y secretaria. */
+  protected readonly canManageSiteConfig = computed(() => {
+    const role = this.currentUser()?.role;
+    return role === 'admin' || role === 'secretaria';
+  });
 
   protected readonly roleBadgeVariant = computed<'brand' | 'neutral'>(() =>
     this.currentUser()?.role === 'admin' ? 'brand' : 'neutral',
