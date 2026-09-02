@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `m` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `m` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. **Renombrada desde `ASG-i-005`** (2026-08-25) para ocupar el número liberado al eliminar el `ASG-i-004` fantasma — ver nota en Convenciones. Ver `specs/assignments/ASG-i-004-*.md` |
 | ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | `m` | spec | P2 | i | Panel de notificaciones sin botón de eliminar ni "eliminar todas". Cap de 10 en el panel + link "Ver todas" abre drawer con existentes y eliminadas; la opción de abrir el drawer debe estar disponible incluso en el empty state. Ver `specs/assignments/ASG-i-005-*.md` |
 
@@ -125,6 +124,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `m` | [fix-236-m-evaluacion-clase-en-drawer](fixes/fix-236-m-evaluacion-clase-en-drawer/fix.md) | 2026-09-02 |
 <!-- AUTO-GENERATED:END -->
 
 ---

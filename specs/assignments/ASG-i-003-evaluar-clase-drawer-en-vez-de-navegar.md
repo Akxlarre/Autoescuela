@@ -1,14 +1,14 @@
 # Asignación ASG-i-003 — "Evaluar clase" debe abrir en Drawer, no navegar a otra página
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-17
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-02
+> **resulting_track:** fix-236-m-evaluacion-clase-en-drawer
 
 ---
 
