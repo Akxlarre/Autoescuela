@@ -13,7 +13,7 @@
 > no hay contenido histórico que perder al reasignar el número.
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-08-25
