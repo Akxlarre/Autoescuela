@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { MenuModule } from 'primeng/menu';
+import { PaginatorModule } from 'primeng/paginator';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -55,6 +56,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     FormsModule,
     SelectModule,
     MenuModule,
+    PaginatorModule,
     StableWidthDirective,
     PeriodSelectorComponent,
     EliminarServicioModalComponent,
@@ -208,7 +210,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <div class="flex items-center gap-2 flex-wrap">
               <p-select
                 [ngModel]="filtroServicio()"
-                (ngModelChange)="filtroServicio.set($event)"
+                (ngModelChange)="onFiltroServicioChange($event)"
                 [options]="filtroOptions()"
                 optionLabel="label"
                 optionValue="value"
@@ -219,7 +221,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
 
               <app-period-selector
                 [window]="periodWindow()"
-                (windowChange)="periodWindow.set($event)"
+                (windowChange)="onPeriodWindowChange($event)"
                 ariaLabel="Período del historial de ventas"
               />
               <div class="relative shrink-0">
@@ -271,7 +273,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 </tr>
               </thead>
               <tbody>
-                @for (venta of ventasFiltradas(); track venta.id) {
+                @for (venta of ventasPaginadas(); track venta.id) {
                   <tr
                     class="transition-colors hover:bg-subtle/50"
                     style="border-bottom:1px solid var(--border-subtle)"
@@ -327,7 +329,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
 
           <!-- Vista Mobile: Card List (Visible cuando el CONTENEDOR es angosto) -->
           <div class="svc-mobile-view flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
-            @for (venta of ventasFiltradas(); track venta.id) {
+            @for (venta of ventasPaginadas(); track venta.id) {
               <div
                 class="p-4 rounded-xl bg-surface border border-border-subtle flex flex-col gap-3"
               >
@@ -374,6 +376,22 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               </div>
             }
           </div>
+
+          <!-- Un solo paginador para AMBAS vistas (spec 0039-b). Precedente: spec 0032,
+               pre-inscritos-content. Es lo que le pone techo al DOM: sin esto, tabla y
+               tarjetas construían la lista filtrada entera cada una. -->
+          @if (ventasFiltradas().length > pageSize) {
+            <div class="shrink-0 border-t border-border-default">
+              <p-paginator
+                [rows]="pageSize"
+                [totalRecords]="ventasFiltradas().length"
+                [first]="safePage() * pageSize"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} ventas"
+                (onPageChange)="onPageChange($event)"
+              />
+            </div>
+          }
         </section>
       </div>
     </div>
@@ -512,6 +530,16 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
    */
   protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
 
+  /**
+   * Techo de DOM del historial (spec 0039-b). Sin esto, `ventasFiltradas()` llegaba entera al
+   * `@for` de AMBAS vistas (tabla y tarjetas coexisten en el DOM, se alternan por CSS y no por
+   * `@if`), así que el costo de render era 2N. Medido: ~0,66 ms por fila, 774 ms de bloqueo del
+   * hilo principal con 1.000 ventas en "Todo el historial". Ver acceptance.md de 0039-b.
+   */
+  private static readonly PAGE_SIZE = 10;
+  protected readonly pageSize = ServiciosEspecialesContentComponent.PAGE_SIZE;
+  protected readonly currentPage = signal(0);
+
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.ventas();
@@ -526,6 +554,34 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
       dateOf: (v) => v.fecha,
     });
   });
+
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.ventasFiltradas().length / this.pageSize)),
+  );
+
+  /** Página acotada al total: evita quedar fuera de rango tras filtrar o cambiar el período. */
+  protected readonly safePage = computed(() => Math.min(this.currentPage(), this.totalPages() - 1));
+
+  /** Único origen del `@for` de las DOS vistas — solo la página actual llega al DOM. */
+  protected readonly ventasPaginadas = computed(() => {
+    const start = this.safePage() * this.pageSize;
+    return this.ventasFiltradas().slice(start, start + this.pageSize);
+  });
+
+  protected onPageChange(event: { page?: number }): void {
+    this.currentPage.set(event.page ?? 0);
+  }
+
+  /** Cambiar de filtro o de período vuelve a la primera página (patrón pre-inscritos-content). */
+  protected onFiltroServicioChange(value: string | null): void {
+    this.filtroServicio.set(value);
+    this.currentPage.set(0);
+  }
+
+  protected onPeriodWindowChange(value: PeriodWindow): void {
+    this.periodWindow.set(value);
+    this.currentPage.set(0);
+  }
 
   protected readonly mesActualLabel = computed(() => {
     const fecha = new Date();

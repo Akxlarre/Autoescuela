@@ -147,6 +147,40 @@ lista de este proyecto.
 
 ## 4. Umbral recomendado
 
+> ## ✅ RESUELTO EMPÍRICAMENTE — 2026-09-01 (spec `0039-b`, desde `ASG-b-088`)
+>
+> **El umbral de 300 se confirmó** (cruce medido de los 200 ms de bloqueo en ≈290 filas), pero la
+> solución adoptada **no fue virtual scroll**. Tres hallazgos de la medición cambiaron el cuadro:
+>
+> 1. **De las 3 superficies de Categoría B, solo 1 tenía DOM sin techo.** `ex-alumnos` Clase B
+>    (`ex-alumnos-content.component.ts:162-172`) y Profesional (`:156-159`) **ya están paginadas**
+>    con `p-table [paginator]="true" [rows]="10"` — su DOM nunca pasa de 10 filas. La
+>    clasificación de §2 como "mostrar todo + scroll interno" quedó obsoleta (probablemente por
+>    `0007-i`). Virtualizarlas no podía mejorar nada.
+> 2. **El costo real era 2N, no N.** En `servicios-especiales`, la tabla desktop y las tarjetas
+>    mobile **coexisten en el DOM** (se alternan con `@container` + `display:none`, no con `@if`).
+>    Medido: 4.000 subtrees y 77.903 nodos con 2.000 ventas. La mitad del trabajo era renderizar
+>    una vista que nadie mira.
+> 3. **Virtual scroll no cubría el caso.** `p-table [virtualScroll]` resuelve la tabla pero no las
+>    tarjetas, que habrían necesitado `cdk-virtual-scroll-viewport` — descartado en §3 de este
+>    mismo documento por no tener ningún uso en el proyecto.
+>
+> **Solución aplicada:** un `<p-paginator>` que alimenta a las DOS vistas (precedente: spec 0032,
+> `pre-inscritos-content`). Resultado medido: **1.371 ms → 70 ms** de bloqueo y **77.903 → 702**
+> nodos DOM, ahora **constantes** entre N=100 y N=5.000.
+>
+> ⚠️ **Esto contradice el veredicto de §3, que rechazó paginar** por contradecir la UX de "ver todo
+> lo filtrado de un vistazo" (specs 0028-0031). Ese rechazo ya no describía al código: las dos
+> listas históricas hermanas están paginadas hoy. `servicios-especiales` era la excepción que nunca
+> recibió ese tratamiento, no el estándar que las otras abandonaron. Decisión del owner.
+>
+> **`LIST_VIRTUAL_SCROLL_THRESHOLD` no se creó**: un umbral configurable solo sirve si hay dos
+> regímenes de render entre los que alternar, y con techo constante no hay nada que alternar.
+>
+> Datos completos y condiciones de medición:
+> `specs/specs/0039-b-benchmark-umbral-virtual-scroll/acceptance.md`.
+
+
 **300 filas filtradas** como punto de activación de `[virtualScroll]` en las páginas de
 Categoría B, después de aplicar el filtro de período por defecto. Razonamiento:
 
