@@ -22,6 +22,7 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | `cualquiera` | fix | Media | i | Detectado en QA de ASG-b-084. **Renumerada desde `ASG-b-092`** (se creó con el prefijo de autor equivocado y chocaba con la de `b`). Ver `specs/assignments/ASG-i-003-*.md` |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad en Reportes Contables | `cualquiera` | fix | P2 | i | `datosRentabilidad` es mock hardcodeado, no `input()`. Detectado en QA de `0003-i`. Confirmar con dueño de negocio si el cálculo real ya existe antes de diseñar el query. **Renombrada desde `ASG-i-005`** (2026-08-25) para ocupar el número liberado al eliminar el `ASG-i-004` fantasma — ver nota en Convenciones. Ver `specs/assignments/ASG-i-004-*.md` |
+| ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | `cualquiera` | spec | P2 | i | Panel de notificaciones sin botón de eliminar ni "eliminar todas". Cap de 10 en el panel + link "Ver todas" abre drawer con existentes y eliminadas; la opción de abrir el drawer debe estar disponible incluso en el empty state. Ver `specs/assignments/ASG-i-005-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
