@@ -1,14 +1,14 @@
 # Asignación ASG-b-088 — Investigación empírica: simular datos y validar el umbral de virtual scroll
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-03
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-09-01
+> **resulting_track:** 0039-b-benchmark-umbral-virtual-scroll
 
 ---
 
@@ -57,6 +57,19 @@ sin fecha.
 - `src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts`
 - Migraciones/seed de datos sintéticos (nueva, en `supabase/scripts/` o similar — no crear en
   `supabase/migrations/` para no ensuciar el historial idempotente real)
+
+## ⚠️ Deriva del contexto (verificada al reclamar, 2026-09-01)
+
+Esta asignación se escribió el 2026-08-03. Dos cambios posteriores mueven la línea base:
+
+1. **`ASG-b-087` ya está cerrada** (spec `0038-b`, 2026-08-22): el filtro de período de 12 meses
+   existe y está en producción (`applyPeriodWindow` + `<app-period-selector>`, 4 superficies). El
+   benchmark ya **no** mide el estado "sin techo" — el browse por defecto está acotado, así que lo
+   que hay que medir es el escape hatch **"Todo el historial"**.
+2. **"Archivos involucrados" quedó stale**: `features/admin/alumnos/ex-alumnos/admin-ex-alumnos.component.ts`
+   ya no existe como fuente — `0007-i` (ASG-b-096, 2026-08-31) consolidó ex-alumnos Clase B en
+   `shared/components/ex-alumnos-content/`. Ver la lista corregida (4 paths) en el `plan.md` del
+   track resultante.
 
 ## Notas para quien la reclame
 
