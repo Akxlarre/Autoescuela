@@ -1,6 +1,6 @@
 # Spec 0013-m — Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-09-04
 > **Owner:** Matías
 > **Priority:** P2
@@ -46,21 +46,48 @@ drawer, el panel deja de saturarse con el tiempo y sigue siendo útil como vista
 
 ## 3. Acceptance Criteria (Gherkin)
 
-- **AC1**: {{pendiente — completar con el usuario}}
-- **AC2**: …
-- **AC3**: …
+- **AC1**: Given una notificación individual visible en el panel, When el usuario hace clic en
+  su botón de eliminar, Then la notificación se marca con `deleted_at` (soft-delete) y desaparece
+  del panel de inmediato (sin recargar la página).
+- **AC2**: Given el panel tiene al menos una notificación visible, When el usuario hace clic en
+  "Eliminar todas", Then todas las notificaciones visibles en ese momento quedan marcadas con
+  `deleted_at` y el panel pasa a mostrar el empty state.
+- **AC3**: Given el panel tiene más de 10 notificaciones no eliminadas, When se renderiza, Then
+  muestra como máximo 10 y, al final de la lista, un link/botón "Ver todas".
+- **AC4**: Given el usuario hace clic en "Ver todas" (o en el trigger del empty state), When se
+  abre el drawer de historial, Then el drawer lista tanto las notificaciones no eliminadas como
+  las eliminadas (`deleted_at` no nulo), distinguibles visualmente entre sí.
+- **AC5**: Given el panel no tiene ninguna notificación (empty state), When se renderiza el
+  empty state, Then igual se muestra un trigger para abrir el drawer de historial completo.
+- **AC6**: Given el drawer de historial completo, When se compara su estructura visual contra
+  `/app/instructor/notificaciones` (feed full-page existente), Then reutiliza ese mismo patrón
+  de layout adaptado al ancho de un drawer (no es un diseño visual nuevo desde cero).
 
 ### Edge cases obligatorios
 
-- **AC-E1**: {{pendiente — ¿qué pasa al eliminar un ítem individual dentro de un grupo
-  colapsado del panel (`NotificationPanelEntry` kind: 'group')?}}
-- **AC-E2**: …
+- **AC-E1**: Given un grupo colapsado (`NotificationPanelEntry` kind: 'group', 3+ no leídas del
+  mismo tipo/día) que el usuario expande, When el usuario hace clic en eliminar sobre uno de los
+  ítems individuales dentro del grupo expandido, Then esa notificación puntual se soft-elimina
+  igual que un ítem suelto, sin afectar al resto del grupo.
+- **AC-E2**: Given una notificación ya soft-eliminada (`deleted_at` no nulo), When se evalúa si
+  cuenta para `unreadCount()` o para el cap de 10 del panel, Then NO cuenta — el panel y el
+  contador solo consideran notificaciones no eliminadas.
+- **AC-E3**: Given el usuario hace clic en "Eliminar todas" con notificaciones agrupadas
+  visibles (`kind: 'group'`), When se ejecuta la eliminación masiva, Then se soft-eliminan todas
+  las notificaciones individuales que componen esos grupos, no solo las que estaban sueltas.
 
 ---
 
 ## 4. Out of scope
 
-- ❌ {{a definir junto con el usuario}}
+- ❌ Borrado físico (`DELETE`) de notificaciones — todo eliminado queda como soft-delete
+  recuperable a nivel de datos (aunque no haya UI de "restaurar" en esta spec).
+- ❌ UI para "restaurar" una notificación eliminada desde el drawer — el drawer solo lista el
+  historial, no permite deshacer el borrado.
+- ❌ Cambios a la lógica de agrupamiento existente (`NotificationPanelEntry` kind: 'group') más
+  allá de que el botón eliminar funcione dentro de un grupo expandido.
+- ❌ Purga automática/TTL de notificaciones soft-eliminadas (ej. borrado físico tras N días) —
+  fuera de alcance, evaluar en una spec futura si la tabla crece demasiado.
 
 ---
 
@@ -120,13 +147,13 @@ drawer, el panel deja de saturarse con el tiempo y sigue siendo útil como vista
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] ¿"Eliminar" es soft-delete (recomendado, dado que el drawer debe listar las eliminadas) o
-  hay otra forma de distinguir "eliminada" vs "no eliminada" ya existente en el modelo de datos?
-  No asumir sin confirmar con el owner — la ASG original ya dejaba esto abierto.
-- [ ] ¿Cómo interactúa "eliminar individual" con los grupos colapsados del panel
-  (`NotificationPanelEntry` kind: 'group')? No estaba resuelto en la ASG original.
-- [ ] ¿El drawer reutiliza el layout de `/app/instructor/notificaciones` o es un diseño nuevo?
-- Originado de Asignación ASG-i-005 (specs/assignments/ASG-i-005-eliminar-notificaciones-drawer-historial.md)
+- [x] "Eliminar" es soft-delete vía columna `deleted_at` en `notifications` (confirmado con el
+  owner, 2026-09-04).
+- [x] Eliminar individual SÍ funciona dentro de grupos colapsados expandidos, ítem por ítem
+  (confirmado con el owner, 2026-09-04).
+- [x] El drawer reutiliza el layout visual de `/app/instructor/notificaciones`, adaptado al
+  ancho de un drawer (confirmado con el owner, 2026-09-04).
+- Originado de Asignación ASG-i-005 (specs/assignments/ASG-i-005-eliminar-notificaciones-y-ver-todas-drawer.md)
 
 ---
 
