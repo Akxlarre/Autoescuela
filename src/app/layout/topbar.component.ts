@@ -27,6 +27,7 @@ import { UserPanelComponent } from '@shared/components/user-panel/user-panel.com
 import { BranchSelectorComponent } from '@shared/components/branch-selector/branch-selector.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AjustesDrawerComponent } from '@shared/components/ajustes-drawer/ajustes-drawer.component';
+import { NotificationsHistoryDrawerComponent } from '@features/notificaciones-historial/notifications-history-drawer.component';
 import { Button } from 'primeng/button';
 
 /**
@@ -221,6 +222,9 @@ export function resolveNotificationRoute(
               (markReadMany)="notifications.markManyAsRead($event)"
               (markAllRead)="notifications.markAllAsRead()"
               (notifClicked)="onNotifClicked($event)"
+              (deleteNotification)="notifications.deleteNotification($event)"
+              (deleteAllNotifications)="onDeleteAllNotifications()"
+              (openHistorial)="openNotificationsHistorial()"
             />
           }
         </div>
@@ -335,6 +339,29 @@ export class TopbarComponent {
   onUserAction(action: 'profile' | 'settings'): void {
     this.userPanelOpen.set(false);
     this.layoutDrawer.open(AjustesDrawerComponent, 'Ajustes del Sistema', 'settings');
+  }
+
+  /** Elimina todas las notificaciones visibles del panel, con confirmación previa (AC2). */
+  async onDeleteAllNotifications(): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar todas las notificaciones',
+      message:
+        '¿Estás seguro de que deseas eliminar todas tus notificaciones? Podrás revisarlas después en el historial.',
+      severity: 'danger',
+      confirmLabel: 'Sí, eliminar todas',
+      cancelLabel: 'Cancelar',
+    });
+    if (confirmed) this.notifications.deleteAllNotifications();
+  }
+
+  /** Abre el drawer de historial completo de notificaciones (AC4, AC5, AC6). */
+  openNotificationsHistorial(): void {
+    this.panelOpen.set(false);
+    this.layoutDrawer.open(
+      NotificationsHistoryDrawerComponent,
+      'Historial de Notificaciones',
+      'bell',
+    );
   }
 
   async onLogout(): Promise<void> {

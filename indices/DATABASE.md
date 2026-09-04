@@ -1341,6 +1341,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `reference_type` | TEXT | sí | — | — |
 | `reference_id` | INT | sí | — | — |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `deleted_at` | TIMESTAMPTZ | sí | `NULL` | — |
 
 **Policies:**
 
@@ -1351,7 +1352,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_notifications | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_notifications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 
-**Índices:** `idx_unread_notifications`
+**Índices:** `idx_unread_notifications`, `idx_notifications_not_deleted` (parcial, `(recipient_id, created_at DESC) WHERE deleted_at IS NULL` — **spec 0013-m**)
+
+> **`deleted_at` (spec 0013-m, `20260904120000_notifications_soft_delete.sql`):** soft-delete para
+> "eliminar notificaciones" del panel/drawer, sin borrado físico (el drawer de historial completo
+> debe poder listar también las eliminadas). **No requirió policy RLS nueva** — `update_notifications`
+> y `select_notifications` ya cubrían "propia fila" (`recipient_id = auth_user_id()`) sin distinguir
+> `deleted_at`, así que alcanzan tanto para el soft-delete individual/masivo como para que el drawer
+> lea el historial completo (activas + eliminadas).
 
 ### `payment_attempts` — 🔒 RLS
 

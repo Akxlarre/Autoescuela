@@ -33,7 +33,7 @@ conexión en Topbar → QA visual (`/verify`).
 |------|------|-----------|
 | `supabase/migrations/20260904120000_notifications_soft_delete.sql` | Migration | Agrega `deleted_at TIMESTAMPTZ NULL` a `notifications` + índice parcial para el filtro del panel |
 | `src/app/shared/components/notifications-history-drawer/notifications-history-drawer.component.ts` | Organismo (drawer) | Historial completo (existentes + eliminadas), abierto vía `LayoutDrawerFacadeService` |
-| `src/app/shared/components/notifications-history-drawer/notifications-history-drawer.component.scss` | Estilos | Estilos del drawer (fila de historial, badge "Eliminada") |
+| `src/app/shared/components/notifications-history-drawer/notifications-history-drawer.component.scss` | Estilos | Estilos del drawer (fila de historial, badge "Leída") |
 | `src/app/shared/components/notifications-history-drawer/notifications-history-drawer.component.spec.ts` | Test | Cubre `computed()` de agrupación por estado (activa/eliminada) si lo hay — ver §7 |
 
 ### Archivos a MODIFICAR
@@ -160,7 +160,7 @@ NotificationsFacade (Facade)
 - [ ] `facades.md` — `NotificationsFacade` NO es branch-scoped (ya documentado en
   `facades.md` §"Facades que NO aplican branch filter" — filtra por `recipient_id`, no cambia).
 - [x] `models.md` — DTO (`deleted_at`) vs UI (`deletedAt`) separados, mapeo solo en el Facade/utils.
-- [x] `visual-system.md` — tokens semánticos para el badge "Eliminada" (ej. `text-text-muted`,
+- [x] `visual-system.md` — tokens semánticos para el badge "Leída" (ej. `text-text-muted`,
   sin colores Tailwind arbitrarios); drawer sigue el layout ya validado de la página de instructor.
 - [ ] `swr-pattern.md` — el historial se carga on-demand al abrir el drawer (no persiste entre
   aperturas como SWR clásico); no aplica SWR completo, es "solo fetch" (ver tabla de

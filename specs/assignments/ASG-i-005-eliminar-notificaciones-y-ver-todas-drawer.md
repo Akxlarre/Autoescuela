@@ -1,6 +1,6 @@
 # Asignación ASG-i-005 — Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2

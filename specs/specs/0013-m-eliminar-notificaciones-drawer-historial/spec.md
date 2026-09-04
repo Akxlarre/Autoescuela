@@ -1,7 +1,8 @@
 # Spec 0013-m — Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-04
+> **Closed:** 2026-09-04
 > **Owner:** Matías
 > **Priority:** P2
 
@@ -50,13 +51,19 @@ drawer, el panel deja de saturarse con el tiempo y sigue siendo útil como vista
   su botón de eliminar, Then la notificación se marca con `deleted_at` (soft-delete) y desaparece
   del panel de inmediato (sin recargar la página).
 - **AC2**: Given el panel tiene al menos una notificación visible, When el usuario hace clic en
-  "Eliminar todas", Then todas las notificaciones visibles en ese momento quedan marcadas con
-  `deleted_at` y el panel pasa a mostrar el empty state.
+  "Eliminar todas" y confirma en el modal de confirmación (`ConfirmModalService`, severidad
+  `danger` — es una acción masiva irreversible desde la UI), Then todas las notificaciones
+  visibles en ese momento quedan marcadas con `deleted_at` y el panel pasa a mostrar el empty
+  state. Si el usuario cancela el modal, no se elimina nada (decidido con el owner, 2026-09-04:
+  ajuste sobre el AC original, que no contemplaba confirmación).
 - **AC3**: Given el panel tiene más de 10 notificaciones no eliminadas, When se renderiza, Then
   muestra como máximo 10 y, al final de la lista, un link/botón "Ver todas".
 - **AC4**: Given el usuario hace clic en "Ver todas" (o en el trigger del empty state), When se
   abre el drawer de historial, Then el drawer lista tanto las notificaciones no eliminadas como
-  las eliminadas (`deleted_at` no nulo), distinguibles visualmente entre sí.
+  las eliminadas (`deleted_at` no nulo) en una sola lista uniforme, sin badge ni distinción
+  visual entre ellas (decisión final del owner, 2026-09-04 — el drawer siempre muestra todas, así
+  que remarcar cuáles fueron eliminadas no aporta nada; solo importa el estado leída/no leída,
+  igual que en el panel).
 - **AC5**: Given el panel no tiene ninguna notificación (empty state), When se renderiza el
   empty state, Then igual se muestra un trigger para abrir el drawer de historial completo.
 - **AC6**: Given el drawer de historial completo, When se compara su estructura visual contra

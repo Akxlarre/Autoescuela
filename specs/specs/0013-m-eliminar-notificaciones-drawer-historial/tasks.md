@@ -1,7 +1,7 @@
 # Tasks 0013-m — Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md)
-> **Status:** in_progress
+> **Status:** done
 > **Created:** 2026-09-04
 
 ---
@@ -100,113 +100,133 @@
 
 ## Fase 3 — Capa UI
 
-- [ ] **T3.1** — Extender `notifications-panel.component.ts` (Dumb) — botones de eliminar
+- [x] **T3.1** — Extender `notifications-panel.component.ts` (Dumb) — botones de eliminar
   - **AC ref:** AC1, AC-E1
   - **DoD:**
-    - [ ] Nuevo `output()`: `deleteNotification = output<string>();`
-    - [ ] Botón eliminar en ítem `single` (icon button, `data-llm-action="delete-notification"`)
-    - [ ] Botón eliminar también en ítems anidados dentro de un grupo expandido (AC-E1) — mismo
+    - [x] Nuevo `output()`: `deleteNotification = output<string>();`
+    - [x] Botón eliminar en ítem `single` (icon button, `data-llm-action="delete-notification"`)
+    - [x] Botón eliminar también en ítems anidados dentro de un grupo expandido (AC-E1) — mismo
       output, mismo id individual
-    - [ ] Sigue siendo Dumb: solo `input()`/`output()`, sin Facades inyectadas
-    - [ ] Tokens de color (sin Tailwind hardcodeado) para el ícono/botón de eliminar
+    - [x] Sigue siendo Dumb: solo `input()`/`output()`, sin Facades inyectadas
+    - [x] Tokens de color (sin Tailwind hardcodeado) para el ícono/botón de eliminar
 
-- [ ] **T3.2** — Extender `notifications-panel.component.ts` — "Eliminar todas" + "Ver todas"
+- [x] **T3.2** — Extender `notifications-panel.component.ts` — "Eliminar todas" + "Ver todas"
   - **AC ref:** AC2, AC3, AC5
   - **DoD:**
-    - [ ] Nuevo `output()`: `deleteAllNotifications = output<void>();` y
+    - [x] Nuevo `output()`: `deleteAllNotifications = output<void>();` y
       `openHistorial = output<void>();`
-    - [ ] Botón "Eliminar todas" visible cuando `entries().length > 0` (junto a "Marcar todo
+    - [x] Botón "Eliminar todas" visible cuando `entries().length > 0` (junto a "Marcar todo
       como leído" en el header, mismo patrón condicional)
-    - [ ] Trigger "Ver todas" (`data-llm-action="open-notifications-history"`) SIEMPRE visible —
+    - [x] Trigger "Ver todas" (`data-llm-action="open-notifications-history"`) SIEMPRE visible —
       tanto al final de la lista con ítems como dentro del bloque `@empty` (AC5)
-    - [ ] `panelEntries` ya viene cortado a 10 desde el Facade (T2.4) — el componente no
+    - [x] `panelEntries` ya viene cortado a 10 desde el Facade (T2.4) — el componente no
       re-implementa el cap
 
-- [ ] **T3.3** — Estilos nuevos en `notifications-panel.component.scss`
+- [x] **T3.3** — Estilos nuevos en `notifications-panel.component.scss`
   - **DoD:**
-    - [ ] Estilos para el botón eliminar por ítem (hover/focus visible)
-    - [ ] Estilos para "Eliminar todas" y el trigger "Ver todas"
-    - [ ] Sin colores Tailwind arbitrarios — tokens del DS
+    - [x] Estilos para el botón eliminar por ítem (hover/focus visible)
+    - [x] Estilos para "Eliminar todas" y el trigger "Ver todas"
+    - [x] Sin colores Tailwind arbitrarios — tokens del DS
 
-- [ ] **T3.4** — Crear `NotificationsHistoryDrawerComponent` (Organismo)
+- [x] **T3.4** — Crear `NotificationsHistoryDrawerComponent` (Organismo)
   - **AC ref:** AC4, AC6
   - **DoD:**
-    - [ ] `shared/components/notifications-history-drawer/notifications-history-drawer.component.ts`
-    - [ ] OnPush
-    - [ ] Inyecta `NotificationsFacade` directamente (permitido: Organismo con Facade de su
-      propio dominio, se abre sin padre vía `LayoutDrawerFacadeService` — no puede recibir
-      `input()`)
-    - [ ] `ngOnInit()` llama `facade.loadHistorial()`
-    - [ ] Reutiliza el layout de fila de `InstructorNotificacionesComponent` (icono circular +
-      título/mensaje/hora), adaptado al ancho de un drawer — NO layout inventado desde cero
-    - [ ] Distingue visualmente notificaciones eliminadas (`deletedAt` no nulo) — ej. opacidad
-      reducida + badge "Eliminada" con `.micro-label`
-    - [ ] `<app-icon>` para íconos, sin SVG inline ni emojis
-    - [ ] Skeleton (`<app-skeleton-block>`) mientras `isHistorialLoading()`, resuelto dentro del
-      mismo componente (no un `*-skeleton.component.ts` separado)
-    - [ ] Documentado en `indices/COMPONENTS.md`
+    - [x] `features/notificaciones-historial/notifications-history-drawer.component.ts` — **NO**
+      en `shared/` como decía el plan original: el Architect Guard (hook mecánico, sin excepción
+      para el patrón Organismo que sí documenta `architecture.md`) bloquea cualquier
+      `inject(*Facade)` bajo `shared/` en un Write nuevo. El precedente real de ~30 drawers con
+      Facade del proyecto ya vive bajo `features/` (`ajustes-drawer` es la única excepción
+      grandfathered) — se siguió ese precedente en vez de pelear contra el hook.
+    - [x] OnPush
+    - [x] Inyecta `NotificationsFacade` directamente
+    - [x] `ngOnInit()` llama `facade.loadHistorial()`
+    - [x] Reutiliza el layout de fila de `InstructorNotificacionesComponent` (icono circular +
+      título/mensaje/hora), adaptado al ancho de un drawer
+    - [x] Cada fila es su propio `.card` (no una lista plana sobre el `bg-base` del drawer) — el
+      body de `LayoutDrawerComponent` pinta `bg-base`, no `bg-surface`; sin `.card` por fila el
+      contenido queda como texto plano sobre gris, sin separación visual. Corregido tras QA visual
+      del owner (2026-09-04), mismo patrón que `alumnos-por-vencer-drawer.component.ts` (`class="card p-3 ..."` por fila) — precedente ya establecido para listas dentro de drawers, no seguido en el primer intento.
+    - [x] **NO** distingue visualmente notificaciones eliminadas — decisión final del owner
+      (2026-09-04, tras 2 iteraciones: primero badge "Eliminada", luego "Leída", finalmente
+      ninguna): el drawer siempre muestra todas, remarcar cuáles fueron eliminadas no aporta
+      nada; solo importa leída/no leída (mismo dot que el panel, basado en `n.read`)
+    - [x] Cada fila es clicable y marca como leída al hacer clic (`facade.markAsRead(n.id)`),
+      mismo comportamiento que `app-notifications-panel` — hallazgo de QA visual del owner: el
+      primer intento no tenía ningún handler de click en las filas del drawer
+    - [x] `NotificationsFacade.markAsRead()` actualiza tanto `_notifications` (panel) como
+      `_historial` (drawer) — son signals independientes con su propio fetch, así que sin este
+      ajuste el drawer nunca reflejaba el `read: true` tras marcar desde ahí mismo
+    - [x] `<app-icon>` para íconos, sin SVG inline ni emojis
+    - [x] Skeleton (`<app-skeleton-block>`) mientras `isHistorialLoading()`, resuelto dentro del
+      mismo componente
+    - [x] Documentado en `indices/COMPONENTS.md`
 
-- [ ] **T3.5** — (Si aplica tras revisar el componente real) `.spec.ts` del drawer
+- [x] **T3.5** — (Si aplica tras revisar el componente real) `.spec.ts` del drawer
   - **DoD:**
-    - [ ] Solo si el drawer tiene un `computed()` con lógica de distinción activa/eliminada
-      no trivial — si es un `@if` directo sobre `notif.deletedAt`, se documenta la decisión de
-      NO testear (bindings, no decisión) según `testing-tdd.md`
+    - [x] No aplicó: el drawer final no tiene `computed()` con lógica de distinción no trivial
+      (la distinción activa/eliminada se eliminó por completo tras feedback del owner) — solo
+      `@if` directos sobre `n.read`, decisión documentada: NO testear (bindings, no decisión)
+      según `testing-tdd.md`
 
 ---
 
 ## Fase 4 — Conexión y animación
 
-- [ ] **T4.1** — Wire-up en `topbar.component.ts`
+- [x] **T4.1** — Wire-up en `topbar.component.ts`
   - **AC ref:** AC1, AC2, AC5, AC6
   - **DoD:**
-    - [ ] `(deleteNotification)="notifications.deleteNotification($event)"`
-    - [ ] `(deleteAllNotifications)="notifications.deleteAllNotifications()"`
-    - [ ] `(openHistorial)="openNotificationsHistorial()"` → nuevo método que llama
+    - [x] `(deleteNotification)="notifications.deleteNotification($event)"`
+    - [x] `(deleteAllNotifications)="onDeleteAllNotifications()"` → NO llama al Facade directo:
+      pasa primero por `ConfirmModalService.confirm()` (severidad `danger`, mismo patrón que
+      `onLogout()` en este mismo archivo) antes de invocar `notifications.deleteAllNotifications()`
+      — ajuste sobre el plan original tras feedback del owner en QA visual (2026-09-04): una
+      eliminación masiva sin confirmar es una acción destructiva que no debía ser inmediata.
+    - [x] `(openHistorial)="openNotificationsHistorial()"` → nuevo método que llama
       `layoutDrawer.open(NotificationsHistoryDrawerComponent, 'Historial de Notificaciones', 'bell')`
       (mismo patrón que `AjustesDrawerComponent`)
-    - [ ] Import del componente nuevo agregado a `topbar.component.ts`
+    - [x] Import del componente nuevo agregado a `topbar.component.ts`
 
-- [ ] **T4.2** — Animación de apertura del drawer
+- [x] **T4.2** — Animación de apertura del drawer
   - **DoD:**
-    - [ ] Verificar que `LayoutDrawerFacadeService` ya anima la apertura (patrón compartido de
-      todos los drawers) — no se necesita animación custom en este componente
-    - [ ] Si el drawer necesita alguna animación propia de entrada de filas, usa
-      `GsapAnimationsService` (nunca `@keyframes` para entradas)
+    - [x] Verificado: `LayoutDrawerFacadeService` ya anima la apertura (patrón compartido de
+      todos los drawers) — no se necesitó animación custom en este componente
+    - [x] Drawer sin animación propia de entrada de filas — no hizo falta
 
 ---
 
 ## Fase 5 — Validación
 
-- [ ] **T5.1** — `npm run lint:arch` corre limpio
-- [ ] **T5.2** — `npm run test:ci` corre verde (incluye los tests nuevos de T2.1)
-- [ ] **T5.3** — QA manual del happy path + edge cases
+- [x] **T5.1** — `npm run lint:arch` corre limpio (0 errores)
+- [x] **T5.2** — `npm run test:ci` corre verde (2293/2293, incluye los tests nuevos de T2.1)
+- [x] **T5.3** — QA manual del happy path + edge cases
   - **AC ref:** todos
   - **DoD:**
-    - [ ] Eliminar 1 notificación individual → desaparece del panel de inmediato
-    - [ ] "Eliminar todas" con panel lleno → panel pasa a empty state
-    - [ ] Panel con >10 no eliminadas → muestra máx. 10 + "Ver todas"
-    - [ ] "Ver todas" desde lista llena Y desde empty state → abre el mismo drawer
-    - [ ] Drawer muestra activas + eliminadas, distinguibles
-    - [ ] AC-E1: eliminar un ítem dentro de un grupo expandido no afecta al resto del grupo
-    - [ ] AC-E2: eliminadas no cuentan en `unreadCount()` ni en el cap de 10
-    - [ ] AC-E3: "Eliminar todas" con grupos visibles elimina también los ítems agrupados
-    - [ ] `/verify` ejecutado: consola limpia, sin 4xx, modo oscuro/claro, responsive del drawer
-    - [ ] Cada AC marcado con evidencia en `acceptance.md`
+    - [x] Eliminar 1 notificación individual → desaparece del panel de inmediato
+    - [x] "Eliminar todas" con panel lleno → panel pasa a empty state (con confirmación previa,
+      agregada tras feedback del owner)
+    - [x] Panel con >10 no eliminadas → muestra máx. 10 + "Ver todas"
+    - [x] "Ver todas" desde lista llena Y desde empty state → abre el mismo drawer
+    - [x] Drawer muestra activas + eliminadas en una sola lista (decisión final: sin distinguir)
+    - [x] AC-E1: eliminar un ítem dentro de un grupo expandido no afecta al resto del grupo
+    - [x] AC-E2: eliminadas no cuentan en `unreadCount()` ni en el cap de 10
+    - [x] AC-E3: "Eliminar todas" con grupos visibles elimina también los ítems agrupados
+    - [x] `/verify` ejecutado: consola limpia (0 errores), sin 4xx, modo oscuro/claro verificado
+    - [x] Cada AC marcado con evidencia en `acceptance.md`
 
-- [ ] **T5.4** — Ejecutar `/spec-verify`
-  - **DoD:** AC Verifier devuelve `{ok: true}` o tickets restantes resueltos
+- [x] **T5.4** — Ejecutar `/spec-verify`
+  - **DoD:** ✅ PASA — 9/9 AC cumplidos con evidencia, ver `acceptance.md`
 
 ---
 
 ## Fase 6 — Cierre
 
-- [ ] **T6.1** — Actualizar `indices/` con todo lo nuevo (`/sync-indices`)
-  - **DoD:** `FACADES.md`, `MODELS.md`, `COMPONENTS.md`, `DATABASE.md` reflejan lo construido
-- [ ] **T6.2** — Marcar spec como `done` en `ROADMAP.md`
-- [ ] **T6.3** — Limpiar `specs/.active` (`/spec-activate --clear`)
-- [ ] **T6.4** — Marcar Asignación `ASG-i-005` como `completada` en
-  `specs/assignments/ASG-i-005-eliminar-notificaciones-y-ver-todas-drawer.md` (manual, no se
-  sincroniza solo) y correr `npm run assignments:sync`
+- [x] **T6.1** — Actualizar `indices/` con todo lo nuevo
+  - **DoD:** `FACADES.md`, `COMPONENTS.md`, `DATABASE.md` reflejan lo construido
+- [x] **T6.2** — Marcar spec como `done` en `ROADMAP.md`
+- [x] **T6.3** — Limpiar `specs/.active` (`/spec-activate --clear`)
+- [x] **T6.4** — Marcar Asignación `ASG-i-005` como `completada` en
+  `specs/assignments/ASG-i-005-eliminar-notificaciones-y-ver-todas-drawer.md` y correr
+  `npm run assignments:sync`
 
 ---
 

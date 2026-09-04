@@ -20,6 +20,7 @@ export interface Notification {
   createdAt: Date;
   referenceType?: NotificationReferenceType | null;
   referenceId?: number | null;
+  deletedAt?: Date | null;
 }
 
 /**

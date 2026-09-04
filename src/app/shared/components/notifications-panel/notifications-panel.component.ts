@@ -38,15 +38,26 @@ type GroupEntry = Extract<NotificationPanelEntry, { kind: 'group' }>;
       <!-- Header -->
       <div class="notif-panel__header">
         <span class="item-title">Notificaciones</span>
-        @if (unreadCount() > 0) {
-          <button
-            class="text-xs text-text-muted hover:text-text-primary cursor-pointer transition-colors"
-            data-llm-action="mark-all-notifications-read"
-            (click)="markAllRead.emit()"
-          >
-            Marcar todo como leído
-          </button>
-        }
+        <div class="notif-panel__header-actions">
+          @if (unreadCount() > 0) {
+            <button
+              class="text-xs text-text-muted hover:text-text-primary cursor-pointer transition-colors"
+              data-llm-action="mark-all-notifications-read"
+              (click)="markAllRead.emit()"
+            >
+              Marcar todo como leído
+            </button>
+          }
+          @if (entries().length > 0) {
+            <button
+              class="text-xs text-text-muted hover:text-text-primary cursor-pointer transition-colors"
+              data-llm-action="delete-all-notifications"
+              (click)="deleteAllNotifications.emit()"
+            >
+              Eliminar todas
+            </button>
+          }
+        </div>
       </div>
 
       <!-- Lista -->
@@ -83,9 +94,20 @@ type GroupEntry = Extract<NotificationPanelEntry, { kind: 'group' }>;
                 >
               </div>
 
-              @if (!entry.notification.read) {
-                <span class="notif-panel__dot" aria-hidden="true"></span>
-              }
+              <div class="notif-panel__item-trailing">
+                @if (!entry.notification.read) {
+                  <span class="notif-panel__dot" aria-hidden="true"></span>
+                }
+                <button
+                  type="button"
+                  class="notif-panel__delete-btn"
+                  aria-label="Eliminar notificación"
+                  data-llm-action="delete-notification"
+                  (click)="onDeleteClick($event, entry.notification.id)"
+                >
+                  <app-icon name="x" [size]="12" />
+                </button>
+              </div>
             </li>
           } @else {
             <li class="notif-panel__group" role="listitem">
@@ -150,9 +172,20 @@ type GroupEntry = Extract<NotificationPanelEntry, { kind: 'group' }>;
                           >{{ timeAgo(n.createdAt) }}</time
                         >
                       </div>
-                      @if (!n.read) {
-                        <span class="notif-panel__dot" aria-hidden="true"></span>
-                      }
+                      <div class="notif-panel__item-trailing">
+                        @if (!n.read) {
+                          <span class="notif-panel__dot" aria-hidden="true"></span>
+                        }
+                        <button
+                          type="button"
+                          class="notif-panel__delete-btn"
+                          aria-label="Eliminar notificación"
+                          data-llm-action="delete-notification"
+                          (click)="onDeleteClick($event, n.id)"
+                        >
+                          <app-icon name="x" [size]="12" />
+                        </button>
+                      </div>
                     </li>
                   }
                 </ul>
@@ -166,6 +199,18 @@ type GroupEntry = Extract<NotificationPanelEntry, { kind: 'group' }>;
           </li>
         }
       </ul>
+
+      <!-- Footer: acceso al historial completo, visible incluso con el panel vacío -->
+      <div class="notif-panel__footer">
+        <button
+          type="button"
+          class="notif-panel__view-all"
+          data-llm-action="open-notifications-history"
+          (click)="openHistorial.emit()"
+        >
+          Ver todas
+        </button>
+      </div>
     </div>
   `,
   styleUrl: './notifications-panel.component.scss',
@@ -179,6 +224,9 @@ export class NotificationsPanelComponent {
   readonly markReadMany = output<string[]>();
   readonly markAllRead = output<void>();
   readonly notifClicked = output<Notification>();
+  readonly deleteNotification = output<string>();
+  readonly deleteAllNotifications = output<void>();
+  readonly openHistorial = output<void>();
 
   private readonly expandedGroups = signal<ReadonlySet<string>>(new Set());
 
@@ -214,6 +262,11 @@ export class NotificationsPanelComponent {
   onItemClick(n: Notification): void {
     this.markRead.emit(n.id);
     this.notifClicked.emit(n);
+  }
+
+  onDeleteClick(event: Event, id: string): void {
+    event.stopPropagation();
+    this.deleteNotification.emit(id);
   }
 
   markGroupRead(entry: GroupEntry, event: Event): void {
