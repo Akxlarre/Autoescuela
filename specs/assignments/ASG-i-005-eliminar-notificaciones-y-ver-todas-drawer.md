@@ -1,14 +1,14 @@
 # Asignación ASG-i-005 — Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-08-31
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-04
+> **resulting_track:** 0013-m-eliminar-notificaciones-drawer-historial
 
 ---
 

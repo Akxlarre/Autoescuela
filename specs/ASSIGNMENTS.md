@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | `m` | spec | P2 | i | Panel de notificaciones sin botón de eliminar ni "eliminar todas". Cap de 10 en el panel + link "Ver todas" abre drawer con existentes y eliminadas; la opción de abrir el drawer debe estar disponible incluso en el empty state. Ver `specs/assignments/ASG-i-005-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -123,6 +122,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | `m` | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---
