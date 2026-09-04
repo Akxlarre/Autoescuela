@@ -103,6 +103,7 @@ export class ServiciosEspecialesFacade {
   private readonly _catalogo = signal<ServicioEspecial[]>([]);
   private readonly _ventas = signal<VentaServicio[]>([]);
   private readonly _selectedServicio = signal<ServicioEspecial | null>(null);
+  private readonly _servicioAEditar = signal<ServicioEspecial | null>(null);
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
   private readonly _error = signal<string | null>(null);
@@ -113,6 +114,7 @@ export class ServiciosEspecialesFacade {
   public readonly catalogo = this._catalogo.asReadonly();
   public readonly ventas = this._ventas.asReadonly();
   public readonly selectedServicio = this._selectedServicio.asReadonly();
+  public readonly servicioAEditar = this._servicioAEditar.asReadonly();
   public readonly isLoading = this._isLoading.asReadonly();
   public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
@@ -125,6 +127,9 @@ export class ServiciosEspecialesFacade {
     return {
       ventasMes: ventas.filter((v) => v.fecha.startsWith(mesActual)).length,
       totalCobrado: cobradas.reduce((s, v) => s + v.precio, 0),
+      recaudacionMes: cobradas
+        .filter((v) => v.fecha.startsWith(mesActual))
+        .reduce((s, v) => s + v.precio, 0),
       pendientesCobro: sinCobrar.reduce((s, v) => s + v.precio, 0),
       totalRegistros: ventas.length,
       ventasCobradas: cobradas.length,
@@ -234,6 +239,23 @@ export class ServiciosEspecialesFacade {
     );
   }
 
+  openHistorialVentasDrawer(): void {
+    import('../../features/admin/servicios-especiales/historial-ventas-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(m.HistorialVentasDrawerComponent, 'Historial de Ventas', 'history');
+      },
+    );
+  }
+
+  openEditarServicioDrawer(servicio: ServicioEspecial): void {
+    this._servicioAEditar.set(servicio);
+    import('../../features/admin/servicios-especiales/editar-servicio-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(m.EditarServicioDrawerComponent, 'Editar Servicio', 'edit');
+      },
+    );
+  }
+
   async registrarVenta(data: VentaFormData): Promise<boolean> {
     const registeredBy = this.auth.currentUser()?.dbId ?? null;
     // fix-024-i: snapshot del nombre — el Historial lo sigue mostrando aunque el servicio
@@ -275,6 +297,25 @@ export class ServiciosEspecialesFacade {
       base_price: data.precio,
       active: true,
     });
+
+    if (error) {
+      this._error.set(this.sanitizer.sanitize(error).message);
+      return false;
+    }
+
+    await this.refreshSilently();
+    return true;
+  }
+
+  /** Edita nombre, precio y estado de un servicio existente (fix-240-m). */
+  async editarServicio(
+    id: number,
+    data: { nombre: string; precio: number; activo: boolean },
+  ): Promise<boolean> {
+    const { error } = await this.supabase.client
+      .from('service_catalog')
+      .update({ name: data.nombre, base_price: data.precio, active: data.activo })
+      .eq('id', id);
 
     if (error) {
       this._error.set(this.sanitizer.sanitize(error).message);

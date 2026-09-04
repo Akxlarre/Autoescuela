@@ -59,6 +59,7 @@ export interface NuevoServicioFormData {
 export interface ServiciosEspecialesKpis {
   ventasMes: number;
   totalCobrado: number;
+  recaudacionMes: number;
   pendientesCobro: number;
   totalRegistros: number;
   ventasCobradas: number;

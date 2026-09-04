@@ -229,6 +229,7 @@ describe('ServiciosEspecialesFacade', () => {
       expect(facade.kpis()).toEqual({
         ventasMes: 2,
         totalCobrado: 10000,
+        recaudacionMes: 10000,
         pendientesCobro: 10000,
         totalRegistros: 3,
         ventasCobradas: 1,
@@ -527,6 +528,47 @@ describe('ServiciosEspecialesFacade', () => {
       const result = await facade.reactivarServicio(1);
 
       expect(result.success).toBe(false);
+      expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  describe('editarServicio (fix-240-m)', () => {
+    it('UPDATE exitoso → refresca catálogo con nombre/precio/estado nuevos', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          'service_catalog:update': { data: null, error: null },
+        },
+      });
+
+      const result = await facade.editarServicio(1, {
+        nombre: 'Psicotécnico Renovado',
+        precio: 30000,
+        activo: false,
+      });
+
+      expect(result).toBe(true);
+      const builder = mockSupabase._builders.get('service_catalog');
+      expect(builder.update).toHaveBeenCalledWith({
+        name: 'Psicotécnico Renovado',
+        base_price: 30000,
+        active: false,
+      });
+    });
+
+    it('error del UPDATE → false, error saneado', async () => {
+      const { facade } = setup({
+        tables: {
+          'service_catalog:update': { data: null, error: { message: 'RLS deny' } },
+        },
+      });
+
+      const result = await facade.editarServicio(1, {
+        nombre: 'X',
+        precio: 1000,
+        activo: true,
+      });
+
+      expect(result).toBe(false);
       expect(facade.error()).toBe('RLS deny');
     });
   });

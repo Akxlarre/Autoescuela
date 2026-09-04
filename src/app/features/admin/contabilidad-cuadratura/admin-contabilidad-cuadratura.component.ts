@@ -44,15 +44,9 @@ import type { IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
         [saldoTeorico]="facade.saldoTeoricoEfectivo()"
         [cajaYaCerrada]="facade.cajaYaCerrada()"
         [isLoading]="facade.isLoading()"
-        [isSaving]="facade.isSaving()"
         [isExporting]="facade.isExporting()"
         [isDrawerOpen]="layoutDrawer.isOpen()"
-        [realizarArqueo]="facade.realizarArqueo()"
-        [diferenciaArqueo]="facade.diferenciaArqueo()"
-        [notasArqueo]="facade.notasArqueo()"
-        [puedeCerrarCaja]="facade.puedeCerrarCaja()"
         [colorDiferencia]="facade.colorDiferenciaArqueo()"
-        (cerrarCaja)="onCerrarCaja()"
         (abrirArqueo)="abrirDrawerArqueo()"
         (abrirIngreso)="abrirDrawerIngreso()"
         (abrirEgreso)="abrirDrawerEgreso()"
@@ -96,18 +90,6 @@ export class AdminContabilidadCuadraturaComponent {
       if (this.auth.currentUser()?.role === 'admin' && branchId === null) return;
       void this.facade.initialize();
     });
-  }
-
-  protected async onCerrarCaja(): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
-      title: 'Cerrar Caja',
-      message: 'Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.',
-      severity: 'danger',
-      confirmLabel: 'Cerrar Caja',
-      cancelLabel: 'Cancelar',
-    });
-    if (!confirmed) return;
-    await this.facade.cerrarCaja();
   }
 
   /** Ancho reducido (spec 0004-i, feedback visual): a 45% del viewport comprimía demasiado
