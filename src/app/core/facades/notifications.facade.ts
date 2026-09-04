@@ -56,6 +56,8 @@ export class NotificationsFacade {
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
   private _filter = signal<NotificationFilter>('all');
+  private _historial = signal<NotificationUi[]>([]);
+  private _isHistorialLoading = signal(false);
   private realtimeChannel: RealtimeChannel | null = null;
 
   // ── 2. ESTADO PÚBLICO (readonly) ───────────────────────────────────────────
@@ -63,6 +65,9 @@ export class NotificationsFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly filter = this._filter.asReadonly();
+  /** Historial completo (activas + eliminadas) — cargado on-demand por el drawer (AC4). */
+  readonly historial = this._historial.asReadonly();
+  readonly isHistorialLoading = this._isHistorialLoading.asReadonly();
 
   readonly unreadCount = computed(() => this._notifications().filter((n) => !n.read).length);
 
@@ -78,9 +83,9 @@ export class NotificationsFacade {
     return list.filter((n) => (n.type ?? 'info') === f);
   });
 
-  /** Entradas del panel: agrupa 3+ no leídas del mismo tipo/día (AC8) y corta a 15. */
+  /** Entradas del panel: agrupa 3+ no leídas del mismo tipo/día (AC8) y corta a 10 (AC3). */
   readonly panelEntries = computed(() =>
-    groupNotifications(this.filteredNotifications()).slice(0, 15),
+    groupNotifications(this.filteredNotifications()).slice(0, 10),
   );
 
   // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
@@ -119,6 +124,7 @@ export class NotificationsFacade {
       .from('notifications')
       .select('*')
       .eq('recipient_id', dbId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -133,11 +139,39 @@ export class NotificationsFacade {
   }
 
   /**
+   * Carga el historial completo (activas + eliminadas) para el drawer "Ver todas" (AC4).
+   * A diferencia de `loadNotifications()`, no filtra `deleted_at`.
+   */
+  async loadHistorial(): Promise<void> {
+    const dbId = this.auth.currentUser()?.dbId;
+    if (!dbId) return;
+
+    this._isHistorialLoading.set(true);
+
+    const { data, error } = await this.supabase.client
+      .from('notifications')
+      .select('*')
+      .eq('recipient_id', dbId)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) {
+      console.error('[NotificationsFacade] loadHistorial error:', error);
+    } else {
+      this._historial.set((data as NotificationDto[]).map(mapNotificationDtoToUi));
+    }
+
+    this._isHistorialLoading.set(false);
+  }
+
+  /**
    * Marca una notificación como leída (optimistic update + BD).
    */
   async markAsRead(id: string): Promise<void> {
-    // Optimistic update
+    // Optimistic update — refleja en ambas listas: el panel usa `notifications`,
+    // el drawer de historial usa `historial` (spec 0013-m).
     this._notifications.update((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    this._historial.update((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
 
     const { error } = await this.supabase.client
       .from('notifications')
@@ -150,6 +184,7 @@ export class NotificationsFacade {
       this._notifications.update((list) =>
         list.map((n) => (n.id === id ? { ...n, read: false } : n)),
       );
+      this._historial.update((list) => list.map((n) => (n.id === id ? { ...n, read: false } : n)));
     }
   }
 
@@ -219,6 +254,52 @@ export class NotificationsFacade {
 
     if (error) {
       console.error('[NotificationsFacade] markManyAsRead error:', error);
+      this._notifications.set(prev);
+    }
+  }
+
+  /**
+   * Elimina (soft-delete) una notificación puntual — optimistic update + rollback (AC1).
+   * Funciona igual para un ítem suelto o uno dentro de un grupo colapsado expandido (AC-E1):
+   * ambos operan sobre el mismo `id` individual.
+   */
+  async deleteNotification(id: string): Promise<void> {
+    const prev = this._notifications();
+
+    this._notifications.update((list) => list.filter((n) => n.id !== id));
+
+    const { error } = await this.supabase.client
+      .from('notifications')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', Number(id));
+
+    if (error) {
+      console.error('[NotificationsFacade] deleteNotification error:', error);
+      this._notifications.set(prev);
+    }
+  }
+
+  /**
+   * Elimina (soft-delete) todas las notificaciones no eliminadas del usuario actual (AC2).
+   * El UPDATE filtra por `recipient_id` + `deleted_at IS NULL` (no por una lista de IDs
+   * visibles en el panel), así que cubre automáticamente los ítems agrupados (AC-E3).
+   */
+  async deleteAllNotifications(): Promise<void> {
+    const dbId = this.auth.currentUser()?.dbId;
+    if (!dbId) return;
+
+    const prev = this._notifications();
+
+    this._notifications.set([]);
+
+    const { error } = await this.supabase.client
+      .from('notifications')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('recipient_id', dbId)
+      .is('deleted_at', null);
+
+    if (error) {
+      console.error('[NotificationsFacade] deleteAllNotifications error:', error);
       this._notifications.set(prev);
     }
   }
@@ -304,6 +385,8 @@ export class NotificationsFacade {
     this._filter.set('all');
     this._error.set(null);
     this._isLoading.set(false);
+    this._historial.set([]);
+    this._isHistorialLoading.set(false);
   }
 
   // ── Privado ────────────────────────────────────────────────────────────────

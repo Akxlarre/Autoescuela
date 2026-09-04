@@ -754,17 +754,8 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly saldoTeorico = input<number>(0);
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
-  readonly isSaving = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
 
-  // ── Estado de Arqueo (spec 0004-i) — vive en CuadraturaFacade desde que el conteo se
-  // movió a ArqueoCierreDrawerComponent (componente separado, no hijo de este). El Smart
-  // wrapper pasa los computeds del Facade tal cual, para que "Cerrar Caja" en el Hero (que se
-  // quedó acá) sepa si está habilitado sin que este Dumb inyecte el Facade directo. ──
-  readonly realizarArqueo = input<boolean>(false);
-  readonly diferenciaArqueo = input<number>(0);
-  readonly notasArqueo = input<string>('');
-  readonly puedeCerrarCaja = input<boolean>(false);
   readonly colorDiferencia = input<string>('var(--state-success)');
 
   private readonly gsap = inject(GsapAnimationsService);
@@ -772,10 +763,9 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly isDrawerOpen = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
-  /** Emite cuando el usuario confirma "Cerrar Caja" desde el Hero — sin payload, el Facade
-   * arma el CierrePayload con su propio estado de arqueo (spec 0004-i). */
-  readonly cerrarCaja = output<void>();
-  /** Abre el Drawer de Arqueo y Cierre Operativo (spec 0004-i). */
+  /** Abre el Drawer de Arqueo y Cierre Operativo (spec 0004-i). "Cerrar Caja" ya no vive en
+   * el Hero (fix-238-m): único punto de cierre es el botón del footer del drawer — fuerza a
+   * pasar siempre por la pantalla de arqueo (aunque esté desactivado) antes de cerrar. */
   readonly abrirArqueo = output<void>();
   readonly abrirIngreso = output<void>();
   readonly abrirEgreso = output<void>();
@@ -818,20 +808,6 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   protected readonly exportMenuOpen = signal(false);
 
-  /** Etiqueta/ícono de "Cerrar Caja" — movido del card de Arqueo al Hero (spec 0004-i). */
-  protected readonly cerrarCajaLabel = computed(() => {
-    if (this.isSaving()) return 'Procesando...';
-    if (this.cajaYaCerrada()) return 'Caja Cerrada';
-    if (
-      this.realizarArqueo() &&
-      this.diferenciaArqueo() !== 0 &&
-      this.notasArqueo().trim().length === 0
-    ) {
-      return 'Justifica la diferencia';
-    }
-    return 'Cerrar Caja';
-  });
-
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {
       id: 'ver-historial',
@@ -849,17 +825,11 @@ export class CuadraturaContentComponent implements AfterViewInit {
       primary: false,
     },
     {
+      /** Único CTA de cierre (fix-238-m): abre el drawer donde vive el botón real
+       * "Cerrar Caja". Primario — es el camino obligado, no un atajo entre varios. */
       id: 'ver-arqueo',
       label: 'Arqueo y Cierre',
       icon: 'wallet',
-      primary: false,
-    },
-    {
-      id: 'cerrar-caja',
-      label: this.cerrarCajaLabel(),
-      icon: this.isSaving() ? 'loader-circle' : 'lock',
-      loading: this.isSaving(),
-      disabled: !this.puedeCerrarCaja() || this.isSaving(),
       primary: true,
     },
   ]);
@@ -913,10 +883,6 @@ export class CuadraturaContentComponent implements AfterViewInit {
     }
     if (actionId === 'ver-arqueo') {
       this.abrirArqueo.emit();
-      return;
-    }
-    if (actionId === 'cerrar-caja' && this.puedeCerrarCaja() && !this.isSaving()) {
-      this.cerrarCaja.emit();
     }
   }
 

@@ -53,6 +53,7 @@ export function mapNotificationDtoToUi(dto: NotificationDto): NotificationUi {
     createdAt: new Date(dto.created_at),
     referenceType: dto.reference_type as NotificationUi['referenceType'],
     referenceId: dto.reference_id ?? null,
+    deletedAt: dto.deleted_at ? new Date(dto.deleted_at) : null,
   };
 }
 

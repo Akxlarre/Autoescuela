@@ -14,6 +14,7 @@ describe('NotificationsFacade', () => {
     const chain: any = {};
     chain.select = vi.fn().mockReturnValue(chain);
     chain.eq = vi.fn().mockReturnValue(chain);
+    chain.is = vi.fn().mockReturnValue(chain);
     chain.order = vi.fn().mockReturnValue(chain);
     chain.limit = vi.fn().mockReturnValue(Promise.resolve({ data, error }));
     return chain;
@@ -23,6 +24,16 @@ describe('NotificationsFacade', () => {
     const chain: any = {};
     chain.update = vi.fn().mockReturnValue(chain);
     chain.eq = vi.fn().mockReturnValue(Promise.resolve({ error }));
+    return chain;
+  };
+
+  /** Chain para updates con más de un filtro encadenado (ej. `.eq().is()`), donde
+   * el último eslabón resuelve la promesa. */
+  const mockChainedUpdateChain = (error: unknown = null) => {
+    const chain: any = {};
+    chain.update = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(chain);
+    chain.is = vi.fn().mockReturnValue(Promise.resolve({ error }));
     return chain;
   };
 
@@ -412,7 +423,7 @@ describe('NotificationsFacade', () => {
   });
 
   describe('panelEntries', () => {
-    it('groups 3+ unread notifications of the same referenceType/day and caps the result at 15', async () => {
+    it('groups 3+ unread notifications of the same referenceType/day and caps the result at 10', async () => {
       const mockData = Array.from({ length: 20 }, (_, i) => ({
         id: i + 1,
         recipient_id: 1,
@@ -433,12 +444,158 @@ describe('NotificationsFacade', () => {
 
       const entries = facade.panelEntries();
 
-      expect(entries.length).toBeLessThanOrEqual(15);
+      expect(entries.length).toBeLessThanOrEqual(10);
       const group = entries.find((e) => e.kind === 'group');
       expect(group).toBeDefined();
       if (group?.kind === 'group') {
         expect(group.count).toBe(5);
       }
+    });
+  });
+
+  describe('loadNotifications — excluye eliminadas (AC-E2)', () => {
+    it('filtra deleted_at IS NULL en el query', async () => {
+      const chain = mockSelectChain([]);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+      await facade.loadNotifications();
+
+      expect(chain.is).toHaveBeenCalledWith('deleted_at', null);
+    });
+  });
+
+  describe('deleteNotification (AC1)', () => {
+    const seedOne = async () => {
+      const chain = mockSelectChain([
+        {
+          id: 7,
+          recipient_id: 1,
+          type: 'system',
+          subject: 'Borrame',
+          message: 'm',
+          read: false,
+          sent_at: null,
+          sent_ok: true,
+          send_error: null,
+          reference_type: null,
+          reference_id: null,
+          created_at: '2026-09-01T10:00:00Z',
+        },
+      ]);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+      await facade.loadNotifications();
+    };
+
+    it('remueve optimistamente la notificación de la lista y persiste deleted_at', async () => {
+      await seedOne();
+
+      const updateChain = mockUpdateChain();
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.deleteNotification('7');
+
+      expect(facade.notifications().find((n) => n.id === '7')).toBeUndefined();
+      expect(updateChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({ deleted_at: expect.any(String) }),
+      );
+      expect(updateChain.eq).toHaveBeenCalledWith('id', 7);
+    });
+
+    it('revierte el optimistic update si el UPDATE falla', async () => {
+      await seedOne();
+
+      const updateChain = mockUpdateChain({ message: 'fail' });
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.deleteNotification('7');
+
+      expect(facade.notifications().find((n) => n.id === '7')).toBeDefined();
+    });
+  });
+
+  describe('deleteAllNotifications (AC2, AC-E3)', () => {
+    const seedThree = async () => {
+      const mockData = [1, 2, 3].map((id) => ({
+        id,
+        recipient_id: 1,
+        type: 'system',
+        subject: `N${id}`,
+        message: 'm',
+        read: false,
+        sent_at: null,
+        sent_ok: true,
+        send_error: null,
+        reference_type: null,
+        reference_id: null,
+        created_at: '2026-09-01T10:00:00Z',
+      }));
+      const chain = mockSelectChain(mockData);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+      await facade.loadNotifications();
+    };
+
+    it('soft-elimina todas las no eliminadas del usuario actual (sin depender de IDs visibles)', async () => {
+      await seedThree();
+
+      const updateChain = mockChainedUpdateChain();
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.deleteAllNotifications();
+
+      expect(facade.notifications()).toEqual([]);
+      expect(updateChain.eq).toHaveBeenCalledWith('recipient_id', 1);
+      expect(updateChain.is).toHaveBeenCalledWith('deleted_at', null);
+    });
+
+    it('revierte el optimistic update si el UPDATE falla', async () => {
+      await seedThree();
+
+      const updateChain = mockChainedUpdateChain({ message: 'fail' });
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.deleteAllNotifications();
+
+      expect(facade.notifications().length).toBe(3);
+    });
+  });
+
+  describe('loadHistorial (AC4)', () => {
+    it('incluye notificaciones eliminadas, sin filtrar deleted_at', async () => {
+      const mockData = [
+        {
+          id: 1,
+          recipient_id: 1,
+          subject: 'Activa',
+          message: 'm1',
+          read: false,
+          sent_ok: true,
+          reference_type: null,
+          reference_id: null,
+          created_at: '2026-09-01T10:00:00Z',
+          deleted_at: null,
+        },
+        {
+          id: 2,
+          recipient_id: 1,
+          subject: 'Eliminada',
+          message: 'm2',
+          read: true,
+          sent_ok: true,
+          reference_type: null,
+          reference_id: null,
+          created_at: '2026-09-01T09:00:00Z',
+          deleted_at: '2026-09-02T09:00:00Z',
+        },
+      ];
+      const chain = mockSelectChain(mockData);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+      await facade.loadHistorial();
+
+      expect(chain.is).not.toHaveBeenCalledWith('deleted_at', null);
+      expect(facade.historial().length).toBe(2);
+      expect(facade.historial().find((n) => n.id === '2')?.deletedAt).toBeInstanceOf(Date);
+      expect(facade.isHistorialLoading()).toBe(false);
     });
   });
 });

@@ -15,15 +15,12 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
   template: `
     <app-servicios-especiales-content
       [catalogo]="facade.catalogo()"
-      [ventas]="facade.ventas()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
-      [isExporting]="facade.isExporting()"
-      backRoute="/app/secretaria/dashboard"
       (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
       (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
-      (exportarHistorial)="onExportar($event)"
-      (ventaBorrada)="onBorrarVenta($event)"
+      (requestVerHistorial)="facade.openHistorialVentasDrawer()"
+      (requestEditarServicio)="facade.openEditarServicioDrawer($event)"
       (servicioBorrado)="onBorrarServicio($event)"
       (servicioReactivado)="onReactivarServicio($event)"
       (servicioEliminadoDefinitivo)="onEliminarDefinitivo($event)"
@@ -36,21 +33,6 @@ export class SecretariaServiciosEspecialesComponent implements OnInit {
 
   ngOnInit(): void {
     void this.facade.initialize();
-  }
-
-  protected onExportar(format: 'excel' | 'pdf'): void {
-    void this.facade.exportarHistorial(format);
-  }
-
-  protected async onBorrarVenta(id: number): Promise<void> {
-    const { success, blockedReason } = await this.facade.borrarVenta(id);
-    if (success) {
-      this.toast.success('Venta borrada');
-    } else if (blockedReason) {
-      this.toast.warning('No se pudo borrar', blockedReason);
-    } else {
-      this.toast.error('No se pudo borrar la venta');
-    }
   }
 
   protected async onBorrarServicio(id: number): Promise<void> {

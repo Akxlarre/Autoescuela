@@ -43,6 +43,12 @@
   flex-shrink: 0;
 }
 
+.notif-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 // ── Lista ────────────────────────────────────────────────────────────────────
 .notif-panel__list {
   list-style: none;
@@ -147,7 +153,45 @@
   height: 7px;
   border-radius: var(--radius-full);
   background: var(--ds-brand, var(--color-primary));
+}
+
+// ── Trailing (dot + eliminar) ────────────────────────────────────────────────
+.notif-panel__item-trailing {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   align-self: center;
+}
+
+.notif-panel__delete-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--state-error-bg);
+    color: var(--state-error);
+  }
+}
+
+.notif-panel__item:hover .notif-panel__delete-btn,
+.notif-panel__item:focus-within .notif-panel__delete-btn {
+  opacity: 1;
 }
 
 // ── Grupo colapsado (AC8) ──────────────────────────────────────────────────
@@ -209,4 +253,30 @@
   color: var(--text-muted);
   font-size: 0.875rem;
   list-style: none;
+}
+
+// ── Footer: "Ver todas" ──────────────────────────────────────────────────────
+.notif-panel__footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle);
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.notif-panel__view-all {
+  width: 100%;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  transition: color 150ms ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ds-brand, var(--color-primary));
+    text-decoration: underline;
+  }
 }

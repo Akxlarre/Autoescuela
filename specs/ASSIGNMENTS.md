@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | `m` | spec | P2 | i | Panel de notificaciones sin botón de eliminar ni "eliminar todas". Cap de 10 en el panel + link "Ver todas" abre drawer con existentes y eliminadas; la opción de abrir el drawer debe estar disponible incluso en el empty state. Ver `specs/assignments/ASG-i-005-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -234,6 +233,7 @@
 | ASG-b-099 | Listado de Flota no destaca vehículos con documentos vencidos | [fix-153-b-flota-listado-alerta-documento-vencido](fixes/fix-153-b-flota-listado-alerta-documento-vencido/fix.md) | 2026-09-01 |
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | [fix-236-m-evaluacion-clase-en-drawer](fixes/fix-236-m-evaluacion-clase-en-drawer/fix.md) | 2026-09-02 |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad | [fix-237-m-conectar-filtro-mes-rentabilidad-cursos](fixes/fix-237-m-conectar-filtro-mes-rentabilidad-cursos/fix.md) | 2026-09-02 |
+| ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
 <!-- AUTO-GENERATED:END -->
 
 ---
