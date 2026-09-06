@@ -1,14 +1,14 @@
 # Asignación ASG-i-006 — Resetear y repoblar la BD de prueba con datos masivos realistas
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-09-06
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-06
+> **resulting_track:** 0008-i-reset-y-poblar-datos-prueba
 
 ---
 

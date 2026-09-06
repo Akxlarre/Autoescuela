@@ -19,6 +19,7 @@
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
+| [0008-i](./specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | Resetear y repoblar la BD de prueba con datos masivos realistas | P2 | i | Draft. Originada de `ASG-i-006`. Fase 1: borrar todos los instructores/alumnos de prueba (y dependientes) sin tocar las 5 cuentas de login del equipo. Fase 2: repoblar con ~6 meses de agenda, ~15 instructores, ~150-300 alumnos B/Profesional, 3+ clases/día. Solo datos, sin cambios de esquema — scripts a validar contra Supabase local antes de aplicar. |
 
 ---
 

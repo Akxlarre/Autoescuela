@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | `i` | spec | P2 | i | Fase 1: borrar todos los instructores/alumnos (y dependientes) sin tocar cuentas de login. Fase 2: repoblar con volumen alto — varios meses de agenda, 3+ clases/día, varios instructores, muchos alumnos B/Profesional. Ver `specs/assignments/ASG-i-006-*.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -123,6 +122,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | `i` | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-06 |
 <!-- AUTO-GENERATED:END -->
 
 ---
