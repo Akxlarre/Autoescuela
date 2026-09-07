@@ -1,6 +1,6 @@
 # Asignación ASG-i-006 — Resetear y repoblar la BD de prueba con datos masivos realistas
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
