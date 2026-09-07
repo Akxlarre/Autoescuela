@@ -1,14 +1,20 @@
 # Asignación ASG-b-092 — Mudar los Organismos a una carpeta que refleje su rol
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** Baja
 > **created:** 2026-08-15
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-09-07
+> **resulting_track:** fix-156-b-guardrail-rol-dumb-organismo
+
+> **Nota de reclamación (2026-09-07):** se generó como `fix`, no como `spec`, porque de las 3
+> opciones planteadas abajo se eligió la que la propia ASG pedía evaluar primero — el **guardrail
+> en `architect.js`**, sin mover archivos. Ese alcance no requiere ACs nuevos ni cambia contratos
+> públicos. Si el guardrail resulta inviable, el residuo estructural (opciones 1 y 2) vuelve al
+> tablero como asignación nueva.
 
 ---
 

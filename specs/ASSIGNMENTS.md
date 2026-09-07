@@ -90,9 +90,8 @@
 > un grep de `inject(*Facade)` sobre `shared/` no distingue rol — verificar cómo se instancia
 > el componente antes de contarlo como violación.**
 
-| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
-|----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | `cualquiera` | spec | Baja | b | Residuo no bloqueante de ASG-b-089. **Evaluar primero un guardrail en `architect.js` en vez de mover archivos** — más barato y duradero. Ver `specs/assignments/ASG-b-092-*.md` |
+> ✅ **ASG-b-092 reclamada (2026-09-07) por `b`** → `fix-156-b-guardrail-rol-dumb-organismo`, con
+> el enfoque de guardrail (sin mover carpetas). Esta tanda queda sin pendientes.
 
 
 ### Tanda auditoría del Design System — 2026-07-31
@@ -122,6 +121,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | `b` | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
