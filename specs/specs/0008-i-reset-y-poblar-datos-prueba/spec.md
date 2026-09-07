@@ -1,7 +1,8 @@
 # Spec 0008-i — Resetear y repoblar la BD de prueba con datos masivos realistas
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-09-06
+> **Closed:** 2026-09-07
 > **Owner:** i
 > **Priority:** P2
 
@@ -151,3 +152,9 @@ distinto entre datasets chicos y grandes en otras superficies del proyecto).
 ## Changelog
 
 - 2026-09-06 — draft inicial por i, vía /assign-claim de ASG-i-006
+- 2026-09-07 — cerrada tras ejecución manual guiada en chat (ver `acceptance.md`).
+  **AC-E2 con desviación documentada**: el proyecto no usa Docker/Supabase local — se
+  sustituyó por validación con transacciones `BEGIN`/`ROLLBACK` directamente contra el
+  entorno compartido (mismo efecto de seguridad: cero cambios reales hasta confirmar, sin
+  requerir un segundo ambiente). Descubrió además un bug preexistente de performance en
+  `v_class_b_schedule_availability`, derivado a `fix-032-i` (no bloqueante para esta spec).
