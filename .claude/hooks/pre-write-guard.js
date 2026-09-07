@@ -167,13 +167,21 @@ process.stdin.on('end', () => {
           );
         }
       }
-      // Dumb component con inject de Facade (shared/ no debe tener Facades)
+      // ARCH-24: rol Dumb vs Organismo en shared/ (fix-156-b).
+      // La regla NO es "shared/ nunca inyecta Facades" (esa es la version previa a fix-146-b,
+      // que equiparaba carpeta con rol). Un Organismo de dominio declarado en el allowlist
+      // puede inyectar el Facade de SU dominio; un Dumb no puede inyectar ninguno. Misma
+      // implementacion que usa architect.js, para que guard y linter no diverjan.
       if (normalizedPath.includes('shared/') && normalizedPath.endsWith('.component.ts')) {
-        if (/inject\s*\(\s*\w*Facade/.test(newContent))
-          violations.push(
-            'Componentes en shared/ son Dumb: no deben inyectar Facades.\n' +
-            '     Solo usan input() y output(). Mueve la logica a un Smart component en features/.'
-          );
+        try {
+          const roles = require(path.join(process.cwd(), 'scripts', 'lib', 'shared-roles.js'));
+          const relPath = roles.normalizeRepoPath(filePath);
+          for (const v of roles.findSharedRoleViolations(newContent, relPath)) {
+            violations.push(v.message);
+          }
+        } catch {
+          // fail-open puntual: si la lib no carga, este check se omite y el resto del hook sigue.
+        }
       }
     }
 
