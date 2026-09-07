@@ -26,6 +26,34 @@ function check(name, cond, detail = '') {
     failures++;
   }
 }
+function skip(name, motivo) {
+  console.log(`SKIP --   ${name} (${motivo})`);
+}
+
+/**
+ * Este script corre en dos escenarios y tiene que dar verde en ambos:
+ *   ANTES de aplicar  → valida que los parches hacen lo que dicen.
+ *   DESPUÉS de aplicar → sirve de verificación de que el estado real es el correcto.
+ *
+ * Los casos de control ("el hook SIN parchear reproduce el falso positivo") solo tienen
+ * sentido en el primer escenario: una vez aplicado el parche, el original ya no está sin
+ * parchear y esos casos se saltean en vez de fallar. La primera versión de este script no
+ * lo contemplaba y salía en rojo al re-verificar después de aplicar — un falso rojo enseña
+ * a ignorar la suite, que es exactamente lo que un guardrail no puede permitirse.
+ */
+const architectYaAplicado = fs
+  .readFileSync(path.join('scripts', 'architect.js'), 'utf8')
+  .includes("'ARCH-24'");
+const hookYaAplicado = fs
+  .readFileSync(path.join('.claude', 'hooks', 'pre-write-guard.js'), 'utf8')
+  .includes('shared-roles.js');
+
+if (architectYaAplicado || hookYaAplicado) {
+  console.log(
+    `\nℹ️  Estado actual: architect.js ${architectYaAplicado ? 'YA' : 'NO'} parcheado · ` +
+      `pre-write-guard.js ${hookYaAplicado ? 'YA' : 'NO'} parcheado.`,
+  );
+}
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'arch24-'));
 const cleanup = [];
@@ -50,7 +78,11 @@ cleanup.push(() => fs.unlinkSync(architectCopy));
 const patch1 = execFileSync('node', ['scripts/harness/patch-architect-arch24.js', architectCopy], {
   encoding: 'utf8',
 });
-check('patcher aplica sin abortar', /ARCH-24 aplicado/.test(patch1), patch1.trim());
+check(
+  'patcher aplica sin abortar',
+  architectYaAplicado ? /ya tiene ARCH-24/.test(patch1) : /ARCH-24 aplicado/.test(patch1),
+  patch1.trim(),
+);
 
 const patched = fs.readFileSync(architectCopy, 'utf8');
 check('inyecta la entrada ARCH-24 en RULES', patched.includes(`'ARCH-24': {`));
@@ -102,11 +134,18 @@ check('…y hace fallar la auditoría (exit 1)', conViolacion.status === 1);
 check('…nombrando el archivo culpable', salida.includes('arch24-fixture.component.ts'));
 
 // El linter SIN parchear no ve nada: prueba de que el parche es lo que agrega la cobertura.
-const sinParche = spawnSync('node', ['scripts/architect.js'], { encoding: 'utf8' });
-check(
-  'el linter sin parchear NO detecta la misma violación (la regla es nueva)',
-  !/ARCH-24/.test(sinParche.stdout + sinParche.stderr),
-);
+if (architectYaAplicado) {
+  skip(
+    'el linter sin parchear NO detecta la misma violación',
+    'architect.js ya está parcheado — el control solo aplica antes de aplicar',
+  );
+} else {
+  const sinParche = spawnSync('node', ['scripts/architect.js'], { encoding: 'utf8' });
+  check(
+    'el linter sin parchear NO detecta la misma violación (la regla es nueva)',
+    !/ARCH-24/.test(sinParche.stdout + sinParche.stderr),
+  );
+}
 
 fs.rmSync(fixtureDir, { recursive: true, force: true });
 
@@ -126,7 +165,11 @@ fs.copyFileSync(hookOriginal, hookCopy);
 const patch2 = execFileSync('node', ['scripts/harness/patch-pre-write-guard-role.js', hookCopy], {
   encoding: 'utf8',
 });
-check('patcher aplica sin abortar', /Check de rol corregido/.test(patch2), patch2.trim());
+check(
+  'patcher aplica sin abortar',
+  hookYaAplicado ? /ya usa shared-roles/.test(patch2) : /Check de rol corregido/.test(patch2),
+  patch2.trim(),
+);
 check('usa la lib compartida', fs.readFileSync(hookCopy, 'utf8').includes('shared-roles.js'));
 check(
   'elimina el patrón viejo que matcheaba LayoutDrawerFacadeService',
@@ -206,19 +249,35 @@ for (const caso of casos) {
 }
 
 // El hook SIN parchear reproduce el falso positivo: prueba de que el parche cambia algo real.
-const fpSinParche = runHook(
-  hookOriginal,
-  DUMB,
-  OK_HEADER + `import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';\nconst d = inject(LayoutDrawerFacadeService); // OnPush`,
-);
-check('el hook sin parchear SÍ bloquea LayoutDrawerFacadeService (falso positivo reproducido)', fpSinParche.blocked);
+if (hookYaAplicado) {
+  skip(
+    'los 2 controles del hook sin parchear',
+    'pre-write-guard.js ya está parcheado — el original ya no reproduce el bug',
+  );
+} else {
+  const fpSinParche = runHook(
+    hookOriginal,
+    DUMB,
+    OK_HEADER + `import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';\nconst d = inject(LayoutDrawerFacadeService); // OnPush`,
+  );
+  check('el hook sin parchear SÍ bloquea LayoutDrawerFacadeService (falso positivo reproducido)', fpSinParche.blocked);
 
-const organismoSinParche = runHook(
-  hookOriginal,
-  DRAWER_ORGANISMO,
-  OK_HEADER + `import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';\nconst f = inject(LiquidacionesFacade); // OnPush`,
-);
-check('el hook sin parchear bloquea a un organismo legítimo (regla stale reproducida)', organismoSinParche.blocked);
+  const organismoSinParche = runHook(
+    hookOriginal,
+    DRAWER_ORGANISMO,
+    OK_HEADER + `import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';\nconst f = inject(LiquidacionesFacade); // OnPush`,
+  );
+  check('el hook sin parchear bloquea a un organismo legítimo (regla stale reproducida)', organismoSinParche.blocked);
+}
+
+// Con los parches ya aplicados, el valor de este script es verificar el estado REAL.
+if (hookYaAplicado) {
+  const casosReales = casos.map((c) => ({ ...c }));
+  for (const caso of casosReales) {
+    const r = runHook(hookOriginal, caso.file, caso.content);
+    check(`[archivo real] ${caso.name}`, r.blocked === caso.esperado, r.stderr.slice(0, 400));
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
@@ -226,4 +285,8 @@ if (failures > 0) {
   console.error(`❌ ${failures} caso(s) fallaron. NO apliques los parches sobre los archivos reales.`);
   process.exit(1);
 }
-console.log('✅ ARCH-24: los dos parches están validados sobre copias. Seguro aplicarlos.');
+if (architectYaAplicado && hookYaAplicado) {
+  console.log('✅ ARCH-24: parches YA aplicados y verificados sobre los archivos reales.');
+} else {
+  console.log('✅ ARCH-24: los dos parches están validados sobre copias. Seguro aplicarlos.');
+}
