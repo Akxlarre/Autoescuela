@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { earlyLicenseWarningFn, hasRequiredProfessionalLicenseFn } from './personal-data.component';
+import {
+  earlyLicenseWarningFn,
+  hasRequiredProfessionalLicenseFn,
+  hasRequiredSenceCodeFn,
+} from './personal-data.component';
 import { todayIso } from '@core/utils/date.utils';
 
 function yearsAgoIso(years: number): string {
@@ -72,5 +76,19 @@ describe('hasRequiredProfessionalLicenseFn()', () => {
     expect(hasRequiredProfessionalLicenseFn('non-professional', null, null)).toBe(true);
     expect(hasRequiredProfessionalLicenseFn('singular', null, null)).toBe(true);
     expect(hasRequiredProfessionalLicenseFn(null, null, null)).toBe(true);
+  });
+});
+
+describe('hasRequiredSenceCodeFn()', () => {
+  it('requiere senceCode cuando courseType es class_b_sence y no bloquea otros cursos', () => {
+    expect(hasRequiredSenceCodeFn('class_b_sence', null)).toBe(false);
+    expect(hasRequiredSenceCodeFn('class_b_sence', '')).toBe(false);
+    expect(hasRequiredSenceCodeFn('class_b_sence', '   ')).toBe(false);
+    expect(hasRequiredSenceCodeFn('class_b_sence', '12-3456-78')).toBe(true);
+
+    expect(hasRequiredSenceCodeFn('class_b', null)).toBe(true);
+    expect(hasRequiredSenceCodeFn('class_b_reinforcement', null)).toBe(true);
+    expect(hasRequiredSenceCodeFn('professional_a2', null)).toBe(true);
+    expect(hasRequiredSenceCodeFn('singular', null)).toBe(true);
   });
 });

@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
     const period = `${year}-${mm}`;
 
     // ── Queries en paralelo ───────────────────────────────────────────────────
-    const [instrRes, hoursRes, advancesRes, paymentsRes] = await Promise.all([
+    const [instrRes, hoursRes, advancesRes, paymentsRes, payrollCfgRes] = await Promise.all([
       adminClient
         .from('instructors')
         .select('id, users(id, first_names, paternal_last_name, rut, branch_id)'),
@@ -199,8 +199,10 @@ Deno.serve(async (req: Request) => {
         .lte('date', fechaFin),
       adminClient
         .from('instructor_monthly_payments')
-        .select('instructor_id, payment_status, paid_at, amount_per_hour')
+        .select('instructor_id, payment_status, paid_at')
         .eq('period', period),
+      // spec 0014-m: tarifa por hora por sede (global por sede, no por instructor)
+      adminClient.from('branch_payroll_config').select('branch_id, amount_per_hour'),
     ]);
 
     if (instrRes.error) throw instrRes.error;
@@ -216,8 +218,12 @@ Deno.serve(async (req: Request) => {
     const paymentsMap = new Map<number, any>(
       (paymentsRes.data ?? []).map((p: any) => [p.instructor_id, p]),
     );
+    const rateByBranch = new Map<number, number>(
+      (payrollCfgRes.data ?? []).map((c: any) => [c.branch_id, c.amount_per_hour]),
+    );
 
     // ── Construir rows ────────────────────────────────────────────────────────
+    // Fallback si una sede no tiene fila en branch_payroll_config (= seed de la migración).
     const AMOUNT_DEFAULT = 5_000;
 
     const rows: LiqRow[] = (instrRes.data ?? [])
@@ -236,7 +242,7 @@ Deno.serve(async (req: Request) => {
         const totalHours = hoursMap.get(instr.id) ?? 0;
         const totalAdvances = advancesMap.get(instr.id) ?? 0;
         const payment = paymentsMap.get(instr.id);
-        const amountPerHour = payment?.amount_per_hour ?? AMOUNT_DEFAULT;
+        const amountPerHour = rateByBranch.get(u?.branch_id) ?? AMOUNT_DEFAULT;
         const totalBaseAmount = totalHours * amountPerHour;
         const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
         return {

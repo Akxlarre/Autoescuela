@@ -62,6 +62,18 @@ export function hasRequiredProfessionalLicenseFn(
   return !!currentLicense && currentLicense !== 'none' && !!licenseDate;
 }
 
+/**
+ * "Clase B SENCE" exige capturar el código SENCE del curso (texto libre — fix-241-m).
+ * Cualquier otro curso no lo requiere.
+ */
+export function hasRequiredSenceCodeFn(
+  courseType: EnrollmentPersonalData['courseType'],
+  senceCode: string | null,
+): boolean {
+  if (courseType !== 'class_b_sence') return true;
+  return !!senceCode?.trim();
+}
+
 @Component({
   selector: 'app-personal-data-step',
   imports: [
@@ -97,7 +109,6 @@ export class PersonalDataComponent {
   /** Sedes disponibles. Array vacío = modo secretaria (oculta el selector). */
   branches = input<BranchOption[]>([]);
   selectedBranchId = input<number | null>(null);
-
 
   dataChange = output<EnrollmentPersonalData>();
   next = output<void>();
@@ -145,8 +156,8 @@ export class PersonalDataComponent {
   readonly rutValid = computed(() => validateRut(this.data().rut));
   readonly emailValid = computed(() => validateEmail(this.data().email));
 
-  readonly ageStatus = computed(
-    (): AgeAlertStatus => getAgeStatus(this.data().birthDate, this.data().courseType),
+  readonly ageStatus = computed((): AgeAlertStatus =>
+    getAgeStatus(this.data().birthDate, this.data().courseType),
   );
 
   /** Advertencia temprana de antigüedad de licencia B, estimada a hoy (fix-089). */
@@ -164,6 +175,8 @@ export class PersonalDataComponent {
     return '$' + price.toLocaleString('es-CL');
   });
 
+  readonly requiresSenceCode = computed(() => this.data().courseType === 'class_b_sence');
+
   readonly canAdvance = computed(() => {
     const d = this.data();
     const courseIsValid = this.filteredCourses().some((c) => c.type === d.courseType);
@@ -178,7 +191,8 @@ export class PersonalDataComponent {
       d.phone.trim().length >= 8 &&
       d.birthDate.length > 0 &&
       courseIsValid &&
-      hasRequiredProfessionalLicenseFn(d.courseCategory, d.currentLicense, d.licenseDate)
+      hasRequiredProfessionalLicenseFn(d.courseCategory, d.currentLicense, d.licenseDate) &&
+      hasRequiredSenceCodeFn(d.courseType, d.senceCode)
     );
   });
 

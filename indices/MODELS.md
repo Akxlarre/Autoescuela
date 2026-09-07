@@ -74,6 +74,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
 | `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
 | `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
+| `BranchPayrollConfig` | `dto` | `src/app/core/models/dto/branch-payroll-config.model.ts` |
 | `CashClosing` | `dto` | `src/app/core/models/dto/cash-closing.model.ts` |
 | `CertificateBatch` | `dto` | `src/app/core/models/dto/certificate-batch.model.ts` |
 | `CertificateIssuanceLog` | `dto` | `src/app/core/models/dto/certificate-issuance-log.model.ts` |

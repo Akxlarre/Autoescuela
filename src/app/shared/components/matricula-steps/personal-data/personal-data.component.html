@@ -423,6 +423,33 @@
               </div>
             }
           }
+
+          @if (requiresSenceCode()) {
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-secondary" for="senceCode">
+                Código SENCE <span class="text-error">*</span>
+              </label>
+              <input
+                id="senceCode"
+                name="senceCode"
+                type="text"
+                [ngModel]="data().senceCode"
+                (ngModelChange)="emitField('senceCode', $event)"
+                (change)="emitField('senceCode', $any($event.target).value)"
+                placeholder="Ej: 12-3456-78"
+                data-llm-description="SENCE code required for the Clase B SENCE course enrollment"
+                class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                [class.border-error]="!data().senceCode?.trim()"
+                [class.border-border-default]="!!data().senceCode?.trim()"
+              />
+              @if (!data().senceCode?.trim()) {
+                <p class="text-xs text-error flex items-center gap-1">
+                  <app-icon name="circle-alert" [size]="12" />
+                  Ingresa el código SENCE de este curso
+                </p>
+              }
+            </div>
+          }
         </div>
 
         <!-- Acciones -->

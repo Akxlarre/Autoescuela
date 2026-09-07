@@ -841,7 +841,9 @@ export class LiquidacionesContentComponent implements AfterViewInit {
     const rows = this.filtradas();
     return {
       clases: rows.reduce((s, r) => s + r.practicalSessions, 0),
-      horas: rows.reduce((s, r) => s + r.totalHours, 0),
+      // Redondeo a 1 decimal: las horas equivalentes de BD son NUMERIC(6,1); sumarlas
+      // en float acumula error (8.3 + 9.8 + … = 144.89999999999998) y se muestra cruda.
+      horas: Math.round(rows.reduce((s, r) => s + r.totalHours, 0) * 10) / 10,
       base: rows.reduce((s, r) => s + r.totalBaseAmount, 0),
       anticipos: rows.reduce((s, r) => s + r.totalAdvances, 0),
       total: rows.reduce((s, r) => s + r.finalPaymentAmount, 0),
