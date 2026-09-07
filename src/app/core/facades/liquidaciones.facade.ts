@@ -8,15 +8,12 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
+import { PayrollConfigFacade } from '@core/facades/payroll-config.facade';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
   PagoInstructorPayload,
 } from '@core/models/ui/liquidaciones.model';
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
-const AMOUNT_PER_HOUR_DEFAULT = 5_000;
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -36,6 +33,7 @@ export class LiquidacionesFacade {
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly notifications = inject(NotificationsFacade);
+  private readonly payrollConfig = inject(PayrollConfigFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
@@ -138,6 +136,15 @@ export class LiquidacionesFacade {
         { event: '*', schema: 'public', table: 'instructor_advances' },
         () => {
           console.log('[LiquidacionesFacade] Realtime update: Advances changed');
+          void this.refreshSilently();
+        },
+      )
+      .on(
+        'postgres_changes',
+        // spec 0014-m: cambiar la tarifa por hora de una sede recalcula la nómina.
+        { event: '*', schema: 'public', table: 'branch_payroll_config' },
+        () => {
+          console.log('[LiquidacionesFacade] Realtime update: Payroll config changed');
           void this.refreshSilently();
         },
       )
@@ -248,6 +255,8 @@ export class LiquidacionesFacade {
           .from('instructor_monthly_payments')
           .select('*')
           .eq('period', `${anio}-${mm}`),
+        // spec 0014-m: tarifa por hora por sede (global por sede, no por instructor)
+        this.payrollConfig.load(),
       ]);
 
       if (instrRes.error) throw instrRes.error;
@@ -289,7 +298,9 @@ export class LiquidacionesFacade {
           const practicalSessions = sessionsMap.get(instr.id) ?? 0;
           const totalAdvances = advancesMap.get(instr.id) ?? 0;
           const payment = paymentsMap.get(instr.id);
-          const amountPerHour = payment?.amount_per_hour ?? AMOUNT_PER_HOUR_DEFAULT;
+          // spec 0014-m: tarifa resuelta por la sede del instructor (no un valor único).
+          // "Todas las escuelas" sigue calculando bien cada fila con la tarifa de su sede.
+          const amountPerHour = this.payrollConfig.rateForBranch(u?.branch_id ?? null);
           const totalBaseAmount = totalHours * amountPerHour;
           const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
 

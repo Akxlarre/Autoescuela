@@ -324,7 +324,7 @@ export function resolveListadoLabel(
                   >
                   <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
                   <span class="item-title mt-0.5" data-llm-info="matricula"
-                    >Matrícula #{{ alumno.matricula }}</span
+                    >Matrícula {{ alumno.matricula }}</span
                   >
                   <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
                     >ESTADO: {{ alumno.estado }}</span

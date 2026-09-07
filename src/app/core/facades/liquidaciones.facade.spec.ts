@@ -5,6 +5,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { PayrollConfigFacade, PAYROLL_RATE_FALLBACK } from '@core/facades/payroll-config.facade';
 import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
 describe('LiquidacionesFacade', () => {
@@ -14,6 +15,7 @@ describe('LiquidacionesFacade', () => {
   let branchFacadeSpy: any;
   let toastSpy: any;
   let notificationsSpy: any;
+  let payrollConfigSpy: any;
 
   beforeEach(() => {
     supabaseSpy = { client: vi.fn() };
@@ -21,6 +23,10 @@ describe('LiquidacionesFacade', () => {
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
     toastSpy = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
     notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
+    payrollConfigSpy = {
+      load: vi.fn().mockResolvedValue(undefined),
+      rateForBranch: vi.fn().mockReturnValue(PAYROLL_RATE_FALLBACK),
+    };
 
     const mockChannel = {
       on: vi.fn().mockReturnThis(),
@@ -64,6 +70,7 @@ describe('LiquidacionesFacade', () => {
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: ToastService, useValue: toastSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: PayrollConfigFacade, useValue: payrollConfigSpy },
       ],
     });
 
@@ -186,6 +193,151 @@ describe('LiquidacionesFacade', () => {
       const ok = await facade.registrarPago(row, { amountPerHour: 5000 } as any);
 
       expect(ok).toBe(true);
+    });
+  });
+
+  // ─── spec 0014-m: tarifa por hora resuelta por sede del instructor ─────────
+  describe('fetchLiquidacionesData — tarifa por sede (spec 0014-m, AC3/AC4/AC-E1)', () => {
+    /**
+     * Mock de `supabase.client` que despacha por nombre de tabla. Cada cadena
+     * (`select/eq/gte/lte`) devuelve el mismo objeto, que además es thenable y
+     * resuelve `{ data, error }` según la tabla.
+     */
+    function mockClientForFetch(byTable: Record<string, any[]>) {
+      const chainFor = (rows: any[]) => {
+        const result = Promise.resolve({ data: rows, error: null });
+        const chain: any = {
+          select: vi.fn(() => chain),
+          eq: vi.fn(() => chain),
+          gte: vi.fn(() => chain),
+          lte: vi.fn(() => chain),
+          then: result.then.bind(result),
+        };
+        return chain;
+      };
+      const mockChannel = { on: vi.fn().mockReturnThis(), subscribe: vi.fn().mockReturnThis() };
+      return {
+        channel: vi.fn().mockReturnValue(mockChannel),
+        removeChannel: vi.fn(),
+        from: vi.fn((table: string) => chainFor(byTable[table] ?? [])),
+      };
+    }
+
+    const instructors = [
+      {
+        id: 10,
+        user_id: 100,
+        users: { id: 100, first_names: 'Ana', paternal_last_name: 'Sur', rut: '1-1', branch_id: 1 },
+      },
+      {
+        id: 20,
+        user_id: 200,
+        users: {
+          id: 200,
+          first_names: 'Beto',
+          paternal_last_name: 'Norte',
+          rut: '2-2',
+          branch_id: 2,
+        },
+      },
+    ];
+
+    beforeEach(() => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+    });
+
+    it('AC4: cada instructor usa la tarifa de SU sede (multi-sede en un mismo fetch)', async () => {
+      payrollConfigSpy.rateForBranch.mockImplementation((id: number | null) =>
+        id === 1 ? 5000 : id === 2 ? 6500 : PAYROLL_RATE_FALLBACK,
+      );
+      supabaseSpy.client = mockClientForFetch({
+        instructors,
+        instructor_monthly_hours: [
+          { instructor_id: 10, practical_sessions: 12, total_equivalent: 9 },
+          { instructor_id: 20, practical_sessions: 11, total_equivalent: 8 },
+        ],
+        instructor_advances: [],
+        instructor_monthly_payments: [],
+      });
+
+      await facade.initialize();
+
+      expect(payrollConfigSpy.load).toHaveBeenCalled();
+      const rows = facade.liquidaciones();
+      const ana = rows.find((r) => r.instructorId === 10)!;
+      const beto = rows.find((r) => r.instructorId === 20)!;
+      expect(ana.amountPerHour).toBe(5000);
+      expect(ana.totalBaseAmount).toBe(45000); // 9 * 5000
+      expect(beto.amountPerHour).toBe(6500);
+      expect(beto.totalBaseAmount).toBe(52000); // 8 * 6500
+    });
+
+    it('AC3: total a pagar = base(sede) - anticipos', async () => {
+      payrollConfigSpy.rateForBranch.mockReturnValue(6000);
+      supabaseSpy.client = mockClientForFetch({
+        instructors: [instructors[0]],
+        instructor_monthly_hours: [
+          { instructor_id: 10, practical_sessions: 10, total_equivalent: 9 },
+        ],
+        instructor_advances: [{ instructor_id: 10, amount: 12000 }],
+        instructor_monthly_payments: [],
+      });
+
+      await facade.initialize();
+
+      const ana = facade.liquidaciones().find((r) => r.instructorId === 10)!;
+      expect(ana.totalBaseAmount).toBe(54000); // 9 * 6000
+      expect(ana.finalPaymentAmount).toBe(42000); // 54000 - 12000
+    });
+
+    it('AC-E1: sede sin fila de config → tarifa fallback, no rompe', async () => {
+      payrollConfigSpy.rateForBranch.mockReturnValue(PAYROLL_RATE_FALLBACK);
+      supabaseSpy.client = mockClientForFetch({
+        instructors: [instructors[0]],
+        instructor_monthly_hours: [
+          { instructor_id: 10, practical_sessions: 10, total_equivalent: 9 },
+        ],
+        instructor_advances: [],
+        instructor_monthly_payments: [],
+      });
+
+      await facade.initialize();
+
+      const ana = facade.liquidaciones().find((r) => r.instructorId === 10)!;
+      expect(ana.amountPerHour).toBe(PAYROLL_RATE_FALLBACK);
+      expect(ana.totalBaseAmount).toBe(45000);
+    });
+
+    it('AC-E3: una fila pagada no dispara ningún UPDATE de base_salary al recargar', async () => {
+      payrollConfigSpy.rateForBranch.mockReturnValue(9000); // tarifa cambió tras el pago
+      const client = mockClientForFetch({
+        instructors: [instructors[0]],
+        instructor_monthly_hours: [
+          { instructor_id: 10, practical_sessions: 10, total_equivalent: 9 },
+        ],
+        instructor_advances: [],
+        instructor_monthly_payments: [
+          {
+            instructor_id: 10,
+            id: 555,
+            payment_status: 'paid',
+            base_salary: 45000,
+            paid_at: '2026-09-01',
+          },
+        ],
+      });
+      supabaseSpy.client = client;
+
+      await facade.initialize();
+
+      const ana = facade.liquidaciones().find((r) => r.instructorId === 10)!;
+      expect(ana.status).toBe('paid');
+      expect(ana.paymentId).toBe(555);
+      // fetch es solo lectura: nunca .from(...).update(...) sobre instructor_monthly_payments
+      const updatedTables = client.from.mock.results
+        .map((r: any) => r.value)
+        .filter((chain: any) => chain.update);
+      expect(updatedTables.length).toBe(0);
     });
   });
 });
