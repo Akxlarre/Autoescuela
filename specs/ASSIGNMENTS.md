@@ -121,7 +121,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
-| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | `b` | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -234,6 +233,7 @@
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | [fix-236-m-evaluacion-clase-en-drawer](fixes/fix-236-m-evaluacion-clase-en-drawer/fix.md) | 2026-09-02 |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad | [fix-237-m-conectar-filtro-mes-rentabilidad-cursos](fixes/fix-237-m-conectar-filtro-mes-rentabilidad-cursos/fix.md) | 2026-09-02 |
 | ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
+| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 | ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-07 |
 <!-- AUTO-GENERATED:END -->
 

@@ -207,6 +207,21 @@ describe('AgendaFacade', () => {
     });
 
     it('une el baseline con un horario real fuera del bloque estándar, sin perder ninguna fila base', async () => {
+      // 17:30 UTC cae fuera del bloque base en cualquiera de los dos offsets de Chile:
+      // 13:30 en horario estándar (UTC-4) y 14:30 en horario de verano (UTC-3).
+      const scheduledAt = `${facade.weekStart()}T17:30:00Z`;
+
+      // La hora local esperada se DERIVA del instante UTC, nunca se escribe a mano: hardcodear
+      // '13:30' ataba el test al offset vigente y lo hacía fallar los ~6 meses de horario de
+      // verano (fix-157-b). Se usa la API nativa a propósito, no to24hTime() del proyecto, para
+      // que el test siga siendo independiente de la implementación que verifica.
+      const expectedLocalTime = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Santiago',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(scheduledAt));
+
       supabaseSpy.setResult('class_b_sessions', [
         {
           id: 1,
@@ -214,8 +229,7 @@ describe('AgendaFacade', () => {
           vehicle_id: 1,
           enrollment_id: 1,
           class_number: 1,
-          // 17:30 UTC = 13:30 America/Santiago (UTC-4 en horario estándar) — fuera del bloque base.
-          scheduled_at: `${facade.weekStart()}T17:30:00Z`,
+          scheduled_at: scheduledAt,
           status: 'scheduled',
           enrollments: {
             students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
@@ -229,7 +243,7 @@ describe('AgendaFacade', () => {
       // Las 13 filas base siguen presentes...
       expect(rows).toEqual(expect.arrayContaining(['08:30', '11:00', '15:00', '20:00']));
       // ...y la fila real fuera del bloque estándar se agrega, no reemplaza nada.
-      expect(rows).toContain('13:30');
+      expect(rows).toContain(expectedLocalTime);
       expect(rows.length).toBe(14);
     });
   });

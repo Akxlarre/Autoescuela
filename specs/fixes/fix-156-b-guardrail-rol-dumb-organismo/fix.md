@@ -2,7 +2,8 @@
 
 > id: fix-156-b-guardrail-rol-dumb-organismo
 > refs: ASG-b-092 (`specs/assignments/ASG-b-092-organismos-carpeta-por-rol.md`)
-> status: in_progress
+> status: done
+> closed: 2026-09-07
 > created: 2026-09-07
 
 ## Root Cause
