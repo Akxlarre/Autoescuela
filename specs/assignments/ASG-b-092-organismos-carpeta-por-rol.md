@@ -1,14 +1,48 @@
 # Asignación ASG-b-092 — Mudar los Organismos a una carpeta que refleje su rol
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** Baja
 > **created:** 2026-08-15
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-09-07
+> **resulting_track:** fix-156-b-guardrail-rol-dumb-organismo
+
+> **Nota de reclamación (2026-09-07):** se generó como `fix`, no como `spec`, porque de las 3
+> opciones planteadas abajo se eligió la que la propia ASG pedía evaluar primero — el **guardrail
+> en `architect.js`**, sin mover archivos. Ese alcance no requiere ACs nuevos ni cambia contratos
+> públicos.
+
+## Resolución (2026-09-07) — ARCH-24, sin mover archivos
+
+Resuelta por `fix-156-b`. **El residuo estructural (mover a `shared/organisms/` o por dominio) se
+cierra como NO necesario, no como pendiente.** El objetivo declarado arriba era *"que la ubicación
+comunique el rol, para que la regla se vuelva evidente en vez de tener que recordarse"*. Eso se
+cumple sin mover un archivo: el rol ahora está **declarado explícitamente** en
+`scripts/lib/shared-organisms.allowlist.json`, con justificación por entrada, y **verificado** por
+ARCH-24 en el linter y en el guard de escritura. Un dev que abre `shared/components/` ya no
+necesita leer el código de cada componente: mira el allowlist. Mover 6 archivos agregaría un diff
+grande sin resolver nada que el allowlist no resuelva ya.
+
+**Hallazgo que reencuadró la asignación:** el guardrail no faltaba — **existía, enforceando la
+regla vieja**. `.claude/hooks/pre-write-guard.js` bloqueaba cualquier `inject(...Facade)` en
+`shared/` (carpeta = rol), la versión previa a `fix-146-b`. El problema real no era estructura de
+carpetas: era que `fix-146-b` corrigió la prosa y no el guard que la enforcea, dejando una
+contradicción silenciosa que además bloqueaba escrituras legítimas. Bonus: el patrón del guard
+matcheaba `LayoutDrawerFacadeService` (plomería de `core/services/ui/`), que inyectan 5 de los 8
+componentes involucrados.
+
+**Criterio reutilizable, más allá de este caso:** cuando una regla tiene un guard automatizado,
+corregir la regla sin corregir el guard no deja la regla "documentada pendiente de implementar" —
+deja dos leyes contradictorias, y la que gana es la del guard. Al corregir una regla, buscá qué
+hook o script la enforcea. Y si va a vivir en más de un consumidor, escribila una vez en un módulo
+común (acá: `scripts/lib/shared-roles.js`).
+
+**Si alguien quiere reabrir el movimiento de carpetas**, que sea por un motivo nuevo (ej. `shared/`
+creció tanto que navegarlo cuesta), no por el objetivo original de esta asignación — ese ya está
+cubierto.
 
 ---
 

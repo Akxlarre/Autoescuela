@@ -93,3 +93,26 @@
   vuelve a aparecer `--color-secondary`, `--color-muted`, `--color-disabled` o
   `--color-primary` bare (los sufijos como `--color-border-muted`/`--color-brand-muted` NO
   están prohibidos, son formas canónicas legítimas).
+
+## AP-016 — Facade en un componente de `shared/` según su ROL (evitar)
+
+- **NO** inyectes ningún Facade en un **Dumb presentacional** (`app-icon`, `app-kpi-card`,
+  `app-badge`…). Recibe sus datos por `input()`.
+- **NO** inyectes un Facade **transversal** (`AuthFacade`, `BranchFacade`) en un Organismo para
+  derivar algo que su Facade de dominio podría exponer: mové ese `computed()` al Facade.
+- **Sí** un **Organismo de dominio** puede inyectar el Facade de **su** dominio. La señal
+  canónica de que algo es Organismo: se abre vía `LayoutDrawerFacadeService.open()`, o sea no
+  tiene padre en ningún template desde donde pasarle `input()`.
+- **El criterio es el ROL, no la carpeta.** `shared/` contiene las dos cosas.
+- **Cómo se declara:** `scripts/lib/shared-organisms.allowlist.json`, con justificación por
+  entrada. Un archivo de gobierno aparece en el diff y se revisa; un tag inline se lo
+  auto-otorga cualquiera.
+- Guardrail: **ARCH-24** — error duro, sin ratchet (arranca en cero: 91 componentes de
+  `shared/` barridos, 6 organismos declarados). Implementado una sola vez en
+  `scripts/lib/shared-roles.js` y consumido por el linter **y** por el guard de escritura.
+- **Por qué la implementación es compartida:** durante un tiempo la regla en prosa y el guard
+  de escritura dijeron cosas distintas — la prosa se corrigió al criterio por rol y el guard
+  siguió enforceando "carpeta = rol", bloqueando escrituras que la regla permitía. Criterio
+  general: **cuando una regla tiene guard, corregir la prosa sin corregir el guard deja una
+  contradicción silenciosa; si el guard va a existir en más de un lugar (lint + hook), la
+  lógica va en un módulo común, no copiada.**

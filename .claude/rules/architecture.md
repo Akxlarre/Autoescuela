@@ -64,6 +64,18 @@ supabase/
 sin padre en ningún template no puede recibir datos por `input()`, así que exigirle "solo
 `input()`/`output()`" es imposible por construcción, no por descuido.
 
+**Guardrail: ARCH-24.** El rol se declara en `scripts/lib/shared-organisms.allowlist.json` (con
+justificación por entrada) y lo verifican el linter y el guard de escritura, compartiendo la
+implementación de `scripts/lib/shared-roles.js`. Un Dumb que inyecta cualquier Facade y un
+Organismo que inyecta uno transversal son errores duros. `LayoutDrawerFacadeService` no cuenta:
+es plomería de `core/services/ui/`, no un Facade de dominio.
+
+> Criterio general que dejó este guardrail: **una regla que se corrige solo en la prosa, teniendo
+> un guard que la enforcea, queda contradiciéndose en silencio** — el guard siguió pidiendo
+> "carpeta = rol" después de que esta sección pasara a "rol ≠ carpeta", y bloqueaba escrituras
+> que la regla ya permitía. Al corregir una regla, buscá si algún hook o script la enforcea; y si
+> va a vivir en más de un lugar, escribila una sola vez en un módulo común.
+
 > Hasta fix-146-b esta regla decía `Dumb (shared/)`, equiparando carpeta con rol. Una auditoría
 > del DS (H1, 2026-08-03) marcó 7 componentes como violación por eso; al revisarlos, 6 eran
 > organismos legítimos y solo `app-logo` era una violación real (renderizaba un único string

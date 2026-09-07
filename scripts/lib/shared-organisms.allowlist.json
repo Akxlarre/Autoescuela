@@ -1,0 +1,36 @@
+{
+  "$schema": "Ver scripts/lib/shared-roles.js — este archivo es la fuente de verdad de QUÉ componente de shared/ es un Organismo de dominio (puede inyectar el Facade de su propio dominio) y cuál es un Dumb presentacional (no puede inyectar ninguno). Regla: .claude/rules/architecture.md §Smart vs Dumb Components.",
+  "$comoAgregarUno": "Agregar una entrada acá es un acto deliberado y revisable, no un tag que uno se auto-otorga inline. Antes de sumar un componente: (1) confirmá que NO puede recibir sus datos por input() — la señal canónica es que se abre dinámicamente vía LayoutDrawerFacadeService.open(), sin padre en ningún template desde donde pasárselos; (2) escribí un 'why' concreto, no 'es un organismo'. Si podés pasarle los datos por input(), es un Dumb y va sin entrada.",
+  "$sobreAllowTransversal": "allowTransversal es una EXCEPCIÓN, no un campo de rutina. architecture.md prohíbe a un organismo inyectar Facades transversales (AuthFacade, BranchFacade) para derivar algo que su Facade de dominio podría exponer. Solo lleva waiver el componente cuyo dominio ES ese estado transversal. Cada waiver necesita su propia justificación.",
+
+  "transversalFacades": ["AuthFacade", "BranchFacade"],
+
+  "organisms": {
+    "src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts": {
+      "facade": "HistorialCuadraturasFacade",
+      "why": "Modal de detalle de cuadratura, abierto dinámicamente desde los historiales de contabilidad de admin y secretaría. Sin padre en un template desde donde pasarle inputs."
+    },
+    "src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts": {
+      "facade": "AdminAlumnosFacade",
+      "why": "Drawer de alumnos por vencer, abierto desde alumnos-list-content y desde los stats de ex-alumnos. Consume su propio dominio (alumnos)."
+    },
+    "src/app/shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component.ts": {
+      "facade": "ServiciosEspecialesFacade",
+      "why": "Drawer de alta de servicio especial, abierto por el propio ServiciosEspecialesFacade. Rediseñado en fix-239/240-m."
+    },
+    "src/app/shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component.ts": {
+      "facade": "ServiciosEspecialesFacade",
+      "why": "Drawer de registro de venta de servicio especial, abierto por el propio ServiciosEspecialesFacade. Rediseñado en fix-239/240-m."
+    },
+    "src/app/shared/components/pago-instructor-modal/pago-instructor-modal.component.ts": {
+      "facade": "LiquidacionesFacade",
+      "why": "Modal de pago a instructor, abierto desde las liquidaciones de contabilidad de admin y secretaría. Consume su propio dominio (liquidaciones)."
+    },
+    "src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts": {
+      "facade": "—",
+      "allowTransversal": ["AuthFacade", "BranchFacade"],
+      "why": "Drawer de ajustes de la app, abierto desde el topbar. Es el ÚNICO caso donde el estado transversal es el dominio propio: su contenido ES el usuario actual (AuthFacade) y el selector de sede (BranchFacade). No tiene Facade de dominio propio del cual derivarlos, así que la alternativa que pide architecture.md (mover el computed al Facade de dominio) no existe acá.",
+      "waiverNota": "Waiver heredado del estado del código al crear ARCH-24 (fix-156-b), no re-litigado en ese track. Si algún día aparece un AjustesFacade, este waiver debería caer."
+    }
+  }
+}

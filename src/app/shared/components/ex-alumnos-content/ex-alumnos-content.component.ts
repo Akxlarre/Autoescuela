@@ -31,8 +31,10 @@ import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 /**
  * Tabla + buscador + selector de período + KPIs de Ex-Alumnos Clase B (spec 0007-i).
  *
- * Dumb puro: NO inyecta ExAlumnosFacade ni ningún otro Facade/Service (el Architect Guard
- * bloquea cualquier inject(...Facade) en shared/). Recibe egresados por input() y calcula
+ * Dumb puro: NO inyecta ExAlumnosFacade ni ningún otro Facade/Service. Lo que lo hace Dumb es
+ * el ROL, no la carpeta — recibe todo lo que necesita por input(), así que no le hace falta
+ * ningún Facade (ARCH-24; un Organismo de dominio de shared/ sí puede inyectar el suyo).
+ * Recibe egresados por input() y calcula
  * todo lo derivado (heroChips, heroKpis, filtrado, paginación) desde ahí. La acción de
  * "re-matricular" (confirmar + navegar + abrir wizard, y en admin, seleccionar sede) NO
  * vive acá: el Dumb solo emite reEnrollRequested con el egresado y el Smart Component

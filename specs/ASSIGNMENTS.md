@@ -90,9 +90,8 @@
 > un grep de `inject(*Facade)` sobre `shared/` no distingue rol — verificar cómo se instancia
 > el componente antes de contarlo como violación.**
 
-| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
-|----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | `cualquiera` | spec | Baja | b | Residuo no bloqueante de ASG-b-089. **Evaluar primero un guardrail en `architect.js` en vez de mover archivos** — más barato y duradero. Ver `specs/assignments/ASG-b-092-*.md` |
+> ✅ **ASG-b-092 reclamada (2026-09-07) por `b`** → `fix-156-b-guardrail-rol-dumb-organismo`, con
+> el enfoque de guardrail (sin mover carpetas). Esta tanda queda sin pendientes.
 
 
 ### Tanda auditoría del Design System — 2026-07-31
@@ -234,6 +233,7 @@
 | ASG-i-003 | "Evaluar clase" debe abrir en Drawer, no navegar a otra página | [fix-236-m-evaluacion-clase-en-drawer](fixes/fix-236-m-evaluacion-clase-en-drawer/fix.md) | 2026-09-02 |
 | ASG-i-004 | El filtro "Aplicar" (mes) no afecta la pestaña Rentabilidad | [fix-237-m-conectar-filtro-mes-rentabilidad-cursos](fixes/fix-237-m-conectar-filtro-mes-rentabilidad-cursos/fix.md) | 2026-09-02 |
 | ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
+| ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 | ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-07 |
 <!-- AUTO-GENERATED:END -->
 

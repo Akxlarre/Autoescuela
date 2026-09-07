@@ -42,7 +42,8 @@ import {
 } from './lib/class-discipline.js';
 import { findIconOnlyButtonsWithoutLabel, findHandRolledTapAreas } from './lib/a11y-guardrails.js';
 import { extractBentoClasses, diffBentoClasses } from './check-bento-classes.js';
-import { findReservedTailwindClassCollisions } from './lib/tailwind-bare-utilities.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
+import { findReservedTailwindClassCollisions } from './lib/tailwind-bare-utilities.js';
+import { findSharedRoleViolations, loadOrganismAllowlist, normalizeRepoPath } from './lib/shared-roles.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -270,6 +271,11 @@ const RULES = {
         doc: 'indices/STYLES.md (§Clases Semánticas Globales) + fix-115-b',
         fix: 'El nombre de clase coincide EXACTAMENTE con una utilidad nativa de Tailwind sin sufijo (ej. overline, flex, truncate, container — ver scripts/lib/tailwind-bare-utilities.js). Tailwind genera su propia regla en @layer utilities que se SUMA silenciosamente al estilo del DS (no lo reemplaza), como pasó con .overline → .micro-label. Elegí un nombre compuesto con guion.',
     },
+    'ARCH-24': {
+        name: 'Rol de shared/ (Dumb inyecta Facade / Organismo inyecta transversal)',
+        doc: '.claude/rules/architecture.md (§Smart vs Dumb Components) + fix-156-b (ASG-b-092)',
+        fix: 'Un Dumb presentacional recibe sus datos por input() y no inyecta ningún Facade. Un Organismo de dominio (se abre vía LayoutDrawerFacadeService.open(), sin padre que le pase inputs) puede inyectar el Facade de SU dominio, nunca uno transversal (AuthFacade/BranchFacade): mové ese computed() al Facade de dominio. Para declarar un organismo nuevo: scripts/lib/shared-organisms.allowlist.json, con justificación.',
+    },
 };
 
 // ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
@@ -374,6 +380,16 @@ function checkHandRolledTapAreas(filePath, content) {
             filePath,
             `Área táctil de 44px reimplementada a mano en ${selector} — el primitivo .tap-area del DS ya hace esto.`,
         );
+    }
+}
+
+/** ARCH-24 — error duro, sin ratchet: arranca en CERO (los 6 organismos legítimos están
+ *  declarados en el allowlist, verificado sobre los 91 componentes de shared/). */
+const organismAllowlist = loadOrganismAllowlist();
+function checkSharedRoles(filePath, content) {
+    const relPath = normalizeRepoPath(filePath);
+    for (const violation of findSharedRoleViolations(content, relPath, organismAllowlist)) {
+        reportError('ARCH-24', filePath, violation.message);
     }
 }
 
@@ -687,6 +703,9 @@ function analyzeTypeScript(filePath) {
 
     // ── Regla 23: área táctil de 44px reimplementada a mano (error duro) ──────
     checkHandRolledTapAreas(filePath, content);
+
+    // ── Regla 24: rol Dumb vs Organismo en shared/ (error duro) ───────────────
+    checkSharedRoles(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
