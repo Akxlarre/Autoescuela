@@ -153,7 +153,7 @@ const BILLING_LABEL: Record<string, string> = {
               </div>
             } @else {
               @for (curso of cursosFiltrados(); track curso.id) {
-                <div class="rounded-xl border overflow-hidden border-border-muted bg-surface">
+                <div class="card p-0 overflow-hidden">
                   <!-- Cabecera de card: nombre + badges -->
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
