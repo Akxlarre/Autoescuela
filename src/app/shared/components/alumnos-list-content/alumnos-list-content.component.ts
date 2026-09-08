@@ -12,6 +12,11 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
+import {
+  getExpedienteStatus as computeExpedienteStatus,
+  getAlumnoStatusSeverity,
+} from '@core/utils/alumno-status.utils';
+import type { ExpedienteStatus } from '@core/utils/alumno-status.utils';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -28,6 +33,7 @@ import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { BadgeComponent } from '../badge/badge.component';
+import { AlumnoCardComponent } from '../alumno-card/alumno-card.component';
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -64,12 +70,6 @@ export interface AlumnoExportRequest {
   expediente: string;
 }
 
-interface ExpedienteStatus {
-  label: 'Completo' | 'Parcial' | 'Pendiente';
-  severity: 'success' | 'warn' | 'danger';
-  count: string;
-}
-
 @Component({
   selector: 'app-alumnos-list-content',
   standalone: true,
@@ -87,6 +87,7 @@ interface ExpedienteStatus {
     EmptyStateComponent,
     SkeletonBlockComponent,
     BadgeComponent,
+    AlumnoCardComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
@@ -283,62 +284,8 @@ interface ExpedienteStatus {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (card of [1, 2, 3, 4, 5, 6]; track card) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
-                    data-col-span="4"
-                  >
-                    <!-- Header -->
-                    <div
-                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
-                    >
-                      <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <app-skeleton-block
-                          variant="circle"
-                          width="40px"
-                          height="40px"
-                          class="shrink-0"
-                        />
-                        <div class="flex flex-col gap-2 w-full">
-                          <app-skeleton-block variant="text" width="80%" height="12px" />
-                          <app-skeleton-block variant="text" width="60%" height="10px" />
-                        </div>
-                      </div>
-                      <app-skeleton-block
-                        variant="rect"
-                        width="48px"
-                        height="20px"
-                        class="shrink-0"
-                      />
-                    </div>
-
-                    <!-- Body -->
-                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 bg-surface">
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="40%" height="10px" />
-                        <app-skeleton-block variant="text" width="80%" height="12px" />
-                      </div>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="60%" height="10px" />
-                        <app-skeleton-block variant="rect" width="70px" height="20px" />
-                      </div>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="45%" height="10px" />
-                        <app-skeleton-block variant="text" width="65%" height="12px" />
-                      </div>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="50%" height="10px" />
-                        <app-skeleton-block variant="text" width="70%" height="12px" />
-                      </div>
-                    </div>
-
-                    <!-- Footer Actions -->
-                    <div
-                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-1"
-                    >
-                      <app-skeleton-block variant="circle" width="32px" height="32px" />
-                      <app-skeleton-block variant="circle" width="32px" height="32px" />
-                      <app-skeleton-block variant="circle" width="32px" height="32px" />
-                    </div>
+                  <div class="bento-wide" data-col-span="4">
+                    <app-alumno-card [loading]="true" [alumno]="skeletonAlumno" />
                   </div>
                 }
               </div>
@@ -541,148 +488,16 @@ interface ExpedienteStatus {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (alumno of visibleCards(); track alumno.id) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
-                    appCardHover
-                    data-col-span="4"
-                  >
-                    <!-- Header -->
-                    <div
-                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
-                    >
-                      <div class="flex items-center gap-3 min-w-0">
-                        <div
-                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
-                        >
-                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
-                        </div>
-                        <div class="flex flex-col min-w-0">
-                          <span
-                            class="item-title truncate"
-                            [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
-                            tooltipPosition="top"
-                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                          >
-                          <span
-                            class="text-xs text-text-muted truncate"
-                            [pTooltip]="alumno.email"
-                            tooltipPosition="top"
-                            >{{ alumno.email }}</span
-                          >
-                        </div>
-                      </div>
-                      <div class="flex flex-col gap-1 items-end shrink-0">
-                        <p-tag
-                          [value]="alumno.status"
-                          [severity]="getStatusSeverity(alumno.status)"
-                          styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                        ></p-tag>
-                        @if (alumno.cursoCompletoPendienteEgreso) {
-                          <p-tag
-                            value="Curso completo"
-                            severity="warn"
-                            styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                            pTooltip="Certificado enviado y 12/12 prácticas — falta marcar como Ex-Alumno"
-                            tooltipPosition="top"
-                          ></p-tag>
-                        }
-                      </div>
-                    </div>
-
-                    <!-- Body -->
-                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">RUT</span>
-                        <span class="font-medium text-text-secondary font-mono text-xs">{{
-                          alumno.rut
-                        }}</span>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Expediente</span>
-                        @let exp = getExpedienteStatus(alumno.expediente);
-                        <div class="flex items-center">
-                          <p-tag
-                            [value]="exp.label + ' · ' + exp.count"
-                            [severity]="exp.severity"
-                            styleClass="text-2xs font-bold px-1.5 py-0.5 bg-transparent border border-current"
-                          ></p-tag>
-                        </div>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Curso</span>
-                        <div class="flex flex-wrap gap-1">
-                          @for (curso of alumno.cursos; track curso.nombre) {
-                            <app-badge
-                              [variant]="
-                                curso.licenseGroup === 'professional' ? 'brand' : 'neutral'
-                              "
-                            >
-                              {{ curso.nombre }}
-                            </app-badge>
-                          }
-                        </div>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Ingreso</span>
-                        <span class="font-medium text-text-secondary text-xs">{{
-                          alumno.fechaIngreso
-                        }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Footer Actions -->
-                    <div
-                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
-                    >
-                      @if (trashView()) {
-                        <!-- Vista Papelera: solo Restaurar -->
-                        <button
-                          aria-label="Restaurar alumno"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
-                          pTooltip="Restaurar alumno"
-                          (click)="restaurarRequested.emit(alumno.id)"
-                          data-llm-action="restore-student-card"
-                        >
-                          <app-icon name="rotate-ccw" [size]="16" />
-                        </button>
-                      } @else {
-                        <!-- Vista Normal -->
-                        <button
-                          aria-label="Ver ficha"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          pTooltip="Ver ficha"
-                          [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
-                        >
-                          <app-icon name="eye" [size]="16" />
-                        </button>
-                        <button
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          pTooltip="Exportar Ficha PDF"
-                          aria-label="Exportar Ficha PDF"
-                          [disabled]="isGeneratingFicha() === alumno.enrollmentId"
-                          (click)="exportarFicha(alumno)"
-                        >
-                          @if (isGeneratingFicha() === alumno.enrollmentId) {
-                            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
-                          } @else {
-                            <app-icon name="download" [size]="16" />
-                          }
-                        </button>
-                        <button
-                          aria-label="Archivar alumno"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
-                          pTooltip="Archivar alumno"
-                          (click)="archivarRequested.emit(alumno.id)"
-                          data-llm-action="archive-student-card"
-                        >
-                          <app-icon name="trash-2" [size]="16" />
-                        </button>
-                      }
-                    </div>
+                  <div class="bento-wide" data-col-span="4">
+                    <app-alumno-card
+                      [alumno]="alumno"
+                      [trashView]="trashView()"
+                      [basePath]="basePath()"
+                      [isGeneratingFicha]="isGeneratingFicha()"
+                      (restaurarRequested)="restaurarRequested.emit($event)"
+                      (archivarRequested)="archivarRequested.emit($event)"
+                      (fichaExportRequested)="fichaExportRequested.emit($event)"
+                    />
                   </div>
                 } @empty {
                   <div class="col-span-full py-8">
@@ -889,6 +704,29 @@ export class AlumnosListContentComponent implements AfterViewInit {
     { label: 'Pendiente', value: 'Pendiente' },
   ];
 
+  /** Placeholder para satisfacer `alumno` (input.required) en las 6 cards skeleton. */
+  protected readonly skeletonAlumno: AlumnoTableRow = {
+    id: '',
+    nombre: '',
+    apellido: '',
+    rut: '',
+    email: '',
+    celular: '',
+    sucursal: '',
+    comuna: '',
+    nroExpedientes: [],
+    fechaIngreso: '',
+    status: 'Activo',
+    cursos: [],
+    pago_por_pagar: 0,
+    pago_total: 0,
+    exp_teorico: 'pendiente',
+    exp_practico: 'pendiente',
+    expediente: { ci: false, foto: false, medico: false, semep: false },
+    expiresAt: null,
+    cursoCompletoPendienteEgreso: false,
+  };
+
   constructor() {}
 
   ngAfterViewInit(): void {
@@ -948,36 +786,13 @@ export class AlumnosListContentComponent implements AfterViewInit {
   }
 
   getExpedienteStatus(exp: AlumnoExpediente): ExpedienteStatus {
-    const docs = [exp.ci, exp.foto, exp.medico, exp.semep];
-    const ok = docs.filter(Boolean).length;
-    const total = docs.length;
-    const count = `${ok}/${total}`;
-    if (ok === total) return { label: 'Completo', severity: 'success', count };
-    if (ok === 0) return { label: 'Pendiente', severity: 'danger', count };
-    return { label: 'Parcial', severity: 'warn', count };
+    return computeExpedienteStatus(exp);
   }
 
   getStatusSeverity(
     status: AlumnoStatus | string,
   ): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
-    switch (status) {
-      case 'Activo':
-        return 'success';
-      case 'Finalizado':
-        return 'info';
-      case 'Retirado':
-        return 'danger';
-      case 'Pre-inscrito':
-        return 'warn';
-      case 'Pendiente Pago':
-        return 'warn';
-      case 'Docs Pendientes':
-        return 'info';
-      case 'Inactivo':
-        return 'secondary';
-      default:
-        return 'secondary';
-    }
+    return getAlumnoStatusSeverity(status);
   }
 
   refresh(): void {
