@@ -32,6 +32,7 @@ import { AdminRelatorCrearDrawerComponent } from './admin-relator-crear-drawer.c
 import { AdminRelatorVerDrawerComponent } from './admin-relator-ver-drawer.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
 import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-specializations';
+import { RelatorCardComponent } from '@shared/components/relator-card/relator-card.component';
 
 @Component({
   selector: 'app-admin-profesional-relatores',
@@ -48,6 +49,7 @@ import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-speci
     IconComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
+    RelatorCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -148,20 +150,7 @@ import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-speci
           <!-- VISTA Mobile: Tarjetas skeleton (visible cuando se comprime) -->
           <div class="mobile-view show-on-squeeze p-4 space-y-4">
             @for (card of [1, 2, 3]; track card) {
-              <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
-                <div class="flex items-center gap-3">
-                  <app-skeleton-block variant="circle" width="36px" height="36px" />
-                  <div class="flex flex-col gap-1.5 flex-1">
-                    <app-skeleton-block variant="text" width="70%" height="13px" />
-                    <app-skeleton-block variant="text" width="45%" height="10px" />
-                  </div>
-                  <app-skeleton-block variant="rect" width="60px" height="20px" />
-                </div>
-                <div class="flex gap-1.5">
-                  <app-skeleton-block variant="rect" width="30px" height="18px" />
-                  <app-skeleton-block variant="rect" width="30px" height="18px" />
-                </div>
-              </div>
+              <app-relator-card [loading]="true" [relator]="skeletonRelator" />
             }
           </div>
         } @else {
@@ -271,74 +260,11 @@ import { getSpecColor as getSpecColorUtil } from '@core/utils/professional-speci
           <!-- VISTA Mobile: Tarjetas apiladas (visible cuando se comprime) -->
           <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
             @for (rel of filteredRelatores(); track rel.id) {
-              <div
-                class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
-              >
-                <div
-                  class="p-4 border-b border-border-subtle flex items-center justify-between gap-3 bg-subtle"
-                >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div
-                      class="w-9 h-9 rounded-full bg-brand-tint text-brand flex items-center justify-center text-xs font-bold shrink-0"
-                    >
-                      {{ rel.initials }}
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                      <span class="item-title truncate">{{ rel.nombre }}</span>
-                      <span class="text-xs text-text-muted truncate">{{ rel.rut }}</span>
-                    </div>
-                  </div>
-                  <p-tag
-                    [value]="rel.estado === 'activo' ? 'Activo' : 'Inactivo'"
-                    [severity]="rel.estado === 'activo' ? 'success' : 'secondary'"
-                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                  ></p-tag>
-                </div>
-
-                <div class="p-4 grid grid-cols-2 gap-4 text-xs">
-                  <div class="flex flex-col">
-                    <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                      >Especialidades</span
-                    >
-                    <div class="flex flex-wrap gap-1.5">
-                      @for (spec of rel.specializations; track spec) {
-                        <span class="spec-badge" [style.background]="getSpecColor(spec)">
-                          {{ spec }}
-                        </span>
-                      } @empty {
-                        <span class="text-text-muted">—</span>
-                      }
-                    </div>
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                      >WhatsApp</span
-                    >
-                    <span>{{ rel.phone || '—' }}</span>
-                  </div>
-                </div>
-
-                <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
-                  <button
-                    aria-label="Ver detalle"
-                    class="action-btn"
-                    (click)="openVerDrawer(rel)"
-                    pTooltip="Ver detalle"
-                    data-llm-action="ver-relator"
-                  >
-                    <app-icon name="eye" [size]="16" />
-                  </button>
-                  <button
-                    aria-label="Editar relator"
-                    class="action-btn"
-                    (click)="openEditarDrawer(rel)"
-                    pTooltip="Editar relator"
-                    data-llm-action="editar-relator"
-                  >
-                    <app-icon name="edit" [size]="16" />
-                  </button>
-                </div>
-              </div>
+              <app-relator-card
+                [relator]="rel"
+                (verRequested)="openVerDrawer($event)"
+                (editarRequested)="openEditarDrawer($event)"
+              />
             } @empty {
               <app-empty-state
                 icon="users"
@@ -431,6 +357,22 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new', label: 'Nuevo Relator', icon: 'plus', primary: true },
   ]);
+
+  /** Placeholder para satisfacer `relator` (input.required) en las cards skeleton. */
+  protected readonly skeletonRelator: RelatorTableRow = {
+    id: 0,
+    rut: '',
+    nombre: '',
+    firstName: '',
+    paternalLastName: '',
+    maternalLastName: '',
+    email: '',
+    phone: '',
+    specializations: [],
+    estado: 'activo',
+    registrationDate: null,
+    initials: '',
+  };
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => [
     { id: 'total', label: 'Total Relatores', value: this.facade.totalRelatores(), icon: 'users' },

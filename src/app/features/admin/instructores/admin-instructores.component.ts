@@ -23,6 +23,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { InstructorCardComponent } from '@shared/components/instructor-card/instructor-card.component';
 import { AdminInstructorCrearDrawerComponent } from './admin-instructor-crear-drawer.component';
 import { AdminInstructorVerDrawerComponent } from './admin-instructor-ver-drawer.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
@@ -41,6 +42,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
     SectionHeroComponent,
     IconComponent,
     SkeletonBlockComponent,
+    InstructorCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -286,93 +288,18 @@ type FilterTab = 'all' | 'active' | 'expiring';
           <div class="mobile-view show-on-squeeze p-4 space-y-4">
             @if (facade.isLoading()) {
               @for (card of [1, 2, 3]; track card) {
-                <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
-                  <div class="flex justify-between items-start">
-                    <app-skeleton-block variant="text" width="140px" height="14px" />
-                    <app-skeleton-block variant="rect" width="60px" height="20px" />
-                  </div>
-                  <div class="space-y-2">
-                    <app-skeleton-block variant="text" width="90%" height="12px" />
-                    <app-skeleton-block variant="text" width="50%" height="10px" />
-                  </div>
-                </div>
+                <app-instructor-card [loading]="true" [instructor]="skeletonInstructor" />
               }
             } @else {
               @for (inst of visibleCards(); track inst.id) {
-                <div
-                  class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
-                >
-                  <div
-                    class="p-4 border-b border-border-subtle flex items-start justify-between bg-subtle"
-                  >
-                    <div class="flex flex-col min-w-0">
-                      <span class="item-title truncate">{{ inst.nombre }}</span>
-                      <span
-                        class="text-xs text-text-muted truncate"
-                        [pTooltip]="inst.email"
-                        tooltipPosition="top"
-                        >{{ inst.email }}</span
-                      >
-                    </div>
-                    <span
-                      class="license-badge shrink-0"
-                      [class]="'license-badge license-badge--' + inst.licenseStatus"
-                      style="font-size: 10px; padding: 2px 8px;"
-                    >
-                      {{ inst.licenseStatusLabel }}
-                    </span>
-                  </div>
-                  <div class="p-4 grid grid-cols-2 gap-4 text-xs">
-                    <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                        >RUT</span
-                      >
-                      <span>{{ inst.rut }}</span>
-                    </div>
-                    @if (showSedeColumn()) {
-                      <div class="flex flex-col">
-                        <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                          >Sede</span
-                        >
-                        <span>{{ sedeLabel(inst.branchId, inst.bothBranches) }}</span>
-                      </div>
-                    }
-                    <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                        >Vehículo</span
-                      >
-                      <span class="truncate">{{ inst.vehiclePlate || 'Sin asignar' }}</span>
-                    </div>
-                    <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
-                        >Estado</span
-                      >
-                      <span
-                        [class.text-success]="inst.estado === 'activo'"
-                        [class.text-text-muted]="inst.estado !== 'activo'"
-                        class="font-medium"
-                      >
-                        {{ inst.estado === 'activo' ? 'Activo' : 'Inactivo' }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
-                    <button
-                      aria-label="Ver detalle"
-                      class="action-btn"
-                      (click)="openVerDrawer(inst)"
-                    >
-                      <app-icon name="eye" [size]="16" />
-                    </button>
-                    <button
-                      aria-label="Editar instructor"
-                      class="action-btn"
-                      (click)="openEditarDrawer(inst)"
-                    >
-                      <app-icon name="edit" [size]="16" />
-                    </button>
-                  </div>
-                </div>
+                <app-instructor-card
+                  [instructor]="inst"
+                  [sedeLabel]="
+                    showSedeColumn() ? sedeLabel(inst.branchId, inst.bothBranches) : null
+                  "
+                  (verRequested)="openVerDrawer($event)"
+                  (editarRequested)="openEditarDrawer($event)"
+                />
               }
 
               <!-- Cargar más: densidad incremental de la vista tarjetas -->
@@ -616,6 +543,38 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   protected readonly activeFilter = signal<FilterTab>('all');
 
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  /** Placeholder para satisfacer `instructor` (input.required) en las cards skeleton. */
+  protected readonly skeletonInstructor: InstructorTableRow = {
+    id: 0,
+    userId: 0,
+    nombre: '',
+    initials: '',
+    email: '',
+    rut: '',
+    phone: '',
+    tipo: 'practice',
+    tipoLabel: '',
+    licenseNumber: '',
+    licenseClass: '',
+    licenseExpiry: null,
+    licenseStatus: 'valid',
+    licenseStatusLabel: '',
+    activeClassesCount: 0,
+    estado: 'activo',
+    registrationDate: null,
+    vehiclePlate: null,
+    vehicleModel: null,
+    vehicleId: null,
+    vehicleAssignmentDate: null,
+    firstName: '',
+    paternalLastName: '',
+    maternalLastName: '',
+    branchId: null,
+    bothBranches: false,
+    firstLogin: false,
+    hasAuthAccount: true,
+  };
 
   // ── Lista filtrada ─────────────────────────────────────────────────────────
   protected readonly filteredInstructores = computed<InstructorTableRow[]>(() => {
