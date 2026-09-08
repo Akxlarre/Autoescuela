@@ -90,7 +90,8 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // fix-028: fuerza una sede con Clase Profesional (deshabilita "Todas"/sedes sin profesional).
     this.branchFacade.setProfessionalOnly(true);
-    void this.facade.initialize();
+    // La carga inicial ya la dispara el effect() del constructor — llamar
+    // initialize() acá también duplicaba la query de red (hotfix-055-b).
   }
 
   ngOnDestroy(): void {

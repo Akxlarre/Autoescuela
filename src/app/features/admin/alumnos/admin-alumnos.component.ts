@@ -73,7 +73,9 @@ export class AdminAlumnosComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.facade.initialize();
+    // La carga inicial ya la dispara el effect() del constructor (se ejecuta
+    // una vez al crear el componente) — llamar initialize() acá también
+    // duplicaba la query de red (hotfix-055-b).
     this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
   }
 
