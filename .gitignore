@@ -53,6 +53,10 @@ specs/.active
 # .claude/author.local.json.example — cada dev crea el suyo, no se comparte.
 .claude/author.local.json
 
+# Notas personales — casos revisados/excepciones a guardrails (ARCH-*) que no
+# ameritan un allowlist compartido ni entran en un fix.md. Solo para mi local.
+.claude/notes.local.md
+
 # Supabase CLI — estado local de qué branch de Supabase tienes activo
 # (supabase/.temp/ SÍ se commitea a propósito: project-ref/versiones del equipo)
 supabase/.branches/
