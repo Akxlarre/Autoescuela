@@ -169,7 +169,14 @@ export function findAdhocTypography(content) {
 // ── Ratchet / baseline ───────────────────────────────────────────────────────
 // Shape: { generatedAt, rules: { 'ARCH-15': { total, files: { relPath: n } }, ... } }
 
-export const DS_RULES = ['ARCH-15', 'ARCH-16', 'ARCH-17', 'ARCH-19'];
+// ARCH-25 (fix-160-b) se suma al MISMO ratchet en vez de traer su propio mecanismo: la
+// implementación vive en scripts/lib/card-composition.js, acá sólo entra al baseline
+// compartido. Arranca con cuota alta (~140 en 66 archivos) a propósito — es backlog real
+// pre-existente, no regresión; lo que la regla impide es que suba.
+// ARCH-26 (fix-160-b, 2ª pasada) también entra acá: los colores absolutos opacos son *a
+// veces* correctos (papel de un PDF, perilla de un toggle), así que no pueden ser error duro
+// como los de paleta. Ver hardcoded-colors.js.
+export const DS_RULES = ['ARCH-15', 'ARCH-16', 'ARCH-17', 'ARCH-19', 'ARCH-25', 'ARCH-26'];
 
 export function buildBaseline(countsByRule) {
   const rules = {};

@@ -43,7 +43,13 @@ import {
 import { findIconOnlyButtonsWithoutLabel, findHandRolledTapAreas } from './lib/a11y-guardrails.js';
 import { extractBentoClasses, diffBentoClasses } from './check-bento-classes.js';
 import { findReservedTailwindClassCollisions } from './lib/tailwind-bare-utilities.js';
-import { findSharedRoleViolations, loadOrganismAllowlist, normalizeRepoPath } from './lib/shared-roles.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
+import { findSharedRoleViolations, loadOrganismAllowlist, normalizeRepoPath } from './lib/shared-roles.js';
+import {
+    findHardcodedPaletteColors,
+    findHardcodedAbsoluteColors,
+    HARDCODED_COLOR_FIX,
+} from './lib/hardcoded-colors.js';
+import { findAdHocCardCompositions, CARD_COMPOSITION_FIX } from './lib/card-composition.js';// TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -276,6 +282,16 @@ const RULES = {
         doc: '.claude/rules/architecture.md (§Smart vs Dumb Components) + fix-156-b (ASG-b-092)',
         fix: 'Un Dumb presentacional recibe sus datos por input() y no inyecta ningún Facade. Un Organismo de dominio (se abre vía LayoutDrawerFacadeService.open(), sin padre que le pase inputs) puede inyectar el Facade de SU dominio, nunca uno transversal (AuthFacade/BranchFacade): mové ese computed() al Facade de dominio. Para declarar un organismo nuevo: scripts/lib/shared-organisms.allowlist.json, con justificación.',
     },
+    'ARCH-25': {
+        name: 'Card compuesta a mano en vez de .card (ratchet)',
+        doc: '.claude/rules/visual-system.md (§Cards) + .claude/rules/architecture.md (§Clases Semánticas vs Tailwind Genérico) + fix-160-b',
+        fix: CARD_COMPOSITION_FIX,
+    },
+    'ARCH-26': {
+        name: 'Blanco/negro opaco o hex arbitrario (ratchet)',
+        doc: '.claude/rules/visual-system.md (§Tokens de color) + fix-160-b',
+        fix: HARDCODED_COLOR_FIX,
+    },
 };
 
 // ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
@@ -339,6 +355,8 @@ const dsCounts = {
     'ARCH-16': new Map(),
     'ARCH-17': new Map(),
     'ARCH-19': new Map(),
+    'ARCH-25': new Map(),
+    'ARCH-26': new Map(),
 };
 function trackClassDiscipline(filePath, content) {
     const rel = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
@@ -358,6 +376,10 @@ function trackClassDiscipline(filePath, content) {
         const clusters = findAdhocTypography(content);
         add('ARCH-19', clusters.length, [...new Set(clusters)].join(', '));
     }
+    const adHocCards = findAdHocCardCompositions(content);
+    add('ARCH-25', adHocCards.length, adHocCards[0]);
+    const absoluteColors = findHardcodedAbsoluteColors(content);
+    add('ARCH-26', absoluteColors.length, absoluteColors.join(', '));
 }
 
 /** ARCH-20 — error duro, sin ratchet: la a11y no tiene backlog legítimo que tolerar. */
@@ -624,14 +646,13 @@ function analyzeTypeScript(filePath) {
         }
     }
 
-    // ── Regla 8: Colores Tailwind hardcodeados en .ts ───────────────────────
-    const hardcodedColorRe =
-        /(?:text|bg|border|ring|from|to|via)-(?:red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|emerald|rose|amber|lime|sky|violet|fuchsia)-\d{2,3}/g;
-    const colorMatches = content.match(hardcodedColorRe);
-    if (colorMatches) {
+    // ── Regla 8: colores de PALETA en .ts (error duro; los absolutos → ARCH-26) ──
+    const hardcodedColors = findHardcodedPaletteColors(content);
+    if (hardcodedColors.length > 0) {
         reportError(
             'ARCH-08', filePath,
-            `Colores Tailwind hardcodeados detectados: ${[...new Set(colorMatches)].join(', ')}`,
+            `Colores hardcodeados detectados: ${hardcodedColors.join(', ')}`,
+            HARDCODED_COLOR_FIX,
         );
     }
 
@@ -735,15 +756,13 @@ function analyzeTemplate(filePath) {
 
     checkDeprecatedDirectives(content, filePath, 'template');
 
-    // ── Regla 8: Colores Tailwind hardcodeados en .html ─────────────────────
-    const hardcodedColorRe =
-        /(?:text|bg|border|ring|from|to|via)-(?:red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|emerald|rose|amber|lime|sky|violet|fuchsia)-\d{2,3}/g;
-    const colorMatches = content.match(hardcodedColorRe);
-    if (colorMatches) {
+    // ── Regla 8: colores de PALETA en .html (error duro; los absolutos → ARCH-26) ──
+    const hardcodedColors = findHardcodedPaletteColors(content);
+    if (hardcodedColors.length > 0) {
         reportError(
             'ARCH-08', filePath,
-            `Colores Tailwind hardcodeados en template: ${[...new Set(colorMatches)].join(', ')}`,
-            'Usa tokens semánticos: text-text-primary, text-text-muted, bg-surface, bg-base.'
+            `Colores hardcodeados en template: ${hardcodedColors.join(', ')}`,
+            HARDCODED_COLOR_FIX,
         );
     }
 
