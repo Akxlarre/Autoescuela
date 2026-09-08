@@ -219,7 +219,11 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         <!-- VISTA Mobile: Tarjetas apiladas (visible cuando el CONTENEDOR se comprime) -->
         <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
           @for (servicio of serviciosVisibles(); track servicio.id) {
-            <div class="card flex flex-col gap-3" [class.opacity-60]="!servicio.activo">
+            <div
+              class="card flex flex-col gap-3"
+              appCardHover
+              [class.opacity-60]="!servicio.activo"
+            >
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-3 min-w-0">
                   <div

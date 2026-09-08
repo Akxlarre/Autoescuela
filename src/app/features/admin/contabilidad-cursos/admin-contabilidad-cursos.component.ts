@@ -136,7 +136,7 @@ const BILLING_LABEL: Record<string, string> = {
           </div>
 
           <!-- ══ VISTA MOBILE (contenedor angosto): cards apiladas ═══════════════ -->
-          <div class="mobile-view show-on-squeeze flex flex-col gap-3">
+          <div class="mobile-view show-on-squeeze p-4 space-y-3">
             @if (facade.isLoading()) {
               @for (i of skeletonRows; track i) {
                 <div class="rounded-xl p-4 flex flex-col gap-3 border border-border-muted">
@@ -153,7 +153,7 @@ const BILLING_LABEL: Record<string, string> = {
               </div>
             } @else {
               @for (curso of cursosFiltrados(); track curso.id) {
-                <div class="card p-0 overflow-hidden">
+                <div class="card p-0 overflow-hidden" appCardHover>
                   <!-- Cabecera de card: nombre + badges -->
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">

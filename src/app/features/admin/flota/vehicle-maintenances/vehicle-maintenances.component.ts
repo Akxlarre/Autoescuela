@@ -255,7 +255,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
               />
             } @else {
               @for (m of facade.maintenances(); track m.id) {
-                <div class="card p-0 overflow-hidden">
+                <div class="card p-0 overflow-hidden" appCardHover>
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="item-title truncate">{{ m.type }}</p>

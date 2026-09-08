@@ -215,7 +215,7 @@ function clp(n: number): string {
                 </div>
               } @else {
                 @for (row of facade.cuentaCorriente(); track row.instructorId) {
-                  <div class="card p-0 overflow-hidden">
+                  <div class="card p-0 overflow-hidden" appCardHover>
                     <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="item-title truncate">{{ row.nombre }}</p>
@@ -366,7 +366,7 @@ function clp(n: number): string {
                 </div>
               } @else {
                 @for (adv of facade.historial(); track adv.id) {
-                  <div class="card flex flex-col gap-2">
+                  <div class="card flex flex-col gap-2" appCardHover>
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="item-title truncate">{{ adv.instructorNombre }}</p>
