@@ -20,6 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | `i` | fix | P1 | b | 1-4.5s por carga, confirmado con EXPLAIN ANALYZE (1M+ buffer hits). Requiere migración + tests de regresión de double-booking antes de tocar producción |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
