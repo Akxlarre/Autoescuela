@@ -35,6 +35,7 @@ import {
   type PeriodWindow,
 } from '@core/utils/period-window.utils';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado-card.component';
 
 /**
  * Dumb presentacional para Ex-Alumnos Profesional (spec 0016).
@@ -60,6 +61,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     SectionHeroComponent,
     PeriodSelectorComponent,
     EmptyStateComponent,
+    EgresadoCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -285,119 +287,14 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (egresado of visibleCards(); track egresado.id) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
-                    appCardHover
-                    data-col-span="4"
-                  >
-                    <!-- Header -->
-                    <div
-                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
-                    >
-                      <div class="flex items-center gap-3 min-w-0">
-                        <div
-                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
-                        >
-                          {{ initials(egresado.nombre) }}
-                        </div>
-                        <div class="flex flex-col min-w-0">
-                          <span
-                            class="item-title truncate"
-                            [pTooltip]="egresado.nombre"
-                            tooltipPosition="top"
-                            >{{ egresado.nombre }}</span
-                          >
-                          <span
-                            class="text-xs text-text-muted truncate"
-                            [pTooltip]="egresado.correo"
-                            tooltipPosition="top"
-                            >{{ egresado.correo }}</span
-                          >
-                        </div>
-                      </div>
-                      <div class="flex flex-col items-end gap-1 shrink-0">
-                        <p-tag
-                          [value]="egresado.licencia"
-                          severity="secondary"
-                          styleClass="text-2xs font-bold px-2 py-0.5"
-                        ></p-tag>
-                        @if (egresado.convalidatedLicense) {
-                          <p-tag
-                            [value]="'Convalida ' + egresado.convalidatedLicense"
-                            severity="info"
-                            styleClass="text-2xs font-bold px-2 py-0.5"
-                          ></p-tag>
-                        }
-                      </div>
-                    </div>
-
-                    <!-- Body -->
-                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">RUT</span>
-                        <span class="font-medium text-text-secondary font-mono text-xs">{{
-                          egresado.rut
-                        }}</span>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Nº Mat.</span>
-                        <span class="font-medium text-text-secondary font-mono text-xs">{{
-                          egresado.nroExpediente ?? '—'
-                        }}</span>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Año / Sede</span>
-                        <span class="font-medium text-text-secondary text-xs"
-                          >{{ egresado.anio ?? '—' }} · {{ egresado.sede }}</span
-                        >
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Estado cuenta</span>
-                        @if (egresado.saldoPendiente > 0) {
-                          <p-tag
-                            [value]="
-                              'Debe ' +
-                              (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
-                            "
-                            severity="warn"
-                            styleClass="text-2xs font-bold px-1.5 py-0.5 w-fit"
-                          ></p-tag>
-                        } @else {
-                          <p-tag
-                            value="Al día"
-                            severity="success"
-                            styleClass="text-2xs font-bold px-1.5 py-0.5 w-fit"
-                          ></p-tag>
-                        }
-                      </div>
-                    </div>
-
-                    <!-- Footer Actions -->
-                    <div
-                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
-                    >
-                      <button
-                        aria-label="Ver ficha"
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                        pTooltip="Ver ficha"
-                        [routerLink]="[basePath() + '/alumnos', egresado.studentId]"
-                        [queryParams]="{ from: 'ex-alumnos' }"
-                        data-llm-action="view-student-detail-card"
-                      >
-                        <app-icon name="eye" [size]="16" />
-                      </button>
-                      <button
-                        aria-label="Re-matricular"
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                        pTooltip="Re-matricular"
-                        (click)="reEnroll.emit(egresado)"
-                        data-llm-action="re-enroll-student-card"
-                      >
-                        <app-icon name="user-plus" [size]="16" />
-                      </button>
-                    </div>
+                  <div class="bento-wide" data-col-span="4">
+                    <app-egresado-card
+                      [egresado]="egresado"
+                      [basePath]="basePath()"
+                      nroLabel="Nº Mat."
+                      [viewQueryParams]="{ from: 'ex-alumnos' }"
+                      (reEnrollRequested)="reEnroll.emit($event)"
+                    />
                   </div>
                 } @empty {
                   <div class="col-span-full py-8">
