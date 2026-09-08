@@ -16,6 +16,8 @@
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
+| `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
+| `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
@@ -31,13 +33,14 @@
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
-| `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` — arma los 4 KPIs del hero de Cuadratura Diaria (cuadratura en efectivo que cuadra: apertura + ingresos efvo. − egresos efvo. = saldo). Consumido por `app-cuadratura-content` (fix-230-m) |
+| `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |
-| `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` — mantener sincronizado con `supabase/functions/_shared/epq-questions.ts`, verificado por `epq-questions.parity.spec.ts` |
+| `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
@@ -56,14 +59,14 @@
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
-| `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `applyPeriodWindow` — ventana de período para listas históricas acumulativas (fix-147-b). Filtro de **renderizado**, no de query: el dataset completo se sigue trayendo de BD. ⚠️ `applyPeriodWindow` devuelve la lista completa cuando `hasActiveSearch` es `true` — regla no negociable de ASG-b-087: si el período atrapara a la búsqueda, buscar a alguien con matrícula vieja daría "0 resultados" y eso se lee como "no existe". Los registros sin fecha se conservan a propósito. Acepta `cutoffIso` explícito para tests deterministas. Consumido por `app-period-selector`. |
+| `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate` |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
-| `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeDetalleDiario`, `computeRentabilidadCursos` (fix-237-m — estimación de rentabilidad por tipo de curso: ingresos reales + gastos directos prorrateados), `buildReporte` (ahora acepta `classCounts` y `directExpenses` opcionales) |
+| `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeDetalleDiario`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
 | `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |

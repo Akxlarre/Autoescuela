@@ -191,7 +191,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (79 tablas, acumulado de las migraciones)
+## Esquema efectivo (80 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -257,16 +257,30 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
 | insert_audit_log | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
-
-> `select_audit_log` ampliada en `fix-224-m` (2026-08-25): antes era `auth_user_role() = 'admin'`
-> a secas — ninguna secretaria podía leer NINGUNA fila, ni siquiera las suyas propias, por lo que
-> el widget "Actividad reciente" de su dashboard quedaba permanentemente vacío pese a que
-> `log_change()` sí registraba sus acciones. Ahora cualquier usuario puede ver además las filas
-> donde él mismo es el actor (`user_id = auth_user_id()`).
+| select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
+
+### `branch_payroll_config` — 🔒 RLS
+
+> Parametros de nomina por sede (spec 0014-m). amount_per_hour = CLP por hora '
+  'equivalente de instructor. Global por sede, no por instructor. Seed = 5000.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `branch_id` PK | INT | NO | — | → `branches.id` |
+| `amount_per_hour` | INTEGER | NO | `5000` | — |
+| `updated_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `updated_by` | INT | sí | — | → `users.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_branch_payroll_config | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| insert_branch_payroll_config | INSERT | — | `auth_user_role() = 'admin'` |
+| update_branch_payroll_config | UPDATE | `auth_user_role() = 'admin'` | — |
 
 ### `branches` — 🔒 RLS
 
@@ -309,7 +323,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `voucher_amount` | INTEGER | sí | `0` | — |
 | `total_income` | INTEGER | sí | — | — |
 | `total_expenses` | INTEGER | sí | — | — |
-| `cash_expenses` | INTEGER | sí | — | — |
 | `balance` | INTEGER | sí | — | — |
 | `payments_count` | INTEGER | sí | — | — |
 | `qty_bill_20000` | SMALLINT | sí | `0` | — |
@@ -328,27 +341,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `closed_by` | INT | sí | — | → `users.id` |
 | `closed_at` | TIMESTAMPTZ | sí | — | — |
 | `notes` | TEXT | sí | — | — |
-| `branch_id_key` | INT (generado) | NO | `COALESCE(branch_id, -1)` | — |
+| `branch_id_key` | INT | sí | — | — |
 | `opening_amount` | INTEGER | sí | — | — |
 | `arqueo_enabled` | BOOLEAN | sí | — | — |
-
-> **Borrador de arqueo (spec 0012-m):** `status` ahora también toma el valor `'draft'` — la
-> misma fila que representa el cierre del día se usa para el borrador autoguardado del drawer
-> "Arqueo y Cierre" (fondo, cantidades, notas, toggle), y pasa a `'closed'` recién al confirmar
-> el cierre. `branch_id_key` es una columna **generada** (`GENERATED ALWAYS AS ... STORED`) que
-> normaliza `branch_id NULL` a `-1` — necesaria porque `onConflict` de PostgREST/supabase-js no
-> acepta un índice sobre expresión (`COALESCE`) como target, solo columnas reales. El
-> `UNIQUE INDEX ux_cash_closings_date_branch` vive sobre `(date, branch_id_key)`, y todo upsert
-> desde el cliente usa `{ onConflict: 'date,branch_id_key' }`. `opening_amount`/`arqueo_enabled`
-> persisten el fondo de apertura y el toggle de arqueo físico — ninguno se deriva de otra tabla.
->
-> **`cash_expenses` (fix-226-m):** snapshot al cierre del subtotal de egresos pagados **en
-> efectivo** (`expenses` + `instructor_advances` con `payment_method = 'efectivo'`) — lo único
-> que baja el saldo físico de la caja (fix-211-m). Separado de `total_expenses` (que suma todos
-> los métodos) para que el Historial de Cuadratura y los reportes muestren "egreso efectivo"
-> (afecta arqueo) vs "egreso tarjeta/transferencia" (no afecta) sin depender de la identidad
-> `balance = opening_amount + cash_amount − cash_expenses`. Null en cierres previos al fix →
-> el cliente usa esa identidad como fallback derivado.
+| `cash_expenses` | INTEGER | sí | — | — |
 
 **Policies:**
 
@@ -356,15 +352,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
-| update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'draft' AND branch_visible(branch_id))` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visible(branch_id))` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
+| update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'd…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 
-> ⚠️ `update_cash_closings` (spec 0012-m) declara `WITH CHECK` **distinto** del `USING` a
-> propósito: `USING` exige que la fila VIEJA sea `'draft'` (una secretaria nunca puede tocar una
-> fila ya `'closed'`), pero `WITH CHECK` no repite esa condición sobre la fila NUEVA — si lo
-> hiciera, la propia transición `draft → closed` que hace `cerrarCaja()` quedaría bloqueada por
-> su propia policy (bug real encontrado en QA manual, 403 reproducido y corregido antes de
-> cerrar la spec). Sin `WITH CHECK` explícito, Postgres reutiliza el `USING` para ambos casos.
+**Índices:** `ux_cash_closings_date_branch`
 
 ### `certificate_batches` — 🔒 RLS
 
@@ -1000,7 +991,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `vehicle_id` | INT | sí | — | → `vehicles.id` |
-| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
+| `payment_method` | TEXT | NO | `'efectivo'` | — |
 
 **Policies:**
 
@@ -1051,7 +1042,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `deducted_on` | DATE | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
-| `payment_method` | TEXT | NO | `'efectivo'` | — (`'efectivo'\|'transferencia'\|'tarjeta'`, fix-211-m) |
+| `payment_method` | TEXT | NO | `'efectivo'` | — |
 
 **Policies:**
 
@@ -1130,27 +1121,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_instructor_monthly_payments | INSERT | — | `auth_user_role() = 'admin'` |
 | update_instructor_monthly_payments | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_instructor_monthly_payments | DELETE | `auth_user_role() = 'admin'` | — |
-
-### `branch_payroll_config` — 🔒 RLS
-
-> Tarifa CLP por hora equivalente de instructor, global por sede (spec 0014-m, `20260907120000`).
-> Seed = 5000 por sede.
-
-| Columna | Tipo | Null | Default | FK |
-|---------|------|------|---------|----|
-| `branch_id` PK | INT | NO | — | → `branches.id` |
-| `amount_per_hour` | INTEGER | NO | `5000` | CHECK ≥ 0 |
-| `updated_at` | TIMESTAMPTZ | NO | `NOW()` | trigger `set_updated_at()` |
-| `updated_by` | INT | sí | — | → `users.id` |
-
-**Policies:**
-
-| Policy | Cmd | USING | WITH CHECK |
-|--------|-----|-------|------------|
-| select_branch_payroll_config | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| insert_branch_payroll_config | INSERT | — | `auth_user_role() = 'admin'` |
-| update_branch_payroll_config | UPDATE | `auth_user_role() = 'admin'` | — |
-| (sin DELETE) | — | — | — |
 
 ### `instructor_replacements` — 🔒 RLS
 
@@ -1374,14 +1344,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_notifications | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_notifications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 
-**Índices:** `idx_unread_notifications`, `idx_notifications_not_deleted` (parcial, `(recipient_id, created_at DESC) WHERE deleted_at IS NULL` — **spec 0013-m**)
-
-> **`deleted_at` (spec 0013-m, `20260904120000_notifications_soft_delete.sql`):** soft-delete para
-> "eliminar notificaciones" del panel/drawer, sin borrado físico (el drawer de historial completo
-> debe poder listar también las eliminadas). **No requirió policy RLS nueva** — `update_notifications`
-> y `select_notifications` ya cubrían "propia fila" (`recipient_id = auth_user_id()`) sin distinguir
-> `deleted_at`, así que alcanzan tanto para el soft-delete individual/masivo como para que el drawer
-> lea el historial completo (activas + eliminadas).
+**Índices:** `idx_notifications_not_deleted`, `idx_unread_notifications`
 
 ### `payment_attempts` — 🔒 RLS
 
@@ -2392,6 +2355,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
+| `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
@@ -2411,7 +2375,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

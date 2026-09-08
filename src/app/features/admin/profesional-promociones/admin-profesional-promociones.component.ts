@@ -35,6 +35,7 @@ import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-draw
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 import { getCourseColor } from '@core/utils/course-colors';
+import { PromocionCardComponent } from '@shared/components/promocion-card/promocion-card.component';
 
 /** Prioridad de estado para el orden de la lista: activas primero, planificadas al final. */
 const STATUS_ORDER: Record<PromocionStatus, number> = {
@@ -60,6 +61,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
     IconComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
+    PromocionCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -155,21 +157,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
           <!-- VISTA Mobile: Tarjetas skeleton (visible cuando se comprime) -->
           <div class="mobile-view show-on-squeeze p-4 space-y-4">
             @for (card of [1, 2, 3]; track card) {
-              <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
-                <div class="flex items-center gap-3">
-                  <app-skeleton-block variant="circle" width="40px" height="40px" />
-                  <div class="flex flex-col gap-1.5 flex-1">
-                    <app-skeleton-block variant="text" width="70%" height="13px" />
-                    <app-skeleton-block variant="text" width="40%" height="11px" />
-                  </div>
-                  <app-skeleton-block variant="rect" width="60px" height="20px" />
-                </div>
-                <app-skeleton-block variant="text" width="90%" height="11px" />
-                <div class="flex flex-wrap gap-2">
-                  <app-skeleton-block variant="rect" width="30px" height="18px" />
-                  <app-skeleton-block variant="rect" width="30px" height="18px" />
-                </div>
-              </div>
+              <app-promocion-card [loading]="true" [promocion]="skeletonPromocion" />
             }
           </div>
         } @else {
@@ -296,92 +284,11 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
           <!-- VISTA Mobile: Tarjetas apiladas (visible cuando se comprime / drawer abierto) -->
           <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
             @for (promo of filteredPromociones(); track promo.id) {
-              <div class="promo-card p-4 rounded-xl border border-(--border-subtle) relative">
-                <!-- Header: icono + nombre/código + estado -->
-                <div class="flex items-start justify-between gap-3 mb-3">
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div
-                      class="w-10 h-10 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
-                    >
-                      <app-icon name="calendar" [size]="18" />
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                      <h3 class="item-title truncate">{{ promo.name }}</h3>
-                      <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
-                    </div>
-                  </div>
-                  <p-tag
-                    [value]="statusLabel(promo.status)"
-                    [severity]="statusSeverity(promo.status)"
-                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                  ></p-tag>
-                </div>
-
-                <!-- Meta: fechas + alumnos -->
-                <div class="flex items-center gap-4 flex-wrap mb-3">
-                  <span class="flex items-center gap-1.5 text-xs text-text-muted">
-                    <app-icon name="calendar" [size]="12" />
-                    {{ promo.startDate | date: 'dd/MM/yyyy' }} →
-                    {{ promo.endDate | date: 'dd/MM/yyyy' }}
-                  </span>
-                  <span class="flex items-center gap-1.5 text-xs text-text-secondary">
-                    <app-icon name="users" [size]="12" />
-                    {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
-                  </span>
-                </div>
-
-                <!-- Cursos -->
-                <div class="flex flex-wrap gap-1.5 mb-3">
-                  @for (curso of promo.cursos; track curso.id) {
-                    <span
-                      class="course-badge"
-                      [style.background]="getCourseColor(curso.courseCode)"
-                      [pTooltip]="
-                        curso.courseName +
-                        ': ' +
-                        curso.enrolledStudents +
-                        '/' +
-                        curso.maxStudents +
-                        ' alumnos'
-                      "
-                    >
-                      {{ curso.courseCode }}
-                    </span>
-                  }
-                </div>
-
-                <!-- Footer: acciones -->
-                <div
-                  class="flex items-center justify-between pt-3"
-                  style="border-top: 1px dashed var(--border-subtle)"
-                >
-                  <span class="text-2xs uppercase font-bold text-text-muted">
-                    {{ promo.cursos.length }} curso(s)
-                  </span>
-                  <div class="inline-flex items-center gap-0.5">
-                    <button
-                      aria-label="Ver detalle"
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      pTooltip="Ver detalle"
-                      (click)="openVerDrawer(promo)"
-                      data-llm-action="ver-promocion"
-                    >
-                      <app-icon name="eye" [size]="16" />
-                    </button>
-                    <button
-                      aria-label="Editar promoción"
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      pTooltip="Editar promoción"
-                      (click)="openEditarDrawer(promo)"
-                      data-llm-action="editar-promocion"
-                    >
-                      <app-icon name="edit" [size]="16" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <app-promocion-card
+                [promocion]="promo"
+                (verRequested)="openVerDrawer($event)"
+                (editarRequested)="openEditarDrawer($event)"
+              />
             } @empty {
               <app-empty-state
                 icon="calendar-x"
@@ -480,6 +387,21 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true },
   ]);
+
+  /** Placeholder para satisfacer `promocion` (input.required) en las cards skeleton. */
+  protected readonly skeletonPromocion: PromocionTableRow = {
+    id: 0,
+    code: '',
+    name: '',
+    startDate: '',
+    endDate: '',
+    status: 'planned',
+    statusLabel: '',
+    currentDay: 0,
+    maxStudents: 0,
+    totalEnrolled: 0,
+    cursos: [],
+  };
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => [
     {

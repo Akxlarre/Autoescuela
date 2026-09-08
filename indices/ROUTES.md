@@ -72,6 +72,7 @@
 | `/app/secretaria/contabilidad/reportes` | `SecretariaContabilidadReportesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/contabilidad/historial-cuadraturas` | `SecretariaContabilidadHistorialCuadraturasComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/contabilidad/liquidaciones` | `SecretariaContabilidadLiquidacionesComponent` | — | `src/app/app.routes.ts` |
+| `/app/secretaria/contabilidad/cursos` | `AdminContabilidadCursosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/certificados` | `SecretariaCertificadosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/documentos` | `SecretariaDocumentosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/instructores` | `SecretariaInstructoresComponent` | — | `src/app/app.routes.ts` |
@@ -93,7 +94,6 @@
 | `/app/instructor/alumnos` | `InstructorAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/alumnos/:id` | → redirect a `:id/ficha` | — | `src/app/app.routes.ts` |
 | `/app/instructor/alumnos/:id/ficha` | `InstructorFichaComponent` | — | `src/app/app.routes.ts` |
-| `/app/instructor/alumnos/:id/evaluacion/:sessionId` | `InstructorEvaluacionComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/clase/iniciar` | `InstructorClaseComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/clase/:id` | `InstructorClaseDetailComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/ficha/:id` | → redirect a `alumnos/:id/ficha` | — | `src/app/app.routes.ts` |

@@ -28,6 +28,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 // Facades & Services
 import { FlotaDetalleFacade } from '@core/facades/flota-detalle.facade';
@@ -70,6 +71,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
     SectionHeroComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
+    BadgeComponent,
   ],
   template: `
     <div
@@ -253,17 +255,15 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
               />
             } @else {
               @for (m of facade.maintenances(); track m.id) {
-                <div class="rounded-xl border overflow-hidden border-border-muted bg-surface">
+                <div class="card p-0 overflow-hidden">
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="item-title truncate">{{ m.type }}</p>
                       <p class="text-xs mt-0.5 text-text-muted">{{ m.date }}</p>
                     </div>
-                    <p-tag
-                      [value]="m.status === 'completed' ? 'Completado' : 'Programado'"
-                      [severity]="m.status === 'completed' ? 'success' : 'warn'"
-                      styleClass="shrink-0 rounded-full text-2xs px-2 font-bold uppercase"
-                    />
+                    <app-badge [variant]="m.status === 'completed' ? 'success' : 'warning'">
+                      {{ m.status === 'completed' ? 'Completado' : 'Programado' }}
+                    </app-badge>
                   </div>
                   @if (m.description) {
                     <p class="px-4 pb-3 text-xs text-text-muted">{{ m.description }}</p>

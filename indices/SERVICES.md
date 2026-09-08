@@ -147,8 +147,8 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
 | `DmsViewerService` | `LayoutDrawerFacadeService` | `src/app/core/services/ui/dms-viewer.service.ts` |
-| `EpqPrintService` | — | `src/app/core/services/ui/epq-print.service.ts` |
-| `FichaTecnicaPrintService` | — | `src/app/core/services/ui/ficha-tecnica-print.service.ts` |
+| `EpqPrintService` | `SupabaseService` | `src/app/core/services/ui/epq-print.service.ts` |
+| `FichaTecnicaPrintService` | `SupabaseService` | `src/app/core/services/ui/ficha-tecnica-print.service.ts` |
 | `GsapAnimationsService` | `PLATFORM_ID`, `NgZone` | `src/app/core/services/ui/gsap-animations.service.ts` |
 | `LayoutDrawerFacadeService` | `LayoutDrawerService` | `src/app/core/services/ui/layout-drawer.facade.service.ts` |
 | `LayoutDrawerService` | — | `src/app/core/services/ui/layout-drawer.service.ts` |

@@ -26,6 +26,7 @@ import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
+import { AlumnoProfesionalCardComponent } from '../alumno-profesional-card/alumno-profesional-card.component';
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -69,6 +70,7 @@ interface SemaforoInfo {
     EmptyStateComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
+    AlumnoProfesionalCardComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
@@ -159,42 +161,8 @@ interface SemaforoInfo {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (card of skeletonRows; track card) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
-                    data-col-span="4"
-                  >
-                    <div
-                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
-                    >
-                      <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <app-skeleton-block
-                          variant="circle"
-                          width="40px"
-                          height="40px"
-                          class="shrink-0"
-                        />
-                        <div class="flex flex-col gap-2 w-full">
-                          <app-skeleton-block variant="text" width="80%" height="12px" />
-                          <app-skeleton-block variant="text" width="60%" height="10px" />
-                        </div>
-                      </div>
-                      <app-skeleton-block
-                        variant="rect"
-                        width="48px"
-                        height="20px"
-                        class="shrink-0"
-                      />
-                    </div>
-                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 bg-surface">
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="40%" height="10px" />
-                        <app-skeleton-block variant="text" width="80%" height="12px" />
-                      </div>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="60%" height="10px" />
-                        <app-skeleton-block variant="rect" width="70px" height="20px" />
-                      </div>
-                    </div>
+                  <div class="bento-wide" data-col-span="4">
+                    <app-alumno-profesional-card [loading]="true" [alumno]="skeletonAlumno" />
                   </div>
                 }
               </div>
@@ -355,132 +323,14 @@ interface SemaforoInfo {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (alumno of filteredAlumnos(); track alumno.id) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
-                    appCardHover
-                    data-col-span="4"
-                  >
-                    <!-- Header: Nombre + Estado -->
-                    <div
-                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
-                    >
-                      <div class="flex items-center gap-3 min-w-0">
-                        <div
-                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
-                        >
-                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
-                        </div>
-                        <div class="flex flex-col min-w-0">
-                          <span
-                            class="item-title truncate"
-                            [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
-                            tooltipPosition="top"
-                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                          >
-                          <span
-                            class="text-xs text-text-muted truncate font-mono"
-                            [pTooltip]="alumno.rut"
-                            tooltipPosition="top"
-                            >{{ alumno.rut }}</span
-                          >
-                        </div>
-                      </div>
-                      <p-tag
-                        [value]="alumno.estado"
-                        [severity]="getStatusSeverity(alumno.estado)"
-                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                      ></p-tag>
-                    </div>
-
-                    <!-- Body: RUT visible en header; progreso + asistencia + saldo aquí -->
-                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Promoción</span>
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <p-tag
-                            [value]="alumno.promocion"
-                            severity="secondary"
-                            styleClass="text-2xs font-bold px-1.5 py-0.5"
-                          ></p-tag>
-                          @if (alumno.convalidatedLicense) {
-                            <p-tag
-                              [value]="'Convalida ' + alumno.convalidatedLicense"
-                              severity="info"
-                              styleClass="text-2xs font-bold px-1.5 py-0.5"
-                            ></p-tag>
-                          }
-                        </div>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Asistencia</span>
-                        @let semM = getSemaforo(alumno.semaforo);
-                        <div class="flex items-center">
-                          <p-tag
-                            [value]="semM.label"
-                            [severity]="semM.severity"
-                            styleClass="text-2xs font-bold px-1.5 py-0.5"
-                          ></p-tag>
-                        </div>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Progreso Módulos</span>
-                        <div class="flex items-center gap-2">
-                          <div class="w-14 h-1.5 rounded-full bg-elevated overflow-hidden">
-                            <div
-                              class="h-full bg-brand rounded-full"
-                              [style.width.%]="moduloPct(alumno)"
-                            ></div>
-                          </div>
-                          <span class="font-medium text-text-secondary font-mono text-xs"
-                            >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
-                          >
-                        </div>
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-2xs text-text-muted mb-0.5">Saldo</span>
-                        <span class="font-medium text-text-secondary text-xs">{{
-                          alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0'
-                        }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Footer Actions -->
-                    <div
-                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
-                    >
-                      @if (trashView()) {
-                        <button
-                          aria-label="Restaurar alumno"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
-                          pTooltip="Restaurar alumno"
-                          (click)="restaurarRequested.emit(alumno.id)"
-                          data-llm-action="restore-professional-student-card"
-                        >
-                          <app-icon name="rotate-ccw" [size]="16" />
-                        </button>
-                      } @else {
-                        <button
-                          aria-label="Ver ficha"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          pTooltip="Ver ficha"
-                          [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
-                        >
-                          <app-icon name="eye" [size]="16" />
-                        </button>
-                        <button
-                          aria-label="Archivar alumno"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
-                          pTooltip="Archivar alumno"
-                          (click)="archivarRequested.emit(alumno.id)"
-                          data-llm-action="archive-professional-student-card"
-                        >
-                          <app-icon name="trash-2" [size]="16" />
-                        </button>
-                      }
-                    </div>
+                  <div class="bento-wide" data-col-span="4">
+                    <app-alumno-profesional-card
+                      [alumno]="alumno"
+                      [trashView]="trashView()"
+                      [basePath]="basePath()"
+                      (restaurarRequested)="restaurarRequested.emit($event)"
+                      (archivarRequested)="archivarRequested.emit($event)"
+                    />
                   </div>
                 } @empty {
                   <div class="col-span-full py-8">
@@ -544,6 +394,25 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   protected readonly skeletonRows = Array(6).fill(0);
+
+  /** Placeholder para satisfacer `alumno` (input.required) en las cards skeleton. */
+  protected readonly skeletonAlumno: AlumnoProfesionalTableRow = {
+    id: '',
+    nombre: '',
+    apellido: '',
+    rut: '',
+    email: '',
+    celular: '',
+    nroMatricula: '',
+    promocion: '',
+    licenseClass: '',
+    semaforo: null,
+    modulosAprobados: 0,
+    modulosTotal: 0,
+    estado: 'Activo',
+    saldo: 0,
+    enrollmentId: 0,
+  };
 
   searchTerm = '';
   selectedClase = '';

@@ -436,7 +436,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           >
             @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
               <div
-                class="rounded-xl border border-border-subtle bg-base p-3 flex flex-col gap-2.5"
+                class="card flex flex-col gap-2.5"
                 [class.border-brand]="
                   pendingConfirmId() === alumno.enrollmentId ||
                   emailConfirmId() === alumno.enrollmentId

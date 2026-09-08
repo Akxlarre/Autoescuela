@@ -56,6 +56,7 @@ import {
   type VehicleDocWarningInfo,
 } from '@core/utils/vehicle-document-status.utils';
 import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
+import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component';
 
 /**
  * FlotaListContentComponent — Dumb Component (Organismo)
@@ -81,6 +82,7 @@ import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
     EmptyStateComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
+    VehiculoCardComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
@@ -194,16 +196,7 @@ import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
             <!-- VISTA Mobile Skeleton -->
             <div class="mobile-view show-on-squeeze p-4 space-y-4">
               @for (card of [1, 2]; track card) {
-                <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
-                  <div class="flex justify-between items-start">
-                    <app-skeleton-block variant="rect" width="70px" height="26px" />
-                    <app-skeleton-block variant="rect" width="60px" height="20px" />
-                  </div>
-                  <div class="space-y-2">
-                    <app-skeleton-block variant="text" width="90%" height="14px" />
-                    <app-skeleton-block variant="text" width="60%" height="12px" />
-                  </div>
-                </div>
+                <app-vehiculo-card [loading]="true" [vehiculo]="skeletonVehiculo" />
               }
             </div>
           </div>
@@ -364,99 +357,14 @@ import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
             <!-- VISTA 2: TARJETAS Mobile -->
             <div class="mobile-view show-on-squeeze p-4 space-y-4">
               @for (v of vehicles(); track v.id) {
-                <div
-                  class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
-                >
-                  <div
-                    class="p-4 border-b border-border-subtle flex items-start justify-between gap-3 bg-subtle"
-                  >
-                    <span
-                      class="font-mono font-bold bg-white px-2 py-1 rounded border border-border-subtle text-xs"
-                    >
-                      {{ v.licensePlate }}
-                    </span>
-                    <div class="flex items-center gap-1.5">
-                      @if (docWarning(v); as w) {
-                        <app-icon
-                          name="alert-triangle"
-                          [size]="15"
-                          [color]="hasExpiredDoc(v) ? 'var(--state-error)' : 'var(--state-warning)'"
-                          [pTooltip]="docWarningLabel(v)"
-                          tooltipPosition="top"
-                          [attr.aria-label]="docWarningLabel(v)"
-                        />
-                      }
-                      <p-tag
-                        [value]="statusLabel(v.status)"
-                        [severity]="statusSeverity(v.status)"
-                        styleClass="text-2xs px-1.5"
-                      />
-                    </div>
-                  </div>
-                  <div class="p-4 space-y-3">
-                    <p class="item-title">
-                      {{ v.brand }} {{ v.model }}
-                      <span class="text-text-muted font-medium">({{ v.year }})</span>
-                    </p>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                      <div class="flex flex-col">
-                        <span class="text-text-muted mb-0.5">Instructor</span>
-                        <span
-                          class="truncate"
-                          [pTooltip]="v.instructorName || '—'"
-                          tooltipPosition="top"
-                          >{{ v.instructorName || '—' }}</span
-                        >
-                      </div>
-                      <div class="flex flex-col">
-                        <span class="text-text-muted mb-0.5">Kilometraje</span>
-                        <span class="font-mono">{{ v.currentKm | number }} km</span>
-                      </div>
-                      @if (showSedeColumn()) {
-                        <div class="flex flex-col">
-                          <span class="text-text-muted mb-0.5">Sede</span>
-                          <span>{{ sedeLabel(v.branchId, v.bothBranches) }}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
-                    <button
-                      aria-label="Agenda"
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
-                      (click)="viewAgenda.emit(v.id)"
-                      data-llm-action="ver-agenda-vehiculo"
-                    >
-                      <app-icon name="calendar" [size]="14" />
-                    </button>
-                    <button
-                      aria-label="Documentos"
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
-                      (click)="manageDocuments.emit(v.id)"
-                      data-llm-action="gestionar-documentos-vehiculo"
-                    >
-                      <app-icon name="file-text" [size]="14" />
-                    </button>
-                    <button
-                      aria-label="Editar"
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
-                      (click)="editVehicle.emit(v.id)"
-                      data-llm-action="editar-vehiculo"
-                    >
-                      <app-icon name="pencil" [size]="14" />
-                    </button>
-                    <a
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
-                      [routerLink]="[basePath(), 'flota', v.id, 'mantenimientos']"
-                      data-llm-nav="mantenimientos-vehiculo"
-                      ><app-icon name="wrench" [size]="14"
-                    /></a>
-                  </div>
-                </div>
+                <app-vehiculo-card
+                  [vehiculo]="v"
+                  [basePath]="basePath()"
+                  [sedeLabel]="showSedeColumn() ? sedeLabel(v.branchId, v.bothBranches) : null"
+                  (viewAgenda)="viewAgenda.emit($event)"
+                  (manageDocuments)="manageDocuments.emit($event)"
+                  (editVehicle)="editVehicle.emit($event)"
+                />
               } @empty {
                 <app-empty-state icon="car" message="Sin resultados" (action)="resetFilters()" />
               }
@@ -622,6 +530,26 @@ export class FlotaListContentComponent {
   readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new-vehicle', label: 'Nuevo Vehículo', icon: 'plus', primary: true },
   ]);
+
+  /** Placeholder para satisfacer `vehiculo` (input.required) en las cards skeleton. */
+  protected readonly skeletonVehiculo: VehicleTableRow = {
+    id: 0,
+    licensePlate: '',
+    brand: '',
+    model: '',
+    year: 0,
+    vehicleLabel: '',
+    type: 'class_b',
+    status: 'available',
+    currentKm: 0,
+    nextMaintenanceDate: null,
+    instructorName: null,
+    instructorId: null,
+    branchId: null,
+    bothBranches: false,
+    documents: [],
+    combustibleMes: 0,
+  };
 
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
