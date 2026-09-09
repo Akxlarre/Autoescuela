@@ -191,7 +191,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (80 tablas, acumulado de las migraciones)
+## Esquema efectivo (82 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -236,6 +236,54 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | all_alert_config | ALL | `auth_user_role() = 'admin'` | — |
+
+### `announcement_recipients` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `announcement_id` | BIGINT | NO | — | → `announcements.id` |
+| `user_id` | INT | NO | — | → `users.id` |
+| `email` | TEXT | sí | — | — |
+| `email_sent_ok` | BOOLEAN | NO | `false` | — |
+| `send_error` | TEXT | sí | — | — |
+| `notification_id` | INT | sí | — | → `notifications.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_announcement_recipients | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND announceme…` | — |
+
+**Índices:** `idx_announcement_recipients_user`
+
+### `announcements` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `subject` | TEXT | NO | — | — |
+| `body` | TEXT | NO | — | — |
+| `kind` | TEXT | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `segment_filters` | JSONB | NO | `'{}'` | — |
+| `sent_by` | INT | NO | — | → `users.id` |
+| `sent_at` | TIMESTAMPTZ | sí | — | — |
+| `recipients_total` | INT | NO | `0` | — |
+| `email_ok_count` | INT | NO | `0` | — |
+| `email_failed_count` | INT | NO | `0` | — |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_announcements | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| insert_announcements | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` |
+| update_announcements | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` | — |
+
+**Índices:** `idx_announcements_branch_sent`
 
 ### `audit_log` — 🔒 RLS
 
@@ -729,6 +777,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_consents | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
 | insert_consents | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
 | update_consents_revocation | UPDATE | `auth_user_role() = 'admin'` | — |
+| update_consents_self_revoke_promocional | UPDATE | `user_id = auth_user_id() AND consent_type = 'comunicaciones_promocionales'` | `user_id = auth_user_id() AND consent_type = 'comunicaciones_promocionales'` |
+| select_consents_self | SELECT | `user_id = auth_user_id()` | — |
 
 **Índices:** `idx_consents_enrollment`, `idx_consents_subject_rut`, `idx_consents_user`
 

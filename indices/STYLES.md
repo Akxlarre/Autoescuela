@@ -323,10 +323,10 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 440 | `#38bdf8` |
-| `--text-muted` | 386 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 442 | `#38bdf8` |
+| `--text-muted` | 388 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 269 | `var(--color-primary-text)` |
-| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
+| `--text-secondary` | 233 | `rgba(255, 255, 255, 0.78)` |
 | `--state-error` | 228 | `#f87171` |
 | `--border-subtle` | 208 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 196 | `#18181b` |
@@ -353,9 +353,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 272 | `src/styles/tokens/_variables.scss` |
+| `.card` | 275 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 176 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 175 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 175 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 51 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 873 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 874 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

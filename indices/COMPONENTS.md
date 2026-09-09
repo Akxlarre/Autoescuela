@@ -419,7 +419,7 @@
 | `app-privacy-notice` | `branchSlug`, `context` | — | `src/app/shared/components/privacy-notice/privacy-notice.component.ts` |
 | `app-promocion-card` | `promocion`, `loading` | `verRequested`, `editarRequested` | `src/app/shared/components/promocion-card/promocion-card.component.ts` |
 | `app-public-context-banner` | `context` | `editRequested` | `src/app/shared/components/public-enrollment-steps/public-context-banner/public-context-banner.component.ts` |
-| `app-public-contract` | `data` | `contractSigned`, `goBack` (`PublicContractSignedPayload` incluye `promotionalAccepted` desde spec 0040-b) | `src/app/shared/components/public-enrollment-steps/public-contract/public-contract.component.ts` |
+| `app-public-contract` | `data` | `contractSigned`, `goBack` | `src/app/shared/components/public-enrollment-steps/public-contract/public-contract.component.ts` |
 | `app-public-documents` | `data`, `isUploading` | `fileSelected`, `clearPhoto`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-documents/public-documents.component.ts` |
 | `app-public-license-type` | `availableFlows`, `currentFlow` | `flowSelect`, `next` | `src/app/shared/components/public-enrollment-steps/public-license-type/public-license-type.component.ts` |
 | `app-public-orientation` | `siteLinks` | — | `src/app/shared/components/public-enrollment-steps/public-orientation/public-orientation.component.ts` |

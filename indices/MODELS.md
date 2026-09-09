@@ -72,6 +72,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 |-----------|----------|---------|
 | `AbsenceEvidence` | `dto` | `src/app/core/models/dto/absence-evidence.model.ts` |
 | `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
+| `AnnouncementKind`, `Announcement`, `AnnouncementRecipient` | `dto` | `src/app/core/models/dto/announcement.model.ts` |
 | `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
 | `BranchPayrollConfig` | `dto` | `src/app/core/models/dto/branch-payroll-config.model.ts` |
 | `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
@@ -151,6 +152,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `InasistenciaClaseBUI`, `ClasePendienteReagendarUI`, `ClasePracticaUI`, `ProgresoUI`, `ReagendamientoHistorialUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
 | `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `AnnouncementCourseType`, `AnnouncementEnrollmentStatus`, `RecipientSegmentFilters`, `RecipientExclusionReason`, `RecipientPreview`, `AnnouncementDraft`, `SendProgress`, `AnnouncementRow` | `ui` | `src/app/core/models/ui/announcement.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `FinishClassPayload` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
