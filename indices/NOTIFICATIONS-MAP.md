@@ -162,7 +162,8 @@ tabla `notification_templates` (vacía, R7) es exactamente donde vivirían las p
   normales (contratos, certificados, facturas) a spam. **El volumen es la variable de riesgo.**
 - ✅ **Capa B — Ley 21.719, RESUELTO (spec 0040-b, cerrada 2026-09-09).** `consents.consent_type`
   ahora incluye `comunicaciones_operativas` (Art. 13 c, informativa) y `comunicaciones_promocionales`
-  (Art. 12, consentimiento real y revocable — self-service desde `/app/alumno/privacidad`). La
+  (Art. 12, consentimiento real y revocable — self-service desde el tab "Ajustes" del
+  `AjustesDrawerComponent` global, no una página standalone; corregido vía fix-167-b). La
   distinción operativo/promocional vive en la UI de matrícula (párrafo vs checkbox) y en el
   `consent_type` de cada fila. Detalle completo, decisiones y evidencia de verificación en
   [`specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md`](../specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md).
