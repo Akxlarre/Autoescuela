@@ -68,45 +68,77 @@
 
 ## Fase 2 — Núcleo funcional (TDD)
 
-- [ ] **T2.1** — Escribir `core/utils/announcement-recipients.utils.spec.ts` **primero**
+- [x] **T2.1** — Escribir `core/utils/announcement-recipients.utils.spec.ts` **primero**
   - **AC ref:** AC2, AC-E1
   - **DoD:**
-    - [ ] Armado de lotes: N/tamaño exacto, con resto, lista vacía, N menor que el lote
-    - [ ] Validación del draft: sin `kind` → inválido (AC2); sin asunto/cuerpo → inválido; 0 destinatarios → inválido (AC-E1); sobre el tope duro de 500 → inválido
-    - [ ] Conteo de excluidos agrupado por motivo
-    - [ ] Los tests **fallan** (no hay implementación)
+    - [x] Armado de lotes: N/tamaño exacto, con resto, lista vacía, N menor que el lote, cobertura sin huecos
+    - [x] Validación del draft: sin `kind` (AC2), sin asunto/cuerpo, 0 destinatarios (AC-E1), sobre el tope duro
+    - [x] Conteo de excluidos agrupado por motivo
+    - [x] Los tests **fallaron** antes de implementar (módulo inexistente), verificado
 
-- [ ] **T2.2** — Implementar `core/utils/announcement-recipients.utils.ts`
+- [x] **T2.2** — Implementar `core/utils/announcement-recipients.utils.ts`
   - **AC ref:** AC2, AC-E1
   - **DoD:**
-    - [ ] Funciones puras (data in → data out), sin inyección de Angular
-    - [ ] `npm run test:ci` verde para este archivo
-    - [ ] Documentado en `indices/UTILS.md`
+    - [x] Funciones puras (data in → data out), sin inyección de Angular
+    - [x] 20/20 tests verdes
+    - [x] Documentado en `indices/UTILS.md` (auto-generado)
 
 ---
 
 ## Fase 3 — Edge Function
 
-- [ ] **T3.1** — Crear `supabase/functions/send-announcement/index.ts`
+- [x] **T3.1** — Crear `supabase/functions/send-announcement/index.ts`
   - **AC ref:** AC3, AC4, AC6, AC-E2, AC-E3
   - **DoD:**
-    - [ ] Copia la estructura de `send-zoom-email` (nodemailer, secrets `SMTP_*`, CORS, `jsonResponse`)
-    - [ ] Valida auth y que el emisor sea `admin` o `secretary`
-    - [ ] **Resuelve los destinatarios server-side** desde `enrollments → students → users` según los filtros recibidos (nunca confía en una lista del cliente)
-    - [ ] Si `kind = 'promocional'` → filtra por `consents` (`comunicaciones_promocionales`, `granted` y `revoked_at IS NULL`) — AC3
-    - [ ] Si `kind = 'operativo'` → **no** filtra por consentimiento — AC4
-    - [ ] Aplica `excludedUserIds` y toma el slice `offset`/`batchSize`
-    - [ ] Escapa el cuerpo (texto plano) antes de inyectarlo en el HTML de marca
-    - [ ] Inserta las notificaciones in-app **aunque el email falle** (AC-E3) y para alumnos sin email (AC-E2)
-    - [ ] Upsert idempotente en `announcement_recipients` (no duplica al reintentar)
-    - [ ] Devuelve `{ sent, failed, processed, done }`
+    - [x] Copia la estructura de `send-zoom-email` (nodemailer, secrets `SMTP_*`, CORS, `jsonResponse`)
+    - [x] Valida auth y que el emisor sea `admin` o `secretary`; secretaría no puede enviar de otra sede
+    - [x] **Resuelve los destinatarios server-side** desde `enrollments → students → users`
+    - [x] Si `kind = 'promocional'` → filtra por `consents` — AC3
+    - [x] Si `kind = 'operativo'` → **no** filtra por consentimiento — AC4
+    - [x] Aplica `excludedUserIds`; el lote se toma por `range()` sobre la lista materializada
+    - [x] Escapa el cuerpo antes de inyectarlo en el HTML de marca
+    - [x] Inserta las notificaciones in-app **aunque el email falle** (AC-E3) y sin email (AC-E2)
+    - [x] Upsert idempotente sobre el UNIQUE (no duplica al reintentar)
+    - [x] Devuelve `{ recipientsTotal, processed, sent, failed, done }`
 
-- [ ] **T3.2** — Verificar la Edge Function contra la BD de desarrollo
-  - **AC ref:** AC3, AC4, AC-E4
-  - **DoD:**
-    - [ ] Alumno con consentimiento promocional revocado: excluido en `promocional`, incluido en `operativo`
-    - [ ] Revocar entre preview y envío → excluido (AC-E4)
-    - [ ] Reintentar el mismo lote no duplica filas ni correos
+  > **Decisión de diseño tomada acá:** los destinatarios se **materializan** en
+  > `announcement_recipients` en el primer lote, y los lotes siguientes paginan sobre esa
+  > tabla (`ORDER BY id`), no sobre una re-consulta del segmento. Con `OFFSET` sobre una
+  > query viva, si alguien revocaba su consentimiento a mitad del envío la lista se
+  > encogía y el offset de los lotes siguientes se corría, **salteando destinatarios que
+  > sí correspondían**. Además se re-chequea el consentimiento por lote, así que revocar
+  > durante el envío sigue excluyendo a esa persona (AC-E4) sin desalinear al resto.
+
+- [x] **T3.2** — Verificar la Edge Function contra la BD de desarrollo
+  - **AC ref:** AC3, AC4, AC6, AC8, AC-E4
+  - **DoD:** 13/13 checks en verde, todo en `dryRun` (cero correos enviados).
+    - [x] AC4 · operativo alcanza al segmento completo (8/8), sin filtrar por consentimiento
+    - [x] AC3 · promocional alcanza solo a los 2 que consintieron, y son exactamente esos
+    - [x] AC-E4 · revocar entre el preview y la confirmación excluye de verdad (2 → 1)
+    - [x] AC6 · una notificación in-app por destinatario
+    - [x] AC8 · secretaría no puede crear comunicado de otra sede (403 por RLS)
+    - [x] AC8 · secretaría no puede crear comunicado multi-sede (`branch_id NULL` → 403)
+    - [x] Reintentar el lote no duplica filas, ni notificaciones, ni entregas
+    - [x] Datos de verificación limpiados de la BD compartida
+
+  > **Bloqueador resuelto con modo dry-run.** Los 200 alumnos de la BD de desarrollo tienen
+  > email `@test-data.local` (TLD inexistente): un envío de prueba habrían sido ~200 rebotes
+  > duros contra el dominio de la escuela — el mismo daño de reputación que §9.4 marca como
+  > riesgo principal y que este feature existe para evitar. `dryRun` corre la resolución, el
+  > filtro de consentimiento, la materialización y las notificaciones in-app, y solo saltea
+  > la entrega SMTP. Queda en la función: sirve para el mismo problema en el futuro.
+  >
+  > **Bug real encontrado por esta verificación (no por revisión de código):** la primera
+  > corrida dio 16 notificaciones para 8 destinatarios. El `UNIQUE (announcement_id, user_id)`
+  > protegía las filas de `announcement_recipients`, pero el INSERT en `notifications` corría
+  > igual en cada reintento — y por la misma razón el correo se habría reenviado a quien ya
+  > lo recibió. Un reintento por corte de red le habría duplicado el comunicado a cientos de
+  > alumnos. Corregido: se saltea a quien ya tiene `email_sent_ok`, y la notificación se crea
+  > solo si la fila todavía no tiene `notification_id`. **Reintentar reanuda, no reenvía.**
+
+  > ⚠️ **Pendiente para producción:** el envío SMTP real nunca se ejercitó. Antes del
+  > despliegue hace falta un smoke test con una casilla real (uno o dos destinatarios) para
+  > confirmar que el correo sale y se ve bien en un cliente de verdad.
 
 ---
 
