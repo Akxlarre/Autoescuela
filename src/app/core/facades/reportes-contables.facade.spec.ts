@@ -153,6 +153,34 @@ describe('ReportesContablesFacade', () => {
       expect(facade.isRegistrando()).toBe(false);
     });
 
+    it('registrarGastoFijo usa el branchId explícito del payload por sobre la sede efectiva', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: 1 });
+      const ok = await facade.registrarGastoFijo({
+        branchId: 2,
+        category: 'arriendo',
+        description: 'Local',
+        amount: 100,
+        date: '2026-07-01',
+      } as any);
+      expect(ok).toBe(true);
+      const insertMock = mockSupabase._builders.get('fixed_expenses').insert;
+      expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ branch_id: 2 }));
+    });
+
+    it('registrarGastoFijo rechaza y NO inserta cuando no hay sede (payload y selector null) — DG-082', async () => {
+      const { facade, mockSupabase, mockToast } = setup({ selectedBranchId: null });
+      const ok = await facade.registrarGastoFijo({
+        category: 'arriendo',
+        description: 'Local',
+        amount: 100,
+        date: '2026-07-01',
+      } as any);
+      expect(ok).toBe(false);
+      expect(mockToast.error).toHaveBeenCalled();
+      expect(mockSupabase._builders.has('fixed_expenses')).toBe(false);
+      expect(facade.isRegistrando()).toBe(false);
+    });
+
     it('registrarGastoFijo con error de BD → toast de error y false, sin colgar el flag', async () => {
       const { facade, mockToast } = setup({
         tables: { fixed_expenses: { data: null, error: new Error('RLS') } },
@@ -209,6 +237,72 @@ describe('ReportesContablesFacade', () => {
       await facade.initialize();
       expect(mockSupabase.client.from).toHaveBeenCalledWith('class_b_sessions');
       expect(mockSupabase.client.from).toHaveBeenCalledWith('professional_practice_sessions');
+    });
+  });
+
+  describe('evolución mensual — serie fija de últimos meses (fix-242-m)', () => {
+    it('expone la serie aunque el filtro sea "Mes actual" (no depende del rango)', async () => {
+      const { facade } = setup({
+        tables: {
+          payments: {
+            data: [
+              {
+                total_amount: 300_000,
+                type: 'enrollment',
+                payment_date: '2026-05-15',
+                enrollments: { branch_id: 1, license_group: 'class_b' },
+              },
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      // filtro por defecto = "mes actual"; la serie igual incluye el mes del pago.
+      expect(facade.filtros().rango).toBe('mes_actual');
+      expect(facade.evolucionMensual().some((m) => /mayo/i.test(m.mes))).toBe(true);
+    });
+  });
+
+  describe('rango propio de Evolución Mensual (spec 0015-m)', () => {
+    it('el rango de evolución arranca en "ultimos_6_meses" y la serie trae 6 meses', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      expect(facade.rangoEvolucion()).toBe('ultimos_6_meses');
+      expect(facade.evolucionMensual()).toHaveLength(6);
+    });
+
+    it('aplicarRangoEvolucion("ultimos_12_meses") repuebla la serie con 12 meses', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      await facade.aplicarRangoEvolucion('ultimos_12_meses');
+      expect(facade.rangoEvolucion()).toBe('ultimos_12_meses');
+      expect(facade.evolucionMensual()).toHaveLength(12);
+    });
+
+    it('aplicarRangoEvolucion NO toca el filtro general ni dispara skeleton (AC8, AC10)', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      const filtrosAntes = facade.filtros();
+      await facade.aplicarRangoEvolucion('anio_anterior');
+
+      // El rango general y su ventana quedan intactos.
+      expect(facade.filtros()).toEqual(filtrosAntes);
+      expect(facade.filtros().rango).toBe('mes_actual');
+      // Sin skeleton: aplicarRangoEvolucion nunca toca isLoading.
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('"anio_anterior" → 12 meses, todos del año calendario anterior (AC6)', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      await facade.aplicarRangoEvolucion('anio_anterior');
+      const serie = facade.evolucionMensual();
+      const anioPasado = String(new Date().getFullYear() - 1);
+      expect(serie).toHaveLength(12);
+      expect(serie.every((m) => m.mes.includes(anioPasado))).toBe(true);
+      // Meses sin datos igual vienen, marcados sinMovimientos (AC7).
+      expect(serie.every((m) => m.sinMovimientos === true)).toBe(true);
     });
   });
 

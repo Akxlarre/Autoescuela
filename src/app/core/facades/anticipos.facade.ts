@@ -263,6 +263,7 @@ export class AnticiposFacade {
         description: payload.description || null,
         status: 'pending',
         registered_by: user.dbId ?? null,
+        payment_method: payload.paymentMethod ?? 'efectivo',
       });
       if (error) throw error;
       this.notifyAnticipoRegistrado(payload.instructorId, payload.amount);
