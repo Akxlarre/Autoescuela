@@ -16,7 +16,10 @@ import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
-import { buildEnrollmentConsents } from '@core/utils/consent-builder.utils';
+import {
+  buildEnrollmentConsents,
+  buildCommunicationsConsents,
+} from '@core/utils/consent-builder.utils';
 import { ConsentsFacade } from '@core/facades/consents.facade';
 import type { Course } from '@core/models/dto/course.model';
 import { findCourseByLicenseClass } from '@core/utils/course-resolution.utils';
@@ -1287,12 +1290,31 @@ export class EnrollmentFacade {
       enrollmentId,
     });
 
-    return this.consentsFacade.recordMany(drafts);
+    // spec 0040-b: comunicaciones al alumno viajan en la misma operación que el
+    // consentimiento de matrícula — mismo criterio, un solo recordMany().
+    const commsDrafts = buildCommunicationsConsents({
+      branchId,
+      source: 'secretaria',
+      promotionalAccepted: this._promotionalConsentAccepted(),
+      isMinor,
+      userId: draft.userId ?? null,
+      subjectRut: pd?.rut ?? null,
+      enrollmentId,
+    });
+
+    return this.consentsFacade.recordMany([...drafts, ...commsDrafts]);
   }
 
   /** Declaración de lectura de la Política de Privacidad (spec 0009-m, AC3/AC5). */
   private readonly _privacyConsentAccepted = signal<boolean>(false);
   readonly privacyConsentAccepted = this._privacyConsentAccepted.asReadonly();
+
+  /**
+   * Casilla de comunicaciones promocionales (spec 0040-b, Art. 12). Desmarcada por
+   * defecto. La operativa NO tiene casilla propia — se informa, no se consiente.
+   */
+  private readonly _promotionalConsentAccepted = signal<boolean>(false);
+  readonly promotionalConsentAccepted = this._promotionalConsentAccepted.asReadonly();
 
   /**
    * Guarda el consentimiento al tratamiento de datos que la secretaria marcó con el
@@ -1301,6 +1323,11 @@ export class EnrollmentFacade {
    */
   setPrivacyConsent(accepted: boolean): void {
     this._privacyConsentAccepted.set(accepted);
+  }
+
+  /** Marca/desmarca la casilla de comunicaciones promocionales (spec 0040-b, AC3). */
+  setPromotionalConsent(accepted: boolean): void {
+    this._promotionalConsentAccepted.set(accepted);
   }
 
   /**

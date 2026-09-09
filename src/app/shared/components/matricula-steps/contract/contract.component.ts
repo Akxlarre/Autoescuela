@@ -56,6 +56,20 @@ export class ContractComponent {
     this.privacyConsentChange.emit(checked);
   }
 
+  /**
+   * Casilla de comunicaciones promocionales (spec 0040-b, Art. 12). Opcional,
+   * desmarcada por defecto — NO entra en `canProceed` (AC4).
+   */
+  readonly _promotionalAccepted = signal<boolean>(false);
+
+  /** Emitido al marcar/desmarcar la casilla promocional. El Smart lo persiste (AC3). */
+  readonly promotionalConsentChange = output<boolean>();
+
+  onPromotionalToggle(checked: boolean): void {
+    this._promotionalAccepted.set(checked);
+    this.promotionalConsentChange.emit(checked);
+  }
+
   readonly acceptedFormats = CONTRACT_ACCEPTED_FORMATS;
   readonly maxSizeMb = CONTRACT_MAX_SIZE_MB;
 

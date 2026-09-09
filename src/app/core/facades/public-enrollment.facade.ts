@@ -1,7 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import { buildEnrollmentConsents, buildPsychTestConsent } from '@core/utils/consent-builder.utils';
+import {
+  buildEnrollmentConsents,
+  buildPsychTestConsent,
+  buildCommunicationsConsents,
+} from '@core/utils/consent-builder.utils';
 import type { ConsentDraft } from '@core/models/ui/consent.model';
 import { PRIVACY_POLICY_VERSION } from '@core/models/ui/privacy-policy.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -929,6 +933,14 @@ export class PublicEnrollmentFacade {
   private readonly _privacyConsentAccepted = signal<boolean>(false);
   readonly privacyConsentAccepted = this._privacyConsentAccepted.asReadonly();
 
+  /**
+   * Casilla de comunicaciones promocionales (spec 0040-b, Art. 12). Desmarcada por
+   * defecto. La operativa NO tiene casilla propia — se informa, no se consiente
+   * (ver `buildCommunicationsConsents()` en `consent-builder.utils.ts`).
+   */
+  private readonly _promotionalConsentAccepted = signal<boolean>(false);
+  readonly promotionalConsentAccepted = this._promotionalConsentAccepted.asReadonly();
+
   setSignedContract(signatureBase64: string): void {
     this._contractSignatureBase64.set(signatureBase64);
   }
@@ -943,6 +955,30 @@ export class PublicEnrollmentFacade {
    */
   setPrivacyConsent(accepted: boolean): void {
     this._privacyConsentAccepted.set(accepted);
+  }
+
+  /** Marca/desmarca la casilla de comunicaciones promocionales (spec 0040-b, AC2). */
+  setPromotionalConsent(accepted: boolean): void {
+    this._promotionalConsentAccepted.set(accepted);
+  }
+
+  /**
+   * Consentimientos de comunicación (spec 0040-b): operativa + promocional, siempre
+   * las 2 filas. Viaja junto a `buildConsents('matricula_datos')` en la misma
+   * operación de submit — mismo criterio que `buildPsychConsent()`.
+   */
+  private buildCommunicationsConsentsForSubmit(): (ConsentDraft & { policyVersion: string })[] {
+    const branch = this._selectedBranch();
+    const pd = this._personalData();
+    if (!branch || !pd) return [];
+
+    return buildCommunicationsConsents({
+      branchId: branch.id,
+      source: 'public',
+      promotionalAccepted: this._promotionalConsentAccepted(),
+      isMinor: false,
+      subjectRut: normalizeRutForStorage(pd.rut),
+    }).map((d) => ({ ...d, policyVersion: PRIVACY_POLICY_VERSION }));
   }
 
   /** Confirma contrato y avanza al paso de pago (Webpay). */
@@ -1006,7 +1042,10 @@ export class PublicEnrollmentFacade {
           amount: this.calculatePaymentAmount(),
           carnetStoragePath: this._carnetStoragePath(),
           contractSignatureBase64: this._contractSignatureBase64(),
-          consents: this.buildConsents('matricula_datos'),
+          consents: [
+            ...this.buildConsents('matricula_datos'),
+            ...this.buildCommunicationsConsentsForSubmit(),
+          ],
         },
       });
 
@@ -1173,7 +1212,10 @@ export class PublicEnrollmentFacade {
           sessionToken: this._sessionToken(),
           carnetStoragePath: this._carnetStoragePath(),
           contractSignatureBase64: this._contractSignatureBase64(),
-          consents: this.buildConsents('matricula_datos'),
+          consents: [
+            ...this.buildConsents('matricula_datos'),
+            ...this.buildCommunicationsConsentsForSubmit(),
+          ],
         },
       });
 

@@ -146,6 +146,37 @@ import type {
           </label>
         </div>
 
+        <!--
+          Comunicaciones al alumno (spec 0040-b, Ley 21.719). NO son simétricas:
+          - Operativa: párrafo informativo, SIN control — Art. 13 c) (ejecución del contrato).
+            Pedirla como checkbox violaría el Art. 12 inc. 5° (consentimiento no libre para algo
+            ya necesario para el contrato).
+          - Promocional: checkbox real, opcional, desmarcado por defecto — Art. 12. NO entra en
+            consentsComplete(): no marcarla nunca bloquea la firma (AC4).
+        -->
+        <div class="card p-3 text-xs flex items-start gap-2" style="color: var(--text-secondary);">
+          <app-icon name="info" [size]="14" color="var(--text-muted)" class="shrink-0 mt-0.5" />
+          <span>
+            Te avisaremos por correo sobre tu curso: recordatorios de clase, documentos pendientes,
+            certificados y tu saldo.
+          </span>
+        </div>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            class="mt-0.5"
+            [checked]="promotionalAccepted()"
+            (change)="togglePromotional($event)"
+            style="accent-color: var(--ds-brand); width: 1.1rem; height: 1.1rem;"
+            data-llm-action="aceptar-comunicaciones-promocionales-publico"
+          />
+          <span class="text-sm" style="color: var(--text-secondary);">
+            Quiero recibir promociones y novedades de la escuela (opcional, puedes cambiarlo cuando
+            quieras desde tu cuenta).
+          </span>
+        </label>
+
         <!-- Signature Canvas -->
         <div
           class="space-y-2"
@@ -234,7 +265,13 @@ export class PublicContractComponent {
    */
   readonly privacyAccepted = signal(false);
 
-  /** Ambas casillas son obligatorias para avanzar (AC3). */
+  /**
+   * Casilla de comunicaciones promocionales (spec 0040-b, Art. 12). Opcional y
+   * desmarcada por defecto — NO entra en `consentsComplete()` (AC4).
+   */
+  readonly promotionalAccepted = signal(false);
+
+  /** Ambas casillas OBLIGATORIAS son términos + privacidad (AC3). La promocional es opcional. */
   readonly consentsComplete = computed(() => this.termsAccepted() && this.privacyAccepted());
 
   readonly signatureError = signal(false);
@@ -264,6 +301,12 @@ export class PublicContractComponent {
     if (!el.checked) {
       this.clearSignature();
     }
+  }
+
+  /** No limpia la firma: es opcional, no gatea nada (AC4). */
+  togglePromotional(event: Event): void {
+    const el = event.target as HTMLInputElement;
+    this.promotionalAccepted.set(el.checked);
   }
 
   private initCanvas(): void {
@@ -340,7 +383,12 @@ export class PublicContractComponent {
       // Rama inalcanzable en el flujo público: `canAdvanceFn` bloquea a los menores en el
       // paso 1 (`getAgeStatus() === 'requires-authorization'`), así que nadie con isMinor
       // llega a este componente. Se conserva por seguridad; su limpieza excede la spec 0009-m.
-      this.contractSigned.emit({ signatureBase64: '', termsAccepted: false, privacyAccepted: false });
+      this.contractSigned.emit({
+        signatureBase64: '',
+        termsAccepted: false,
+        privacyAccepted: false,
+        promotionalAccepted: false,
+      });
       return;
     }
 
@@ -368,6 +416,7 @@ export class PublicContractComponent {
       signatureBase64: base64,
       termsAccepted: this.termsAccepted(),
       privacyAccepted: this.privacyAccepted(),
+      promotionalAccepted: this.promotionalAccepted(),
     });
   }
 }

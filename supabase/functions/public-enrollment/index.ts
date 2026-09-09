@@ -269,7 +269,13 @@ const HONEYPOT_ACTIONS = new Set([
 // ══════════════════════════════════════════════════════════════════════════════
 
 interface ConsentDraftPayload {
-  consentType: 'matricula_datos' | 'certificado_medico' | 'preinscripcion' | 'test_psicologico';
+  consentType:
+    | 'matricula_datos'
+    | 'certificado_medico'
+    | 'preinscripcion'
+    | 'test_psicologico'
+    | 'comunicaciones_operativas'
+    | 'comunicaciones_promocionales';
   granted: boolean;
   branchId: number;
   source: 'public' | 'secretaria';
@@ -290,6 +296,8 @@ const CONSENT_TYPES = new Set([
   'certificado_medico',
   'preinscripcion',
   'test_psicologico',
+  'comunicaciones_operativas',
+  'comunicaciones_promocionales',
 ]);
 
 /**
