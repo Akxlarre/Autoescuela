@@ -116,3 +116,26 @@
   general: **cuando una regla tiene guard, corregir la prosa sin corregir el guard deja una
   contradicción silenciosa; si el guard va a existir en más de un lugar (lint + hook), la
   lógica va en un módulo común, no copiada.**
+
+## AP-017 — Utility de spacing (`gap-*`/`space-y-*`) sin verificar el `display` real (evitar)
+
+- **NO** asumas que una clase de spacing hace efecto solo porque está en el `class`. `gap-*`
+  requiere `display: flex`/`grid` en el propio elemento; `space-y-*`/`space-x-*` requiere que
+  los hijos sean de flujo normal (no `inline` ni posicionados). Si otra regla CSS —
+  especialmente una con `!important` en un `styles: []` local, como el patrón dual-viewport
+  `.show-on-squeeze`/`.hide-on-squeeze` — pisa el `display` que la utility necesita, la
+  utility queda en **cero efecto visual y cero error**: no hay warning de Tailwind ni del
+  Architect Guard, el elemento simplemente no separa a sus hijos.
+- **Cómo verificar que el spacing es real** (no solo "se ve bien" en una captura — un
+  screenshot con bordes/`box-shadow` puede simular separación que no existe): medir en vivo
+  con `getComputedStyle(el).display` + `getBoundingClientRect()` en dos hijos consecutivos,
+  no confiar en la inspección visual del screenshot.
+- **Aplica en general** a cualquier combinación de utility de spacing + un contenedor cuyo
+  `display` pueda estar forzado por otra regla (el patrón dual-viewport de este proyecto es
+  el caso más común, pero no el único — cualquier `!important` o selector de mayor
+  especificidad sobre el mismo elemento corre el mismo riesgo).
+- Precedente inverso: **fix-163-b** (un custom element sin `:host{display:block}` quedaba
+  `inline` y rompía `margin-top` de `space-y-4`). Este caso (**fix-165-b**): `gap-3` de
+  `flex` roto porque `.show-on-squeeze{display:block!important}` ganaba sobre `.flex`.
+  Mismo síntoma raíz — spacing utility + `display` real distinto del asumido — con
+  mecanismos de rotura opuestos.

@@ -579,6 +579,7 @@ const PAGE_SIZE = 10;
               @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
                 <div
                   class="card flex flex-col gap-2.5"
+                  appCardHover
                   [class.border-brand]="
                     pendingConfirmId() === alumno.enrollmentId ||
                     emailConfirmId() === alumno.enrollmentId
