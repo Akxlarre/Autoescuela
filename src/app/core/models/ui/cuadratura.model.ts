@@ -40,8 +40,17 @@ export interface EgresoFormData {
   tipo: 'gasto' | 'anticipo' | 'combustible';
   monto: number;
   descripcion: string;
-  /** Vehículo asociado al egreso (ej. carga de combustible). Opcional. */
+  /** Vehículo asociado — OBLIGATORIO para tipo `combustible` (de él sale la sede). */
   vehiculoId?: number | null;
+  /** Instructor asociado — OBLIGATORIO para tipo `anticipo` (de él sale la sede vía join). */
+  instructorId?: number | null;
+  /**
+   * Sede del egreso (fix-243-m). Para `gasto` la elige el usuario; para `combustible` se deriva
+   * del vehículo (o se elige si el vehículo es legacy sin sede); para `anticipo` no aplica
+   * — `instructor_advances` no tiene columna `branch_id`, la sede se resuelve por el instructor.
+   * NUNCA debe llegar `null` al insert de `expenses`.
+   */
+  branchId?: number | null;
   /** Método de pago del egreso (fix-211-m) — determina si resta del efectivo del arqueo. */
   metodoPago: 'efectivo' | 'transferencia' | 'tarjeta';
 }

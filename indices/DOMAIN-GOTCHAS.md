@@ -1169,7 +1169,22 @@
   de columna. Si lo tiene, su Smart Component debe gatear la vista completa con
   `BranchGateComponent` cuando `selectedBranchId() === null` — no alcanza con que las queries de
   lectura "funcionen sin romper".
-- **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`
+- **Ampliación (fix-243-m):** el `BranchGate` en **la página** no cierra el agujero si el mismo
+  `insert` es alcanzable desde **otro** contexto no gateado. `CuadraturaFacade.registrarEgreso()`
+  y `ReportesContablesFacade.registrarGastoFijo()` seguían escribiendo `branch_id: null` porque
+  el drawer se abre también desde el **dashboard** (`qa4`) y la página de Reportes Contables **no
+  tiene** `BranchGate`. Segundo mecanismo, más robusto que el gate: el método de escritura **no
+  deriva** la sede del helper de lectura — la recibe explícita en el payload (elegida por el
+  usuario, o derivada de una asociación obligatoria: vehículo→`branch_id`, instructor→
+  `users.branch_id`) y **rechaza `null`** con un toast antes del `insert`. El gate de página sigue
+  siendo válido como UX; el guard anti-null en el Facade es el piso que no depende del punto de
+  entrada.
+- **Corolario:** una tabla financiera cuya sede se deriva por **join** y no por columna propia
+  (`instructor_advances` no tiene `branch_id`; sale de `instructors.users.branch_id`) igual
+  necesita que **la query de lectura** aplique ese filtro por join — si no, una vista de sede
+  específica suma filas de todas las sedes (lo tenía `CuadraturaFacade.fetchExpensesAndAdvances()`).
+- **Fuente:** `specs/fixes/fix-212-m-cuadratura-requiere-sede-especifica`,
+  `specs/fixes/fix-243-m-egresos-sede-y-asociacion-obligatoria`
 
 ### DG-083 — Una policy RLS de SELECT solo-admin en una tabla que también alimenta un widget de otro rol deja ese widget permanentemente vacío, sin error
 - **Trampa:** asumir que si un widget se renderiza para un rol (ej. "Actividad reciente" en el
@@ -1360,6 +1375,33 @@
   pida) — es una spec, no un ajuste del cálculo. Profesional se asume siempre sede 2
   (`PROFESSIONAL_BRANCH_ID`), mismo invariante que `auto-create-next-promotions`.
 - **Fuente:** `specs/fixes/fix-237-m-conectar-filtro-mes-rentabilidad-cursos`.
+
+### DG-091 — `expenses.category` es TEXT libre y cada módulo usa un vocabulario distinto
+- **Trampa:** `expenses.category` no tiene `CHECK` ni enum. Quien la escribe y quien la lee no
+  comparten diccionario:
+  - **Drawer de egreso de Cuadratura** (`CuadraturaFacade.registrarEgreso`) escribe
+    `'combustible'` para combustible y **`null`** para "Gastos Varios" (el drawer no tiene
+    selector de categoría para ese tipo).
+  - **`FlotaFacade`** (gasto de bencina por vehículo) filtra con `.eq('category', 'combustible')`
+    — depende del literal exacto.
+  - **`CuadraturaContentComponent`** mapea `'combustible'` → "Combustible" / ícono `fuel`.
+  - **Reportes Contables** (`reportes-contables.utils.ts`) espera la clave canónica `'fuel'`
+    y las de `fixed_expenses` (`rent`, `salary`, `utility`, `insurance`, `repair`, `other`).
+  Resultado antes de fix-244-m: en "Gastos por Categoría" todo egreso de combustible y todo
+  gasto vario caían en "Otros", con filas "Otros" duplicadas (una por cada clave cruda no
+  reconocida).
+- **Realidad:** no hay un valor "correcto" único — `'combustible'` es el de-facto canónico del
+  lado de Cuadratura/Flota y `'fuel'` el del lado de Reportes. Se concilian **al leer** en
+  `reportes-contables.utils.ts`: `EXPENSE_CATEGORY_ALIAS = { combustible: 'fuel' }` normaliza
+  antes de agrupar, `category ?? 'general'` cubre los `null` históricos como "Gastos Varios", y
+  toda clave sin etiqueta conocida colapsa en un único bucket `'other'`. Sin migración de datos
+  (criterio del owner, fix-243 AC-7).
+- **Regla de aplicabilidad:** al agregar un consumidor nuevo de `expenses.category`, NO asumas
+  un set de valores — revisá qué escribe realmente `registrarEgreso()` (`'combustible'` /
+  `null`) más las claves de `fixed_expenses`. Si cambiás el valor que se **escribe**, tocás en
+  cadena `FlotaFacade`, `CuadraturaContentComponent` e `historial-cuadraturas` — es un fix de
+  esa familia, no un ajuste de Reportes.
+- **Fuente:** `specs/fixes/fix-244-m-reportes-gastos-categoria-otros`.
 
 
 

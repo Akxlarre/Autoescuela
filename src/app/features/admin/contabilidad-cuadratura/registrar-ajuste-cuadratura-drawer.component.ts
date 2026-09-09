@@ -350,7 +350,7 @@ export class RegistrarAjusteCuadraturaDrawerComponent {
 
   readonly categoriaOptions = [
     { label: 'Combustible', value: 'combustible' },
-    { label: 'Gasto Varios', value: 'gasto' },
+    { label: 'Gastos Varios', value: 'gasto' },
   ];
 
   // ── Injections ───────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import {
 } from './cuadratura.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -266,11 +267,12 @@ describe('CuadraturaFacade', () => {
   });
 });
 
-// ─── fix-006-i: registrarEgreso con tipo "combustible" ────────────────────────
+// ─── fix-006-i + fix-243-m: registrarEgreso (gasto / combustible, sede obligatoria) ──
 
-describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
+describe('CuadraturaFacade.registrarEgreso — gasto/combustible (fix-006-i, fix-243-m)', () => {
   let facade: CuadraturaFacade;
   let insertSpy: ReturnType<typeof vi.fn>;
+  const errorToast = vi.fn();
 
   const mockUser = {
     id: 'user-uuid',
@@ -283,6 +285,7 @@ describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
   };
 
   beforeEach(() => {
+    errorToast.mockClear();
     insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
 
     TestBed.configureTestingModule({
@@ -302,55 +305,147 @@ describe('CuadraturaFacade.registrarEgreso — combustible (fix-006-i)', () => {
           },
         },
         { provide: AuthFacade, useValue: { currentUser: () => mockUser } },
-        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: errorToast } },
       ],
     });
 
     facade = TestBed.inject(CuadraturaFacade);
   });
 
-  it('inserta en expenses con category="combustible" cuando tipo es "combustible"', async () => {
+  it('inserta en expenses con category="combustible" y el branchId recibido', async () => {
     await facade.registrarEgreso({
       tipo: 'combustible',
       monto: 25_000,
       descripcion: 'Camioneta ABC-123',
+      vehiculoId: 4,
+      branchId: 2,
       metodoPago: 'efectivo',
     });
 
     expect(insertSpy).toHaveBeenCalledWith(
       'expenses',
-      expect.objectContaining({ category: 'combustible', amount: 25_000 }),
+      expect.objectContaining({
+        category: 'combustible',
+        amount: 25_000,
+        vehicle_id: 4,
+        branch_id: 2,
+      }),
     );
   });
 
-  it('inserta en expenses con category=null cuando tipo es "gasto" (sin cambio de comportamiento previo)', async () => {
+  it('inserta en expenses con category=null cuando tipo es "gasto"', async () => {
     await facade.registrarEgreso({
       tipo: 'gasto',
       monto: 10_000,
       descripcion: 'Insumos',
+      branchId: 1,
       metodoPago: 'efectivo',
     });
 
     expect(insertSpy).toHaveBeenCalledWith(
       'expenses',
-      expect.objectContaining({ category: null, amount: 10_000 }),
+      expect.objectContaining({ category: null, amount: 10_000, branch_id: 1 }),
     );
   });
 
-  it('inserta en instructor_advances (sin category) cuando tipo es "anticipo"', async () => {
-    await facade.registrarEgreso({
-      tipo: 'anticipo',
-      monto: 15_000,
-      descripcion: 'Anticipo Juan',
+  // ─── AC-1: nunca un egreso huérfano (branch_id null) ──────────────────────
+  it('rechaza el guardado y NO inserta cuando branchId es null (admin en "Todas las sedes")', async () => {
+    const ok = await facade.registrarEgreso({
+      tipo: 'gasto',
+      monto: 10_000,
+      descripcion: 'Insumos',
+      branchId: null,
       metodoPago: 'efectivo',
     });
 
-    expect(insertSpy).toHaveBeenCalledWith(
-      'instructor_advances',
-      expect.objectContaining({ amount: 15_000, reason: 'Anticipo Juan' }),
-    );
-    const [, payload] = insertSpy.mock.calls[0];
-    expect((payload as Record<string, unknown>)['category']).toBeUndefined();
+    expect(ok).toBe(false);
+    expect(insertSpy).not.toHaveBeenCalled();
+    expect(errorToast).toHaveBeenCalled();
+  });
+
+  // ─── AC-2: combustible sin vehículo se rechaza ────────────────────────────
+  it('rechaza combustible sin vehiculoId', async () => {
+    const ok = await facade.registrarEgreso({
+      tipo: 'combustible',
+      monto: 25_000,
+      descripcion: 'Carga',
+      vehiculoId: null,
+      branchId: 2,
+      metodoPago: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(insertSpy).not.toHaveBeenCalled();
+  });
+
+  // ─── AC-3: el tipo "anticipo" ya no lo maneja este facade ─────────────────
+  it('rechaza tipo "anticipo" (se enruta por AnticiposFacade desde el componente)', async () => {
+    const ok = await facade.registrarEgreso({
+      tipo: 'anticipo',
+      monto: 15_000,
+      descripcion: 'Anticipo Juan',
+      instructorId: 3,
+      metodoPago: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(insertSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ─── fix-243-m: fetchExpensesAndAdvances filtra anticipos por sede ───────────
+
+describe('CuadraturaFacade.fetchExpensesAndAdvances — filtro de sede en anticipos (fix-243-m)', () => {
+  function setup(selectedBranchId: number | null) {
+    const advEqCalls: Array<[string, unknown]> = [];
+
+    const chain = (table: string): any => {
+      const obj: any = {
+        select: () => obj,
+        in: () => obj,
+        eq: (col: string, val: unknown) => {
+          if (table === 'instructor_advances') advEqCalls.push([col, val]);
+          return obj;
+        },
+        gte: () => obj,
+        lte: () => obj,
+        order: () => Promise.resolve({ data: [], error: null }),
+        maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        then: (cb: (r: { data: unknown[]; error: null }) => unknown) =>
+          Promise.resolve(cb({ data: [], error: null })),
+      };
+      return obj;
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        { provide: SupabaseService, useValue: { client: { from: chain } } },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: () => ({ dbId: 1, role: 'admin', branchId: 1 }) },
+        },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        {
+          provide: BranchFacade,
+          useValue: { selectedBranchId: () => selectedBranchId, branches: () => [] },
+        },
+      ],
+    });
+
+    return { facade: TestBed.inject(CuadraturaFacade), advEqCalls };
+  }
+
+  it('agrega .eq("instructors.users.branch_id") cuando hay una sede activa', async () => {
+    const { facade, advEqCalls } = setup(7);
+    await facade.refresh();
+    expect(advEqCalls).toContainEqual(['instructors.users.branch_id', 7]);
+  });
+
+  it('NO filtra anticipos por sede cuando el admin está en "Todas las sedes"', async () => {
+    const { facade, advEqCalls } = setup(null);
+    await facade.refresh();
+    expect(advEqCalls.some(([col]) => col === 'instructors.users.branch_id')).toBe(false);
   });
 });
 

@@ -455,10 +455,18 @@ export class CuadraturaFacade {
       expQuery = expQuery.eq('branch_id', branchId);
     }
 
-    const [expRes, advRes] = await Promise.all([
-      expQuery,
-      this.supabase.client.from('instructor_advances').select('*').eq('date', today),
-    ]);
+    // `instructor_advances` no tiene `branch_id` propio — la sede sale del instructor
+    // (`instructors.users.branch_id`), mismo patrón que `AnticiposFacade.fetchData()`.
+    // Sin esto, una cuadratura de sede específica sumaba anticipos de TODAS las sedes (fix-243-m).
+    let advQuery: any = this.supabase.client
+      .from('instructor_advances')
+      .select('*, instructors!inner(users!inner(branch_id))')
+      .eq('date', today);
+    if (branchId) {
+      advQuery = advQuery.eq('instructors.users.branch_id', branchId);
+    }
+
+    const [expRes, advRes] = await Promise.all([expQuery, advQuery]);
     const gastos = (expRes.data ?? []).map(mapExpenseToEgreso);
     const anticipos = (advRes.data ?? []).map(mapAdvanceToEgreso);
     this._gastosHoy.set([...gastos, ...anticipos]);
@@ -569,32 +577,49 @@ export class CuadraturaFacade {
     }
   }
 
+  /**
+   * Registra un egreso de tipo `gasto` o `combustible` en `expenses`.
+   *
+   * El tipo `anticipo` NO se maneja acá — el componente lo enruta a
+   * `AnticiposFacade.registrarAnticipo()` (necesita `instructor_id`, y `instructor_advances`
+   * no tiene columna `branch_id`). Ver fix-243-m.
+   *
+   * `datos.branchId` es obligatorio y NUNCA puede ser `null`: para `gasto` lo elige el usuario,
+   * para `combustible` sale de la sede del vehículo (o se elige si es un vehículo legacy sin
+   * sede). Sin esto un egreso registrado con el admin en "Todas las sedes" quedaba huérfano
+   * (`branch_id: null`), invisible en toda cuadratura por sede — DG-082.
+   */
   async registrarEgreso(datos: EgresoFormData): Promise<boolean> {
     const user = this.auth.currentUser();
     if (!user) return false;
+
+    if (datos.tipo === 'anticipo') {
+      this.toast.error('Los anticipos se registran por el flujo de instructor.');
+      return false;
+    }
+    if (datos.tipo === 'combustible' && !datos.vehiculoId) {
+      this.toast.error('Selecciona el vehículo del egreso de combustible.');
+      return false;
+    }
+    if (datos.branchId == null) {
+      this.toast.error('Selecciona la sede del egreso.');
+      return false;
+    }
+
     this._isSaving.set(true);
     try {
       const today = toISODate(new Date());
-      if (datos.tipo === 'gasto' || datos.tipo === 'combustible') {
-        await this.supabase.client.from('expenses').insert({
-          date: today,
-          amount: datos.monto,
-          description: datos.descripcion,
-          category: datos.tipo === 'combustible' ? 'combustible' : null,
-          vehicle_id: datos.vehiculoId ?? null,
-          branch_id: this.getActiveBranchId(),
-          registered_by: user.dbId,
-          payment_method: datos.metodoPago,
-        });
-      } else {
-        await this.supabase.client.from('instructor_advances').insert({
-          date: today,
-          amount: datos.monto,
-          reason: datos.descripcion,
-          registered_by: user.dbId,
-          payment_method: datos.metodoPago,
-        });
-      }
+      const { error } = await this.supabase.client.from('expenses').insert({
+        date: today,
+        amount: datos.monto,
+        description: datos.descripcion,
+        category: datos.tipo === 'combustible' ? 'combustible' : null,
+        vehicle_id: datos.vehiculoId ?? null,
+        branch_id: datos.branchId,
+        registered_by: user.dbId,
+        payment_method: datos.metodoPago,
+      });
+      if (error) throw error;
       this.toast.success('Egreso registrado correctamente.');
       void this.refreshSilently();
       return true;

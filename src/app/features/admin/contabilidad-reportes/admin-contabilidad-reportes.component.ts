@@ -16,8 +16,6 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [ingresosCategoria]="facade.ingresosCategoria()"
       [gastosCategoria]="facade.gastosCategoria()"
       [evolucionMensual]="facade.evolucionMensual()"
-      [detalleDiario]="facade.detalleDiario()"
-      [diasConMovimientos]="facade.diasConMovimientos()"
       [escuela]="facade.escuela()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
@@ -25,10 +23,11 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [rentabilidadCursos]="facade.rentabilidadCursos()"
       [isAdmin]="true"
       [filtros]="facade.filtros()"
+      [rangoEvolucion]="facade.rangoEvolucion()"
       (aplicarFiltros)="onAplicarFiltros($event)"
+      (aplicarRangoEvolucion)="facade.aplicarRangoEvolucion($event)"
       (exportRequested)="facade.exportar($event)"
       (registrarGastoClick)="onAbrirRegistrarGasto()"
-      (verDetalle)="onVerDetalle($event)"
     />
   `,
 })
@@ -50,10 +49,5 @@ export class AdminContabilidadReportesComponent {
 
   protected onAbrirRegistrarGasto(): void {
     this.layoutDrawer.open(RegistrarGastoFijoDrawerComponent, 'Registrar Gasto Fijo', 'receipt');
-  }
-
-  protected onVerDetalle(fecha: string): void {
-    // TODO: abrir drawer con detalle del día (fecha YYYY-MM-DD)
-    console.log('Ver detalle del día:', fecha);
   }
 }

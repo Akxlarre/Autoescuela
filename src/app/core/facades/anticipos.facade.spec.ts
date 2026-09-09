@@ -154,6 +154,7 @@ describe('AnticiposFacade.registrarAnticipo() — notifica al instructor (spec 0
   let notificationsSpy: any;
   let toastSpy: any;
   let singleMock: any;
+  let advancesChain: any;
 
   const payload = {
     instructorId: 7,
@@ -187,7 +188,7 @@ describe('AnticiposFacade.registrarAnticipo() — notifica al instructor (spec 0
         }),
       }),
     };
-    const advancesChain = {
+    advancesChain = {
       insert: vi.fn().mockResolvedValue({ error: null }),
       select: vi.fn().mockReturnValue({
         order: vi.fn(() => asyncChain({ data: [], error: null })),
@@ -242,6 +243,23 @@ describe('AnticiposFacade.registrarAnticipo() — notifica al instructor (spec 0
     const ok = await facade.registrarAnticipo(payload);
 
     expect(ok).toBe(true);
+  });
+
+  // ─── fix-243-m: método de pago persiste (afecta el arqueo de caja) ─────────
+  it('persiste el paymentMethod recibido en el insert', async () => {
+    await facade.registrarAnticipo({ ...payload, paymentMethod: 'transferencia' });
+
+    expect(advancesChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_method: 'transferencia' }),
+    );
+  });
+
+  it('usa payment_method "efectivo" por defecto cuando no se pasa', async () => {
+    await facade.registrarAnticipo(payload);
+
+    expect(advancesChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_method: 'efectivo' }),
+    );
   });
 });
 
