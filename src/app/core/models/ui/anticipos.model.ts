@@ -34,6 +34,12 @@ export interface RegistrarAnticipoPayload {
   amount: number;
   reason: string;
   description: string;
+  /**
+   * Método de pago del anticipo (fix-243-m). Afecta el arqueo de caja cuando el anticipo se
+   * registra desde el drawer de egreso de la cuadratura. Default `'efectivo'` si no se pasa
+   * (el drawer dedicado de Anticipos no lo captura).
+   */
+  paymentMethod?: 'efectivo' | 'transferencia' | 'tarjeta';
 }
 
 export interface InstructorOption {

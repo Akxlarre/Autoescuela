@@ -324,27 +324,27 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 444 | `#38bdf8` |
-| `--text-muted` | 388 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 269 | `var(--color-primary-text)` |
-| `--state-error` | 234 | `#f87171` |
-| `--text-secondary` | 233 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 208 | `rgba(255, 255, 255, 0.18)` |
-| `--bg-surface` | 196 | `#18181b` |
-| `--state-success` | 173 | `#4ade80` |
-| `--border-default` | 137 | `rgba(255, 255, 255, 0.28)` |
-| `--color-primary` | 134 | `#38bdf8` |
+| `--text-muted` | 385 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 265 | `var(--color-primary-text)` |
+| `--state-error` | 232 | `#f87171` |
+| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
+| `--border-subtle` | 212 | `rgba(255, 255, 255, 0.18)` |
+| `--bg-surface` | 192 | `#18181b` |
+| `--state-success` | 176 | `#4ade80` |
+| `--border-default` | 139 | `rgba(255, 255, 255, 0.28)` |
+| `--color-primary` | 133 | `#38bdf8` |
 | `--state-warning` | 124 | `#fbbf24` |
 | `--bg-elevated` | 76 | `#27272a` |
-| `--text-sm` | 68 | `0.875rem` |
-| `--bg-subtle` | 59 | `rgba(255, 255, 255, 0.1)` |
+| `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
+| `--bg-subtle` | 53 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 53 | `200ms` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--text-xs` | 48 | `0.75rem` |
+| `--text-xs` | 52 | `0.75rem` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
-| `--border-muted` | 46 | `var(--border-subtle)` |
 | `--color-success` | 39 | `—` |
 | `--color-primary-text` | 37 | `#ffffff` |
+| `--border-muted` | 36 | `var(--border-subtle)` |
 | `--bg-base` | 28 | `#09090b` |
 | `--state-error-bg` | 26 | `rgba(248, 113, 113, 0.1)` |
 | `--radius-full` | 24 | `9999px` |
@@ -353,7 +353,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 283 | `src/styles/tokens/_variables.scss` |
+| `.card` | 284 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 177 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 177 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 51 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 874 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 861 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -478,9 +478,9 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 10 | `text-sm font-bold text-text-primary` |
 | 9 | `text-xs font-semibold text-text-muted mb-1 block` |
 | 9 | `m-0 font-semibold text-text-primary` |
-| 8 | `text-xs font-semibold uppercase tracking-wider` |
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
+| 6 | `text-xs font-semibold uppercase tracking-wider` |
 | 6 | `text-text-secondary font-semibold text-xs tracking-wider` |
 
 

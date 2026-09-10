@@ -16,13 +16,18 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [BadgeComponent, IconComponent, ShortCurrencyPipe],
   styles: `
+    :host {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
     .rows-divider > * + * {
       border-top: 1px solid var(--border-muted);
     }
   `,
   template: `
     <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4 shrink-0">
       <div class="flex items-center gap-2">
         <app-icon name="bar-chart-2" [size]="18" color="var(--text-primary)" />
         <h2 class="text-text-primary font-semibold">Rentabilidad Estimada por Tipo de Curso</h2>
@@ -45,7 +50,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
       </div>
     } @else {
       <!-- ── Tabla ───────────────────────────────────────────────────────────── -->
-      <div>
+      <div class="flex-1 min-h-0 overflow-y-auto">
         <!-- Encabezado de columnas -->
         <div
           class="micro-label hidden lg:grid gap-4 px-6 py-2 border-b bg-surface border-border-muted"
@@ -193,7 +198,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 
       <!-- ── Nota al pie ────────────────────────────────────────────────────────── -->
       <div
-        class="mt-4 px-4 py-3 rounded-lg text-xs text-text-muted border border-border-muted bg-text-muted/8"
+        class="mt-4 shrink-0 px-4 py-3 rounded-lg text-xs text-text-muted border border-border-muted bg-text-muted/8"
       >
         <strong>Nota:</strong> Estimación. Los gastos directos se prorratean desde bencina,
         reparaciones (según nº de clases prácticas de cada tipo) y materiales (según ingresos). No

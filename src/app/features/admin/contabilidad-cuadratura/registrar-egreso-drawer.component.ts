@@ -1,17 +1,16 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { merge } from 'rxjs';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { FlotaFacade } from '@core/facades/flota.facade';
+import { AnticiposFacade } from '@core/facades/anticipos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -23,7 +22,18 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
  * RegistrarEgresoDrawerComponent — Panel lateral para registrar un egreso/retiro.
  *
  * Renderizado vía `LayoutDrawerFacadeService.open()` como NgComponentOutlet.
- * Inyecta `CuadraturaFacade` directamente para persistir y refrescar datos.
+ * Reutilizable: se abre desde la página de Cuadratura y desde el atajo del dashboard.
+ *
+ * fix-243-m — cada tipo de egreso ahora exige la asociación de la que sale su sede:
+ * - `combustible` → vehículo obligatorio (sede = `vehicle.branchId`; si el vehículo es una
+ *   fila legacy sin sede, aparece el campo Sede como fallback).
+ * - `anticipo` → instructor obligatorio. El guardado NO pasa por `CuadraturaFacade` sino
+ *   por `AnticiposFacade.registrarAnticipo()` (necesita `instructor_id`; la tabla no tiene
+ *   `branch_id`, la sede se deriva del instructor).
+ * - `gasto` → campo Sede obligatorio (no hay de dónde derivarla).
+ *
+ * Sin esto, un egreso registrado con el admin en "Todas las sedes" quedaba con
+ * `branch_id: null` — invisible en toda cuadratura por sede (DG-082).
  */
 @Component({
   selector: 'app-registrar-egreso-drawer',
@@ -74,13 +84,14 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 TIPO DE EGRESO <span class="text-error">*</span>
               </label>
               <p-select
+                inputId="egr-tipo"
                 formControlName="tipo"
                 [options]="tipoOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Seleccionar tipo..."
                 styleClass="w-full"
-                data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
+                data-llm-description="Selector del tipo de egreso: combustible, gastos varios o anticipo a instructor"
                 [class.field-input--error]="isInvalid('tipo')"
               />
               @if (isInvalid('tipo')) {
@@ -88,24 +99,77 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               }
             </div>
 
-            <!-- Vehículo / Patente (destacado cuando el tipo es combustible) -->
-            <div
-              class="flex flex-col gap-1.5 rounded-lg"
-              [class.p-3]="isCombustible()"
-              [style.background]="isCombustible() ? 'var(--color-primary-muted)' : null"
-            >
-              <label for="egr-vehiculo" class="field-label">VEHÍCULO / PATENTE</label>
-              <p-select
-                formControlName="vehiculoId"
-                [options]="vehicleOptions()"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccionar vehículo (opcional)..."
-                styleClass="w-full"
-                [showClear]="true"
-                data-llm-description="Selector del vehículo asociado al egreso, muestra el instructor asignado"
-              />
-            </div>
+            <!-- Vehículo / Patente (obligatorio para Combustible: de él sale la sede) -->
+            @if (isCombustible()) {
+              <div
+                class="flex flex-col gap-1.5 rounded-lg p-3"
+                [style.background]="'var(--color-primary-muted)'"
+              >
+                <label for="egr-vehiculo" class="field-label">
+                  VEHÍCULO / PATENTE <span class="text-error">*</span>
+                </label>
+                <p-select
+                  inputId="egr-vehiculo"
+                  formControlName="vehiculoId"
+                  [options]="vehicleOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccionar vehículo..."
+                  styleClass="w-full"
+                  data-llm-description="Selector del vehículo asociado al egreso de combustible; determina la sede del egreso"
+                  [class.field-input--error]="isInvalid('vehiculoId')"
+                />
+                @if (isInvalid('vehiculoId')) {
+                  <span class="field-error">Seleccione el vehículo del egreso.</span>
+                }
+              </div>
+            }
+
+            <!-- Instructor (obligatorio para Anticipo: de él sale la sede) -->
+            @if (isAnticipo()) {
+              <div class="flex flex-col gap-1.5">
+                <label for="egr-instructor" class="field-label">
+                  INSTRUCTOR <span class="text-error">*</span>
+                </label>
+                <p-select
+                  inputId="egr-instructor"
+                  formControlName="instructorId"
+                  [options]="instructorOptions()"
+                  optionLabel="nombre"
+                  optionValue="id"
+                  placeholder="Seleccionar instructor..."
+                  styleClass="w-full"
+                  data-llm-description="Selector del instructor al que se registra el anticipo; determina la sede del egreso"
+                  [class.field-input--error]="isInvalid('instructorId')"
+                />
+                @if (isInvalid('instructorId')) {
+                  <span class="field-error">Seleccione un instructor.</span>
+                }
+              </div>
+            }
+
+            <!-- Sede (solo admin; solo cuando la sede no se puede derivar) -->
+            @if (showSedeField()) {
+              <div class="flex flex-col gap-1.5">
+                <label for="egr-sede" class="field-label">
+                  SEDE <span class="text-error">*</span>
+                </label>
+                <p-select
+                  inputId="egr-sede"
+                  formControlName="branchId"
+                  [options]="branchOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccionar sede..."
+                  styleClass="w-full"
+                  data-llm-description="Sede a la que se imputa el egreso"
+                  [class.field-input--error]="isInvalid('branchId')"
+                />
+                @if (isInvalid('branchId')) {
+                  <span class="field-error">Seleccione la sede del egreso.</span>
+                }
+              </div>
+            }
 
             <!-- Monto -->
             <div class="flex flex-col gap-1.5">
@@ -286,7 +350,7 @@ export class RegistrarEgresoDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   readonly tipoOptions = [
     { label: 'Combustible', value: 'combustible' },
-    { label: 'Gasto Varios', value: 'gasto' },
+    { label: 'Gastos Varios', value: 'gasto' },
     { label: 'Anticipo a Instructor', value: 'anticipo' },
   ];
   readonly metodoPagoOptions = [
@@ -298,6 +362,9 @@ export class RegistrarEgresoDrawerComponent {
   // ── Injections ───────────────────────────────────────────────────────────────
   protected readonly facade = inject(CuadraturaFacade);
   private readonly flotaFacade = inject(FlotaFacade);
+  private readonly anticiposFacade = inject(AnticiposFacade);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly auth = inject(AuthFacade);
   private readonly fb = inject(FormBuilder);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
@@ -310,9 +377,21 @@ export class RegistrarEgresoDrawerComponent {
     tipo: ['', Validators.required],
     monto: [null as number | null, [Validators.required, Validators.min(1)]],
     descripcion: ['', [Validators.required, Validators.minLength(3)]],
-    // Opcional: no se persiste todavía (vehicle_id queda reservado para ASG-b-037).
+    /** Obligatorio solo para `combustible` — de él sale la sede (`expenses.vehicle_id`). */
     vehiculoId: [null as number | null],
+    /** Obligatorio solo para `anticipo` — enruta a `AnticiposFacade.registrarAnticipo()`. */
+    instructorId: [null as number | null],
+    /** Obligatorio para `gasto`, y para `combustible` si el vehículo es legacy sin sede. */
+    branchId: [null as number | null],
     metodoPago: ['efectivo' as 'efectivo' | 'transferencia' | 'tarjeta', Validators.required],
+  });
+
+  // ── Señales derivadas del formulario ────────────────────────────────────────
+  private readonly tipoValue = toSignal(this.form.controls.tipo.valueChanges, {
+    initialValue: this.form.controls.tipo.value,
+  });
+  private readonly vehiculoIdValue = toSignal(this.form.controls.vehiculoId.valueChanges, {
+    initialValue: this.form.controls.vehiculoId.value,
   });
 
   // ── Vehículos (selector "Vehículo / Patente" con instructor asignado) ────────
@@ -325,8 +404,15 @@ export class RegistrarEgresoDrawerComponent {
     })),
   );
 
+  protected readonly instructorOptions = computed(() => this.anticiposFacade.instructores());
+
+  protected readonly branchOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
+
   constructor() {
     void this.flotaFacade.initialize();
+    void this.anticiposFacade.initialize();
 
     // Preset de tipo (ej: "combustible" desde el atajo del dashboard) — se consume una sola vez.
     const preset = this.facade.egresoTipoPreset();
@@ -334,24 +420,94 @@ export class RegistrarEgresoDrawerComponent {
       this.form.patchValue({ tipo: preset });
       this.facade.egresoTipoPreset.set(null);
     }
+
+    // Validadores dinámicos según el tipo + prefill de la sede activa. Se resuelve por
+    // suscripción (no `effect()`) para que corra sincrónicamente en cada cambio del form,
+    // sin depender de un ciclo de detección de cambios.
+    merge(this.form.controls.tipo.valueChanges, this.form.controls.vehiculoId.valueChanges)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.syncValidators());
+    this.syncValidators();
+  }
+
+  /** Ajusta qué campos son obligatorios según el tipo, y precarga la sede activa. */
+  private syncValidators(): void {
+    const tipo = this.form.controls.tipo.value;
+    const combustible = tipo === 'combustible';
+    const anticipo = tipo === 'anticipo';
+
+    const vehicle = this.selectedVehicle();
+    const combustibleSinSede = combustible && !!vehicle && vehicle.branchId == null;
+    const needsSede = this.isAdminLike() && (tipo === 'gasto' || combustibleSinSede);
+
+    this.setRequired(this.form.controls.vehiculoId, combustible);
+    this.setRequired(this.form.controls.instructorId, anticipo);
+    this.setRequired(this.form.controls.branchId, needsSede);
+
+    if (needsSede && this.form.controls.branchId.value == null) {
+      const active = this.forcedBranchId();
+      if (active != null) {
+        this.form.controls.branchId.setValue(active, { emitEvent: false });
+      }
+    }
   }
 
   // ── Computed ─────────────────────────────────────────────────────────────────
+  protected readonly isCombustible = computed(() => this.tipoValue() === 'combustible');
+  protected readonly isAnticipo = computed(() => this.tipoValue() === 'anticipo');
+  protected readonly isGasto = computed(() => this.tipoValue() === 'gasto');
+
+  /** Admin (o secretaria con acceso a ambas sedes) → puede elegir sede; secretaria → no. */
+  private readonly isAdminLike = computed(() => {
+    const u = this.auth.currentUser();
+    return u?.role === 'admin' || !!u?.canAccessBothBranches;
+  });
+
+  /** Sede impuesta a una secretaria, o el selector activo del admin (`null` = Todas las sedes). */
+  private readonly forcedBranchId = computed<number | null>(() => {
+    const u = this.auth.currentUser();
+    return resolveBranchScope(
+      u?.role,
+      u?.branchId,
+      this.branchFacade.selectedBranchId(),
+      u?.canAccessBothBranches,
+    );
+  });
+
+  private readonly selectedVehicle = computed(
+    () => this.flotaFacade.vehicles().find((v) => v.id === this.vehiculoIdValue()) ?? null,
+  );
+
+  /** Vehículo elegido que es una fila legacy sin sede asignada (`branchId` null). */
+  private readonly vehicleHasNoBranch = computed(() => {
+    const v = this.selectedVehicle();
+    return !!v && v.branchId == null;
+  });
+
+  /**
+   * El campo Sede se muestra solo al admin y solo cuando la sede no se puede derivar:
+   * - `gasto` → siempre (no hay asociación de la cual sacarla)
+   * - `combustible` → solo si el vehículo elegido no tiene sede (fila legacy)
+   * - `anticipo` → nunca (sale del instructor)
+   */
+  protected readonly showSedeField = computed(
+    () =>
+      this.isAdminLike() && (this.isGasto() || (this.isCombustible() && this.vehicleHasNoBranch())),
+  );
+
   protected readonly tipoLabel = computed(() => {
-    const tipo = this.form.get('tipo')?.value;
+    const tipo = this.tipoValue();
     if (tipo === 'anticipo') return 'Motivo del anticipo';
     if (tipo === 'combustible') return 'Detalle (ej: patente, litros)';
     return 'Descripción / Motivo';
   });
 
   protected readonly tipoPlaceholder = computed(() => {
-    const tipo = this.form.get('tipo')?.value;
+    const tipo = this.tipoValue();
     if (tipo === 'anticipo') return 'Ej: Anticipo por combustible...';
     if (tipo === 'combustible') return 'Ej: Carga camioneta ABC-123...';
     return 'Ej: Compra insumos oficina...';
   });
-
-  protected readonly isCombustible = computed(() => this.form.get('tipo')?.value === 'combustible');
 
   protected readonly fechaHoy = computed(() =>
     new Date().toLocaleDateString('es-CL', {
@@ -382,16 +538,41 @@ export class RegistrarEgresoDrawerComponent {
     this.saveError.set(null);
 
     try {
-      const { tipo, monto, descripcion, vehiculoId, metodoPago } = this.form.getRawValue();
-      const datos: EgresoFormData = {
-        tipo: tipo as 'gasto' | 'anticipo' | 'combustible',
-        monto: Number(monto),
-        descripcion: descripcion ?? '',
-        vehiculoId: vehiculoId ?? null,
-        metodoPago: metodoPago ?? 'efectivo',
-      };
+      const raw = this.form.getRawValue();
+      const tipo = raw.tipo as EgresoFormData['tipo'];
+      const metodoPago = raw.metodoPago ?? 'efectivo';
 
-      const ok = await this.facade.registrarEgreso(datos);
+      let ok = false;
+
+      if (tipo === 'anticipo') {
+        // El anticipo NO pasa por CuadraturaFacade: necesita instructor_id y la lógica de
+        // notificación al instructor que ya vive en AnticiposFacade.
+        ok = await this.anticiposFacade.registrarAnticipo({
+          instructorId: Number(raw.instructorId),
+          date: this.fechaHoyISO(),
+          amount: Number(raw.monto),
+          reason: '',
+          description: raw.descripcion ?? '',
+          paymentMethod: metodoPago,
+        });
+        if (ok) await this.facade.refresh();
+      } else {
+        const branchId =
+          tipo === 'combustible'
+            ? (this.selectedVehicle()?.branchId ?? raw.branchId ?? this.forcedBranchId())
+            : (raw.branchId ?? this.forcedBranchId());
+
+        const datos: EgresoFormData = {
+          tipo,
+          monto: Number(raw.monto),
+          descripcion: raw.descripcion ?? '',
+          vehiculoId: raw.vehiculoId ?? null,
+          branchId: branchId ?? null,
+          metodoPago,
+        };
+        ok = await this.facade.registrarEgreso(datos);
+      }
+
       if (ok) {
         this.layoutDrawer.close();
       }
@@ -404,5 +585,14 @@ export class RegistrarEgresoDrawerComponent {
     } finally {
       this.isSaving.set(false);
     }
+  }
+
+  private setRequired(ctrl: AbstractControl, required: boolean): void {
+    ctrl.setValidators(required ? [Validators.required] : []);
+    ctrl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private fechaHoyISO(): string {
+    return new Date().toISOString().slice(0, 10);
   }
 }

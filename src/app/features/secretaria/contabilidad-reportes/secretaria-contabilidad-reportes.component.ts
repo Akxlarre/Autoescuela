@@ -14,16 +14,15 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [ingresosCategoria]="facade.ingresosCategoria()"
       [gastosCategoria]="facade.gastosCategoria()"
       [evolucionMensual]="facade.evolucionMensual()"
-      [detalleDiario]="facade.detalleDiario()"
-      [diasConMovimientos]="facade.diasConMovimientos()"
       [escuela]="facade.escuela()"
       [rentabilidadCursos]="facade.rentabilidadCursos()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
       [filtros]="facade.filtros()"
+      [rangoEvolucion]="facade.rangoEvolucion()"
       (aplicarFiltros)="onAplicarFiltros($event)"
+      (aplicarRangoEvolucion)="facade.aplicarRangoEvolucion($event)"
       (exportRequested)="facade.exportar($event)"
-      (verDetalle)="onVerDetalle($event)"
     />
   `,
 })
@@ -40,10 +39,5 @@ export class SecretariaContabilidadReportesComponent {
 
   protected async onAplicarFiltros(filtros: FiltrosReporte): Promise<void> {
     await this.facade.aplicarFiltros(filtros);
-  }
-
-  protected onVerDetalle(fecha: string): void {
-    // TODO: abrir drawer con detalle del día (fecha YYYY-MM-DD)
-    console.log('Ver detalle del día:', fecha);
   }
 }

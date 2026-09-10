@@ -8,8 +8,8 @@ import type {
   CategoriaGasto,
   CategoriaIngreso,
   ClassCountsByGroup,
-  DetalleDiario,
   EvolucionMensual,
+  RangoEvolucion,
   RentabilidadCurso,
   ReporteContable,
   ReporteKpis,
@@ -64,7 +64,19 @@ const EXPENSE_LABEL: Record<string, string> = {
   utility: 'Servicios Básicos',
   insurance: 'Seguros',
   repair: 'Reparaciones',
+  // `gasto` del drawer de egreso → categoría genérica (hasta fix-244-m se guardaba `null`).
+  general: 'Gastos Varios',
   other: 'Otros',
+};
+
+/**
+ * Alias de `expenses.category` → clave canónica de `EXPENSE_LABEL` (fix-244-m).
+ * El drawer de egreso de Cuadratura escribe `'combustible'`, que es el mismo concepto
+ * que `'fuel'`. Se normaliza al LEER (sin migración de datos — criterio del owner,
+ * fix-243 AC-7) para que ambos caigan en la misma fila "Bencina", no en dos.
+ */
+const EXPENSE_CATEGORY_ALIAS: Record<string, string> = {
+  combustible: 'fuel',
 };
 
 // ── Helpers internos ──────────────────────────────────────────────────────────
@@ -174,6 +186,32 @@ export function computeKpis(payments: PaymentRow[], expenses: ExpenseRow[]): Rep
 }
 
 /**
+ * Reparte porcentajes a 1 decimal que sumen exactamente 100.0 (método del resto mayor
+ * / Hamilton), para que las filas de "por categoría" no queden en 99.9% ni 100.1% por
+ * redondear cada una por separado (hotfix-101-m).
+ *
+ * Trabaja en décimas de punto (enteros 0..1000): trunca cada parte hacia abajo y suma
+ * la décima faltante a las categorías con mayor resto. `total <= 0` → todos 0.
+ */
+function distributePercentages(montos: number[], total: number): number[] {
+  if (total <= 0 || montos.length === 0) return montos.map(() => 0);
+
+  const exact = montos.map((m) => (m / total) * 1000);
+  const floors = exact.map((x) => Math.floor(x));
+  let deficit = 1000 - floors.reduce((s, x) => s + x, 0);
+
+  const order = exact
+    .map((x, i) => ({ i, rem: x - floors[i], monto: montos[i] }))
+    .sort((a, b) => b.rem - a.rem || b.monto - a.monto || a.i - b.i);
+
+  const tenths = [...floors];
+  for (let k = 0; k < order.length && deficit > 0; k++, deficit--) {
+    tenths[order[k].i] += 1;
+  }
+  return tenths.map((t) => t / 10);
+}
+
+/**
  * Agrupa los pagos por categoría de ingreso y calcula porcentajes.
  * `showBranch` = true cuando el admin ve todas las sedes (branchId === null).
  */
@@ -190,15 +228,22 @@ export function computeIngresosCategoria(
     map.set(key, { monto: current.monto + p.total_amount, operaciones: current.operaciones + 1 });
   }
 
-  return Array.from(map.entries())
+  const rows = Array.from(map.entries())
     .map(([key, { monto, operaciones }]) => ({
       nombre: incomeCategoryLabel(key, showBranch),
       monto,
       operaciones,
-      porcentaje: totalIngresos > 0 ? Math.round((monto / totalIngresos) * 1000) / 10 : 0,
+      porcentaje: 0,
       barColor: incomeBarColor(key),
     }))
     .sort((a, b) => b.monto - a.monto);
+
+  const pcts = distributePercentages(
+    rows.map((r) => r.monto),
+    totalIngresos,
+  );
+  rows.forEach((r, i) => (r.porcentaje = pcts[i]));
+  return rows;
 }
 
 /** Agrupa los gastos por categoría y calcula porcentajes. */
@@ -207,91 +252,130 @@ export function computeGastosCategoria(expenses: ExpenseRow[]): CategoriaGasto[]
   const map = new Map<string, { monto: number; registros: number }>();
 
   for (const e of expenses) {
-    const cat = e.category ?? 'other';
+    // Normalización ANTES de agrupar (fix-244-m): `null` = egreso tipo `gasto` del drawer
+    // (hasta fix-244-m no guardaba categoría) → `'general'` ("Gastos Varios"); los alias
+    // (`combustible` → `fuel`) se colapsan a su clave canónica; cualquier clave sin etiqueta
+    // conocida cae en `'other'`. Sin esto aparecían varias filas distintas todas rotuladas igual.
+    const raw = e.category ?? 'general';
+    const canonical = EXPENSE_CATEGORY_ALIAS[raw] ?? raw;
+    const cat = canonical in EXPENSE_LABEL ? canonical : 'other';
     const current = map.get(cat) ?? { monto: 0, registros: 0 };
     map.set(cat, { monto: current.monto + e.amount, registros: current.registros + 1 });
   }
 
-  return Array.from(map.entries())
+  const rows = Array.from(map.entries())
     .map(([cat, { monto, registros }]) => ({
       nombre: EXPENSE_LABEL[cat] ?? 'Otros',
       monto,
       registros,
-      porcentaje: totalGastos > 0 ? Math.round((monto / totalGastos) * 1000) / 10 : 0,
+      porcentaje: 0,
     }))
     .sort((a, b) => b.monto - a.monto);
+
+  const pcts = distributePercentages(
+    rows.map((r) => r.monto),
+    totalGastos,
+  );
+  rows.forEach((r, i) => (r.porcentaje = pcts[i]));
+  return rows;
 }
 
-/** Construye la evolución mensual agrupando por YYYY-MM. */
+/**
+ * Construye la evolución mensual agrupando por YYYY-MM.
+ *
+ * - Sin `meses`: emite solo los meses que tienen algún ingreso o gasto (comportamiento
+ *   histórico — usado por `buildReporte`).
+ * - Con `meses` (spec 0015-m): emite **exactamente** esa lista, en ese orden, rellenando
+ *   con 0 los meses sin datos y marcando `sinMovimientos`. Los datos fuera de la ventana
+ *   se ignoran.
+ */
 export function computeEvolucionMensual(
   payments: PaymentRow[],
   expenses: ExpenseRow[],
+  meses?: string[],
 ): EvolucionMensual[] {
   const ingresosPorMes = new Map<string, number>();
   const gastosPorMes = new Map<string, number>();
-  const meses = new Set<string>();
+  const mesesConDatos = new Set<string>();
 
   for (const p of payments) {
     if (!p.payment_date) continue;
     const mes = p.payment_date.substring(0, 7);
-    meses.add(mes);
+    mesesConDatos.add(mes);
     ingresosPorMes.set(mes, (ingresosPorMes.get(mes) ?? 0) + p.total_amount);
   }
 
   for (const e of expenses) {
     const mes = e.date.substring(0, 7);
-    meses.add(mes);
+    mesesConDatos.add(mes);
     gastosPorMes.set(mes, (gastosPorMes.get(mes) ?? 0) + e.amount);
   }
 
-  return Array.from(meses)
-    .sort()
-    .map((mes) => {
-      const ingresos = ingresosPorMes.get(mes) ?? 0;
-      const gastos = gastosPorMes.get(mes) ?? 0;
-      const neto = ingresos - gastos;
-      const margen = ingresos > 0 ? Math.round((neto / ingresos) * 1000) / 10 : 0;
-      return { mes: monthLabel(mes), ingresos, gastos, neto, margen };
-    });
+  const mesesFinales = meses ?? Array.from(mesesConDatos).sort();
+
+  return mesesFinales.map((mes) => {
+    const ingresos = ingresosPorMes.get(mes) ?? 0;
+    const gastos = gastosPorMes.get(mes) ?? 0;
+    const neto = ingresos - gastos;
+    const margen = ingresos > 0 ? Math.round((neto / ingresos) * 1000) / 10 : 0;
+    return {
+      mes: monthLabel(mes),
+      ingresos,
+      gastos,
+      neto,
+      margen,
+      sinMovimientos: ingresos === 0 && gastos === 0,
+    };
+  });
 }
 
-/** Construye el detalle diario agrupando por YYYY-MM-DD. */
-export function computeDetalleDiario(
-  payments: PaymentRow[],
-  expenses: ExpenseRow[],
-): DetalleDiario[] {
-  const ingresosPorDia = new Map<string, { monto: number; ops: number }>();
-  const gastosPorDia = new Map<string, number>();
-  const dias = new Set<string>();
+/**
+ * Traduce un `RangoEvolucion` (spec 0015-m) a la ventana `[desde, hasta]` en `YYYY-MM-DD`
+ * y la lista ordenada de meses `YYYY-MM` que la pestaña Evolución debe pintar (con o sin
+ * datos). Función pura — `now` es inyectable para tests.
+ *
+ * Estas ventanas son SIEMPRE multi-mes (la única excepción es "año actual" en enero, que
+ * da 1 mes); por eso tiene sentido re-acoplar Evolución a un selector, a diferencia del
+ * `RangoReporte` general que fix-242-m había desacoplado (con "Mes actual" daba 1 mes).
+ */
+export function computeEvolucionRange(
+  rango: RangoEvolucion,
+  now: Date = new Date(),
+): { desde: string; hasta: string; meses: string[] } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ym = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  const firstDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
+  const lastDay = (year: number, monthIdx: number) => {
+    const d = new Date(year, monthIdx + 1, 0);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const monthList = (startYear: number, startMonthIdx: number, count: number): string[] =>
+    Array.from({ length: count }, (_, i) => ym(new Date(startYear, startMonthIdx + i, 1)));
 
-  for (const p of payments) {
-    if (!p.payment_date) continue;
-    dias.add(p.payment_date);
-    const current = ingresosPorDia.get(p.payment_date) ?? { monto: 0, ops: 0 };
-    ingresosPorDia.set(p.payment_date, {
-      monto: current.monto + p.total_amount,
-      ops: current.ops + 1,
-    });
-  }
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0–11
 
-  for (const e of expenses) {
-    dias.add(e.date);
-    gastosPorDia.set(e.date, (gastosPorDia.get(e.date) ?? 0) + e.amount);
-  }
-
-  return Array.from(dias)
-    .sort()
-    .map((fecha) => {
-      const ingData = ingresosPorDia.get(fecha) ?? { monto: 0, ops: 0 };
-      const gastos = gastosPorDia.get(fecha) ?? 0;
+  switch (rango) {
+    case 'ultimos_6_meses':
+    case 'ultimos_12_meses': {
+      const count = rango === 'ultimos_6_meses' ? 6 : 12;
+      const start = new Date(y, m - (count - 1), 1);
       return {
-        fecha,
-        operaciones: ingData.ops + (gastosPorDia.has(fecha) ? 1 : 0),
-        ingresos: ingData.monto,
-        gastos,
-        neto: ingData.monto - gastos,
+        desde: firstDay(start),
+        hasta: lastDay(y, m),
+        meses: monthList(start.getFullYear(), start.getMonth(), count),
       };
-    });
+    }
+    case 'anio_actual': {
+      // Enero → mes en curso, inclusive (NO ene–dic completo).
+      const count = m + 1;
+      return { desde: `${y}-01-01`, hasta: lastDay(y, m), meses: monthList(y, 0, count) };
+    }
+    case 'anio_anterior': {
+      const py = y - 1;
+      return { desde: `${py}-01-01`, hasta: `${py}-12-31`, meses: monthList(py, 0, 12) };
+    }
+  }
 }
 
 // ── Rentabilidad estimada por tipo de curso (fix-237-m) ──────────────────────
@@ -305,8 +389,12 @@ export function computeDetalleDiario(
 //   • Materiales (`materials`) → se reparten por participación en ingresos.
 //   • Gastos fijos y pagos a instructores NO entran.
 
-/** Categorías de `expenses` que se reparten por nº de clases prácticas. */
-const RENTABILIDAD_VEHICLE_CATEGORIES = ['fuel', 'repair'] as const;
+/**
+ * Categorías de `expenses` que se reparten por nº de clases prácticas.
+ * `combustible` es el alias legacy de `fuel` que escribe el drawer de egreso de Cuadratura
+ * (fix-244-m) — sin él, ningún egreso de combustible entraba al prorrateo de vehículo.
+ */
+const RENTABILIDAD_VEHICLE_CATEGORIES = ['fuel', 'combustible', 'repair'] as const;
 /** Categoría de `expenses` que se reparte por participación en ingresos. */
 const RENTABILIDAD_MATERIAL_CATEGORY = 'materials';
 
@@ -415,16 +503,13 @@ export function buildReporte(
   directExpenses: ExpenseRow[] = expenses,
 ): ReporteContable {
   const showBranch = branchId === null;
-  const detalleDiario = computeDetalleDiario(payments, expenses);
 
   return {
     kpis: computeKpis(payments, expenses),
     ingresosCategoria: computeIngresosCategoria(payments, showBranch),
     gastosCategoria: computeGastosCategoria(expenses),
     evolucionMensual: computeEvolucionMensual(payments, expenses),
-    detalleDiario,
     rentabilidadCursos: computeRentabilidadCursos(payments, directExpenses, classCounts),
-    diasConMovimientos: detalleDiario.length,
     escuela,
   };
 }

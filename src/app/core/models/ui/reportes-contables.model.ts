@@ -17,6 +17,30 @@ export const RANGOS_REPORTE: RangoOption[] = [
   { label: 'Personalizado', value: 'personalizado' },
 ];
 
+/**
+ * Rango de la pestaña **Evolución Mensual** (spec 0015-m). Es un eje independiente del
+ * `RangoReporte` general: aquí solo tienen sentido ventanas multi-mes, porque un gráfico
+ * de barras mensuales con un único mes no aporta (motivo por el que fix-242-m había fijado
+ * 6 meses hardcodeados). El selector del header muestra estas opciones cuando la pestaña
+ * activa es "Evolución Mensual", y las de `RANGOS_REPORTE` en las demás.
+ */
+export type RangoEvolucion =
+  'ultimos_6_meses' | 'ultimos_12_meses' | 'anio_actual' | 'anio_anterior';
+
+export interface RangoEvolucionOption {
+  label: string;
+  value: RangoEvolucion;
+}
+
+export const RANGOS_EVOLUCION: RangoEvolucionOption[] = [
+  { label: 'Últimos 6 meses', value: 'ultimos_6_meses' },
+  { label: 'Últimos 12 meses', value: 'ultimos_12_meses' },
+  { label: 'Año actual', value: 'anio_actual' },
+  { label: 'Año anterior', value: 'anio_anterior' },
+];
+
+export const RANGO_EVOLUCION_DEFAULT: RangoEvolucion = 'ultimos_6_meses';
+
 export interface FiltrosReporte {
   rango: RangoReporte;
   desde: string; // YYYY-MM-DD
@@ -53,14 +77,12 @@ export interface EvolucionMensual {
   gastos: number;
   neto: number;
   margen: number; // porcentaje 0–100
-}
-
-export interface DetalleDiario {
-  fecha: string; // "2026-01-02"
-  operaciones: number;
-  ingresos: number;
-  gastos: number;
-  neto: number;
+  /**
+   * true ⇔ el mes no tuvo ningún ingreso NI gasto (spec 0015-m). El mes igual se
+   * dibuja (barra en 0) con una nota "sin movimientos", en vez de omitirse — así el
+   * eje de tiempo no tiene huecos que se confundan con meses faltantes.
+   */
+  sinMovimientos: boolean;
 }
 
 /**
@@ -84,9 +106,7 @@ export interface ReporteContable {
   ingresosCategoria: CategoriaIngreso[];
   gastosCategoria: CategoriaGasto[];
   evolucionMensual: EvolucionMensual[];
-  detalleDiario: DetalleDiario[];
   rentabilidadCursos: RentabilidadCurso[];
-  diasConMovimientos: number;
   escuela: string;
 }
 
@@ -120,6 +140,12 @@ export interface RegistrarGastoFijoPayload {
   description: string;
   amount: number;
   date: string; // YYYY-MM-DD
+  /**
+   * Sede a la que se imputa el gasto fijo (fix-243-m). La elige el usuario en el drawer.
+   * Si no se pasa, el Facade cae a la sede efectiva; en cualquier caso rechaza `null`
+   * (un `fixed_expenses.branch_id` null queda huérfano — DG-082).
+   */
+  branchId?: number | null;
 }
 
 /**

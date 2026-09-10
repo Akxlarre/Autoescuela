@@ -4,12 +4,18 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { FixedExpense } from '@core/models/dto/fixed-expense.model';
 import type {
+  EvolucionMensual,
   FiltrosReporte,
   GastoFijoRow,
+  RangoEvolucion,
   RegistrarGastoFijoPayload,
   ReporteContable,
 } from '@core/models/ui/reportes-contables.model';
-import { GASTO_FIJO_CATEGORIES, computeDateRange } from '@core/models/ui/reportes-contables.model';
+import {
+  GASTO_FIJO_CATEGORIES,
+  RANGO_EVOLUCION_DEFAULT,
+  computeDateRange,
+} from '@core/models/ui/reportes-contables.model';
 import type { ClassCountsByGroup } from '@core/models/ui/reportes-contables.model';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -18,6 +24,8 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import {
   buildReporte,
+  computeEvolucionMensual,
+  computeEvolucionRange,
   filterPaymentsByBranch,
   mapSingularSaleToPaymentRow,
   type ExpenseRow,
@@ -39,6 +47,14 @@ export class ReportesContablesFacade {
   private readonly _error = signal<string | null>(null);
   private readonly _reporte = signal<ReporteContable | null>(null);
   private readonly _gastosFijos = signal<GastoFijoRow[]>([]);
+  /**
+   * Serie de Evolución Mensual — su propia ventana, independiente del filtro de rango
+   * general (fix-242-m: con "Mes actual" el reporte filtrado da un solo mes y el gráfico
+   * no aporta). spec 0015-m: la ventana ya no es fija de 6 meses, la elige el usuario en
+   * la pestaña Evolución vía `_rangoEvolucion` (opciones de `RANGOS_EVOLUCION`).
+   */
+  private readonly _evolucionSerie = signal<EvolucionMensual[]>([]);
+  private readonly _rangoEvolucion = signal<RangoEvolucion>(RANGO_EVOLUCION_DEFAULT);
   private readonly _filtros = signal<FiltrosReporte>(
     (() => {
       const [desde, hasta] = computeDateRange('mes_actual');
@@ -49,6 +65,13 @@ export class ReportesContablesFacade {
 
   /** Guard anti respuestas fuera de orden para `fetchReporte()` (regla facades §7). */
   private readonly reporteGuard = createRequestGuard();
+
+  /**
+   * Guard propio para la serie de Evolución (regla facades §7): `aplicarRangoEvolucion()`
+   * y `fetchReporte()` escriben ambos `_evolucionSerie`; sin un guard dedicado una
+   * respuesta vieja de una podría pisar a la otra.
+   */
+  private readonly evolucionGuard = createRequestGuard();
 
   /**
    * Las promociones Clase Profesional viven siempre en la sede 2 (Conductores
@@ -69,10 +92,11 @@ export class ReportesContablesFacade {
   public readonly kpis = computed(() => this._reporte()?.kpis ?? null);
   public readonly ingresosCategoria = computed(() => this._reporte()?.ingresosCategoria ?? []);
   public readonly gastosCategoria = computed(() => this._reporte()?.gastosCategoria ?? []);
-  public readonly evolucionMensual = computed(() => this._reporte()?.evolucionMensual ?? []);
-  public readonly detalleDiario = computed(() => this._reporte()?.detalleDiario ?? []);
+  /** Serie de Evolución Mensual — ventana propia elegida en `_rangoEvolucion` (spec 0015-m). */
+  public readonly evolucionMensual = this._evolucionSerie.asReadonly();
+  /** Opción de rango vigente de la pestaña Evolución (independiente de `filtros()`). */
+  public readonly rangoEvolucion = this._rangoEvolucion.asReadonly();
   public readonly rentabilidadCursos = computed(() => this._reporte()?.rentabilidadCursos ?? []);
-  public readonly diasConMovimientos = computed(() => this._reporte()?.diasConMovimientos ?? 0);
   public readonly escuela = computed(() => this._reporte()?.escuela ?? '');
 
   /**
@@ -155,9 +179,17 @@ export class ReportesContablesFacade {
 
   /** Registra un gasto fijo en `fixed_expenses` y recarga el reporte. */
   async registrarGastoFijo(payload: RegistrarGastoFijoPayload): Promise<boolean> {
+    // El drawer elige la sede explícitamente; el fallback a la sede efectiva cubre callers
+    // legacy. En cualquier caso, NUNCA un `fixed_expenses.branch_id` null — quedaría huérfano
+    // e invisible en toda vista por sede (DG-082, fix-243-m).
+    const branchId = payload.branchId ?? this._effectiveBranchId();
+    if (branchId == null) {
+      this.toast.error('Selecciona la sede del gasto fijo.');
+      return false;
+    }
+
     this._isRegistrando.set(true);
     try {
-      const branchId = this._effectiveBranchId();
       const user = this.authFacade.currentUser();
       const { error } = await this.supabase.client.from('fixed_expenses').insert({
         branch_id: branchId,
@@ -225,6 +257,8 @@ export class ReportesContablesFacade {
     const branchId = this._effectiveBranchId();
 
     try {
+      // La serie de Evolución se refresca por su propio camino (self-guarded): un solo
+      // lugar escribe `_evolucionSerie` y usa siempre la ventana de `_rangoEvolucion()`.
       const [paymentsResult, singularsResult, expensesResult, fixedResult, classCounts] =
         await Promise.all([
           this.queryPayments(desde, hasta),
@@ -232,6 +266,7 @@ export class ReportesContablesFacade {
           this.queryExpenses(desde, hasta, branchId),
           this.queryFixedExpenses(desde, hasta, branchId),
           this.queryClassCounts(desde, hasta, branchId),
+          this.refreshEvolucionSerie(),
         ]);
 
       if (paymentsResult.error) throw paymentsResult.error;
@@ -365,6 +400,81 @@ export class ReportesContablesFacade {
     }
 
     return query;
+  }
+
+  /**
+   * Cambia la opción de rango de la pestaña Evolución Mensual y repuebla SOLO su serie.
+   * NO toca `_filtros` ni el reporte general (KPIs / Categorías / Rentabilidad / Gastos
+   * Fijos siguen con su propio rango) — spec 0015-m. SWR: sin skeleton (nunca toca
+   * `_isLoading`); los datos previos quedan visibles hasta que llega la nueva serie.
+   */
+  async aplicarRangoEvolucion(rango: RangoEvolucion): Promise<void> {
+    if (this._rangoEvolucion() === rango) return;
+    this._rangoEvolucion.set(rango);
+    await this.refreshEvolucionSerie();
+  }
+
+  /**
+   * Repuebla `_evolucionSerie` para la ventana de `_rangoEvolucion()`. Self-guarded
+   * (regla facades §7): la llaman tanto `fetchReporte()` como `aplicarRangoEvolucion()`.
+   * Best-effort: si la fetch falla NO pisa la serie vigente con datos vacíos.
+   */
+  private async refreshEvolucionSerie(): Promise<void> {
+    const token = this.evolucionGuard.next();
+    const { desde, hasta, meses } = computeEvolucionRange(this._rangoEvolucion());
+    const branchId = this._effectiveBranchId();
+    const serie = await this.fetchEvolucionSerie(desde, hasta, branchId, meses);
+
+    if (!this.evolucionGuard.isCurrent(token)) return;
+    // `computeEvolucionMensual(_, _, meses)` siempre devuelve `meses.length` filas; un
+    // array vacío solo puede venir de un fallo de red → no pisar la serie buena.
+    if (serie.length === 0 && meses.length > 0) return;
+    this._evolucionSerie.set(serie);
+  }
+
+  /**
+   * Trae pagos + cobros singulares + gastos (operacionales y fijos) de la ventana de la
+   * serie y devuelve la Evolución Mensual ya computada, rellenando `meses` con ceros.
+   * Best-effort: si algo falla, devuelve `[]` (el caller decide si pisa o conserva).
+   */
+  private async fetchEvolucionSerie(
+    desde: string,
+    hasta: string,
+    branchId: number | null,
+    meses: string[],
+  ): Promise<EvolucionMensual[]> {
+    try {
+      const [paymentsResult, singularsResult, expensesResult, fixedResult] = await Promise.all([
+        this.queryPayments(desde, hasta),
+        this.querySingularSales(desde, hasta),
+        this.queryExpenses(desde, hasta, branchId),
+        this.queryFixedExpenses(desde, hasta, branchId),
+      ]);
+      if (paymentsResult.error) throw paymentsResult.error;
+      if (expensesResult.error) throw expensesResult.error;
+      if (fixedResult.error) throw fixedResult.error;
+
+      const singularRows: PaymentRow[] = ((singularsResult.data ?? []) as any[]).map((s) =>
+        mapSingularSaleToPaymentRow({
+          amount_paid: s.amount_paid,
+          paid_at: s.paid_at,
+          branch_id: s.standalone_courses?.branch_id ?? 0,
+        }),
+      );
+      const payments = filterPaymentsByBranch(
+        [...((paymentsResult.data ?? []) as unknown as PaymentRow[]), ...singularRows],
+        branchId,
+      );
+      const expenses: ExpenseRow[] = [
+        ...((expensesResult.data ?? []) as ExpenseRow[]),
+        ...((fixedResult.data ?? []) as { amount: number; category: string; date: string }[]).map(
+          (r) => ({ amount: r.amount, category: r.category, date: r.date }),
+        ),
+      ];
+      return computeEvolucionMensual(payments, expenses, meses);
+    } catch {
+      return [];
+    }
   }
 
   /**

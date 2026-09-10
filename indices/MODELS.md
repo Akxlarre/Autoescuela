@@ -192,7 +192,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
 | `PublicEnrollmentContext` | `ui` | `src/app/core/models/ui/public-enrollment-context.model.ts` |
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
-| `RangoReporte`, `RangoOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `DetalleDiario`, `RentabilidadCurso`, `ReporteContable`, `ClassCountsByGroup`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
+| `RangoReporte`, `RangoOption`, `RangoEvolucion`, `RangoEvolucionOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `RentabilidadCurso`, `ReporteContable`, `ClassCountsByGroup`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
 | `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
 | `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroMenuItem`, `SectionHeroKpi`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |

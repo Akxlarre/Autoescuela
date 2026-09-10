@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
@@ -7,6 +7,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import {
   GASTO_FIJO_CATEGORIES,
@@ -64,6 +65,28 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <ng-template #content>
           <!-- Cuerpo del formulario -->
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onGuardar()">
+            <!-- Sede (obligatoria: sin esto el gasto fijo queda huérfano — DG-082) -->
+            <div class="flex flex-col gap-1.5">
+              <label
+                class="text-xs font-semibold uppercase tracking-wider"
+                style="color: var(--text-muted)"
+              >
+                Sede *
+              </label>
+              <p-select
+                formControlName="branchId"
+                [options]="branchOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona una sede"
+                styleClass="w-full"
+                data-llm-description="sede a la que se imputa el gasto fijo"
+              />
+              @if (form.get('branchId')?.invalid && form.get('branchId')?.touched) {
+                <span class="text-xs" style="color: var(--state-error)">Selecciona una sede</span>
+              }
+            </div>
+
             <!-- Categoría -->
             <div class="flex flex-col gap-1.5">
               <label
@@ -196,6 +219,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 })
 export class RegistrarGastoFijoDrawerComponent {
   private readonly facade = inject(ReportesContablesFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 
@@ -203,11 +227,20 @@ export class RegistrarGastoFijoDrawerComponent {
   protected readonly isSaving = this.facade.isRegistrando;
   protected readonly saveError = signal<string | null>(null);
 
-  protected readonly form = this.fb.nonNullable.group({
-    category: ['', Validators.required],
-    description: ['', [Validators.required, Validators.minLength(3)]],
-    amount: [0, [Validators.required, Validators.min(1)]],
-    date: [new Date().toISOString().slice(0, 10), Validators.required],
+  protected readonly branchOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
+
+  protected readonly form = this.fb.group({
+    // Prefill con la sede activa del topbar; si el admin está en "Todas las sedes" queda
+    // vacío y `Validators.required` obliga a elegir (sin esto → fixed_expenses huérfano).
+    branchId: this.fb.control<number | null>(this.branchFacade.selectedBranchId(), {
+      validators: Validators.required,
+    }),
+    category: this.fb.nonNullable.control('', Validators.required),
+    description: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3)]),
+    amount: this.fb.nonNullable.control(0, [Validators.required, Validators.min(1)]),
+    date: this.fb.nonNullable.control(new Date().toISOString().slice(0, 10), Validators.required),
   });
 
   protected async onGuardar(): Promise<void> {
@@ -216,8 +249,9 @@ export class RegistrarGastoFijoDrawerComponent {
       return;
     }
     this.saveError.set(null);
-    const { category, description, amount, date } = this.form.getRawValue();
+    const { branchId, category, description, amount, date } = this.form.getRawValue();
     const ok = await this.facade.registrarGastoFijo({
+      branchId,
       category: category as RegistrarGastoFijoPayload['category'],
       description,
       amount,
