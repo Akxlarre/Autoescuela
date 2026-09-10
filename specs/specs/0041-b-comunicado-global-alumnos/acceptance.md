@@ -13,9 +13,8 @@
 - AC fallidos: **0**
 - AC con evidencia empírica (no solo código): **9**
 
-**Veredicto final:** ✅ **PASA**, con una salvedad explícita: **el envío SMTP real nunca se
-ejercitó** (ver "Riesgo residual"). Todo lo verificado se hizo en `dryRun` o sin llegar a
-confirmar el envío, a propósito.
+**Veredicto final:** ✅ **PASA**. El envío SMTP real se verificó con un smoke test a una
+casilla real después del cierre inicial (ver "Riesgo residual — CERRADO").
 
 Commits: `0bdbd884` (datos/RLS), `ebd09085` (núcleo funcional + Edge Function),
 `bfca66f3` (Facade), `310b7ad6` (UI y conexión).
@@ -80,12 +79,16 @@ Commits: `0bdbd884` (datos/RLS), `ebd09085` (núcleo funcional + Edge Function),
 
 ### AC6 — Email + notificación in-app por destinatario
 
-- **Estado:** ✅ cumplido para la notificación in-app · ⚠️ el email no se ejercitó
+- **Estado:** ✅ cumplido — entrega SMTP real verificada
 - **Evidencia:**
   - `dryRun`: 8 destinatarios → **8 notificaciones** con `reference_type='announcement'`.
-  - El HTML del correo se construye también en `dryRun`, así que el armado y el escapado
-    se ejercitaron; lo único que no corrió es la entrega SMTP.
-  - Ver "Riesgo residual".
+  - **Smoke test con envío real (2026-09-09), post-cierre:** se reasignó temporalmente el
+    email de un alumno sembrado a una casilla real del owner, se envió el comunicado
+    (`dryRun: false`) solo a ese destinatario, y llegó: cabecera de marca, saludo con
+    nombre, cuerpo y footer correctos. Screenshot de la bandeja de entrada confirmando
+    recepción. Ambos usuarios (el temporalmente reasignado y el dueño original del email,
+    que ya existía como cuenta de prueba propia) quedaron revertidos a su estado original,
+    y el comunicado de prueba (`id=10`) se borró de la BD compartida tras la confirmación.
 
 ### AC7 — Historial con detalle de lo enviado
 
@@ -166,16 +169,21 @@ Commits: `0bdbd884` (datos/RLS), `ebd09085` (núcleo funcional + Edge Function),
 
 ---
 
-## Riesgo residual — leer antes de desplegar
+## Riesgo residual — CERRADO (2026-09-09, post-cierre)
 
-**El envío SMTP real nunca se ejecutó.** Los 200 alumnos de la BD de desarrollo tienen
-email `@test-data.local`, un TLD inexistente: una prueba de envío habría sido ~200 rebotes
-duros contra el dominio de la escuela, que es exactamente el daño que este feature existe
-para evitar (`indices/NOTIFICATIONS-MAP.md` §9.4).
+Los 200 alumnos de la BD de desarrollo tienen email `@test-data.local` (TLD inexistente),
+así que ningún AC de esta spec se verificó con un envío SMTP real — todo corrió en
+`dryRun`. Enviar a esos 200 habría sido ~200 rebotes duros contra el dominio de la
+escuela, el mismo daño que este feature existe para evitar (`indices/NOTIFICATIONS-MAP.md`
+§9.4).
 
-**Antes de producción hace falta un smoke test** con una casilla real (uno o dos
-destinatarios) que confirme dos cosas: que el correo efectivamente sale, y que el HTML se
-ve bien en un cliente de correo de verdad. La función acepta `dryRun` para todo lo demás.
+**Resuelto con un smoke test dirigido:** se reasignó temporalmente el email de un único
+alumno sembrado a una casilla real del owner (con el resto del segmento explícitamente
+excluido, para que el envío alcanzara solo a ese destinatario), se disparó el envío real
+(`dryRun: false`), y el owner confirmó la recepción con captura de pantalla — asunto,
+cabecera de marca, saludo, cuerpo y footer correctos. Ambas cuentas de usuario tocadas
+quedaron revertidas a su email original y el comunicado de prueba se borró de la BD
+compartida. No queda ningún AC sin verificación de extremo a extremo.
 
 ---
 

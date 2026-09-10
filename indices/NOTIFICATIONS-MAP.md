@@ -175,8 +175,10 @@ tabla `notification_templates` (vacía, R7) es exactamente donde vivirían las p
   El emisor declara si es `operativo` o `promocional`, y el servidor filtra por consentimiento
   al momento del envío. Evidencia por AC en
   [`specs/specs/0041-b-comunicado-global-alumnos/acceptance.md`](../specs/specs/0041-b-comunicado-global-alumnos/acceptance.md).
-  ⚠️ **El envío SMTP real todavía no se ejercitó** (los alumnos sembrados tienen dominio
-  inexistente): falta un smoke test con una casilla real antes de producción.
+  ✅ **Entrega SMTP real verificada (2026-09-09):** smoke test dirigido a una casilla real
+  (los alumnos sembrados tienen dominio inexistente, así que la verificación de la spec
+  corrió en `dryRun`) — reasignación temporal de email, envío único, confirmación por
+  captura de pantalla del owner, y reversión completa sin dejar rastro en la BD compartida.
 - 📊 **Deuda de medición.** La adopción del módulo "Comunicación" sigue sin métrica. Cuando haya
   uso real, `select from_role, date_trunc('week', created_at), count(*) from tasks group by 1,2`
   la responde — contra la instancia de la escuela, no contra la BD de prueba (spec `0008-i` la
