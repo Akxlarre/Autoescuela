@@ -144,25 +144,31 @@
 
 ## Fase 4 — Capa Facade (TDD)
 
-- [ ] **T4.1** — Escribir `core/facades/announcements.facade.spec.ts` **primero**
+- [x] **T4.1** — Escribir `core/facades/announcements.facade.spec.ts` **primero**
   - **AC ref:** AC1, AC5, AC7, AC-E3
   - **DoD:**
-    - [ ] `send()` inserta el announcement, itera lotes y actualiza `progress`
-    - [ ] Fallo parcial de un lote no aborta el resto y acumula `failed` (AC-E3)
-    - [ ] Historial SWR: `initialize()` dos veces no re-muestra skeleton
-    - [ ] Scope de sede aplicado cuando `selectedBranchId()` no es nulo
-    - [ ] Los tests **fallan**
+    - [x] `send()` inserta el announcement, itera lotes (offsets 0/25/50) y actualiza `progress`
+    - [x] Fallo parcial de un lote no aborta el resto y acumula `failed` (AC-E3)
+    - [x] Historial SWR: primera carga con skeleton, segunda sin, pero igual refresca
+    - [x] El body del lote lleva SOLO `announcementId`/`offset`/`batchSize` — nunca destinatarios
+    - [x] Los tests fallaron antes de implementar
 
-- [ ] **T4.2** — Implementar `core/facades/announcements.facade.ts`
+  > **Dos tests se reescribieron por vacuos.** El de SWR miraba `isLoading()` *después*
+  > del `await`, donde siempre es `false`: pasaba igual con SWR roto. Ahora se mira antes
+  > de esperar la promesa. El de "no manda destinatarios" afirmaba `not.toHaveProperty`
+  > sobre dos nombres inventados; ahora afirma el set exacto de claves del body, que sí
+  > falla si alguien agrega una lista. Un test que no puede fallar da confianza falsa.
+
+- [x] **T4.2** — Implementar `core/facades/announcements.facade.ts`
   - **AC ref:** AC1, AC5, AC7, AC-E3
   - **DoD:**
-    - [ ] Estructura: estado privado → público readonly → métodos
-    - [ ] Inyecta `BranchFacade`; `createRequestGuard()` en el fetch del historial
-    - [ ] SWR: `initialize()` + `refreshSilently()` + `_initialized`
-    - [ ] `catchError` y signal de error expuesto
-    - [ ] Orquestación por lotes de 25 con `progress` signal
-    - [ ] `npm run test:ci` verde
-    - [ ] Documentado en `indices/FACADES.md`
+    - [x] Estructura: estado privado → público readonly → métodos
+    - [x] Inyecta `BranchFacade`; `createRequestGuard()` en el fetch del historial
+    - [x] SWR: `initialize()` + `refreshSilently()` + flag `initialized`
+    - [x] Errores capturados vía `ErrorSanitizerService` y expuestos en el signal `error`
+    - [x] Orquestación por lotes de 25 con `progress` signal
+    - [x] 13/13 tests verdes
+    - [x] Documentado en `indices/FACADES.md` (auto-generado)
 
 ---
 

@@ -18,6 +18,7 @@
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
 | `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
+| `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
