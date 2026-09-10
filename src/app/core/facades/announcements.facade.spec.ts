@@ -28,6 +28,8 @@ describe('AnnouncementsFacade', () => {
   /** Idem para el UPDATE, y los filtros que se le aplicaron. */
   let updatePayload: any;
   let updateFilters: string[];
+  /** Filtros aplicados al SELECT del historial (fix-168-b). */
+  let historialFilters: string[];
 
   /** Encadena el mock de PostgREST para las dos consultas que hace la facade. */
   function buildClient() {
@@ -56,11 +58,17 @@ describe('AnnouncementsFacade', () => {
               };
               return chain;
             }),
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockImplementation(() => {
+              // Registra los filtros del historial: el bug de fix-168-b era invisible
+              // mirando las filas devueltas — había que mirar QUÉ se le pedía a la BD.
+              const chain: any = {
+                eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+                  historialFilters.push(`${col}=${val}`);
+                  return chain;
+                }),
                 order: vi.fn().mockResolvedValue({ data: historialRows, error: null }),
-              }),
-              order: vi.fn().mockResolvedValue({ data: historialRows, error: null }),
+              };
+              return chain;
             }),
           };
         }
@@ -80,6 +88,7 @@ describe('AnnouncementsFacade', () => {
     historialRows = [];
     updatePayload = undefined;
     updateFilters = [];
+    historialFilters = [];
     supabaseSpy = { client: buildClient() };
 
     TestBed.configureTestingModule({
@@ -406,6 +415,105 @@ describe('AnnouncementsFacade', () => {
       await facade.initialize();
 
       expect(supabaseSpy.client.from.mock.calls.length).toBeGreaterThan(llamadasIniciales);
+    });
+  });
+
+  // ── fix-168-b ──────────────────────────────────────────────────────────────
+  //
+  // `selectedBranchId` se persiste en localStorage bajo una clave sin namespacing por
+  // usuario que nadie limpia al cerrar sesión. Para un admin es una comodidad; para una
+  // secretaria es un filtro que no eligió, no ve y no puede corregir — no tiene selector
+  // de sede en el topbar. El síntoma era el peor posible: historial vacío, sin error.
+  //
+  // Estos tests miran QUÉ se le pide a la BD, no qué filas vuelven: el mock siempre
+  // devuelve lo mismo, así que un test sobre las filas no habría visto nada.
+  describe('scope de sede del historial (fix-168-b)', () => {
+    function comoSecretaria(extra: Record<string, unknown> = {}): void {
+      (TestBed.inject(AuthFacade) as any).currentUser.mockReturnValue({
+        role: 'secretaria',
+        dbId: 8,
+        branchId: 1,
+        ...extra,
+      });
+    }
+
+    function sedePersistida(id: number | null): void {
+      (TestBed.inject(BranchFacade) as any).selectedBranchId.mockReturnValue(id);
+    }
+
+    it('una secretaria ignora la sede persistida de otro usuario', async () => {
+      comoSecretaria();
+      sedePersistida(2); // el admin dejó elegida otra sede en este navegador
+
+      await facade.initialize();
+
+      expect(historialFilters).not.toContain('branch_id=2');
+    });
+
+    // El primer intento de fix ancló a la secretaria con eq(branch_id, la suya) y le
+    // borró de la pantalla los comunicados que administración manda a TODAS las sedes
+    // —que llegaron a sus propios alumnos—. En esta tabla NULL significa "a todas", no
+    // "sin sede", y quien resuelve eso bien es la RLS (branch_visible), no el cliente.
+    it('una secretaria no filtra en el cliente: la RLS le da su sede Y los multi-sede', async () => {
+      comoSecretaria();
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toEqual([]);
+    });
+
+    it('un admin sí respeta el selector de sede', async () => {
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toContain('branch_id=2');
+    });
+
+    it('un admin en "todas las sedes" consulta sin filtro', async () => {
+      sedePersistida(null);
+
+      await facade.initialize();
+
+      expect(historialFilters).toEqual([]);
+    });
+
+    // Spec 0017: el grant multi-sede la hace comportarse como admin para el scope.
+    it('una secretaria con grant multi-sede respeta el selector', async () => {
+      comoSecretaria({ canAccessBothBranches: true });
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toContain('branch_id=2');
+    });
+
+    // El grant de spec 0017 amplía lo que se puede LEER, no lo que se escribe acá: la
+    // policy `insert_announcements` exige `branch_id = auth_user_branch_id()` para todo
+    // rol `secretary`. Mandar la sede del selector le daría un 403 de la BD.
+    it('una secretaria con grant igual manda con SU sede: la RLS del INSERT la ancla', async () => {
+      comoSecretaria({ canAccessBothBranches: true });
+      invokeSpy.mockResolvedValue({
+        data: { recipientsTotal: 1, processed: 1, sent: 1, failed: 0, done: true },
+        error: null,
+      });
+
+      await facade.send({ ...DRAFT, filters: { ...DRAFT.filters, branchId: 2 } });
+
+      expect(insertPayload.branch_id).toBe(1);
+    });
+
+    // El centinela sirve para filtrar, no para guardar: `branch_id` es una FK, así que
+    // mandarlo daría un error de integridad crudo en vez de decir qué pasa.
+    it('el centinela nunca llega al INSERT: el envío se corta antes con el motivo real', async () => {
+      comoSecretaria({ branchId: null });
+
+      const ok = await facade.send(DRAFT);
+
+      expect(ok).toBe(false);
+      expect(insertSelectSingle).not.toHaveBeenCalled();
+      expect(facade.error()).toContain('no tiene una sede asignada');
     });
   });
 

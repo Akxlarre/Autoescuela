@@ -28,6 +28,27 @@ export function resolveBranchScope(
   canAccessBothBranches = false,
 ): number | null {
   // admin, o secretaria con grant → respeta el selector (incl. null = todas las sedes)
-  if (role === 'admin' || canAccessBothBranches) return selectedBranchId;
+  if (canChooseBranch(role, canAccessBothBranches)) return selectedBranchId;
   return userBranchId ?? NO_BRANCH_SCOPE;
+}
+
+/**
+ * ¿Este usuario elige su sede, o está anclado a la suya?
+ *
+ * Es la mitad de `resolveBranchScope()` que decide *quién manda*, extraída porque hay
+ * queries donde el `branch_id` resuelto no sirve como filtro y la pregunta que importa es
+ * solo esta. Caso concreto (fix-168-b): en `announcements`, `branch_id IS NULL` significa
+ * "a todas las sedes", así que filtrar por la sede de la secretaria le escondería los
+ * comunicados que administración mandó a todos —y que llegaron a sus alumnos—. Ahí el
+ * scope correcto lo pone la RLS (`branch_visible`), y el cliente solo debe filtrar cuando
+ * hay un selector de sede que respetar.
+ *
+ * Vive acá y no en cada facade para que la regla de rol tenga una sola definición: la
+ * causa de fix-168-b fue justamente reimplementarla a mano.
+ */
+export function canChooseBranch(
+  role: UserRole | undefined,
+  canAccessBothBranches = false,
+): boolean {
+  return role === 'admin' || canAccessBothBranches;
 }
