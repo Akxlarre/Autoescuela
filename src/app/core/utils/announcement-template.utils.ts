@@ -65,6 +65,49 @@ export function isScheduledForValid(scheduledFor: string | null, now: Date = new
   return target > now.getTime();
 }
 
+/** Texto resultante y dónde queda el cursor después de insertar. */
+export interface InsertionResult {
+  text: string;
+  caret: number;
+}
+
+/**
+ * Inserta `{{variable}}` en la posición del cursor, reemplazando lo que esté seleccionado
+ * (spec 0043-b, AC10).
+ *
+ * Antes se concatenaba al final del cuerpo. Con un mensaje ya escrito eso obliga a cortar
+ * y pegar a mano el marcador hasta donde iba, que es exactamente el trabajo que el botón
+ * decía ahorrar.
+ *
+ * `start`/`end` vienen de `selectionStart`/`selectionEnd` del textarea, que son `null`
+ * cuando el elemento nunca tuvo foco; en ese caso se cae al final del texto, que es el
+ * comportamiento anterior y el único razonable sin cursor.
+ */
+export function insertAtCursor(
+  text: string,
+  insertion: string,
+  start: number | null,
+  end: number | null,
+): InsertionResult {
+  const from = clampToText(start ?? text.length, text);
+  const to = clampToText(end ?? from, text);
+
+  // Un rango invertido (el usuario seleccionó de derecha a izquierda) no lo produce el
+  // DOM, pero sí un caller que pase los índices al revés: se normaliza en vez de cortar mal.
+  const desde = Math.min(from, to);
+  const hasta = Math.max(from, to);
+
+  return {
+    text: text.slice(0, desde) + insertion + text.slice(hasta),
+    caret: desde + insertion.length,
+  };
+}
+
+function clampToText(index: number, text: string): number {
+  if (!Number.isFinite(index) || index < 0) return 0;
+  return Math.min(Math.trunc(index), text.length);
+}
+
 export function validateTemplateDraft(draft: TemplateDraft): TemplateDraftValidation {
   const errors: TemplateDraftError[] = [];
 

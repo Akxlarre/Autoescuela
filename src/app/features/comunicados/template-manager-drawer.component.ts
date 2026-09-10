@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -9,6 +17,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { NotificationTemplatesFacade } from '@core/facades/notification-templates.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { insertAtCursor } from '@core/utils/announcement-template.utils';
 import { TEMPLATE_VARIABLES } from '@core/models/ui/notification-template.model';
 import type { TemplateDraft, TemplateRow } from '@core/models/ui/notification-template.model';
 
@@ -76,6 +85,7 @@ const DRAFT_VACIO: TemplateDraft = { id: null, name: '', subject: '', body: '', 
               >Mensaje <span class="text-error">*</span></label
             >
             <textarea
+              #bodyInput
               id="t-body"
               rows="7"
               class="field-input"
@@ -220,6 +230,9 @@ export class TemplateManagerDrawerComponent {
 
   protected readonly variables = TEMPLATE_VARIABLES;
 
+  /** Sin la referencia al textarea no hay cursor que respetar (AC10). */
+  private readonly bodyInput = viewChild<ElementRef<HTMLTextAreaElement>>('bodyInput');
+
   protected readonly editing = signal(false);
   protected readonly draft = signal<TemplateDraft>({ ...DRAFT_VACIO });
 
@@ -245,8 +258,33 @@ export class TemplateManagerDrawerComponent {
     this.draft.update((d) => ({ ...d, ...cambio }));
   }
 
+  /**
+   * Inserta el marcador donde está el cursor (spec 0043-b, AC10).
+   *
+   * El textarea usa `[ngModel]` de una vía, así que después de mover el modelo hay que
+   * reponer el DOM y el cursor a mano: si no, el caret se va al final del texto y el botón
+   * sigue obligando a cortar y pegar, que es justo lo que venía a evitar. Se escribe el
+   * valor antes de devolver el foco porque asignar el mismo string después no reubica el
+   * caret, pero asignar uno distinto sí lo mandaría al final.
+   */
   protected insertarVariable(variable: string): void {
-    this.patch({ body: `${this.draft().body}{{${variable}}}` });
+    const el = this.bodyInput()?.nativeElement;
+    const actual = el?.value ?? this.draft().body;
+
+    const { text, caret } = insertAtCursor(
+      actual,
+      `{{${variable}}}`,
+      el?.selectionStart ?? null,
+      el?.selectionEnd ?? null,
+    );
+
+    this.patch({ body: text });
+
+    if (el) {
+      el.value = text;
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    }
   }
 
   protected nueva(): void {

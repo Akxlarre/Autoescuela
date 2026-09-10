@@ -49,7 +49,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         } @else if (facade.previewHtml()) {
           <iframe
             #frame
-            class="w-full rounded-xl border border-border-default bg-white"
+            class="w-full rounded-xl border border-border-default bg-base"
             style="height: 520px"
             title="Vista previa del comunicado"
             sandbox=""

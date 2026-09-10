@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   extractUsedVariables,
+  insertAtCursor,
   isScheduledForValid,
   renderTemplate,
   validateTemplateDraft,
@@ -135,5 +136,53 @@ describe('validateTemplateDraft()', () => {
     expect(validar({ name: '', subject: '', body: '' }).errors).toEqual(
       expect.arrayContaining(['nombre_requerido', 'asunto_requerido', 'cuerpo_requerido']),
     );
+  });
+});
+
+describe('insertAtCursor()', () => {
+  it('inserta en la posición del cursor, no al final (AC10)', () => {
+    const { text } = insertAtCursor('Hola , nos vemos el lunes.', '{{nombre}}', 5, 5);
+    expect(text).toBe('Hola {{nombre}}, nos vemos el lunes.');
+  });
+
+  it('deja el cursor justo después de lo insertado', () => {
+    const { caret } = insertAtCursor('Hola , nos vemos.', '{{nombre}}', 5, 5);
+    expect(caret).toBe(5 + '{{nombre}}'.length);
+  });
+
+  it('reemplaza el texto seleccionado', () => {
+    const { text } = insertAtCursor('Hola NOMBRE, ¿cómo estás?', '{{nombre}}', 5, 11);
+    expect(text).toBe('Hola {{nombre}}, ¿cómo estás?');
+  });
+
+  it('sin cursor (textarea que nunca tuvo foco) cae al final, como antes', () => {
+    const { text, caret } = insertAtCursor('Hola', '{{sede}}', null, null);
+    expect(text).toBe('Hola{{sede}}');
+    expect(caret).toBe('Hola{{sede}}'.length);
+  });
+
+  it('inserta al inicio cuando el cursor está en 0', () => {
+    expect(insertAtCursor('lunes', '{{nombre}}: ', 0, 0).text).toBe('{{nombre}}: lunes');
+  });
+
+  it('funciona sobre un cuerpo vacío', () => {
+    expect(insertAtCursor('', '{{nombre}}', 0, 0)).toEqual({ text: '{{nombre}}', caret: 10 });
+  });
+
+  it('un índice más allá del texto no duplica ni pierde contenido', () => {
+    expect(insertAtCursor('Hola', '{{sede}}', 99, 99).text).toBe('Hola{{sede}}');
+  });
+
+  it('un índice negativo se trata como el inicio', () => {
+    expect(insertAtCursor('Hola', '{{sede}}', -5, -5).text).toBe('{{sede}}Hola');
+  });
+
+  it('normaliza un rango invertido en vez de cortar mal', () => {
+    expect(insertAtCursor('Hola NOMBRE!', '{{nombre}}', 11, 5).text).toBe('Hola {{nombre}}!');
+  });
+
+  it('el resultado sigue siendo un marcador que renderTemplate resuelve', () => {
+    const { text } = insertAtCursor('Hola , nos vemos.', '{{nombre}}', 5, 5);
+    expect(renderTemplate(text, VALORES)).toBe('Hola Ana Pérez, nos vemos.');
   });
 });
