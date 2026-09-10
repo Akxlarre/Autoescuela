@@ -334,6 +334,7 @@
 | `features/auth/login` | ✅ | ❌ | ❌ | ❌ |
 | `features/auth/recuperar-contrasena` | ❌ | ❌ | ❌ | ❌ |
 | `features/comunicados` | ❌ | ❌ | ✅ | ✅ |
+| `features/comunicados` | ❌ | ❌ | ✅ | ✅ |
 | `features/comunicados` | ✅ | ✅ | ✅ | ✅ |
 | `features/dashboard` | ✅ | ✅ | ❌ | ❌ |
 | `features/dashboard/alerts-drawer` | ✅ | ❌ | ❌ | ✅ |

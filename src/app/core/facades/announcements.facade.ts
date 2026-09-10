@@ -39,6 +39,8 @@ export class AnnouncementsFacade {
   private readonly _announcements = signal<AnnouncementRow[]>([]);
   private readonly _preview = signal<RecipientPreview[]>([]);
   private readonly _isLoadingPreview = signal(false);
+  private readonly _previewHtml = signal<string | null>(null);
+  private readonly _isLoadingPreviewHtml = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _isSending = signal(false);
   private readonly _progress = signal<SendProgress>(EMPTY_PROGRESS);
@@ -52,6 +54,8 @@ export class AnnouncementsFacade {
   readonly announcements = this._announcements.asReadonly();
   readonly preview = this._preview.asReadonly();
   readonly isLoadingPreview = this._isLoadingPreview.asReadonly();
+  readonly previewHtml = this._previewHtml.asReadonly();
+  readonly isLoadingPreviewHtml = this._isLoadingPreviewHtml.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSending = this._isSending.asReadonly();
   readonly progress = this._progress.asReadonly();
@@ -331,6 +335,53 @@ export class AnnouncementsFacade {
 
     if (error || !data) throw error ?? new Error('No se pudo registrar el comunicado.');
     return data.id;
+  }
+
+  // ── Preview del correo (spec 0043-b) ───────────────────────────────────────
+
+  /**
+   * Pide a la Edge Function el HTML del correo tal como va a salir.
+   *
+   * El HTML lo arma el servidor, no el cliente: el wrapper de marca tiene una sola fuente
+   * en `_shared/announcement-send.ts`, y duplicarlo acá haría que las dos versiones
+   * divergieran en el primer cambio de diseño. Un preview que miente es peor que no tener
+   * preview.
+   *
+   * Se mandan asunto y cuerpo **con los marcadores sin resolver**: el servidor los sustituye
+   * con datos de ejemplo. Resolverlos acá mostraría algo distinto de lo que se persiste.
+   */
+  async loadPreviewHtml(draft: AnnouncementDraft): Promise<boolean> {
+    if (draft.subject.trim().length === 0 || draft.body.trim().length === 0) {
+      this._error.set('Escribí el asunto y el mensaje antes de previsualizar.');
+      return false;
+    }
+
+    this._isLoadingPreviewHtml.set(true);
+    this._error.set(null);
+    this._previewHtml.set(null);
+
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('send-announcement', {
+        body: {
+          previewOnly: true,
+          preview: { subject: draft.subject, body: draft.body },
+        },
+      });
+
+      if (error || !data?.html) throw error ?? new Error('No se pudo generar la vista previa.');
+
+      this._previewHtml.set(data.html);
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo generar la vista previa.');
+      return false;
+    } finally {
+      this._isLoadingPreviewHtml.set(false);
+    }
+  }
+
+  clearPreviewHtml(): void {
+    this._previewHtml.set(null);
   }
 
   // ── Programación (spec 0042-b) ─────────────────────────────────────────────

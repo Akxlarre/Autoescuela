@@ -326,7 +326,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--ds-brand` | 444 | `#38bdf8` |
 | `--text-muted` | 385 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 265 | `var(--color-primary-text)` |
-| `--state-error` | 234 | `#f87171` |
+| `--state-error` | 236 | `#f87171` |
 | `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 212 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 192 | `#18181b` |
@@ -353,7 +353,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 288 | `src/styles/tokens/_variables.scss` |
+| `.card` | 290 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 179 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 178 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |

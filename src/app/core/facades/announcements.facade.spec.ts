@@ -460,4 +460,61 @@ describe('AnnouncementsFacade', () => {
       expect(updateFilters.join(',')).toContain('programado');
     });
   });
+
+  describe('loadPreviewHtml() — spec 0043-b', () => {
+    it('AC1 · pide el HTML a la Edge Function y lo expone', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html>hola</html>' }, error: null });
+
+      const ok = await facade.loadPreviewHtml(DRAFT);
+
+      expect(ok).toBe(true);
+      expect(facade.previewHtml()).toBe('<html>hola</html>');
+      expect(invokeSpy).toHaveBeenCalledWith(
+        'send-announcement',
+        expect.objectContaining({ body: expect.objectContaining({ previewOnly: true }) }),
+      );
+    });
+
+    it('AC1 · manda el asunto y el cuerpo tal como se redactaron, con los marcadores', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html></html>' }, error: null });
+
+      await facade.loadPreviewHtml({ ...DRAFT, body: 'Hola {{nombre}}' });
+
+      // Los marcadores los resuelve el servidor: mandarlos ya sustituidos desde acá
+      // haría que el preview muestre algo distinto de lo que se va a guardar.
+      expect(invokeSpy.mock.calls[0][1].body.preview.body).toBe('Hola {{nombre}}');
+    });
+
+    // AC-E2 — un preview vacío no dice nada; mejor avisar que gastar un round-trip.
+    it('AC-E2 · con cuerpo vacío no llama a la Edge Function', async () => {
+      const ok = await facade.loadPreviewHtml({ ...DRAFT, body: '   ' });
+
+      expect(ok).toBe(false);
+      expect(invokeSpy).not.toHaveBeenCalled();
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('AC-E2 · con asunto vacío tampoco', async () => {
+      expect(await facade.loadPreviewHtml({ ...DRAFT, subject: '' })).toBe(false);
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it('si la función falla, expone el error y no deja HTML viejo', async () => {
+      invokeSpy.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      const ok = await facade.loadPreviewHtml(DRAFT);
+
+      expect(ok).toBe(false);
+      expect(facade.previewHtml()).toBeNull();
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('isLoadingPreviewHtml vuelve a false aunque falle', async () => {
+      invokeSpy.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      await facade.loadPreviewHtml(DRAFT);
+
+      expect(facade.isLoadingPreviewHtml()).toBe(false);
+    });
+  });
 });

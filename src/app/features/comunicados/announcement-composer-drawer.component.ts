@@ -8,6 +8,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { AnnouncementsFacade } from '@core/facades/announcements.facade';
 import { NotificationTemplatesFacade } from '@core/facades/notification-templates.facade';
+import { AnnouncementPreviewDrawerComponent } from './announcement-preview-drawer.component';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -317,7 +318,16 @@ function toLocalInputValue(date: Date): string {
       </div>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-secondary flex items-center justify-center gap-2"
+          [disabled]="!puedePrevisualizar()"
+          data-llm-action="previsualizar-comunicado"
+          (click)="previsualizar()"
+        >
+          <app-icon name="eye" [size]="16" />
+          Vista previa
+        </button>
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2"
@@ -385,6 +395,13 @@ export class AnnouncementComposerDrawerComponent {
 
   protected readonly templateOptions = computed(() =>
     this.templates.activeTemplates().map((t) => ({ label: t.name, value: t.id })),
+  );
+
+  protected readonly puedePrevisualizar = computed(
+    () =>
+      this.subject().trim().length > 0 &&
+      this.body().trim().length > 0 &&
+      !this.facade.isLoadingPreviewHtml(),
   );
 
   protected readonly scheduledInvalid = computed(
@@ -518,6 +535,17 @@ export class AnnouncementComposerDrawerComponent {
 
     this.subject.set(plantilla.subject);
     this.body.set(plantilla.body);
+  }
+
+  /**
+   * Abre la vista previa. Se apila sobre el compositor (`push`), no lo reemplaza: volver
+   * tiene que devolver el borrador intacto, no obligar a reescribirlo.
+   */
+  protected async previsualizar(): Promise<void> {
+    const draft = this.buildDraft();
+    if (!(await this.facade.loadPreviewHtml(draft))) return;
+
+    this.drawer.push(AnnouncementPreviewDrawerComponent, 'Vista previa', 'eye');
   }
 
   protected async submit(): Promise<void> {
