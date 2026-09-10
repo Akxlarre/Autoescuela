@@ -1,12 +1,16 @@
 // Modelos de UI del comunicado global (spec 0041-b).
 // El DTO crudo vive en core/models/dto/announcement.model.ts.
 
-import type { Announcement, AnnouncementKind } from '@core/models/dto/announcement.model';
+import type {
+  Announcement,
+  AnnouncementKind,
+  AnnouncementStatus,
+} from '@core/models/dto/announcement.model';
 
-// El tipo de comunicado es vocabulario de dominio compartido, no una forma de fila:
-// se re-exporta para que la UI no tenga que importar del DTO (ARCH-12), mismo
+// El tipo y el estado del comunicado son vocabulario de dominio compartido, no formas
+// de fila: se re-exportan para que la UI no tenga que importar del DTO (ARCH-12), mismo
 // criterio que `ConsentType` en ui/consent.model.ts.
-export type { AnnouncementKind };
+export type { AnnouncementKind, AnnouncementStatus };
 
 /** Tipo de curso por el que se puede segmentar. Espeja `courses.type`. */
 export type AnnouncementCourseType = 'class_b' | 'professional';
@@ -58,6 +62,16 @@ export interface AnnouncementDraft {
   filters: RecipientSegmentFilters;
   /** Ids destildados a mano en el preview (AC5). */
   excludedUserIds: number[];
+
+  /**
+   * ISO de cuándo debe salir, o `null` para enviar ahora (spec 0042-b).
+   *
+   * El segmento NO se congela al programar: se guardan los filtros y la lista se resuelve
+   * recién al enviar, así que quien revocó su consentimiento entre medio queda fuera.
+   */
+  scheduledFor: string | null;
+  /** Plantilla de la que se partió, si se partió de una. */
+  templateId: number | null;
 }
 
 /** Progreso del envío por lotes, para la barra del compositor. */
@@ -79,4 +93,13 @@ export interface AnnouncementRow extends Pick<
   sentAt: string | null;
   /** Nombre de la sede, o "Todas las sedes" cuando `branch_id` es NULL. */
   branchLabel: string;
+
+  status: AnnouncementStatus;
+  /** ISO de cuándo va a salir; NULL en los que se enviaron al toque. */
+  scheduledFor: string | null;
+  /**
+   * Solo un comunicado `programado` se puede cancelar. Uno en `enviando` ya está saliendo:
+   * cancelarlo a mitad dejaría a unos alumnos con el correo y a otros sin él.
+   */
+  canCancel: boolean;
 }

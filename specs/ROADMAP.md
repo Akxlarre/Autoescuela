@@ -19,6 +19,7 @@
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
+| 0043-b | Enviar archivos en un comunicado | P2 | Benjamín | Sin spec todavía. Diferido de `0042-b` el 2026-09-10 por decisión del owner. **No adjuntar por SMTP**: un PDF a cientos de destinatarios multiplica el tráfico y es señal de spam (riesgo de reputación de dominio, `indices/NOTIFICATIONS-MAP.md` §9.4) — la forma sana es subir a Storage (bucket privado `documents`, ya existe) y mandar enlace. La decisión de fondo que la spec debe resolver es el **control de acceso al enlace**: firmado con expiración vs. exige login del alumno. |
 
 ---
 

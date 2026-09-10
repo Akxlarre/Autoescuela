@@ -12,6 +12,17 @@
  */
 export type AnnouncementKind = 'operativo' | 'promocional';
 
+/**
+ * Estado del comunicado (spec 0042-b). Espeja el CHECK de `announcements.status`.
+ *
+ * Antes de 0042-b el estado se infería de si `sent_at` era NULL. Con envíos programados
+ * eso dejó de alcanzar: "todavía no salió" pasó a significar tres cosas distintas. Además
+ * `enviando` no es cosmético — es el candado que impide el doble envío: el dispatcher
+ * toma un comunicado con `UPDATE ... WHERE status='programado'`, así que dos corridas
+ * solapadas del cron no pueden despacharlo dos veces.
+ */
+export type AnnouncementStatus = 'programado' | 'enviando' | 'enviado' | 'cancelado';
+
 export interface Announcement {
   id: number;
 
@@ -34,6 +45,12 @@ export interface Announcement {
   sent_by: number;
   /** NULL mientras el envío no terminó. */
   sent_at: string | null;
+
+  status: AnnouncementStatus;
+  /** NULL = envío inmediato. Con valor, el dispatcher lo toma cuando la hora llega. */
+  scheduled_for: string | null;
+  /** De qué plantilla salió, si salió de una. `ON DELETE SET NULL` en BD. */
+  template_id: number | null;
 
   recipients_total: number;
   email_ok_count: number;

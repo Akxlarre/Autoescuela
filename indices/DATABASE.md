@@ -274,6 +274,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `email_ok_count` | INT | NO | `0` | — |
 | `email_failed_count` | INT | NO | `0` | — |
 | `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `scheduled_for` | TIMESTAMPTZ | sí | — | — |
+| `status` | TEXT | NO | `'enviado'` | — |
+| `template_id` | INT | sí | — | → `notification_templates.id` |
 
 **Policies:**
 
@@ -283,7 +286,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_announcements | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` |
 | update_announcements | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` | — |
 
-**Índices:** `idx_announcements_branch_sent`
+**Índices:** `idx_announcements_branch_sent`, `idx_announcements_pending_dispatch`
 
 ### `audit_log` — 🔒 RLS
 

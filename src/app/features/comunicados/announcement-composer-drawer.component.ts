@@ -306,6 +306,10 @@ export class AnnouncementComposerDrawerComponent {
   protected readonly subject = signal('');
   protected readonly body = signal('');
 
+  /** ISO de cuándo sale, o null para enviar ahora (spec 0042-b). */
+  protected readonly scheduledFor = signal<string | null>(null);
+  protected readonly templateId = signal<number | null>(null);
+
   /** Destildados a mano. Solo aplica sobre quienes ya están habilitados. */
   private readonly excludedUserIds = signal<number[]>([]);
 
@@ -393,6 +397,8 @@ export class AnnouncementComposerDrawerComponent {
         enrollmentStatus: this.enrollmentStatus(),
       },
       excludedUserIds: this.excludedUserIds(),
+      scheduledFor: this.scheduledFor(),
+      templateId: this.templateId(),
     };
   }
 

@@ -72,7 +72,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 |-----------|----------|---------|
 | `AbsenceEvidence` | `dto` | `src/app/core/models/dto/absence-evidence.model.ts` |
 | `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
-| `AnnouncementKind`, `Announcement`, `AnnouncementRecipient` | `dto` | `src/app/core/models/dto/announcement.model.ts` |
+| `AnnouncementKind`, `AnnouncementStatus`, `Announcement`, `AnnouncementRecipient` | `dto` | `src/app/core/models/dto/announcement.model.ts` |
 | `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
 | `BranchPayrollConfig` | `dto` | `src/app/core/models/dto/branch-payroll-config.model.ts` |
 | `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
@@ -109,7 +109,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `LicenseValidation` | `dto` | `src/app/core/models/dto/license-validation.model.ts` |
 | `LoginAttempt` | `dto` | `src/app/core/models/dto/login-attempt.model.ts` |
 | `MaintenanceRecord` | `dto` | `src/app/core/models/dto/maintenance-record.model.ts` |
-| `NotificationTemplate` | `dto` | `src/app/core/models/dto/notification-template.model.ts` |
+| `NotificationTemplateType`, `NotificationTemplate` | `dto` | `src/app/core/models/dto/notification-template.model.ts` |
 | `Notification` | `dto` | `src/app/core/models/dto/notification.model.ts` |
 | `PaymentDenomination` | `dto` | `src/app/core/models/dto/payment-denomination.model.ts` |
 | `Payment` | `dto` | `src/app/core/models/dto/payment.model.ts` |
@@ -185,6 +185,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `LibroClasesSubnavSection` | `ui` | `src/app/core/models/ui/libro-clases-subnav.model.ts` |
 | `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
+| `TemplateVariable`, `TemplateVariableValues`, `TemplateDraft`, `TemplateRow` | `ui` | `src/app/core/models/ui/notification-template.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |
 | `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
 | `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |

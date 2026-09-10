@@ -100,7 +100,7 @@ export class AnnouncementsFacade {
     let query = this.supabase.client
       .from('announcements')
       .select(
-        'id, subject, kind, branch_id, sent_at, recipients_total, email_ok_count, email_failed_count, users:sent_by(first_names, paternal_last_name), branches:branch_id(name)',
+        'id, subject, kind, branch_id, sent_at, status, scheduled_for, recipients_total, email_ok_count, email_failed_count, users:sent_by(first_names, paternal_last_name), branches:branch_id(name)',
       );
 
     // null = admin en "todas las sedes" → sin filtro.
@@ -128,6 +128,11 @@ export class AnnouncementsFacade {
         : 'Desconocido',
       sentAt: row.sent_at,
       branchLabel: row.branches?.name ?? 'Todas las sedes',
+      status: row.status,
+      scheduledFor: row.scheduled_for,
+      // Solo lo programado se cancela: uno en 'enviando' ya está saliendo, y cortarlo
+      // a mitad dejaría a unos alumnos con el correo y a otros sin él.
+      canCancel: row.status === 'programado',
     };
   }
 
