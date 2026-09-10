@@ -35,7 +35,12 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { loadAnnouncement, sendAnnouncementBatch } from '../_shared/announcement-send.ts';
+import {
+  buildEmailHtml,
+  loadAnnouncement,
+  renderTemplate,
+  sendAnnouncementBatch,
+} from '../_shared/announcement-send.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,7 +91,31 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Body ─────────────────────────────────────────────────────────────────
-    const { announcementId, offset, batchSize, dryRun } = await req.json();
+    const { announcementId, offset, batchSize, dryRun, previewOnly, preview } = await req.json();
+
+    // ── Preview: PRIMERA GUARDA, antes de cualquier efecto ───────────────────
+    //
+    // Va acá arriba y no como una rama al final a propósito: un preview no puede, ni por un
+    // error de orden al editar esta función, materializar destinatarios ni mandar un correo.
+    // Devuelve el MISMO HTML que sale de verdad, armado con los helpers compartidos — el
+    // valor entero de un preview es que lo que se ve sea lo que se manda, así que duplicar
+    // la plantilla en el cliente estaba descartado.
+    if (previewOnly === true) {
+      const subject = String(preview?.subject ?? '').trim();
+      const body = String(preview?.body ?? '').trim();
+      if (!subject || !body) {
+        return jsonResponse({ error: 'Falta asunto o mensaje para previsualizar' }, 400);
+      }
+
+      // Datos de ejemplo: el preview muestra cómo lo lee UN alumno, con las variables
+      // resueltas. Ver `{{nombre}}` literal no diría nada sobre el resultado real.
+      const ejemplo = { nombre: 'Ana Pérez', sede: 'Autoescuela Chillán' };
+      return jsonResponse({
+        html: buildEmailHtml(renderTemplate(subject, ejemplo), renderTemplate(body, ejemplo)),
+        subject: renderTemplate(subject, ejemplo),
+      });
+    }
+
     if (
       typeof announcementId !== 'number' ||
       typeof offset !== 'number' ||
