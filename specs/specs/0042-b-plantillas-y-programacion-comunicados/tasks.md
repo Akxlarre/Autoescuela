@@ -170,19 +170,28 @@
 
 ## Fase 5 — Facades (TDD)
 
-- [ ] **T5.1** — `notification-templates.facade.spec.ts` **primero**, luego la facade
+- [x] **T5.1** — `notification-templates.facade.spec.ts` **primero**, luego la facade
   - **AC ref:** AC1, AC4
   - **DoD:**
-    - [ ] Tests de CRUD y de SWR de la lista
-    - [ ] Estructura: estado privado → público readonly → métodos; `catchError` + signal de error
-    - [ ] Documentada en `indices/FACADES.md`
+    - [x] 11/11 tests: CRUD, SWR, derivación de variables usadas, validación previa
+    - [x] Estructura canónica; `setError` + signal de error
+    - [x] Documentada en `indices/FACADES.md`
 
-- [ ] **T5.2** — `AnnouncementsFacade`: `schedule()` y `cancelScheduled()` (tests primero)
+  > **AC4 no necesitó código.** La RLS de `notification_templates` ya rechaza la escritura
+  > de secretaría; la facade solo expone ese rechazo como error en vez de simularlo con un
+  > `if` de rol, que sería una comprobación que el cliente podría saltear.
+
+- [x] **T5.2** — `AnnouncementsFacade`: `schedule()` y `cancelScheduled()` (tests primero)
   - **AC ref:** AC5, AC8
   - **DoD:**
-    - [ ] `schedule()` persiste `status='programado'` y **no** invoca la Edge Function (AC5)
-    - [ ] `cancelScheduled()` pasa a `cancelado`; **no borra la fila** (AC8: es trazabilidad)
-    - [ ] `send()` existente sigue seteando `status='enviado'` sin romper 0041-b
+    - [x] `schedule()` persiste `status='programado'` y **no** invoca la Edge Function (AC5),
+          verificado con `expect(invokeSpy).not.toHaveBeenCalled()`
+    - [x] Rechaza fecha pasada y fecha ausente sin tocar la BD
+    - [x] Guarda los filtros del segmento, no una lista de destinatarios
+    - [x] `cancelScheduled()` pasa a `cancelado`; **no borra la fila** (AC8)
+    - [x] Cancelar filtra por `status='programado'`: sin eso podría pisar un comunicado que
+          el dispatcher ya empezó a despachar y dejarlo a mitad
+    - [x] Los 20 tests de 0041-b siguen verdes (26/26 en total)
 
 ---
 

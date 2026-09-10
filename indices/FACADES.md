@@ -109,6 +109,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `InstructoresFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade`, `AuthFacade` | — | `src/app/core/facades/instructores.facade.ts` |
 | `LibroDeClasesFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade`, `AuthFacade` | — | `src/app/core/facades/libro-de-clases.facade.ts` |
 | `LiquidacionesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `PayrollConfigFacade`, `ToastService` | — | `src/app/core/facades/liquidaciones.facade.ts` |
+| `NotificationTemplatesFacade` | `SupabaseService`, `ToastService`, `ErrorSanitizerService` | — | `src/app/core/facades/notification-templates.facade.ts` |
 | `NotificationsFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/notifications.facade.ts` |
 | `PagosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/pagos.facade.ts` |
 | `PayrollConfigFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/payroll-config.facade.ts` |

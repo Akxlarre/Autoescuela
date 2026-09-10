@@ -13,6 +13,8 @@ const DRAFT: AnnouncementDraft = {
   body: 'Por el feriado no habrá clases prácticas.',
   filters: { branchId: 1, courseType: 'class_b', enrollmentStatus: 'active' },
   excludedUserIds: [],
+  scheduledFor: null,
+  templateId: null,
 };
 
 describe('AnnouncementsFacade', () => {
@@ -23,6 +25,9 @@ describe('AnnouncementsFacade', () => {
   let historialRows: any[];
   /** Lo que la facade manda al INSERT de `announcements`, para poder afirmarlo. */
   let insertPayload: any;
+  /** Idem para el UPDATE, y los filtros que se le aplicaron. */
+  let updatePayload: any;
+  let updateFilters: string[];
 
   /** Encadena el mock de PostgREST para las dos consultas que hace la facade. */
   function buildClient() {
@@ -37,7 +42,20 @@ describe('AnnouncementsFacade', () => {
               insertPayload = payload;
               return { select: vi.fn().mockReturnValue({ maybeSingle: insertSelectSingle }) };
             }),
-            update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+            update: vi.fn().mockImplementation((payload: any) => {
+              updatePayload = payload;
+              updateFilters = [];
+              // `update().eq().eq()` encadena: se registran todos los filtros aplicados
+              // para poder afirmar que cancelar solo toca lo que sigue programado.
+              const chain: any = {
+                eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+                  updateFilters.push(`${col}=${val}`);
+                  return chain;
+                }),
+                then: (resolve: any) => resolve({ error: null }),
+              };
+              return chain;
+            }),
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
                 order: vi.fn().mockResolvedValue({ data: historialRows, error: null }),
@@ -60,6 +78,8 @@ describe('AnnouncementsFacade', () => {
 
   beforeEach(() => {
     historialRows = [];
+    updatePayload = undefined;
+    updateFilters = [];
     supabaseSpy = { client: buildClient() };
 
     TestBed.configureTestingModule({
@@ -386,6 +406,58 @@ describe('AnnouncementsFacade', () => {
       await facade.initialize();
 
       expect(supabaseSpy.client.from.mock.calls.length).toBeGreaterThan(llamadasIniciales);
+    });
+  });
+
+  describe('schedule() y cancelScheduled() — spec 0042-b', () => {
+    it('AC5 · programar persiste el comunicado SIN despachar nada', async () => {
+      const cuando = new Date(Date.now() + 86_400_000).toISOString();
+
+      const ok = await facade.schedule({ ...DRAFT, scheduledFor: cuando });
+
+      expect(ok).toBe(true);
+      expect(insertPayload.status).toBe('programado');
+      expect(insertPayload.scheduled_for).toBe(cuando);
+      // Lo que separa programar de enviar: la Edge Function no se toca.
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it('AC5 · guarda los filtros del segmento, no una lista de destinatarios', async () => {
+      await facade.schedule({
+        ...DRAFT,
+        scheduledFor: new Date(Date.now() + 3600_000).toISOString(),
+      });
+
+      // El segmento se resuelve recién al enviar: quien revoque en el medio queda fuera.
+      expect(insertPayload.segment_filters).toMatchObject({ courseType: 'class_b' });
+      expect(insertPayload.recipients_total ?? 0).toBe(0);
+    });
+
+    it('programar con fecha pasada no persiste nada', async () => {
+      const ayer = new Date(Date.now() - 86_400_000).toISOString();
+
+      const ok = await facade.schedule({ ...DRAFT, scheduledFor: ayer });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('programar sin fecha no persiste nada: para eso está send()', async () => {
+      expect(await facade.schedule({ ...DRAFT, scheduledFor: null })).toBe(false);
+    });
+
+    it('AC8 · cancelar pasa a cancelado y NO borra la fila', async () => {
+      const ok = await facade.cancelScheduled(77);
+
+      expect(ok).toBe(true);
+      expect(updatePayload).toMatchObject({ status: 'cancelado' });
+    });
+
+    it('AC8 · cancelar solo afecta a lo que sigue programado', async () => {
+      await facade.cancelScheduled(77);
+
+      // Sin este filtro, cancelar podría pisar un comunicado que ya arrancó a salir.
+      expect(updateFilters.join(',')).toContain('programado');
     });
   });
 });

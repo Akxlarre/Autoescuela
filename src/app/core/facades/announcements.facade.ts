@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { ANNOUNCEMENT_BATCH_SIZE, buildBatches } from '@core/utils/announcement-recipients.utils';
+import { isScheduledForValid } from '@core/utils/announcement-template.utils';
 import type {
   AnnouncementDraft,
   AnnouncementRow,
@@ -319,12 +320,80 @@ export class AnnouncementsFacade {
           excludedUserIds: draft.excludedUserIds,
         },
         sent_by: user?.dbId,
+        template_id: draft.templateId,
+        // `enviado` es el default de la columna, así que un envío inmediato no necesita
+        // decir nada; programar sí.
+        status: draft.scheduledFor ? 'programado' : 'enviado',
+        scheduled_for: draft.scheduledFor,
       })
       .select('id')
       .maybeSingle();
 
     if (error || !data) throw error ?? new Error('No se pudo registrar el comunicado.');
     return data.id;
+  }
+
+  // ── Programación (spec 0042-b) ─────────────────────────────────────────────
+
+  /**
+   * Deja el comunicado agendado y NO envía nada: el dispatcher lo tomará cuando llegue la
+   * hora. Se guardan los filtros del segmento, no una lista de destinatarios — la lista se
+   * resuelve recién al enviar, así que quien revoque su consentimiento entre medio queda
+   * fuera (AC6).
+   */
+  async schedule(draft: AnnouncementDraft): Promise<boolean> {
+    if (!draft.scheduledFor) {
+      this._error.set('Falta la fecha de envío. Para enviar ahora, usá "Enviar comunicado".');
+      return false;
+    }
+    if (!isScheduledForValid(draft.scheduledFor)) {
+      this._error.set('La fecha de envío tiene que ser futura.');
+      return false;
+    }
+
+    this._isSending.set(true);
+    this._error.set(null);
+
+    try {
+      await this.insertAnnouncement(draft);
+      this.toast.success('Comunicado programado.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo programar el comunicado.');
+      return false;
+    } finally {
+      this._isSending.set(false);
+    }
+  }
+
+  /**
+   * Cancela un comunicado que todavía no salió. No borra la fila: queda como `cancelado`
+   * porque es parte del registro de qué se decidió comunicar y qué no.
+   *
+   * El filtro por `status='programado'` no es redundante: sin él, cancelar podría pisar un
+   * comunicado que el dispatcher ya empezó a despachar, y quedaría a mitad de camino con
+   * unos alumnos avisados y otros no.
+   */
+  async cancelScheduled(announcementId: number): Promise<boolean> {
+    this._error.set(null);
+
+    try {
+      const { error } = await this.supabase.client
+        .from('announcements')
+        .update({ status: 'cancelado' })
+        .eq('id', announcementId)
+        .eq('status', 'programado');
+
+      if (error) throw error;
+
+      this.toast.success('Comunicado cancelado.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo cancelar el comunicado.');
+      return false;
+    }
   }
 
   /** Devuelve `null` si el lote falló, para que el llamador decida si sigue. */
