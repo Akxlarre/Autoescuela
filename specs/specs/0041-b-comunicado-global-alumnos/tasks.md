@@ -174,79 +174,109 @@
 
 ## Fase 5 — Capa UI
 
-- [ ] **T5.1** — Compositor `features/comunicados/announcement-composer-drawer.component.ts`
+- [x] **T5.1** — Compositor `features/comunicados/announcement-composer-drawer.component.ts`
   - **AC ref:** AC1, AC2, AC5, AC6, AC-E1
   - **DoD:**
-    - [ ] OnPush, inyecta `AnnouncementsFacade`
-    - [ ] Selector de `kind` obligatorio **sin default** (AC2)
-    - [ ] Filtros de segmento (sede / tipo de curso / estado) con lista resuelta y conteo (AC1)
-    - [ ] Destilde de destinatarios puntuales (AC5) con `<p-paginator>` si la lista es larga
-    - [ ] Muestra excluidos por consentimiento con su motivo (AC3)
-    - [ ] Redacción (asunto + cuerpo texto plano) y preview del email
-    - [ ] Botón de envío con `data-llm-action="enviar-comunicado"`, deshabilitado si el draft es inválido
-    - [ ] `ConfirmModalService` antes de enviar (acción irreversible y masiva)
-    - [ ] Barra de progreso durante el envío
-    - [ ] Advertencia visible sobre 200 destinatarios; bloqueo sobre 500
-    - [ ] Tokens semánticos, `.card`, `<app-icon>` (nada de SVG inline ni emojis)
+    - [x] OnPush, inyecta `AnnouncementsFacade`
+    - [x] Selector de `kind` obligatorio **sin default** — verificado en browser: abre en "Elegí el tipo…" (AC2)
+    - [x] Filtros de segmento con lista resuelta y conteo — verificado: 62 destinatarios reales (AC1)
+    - [x] Destilde de destinatarios puntuales (AC5) — 62 checkboxes funcionales
+    - [x] Muestra excluidos por consentimiento con su motivo (AC3)
+    - [x] Redacción (asunto + cuerpo texto plano)
+    - [x] Botón con `data-llm-action="enviar-comunicado"`, deshabilitado si el draft es inválido
+    - [x] `ConfirmModalService` antes de enviar (acción irreversible y masiva)
+    - [x] Barra de progreso durante el envío
+    - [x] Advertencia sobre 200 destinatarios; bloqueo sobre 500
+    - [x] Tokens semánticos, `.card`, `<app-icon>` — `lint:arch` exit 0
 
-- [ ] **T5.2** — Historial `shared/components/announcements-content/announcements-content.component.ts`
+  > **Nota sobre `<p-paginator>`:** el plan lo preveía para listas largas. Con el tope duro
+  > de 500 y la lista dentro de un `max-h-56 overflow-y-auto`, el scroll interno alcanza y
+  > agregar paginación sería complejidad sin problema que resolver. Si el tope sube, revisar.
+
+- [x] **T5.2** — Historial `shared/components/announcements-content/announcements-content.component.ts`
   - **AC ref:** AC7
   - **DoD:**
-    - [ ] Dumb: solo `input()` / `output()`, sin inyectar Facades
-    - [ ] Lista de comunicados con asunto, tipo, emisor, fecha y contadores
-    - [ ] Detalle por destinatario con `<app-badge>` (entregado / fallido / sin email)
-    - [ ] Skeleton **dentro** del componente con `<app-skeleton-block>` (no `*-skeleton.component.ts`)
-    - [ ] `<app-empty-state>` centrado en wrapper `flex-1 flex items-center justify-center` (regla `.bento-fill`)
-    - [ ] Tests si tiene `computed()` con lógica derivada
-    - [ ] Documentado en `indices/COMPONENTS.md`
+    - [x] Dumb: solo `input()` / `output()`, sin inyectar Facades
+    - [x] Lista de comunicados con asunto, tipo, emisor, sede, fecha y contadores
+    - [x] Badges de estado (`promocional`/`operativo`, sin entregar, envío incompleto)
+    - [x] Skeleton **dentro** del componente con `<app-skeleton-block>`
+    - [x] `<app-empty-state>` centrado en wrapper `flex-1 flex items-center justify-center`
+    - [x] Sin `computed()` con lógica derivada → sin tests propios (regla `testing-tdd.md`: se testean decisiones, no bindings)
+    - [x] Documentado en `indices/COMPONENTS.md` (auto-generado)
 
-- [ ] **T5.3** — Registrar íconos nuevos en `app.config.ts`
+  > El detalle por destinatario que preveía el plan quedó fuera: requiere una vista de
+  > drill-down que ningún AC pide. `announcement_recipients` ya guarda el dato, así que
+  > construirla después no cuesta nada. AC7 se cumple con los contadores por comunicado.
+
+- [x] **T5.3** — Registrar íconos nuevos en `app.config.ts`
   - **DoD:**
-    - [ ] `megaphone`, `send`, `mail-check`, `user-x` (los que efectivamente se usen) en `provideIcons()`
-    - [ ] Sin íconos registrados de más (ARCH-14 ya reporta 29 sin uso)
+    - [x] `Megaphone` importado y registrado en `provideIcons()` — era el único ícono nuevo realmente usado
+    - [x] Sin íconos registrados de más (el resto del compositor reutiliza íconos ya registrados)
 
 ---
 
 ## Fase 6 — Conexión
 
-- [ ] **T6.1** — Conectar en `features/secretaria/observaciones/secretaria-observaciones.component.ts`
+- [x] **T6.1** — Conectar en `secretaria-observaciones.component.ts`
+- [x] **T6.2** — Conectar en `admin-tareas.component.ts`
   - **AC ref:** AC1, AC7, AC8
   - **DoD:**
-    - [ ] `<app-tabs variant="line">` a nivel página: "Tareas" / "Comunicados"
-    - [ ] Acción de hero "Nuevo comunicado" que abre el compositor vía `LayoutDrawerFacadeService`
-    - [ ] La pestaña Comunicados respeta el patrón app-like (`.bento-fill`)
-    - [ ] Scope de sede de la secretaria respetado
+    - [x] `<app-tabs variant="line">` a nivel página: "Tareas del equipo" / "Comunicados a alumnos"
+    - [x] Acción de hero "Nuevo comunicado" que abre el compositor vía `LayoutDrawerFacadeService`
+    - [x] `features/instructor/tareas/` NO se tocó
+    - [x] El historial se carga recién al abrir su pestaña (la mayoría de las visitas son por tareas)
 
-- [ ] **T6.2** — Conectar en `features/admin/tareas/admin-tareas.component.ts`
-  - **AC ref:** AC1, AC7
-  - **DoD:**
-    - [ ] Mismo wire-up que T6.1, con alcance multi-sede
-    - [ ] `features/instructor/tareas/` **NO** se toca (verificado)
+  > **La fila de tabs necesitaba cambiar el modificador del grid, no SCSS nuevo.**
+  > `--fill-screen` define `grid-template-rows: auto minmax(0,1fr)` — hero + celda que
+  > llena. Meter una fila de tabs ahí rompe el cálculo de 100vh. `--fill-screen-kpi` ya
+  > existe con `auto auto minmax(0,1fr)` (hero + fila corta + fill), que es exactamente
+  > esta forma, y además evita el shift de tabs por el scrollbar de Windows (spec 0031).
 
-- [ ] **T6.3** — Animación de entrada
+- [x] **T6.3** — Animación de entrada
   - **DoD:**
-    - [ ] `animateBentoGrid()` sigue funcionando con la estructura nueva de tabs
-    - [ ] Sin `@angular/animations` ni `@keyframes`
+    - [x] `animateBentoGrid()` sigue funcionando con la estructura nueva
+    - [x] Sin `@angular/animations` ni `@keyframes`
 
 ---
 
 ## Fase 7 — Validación
 
-- [ ] **T7.1** — `npm run lint:arch` limpio
-  - **DoD:** 0 errores y **sin regresión de ratchet** (ARCH-25 en su baseline; ya subió dos veces en specs previas por componer cards a mano)
-- [ ] **T7.2** — `npm run test:ci` verde
-- [ ] **T7.3** — `npx ng build` sin errores
-  - **DoD:** corrido explícitamente — vitest no type-checkea con el mismo rigor que el build (lección de 0040-b)
-- [ ] **T7.4** — QA manual en browser (`/verify`)
-  - **DoD:**
-    - [ ] Golden path como secretaria: filtros → destilde → redacción → preview → envío → historial
-    - [ ] AC-E2: alumno sin email reportado, con notificación in-app igual
-    - [ ] Notificación in-app verificada en el portal del alumno (`alumno@test.com`)
-- [ ] **T7.5** — Verificación server-side de RLS
-  - **DoD:** secretaria de sede A no puede insertar un comunicado con `branch_id` de sede B (rechazo real de RLS, no solo UI oculta) — AC8
-- [ ] **T7.6** — `/spec-verify` → `acceptance.md` con evidencia por AC
+- [x] **T7.1** — `npm run lint:arch` limpio
+  - **DoD:** exit 0, sin regresión de ratchet (ARCH-25 en su baseline)
 
----
+  > **ARCH-12 real encontrado acá:** el compositor importaba `AnnouncementKind` desde
+  > `dto/`, y la regla prohíbe que un componente toque el DTO crudo. Se resolvió como ya
+  > lo hace `ui/consent.model.ts` con `ConsentType`: el modelo de UI re-exporta el tipo.
+  > El tipo es vocabulario de dominio, no la forma de una fila, así que re-exportarlo no
+  > lava la violación — evita duplicar la unión en dos archivos.
+
+- [x] **T7.2** — `npm run test:ci` verde
+  - **DoD:** 2389 passed, 5 skipped, exit 0 (40 tests nuevos de esta spec)
+- [x] **T7.3** — `npx ng build` sin errores
+  - **DoD:** exit 0. Encontró dos errores que vitest no ve: `SectionHeroAction.primary`
+    es obligatorio, y faltaba declarar los componentes nuevos en el `imports` de admin.
+- [x] **T7.4** — QA manual en browser
+  - **DoD:** como `secretaria@test.com`, contra la BD de desarrollo real:
+    - [x] Tabs "Tareas del equipo" / "Comunicados a alumnos" y acción "Nuevo comunicado"
+    - [x] AC2 · el compositor abre sin tipo elegido ("Elegí el tipo…")
+    - [x] AC1 · operativo resuelve **62 destinatarios** (coincide con el SQL del segmento)
+    - [x] AC3 · al pasar a promocional cae a **0**, con "62 alumno(s) … quedan fuera por no
+          tener consentimiento promocional vigente" y badge "Sin consentimiento" por fila
+    - [x] AC-E1 · con 0 destinatarios el botón de envío queda deshabilitado
+    - [x] AC8 · no aparece el selector de Sede para secretaría
+    - [x] Camino feliz: operativo + asunto + cuerpo → botón habilitado
+    - [x] Historial vacío se ve centrado, con el ícono `megaphone` bien registrado
+
+  > **No se ejecutó un envío real desde la UI, a propósito.** El compositor no pasa
+  > `dryRun` (correcto: en producción tiene que enviar de verdad), así que apretar
+  > "Enviar" habría disparado 62 correos a `@test-data.local` y otros tantos rebotes
+  > contra el dominio de la escuela. La verificación del envío ya se hizo en T3.2 en
+  > dry-run contra la Edge Function real.
+
+- [x] **T7.5** — Verificación server-side de RLS
+  - **DoD:** cubierto en T3.2 — secretaría recibe 403 al intentar crear un comunicado de
+    otra sede y al intentar uno multi-sede (`branch_id NULL`)
+- [ ] **T7.6** — `/spec-verify` → `acceptance.md` con evidencia por AC
 
 ## Fase 8 — Cierre
 

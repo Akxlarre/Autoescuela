@@ -228,6 +228,136 @@ describe('AnnouncementsFacade', () => {
     });
   });
 
+  describe('loadPreview()', () => {
+    /** Reemplaza el mock de `from` por uno que responde el segmento y los consentimientos. */
+    function mockSegmento(enrollmentRows: any[], consentRows: any[] = []) {
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'enrollments') {
+          const chain: any = {
+            select: vi.fn().mockReturnValue(chainable()),
+          };
+          function chainable() {
+            const c: any = {
+              eq: vi.fn().mockImplementation(() => c),
+              then: (resolve: any) => resolve({ data: enrollmentRows, error: null }),
+            };
+            return c;
+          }
+          return chain;
+        }
+        if (table === 'consents') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({ data: consentRows, error: null }),
+                }),
+              }),
+            }),
+          };
+        }
+        return { select: vi.fn() };
+      });
+    }
+
+    function alumno(id: number, nombre: string, email = `a${id}@test.com`) {
+      return {
+        status: 'active',
+        branch_id: 1,
+        courses: { type: 'class_b' },
+        students: {
+          user_id: id,
+          users: {
+            id,
+            first_names: nombre,
+            paternal_last_name: 'Pérez',
+            email,
+            active: true,
+          },
+        },
+      };
+    }
+
+    const FILTROS = DRAFT.filters;
+
+    it('AC1 · resuelve el segmento con nombre y email', async () => {
+      mockSegmento([alumno(1, 'Ana'), alumno(2, 'Beto')]);
+
+      await facade.loadPreview(FILTROS, 'operativo');
+
+      expect(facade.preview()).toHaveLength(2);
+      expect(facade.preview()[0]).toMatchObject({ userId: 1, name: 'Ana Pérez', included: true });
+    });
+
+    it('un alumno con dos matrículas aparece una sola vez', async () => {
+      mockSegmento([alumno(1, 'Ana'), alumno(1, 'Ana')]);
+
+      await facade.loadPreview(FILTROS, 'operativo');
+
+      expect(facade.preview()).toHaveLength(1);
+    });
+
+    it('AC4 · el operativo no marca a nadie como excluido', async () => {
+      mockSegmento([alumno(1, 'Ana'), alumno(2, 'Beto')], []);
+
+      await facade.loadPreview(FILTROS, 'operativo');
+
+      expect(facade.preview().every((r) => r.included)).toBe(true);
+    });
+
+    it('AC3 · el promocional excluye a quien no consintió, con su motivo', async () => {
+      mockSegmento(
+        [alumno(1, 'Ana'), alumno(2, 'Beto')],
+        [{ user_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' }],
+      );
+
+      await facade.loadPreview(FILTROS, 'promocional');
+
+      const [ana, beto] = facade.preview();
+      expect(ana).toMatchObject({ userId: 1, included: true, exclusionReason: null });
+      expect(beto).toMatchObject({
+        userId: 2,
+        included: false,
+        exclusionReason: 'sin_consentimiento',
+      });
+    });
+
+    it('AC3 · un consentimiento revocado no habilita', async () => {
+      mockSegmento(
+        [alumno(1, 'Ana')],
+        [{ user_id: 1, granted: true, revoked_at: '2026-09-05', granted_at: '2026-09-01' }],
+      );
+
+      await facade.loadPreview(FILTROS, 'promocional');
+
+      expect(facade.preview()[0].included).toBe(false);
+    });
+
+    // Un alumno con dos matrículas tiene una fila de consentimiento por matrícula:
+    // vale su última expresión de voluntad, no la más conveniente.
+    it('AC3 · con varios registros manda el más reciente', async () => {
+      mockSegmento(
+        [alumno(1, 'Ana')],
+        [
+          { user_id: 1, granted: false, revoked_at: null, granted_at: '2026-09-08' },
+          { user_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' },
+        ],
+      );
+
+      await facade.loadPreview(FILTROS, 'promocional');
+
+      expect(facade.preview()[0].included).toBe(false);
+    });
+
+    it('AC-E2 · un alumno sin email queda incluido, con email null', async () => {
+      mockSegmento([alumno(1, 'Ana', '   ')]);
+
+      await facade.loadPreview(FILTROS, 'operativo');
+
+      expect(facade.preview()[0]).toMatchObject({ included: true, email: null });
+    });
+  });
+
   describe('initialize() — SWR', () => {
     // Se mira isLoading ANTES de esperar la promesa: después del await siempre es
     // false, así que un test que chequee ahí no puede distinguir SWR de no-SWR.

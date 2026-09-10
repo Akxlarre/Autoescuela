@@ -9,8 +9,11 @@ import { ANNOUNCEMENT_BATCH_SIZE, buildBatches } from '@core/utils/announcement-
 import type {
   AnnouncementDraft,
   AnnouncementRow,
+  RecipientPreview,
+  RecipientSegmentFilters,
   SendProgress,
 } from '@core/models/ui/announcement.model';
+import type { AnnouncementKind } from '@core/models/dto/announcement.model';
 
 const EMPTY_PROGRESS: SendProgress = { total: 0, processed: 0, ok: 0, failed: 0 };
 
@@ -33,6 +36,8 @@ export class AnnouncementsFacade {
 
   // ── Estado reactivo (privado) ──────────────────────────────────────────────
   private readonly _announcements = signal<AnnouncementRow[]>([]);
+  private readonly _preview = signal<RecipientPreview[]>([]);
+  private readonly _isLoadingPreview = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _isSending = signal(false);
   private readonly _progress = signal<SendProgress>(EMPTY_PROGRESS);
@@ -44,6 +49,8 @@ export class AnnouncementsFacade {
 
   // ── Estado expuesto ────────────────────────────────────────────────────────
   readonly announcements = this._announcements.asReadonly();
+  readonly preview = this._preview.asReadonly();
+  readonly isLoadingPreview = this._isLoadingPreview.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSending = this._isSending.asReadonly();
   readonly progress = this._progress.asReadonly();
@@ -124,6 +131,103 @@ export class AnnouncementsFacade {
     };
   }
 
+  // ── Preview de destinatarios ───────────────────────────────────────────────
+
+  /**
+   * Resuelve el segmento para MOSTRARLO. Es informativo: la lista que vale la calcula
+   * la Edge Function al enviar.
+   *
+   * Sí, esto duplica la resolución que ya vive en el servidor, y es a propósito: la
+   * secretaria necesita ver a quién le va a llegar antes de confirmar, pero dejar que
+   * esa lista decidiera el envío sería confiarle al cliente el filtro de consentimiento.
+   */
+  async loadPreview(filters: RecipientSegmentFilters, kind: AnnouncementKind): Promise<void> {
+    this._isLoadingPreview.set(true);
+    this._error.set(null);
+
+    try {
+      const branchId = this.effectiveBranchId(filters);
+
+      let query = this.supabase.client
+        .from('enrollments')
+        .select(
+          'students!inner(user_id, users!inner(id, first_names, paternal_last_name, email, active)), courses!inner(type), status, branch_id',
+        );
+
+      if (branchId !== null) query = query.eq('branch_id', branchId);
+      if (filters.courseType) query = query.eq('courses.type', filters.courseType);
+      if (filters.enrollmentStatus) query = query.eq('status', filters.enrollmentStatus);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Un alumno con dos matrículas es un destinatario, no dos.
+      const byUserId = new Map<number, RecipientPreview>();
+      for (const row of (data ?? []) as any[]) {
+        const u = row.students?.users;
+        if (!u?.active || byUserId.has(u.id)) continue;
+        byUserId.set(u.id, {
+          userId: u.id,
+          name: `${u.first_names} ${u.paternal_last_name}`.trim(),
+          email: u.email?.trim() ? u.email.trim() : null,
+          included: true,
+          exclusionReason: null,
+        });
+      }
+
+      const recipients = [...byUserId.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+      if (kind === 'promocional') {
+        const consented = await this.loadPromotionalConsentIds([...byUserId.keys()]);
+        for (const recipient of recipients) {
+          if (!consented.has(recipient.userId)) {
+            recipient.included = false;
+            recipient.exclusionReason = 'sin_consentimiento';
+          }
+        }
+      }
+
+      this._preview.set(recipients);
+    } catch (err) {
+      this._preview.set([]);
+      this.setError(err, 'No se pudo resolver la lista de destinatarios.');
+    } finally {
+      this._isLoadingPreview.set(false);
+    }
+  }
+
+  /** Ids con consentimiento promocional vigente, mirando el registro más reciente de cada uno. */
+  private async loadPromotionalConsentIds(userIds: number[]): Promise<Set<number>> {
+    if (userIds.length === 0) return new Set();
+
+    const { data, error } = await this.supabase.client
+      .from('consents')
+      .select('user_id, granted, revoked_at, granted_at')
+      .eq('consent_type', 'comunicaciones_promocionales')
+      .in('user_id', userIds)
+      .order('granted_at', { ascending: false });
+    if (error) throw error;
+
+    const vigentes = new Set<number>();
+    const visto = new Set<number>();
+    for (const row of (data ?? []) as any[]) {
+      if (visto.has(row.user_id)) continue;
+      visto.add(row.user_id);
+      if (row.granted && row.revoked_at === null) vigentes.add(row.user_id);
+    }
+    return vigentes;
+  }
+
+  clearPreview(): void {
+    this._preview.set([]);
+  }
+
+  /** La secretaria queda fijada a su sede; el admin elige. */
+  private effectiveBranchId(filters: RecipientSegmentFilters): number | null {
+    const user = this.authFacade.currentUser();
+    return user?.role === 'admin' ? filters.branchId : (user?.branchId ?? null);
+  }
+
   // ── Envío ──────────────────────────────────────────────────────────────────
 
   /**
@@ -194,9 +298,7 @@ export class AnnouncementsFacade {
 
   private async insertAnnouncement(draft: AnnouncementDraft): Promise<number> {
     const user = this.authFacade.currentUser();
-
-    // La secretaria queda fijada a su sede; el admin puede segmentar por una o por todas.
-    const branchId = user?.role === 'admin' ? draft.filters.branchId : (user?.branchId ?? null);
+    const branchId = this.effectiveBranchId(draft.filters);
 
     const { data, error } = await this.supabase.client
       .from('announcements')

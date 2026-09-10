@@ -3,6 +3,11 @@
 
 import type { Announcement, AnnouncementKind } from '@core/models/dto/announcement.model';
 
+// El tipo de comunicado es vocabulario de dominio compartido, no una forma de fila:
+// se re-exporta para que la UI no tenga que importar del DTO (ARCH-12), mismo
+// criterio que `ConsentType` en ui/consent.model.ts.
+export type { AnnouncementKind };
+
 /** Tipo de curso por el que se puede segmentar. Espeja `courses.type`. */
 export type AnnouncementCourseType = 'class_b' | 'professional';
 

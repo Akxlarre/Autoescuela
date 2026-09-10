@@ -323,17 +323,17 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 442 | `#38bdf8` |
+| `--ds-brand` | 444 | `#38bdf8` |
 | `--text-muted` | 388 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 269 | `var(--color-primary-text)` |
+| `--state-error` | 234 | `#f87171` |
 | `--text-secondary` | 233 | `rgba(255, 255, 255, 0.78)` |
-| `--state-error` | 228 | `#f87171` |
 | `--border-subtle` | 208 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 196 | `#18181b` |
 | `--state-success` | 173 | `#4ade80` |
 | `--border-default` | 137 | `rgba(255, 255, 255, 0.28)` |
 | `--color-primary` | 134 | `#38bdf8` |
-| `--state-warning` | 122 | `#fbbf24` |
+| `--state-warning` | 124 | `#fbbf24` |
 | `--bg-elevated` | 76 | `#27272a` |
 | `--text-sm` | 68 | `0.875rem` |
 | `--bg-subtle` | 59 | `rgba(255, 255, 255, 0.1)` |
@@ -353,9 +353,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 275 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 176 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 175 | `src/styles/tokens/_variables.scss` |
+| `.card` | 283 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 177 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 177 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
