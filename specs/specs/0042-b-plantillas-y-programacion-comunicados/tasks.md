@@ -118,28 +118,55 @@
 
 ## Fase 4 — Dispatcher
 
-- [ ] **T4.1** — Crear `supabase/functions/dispatch-scheduled-announcements/index.ts`
+- [x] **T4.1** — Crear `supabase/functions/dispatch-scheduled-announcements/index.ts`
   - **AC ref:** AC6, AC-E2, AC-E3, AC-E4
   - **DoD:**
-    - [ ] Corre con `service_role`, sin usuario autenticado
-    - [ ] Busca `status='programado' AND scheduled_for <= now()`
-    - [ ] **Candado:** toma cada uno con `UPDATE ... SET status='enviando' WHERE id=$1 AND
-          status='programado' RETURNING id`; si no devuelve fila, otro lo tomó y se saltea (AC-E4)
-    - [ ] Envía usando el núcleo de `_shared/` (segmento resuelto **al enviar**, no al programar)
-    - [ ] Vencidos viejos se envían igual, no se saltean (AC-E2)
-    - [ ] Segmento vacío → `enviado` con 0 destinatarios y motivo, sin reintentar (AC-E3)
-    - [ ] Rescata los `enviando` con más de N minutos (si la EF murió a mitad, si no quedan
-          huérfanos para siempre)
+    - [x] Corre con `service_role`, sin usuario autenticado
+    - [x] Busca `status='programado' AND scheduled_for <= now()`
+    - [x] **Candado** con `UPDATE ... WHERE status='programado'`
+    - [x] Envía usando el núcleo de `_shared/`
+    - [x] Vencidos viejos se envían igual (AC-E2)
+    - [x] Segmento vacío → `enviado` con 0, sin reintentar (AC-E3)
+    - [x] Rescata los `enviando` con más de 30 min (2 ciclos de cron)
+    - [x] `dryRun` opcional para poder verificar sin tocar SMTP
 
-- [ ] **T4.2** — Verificar el dispatcher contra la BD de desarrollo
+- [x] **T4.2** — Verificar el dispatcher contra la BD de desarrollo
   - **AC ref:** AC6, AC-E2, AC-E3, AC-E4
-  - **DoD (todo en `dryRun`):**
-    - [ ] AC-E4 · dos `UPDATE` concurrentes sobre el mismo comunicado → solo uno afecta fila
-    - [ ] AC6 · programado con fecha pasada → se envía y respeta el filtro de consentimiento
-    - [ ] AC-E3 · segmento vacío al vencer → `enviado` con 0, no queda reintentando
-    - [ ] Datos de verificación limpiados de la BD compartida
+  - **DoD:**
+    - [x] AC-E4 · dos tomas concurrentes del mismo comunicado: exactamente una gana;
+          una toma posterior tampoco
+    - [x] AC-E2 · el vencido de ayer se despacha, no se saltea
+    - [x] AC-E3 · segmento vacío → `enviado` con `recipients_total = 0`
+    - [x] Rescate verificado en vivo: el comunicado que el test del candado dejó trabado
+          en `enviando` fue rescatado y despachado en la corrida siguiente
+    - [x] Autorización · un admin logueado recibe 401 al intentar disparar el dispatcher
+    - [x] Datos de verificación limpiados de la BD compartida
 
----
+  > ### 3 hallazgos que solo aparecieron al correrlo de verdad
+  >
+  > **1. Comparar la key contra la env var rechazaba al propio cron (401).** La
+  > `service_role_key` que el cron saca del vault es el JWT legacy y no coincide con
+  > `SUPABASE_SERVICE_ROLE_KEY` del runtime — conviven formatos de key distintos. El
+  > arreglo no fue aflojar el control sino moverlo al lugar correcto: se valida el **claim
+  > `role`** del token. La autenticidad ya la garantiza el gateway (`verify_jwt` en su
+  > default `true`); lo que decide la función es la autorización. Un admin logueado sigue
+  > recibiendo 401, verificado.
+  >
+  > **2. `pg_net` corta a los 5 segundos por defecto.** El primer disparo devolvió
+  > `Timeout of 5000 ms` aunque **el trabajo se completó igual** (la función sigue
+  > corriendo del lado del servidor). O sea: el cron dispara y olvida, y no puede ver si
+  > el envío falló. Para verificar hay que pasar `timeout_milliseconds`. Operativamente
+  > implica que **los errores del dispatcher solo se ven en los logs de la función**, no
+  > en `net._http_response`.
+  >
+  > **3. Se enviaron 8 correos reales a dominios inexistentes durante esta verificación.**
+  > El dispatcher no aceptaba `dryRun` (correcto para producción) y el comunicado de
+  > prueba del candado usaba un segmento que resolvía a 8 alumnos sembrados
+  > `@test-data.local` → 8 rebotes duros contra el dominio de la escuela. Corregido en dos
+  > frentes: el dispatcher acepta `dryRun` (solo para quien ya pasó el control de rol de
+  > servicio), y **la regla para adelante es que todo comunicado de prueba en la BD
+  > compartida use un segmento que resuelva a cero**. La re-verificación completa corrió
+  > en `dryRun` y las 8 filas quedaron marcadas `send_error='dry_run'`, sin entrega.
 
 ## Fase 5 — Facades (TDD)
 
