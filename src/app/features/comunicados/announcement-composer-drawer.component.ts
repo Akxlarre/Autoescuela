@@ -57,7 +57,7 @@ import type {
             [options]="kindOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Elegí el tipo…"
+            placeholder="Elige el tipo…"
             styleClass="w-full"
             [ngModel]="kind()"
             (ngModelChange)="onKindChange($event)"
@@ -123,7 +123,7 @@ import type {
 
         <!-- ── Lista resuelta ─────────────────────────────────────────── -->
         @if (kind() === null) {
-          <p class="field-hint">Elegí el tipo de comunicado para ver a quién le llegaría.</p>
+          <p class="field-hint">Elige el tipo de comunicado para ver a quién le llegaría.</p>
         } @else if (facade.isLoadingPreview()) {
           <div class="card p-3 flex flex-col gap-2">
             <app-skeleton-block variant="text" width="45%" height="14px" />
@@ -190,7 +190,7 @@ import type {
             <div class="card p-3 flex items-start gap-2">
               <app-icon name="alert-circle" [size]="14" color="var(--state-error)" />
               <p class="text-xs text-error">
-                El máximo por comunicado es {{ maxRecipients }} destinatarios. Acotá el segmento.
+                El máximo por comunicado es {{ maxRecipients }} destinatarios. Acota el segmento.
               </p>
             </div>
           }
