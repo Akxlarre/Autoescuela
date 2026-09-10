@@ -20,6 +20,13 @@ import {
   validateAnnouncementDraft,
 } from '@core/utils/announcement-recipients.utils';
 import { isScheduledForValid } from '@core/utils/announcement-template.utils';
+import {
+  applyBulkAction,
+  filterRecipients,
+  includedCount as countIncluded,
+  onlyExcluded,
+  type BulkAction,
+} from '@core/utils/recipient-filter.utils';
 import type {
   AnnouncementKind,
   AnnouncementCourseType,
@@ -151,40 +158,97 @@ function toLocalInputValue(date: Date): string {
               </app-badge>
             </div>
 
-            @if (exclusions().sinConsentimiento > 0) {
-              <p class="px-3 py-2 text-xs text-text-muted border-t border-border-subtle">
-                {{ exclusions().sinConsentimiento }} alumno(s) del segmento quedan fuera por no
-                tener consentimiento promocional vigente.
-              </p>
-            }
-
             @if (facade.preview().length === 0) {
               <p class="px-3 py-3 text-xs text-text-muted border-t border-border-subtle">
                 Este segmento no tiene alumnos.
               </p>
             } @else {
-              <ul class="max-h-56 overflow-y-auto border-t border-border-subtle">
-                @for (r of facade.preview(); track r.userId) {
-                  <li
-                    class="flex items-center gap-2 px-3 py-1.5 border-b border-border-subtle last:border-b-0"
+              <!-- Buscador + acciones masivas. El buscador solo cambia QUÉ SE VE: el
+                   contador de arriba nunca depende del filtro. -->
+              <div class="flex flex-col gap-2 px-3 py-2 border-t border-border-subtle">
+                <input
+                  type="search"
+                  class="field-input h-8 text-xs"
+                  placeholder="Buscar por nombre…"
+                  [ngModel]="searchTerm()"
+                  (ngModelChange)="searchTerm.set($event)"
+                  data-llm-description="filter the recipient list by name; does not change who receives"
+                />
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <!-- Las etiquetas nombran el número exacto que van a afectar: un botón
+                       que dijera "todos" y tocara 185 con 12 en pantalla sería una trampa. -->
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-md border border-border-default bg-surface px-2 py-1 text-2xs font-semibold text-text-secondary transition-colors hover:bg-subtle disabled:opacity-50"
+                    [disabled]="bulkTargetCount() === 0"
+                    data-llm-action="quitar-destinatarios-visibles"
+                    (click)="accionMasiva('quitar')"
                   >
-                    <input
-                      type="checkbox"
-                      class="cursor-pointer"
-                      [checked]="isChecked(r.userId)"
-                      [disabled]="r.exclusionReason === 'sin_consentimiento'"
-                      [attr.aria-label]="'Incluir a ' + r.name"
-                      (change)="toggleRecipient(r.userId)"
-                    />
-                    <span class="flex-1 text-xs text-text-primary truncate">{{ r.name }}</span>
-                    @if (r.email === null) {
-                      <app-badge variant="warning">Sin email</app-badge>
-                    } @else if (r.exclusionReason === 'sin_consentimiento') {
-                      <app-badge variant="neutral">Sin consentimiento</app-badge>
-                    }
-                  </li>
-                }
-              </ul>
+                    Quitar {{ bulkLabel() }}
+                  </button>
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-md border border-border-default bg-surface px-2 py-1 text-2xs font-semibold text-text-secondary transition-colors hover:bg-subtle disabled:opacity-50"
+                    [disabled]="bulkTargetCount() === 0"
+                    data-llm-action="incluir-destinatarios-visibles"
+                    (click)="accionMasiva('incluir')"
+                  >
+                    Incluir {{ bulkLabel() }}
+                  </button>
+
+                  @if (totalExcluidos() > 0) {
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded-md px-2 py-1 text-2xs font-semibold transition-colors"
+                      [class.bg-brand-muted]="verSoloExcluidos()"
+                      [class.text-brand]="verSoloExcluidos()"
+                      [class.text-text-secondary]="!verSoloExcluidos()"
+                      (click)="verSoloExcluidos.set(!verSoloExcluidos())"
+                    >
+                      {{
+                        verSoloExcluidos()
+                          ? 'Ver todos'
+                          : 'Ver excluidos (' + totalExcluidos() + ')'
+                      }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              @if (visibles().length === 0) {
+                <p class="px-3 py-3 text-xs text-text-muted border-t border-border-subtle">
+                  @if (verSoloExcluidos()) {
+                    No hay destinatarios excluidos.
+                  } @else {
+                    Ningún nombre coincide con “{{ searchTerm() }}”. El alcance sigue siendo de
+                    {{ includedCount() }} destinatario(s).
+                  }
+                </p>
+              } @else {
+                <ul class="max-h-56 overflow-y-auto border-t border-border-subtle">
+                  @for (r of visibles(); track r.userId) {
+                    <li
+                      class="flex items-center gap-2 px-3 py-1.5 border-b border-border-subtle last:border-b-0"
+                    >
+                      <input
+                        type="checkbox"
+                        class="cursor-pointer"
+                        [checked]="isChecked(r.userId)"
+                        [disabled]="r.exclusionReason === 'sin_consentimiento'"
+                        [attr.aria-label]="'Incluir a ' + r.name"
+                        (change)="toggleRecipient(r.userId)"
+                      />
+                      <span class="flex-1 text-xs text-text-primary truncate">{{ r.name }}</span>
+                      @if (r.exclusionReason === 'sin_consentimiento') {
+                        <app-badge variant="neutral">Sin consentimiento</app-badge>
+                      } @else if (r.email === null) {
+                        <app-badge variant="warning">Sin email</app-badge>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
             }
           </div>
 
@@ -411,6 +475,10 @@ export class AnnouncementComposerDrawerComponent {
   /** Destildados a mano. Solo aplica sobre quienes ya están habilitados. */
   private readonly excludedUserIds = signal<number[]>([]);
 
+  /** Filtro de la lista. NO afecta el alcance: solo qué se ve. */
+  protected readonly searchTerm = signal('');
+  protected readonly verSoloExcluidos = signal(false);
+
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   protected readonly branchOptions = computed(() =>
@@ -419,11 +487,47 @@ export class AnnouncementComposerDrawerComponent {
 
   protected readonly exclusions = computed(() => countExclusions(this.facade.preview()));
 
-  protected readonly includedCount = computed(
-    () =>
-      this.facade.preview().filter((r) => r.included && !this.excludedUserIds().includes(r.userId))
-        .length,
+  /**
+   * Lista con el estado manual ya aplicado. Es la fuente para contar y para mostrar, así
+   * el contador y las casillas no pueden contradecirse.
+   */
+  private readonly recipientsConEstado = computed(() => {
+    const excluidos = new Set(this.excludedUserIds());
+    return this.facade
+      .preview()
+      .map((r) =>
+        excluidos.has(r.userId)
+          ? { ...r, included: false, exclusionReason: 'excluido_manualmente' as const }
+          : r,
+      );
+  });
+
+  /** Se cuenta SIEMPRE sobre la lista completa, nunca sobre la filtrada (AC-E1). */
+  protected readonly includedCount = computed(() => countIncluded(this.recipientsConEstado()));
+
+  /** Lo que se ve: filtrado por búsqueda, o solo los excluidos. */
+  protected readonly visibles = computed(() => {
+    const base = this.verSoloExcluidos()
+      ? onlyExcluded(this.facade.preview(), this.excludedUserIds())
+      : this.recipientsConEstado();
+    return filterRecipients(base, this.searchTerm());
+  });
+
+  protected readonly totalExcluidos = computed(
+    () => onlyExcluded(this.facade.preview(), this.excludedUserIds()).length,
   );
+
+  /** Sobre cuántos opera de verdad una acción masiva (los que puede tocar). */
+  protected readonly bulkTargetCount = computed(
+    () => this.visibles().filter((r) => r.exclusionReason !== 'sin_consentimiento').length,
+  );
+
+  /** El botón dice el número exacto, y si hay filtro aclara que son los visibles. */
+  protected readonly bulkLabel = computed(() => {
+    const n = this.bulkTargetCount();
+    const filtrando = this.searchTerm().trim().length > 0 || this.verSoloExcluidos();
+    return filtrando ? `los ${n} visibles` : `los ${n}`;
+  });
 
   private readonly validation = computed(() =>
     validateAnnouncementDraft(this.buildDraft(), this.includedCount()),
@@ -458,6 +562,12 @@ export class AnnouncementComposerDrawerComponent {
     return !this.excludedUserIds().includes(userId);
   }
 
+  protected accionMasiva(action: BulkAction): void {
+    this.excludedUserIds.set(
+      applyBulkAction(this.facade.preview(), this.visibles(), action, this.excludedUserIds()),
+    );
+  }
+
   protected toggleRecipient(userId: number): void {
     this.excludedUserIds.update((ids) =>
       ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId],
@@ -485,8 +595,11 @@ export class AnnouncementComposerDrawerComponent {
     const kind = this.kind();
     if (kind === null) return;
 
-    // Cambiar el segmento invalida los destildes: eran sobre otra lista.
+    // Cambiar el segmento invalida los destildes: eran sobre otra lista. El filtro y la
+    // vista de excluidos también se resetean: quedarían aplicados sobre gente que ya no está.
     this.excludedUserIds.set([]);
+    this.searchTerm.set('');
+    this.verSoloExcluidos.set(false);
     await this.facade.loadPreview(this.buildDraft().filters, kind);
   }
 
