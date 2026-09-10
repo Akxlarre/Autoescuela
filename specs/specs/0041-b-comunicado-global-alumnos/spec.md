@@ -1,6 +1,6 @@
 # Spec 0041-b — Comunicado global a alumnos (1:N, email + in-app)
 
-> **Status:** in_progress
+> **Status:** done
 > **Created:** 2026-09-09
 > **Owner:** Benjamín
 > **Priority:** P1 — no bloquea el despliegue, pero es el mayor ahorro de tiempo identificado para la secretaria

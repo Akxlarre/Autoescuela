@@ -1,7 +1,7 @@
 # Tasks 0041-b — Comunicado global a alumnos (1:N, email + in-app)
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md)
-> **Status:** in_progress
+> **Status:** done
 > **Created:** 2026-09-09
 
 ---
@@ -276,16 +276,17 @@
 - [x] **T7.5** — Verificación server-side de RLS
   - **DoD:** cubierto en T3.2 — secretaría recibe 403 al intentar crear un comunicado de
     otra sede y al intentar uno multi-sede (`branch_id NULL`)
-- [ ] **T7.6** — `/spec-verify` → `acceptance.md` con evidencia por AC
+- [x] **T7.6** — `/spec-verify` → [`acceptance.md`](./acceptance.md) con evidencia por AC (12/12 ✅ PASA)
 
 ## Fase 8 — Cierre
 
-- [ ] **T8.1** — Sincronizar `indices/` (`/sync-indices`)
-  - **DoD:** incluye actualizar `indices/NOTIFICATIONS-MAP.md` §9.3 — el comunicado global deja de ser "sin implementar"
-- [ ] **T8.2** — Mover la spec a Done en `specs/ROADMAP.md`
-- [ ] **T8.3** — `status: done` en `spec.md` y limpiar `specs/.active`
-
----
+- [x] **T8.1** — Sincronizar `indices/`
+  - **DoD:**
+    - [x] `npm run indices:sync` corrido (DATABASE, MODELS, UTILS, FACADES, COMPONENTS, USAGE-MAP, STYLES)
+    - [x] `indices/NOTIFICATIONS-MAP.md` §9.4 — el comunicado global pasó de "sin
+          implementar" a implementado, con la salvedad del smoke test SMTP pendiente
+- [x] **T8.2** — Mover la spec a Done en `specs/ROADMAP.md`
+- [x] **T8.3** — `status: done` en `spec.md` y limpiar `specs/.active`
 
 ## Tareas descubiertas durante implementación
 

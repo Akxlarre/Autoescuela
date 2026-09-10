@@ -167,8 +167,16 @@ tabla `notification_templates` (vacía, R7) es exactamente donde vivirían las p
   distinción operativo/promocional vive en la UI de matrícula (párrafo vs checkbox) y en el
   `consent_type` de cada fila. Detalle completo, decisiones y evidencia de verificación en
   [`specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md`](../specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md).
-  **Esto desbloquea el comunicado global** (§9.3) — sigue sin implementarse, pero ya no tiene
-  deuda legal pendiente que arrastrar antes de construirlo.
+  **Esto desbloqueó el comunicado global** (§9.3), construido después en la spec 0041-b.
+- ✅ **Comunicado global IMPLEMENTADO (spec 0041-b, cerrada 2026-09-09).** El 1:N de §9.3 ya
+  existe: pestaña "Comunicados a alumnos" en el módulo Comunicación (admin y secretaría),
+  compositor con segmentación por sede/curso/estado, envío por lotes vía la Edge Function
+  `send-announcement`, y registro auditable en `announcements` + `announcement_recipients`.
+  El emisor declara si es `operativo` o `promocional`, y el servidor filtra por consentimiento
+  al momento del envío. Evidencia por AC en
+  [`specs/specs/0041-b-comunicado-global-alumnos/acceptance.md`](../specs/specs/0041-b-comunicado-global-alumnos/acceptance.md).
+  ⚠️ **El envío SMTP real todavía no se ejercitó** (los alumnos sembrados tienen dominio
+  inexistente): falta un smoke test con una casilla real antes de producción.
 - 📊 **Deuda de medición.** La adopción del módulo "Comunicación" sigue sin métrica. Cuando haya
   uso real, `select from_role, date_trunc('week', created_at), count(*) from tasks group by 1,2`
   la responde — contra la instancia de la escuela, no contra la BD de prueba (spec `0008-i` la
