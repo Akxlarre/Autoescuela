@@ -1,12 +1,22 @@
 // Registro de consentimiento (Ley 21.719) — mapea la tabla `consents` 1:1.
 // Migración: supabase/migrations/20260817130000_consents_table_and_rls.sql
 
-/** Tipo de consentimiento otorgado. Espeja el CHECK de `consents.consent_type`. */
+/**
+ * Tipo de consentimiento otorgado. Espeja el CHECK de `consents.consent_type`.
+ *
+ * `comunicaciones_operativas` y `comunicaciones_promocionales` (spec 0040-b) NO son
+ * simétricas: la operativa se ampara en Art. 13 c) (ejecución del contrato) y siempre
+ * se persiste con `granted:true` — es un acuse de información, no una elección del
+ * titular (pedirla como checkbox violaría el Art. 12 inciso 5°). La promocional es
+ * consentimiento real bajo Art. 12, revocable por el propio titular.
+ */
 export type ConsentType =
   | 'matricula_datos'
   | 'certificado_medico'
   | 'preinscripcion'
-  | 'test_psicologico';
+  | 'test_psicologico'
+  | 'comunicaciones_operativas'
+  | 'comunicaciones_promocionales';
 
 /**
  * Por qué vía se otorgó. Espeja el CHECK de `consents.source`.

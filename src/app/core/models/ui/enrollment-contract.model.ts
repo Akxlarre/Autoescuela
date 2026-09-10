@@ -70,4 +70,10 @@ export interface PublicContractSignedPayload {
   signatureBase64: string;
   termsAccepted: boolean;
   privacyAccepted: boolean;
+  /**
+   * Casilla de comunicaciones promocionales (spec 0040-b, Art. 12). Voluntaria — NO
+   * entra en el gate que habilita la firma. La operativa no viaja acá: no tiene
+   * casilla, se informa (Art. 13 c) y el Facade la registra siempre en `true`.
+   */
+  promotionalAccepted: boolean;
 }

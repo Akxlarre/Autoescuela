@@ -3,6 +3,7 @@ import {
   buildEnrollmentConsents,
   buildMedicalCertificateConsent,
   buildPsychTestConsent,
+  buildCommunicationsConsents,
   type ConsentBuilderInput,
 } from './consent-builder.utils';
 
@@ -174,5 +175,91 @@ describe('buildPsychTestConsent()', () => {
 
   it('lanza si el titular no es identificable por ninguna vía', () => {
     expect(() => buildPsychTestConsent({ ...BASE, userId: null, subjectRut: null })).toThrow();
+  });
+});
+
+describe('buildCommunicationsConsents()', () => {
+  // Spec 0040-b — las dos finalidades NO son simétricas: la operativa (Art. 13 c,
+  // ejecución del contrato) se informa, no se consiente; la promocional (Art. 12)
+  // es consentimiento real. Ver dto/consent.model.ts.
+
+  it('siempre devuelve exactamente 2 filas: operativa y promocional', () => {
+    const consents = buildCommunicationsConsents({ ...BASE, promotionalAccepted: true });
+
+    expect(consents).toHaveLength(2);
+    expect(consents.map((c) => c.consentType).sort()).toEqual([
+      'comunicaciones_operativas',
+      'comunicaciones_promocionales',
+    ]);
+  });
+
+  it('la operativa sale con granted:true AUNQUE la casilla promocional venga en false — no es una elección (Art. 12 inc. 5°)', () => {
+    const [operativa] = buildCommunicationsConsents({
+      ...BASE,
+      promotionalAccepted: false,
+    }).filter((c) => c.consentType === 'comunicaciones_operativas');
+
+    expect(operativa.granted).toBe(true);
+  });
+
+  it('la promocional refleja la casilla: true', () => {
+    const [promocional] = buildCommunicationsConsents({
+      ...BASE,
+      promotionalAccepted: true,
+    }).filter((c) => c.consentType === 'comunicaciones_promocionales');
+
+    expect(promocional.granted).toBe(true);
+  });
+
+  it('la promocional refleja la casilla: false (se registra la negativa, no la ausencia)', () => {
+    const [promocional] = buildCommunicationsConsents({
+      ...BASE,
+      promotionalAccepted: false,
+    }).filter((c) => c.consentType === 'comunicaciones_promocionales');
+
+    expect(promocional.granted).toBe(false);
+  });
+
+  it('menor de edad: AMBAS filas quedan marcadas como otorgadas por el representante', () => {
+    const consents = buildCommunicationsConsents({
+      ...BASE,
+      isMinor: true,
+      promotionalAccepted: false,
+    });
+
+    expect(consents.every((c) => c.grantedByRepresentative === true)).toBe(true);
+  });
+
+  it('propaga titular, matrícula, sede y origen en ambas filas', () => {
+    const consents = buildCommunicationsConsents({ ...BASE, promotionalAccepted: true });
+
+    for (const c of consents) {
+      expect(c.userId).toBe(10);
+      expect(c.subjectRut).toBe('18.456.789-0');
+      expect(c.enrollmentId).toBe(55);
+      expect(c.branchId).toBe(2);
+      expect(c.source).toBe('public');
+    }
+  });
+
+  it('lanza si el titular no es identificable por ninguna vía', () => {
+    expect(() =>
+      buildCommunicationsConsents({
+        ...BASE,
+        userId: null,
+        subjectRut: null,
+        promotionalAccepted: true,
+      }),
+    ).toThrow();
+  });
+
+  it('lanza si falta la sede: no se sabría ante qué responsable se otorgó', () => {
+    expect(() =>
+      buildCommunicationsConsents({
+        ...BASE,
+        branchId: null as unknown as number,
+        promotionalAccepted: true,
+      }),
+    ).toThrow();
   });
 });

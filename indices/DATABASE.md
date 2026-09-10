@@ -70,7 +70,7 @@
 | `enrollments` | M6 - Matrí. | `id`, `number`, `current_step` (1-6), `payment_mode` ('total'\|'partial') — ⚠️ corregido 2026-07-10 (Spec 0026): el índice documentaba 'deposit', pero el valor real usado en producción es 'partial' (verificado contra 44 enrollments reales), `license_group` ('class_b'\|'professional'), `status` ('draft'\|'pending_payment'\|'active'\|'inactive'\|'completed'\|'cancelled'), `registration_channel` ('presential'\|'online'), `certificate_enabled` (BOOL, false), `certificate_b_pdf_url` (TEXT, null hasta generar), `certificate_professional_pdf_url` (TEXT, null hasta generar), `license_pdf_url` (TEXT, **legacy** — ya no se escribe), `license_initial_url` (TEXT, null hasta generar — carnet 6 clases/amarillo), `license_full_url` (TEXT, null hasta generar — carnet 12 clases/verde), `theory_cycle_id` (INT, null — ciclo teórico asignado) | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by`, `theory_cycle_id`→class_b_theory_cycles | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · Fix `20260312100000`: UNIQUE(`number`, `branch_id`, `license_group`). · **`20260630000000` (Spec 0001-m):** `theory_cycle_id` — asignado automáticamente por trigger `trg_assign_theory_cycle` al activar una matrícula Clase B (RF-04/05/06). · Fix `20260317150000`: `chk_enrollment_number` actualizado. · **`20260412000001`:** `certificate_enabled` pasa a `true` cuando el trigger `trg_enable_certificate_b` detecta que la **clase práctica #12** fue completada. · **`20260413000000`:** añadida `certificate_professional_pdf_url` (TEXT) — path relativo del PDF de certificado Clase Profesional en bucket 'documents'. · **`20260501000001`:** añadida `license_pdf_url` (TEXT) — path relativo del PDF de carnet Clase B en bucket `documents/student-licenses/`; generado por EF `generate-student-license-pdf`. · **`20260621000001` (fix-019-m):** carnet dual — `license_initial_url` (6 clases, fondo amarillo) y `license_full_url` (12 clases, fondo verde) reemplazan a `license_pdf_url` (que queda legacy, backfilled a `license_initial_url`). La EF recibe `variant: 'initial'\|'full'` y escribe la columna correspondiente; ambos carnets coexisten. |
 | `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Inst: R (solo alumnos con `class_b_sessions` asignadas) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede, Inst solo sus alumnos** · **Fix `20260723000000` (H-028): UPDATE ahora sí incluye secretary (sede propia) — antes solo admin/student, bloqueaba upsert de matrícula Profesional con 403** | ✅ Definida · Fix `20260317140000`: fotos subidas en flujo público se insertan vía Edge Function (service role) desde ruta temporal `public-uploads/carnet/{sessionToken}` tras crear el enrollment · **`20260413000001`: `storage_url` ahora almacena path relativo** (ej: `students/42/id_photo`), no URL pública. |
 | `digital_contracts` | M6 - Matrí. | `id`, `content_hash`, `signed_contract_url` (TEXT, null — path relativo del PDF firmado escaneado; solo para flujo online) | `enrollment_id` (UNIQUE) | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · Fix `20260313130000`: UPDATE incluye secretary (necesario para upsert con `onConflict`) · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede vía enrollment** | ✅ Definida · `20260404120000`: eliminado `student_id` redundante. · **`20260413000001`: `file_url` almacena path relativo** (ej: `contracts/42/contract.pdf`). · **`20260501000002`: añadida `signed_contract_url`** — path relativo del contrato físicamente firmado. `null` en flujo online hasta que se suba; en flujo presencial `file_url` ya es el firmado. |
-| `consents` | M6 - Matrí. | `id` (bigserial), `user_id` (null en leads), `subject_rut`, `branch_id` (**NOT NULL** — ante qué responsable se otorgó), `consent_type` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico`), `granted` (BOOL NOT NULL — **`false` = negativa expresa, se registra como fila**), `granted_at`, `revoked_at` (única columna actualizable), `ip` (la escribe el trigger), `policy_version`, `source` (`public`\|`secretaria` — **sin `papel`**: nunca se digita una matrícula en ficha física), `granted_by_representative` (BOOL — lo otorgó el apoderado de un menor; **su identidad NO se guarda acá**, consta en la autorización notarial del expediente) | `user_id`→users, `enrollment_id`→enrollments, `branch_id`→branches · CHECK `consents_subject_identifiable` (user_id O subject_rut) | Admin/Sec: SELECT · authenticated: INSERT · Admin: UPDATE (acotado a `revoked_at` por trigger) · **DELETE: ninguna policy, en ningún rol** · **`anon`: ninguna policy + REVOKE ALL** — el flujo público escribe vía Edge Function con `service_role` | ✅ Definida (`20260817130000`) · **Spec 0009-m (Ley 21.719).** APPEND-ONLY: `trg_consents_append_only` lanza excepción ante cualquier UPDATE que no sea `revoked_at` (RLS no restringe por columna). IP server-side vía `trg_consents_set_ip` + `request_client_ip()` — ⚠️ la función del trigger es **SECURITY INVOKER a propósito**: en una DEFINER, `current_user` es el dueño y la rama `service_role` nunca se toma, guardando la IP del runtime de la EF en vez de la del alumno. · **`20260818130000` (spec 0010-m, Ley 21.719 Art. 16):** agregado `test_psicologico` al CHECK de `consent_type` — consentimiento reforzado del test psicométrico EPQ. Gate de persistencia en dos capas (cliente en `PublicEnrollmentFacade.submitPreInscription()` + servidor en `handleSubmitPreInscription()` de la EF `public-enrollment`): sin un draft `test_psicologico` con `granted:true`, `professional_pre_registrations.psych_test_answers` queda `NULL` aunque el body traiga las 81 respuestas — verificado empíricamente en Supabase local. |
+| `consents` | M6 - Matrí. | `id` (bigserial), `user_id` (null en leads), `subject_rut`, `branch_id` (**NOT NULL** — ante qué responsable se otorgó), `consent_type` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico`\|`comunicaciones_operativas`\|`comunicaciones_promocionales`), `granted` (BOOL NOT NULL — **`false` = negativa expresa, se registra como fila**), `granted_at`, `revoked_at` (única columna actualizable), `ip` (la escribe el trigger), `policy_version`, `source` (`public`\|`secretaria` — **sin `papel`**: nunca se digita una matrícula en ficha física), `granted_by_representative` (BOOL — lo otorgó el apoderado de un menor; **su identidad NO se guarda acá**, consta en la autorización notarial del expediente) | `user_id`→users, `enrollment_id`→enrollments, `branch_id`→branches · CHECK `consents_subject_identifiable` (user_id O subject_rut) | Admin/Sec: SELECT (`select_consents`) · **Titular: SELECT** de sus propias filas, **todas** las finalidades (`select_consents_self`, `20260909130000` — sin restricción por `consent_type`: leer los propios datos es un derecho de acceso general, Art. 14 ter/ARCO, no algo acotado a esta spec) · authenticated: INSERT · Admin: UPDATE (acotado a `revoked_at` por trigger) · **Titular (self-service): UPDATE** de `revoked_at` en sus propias filas, **solo** `consent_type='comunicaciones_promocionales'` (`update_consents_self_revoke_promocional`) · **DELETE: ninguna policy, en ningún rol** · **`anon`: ninguna policy + REVOKE ALL** — el flujo público escribe vía Edge Function con `service_role` | ✅ Definida (`20260817130000`) · **Spec 0009-m (Ley 21.719).** APPEND-ONLY: `trg_consents_append_only` lanza excepción ante cualquier UPDATE que no sea `revoked_at` (RLS no restringe por columna). IP server-side vía `trg_consents_set_ip` + `request_client_ip()` — ⚠️ la función del trigger es **SECURITY INVOKER a propósito**: en una DEFINER, `current_user` es el dueño y la rama `service_role` nunca se toma, guardando la IP del runtime de la EF en vez de la del alumno. · **`20260818130000` (spec 0010-m, Ley 21.719 Art. 16):** agregado `test_psicologico` al CHECK de `consent_type` — consentimiento reforzado del test psicométrico EPQ. Gate de persistencia en dos capas (cliente en `PublicEnrollmentFacade.submitPreInscription()` + servidor en `handleSubmitPreInscription()` de la EF `public-enrollment`): sin un draft `test_psicologico` con `granted:true`, `professional_pre_registrations.psych_test_answers` queda `NULL` aunque el body traiga las 81 respuestas — verificado empíricamente en Supabase local. · **`20260909120000` (spec 0040-b, Ley 21.719):** agregadas `comunicaciones_operativas`/`comunicaciones_promocionales` al CHECK de `consent_type`. **No son simétricas**: la operativa se ampara en Art. 13 c) (ejecución del contrato) y siempre se persiste con `granted=true` (es un acuse de información, no una elección — pedirla como checkbox violaría el Art. 12 inciso 5°, que presume no libremente otorgado el consentimiento recabado para algo ya necesario para el contrato); la promocional es consentimiento real bajo Art. 12, con su propia policy de auto-revocación (`update_consents_self_revoke_promocional`) porque el Art. 12 exige que el medio de revocación esté "permanentemente disponible" para el titular. · **`20260909130000` (spec 0040-b, hallazgo durante T3.4):** agregada `select_consents_self` — hasta esta migración el titular no podía ni SELECT sus propios consentimientos (`select_consents` solo cubría admin/secretaria), lo que dejaba `ConsentsFacade.loadByUser()` devolviendo `[]` para cualquier alumno sin ningún error visible — un falso "no tienes registros". Detectado al construir `AlumnoPrivacidadComponent`, antes de llegar a QA. |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
 | `document_templates` | M6 - Matrí. | `id`, `name` | `updated_by` | Admin: CRUD, Sec: R, Stu: R, Inst: R | ✅ Definida |
@@ -191,7 +191,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (80 tablas, acumulado de las migraciones)
+## Esquema efectivo (82 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -236,6 +236,54 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | all_alert_config | ALL | `auth_user_role() = 'admin'` | — |
+
+### `announcement_recipients` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `announcement_id` | BIGINT | NO | — | → `announcements.id` |
+| `user_id` | INT | NO | — | → `users.id` |
+| `email` | TEXT | sí | — | — |
+| `email_sent_ok` | BOOLEAN | NO | `false` | — |
+| `send_error` | TEXT | sí | — | — |
+| `notification_id` | INT | sí | — | → `notifications.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_announcement_recipients | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND announceme…` | — |
+
+**Índices:** `idx_announcement_recipients_user`
+
+### `announcements` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `subject` | TEXT | NO | — | — |
+| `body` | TEXT | NO | — | — |
+| `kind` | TEXT | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `segment_filters` | JSONB | NO | `'{}'` | — |
+| `sent_by` | INT | NO | — | → `users.id` |
+| `sent_at` | TIMESTAMPTZ | sí | — | — |
+| `recipients_total` | INT | NO | `0` | — |
+| `email_ok_count` | INT | NO | `0` | — |
+| `email_failed_count` | INT | NO | `0` | — |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_announcements | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| insert_announcements | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` |
+| update_announcements | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_id …` | — |
+
+**Índices:** `idx_announcements_branch_sent`
 
 ### `audit_log` — 🔒 RLS
 
@@ -729,6 +777,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_consents | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
 | insert_consents | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
 | update_consents_revocation | UPDATE | `auth_user_role() = 'admin'` | — |
+| update_consents_self_revoke_promocional | UPDATE | `user_id = auth_user_id() AND consent_type = 'comunicaciones_promocionales'` | `user_id = auth_user_id() AND consent_type = 'comunicaciones_promocionales'` |
+| select_consents_self | SELECT | `user_id = auth_user_id()` | — |
 
 **Índices:** `idx_consents_enrollment`, `idx_consents_subject_rut`, `idx_consents_user`
 

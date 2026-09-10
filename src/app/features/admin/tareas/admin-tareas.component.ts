@@ -13,9 +13,13 @@ import {
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
+import { AnnouncementsContentComponent } from '@shared/components/announcements-content/announcements-content.component';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
+import { AnnouncementComposerDrawerComponent } from '@features/comunicados/announcement-composer-drawer.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
+import { AnnouncementsFacade } from '@core/facades/announcements.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -26,17 +30,22 @@ import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-
 
 type TaskTab = 'sent' | 'received' | 'observations';
 
+/** Audiencia del canal: el equipo interno (tareas) o los alumnos (comunicados). */
+type Canal = 'tareas' | 'comunicados';
+
 @Component({
   selector: 'app-admin-tareas',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
     TaskListContentComponent,
+    AnnouncementsContentComponent,
+    TabsComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
+    <div #bentoGrid class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout>
       <!-- Hero -->
       <app-section-hero
         density="slim"
@@ -50,26 +59,45 @@ type TaskTab = 'sent' | 'received' | 'observations';
         (actionClick)="onHeroAction($event)"
       />
 
-      <!-- Lista de tareas con tabs + densidad adaptativa (spec 0028/0029) -->
-      <app-task-list-content
-        class="bento-banner card p-0 overflow-hidden bento-fill"
-        appCardHover
-        [tabs]="tabs()"
-        [activeTab]="activeTab()"
-        [tasks]="activeTasks()"
-        [loading]="facade.isLoading()"
-        [maxVisible]="maxVisible()"
-        emptyMessage="Sin tareas en esta sección"
-        emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
-        emptyIcon="clipboard-list"
-        (activeTabChange)="activeTab.set($any($event))"
-        (taskClicked)="openDetail($event)"
+      <!-- Audiencia: equipo interno (tareas) vs alumnos (comunicados, spec 0041-b).
+           Son dos canales distintos, no dos filtros del mismo. -->
+      <app-tabs
+        class="bento-banner"
+        [tabs]="canalTabs()"
+        [activeId]="canal()"
+        (activeIdChange)="onCanalChange($event)"
       />
+
+      @if (canal() === 'tareas') {
+        <!-- Lista de tareas con tabs + densidad adaptativa (spec 0028/0029) -->
+        <app-task-list-content
+          class="bento-banner card p-0 overflow-hidden bento-fill"
+          appCardHover
+          [tabs]="tabs()"
+          [activeTab]="activeTab()"
+          [tasks]="activeTasks()"
+          [loading]="facade.isLoading()"
+          [maxVisible]="maxVisible()"
+          emptyMessage="Sin tareas en esta sección"
+          emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
+          emptyIcon="clipboard-list"
+          (activeTabChange)="activeTab.set($any($event))"
+          (taskClicked)="openDetail($event)"
+        />
+      } @else {
+        <app-announcements-content
+          class="bento-banner card p-0 overflow-hidden bento-fill"
+          appCardHover
+          [announcements]="announcements.announcements()"
+          [loading]="announcements.isLoading()"
+        />
+      }
     </div>
   `,
 })
 export class AdminTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
+  protected readonly announcements = inject(AnnouncementsFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutService = inject(LayoutService);
   private readonly drawer = inject(LayoutDrawerFacadeService);
@@ -79,6 +107,7 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   protected readonly activeTab = signal<TaskTab>('sent');
+  protected readonly canal = signal<Canal>('tareas');
 
   protected readonly tabs = computed(() => [
     {
@@ -116,7 +145,18 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
       icon: 'message-circle',
       primary: true,
     },
+    {
+      id: 'nuevo-comunicado',
+      label: 'Nuevo comunicado',
+      icon: 'megaphone',
+      primary: false,
+    },
   ];
+
+  protected readonly canalTabs = computed(() => [
+    { id: 'tareas', label: 'Tareas del equipo', count: this.facade.pendingCount() },
+    { id: 'comunicados', label: 'Comunicados a alumnos', count: null },
+  ]);
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => [
     {
@@ -164,9 +204,19 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
+  protected onCanalChange(canal: string): void {
+    this.canal.set(canal as Canal);
+    // El historial se carga recién al abrir la pestaña: la mayoría de las visitas a
+    // Comunicación son por tareas del equipo.
+    if (canal === 'comunicados') void this.announcements.initialize();
+  }
+
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {
       this.drawer.open(TaskCreateDrawerComponent, 'Nueva comunicación', 'message-circle');
+    }
+    if (id === 'nuevo-comunicado') {
+      this.drawer.open(AnnouncementComposerDrawerComponent, 'Nuevo comunicado', 'megaphone');
     }
   }
 

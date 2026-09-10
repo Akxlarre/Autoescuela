@@ -716,6 +716,73 @@ describe('EnrollmentFacade', () => {
       const result = await facade.generateContract();
       expect(result).toBeNull();
     });
+
+    // ── spec 0040-b (Ley 21.719): comunicaciones al alumno ──────────────────────
+
+    it('manda las 2 filas de comunicación junto con la de matrícula (AC3)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      facade.setPromotionalConsent(true);
+
+      await facade.confirmEnrollment();
+
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      const types = drafts.map((d: { consentType: string }) => d.consentType);
+      expect(types).toContain('matricula_datos');
+      expect(types).toContain('comunicaciones_operativas');
+      expect(types).toContain('comunicaciones_promocionales');
+    });
+
+    it('la operativa sale con granted:true sin importar la casilla promocional', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      facade.setPromotionalConsent(false);
+
+      await facade.confirmEnrollment();
+
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      const operativa = drafts.find(
+        (d: { consentType: string }) => d.consentType === 'comunicaciones_operativas',
+      );
+      expect(operativa.granted).toBe(true);
+    });
+
+    it('la promocional refleja la casilla que marcó la secretaria', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      facade.setPromotionalConsent(true);
+
+      await facade.confirmEnrollment();
+
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      const promocional = drafts.find(
+        (d: { consentType: string }) => d.consentType === 'comunicaciones_promocionales',
+      );
+      expect(promocional.granted).toBe(true);
+      expect(promocional.source).toBe('secretaria');
+    });
+
+    // AC-E1: menor de edad — el apoderado otorga, el titular sigue siendo el alumno.
+    it('menor de edad: ambas filas de comunicación quedan con grantedByRepresentative:true', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      (facade as any)._personalData.set({ birthDate: '2015-01-01', rut: '11.111.111-1' });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+
+      await facade.confirmEnrollment();
+
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      const comms = drafts.filter((d: { consentType: string }) =>
+        d.consentType.startsWith('comunicaciones_'),
+      );
+      expect(comms).toHaveLength(2);
+      expect(
+        comms.every((d: { grantedByRepresentative: boolean }) => d.grantedByRepresentative),
+      ).toBe(true);
+    });
   });
 
   // ── Confirm Enrollment ──

@@ -61,7 +61,8 @@ resguardo.
 | Cobrar y emitir documentos tributarios | Ejecución del contrato y obligación legal tributaria |
 | Rendir e informar a **SENCE** los cursos con franquicia o financiamiento | Obligación legal |
 | Informar a tu empleador tu asistencia y resultado, cuando él financia el curso | Ejecución del contrato entre tu empleador y nosotros |
-| Comunicarnos contigo sobre tu curso (correos, enlaces de clase) | Ejecución del contrato |
+| Comunicarnos contigo sobre tu curso (recordatorios de clase, documentos pendientes, certificados, saldo) | Ejecución del contrato de matrícula |
+| Enviarte promociones o novedades de la escuela | Tu consentimiento — voluntario, no condiciona tu matrícula, y puedes revocarlo cuando quieras desde tu cuenta |
 | Registrar la dirección IP al otorgar un consentimiento en línea | Evidencia legal de que tú diste ese consentimiento |
 | Videovigilancia de nuestras instalaciones | Interés legítimo en la seguridad de personas y bienes |
 | Encuestas de satisfacción una vez egresado | Tu consentimiento — participar es voluntario |

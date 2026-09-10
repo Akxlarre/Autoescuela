@@ -871,6 +871,7 @@ export class PublicEnrollmentComponent {
     // El consentimiento se guarda en el draft ANTES de confirmar el contrato: la Edge
     // Function lo persiste junto con la matrícula, en la misma operación (spec 0009-m AC5).
     this.facade.setPrivacyConsent(payload.privacyAccepted);
+    this.facade.setPromotionalConsent(payload.promotionalAccepted);
     this.facade.setSignedContract(payload.signatureBase64);
     this.facade.confirmContract();
   }

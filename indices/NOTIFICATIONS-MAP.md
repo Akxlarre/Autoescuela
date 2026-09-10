@@ -108,3 +108,78 @@ Opciones por evento: (a) **trigger SQL** AFTER UPDATE/INSERT (recomendado: no co
 | **Ola 2** | A4, B2, A6, A7, A5, B3 | ✅ **Implementada (Spec 0025, 2026-07-10)** | Completa el circuito financiero (alumno e instructor) y el onboarding |
 | **Ola 3** | Grupo C (triggers) + D1 (RF-018) | ✅ **Implementada (Spec 0026, 2026-07-10)** | Requerían migraciones SQL; D1 resuelto como trigger reactivo (no cron) tras descubrir el patrón `trg_enable_certificate_b` |
 | **Ola 4** | D2-D4 + canales email/WhatsApp (R7) | ✅ **Implementada (Spec 0027, 2026-07-10) — alcance reducido a D3** | D3 implementado. D2 diferido (decisión pendiente entre 2 interpretaciones), D4 bloqueado (sin módulo de encuestas), WhatsApp fuera (decisión de infra/costo aparte). Canal email ya existe (SMTP), no se formaliza acá. |
+
+---
+
+## 9. Revisión del objetivo — comunicación hacia el alumno (2026-09-08)
+
+Resultado de un interrogatorio (`/grill_me`) sobre el sistema de comunicación completo:
+las 4 capas (toasts · notificaciones · alertas · módulo "Comunicación") vistas juntas y no
+por separado. **Conocimiento afirmado por el equipo, no propuesta.**
+
+### 9.1 Diagnóstico
+
+| # | Hallazgo | Evidencia |
+|---|---|---|
+| H1 | El objetivo declarado del módulo "Comunicación" **no es conversar, es trazabilidad de instrucciones** ("saber qué se le dijo al instructor hace una semana"). Su competidor está nombrado en la propia spec: WhatsApp. | `specs/specs/0001-b-sistema-de-tareas-multi-rol/spec.md` §1 |
+| H2 | **El módulo `tasks` es estructuralmente incapaz de atender el volumen real.** `tasks.to_role` acepta `admin\|secretary\|instructor` — el alumno está excluido a nivel de esquema, no de UI. El instructor solo responde en hilos `type='question'` donde lo invitaron: no puede iniciar nunca. | `indices/DATABASE.md` (`tasks`, constraint `role_matrix` + RLS) |
+| H3 | El diseño baja instrucciones de oficina a terreno, pero **la información nace en terreno y sube** (instructor: falla del vehículo, alumno que no llegó) y el mayor volumen es hacia afuera (alumno). Los dos actores con más información son los dos que no pueden hablar. | H2 + confirmación del equipo |
+| H4 | **El volumen real está en alumno ↔ escuela** (reagendar, atrasos, documentos, saldo). Hoy 100% por WhatsApp, fuera del sistema. | Afirmado por el equipo |
+| H5 | Nada de esto se pudo medir porque **el sistema todavía no se despliega**: no hay uso real que contradiga o confirme la hipótesis de valor de 0001-b. | `specs/specs/0009-m-consentimiento-ley-21719/spec.md` §1 |
+
+### 9.2 Decisiones tomadas
+
+| # | Decisión | Fundamento |
+|---|---|---|
+| D-1 | Hacia el alumno el sistema **avisa, no conversa** (una vía). No se abre bandeja bidireccional: obligaría al alumno a cambiar de canal y le dejaría a la secretaria **dos** bandejas en vez de una. | Principio #1 de `PRODUCT-VISION.md` (la secretaria es la estrella) |
+| D-2 | Canal: **email por SMTP propio, uniforme para toda la población** (sin ramas por `license_group`). Riesgo asumido y explícito: en Clase B (17-25 años) el aviso probablemente no se lee y la secretaria seguirá escribiendo por WhatsApp para esa población. | Infra ya existente y cero-deps |
+| D-3 | **Prioridad: el comunicado global antes que el aviso automático por evento.** | Ver 9.3 |
+
+### 9.3 El corte que faltaba: aviso derivado ≠ comunicado global
+
+Bajo "comunicación al alumno" conviven **dos sistemas distintos** que este mapa (§2-§5, todo
+orientado a productores por evento) nunca separó:
+
+| | **Aviso derivado** | **Comunicado global** |
+|---|---|---|
+| Origen | Lo calcula el sistema | Lo redacta una persona |
+| Forma | 1:1, automático | 1:N, a un segmento |
+| Ejemplo | "tu clase es mañana a las 10" | "mañana no hay clases por el feriado" |
+| ¿Automatizable? | Sí (§2-§5) | **Nunca** — no se deriva de ningún dato |
+| Hoy | La secretaria tipea 1 mensaje | Copia y pega a una lista de difusión |
+
+**Por qué el comunicado global va primero:** es el único caso donde (a) el ahorro de tiempo es
+masivo, (b) ninguna otra tecnología lo cubre — ni la automatización ni un deep-link `wa.me`,
+que no escala a N destinatarios — y (c) **la infraestructura ya existe**: `send-zoom-email`
+recibe `recipients: {name,email}[]` arbitrario y solo tiene la plantilla hardcodeada, y la
+tabla `notification_templates` (vacía, R7) es exactamente donde vivirían las plantillas.
+
+### 9.4 Riesgos y bloqueos que arrastra
+
+- ⚠️ **Reputación de dominio (técnico).** Con SMTP propio, la reputación del dominio de la
+  escuela es del cliente: un SaaS la gestiona por vos, el hosting no. Espejar los ~14
+  productores ya implementados a email es el escenario que la quema — y arrastra a los correos
+  normales (contratos, certificados, facturas) a spam. **El volumen es la variable de riesgo.**
+- ✅ **Capa B — Ley 21.719, RESUELTO (spec 0040-b, cerrada 2026-09-09).** `consents.consent_type`
+  ahora incluye `comunicaciones_operativas` (Art. 13 c, informativa) y `comunicaciones_promocionales`
+  (Art. 12, consentimiento real y revocable — self-service desde el tab "Ajustes" del
+  `AjustesDrawerComponent` global, no una página standalone; corregido vía fix-167-b). La
+  distinción operativo/promocional vive en la UI de matrícula (párrafo vs checkbox) y en el
+  `consent_type` de cada fila. Detalle completo, decisiones y evidencia de verificación en
+  [`specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md`](../specs/specs/0040-b-consentimiento-comunicaciones-alumno/acceptance.md).
+  **Esto desbloqueó el comunicado global** (§9.3), construido después en la spec 0041-b.
+- ✅ **Comunicado global IMPLEMENTADO (spec 0041-b, cerrada 2026-09-09).** El 1:N de §9.3 ya
+  existe: pestaña "Comunicados a alumnos" en el módulo Comunicación (admin y secretaría),
+  compositor con segmentación por sede/curso/estado, envío por lotes vía la Edge Function
+  `send-announcement`, y registro auditable en `announcements` + `announcement_recipients`.
+  El emisor declara si es `operativo` o `promocional`, y el servidor filtra por consentimiento
+  al momento del envío. Evidencia por AC en
+  [`specs/specs/0041-b-comunicado-global-alumnos/acceptance.md`](../specs/specs/0041-b-comunicado-global-alumnos/acceptance.md).
+  ✅ **Entrega SMTP real verificada (2026-09-09):** smoke test dirigido a una casilla real
+  (los alumnos sembrados tienen dominio inexistente, así que la verificación de la spec
+  corrió en `dryRun`) — reasignación temporal de email, envío único, confirmación por
+  captura de pantalla del owner, y reversión completa sin dejar rastro en la BD compartida.
+- 📊 **Deuda de medición.** La adopción del módulo "Comunicación" sigue sin métrica. Cuando haya
+  uso real, `select from_role, date_trunc('week', created_at), count(*) from tasks group by 1,2`
+  la responde — contra la instancia de la escuela, no contra la BD de prueba (spec `0008-i` la
+  repobló).

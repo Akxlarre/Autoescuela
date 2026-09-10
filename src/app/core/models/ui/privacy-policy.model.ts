@@ -17,7 +17,7 @@
  * archivo hay que subir esta fecha**, o los consentimientos nuevos quedarán apuntando a
  * una versión que ya no es la que el titular leyó.
  */
-export const PRIVACY_POLICY_VERSION = '2026-08-21';
+export const PRIVACY_POLICY_VERSION = '2026-09-09';
 
 /**
  * País donde Supabase aloja la base de datos, tal como se le declara al titular.
@@ -403,8 +403,12 @@ const CONDUCTORES: PrivacyPolicyContent = {
               'Obligación legal',
             ],
             [
-              'Comunicarnos contigo sobre tu curso (correos, enlaces de clase, certificados)',
-              'Ejecución del contrato',
+              'Comunicarnos contigo sobre tu curso (recordatorios de clase, documentos pendientes, certificados, saldo)',
+              'Ejecución del contrato de matrícula',
+            ],
+            [
+              'Enviarte promociones o novedades de la escuela',
+              'Tu consentimiento — voluntario, no condiciona tu matrícula, y puedes revocarlo cuando quieras desde tu cuenta',
             ],
             [
               'Videovigilancia de nuestras instalaciones',
@@ -608,8 +612,12 @@ const AUTOESCUELA: PrivacyPolicyContent = {
               'Ejecución del contrato entre tu empleador y nosotros',
             ],
             [
-              'Comunicarnos contigo sobre tu curso (correos, enlaces de clase)',
-              'Ejecución del contrato',
+              'Comunicarnos contigo sobre tu curso (recordatorios de clase, documentos pendientes, certificados, saldo)',
+              'Ejecución del contrato de matrícula',
+            ],
+            [
+              'Enviarte promociones o novedades de la escuela',
+              'Tu consentimiento — voluntario, no condiciona tu matrícula, y puedes revocarlo cuando quieras desde tu cuenta',
             ],
             [
               'Videovigilancia de nuestras instalaciones',

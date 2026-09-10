@@ -8,7 +8,7 @@ Interfaces que mapean 1:1 las tablas y vistas de Supabase. Son estructuras de da
 | Modelo | Archivo | Descripción |
 |---|---|---|
 | `User` | `user.model.ts` | Entidad base de Supabase Auth (AppUser), contiene el id, email y el rol del usuario (ADMIN, RECEPCION, etc.) |
-| `Consent` | `consent.model.ts` | **Spec 0009-m (Ley 21.719).** Mapea la tabla `consents` 1:1. Exporta además los union types `ConsentType` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico` — el último agregado por la spec 0010-m, Art. 16, test EPQ) y `ConsentSource` (`public`\|`secretaria`), que espejan los CHECK de la BD. |
+| `Consent` | `consent.model.ts` | **Spec 0009-m (Ley 21.719).** Mapea la tabla `consents` 1:1. Exporta además los union types `ConsentType` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico` — Art. 16/spec 0010-m — \|`comunicaciones_operativas`\|`comunicaciones_promocionales` — spec 0040-b) y `ConsentSource` (`public`\|`secretaria`), que espejan los CHECK de la BD. ⚠️ **`comunicaciones_operativas`/`comunicaciones_promocionales` NO son simétricas**: la operativa (Art. 13 c, ejecución del contrato) se persiste siempre con `granted:true` — es informativa, no una elección (pedirla como checkbox violaría el Art. 12 inciso 5°); solo la promocional (Art. 12) es consentimiento real, revocable por el propio titular. |
 | `WebsiteConfig` | `website-config.model.ts` | Configuración de las landing pages web multi-sede (Azul y Roja). **Spec 0004:** `CourseConfig` refactorizado — ya NO incluye `name/price/licenseClass` (heredados de `courses` via `course_id` FK lógica). Campos nuevos: `course_id`, `priceOverride`, `displayOrder`. Validado por trigger SQL `trg_validate_website_config_courses_fk`. |
 
 ## 📁 Interfaz de Usuario (`core/models/ui/`)
@@ -72,6 +72,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 |-----------|----------|---------|
 | `AbsenceEvidence` | `dto` | `src/app/core/models/dto/absence-evidence.model.ts` |
 | `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
+| `AnnouncementKind`, `Announcement`, `AnnouncementRecipient` | `dto` | `src/app/core/models/dto/announcement.model.ts` |
 | `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
 | `BranchPayrollConfig` | `dto` | `src/app/core/models/dto/branch-payroll-config.model.ts` |
 | `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
@@ -151,6 +152,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `InasistenciaClaseBUI`, `ClasePendienteReagendarUI`, `ClasePracticaUI`, `ProgresoUI`, `ReagendamientoHistorialUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
 | `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `AnnouncementCourseType`, `AnnouncementEnrollmentStatus`, `RecipientSegmentFilters`, `RecipientExclusionReason`, `RecipientPreview`, `AnnouncementDraft`, `SendProgress`, `AnnouncementRow` | `ui` | `src/app/core/models/ui/announcement.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `FinishClassPayload` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
@@ -190,7 +192,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
 | `PublicEnrollmentContext` | `ui` | `src/app/core/models/ui/public-enrollment-context.model.ts` |
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
-| `RangoReporte`, `RangoOption`, `RangoEvolucion`, `RangoEvolucionOption`, `RANGOS_EVOLUCION`, `RANGO_EVOLUCION_DEFAULT`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual` (+`sinMovimientos`), `RentabilidadCurso`, `ReporteContable`, `ClassCountsByGroup`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
+| `RangoReporte`, `RangoOption`, `RangoEvolucion`, `RangoEvolucionOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `RentabilidadCurso`, `ReporteContable`, `ClassCountsByGroup`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
 | `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
 | `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroMenuItem`, `SectionHeroKpi`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |

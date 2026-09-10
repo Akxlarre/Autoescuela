@@ -30,7 +30,9 @@ export interface ConsentBuilderInput {
   consentType?: ConsentType;
 }
 
-function assertIdentifiable(input: ConsentBuilderInput): void {
+function assertIdentifiable(
+  input: Pick<ConsentBuilderInput, 'branchId' | 'userId' | 'subjectRut'>,
+): void {
   if (input.branchId === null || input.branchId === undefined) {
     throw new Error(
       'consent-builder: falta branchId — sin sede no se sabe ante qué responsable se otorgó el consentimiento.',
@@ -97,4 +99,35 @@ export function buildMedicalCertificateConsent(input: ConsentBuilderInput): Cons
 export function buildPsychTestConsent(input: ConsentBuilderInput): ConsentDraft {
   assertIdentifiable(input);
   return toDraft(input, 'test_psicologico');
+}
+
+export type CommunicationsConsentInput = Omit<
+  ConsentBuilderInput,
+  'policyAccepted' | 'consentType'
+> & {
+  /** Casilla de comunicaciones promocionales. La operativa NO tiene casilla — se informa. */
+  promotionalAccepted: boolean;
+};
+
+/**
+ * Consentimientos de comunicación al alumno (spec 0040-b, Ley 21.719).
+ *
+ * Devuelve SIEMPRE 2 filas, y no son simétricas:
+ *  - `comunicaciones_operativas` se ampara en el Art. 13 c) (ejecución del contrato) y se
+ *    persiste SIEMPRE con `granted: true`, sin importar `promotionalAccepted`. No es una
+ *    elección del titular: pedirla como checkbox de aceptar/rechazar violaría el Art. 12
+ *    inciso 5°, que presume no libremente otorgado el consentimiento recabado para algo ya
+ *    necesario para el contrato.
+ *  - `comunicaciones_promocionales` sí es consentimiento real bajo el Art. 12: libre,
+ *    revocable, y refleja exactamente `promotionalAccepted` (incluida la negativa expresa).
+ */
+export function buildCommunicationsConsents(input: CommunicationsConsentInput): ConsentDraft[] {
+  assertIdentifiable(input);
+  return [
+    toDraft({ ...input, policyAccepted: true }, 'comunicaciones_operativas'),
+    toDraft(
+      { ...input, policyAccepted: input.promotionalAccepted },
+      'comunicaciones_promocionales',
+    ),
+  ];
 }

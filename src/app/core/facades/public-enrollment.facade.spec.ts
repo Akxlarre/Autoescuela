@@ -929,6 +929,86 @@ describe('PublicEnrollmentFacade', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // Comunicaciones al alumno (spec 0040-b, Ley 21.719)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('comunicaciones al alumno (spec 0040-b)', () => {
+    const setupClaseBReadyToSubmit = () => {
+      facade.selectFlowType('class_b');
+      facade.confirmLicenseType();
+      facade['_selectedBranch'].set(sampleBranches[0] as never);
+      facade['_personalData'].set(samplePersonalData as never);
+    };
+
+    const invokeSpy = () =>
+      (mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { success: true, enrollmentNumber: '0099' }, error: null }));
+
+    it('initiatePayment(): manda las 2 filas de comunicación — operativa siempre true, promocional refleja la casilla', async () => {
+      setupClaseBReadyToSubmit();
+      facade.setPromotionalConsent(true);
+      const spy = invokeSpy();
+
+      await facade.initiatePayment();
+
+      const body = spy.mock.calls[0][1].body;
+      const operativa = body.consents.find(
+        (c: { consentType: string }) => c.consentType === 'comunicaciones_operativas',
+      );
+      const promocional = body.consents.find(
+        (c: { consentType: string }) => c.consentType === 'comunicaciones_promocionales',
+      );
+      expect(operativa).toBeDefined();
+      expect(operativa.granted).toBe(true);
+      expect(promocional).toBeDefined();
+      expect(promocional.granted).toBe(true);
+      expect(promocional.source).toBe('public');
+    });
+
+    it('initiatePayment(): sin marcar la casilla, la operativa igual sale con granted:true y la promocional con false', async () => {
+      setupClaseBReadyToSubmit();
+      // setPromotionalConsent nunca llamado — default false.
+      const spy = invokeSpy();
+
+      await facade.initiatePayment();
+
+      const body = spy.mock.calls[0][1].body;
+      const operativa = body.consents.find(
+        (c: { consentType: string }) => c.consentType === 'comunicaciones_operativas',
+      );
+      const promocional = body.consents.find(
+        (c: { consentType: string }) => c.consentType === 'comunicaciones_promocionales',
+      );
+      expect(operativa.granted).toBe(true);
+      expect(promocional.granted).toBe(false);
+    });
+
+    it('submitClaseBEnrollment(): manda las mismas 2 filas de comunicación', async () => {
+      setupClaseBReadyToSubmit();
+      facade.setPromotionalConsent(true);
+      const spy = invokeSpy();
+
+      await facade.submitClaseBEnrollment();
+
+      const body = spy.mock.calls[0][1].body;
+      const types = body.consents.map((c: { consentType: string }) => c.consentType);
+      expect(types).toContain('comunicaciones_operativas');
+      expect(types).toContain('comunicaciones_promocionales');
+    });
+
+    it('no marcar la casilla promocional NO bloquea el envío (AC4)', async () => {
+      setupClaseBReadyToSubmit();
+      const spy = invokeSpy();
+
+      const result = await facade.submitClaseBEnrollment();
+
+      expect(spy).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // Professional course selection
   // ══════════════════════════════════════════════════════════════════════════════
 

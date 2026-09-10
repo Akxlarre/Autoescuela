@@ -1,7 +1,15 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  effect,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { ConsentsFacade } from '@core/facades/consents.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ThemeService } from '@core/services/ui/theme.service';
 import {
@@ -9,9 +17,11 @@ import {
   type AgendaVisibilityMonths,
 } from '@core/services/ui/agenda-settings.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { FormsModule } from '@angular/forms';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
 import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
@@ -23,7 +33,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   selector: 'app-ajustes-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, StatBoxComponent, FormsModule, BadgeComponent, DrawerFormComponent],
+  imports: [
+    IconComponent,
+    StatBoxComponent,
+    FormsModule,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    DrawerFormComponent,
+  ],
   template: `
     <div class="ajustes-container flex h-full flex-col">
       <!-- Tabs Navigation -->
@@ -213,6 +230,55 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
               </button>
             </div>
+
+            @if (isAlumno()) {
+              <!-- Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8).
+                   Acotado a comunicaciones_promocionales: la operativa no tiene control,
+                   se informa (Art. 13 c), no se consiente (ver consent-builder.utils.ts). -->
+              <div class="card p-4 space-y-3">
+                @if (consents.isLoading()) {
+                  <app-skeleton-block variant="text" width="60%" height="18px" />
+                  <app-skeleton-block variant="text" width="85%" height="13px" />
+                } @else if (promotionalConsent(); as consent) {
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Promociones y Novedades</p>
+                      <p class="text-xs text-text-muted">
+                        Correos ocasionales de la escuela. No afecta los avisos de tu curso (clases,
+                        documentos, certificados, saldo), que siempre llegan igual.
+                      </p>
+                    </div>
+                    <app-badge
+                      class="shrink-0"
+                      [variant]="isPromoGranted() ? 'success' : 'neutral'"
+                    >
+                      {{ isPromoGranted() ? 'Activo' : 'Desactivado' }}
+                    </app-badge>
+                  </div>
+                  @if (isPromoRevoked() && consent.revokedAt) {
+                    <p class="text-xs text-text-muted">
+                      Desactivado el {{ formatConsentDate(consent.revokedAt) }}.
+                    </p>
+                  }
+                  @if (isPromoGranted()) {
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      [disabled]="consents.isSaving()"
+                      data-llm-action="revocar-comunicaciones-promocionales"
+                      (click)="onRevokePromotionalConsent()"
+                    >
+                      <app-icon name="bell-off" [size]="14" />
+                      <span>Dejar de recibir promociones</span>
+                    </button>
+                  }
+                } @else {
+                  <p class="text-xs text-text-muted">
+                    Todavía no tienes una preferencia de comunicaciones promocionales registrada.
+                  </p>
+                }
+              </div>
+            }
 
             @if (canManageSiteConfig()) {
               <!-- Límite de Visualización de Agenda -->
@@ -453,8 +519,10 @@ export class AjustesDrawerComponent {
   protected readonly theme = inject(ThemeService);
   protected readonly agendaSettings = inject(AgendaSettingsService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly consents = inject(ConsentsFacade);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly activeTab = signal<'perfil' | 'config' | 'seguridad'>('perfil');
   protected readonly isSaving = signal(false);
@@ -463,6 +531,24 @@ export class AjustesDrawerComponent {
 
   protected readonly currentUser = this.auth.currentUser;
   protected readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+  protected readonly isAlumno = computed(() => this.currentUser()?.role === 'alumno');
+
+  /**
+   * Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8). Acotado a
+   * `comunicaciones_promocionales` — la operativa no tiene control, se informa
+   * (Art. 13 c), no se consiente.
+   */
+  protected readonly promotionalConsent = computed(
+    () =>
+      this.consents.consents().find((c) => c.consentType === 'comunicaciones_promocionales') ??
+      null,
+  );
+  protected readonly isPromoGranted = computed(
+    () => this.promotionalConsent()?.status === 'otorgado',
+  );
+  protected readonly isPromoRevoked = computed(
+    () => this.promotionalConsent()?.status === 'revocado',
+  );
 
   /** Configuración de sede (agenda global + editor web): solo admin y secretaria. */
   protected readonly canManageSiteConfig = computed(() => {
@@ -514,8 +600,45 @@ export class AjustesDrawerComponent {
     return branch?.name ?? 'Asignada';
   });
 
+  constructor() {
+    // El drawer es global a los 4 roles; solo el alumno tiene consentimientos de
+    // comunicación que consultar — evita la llamada de red para los demás roles.
+    effect(() => {
+      const user = this.currentUser();
+      if (user?.role === 'alumno' && user.dbId) {
+        void this.consents.loadByUser(user.dbId);
+      }
+    });
+  }
+
   setTab(tab: 'perfil' | 'config' | 'seguridad'): void {
     this.activeTab.set(tab);
+  }
+
+  formatConsentDate(iso: string | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  async onRevokePromotionalConsent(): Promise<void> {
+    const consent = this.promotionalConsent();
+    if (!consent || consent.status !== 'otorgado') return;
+
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Dejar de recibir promociones',
+      message:
+        'No volverás a recibir correos promocionales de la escuela. Los avisos de tu curso (clases, documentos, certificados, saldo) siguen llegando igual. Puedes reactivarlo cuando quieras.',
+      severity: 'warn',
+      confirmLabel: 'Dejar de recibir',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    await this.consents.revoke(consent.id);
   }
 
   togglePasswordForm(): void {

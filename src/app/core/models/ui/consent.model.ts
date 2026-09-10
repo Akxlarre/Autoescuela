@@ -56,6 +56,10 @@ export const CONSENT_TYPE_LABELS: Record<ConsentType, string> = {
   certificado_medico: 'Certificado médico (dato de salud)',
   preinscripcion: 'Preinscripción y contacto',
   test_psicologico: 'Test psicométrico EPQ (dato de salud psíquica)',
+  // Informativa (Art. 13 c) — no es una elección del titular; `granted` es siempre
+  // `true`. No agregar un flujo de "rechazo" para esta finalidad (ver dto/consent.model.ts).
+  comunicaciones_operativas: 'Comunicaciones operativas (informativo, no revocable)',
+  comunicaciones_promocionales: 'Comunicaciones promocionales (consentimiento, revocable)',
 };
 
 export const CONSENT_SOURCE_LABELS: Record<ConsentSource, string> = {

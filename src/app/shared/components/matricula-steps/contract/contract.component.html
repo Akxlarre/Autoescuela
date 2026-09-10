@@ -308,6 +308,33 @@
         </p>
       }
 
+      <!-- ── Comunicaciones al alumno (spec 0040-b, Ley 21.719) ──
+           NO son simétricas: operativa se informa (Art. 13 c), promocional se consiente
+           (Art. 12). Mismo criterio que el flujo público — ver public-contract.component.ts. -->
+      <div class="card p-3 text-xs flex items-start gap-2 text-text-secondary">
+        <app-icon name="info" [size]="14" class="shrink-0 mt-0.5 text-text-muted" />
+        <span>
+          Le avisaremos al alumno por correo sobre su curso: recordatorios de clase, documentos
+          pendientes, certificados y su saldo.
+        </span>
+      </div>
+
+      <label class="flex items-start gap-3 cursor-pointer group">
+        <input
+          type="checkbox"
+          class="mt-0.5 shrink-0 w-4 h-4 accent-brand cursor-pointer"
+          [checked]="_promotionalAccepted()"
+          (change)="onPromotionalToggle($any($event.target).checked)"
+          data-llm-action="accept-promotional-communications"
+        />
+        <span
+          class="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors"
+        >
+          El alumno quiere recibir promociones y novedades de la escuela (opcional, se puede cambiar
+          cuando quiera desde su cuenta).
+        </span>
+      </label>
+
       <!-- ── Público: Aceptación de términos ── -->
       @if (isPublic()) {
         <label
