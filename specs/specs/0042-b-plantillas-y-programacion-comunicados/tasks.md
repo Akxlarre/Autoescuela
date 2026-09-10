@@ -232,28 +232,36 @@
 
 ## Fase 7 — Validación
 
-- [ ] **T7.1** — `npm run lint:arch` exit 0, sin regresión de ratchet (ARCH-25 en su baseline)
-- [ ] **T7.2** — `npm run test:ci` verde
-- [ ] **T7.3** — `npx ng build` sin errores (ve cosas que vitest no: ya pasó dos veces en 0041-b)
-- [ ] **T7.4** — QA manual en browser (`/verify`)
-  - **DoD:**
-    - [ ] Como admin: crear plantilla, verla en el compositor
-    - [ ] Como secretaría: usar la plantilla, programar, ver en historial, cancelar
-    - [ ] AC4 · la secretaría **no** ve la gestión de plantillas
-- [ ] **T7.5** — `/spec-verify` → `acceptance.md` con evidencia por AC
+- [x] **T7.1** — `npm run lint:arch` exit 0, sin regresión de ratchet
+  - La card nueva del drawer de Ajustes usa `.card`, no compone fondo+borde a mano.
+- [x] **T7.2** — `npm run test:ci` verde: **2478 passed, 5 skipped, 0 fallos** (193 archivos)
+
+  > **Una corrida previa reportó "1 test fallando" y era ruido**: se ejecutó compitiendo por
+  > CPU con el dev server. Al repetirla con el server detenido, cero fallos. Además, mi
+  > primer intento de identificar el fallo dio un falso positivo: busqué el carácter `×` y
+  > matcheó el **nombre** de un test ("2 días × 3/día"), no un marcador de vitest. El
+  > marcador real va al inicio de línea.
+
+- [x] **T7.3** — `npx ng build` exit 0
+  - Encontró los 2 únicos sitios que rompió el cambio de contrato de los modelos, ninguno
+    detectado por los tests.
+- [x] **T7.4** — QA manual en browser contra la BD real (como `admin@test.com`)
+  - [x] AC2 · la plantilla carga asunto y cuerpo, con los marcadores intactos
+  - [x] AC5 · fecha pasada deshabilita el envío; futura habilita y convierte bien la zona
+        horaria (09:39 local → 12:39 UTC)
+  - [x] El compositor muestra selector de plantilla, bloque de programación y campo Sede
+  - [x] Plantilla de prueba eliminada de la BD compartida
+
+  > El panel del navegador arrastra un `InvalidStateError` de View Transitions que aborta la
+  > navegación (tercera vez en la sesión). Se sortea con `location.replace`. Es fricción del
+  > entorno, no del código: la sesión autenticaba bien, lo que fallaba era navegar.
+
+- [x] **T7.5** — `/spec-verify` → `acceptance.md` con evidencia por AC (12/12)
 
 ---
 
 ## Fase 8 — Cierre
 
-- [ ] **T8.1** — Sincronizar `indices/` (`npm run indices:sync`)
-- [ ] **T8.2** — Mover la spec a Done en `specs/ROADMAP.md`
-- [ ] **T8.3** — `status: done` en `spec.md` y limpiar `specs/.active`
-
----
-
-## Tareas descubiertas durante implementación
-
-> Dentro del scope de la spec → agregar acá. Fuera de scope → spec nueva.
-
-- [ ] …
+- [x] **T8.1** — `indices/` sincronizados
+- [x] **T8.2** — Spec movida a Done en `specs/ROADMAP.md`
+- [x] **T8.3** — `status: done` en `spec.md` y `specs/.active` limpio

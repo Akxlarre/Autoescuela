@@ -1,6 +1,7 @@
 # Spec 0042-b — Plantillas y programación de comunicados
 
-> **Status:** in_progress
+> **Status:** done
+> **Closed:** 2026-09-10
 > **Created:** 2026-09-10
 > **Owner:** Benjamín
 > **Priority:** P2 — el comunicado global ya funciona sin esto; acá se reduce la fricción de usarlo
