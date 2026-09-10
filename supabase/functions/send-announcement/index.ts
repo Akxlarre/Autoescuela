@@ -261,7 +261,7 @@ Deno.serve(async (req: Request) => {
 
     // La RLS no protege al service_role: la autorización de sede se comprueba acá.
     if (callerRole === 'secretary' && announcement.branch_id !== caller.branch_id) {
-      return jsonResponse({ error: 'No podés enviar comunicados de otra sede' }, 403);
+      return jsonResponse({ error: 'No puedes enviar comunicados de otra sede' }, 403);
     }
 
     // ── Materialización (solo en el primer lote) ─────────────────────────────
