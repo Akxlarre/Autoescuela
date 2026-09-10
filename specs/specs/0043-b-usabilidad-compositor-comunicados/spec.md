@@ -1,6 +1,6 @@
 # Spec 0043-b — Usabilidad del compositor y el historial de comunicados
 
-> **Status:** in_progress
+> **Status:** done
 > **Created:** 2026-09-10
 > **Owner:** Benjamín
 > **Priority:** P1 — el feature funciona pero la pantalla principal es impracticable con datos reales
