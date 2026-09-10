@@ -65,20 +65,22 @@
 
 ## Fase 2 — Núcleo funcional (TDD)
 
-- [ ] **T2.1** — Escribir `core/utils/announcement-template.utils.spec.ts` **primero**
+- [x] **T2.1** — Escribir `core/utils/announcement-template.utils.spec.ts` **primero**
   - **AC ref:** AC3, AC5, AC-E1
   - **DoD:**
-    - [ ] Sustituye `{{nombre}}` y `{{sede}}`; múltiples ocurrencias de la misma variable
-    - [ ] Variable desconocida → cadena vacía, sin excepción (AC-E1)
-    - [ ] Cuerpo sin variables queda intacto; llaves sueltas (`{`, `}}`) no rompen
-    - [ ] Validación de fecha programada: pasado inválido, futuro válido, `null` = inmediato
-    - [ ] Los tests **fallan** antes de implementar
+    - [x] Sustituye `{{nombre}}` y `{{sede}}`; múltiples ocurrencias; tolera `{{ espacios }}`
+    - [x] Variable desconocida → cadena vacía, sin excepción (AC-E1); y variable conocida
+          sin valor para ese destinatario, también
+    - [x] Cuerpo sin variables intacto; llaves sueltas no rompen; saltos de línea respetados
+    - [x] Validación de fecha programada: pasado inválido, futuro válido, `null` = inmediato,
+          fecha ilegible inválida en vez de romper
+    - [x] Los tests **fallaron** antes de implementar (módulo inexistente), verificado
 
-- [ ] **T2.2** — Implementar `core/utils/announcement-template.utils.ts`
+- [x] **T2.2** — Implementar `core/utils/announcement-template.utils.ts`
   - **DoD:**
-    - [ ] Funciones puras, sin inyección de Angular
-    - [ ] Tests verdes
-    - [ ] Documentado en `indices/UTILS.md`
+    - [x] Funciones puras, sin inyección de Angular
+    - [x] 25/25 tests verdes
+    - [x] Documentado en `indices/UTILS.md`
 
 ---
 
@@ -87,25 +89,30 @@
 > Va **antes** que todo lo nuevo, con la suite de 0041-b como red. Si esto no queda verde, no se
 > sigue: se está tocando la función que decide a qué alumnos les llega un correo.
 
-- [ ] **T3.1** — Extraer el núcleo de envío a `supabase/functions/_shared/announcement-send.ts`
-  - **AC ref:** ninguno nuevo — es refactor puro, no debe cambiar comportamiento
+- [x] **T3.1** — Extraer el núcleo de envío a `supabase/functions/_shared/announcement-send.ts`
+  - **AC ref:** ninguno nuevo — refactor puro
   - **DoD:**
-    - [ ] Resolución de segmento, filtro de consentimiento, materialización, lotes e idempotencia
+    - [x] Resolución de segmento, filtro de consentimiento, materialización, lotes e idempotencia
           viven en el módulo compartido
-    - [ ] `send-announcement/index.ts` queda como **borde HTTP**: valida auth de usuario, valida
-          sede, y delega
-    - [ ] **La validación de usuario NO se mueve al núcleo compartido** — si viviera ahí, el
-          dispatcher tendría que saltearla y volveríamos al problema que este refactor evita
-    - [ ] Precedente seguido: `_shared/anti-abuse.ts`, `_shared/reenrollment.ts`
-    - [ ] Redesplegada y re-verificada con el script de verificación de 0041-b (13/13 en `dryRun`)
+    - [x] `send-announcement/index.ts` quedó como borde HTTP: de 427 → 120 líneas
+    - [x] **La validación de usuario NO se movió al núcleo compartido**
+    - [x] Precedente seguido: `_shared/anti-abuse.ts`, `_shared/reenrollment.ts`
+    - [x] Redesplegada y **re-verificada con el script de 0041-b: 13/13 en `dryRun`**
+    - [x] Datos de verificación limpiados
 
-- [ ] **T3.2** — Sustitución de variables aplicada por destinatario en el envío
+  > La red de seguridad funcionó como se esperaba: los mismos 13 checks que cerraron 0041-b
+  > volvieron a pasar sin tocarlos. Un refactor de esta pieza sin esa verificación habría
+  > sido a ciegas — es la función que decide a qué alumnos les llega un correo.
+
+- [x] **T3.2** — Sustitución de variables aplicada por destinatario en el envío
   - **AC ref:** AC3, AC-E1
   - **DoD:**
-    - [ ] Se sustituye justo antes de armar el HTML, con los datos de cada destinatario
-    - [ ] `announcements.body` sigue guardando los marcadores intactos (el registro tiene que
-          reflejar lo que se redactó, no lo que vio un alumno puntual)
-    - [ ] Escapado sigue aplicándose después de sustituir (una variable no puede inyectar HTML)
+    - [x] Se sustituye justo antes de armar el HTML, con los datos de cada destinatario
+          (`{{nombre}}` del usuario, `{{sede}}` de su propia sede, no la del comunicado)
+    - [x] `announcements.body` sigue guardando los marcadores intactos
+    - [x] **Escapado después de sustituir**: si se escapara antes, el escapado no alcanzaría
+          al contenido de la variable y un nombre con markup podría inyectar HTML
+    - [x] El asunto también se sustituye, no solo el cuerpo
 
 ---
 
