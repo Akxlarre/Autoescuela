@@ -4,7 +4,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
-import type { AnnouncementRow } from '@core/models/ui/announcement.model';
+import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announcement.model';
 
 /**
  * Historial de comunicados enviados (spec 0041-b, AC7).
@@ -51,10 +51,19 @@ import type { AnnouncementRow } from '@core/models/ui/announcement.model';
             role="button"
           >
             <div class="flex items-start justify-between gap-3">
-              <p class="item-title truncate">{{ a.subject }}</p>
-              <app-badge class="shrink-0" [variant]="a.kind === 'promocional' ? 'info' : 'neutral'">
-                {{ a.kind === 'promocional' ? 'Promocional' : 'Operativo' }}
-              </app-badge>
+              <p class="item-title truncate" [class.text-text-muted]="a.status === 'cancelado'">
+                {{ a.subject }}
+              </p>
+              <div class="flex shrink-0 items-center gap-1.5">
+                @if (a.status !== 'enviado') {
+                  <app-badge [variant]="statusVariant(a.status)">
+                    {{ statusLabel(a.status) }}
+                  </app-badge>
+                }
+                <app-badge [variant]="a.kind === 'promocional' ? 'info' : 'neutral'">
+                  {{ a.kind === 'promocional' ? 'Promocional' : 'Operativo' }}
+                </app-badge>
+              </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
@@ -80,10 +89,24 @@ import type { AnnouncementRow } from '@core/models/ui/announcement.model';
                 {{ a.sentByName }}
               </span>
 
-              @if (a.sentAt) {
+              @if (a.status === 'programado' && a.scheduledFor) {
+                <span class="flex items-center gap-1">
+                  <app-icon name="calendar-clock" [size]="12" />
+                  Sale el {{ a.scheduledFor | date: 'dd/MM/yyyy HH:mm' }}
+                </span>
+              } @else if (a.sentAt) {
                 <span>{{ a.sentAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-              } @else {
-                <app-badge variant="warning">Envío incompleto</app-badge>
+              }
+
+              @if (a.canCancel) {
+                <button
+                  type="button"
+                  class="cursor-pointer text-error underline-offset-2 hover:underline"
+                  data-llm-action="cancelar-comunicado-programado"
+                  (click)="onCancel($event, a.id)"
+                >
+                  Cancelar
+                </button>
               }
             </div>
           </li>
@@ -97,6 +120,32 @@ export class AnnouncementsContentComponent {
   readonly loading = input(false);
 
   readonly announcementClicked = output<number>();
+  readonly cancelRequested = output<number>();
 
   protected readonly skeletonRows = [0, 1, 2, 3];
+
+  protected statusLabel(status: AnnouncementStatus): string {
+    switch (status) {
+      case 'programado':
+        return 'Programado';
+      case 'enviando':
+        return 'Enviando';
+      case 'cancelado':
+        return 'Cancelado';
+      default:
+        return 'Enviado';
+    }
+  }
+
+  protected statusVariant(status: AnnouncementStatus): 'info' | 'warning' | 'neutral' {
+    if (status === 'programado') return 'info';
+    if (status === 'enviando') return 'warning';
+    return 'neutral';
+  }
+
+  /** Sin `stopPropagation` el clic también abriría el detalle del comunicado. */
+  protected onCancel(event: Event, id: number): void {
+    event.stopPropagation();
+    this.cancelRequested.emit(id);
+  }
 }

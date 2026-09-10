@@ -11,6 +11,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConsentsFacade } from '@core/facades/consents.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { TemplateManagerDrawerComponent } from '@features/comunicados/template-manager-drawer.component';
 import { ThemeService } from '@core/services/ui/theme.service';
 import {
   AgendaSettingsService,
@@ -387,6 +388,28 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
             <!-- Descuentos Predefinidos card -->
             @if (isAdmin()) {
+              <!-- Plantillas de comunicado (spec 0042-b). Vive acá y no en un ítem de menú
+                   nuevo: es configuración institucional de admin, como precios y tarifas. -->
+              <div class="card p-4 space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Plantillas de Comunicado</p>
+                  <p class="text-xs text-text-muted">
+                    Textos reutilizables para los avisos que se repiten
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  data-llm-action="open-template-manager"
+                  (click)="abrirPlantillas()"
+                >
+                  <app-icon name="file-text" [size]="14" />
+                  <span>Administrar Plantillas</span>
+                </button>
+              </div>
+            }
+
+            @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
                 <div class="space-y-0.5">
                   <p class="item-title">Descuentos Predefinidos</p>
@@ -674,6 +697,10 @@ export class AjustesDrawerComponent {
 
   abrirDescuentos(): void {
     this.layoutDrawer.push(DescuentosDrawerComponent, 'Descuentos', 'tag');
+  }
+
+  abrirPlantillas(): void {
+    this.layoutDrawer.push(TemplateManagerDrawerComponent, 'Plantillas de Comunicado', 'file-text');
   }
 
   abrirPreciosCursos(): void {

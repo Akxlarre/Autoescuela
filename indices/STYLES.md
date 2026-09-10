@@ -326,7 +326,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--ds-brand` | 444 | `#38bdf8` |
 | `--text-muted` | 385 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 265 | `var(--color-primary-text)` |
-| `--state-error` | 232 | `#f87171` |
+| `--state-error` | 234 | `#f87171` |
 | `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 212 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 192 | `#18181b` |
@@ -353,9 +353,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 284 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 177 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 177 | `src/styles/tokens/_variables.scss` |
+| `.card` | 288 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 179 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 178 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 51 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 861 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 863 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -472,7 +472,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 12 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 11 | `text-2xl font-semibold text-text-primary` |
-| 10 | `text-xs font-semibold text-text-primary` |
+| 11 | `text-xs font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-warning` |
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |
@@ -481,7 +481,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
 | 6 | `text-xs font-semibold uppercase tracking-wider` |
-| 6 | `text-text-secondary font-semibold text-xs tracking-wider` |
+| 6 | `w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle` |
 
 
 <!-- AUTO-GENERATED:END -->

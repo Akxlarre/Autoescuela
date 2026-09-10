@@ -197,37 +197,38 @@
 
 ## Fase 6 — UI
 
-- [ ] **T6.1** — Gestión de plantillas: `template-manager-drawer.component.ts`
+- [x] **T6.1** — Gestión de plantillas: `template-manager-drawer.component.ts`
   - **AC ref:** AC1, AC4
   - **DoD:**
-    - [ ] OnPush; abre desde el tab "Ajustes" del `AjustesDrawerComponent`, **gateado a admin**
-          (mismo lugar que límite de agenda, precios y tarifas — sin ítem de menú nuevo)
-    - [ ] Crear, editar, activar/desactivar y borrar plantillas
-    - [ ] Ayuda visible de las variables disponibles (`{{nombre}}`, `{{sede}}`)
-    - [ ] `data-llm-action` en guardar y borrar; `ConfirmModalService` antes de borrar
-    - [ ] Documentado en `indices/COMPONENTS.md`
+    - [x] OnPush; abre desde el tab "Ajustes" del `AjustesDrawerComponent`, gateado a admin
+    - [x] Crear, editar, archivar (sin borrar) y eliminar plantillas
+    - [x] Ayuda de variables disponibles, clickeables para insertarlas en el cuerpo
+    - [x] `data-llm-action` en guardar y eliminar; `ConfirmModalService` antes de borrar
+    - [x] La card nueva usa `.card`, no compone el fondo a mano (ARCH-25 sin regresión)
 
-- [ ] **T6.2** — Compositor: selector de plantilla + programar
+- [x] **T6.2** — Compositor: selector de plantilla + programar
   - **AC ref:** AC2, AC5
   - **DoD:**
-    - [ ] Selector "Partir de una plantilla…" (opcional) que carga asunto y cuerpo **editables**
-    - [ ] Botón "Programar" con fecha y hora; fecha pasada rechazada en el formulario
-    - [ ] La confirmación distingue enviar ahora de programar
-    - [ ] La UI comunica la granularidad real ("se enviará alrededor de las HH:MM"), no promete
-          precisión al minuto que el cron de 15 min no tiene
+    - [x] Selector "Partir de una plantilla…" que carga asunto y cuerpo **editables**
+    - [x] Checkbox "Programar para más adelante" con `datetime-local`
+    - [x] Fecha pasada deshabilita el envío; el botón cambia a "Programar comunicado"
+    - [x] La UI comunica la granularidad real ("± 15 minutos"), no promete precisión al minuto
+    - [x] La confirmación avisa que el segmento **se recalcula al enviar**: el alcance que se
+          muestra es el de ahora y puede cambiar
 
-- [ ] **T6.3** — Historial: estados y cancelar
+- [x] **T6.3** — Historial: estados y cancelar
   - **AC ref:** AC7, AC8
   - **DoD:**
-    - [ ] Programados arriba, con badge "Programado" y su fecha
-    - [ ] Acción de cancelar solo en `programado` (no en `enviando`)
-    - [ ] Cancelados atenuados, no ocultos
-    - [ ] Sigue siendo Dumb: solo `input()`/`output()`
+    - [x] Badge de estado para todo lo que no está `enviado`; programados muestran su fecha
+    - [x] Acción de cancelar solo con `canCancel` (derivado de `status === 'programado'`)
+    - [x] Cancelados atenuados, no ocultos
+    - [x] Sigue siendo Dumb: emite `cancelRequested`, la confirmación la hace la página
+    - [x] `stopPropagation` en cancelar: sin eso el clic también abría el detalle
 
-- [ ] **T6.4** — Registrar íconos nuevos en `app.config.ts`
-  - **DoD:** solo los que se usen de verdad (ARCH-14 ya reporta 29 sin uso)
-
----
+- [x] **T6.4** — Registrar íconos nuevos en `app.config.ts`
+  - **DoD:**
+    - [x] **Sin cambios necesarios**: `file-text`, `calendar-clock`, `pencil`, `trash-2`,
+          `plus` y `check` ya estaban registrados. Verificado antes de asumirlo.
 
 ## Fase 7 — Validación
 

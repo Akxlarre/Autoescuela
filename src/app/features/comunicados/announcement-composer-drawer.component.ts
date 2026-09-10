@@ -7,6 +7,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { AnnouncementsFacade } from '@core/facades/announcements.facade';
+import { NotificationTemplatesFacade } from '@core/facades/notification-templates.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -17,12 +18,22 @@ import {
   countExclusions,
   validateAnnouncementDraft,
 } from '@core/utils/announcement-recipients.utils';
+import { isScheduledForValid } from '@core/utils/announcement-template.utils';
 import type {
   AnnouncementKind,
   AnnouncementCourseType,
   AnnouncementEnrollmentStatus,
   AnnouncementDraft,
 } from '@core/models/ui/announcement.model';
+
+/**
+ * `datetime-local` trabaja en hora local sin zona, así que no sirve `toISOString()`:
+ * hay que descontar el offset antes de recortar.
+ */
+function toLocalInputValue(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 
 /**
  * Compositor de comunicados (spec 0041-b).
@@ -199,6 +210,27 @@ import type {
         <!-- ── Mensaje ────────────────────────────────────────────────── -->
         <h3 class="section-title">Mensaje</h3>
 
+        @if (templates.activeTemplates().length > 0) {
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="a-template">Partir de una plantilla</label>
+            <p-select
+              id="a-template"
+              [options]="templateOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Escribir desde cero…"
+              [showClear]="true"
+              styleClass="w-full"
+              [ngModel]="templateId()"
+              (ngModelChange)="aplicarPlantilla($event)"
+              data-llm-description="optional saved template to prefill subject and body"
+            />
+            <p class="field-hint">
+              Podés editar el texto después: la plantilla es un punto de partida.
+            </p>
+          </div>
+        }
+
         <div class="flex flex-col gap-1.5">
           <label class="field-label" for="a-subject"
             >Asunto <span class="text-error">*</span></label
@@ -225,6 +257,36 @@ import type {
             data-llm-description="announcement body, plain text"
           ></textarea>
           <p class="field-hint">Texto plano. Los saltos de línea se respetan en el correo.</p>
+        </div>
+
+        <!-- ── Programación ───────────────────────────────────────────── -->
+        <div class="card p-3 space-y-2">
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              class="cursor-pointer"
+              [checked]="isScheduled()"
+              (change)="toggleScheduled()"
+            />
+            <span class="text-xs font-semibold text-text-primary">Programar para más adelante</span>
+          </label>
+
+          @if (isScheduled()) {
+            <input
+              type="datetime-local"
+              class="field-input"
+              [min]="minScheduledFor"
+              [ngModel]="scheduledLocal()"
+              (ngModelChange)="setScheduledLocal($event)"
+              data-llm-description="date and time to send the announcement"
+            />
+            @if (scheduledInvalid()) {
+              <p class="text-xs text-error">La fecha de envío tiene que ser futura.</p>
+            } @else {
+              <!-- El cron corre cada 15 minutos: prometer precisión al minuto sería mentir. -->
+              <p class="field-hint">Se enviará aproximadamente a esa hora (± 15 minutos).</p>
+            }
+          }
         </div>
 
         <!-- ── Progreso del envío ─────────────────────────────────────── -->
@@ -266,7 +328,10 @@ import type {
         >
           @if (facade.isSending()) {
             <app-icon name="loader-circle" [size]="16" class="animate-spin" />
-            Enviando…
+            {{ isScheduled() ? 'Programando…' : 'Enviando…' }}
+          } @else if (isScheduled()) {
+            <app-icon name="calendar-clock" [size]="16" />
+            Programar comunicado
           } @else {
             <app-icon name="megaphone" [size]="16" />
             Enviar comunicado
@@ -278,6 +343,7 @@ import type {
 })
 export class AnnouncementComposerDrawerComponent {
   protected readonly facade = inject(AnnouncementsFacade);
+  protected readonly templates = inject(NotificationTemplatesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
@@ -310,6 +376,21 @@ export class AnnouncementComposerDrawerComponent {
   protected readonly scheduledFor = signal<string | null>(null);
   protected readonly templateId = signal<number | null>(null);
 
+  /** Valor del `datetime-local`, que trabaja en hora local sin zona. */
+  protected readonly scheduledLocal = signal('');
+  protected readonly isScheduled = signal(false);
+
+  /** El navegador no deja elegir un pasado obvio; la validación real igual corre. */
+  protected readonly minScheduledFor = toLocalInputValue(new Date(Date.now() + 60_000));
+
+  protected readonly templateOptions = computed(() =>
+    this.templates.activeTemplates().map((t) => ({ label: t.name, value: t.id })),
+  );
+
+  protected readonly scheduledInvalid = computed(
+    () => this.isScheduled() && !isScheduledForValid(this.scheduledFor()),
+  );
+
   /** Destildados a mano. Solo aplica sobre quienes ya están habilitados. */
   private readonly excludedUserIds = signal<number[]>([]);
 
@@ -335,7 +416,12 @@ export class AnnouncementComposerDrawerComponent {
   protected readonly excedeTope = computed(() => this.validation().errors.includes('excede_tope'));
 
   protected readonly canSend = computed(
-    () => this.validation().valid && !this.facade.isSending() && !this.facade.isLoadingPreview(),
+    () =>
+      this.validation().valid &&
+      !this.facade.isSending() &&
+      !this.facade.isLoadingPreview() &&
+      // Programar sin fecha válida no puede quedar habilitado: el draft se vería completo.
+      !this.scheduledInvalid(),
   );
 
   protected readonly progressPercent = computed(() => {
@@ -346,6 +432,7 @@ export class AnnouncementComposerDrawerComponent {
   constructor() {
     this.facade.clearPreview();
     this.facade.resetProgress();
+    void this.templates.initialize();
   }
 
   protected isChecked(userId: number): boolean {
@@ -402,19 +489,57 @@ export class AnnouncementComposerDrawerComponent {
     };
   }
 
+  protected toggleScheduled(): void {
+    const activar = !this.isScheduled();
+    this.isScheduled.set(activar);
+    if (!activar) {
+      this.scheduledLocal.set('');
+      this.scheduledFor.set(null);
+    }
+  }
+
+  protected setScheduledLocal(value: string): void {
+    this.scheduledLocal.set(value);
+    // El input da hora local; se guarda en ISO para que el servidor no tenga que adivinar.
+    this.scheduledFor.set(value ? new Date(value).toISOString() : null);
+  }
+
+  /**
+   * Carga la plantilla como PUNTO DE PARTIDA (AC2): el texto queda editable. No se
+   * sustituyen las variables acá — se resuelven por destinatario al enviar, así que el
+   * cuerpo guardado conserva los marcadores.
+   */
+  protected aplicarPlantilla(templateId: number | null): void {
+    this.templateId.set(templateId);
+    if (templateId === null) return;
+
+    const plantilla = this.templates.activeTemplates().find((t) => t.id === templateId);
+    if (!plantilla) return;
+
+    this.subject.set(plantilla.subject);
+    this.body.set(plantilla.body);
+  }
+
   protected async submit(): Promise<void> {
     if (!this.canSend()) return;
 
     const total = this.includedCount();
+    const programado = this.isScheduled();
+
+    // El alcance que se muestra acá es el de AHORA. En un comunicado programado la lista
+    // se recalcula al enviar, así que el número puede cambiar: se dice, no se promete.
     const confirmed = await this.confirmModal.confirm({
-      title: 'Enviar comunicado',
-      message: `Se va a enviar a ${total} destinatario(s) por correo y a su portal. Esta acción no se puede deshacer.`,
-      confirmLabel: 'Enviar',
+      title: programado ? 'Programar comunicado' : 'Enviar comunicado',
+      message: programado
+        ? `Se enviará automáticamente en la fecha indicada. Hoy el segmento alcanza a ${total} destinatario(s), pero la lista se vuelve a calcular al momento del envío.`
+        : `Se va a enviar a ${total} destinatario(s) por correo y a su portal. Esta acción no se puede deshacer.`,
+      confirmLabel: programado ? 'Programar' : 'Enviar',
       cancelLabel: 'Revisar',
     });
     if (!confirmed) return;
 
-    const ok = await this.facade.send(this.buildDraft());
+    const draft = this.buildDraft();
+    const ok = programado ? await this.facade.schedule(draft) : await this.facade.send(draft);
     if (ok) this.drawer.close();
   }
 }
