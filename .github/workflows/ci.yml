@@ -1,0 +1,40 @@
+name: 🔎 CI — Calidad de Código
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: 🧪 Lint arquitectónico + Tests + Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚚 Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏛️ Lint Arquitectónico (facades, modelos, bento grid, etc.)
+        run: npm run lint:arch
+
+      - name: 🧪 Tests Unitarios (vitest)
+        run: npm run test:ci
+
+      - name: 🏗️ Build de Producción
+        run: npm run build
