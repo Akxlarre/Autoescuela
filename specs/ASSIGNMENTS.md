@@ -21,6 +21,15 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | `i` | fix | P1 | b | 1-4.5s por carga, confirmado con EXPLAIN ANALYZE (1M+ buffer hits). Requiere migración + tests de regresión de double-booking antes de tocar producción |
+| ASG-m-001 | Validación de años de licencia previa en matrícula profesional | `i` | fix | P1 | m | A2/A4/Conv. A4 → 2 años licencia B; A5/A3/Conv. A5 → 2 años licencia A2/A4 |
+| ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | `i` | fix | P1 | m | Aplica a B y Profesional, ambas escuelas. Pago sin firma queda pendiente de aplicar, no se pierde |
+| ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
+| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | spec | P1 | m | Solo admin. Requiere vista previa. Discutir diseño técnico antes de comprometer plan |
+| ASG-m-005 | Filtros en la tabla principal de la vista Pagos | `m` | fix | P2 | m | Fechas y tipo de curso (B/Profesional) como mínimo |
+| ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | `m` | fix | P2 | m | Requiere verificación visual con Playwright antes de cerrar |
+| ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
+| ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
+| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | `m` | fix | P1 | m | Solo nombres de alumnos precargados; notas/asistencia quedan vacías. Evaluaciones/Asistencia digitales no cambian |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
