@@ -16,8 +16,12 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { escapePdfWinAnsi as esc, loadPngForPdf, assemblePdf, wrapLines } from '../_shared/pdf-utils.ts';
-
+import {
+  escapePdfWinAnsi as esc,
+  loadPngForPdf,
+  assemblePdf,
+  wrapLines,
+} from '../_shared/pdf-utils.ts';
 
 // ─── CORS ───
 
@@ -46,16 +50,12 @@ Deno.serve(async (req: Request) => {
     );
 
     // ── Fetch all data in parallel ──
-    const [
-      courseRes,
-      lecturersRes,
-      enrollmentsRes,
-      theoryRes,
-      practiceRes,
-      gradesRes,
-      signaturesRes,
-      classBookRes,
-    ] = await Promise.all([
+    // fix-250-m: el Libro de Clases (PDF incluido) es una plantilla imprimible, no un
+    // reflejo de resultados ya registrados — no se leen professional_module_grades,
+    // professional_theory_attendance, professional_practice_attendance ni
+    // professional_weekly_signatures. Solo se precargan alumnos, profesores, sesiones
+    // (para el layout de la grilla) y los datos propios del libro (SENCE/horario).
+    const [courseRes, lecturersRes, enrollmentsRes, theoryRes, classBookRes] = await Promise.all([
       // 1. Course + promotion + branch
       supabase
         .from('promotion_courses')
@@ -82,33 +82,14 @@ Deno.serve(async (req: Request) => {
         .not('status', 'in', '("cancelled","draft")')
         .order('id'),
 
-      // 4. Theory sessions + attendance
+      // 4. Theory sessions — solo definen la grilla de columnas/semanas y el calendario.
       supabase
         .from('professional_theory_sessions')
         .select('id, date, status')
         .eq('promotion_course_id', promotion_course_id)
         .order('date'),
 
-      // 5. Practice sessions
-      supabase
-        .from('professional_practice_sessions')
-        .select('id, date, status')
-        .eq('promotion_course_id', promotion_course_id)
-        .order('date'),
-
-      // 6. Grades (fetched separately after enrollments)
-      supabase
-        .from('professional_module_grades')
-        .select('enrollment_id, module_number, grade, passed, status')
-        .order('enrollment_id'),
-
-      // 7. Weekly signatures
-      supabase
-        .from('professional_weekly_signatures')
-        .select('enrollment_id, week_start_date, signed_at')
-        .eq('promotion_course_id', promotion_course_id),
-
-      // 8. Class book editable fields
+      // 5. Class book editable fields
       supabase
         .from('class_book')
         .select('sence_code, horario')
@@ -139,30 +120,6 @@ Deno.serve(async (req: Request) => {
         telefono: u.phone ?? '',
       };
     });
-    const enrollmentIds = enrollments.map((e) => e.id);
-
-    // Filter grades to this course's enrollments
-    const grades = (gradesRes.data ?? []).filter((g) => enrollmentIds.includes(g.enrollment_id));
-
-    // Theory attendance (need separate query with session IDs)
-    const theoryIds = (theoryRes.data ?? []).map((s) => s.id);
-    const practiceIds = (practiceRes.data ?? []).map((s) => s.id);
-
-    const [theoryAttRes, practiceAttRes] = await Promise.all([
-      theoryIds.length > 0
-        ? supabase
-            .from('professional_theory_attendance')
-            .select('theory_session_prof_id, enrollment_id, status')
-            .in('theory_session_prof_id', theoryIds)
-        : Promise.resolve({ data: [], error: null }),
-      practiceIds.length > 0
-        ? supabase
-            .from('professional_practice_attendance')
-            .select('session_id, enrollment_id, status')
-            .in('session_id', practiceIds)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-
     // Module names based on license class
     const moduleNames = getModuleNames(licenseClass);
 
@@ -189,11 +146,6 @@ Deno.serve(async (req: Request) => {
         moduleNames,
         enrollments,
         theorySessions: theoryRes.data ?? [],
-        theoryAttendance: theoryAttRes.data ?? [],
-        practiceSessions: practiceRes.data ?? [],
-        practiceAttendance: practiceAttRes.data ?? [],
-        grades,
-        signatures: signaturesRes.data ?? [],
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('PDF generation timeout after 40s')), 40_000),
@@ -300,6 +252,9 @@ function getModuleNames(lc: string): string[] {
 // PDF Builder — Libro de Clases
 // ══════════════════════════════════════════════════════════════════════════════
 
+// fix-250-m: sin campos de resultados (notas/asistencia/firmas) — el Libro de Clases en
+// PDF es una plantilla imprimible: trae alumnos, profesores y sesiones (para el layout),
+// pero las secciones de resultados se dibujan vacías, listas para llenarse a mano.
 interface ClassBookData {
   promo: { name: string; code: string; startDate: string; endDate: string };
   course: { name: string; code: string; licenseClass: string };
@@ -310,17 +265,6 @@ interface ClassBookData {
   moduleNames: string[];
   enrollments: { id: number; numero: number; nombre: string; rut: string; telefono: string }[];
   theorySessions: { id: number; date: string; status: string }[];
-  theoryAttendance: { theory_session_prof_id: number; enrollment_id: number; status: string }[];
-  practiceSessions: { id: number; date: string; status: string }[];
-  practiceAttendance: { session_id: number; enrollment_id: number; status: string }[];
-  grades: {
-    enrollment_id: number;
-    module_number: number;
-    grade: number;
-    passed: boolean;
-    status: string;
-  }[];
-  signatures: { enrollment_id: number; week_start_date: string; signed_at: string | null }[];
 }
 
 async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
@@ -559,18 +503,6 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       if (ws.every((s) => s.status === 'cancelled')) weekMap.delete(mon);
     }
 
-    // Attendance map
-    const attMap = new Map<string, string>();
-    for (const a of d.theoryAttendance) {
-      attMap.set(`${a.theory_session_prof_id}-${a.enrollment_id}`, a.status);
-    }
-
-    // Signature set
-    const sigSet = new Set<string>();
-    for (const s of d.signatures) {
-      if (s.signed_at) sigSet.add(`${s.enrollment_id}-${s.week_start_date}`);
-    }
-
     let weekNum = 0;
     const dayNames = ['Lun', 'Mar', 'Mi\u00e9', 'Jue', 'Vie', 'S\u00e1b'];
 
@@ -618,25 +550,14 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
           const session = weekSessions.find((s) => s.date === dias[di]);
           if (session && session.status === 'cancelled') {
             T(x + 5, y, 'LIBRE', 'F2', 8);
-          } else if (session) {
-            const status = attMap.get(`${session.id}-${e.id}`);
-            const label =
-              status === 'present'
-                ? 'P'
-                : status === 'absent'
-                  ? 'A'
-                  : status === 'excused'
-                    ? 'J'
-                    : '\u2014';
-            T(x + 28, y, label, 'F1', 9);
           } else {
+            // Plantilla imprimible: la marca de asistencia se llena a mano.
             T(x + 28, y, '\u2014', 'F1', 9);
           }
         }
 
-        // Firma semanal
-        const hasSig = sigSet.has(`${e.id}-${monday}`);
-        T(ML + 28 + nameW + 6 * dayW + 8, y, hasSig ? 'S\u00ed' : '\u2014', 'F1', 9);
+        // Firma semanal \u2014 se llena a mano.
+        T(ML + 28 + nameW + 6 * dayW + 8, y, '\u2014', 'F1', 9);
 
         y -= 14;
         HL(y + 12, 0.1);
@@ -682,13 +603,6 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   NP();
   drawLogoHeader('EVALUACIONES CLASE PROFESIONAL', 14);
 
-  // Build grades map: enrollmentId → moduleNumber → grade
-  const gradeMap = new Map<number, Map<number, number>>();
-  for (const g of d.grades) {
-    if (!gradeMap.has(g.enrollment_id)) gradeMap.set(g.enrollment_id, new Map());
-    gradeMap.get(g.enrollment_id)!.set(g.module_number, g.grade);
-  }
-
   // Evaluaciones layout: N°(25) | APELLIDO(215) | 7×Mód(66=462) | FINAL(60) = 762
   const evalNameW = 215;
   const modW = 66;
@@ -706,23 +620,13 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
     T(ML + 6, y, `${e.numero}`, 'F1', 9);
     T(ML + 25, y, e.nombre.slice(0, 35), 'F1', 9);
 
-    const eGrades = gradeMap.get(e.id);
-    const notasArr: (number | null)[] = [];
-    for (let m = 1; m <= 7; m++) {
-      const grade = eGrades?.get(m) ?? null;
-      notasArr.push(grade);
-      const x = ML + 25 + evalNameW + (m - 1) * modW;
-      T(x + 18, y, grade !== null ? `${grade}` : '\u2014', 'F1', 9);
+    // Plantilla imprimible: notas y nota final se llenan a mano.
+    for (let m = 0; m < 7; m++) {
+      const x = ML + 25 + evalNameW + m * modW;
+      T(x + 18, y, '\u2014', 'F1', 9);
     }
-
-    // Nota final (promedio)
-    const validGrades = notasArr.filter((n): n is number => n !== null);
-    const avg =
-      validGrades.length > 0
-        ? Math.round((validGrades.reduce((a, b) => a + b, 0) / validGrades.length) * 10) / 10
-        : null;
     const x = ML + 25 + evalNameW + 7 * modW;
-    T(x + 10, y, avg !== null ? `${avg}` : '\u2014', 'F2', 9);
+    T(x + 10, y, '\u2014', 'F2', 9);
 
     y -= 13;
     HL(y + 11, 0.1);
@@ -735,11 +639,6 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   NP();
   drawLogoHeader('ASISTENCIA CLASE PROFESIONAL', 14);
 
-  const completedTheory = d.theorySessions.filter((s) => s.status === 'completed').map((s) => s.id);
-  const completedPractice = d.practiceSessions
-    .filter((s) => s.status === 'completed')
-    .map((s) => s.id);
-
   // Asistencia layout: N°(30) | APELLIDO(330) | %PRÁCTICA(200) | %TEÓRICA(rest≈202)
   Rect(ML, y - 2, PW, 18);
   T(ML + 4, y, 'N\u00b0', 'F2', 9);
@@ -748,29 +647,13 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   T(ML + 565, y, '% ASIST. TE\u00d3RICA', 'F2', 9);
   y -= 18;
 
+  // Plantilla imprimible: los porcentajes se llenan a mano, no se calculan.
   for (const e of d.enrollments) {
     need(15);
-    const thAtt = d.theoryAttendance.filter(
-      (a) =>
-        a.enrollment_id === e.id &&
-        a.status === 'present' &&
-        completedTheory.includes(a.theory_session_prof_id),
-    ).length;
-    const prAtt = d.practiceAttendance.filter(
-      (a) =>
-        a.enrollment_id === e.id &&
-        a.status === 'present' &&
-        completedPractice.includes(a.session_id),
-    ).length;
-    const pctTh =
-      completedTheory.length > 0 ? Math.round((thAtt / completedTheory.length) * 100) : 0;
-    const pctPr =
-      completedPractice.length > 0 ? Math.round((prAtt / completedPractice.length) * 100) : 0;
-
     T(ML + 8, y, `${e.numero}`, 'F1', 10);
     T(ML + 35, y, e.nombre.slice(0, 45), 'F1', 10);
-    T(ML + 430, y, `${pctPr}%`, 'F1', 10);
-    T(ML + 630, y, `${pctTh}%`, 'F1', 10);
+    T(ML + 430, y, '—', 'F1', 10);
+    T(ML + 630, y, '—', 'F1', 10);
     y -= 14;
     HL(y + 12, 0.15);
   }

@@ -27,7 +27,6 @@
 | ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | spec | P1 | m | Solo admin. Requiere vista previa. Discutir diseño técnico antes de comprometer plan |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
-| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | `m` | fix | P1 | m | Solo nombres de alumnos precargados; notas/asistencia quedan vacías. Evaluaciones/Asistencia digitales no cambian |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -245,6 +244,7 @@
 | ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-07 |
 | ASG-m-005 | Filtros en la tabla principal de la vista Pagos | [fix-248-m-filtros-tabla-pagos](fixes/fix-248-m-filtros-tabla-pagos/fix.md) | 2026-09-15 |
 | ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | [fix-247-m-secretarias-layout-espacio-vacio](fixes/fix-247-m-secretarias-layout-espacio-vacio/fix.md) | 2026-09-15 |
+| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | [fix-250-m-libro-clases-plantilla-imprimible](fixes/fix-250-m-libro-clases-plantilla-imprimible/fix.md) | 2026-09-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---
