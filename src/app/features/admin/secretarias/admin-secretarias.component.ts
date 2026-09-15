@@ -59,7 +59,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
       @if (facade.isLoading()) {
         <!-- Content Skeleton -->
-        <div class="bento-wide" data-col-span="9" data-col-span-md="8">
+        <div
+          class="bento-wide"
+          data-col-span="9"
+          data-col-start="1"
+          data-col-span-md="8"
+          data-col-start-md="1"
+        >
           <div class="card p-6 h-full">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <app-skeleton-block variant="text" width="180px" height="20px" />
@@ -86,7 +92,15 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           </div>
         </div>
 
-        <div class="bento-tall" data-col-span="3" data-col-span-md="8">
+        <div
+          class="bento-tall"
+          data-col-span="3"
+          data-col-start="10"
+          data-row-span="1"
+          data-col-span-md="8"
+          data-col-start-md="1"
+          data-row-span-md="1"
+        >
           <div class="card p-6 h-full">
             <app-skeleton-block variant="text" width="150px" height="18px" class="mb-4" />
             <app-skeleton-block variant="rect" width="100%" height="80px" class="mb-4" />
@@ -99,7 +113,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <!-- ── Active View ──────────────────────────────────────────────────── -->
 
         <!-- Lista de Secretarias -->
-        <div class="bento-wide bento-fill" data-col-span="9" data-col-span-md="8">
+        <div
+          class="bento-wide bento-fill"
+          data-col-span="9"
+          data-col-start="1"
+          data-col-span-md="8"
+          data-col-start-md="1"
+        >
           <div class="card p-6 flex flex-col h-full" appCardHover>
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
               <h2 class="font-bold whitespace-nowrap text-text-primary">Lista de Personal</h2>
@@ -253,7 +273,15 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         </div>
 
         <!-- Sidebar (Panel de Control) -->
-        <div class="bento-tall bento-fill" data-col-span="3" data-col-span-md="8">
+        <div
+          class="bento-tall bento-fill"
+          data-col-span="3"
+          data-col-start="10"
+          data-row-span="1"
+          data-col-span-md="8"
+          data-col-start-md="1"
+          data-row-span-md="1"
+        >
           <div class="card p-6 h-full flex flex-col" appCardHover>
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 text-text-secondary">
               Panel de Control
