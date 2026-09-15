@@ -26,13 +26,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from '../../admin/pagos/registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from '../../admin/pagos/admin-pago-detalle-drawer.component';
 import { PagosRecientesDrawerComponent } from '../../admin/pagos/pagos-recientes-drawer.component';
-import { formatCLP, toISODate } from '@core/utils/date.utils';
+import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000)
@@ -50,6 +51,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     DatePipe,
     DatePickerModule,
     DateInputComponent,
+    SelectModule,
     DialogModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
@@ -90,7 +92,50 @@ function toCompact(amount: number): { value: number; suffix: string } {
               clase 7 cuando corresponda.
             </p>
           </div>
-          <span class="text-xs text-text-muted">{{ facade.alumnosConDeuda().length }} alumnos</span>
+          <span class="text-xs text-text-muted">
+            {{ deudoresFiltrados().length }} de {{ facade.alumnosConDeuda().length }} alumnos
+          </span>
+        </div>
+
+        <!-- ── Filtros (fix-248-m / ASG-m-005) — client-side sobre alumnosConDeuda() ── -->
+        <div
+          class="shrink-0 flex flex-col sm:flex-row gap-3 px-6 py-3 border-b border-border-muted"
+        >
+          <app-date-input
+            [value]="filtroFechaDesde()"
+            (valueChange)="setFiltroFechaDesde($event)"
+            placeholder="Matrícula desde"
+            [max]="filtroFechaHasta()"
+            data-llm-description="filter debtors by enrollment date, start of range"
+          />
+          <app-date-input
+            [value]="filtroFechaHasta()"
+            (valueChange)="setFiltroFechaHasta($event)"
+            placeholder="Matrícula hasta"
+            [min]="filtroFechaDesde()"
+            data-llm-description="filter debtors by enrollment date, end of range"
+          />
+          <p-select
+            [options]="cursoOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todos los cursos"
+            [ngModel]="filtroCurso()"
+            (ngModelChange)="setFiltroCurso($event)"
+            styleClass="w-full sm:w-48"
+            data-llm-description="filter debtors by course type, class B or professional"
+          />
+          @if (hayFiltrosActivos()) {
+            <button
+              type="button"
+              class="btn-ghost shrink-0"
+              (click)="limpiarFiltros()"
+              data-llm-action="clear-debtor-filters"
+            >
+              <app-icon name="x" [size]="14" />
+              Limpiar filtros
+            </button>
+          }
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto">
@@ -139,6 +184,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
             >
               <span>Alumno</span>
               <span class="dc-rut">RUT</span>
+              <span class="dc-fecha">Fecha Matrícula</span>
               <span class="text-right dc-total">Total a Pagar</span>
               <span class="text-right dc-pagado">Pagado</span>
               <span class="text-right">Saldo</span>
@@ -154,11 +200,14 @@ function toCompact(amount: number): { value: number; suffix: string } {
                       alumno.alumno
                     }}</span>
                     <span class="text-xs lg:hidden mt-0.5 text-text-secondary"
-                      >RUT: {{ alumno.rut }}</span
+                      >RUT: {{ alumno.rut }} · {{ fechaCorta(alumno.fechaMatricula) }}</span
                     >
                   </div>
                   <span class="hidden lg:block text-sm text-text-secondary dc-rut">{{
                     alumno.rut
+                  }}</span>
+                  <span class="hidden lg:block text-sm text-text-secondary dc-fecha">{{
+                    fechaCorta(alumno.fechaMatricula)
                   }}</span>
                   <div
                     class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
@@ -381,13 +430,15 @@ function toCompact(amount: number): { value: number; suffix: string } {
       /* La grilla compacta deja 3 columnas: hay que esconder las 3 celdas sobrantes, o se
          desbordan (fix-209-m). Va junto con la regla de arriba, nunca sola. */
       .deudores-compact .dc-rut,
+      .deudores-compact .dc-fecha,
       .deudores-compact .dc-total,
       .deudores-compact .dc-pagado {
         display: none !important;
       }
-      /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo. */
+      /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo.
+         Incluye columna Fecha Matrícula (fix-248-m), siempre visible. */
       .deudores-grid-cols {
-        grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1.2fr;
+        grid-template-columns: 1.6fr 0.8fr 0.9fr 1fr 1fr 1fr 1.2fr;
       }
     `,
   ],
@@ -475,6 +526,70 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   }
   protected readonly today = new Date();
 
+  // ── Filtros de deudores (fix-248-m / ASG-m-005) ──────────────────────────────
+  // Client-side sobre alumnosConDeuda() — mismo patrón que
+  // PagosRecientesDrawerComponent.pagosFiltrados(). Se aplican ANTES de paginar/recortar.
+  // Sin filtro de sede: la secretaria está anclada a una sola sede (currentUser().branchId).
+  protected readonly filtroFechaDesde = signal('');
+  protected readonly filtroFechaHasta = signal('');
+  protected readonly filtroCurso = signal<string | null>(null);
+
+  protected readonly cursoOptions = [
+    { label: 'Todos los cursos', value: null },
+    { label: 'Clase B', value: 'class_b' },
+    { label: 'Profesional', value: 'professional' },
+  ];
+
+  protected readonly deudoresFiltrados = computed<AlumnoDeudor[]>(() => {
+    const desde = this.filtroFechaDesde();
+    const hasta = this.filtroFechaHasta();
+    const curso = this.filtroCurso();
+
+    return this.facade.alumnosConDeuda().filter((d) => {
+      const fecha = d.fechaMatricula?.slice(0, 10) ?? null;
+      const matchDesde = !desde || (fecha !== null && fecha >= desde);
+      const matchHasta = !hasta || (fecha !== null && fecha <= hasta);
+      const matchCurso = !curso || d.cursoTipo === curso;
+      return matchDesde && matchHasta && matchCurso;
+    });
+  });
+
+  // Cada setter vuelve a la página 1 — evita quedar en una página fuera de rango
+  // (vacía) si el resultado filtrado tiene menos páginas que la actual.
+  protected setFiltroFechaDesde(value: string): void {
+    this.filtroFechaDesde.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected setFiltroFechaHasta(value: string): void {
+    this.filtroFechaHasta.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected setFiltroCurso(value: string | null): void {
+    this.filtroCurso.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected readonly hayFiltrosActivos = computed(
+    () =>
+      this.filtroFechaDesde() !== '' ||
+      this.filtroFechaHasta() !== '' ||
+      this.filtroCurso() !== null,
+  );
+
+  protected limpiarFiltros(): void {
+    this.filtroFechaDesde.set('');
+    this.filtroFechaHasta.set('');
+    this.filtroCurso.set(null);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected fechaCorta(fecha: string | null): string {
+    if (!fecha) return '—';
+    return formatChileanDate(fecha, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
   // ── Densidad adaptativa: Deudores (fix-132-m / ASG-b-076) ────────────────────
   // Desktop: paginador real (10/página, mismo patrón que alumnos-list-content).
   // Tablet/mobile: presupuesto + "Cargar más" — mismo patrón que admin-secretarias.
@@ -493,12 +608,12 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   protected readonly totalPaginasDeudores = computed(() =>
     Math.max(
       1,
-      Math.ceil(this.facade.alumnosConDeuda().length / SecretariaPagosComponent.DEUDORES_PAGE_SIZE),
+      Math.ceil(this.deudoresFiltrados().length / SecretariaPagosComponent.DEUDORES_PAGE_SIZE),
     ),
   );
 
   protected readonly rangoDeudoresMostrando = computed(() => {
-    const total = this.facade.alumnosConDeuda().length;
+    const total = this.deudoresFiltrados().length;
     if (total === 0) return '';
     const start =
       (this.paginaDeudoresActual() - 1) * SecretariaPagosComponent.DEUDORES_PAGE_SIZE + 1;
@@ -510,7 +625,7 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   });
 
   protected readonly deudoresVisibles = computed<AlumnoDeudor[]>(() => {
-    const todos = this.facade.alumnosConDeuda();
+    const todos = this.deudoresFiltrados();
     if (this.isDesktopTier()) {
       const start = (this.paginaDeudoresActual() - 1) * SecretariaPagosComponent.DEUDORES_PAGE_SIZE;
       return todos.slice(start, start + SecretariaPagosComponent.DEUDORES_PAGE_SIZE);
@@ -521,7 +636,7 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   protected readonly remainingDeudores = computed(() => {
     const max = this.maxVisibleDeudores();
     if (max === null) return 0;
-    return Math.max(0, this.facade.alumnosConDeuda().length - max);
+    return Math.max(0, this.deudoresFiltrados().length - max);
   });
 
   protected loadMoreDeudores(): void {

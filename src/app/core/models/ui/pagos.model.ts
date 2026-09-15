@@ -8,6 +8,13 @@ export interface AlumnoDeudor {
   totalAPagar: number;
   pagado: number;
   saldo: number;
+  /** `courses.type`: 'class_b' | 'professional' | 'singular' — para el filtro de tipo de curso. */
+  cursoTipo: string | null;
+  cursoNombre: string;
+  /** `enrollments.created_at` (fecha de matrícula) — único campo de fecha disponible en esta tabla. */
+  fechaMatricula: string | null;
+  sedeId: number;
+  sedeNombre: string;
 }
 
 /** UI model para una fila de la tabla Pagos Recientes. */
