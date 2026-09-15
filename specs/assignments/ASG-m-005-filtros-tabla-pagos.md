@@ -1,6 +1,6 @@
 # Asignación ASG-m-005 — Filtros en la tabla principal de la vista Pagos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

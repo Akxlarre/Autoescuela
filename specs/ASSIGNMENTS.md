@@ -129,7 +129,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
-| ASG-m-005 | Filtros en la tabla principal de la vista Pagos | `m` | [fix-248-m-filtros-tabla-pagos](fixes/fix-248-m-filtros-tabla-pagos/fix.md) | 2026-09-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -244,6 +243,7 @@
 | ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
 | ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 | ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-07 |
+| ASG-m-005 | Filtros en la tabla principal de la vista Pagos | [fix-248-m-filtros-tabla-pagos](fixes/fix-248-m-filtros-tabla-pagos/fix.md) | 2026-09-15 |
 | ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | [fix-247-m-secretarias-layout-espacio-vacio](fixes/fix-247-m-secretarias-layout-espacio-vacio/fix.md) | 2026-09-15 |
 <!-- AUTO-GENERATED:END -->
 
