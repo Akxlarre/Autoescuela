@@ -1,14 +1,14 @@
 # Asignación ASG-m-006 — Fix visual en la vista Secretarias de admin (espacio vacío)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-15
+> **resulting_track:** fix-247-m-secretarias-layout-espacio-vacio
 
 ---
 
