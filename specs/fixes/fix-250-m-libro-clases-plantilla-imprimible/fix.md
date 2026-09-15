@@ -41,10 +41,62 @@ Ninguna spec declaró ACs para esta vista. ACs que este fix establece:
   tocan — esas vistas siguen funcionando exactamente igual.
 
 ## Cambio
-<!-- Archivo tocado y descripción en una línea. Un fix = un cambio puntual. -->
+
 - **Archivo:** `src/app/core/facades/libro-de-clases.facade.ts`
-- **Qué cambia:** ...
+  - `loadAsistenciaSemanal()`: deja de consultar `professional_theory_attendance` y
+    `professional_weekly_signatures`. Sigue consultando `professional_theory_sessions` (solo
+    para armar la grilla de semanas/días del layout imprimible). Cada celda de asistencia queda
+    `null` y `firmaSemanal` queda `false` para todos los alumnos.
+  - `loadEvaluaciones()`: deja de consultar `professional_module_grades`. Pasa a ser síncrono
+    (ya no hace `await`): mapea los alumnos ya cargados a `notas` (array de `null`),
+    `notaFinal: null`, `aprobado: false`.
+  - `loadResumenAsistencia()`: deja de consultar `professional_theory_sessions` (contadas
+    completadas), `professional_practice_sessions`, `professional_theory_attendance` y
+    `professional_practice_attendance`. Pasa a ser síncrono: mapea los alumnos a
+    `{ nombre, pctPractica: null, pctTeorica: null }`.
+  - `loadAllSections()`: `loadEvaluaciones()`/`loadResumenAsistencia()` se llaman sin `await`
+    (ya no son async) antes del `Promise.all` de las secciones restantes.
+- **Archivo:** `src/app/core/models/ui/libro-de-clases.model.ts`
+  - `ResumenAsistenciaLibro.pctPractica` / `.pctTeorica` pasan de `number` a `number | null`
+    (`null` = plantilla vacía, sin dato precargado).
+- **Archivo:** `src/app/features/libro-de-clases/libro-de-clases.component.ts`
+  - Sección "resumen" (Asistencia Clase Profesional): renderiza `—` en vez de `0%` cuando
+    `pctPractica`/`pctTeorica` son `null`, sin las clases de color de estado.
+  - `alumnos`, `profesores`, `calendario` y `cabecera`/`class_book` (código SENCE + horario) no
+    se tocaron — siguen precargándose igual, fuera del alcance de este fix.
+- **Archivo:** `supabase/functions/generate-class-book-pdf/index.ts`
+  - El generador del PDF real (invocado por el botón "Exportar PDF") consultaba estas mismas 4
+    tablas de forma **independiente** al facade de Angular — el fix del facade por sí solo NO
+    corregía el PDF exportado. Se le aplicó el mismo cambio: deja de consultar
+    `professional_module_grades`, `professional_theory_attendance`,
+    `professional_practice_attendance` y `professional_practice_sessions` (ya no se usa nada de
+    asistencia práctica). Sigue consultando `professional_theory_sessions` (grilla de
+    semanas/días + calendario), `enrollments` (alumnos), `promotion_course_lecturers`
+    (profesores) y `class_book` (SENCE/horario).
+  - Las secciones "CONTROL DE ASISTENCIA (FIRMA DIARIA)", "EVALUACIONES CLASE PROFESIONAL" y
+    "ASISTENCIA CLASE PROFESIONAL" del PDF dibujan `—` en cada celda de resultado en vez de
+    calcularlas — mismo criterio que el facade.
+  - Desplegada por el usuario a Supabase (`skvekggejikzxhzsjmkz`) durante esta sesión; verificada
+    exportando un PDF real (ver Test de Regresión).
 
 ## Test de Regresión
-<!-- El test que prueba que el fix funciona. Debe quedar verde post-fix. -->
-- `ruta/archivo.spec.ts > nombre del test` ✓
+
+- `src/app/core/facades/libro-de-clases.facade.spec.ts`:
+  - `evaluaciones: plantilla imprimible — nombres precargados, notas y nota final vacías (fix-250-m)` ✓
+  - `asistencia semanal: plantilla imprimible — grilla de semana/días armada, marcas y firma vacías (fix-250-m)` ✓
+  - `resumen asistencia: plantilla imprimible — nombres precargados, porcentajes vacíos (fix-250-m)` ✓
+  - Resto de la suite del facade (20/20) ✓ — sin regresión en cabecera, alumnos, profesores,
+    calendario, `saveClassBookFields`, `exportPdf`, `reset`.
+- `src/app/features/libro-de-clases/libro-de-clases.component.spec.ts` — 20/20 (2 archivos, 20
+  tests) sin regresión.
+- `npm run test:ci` — 191 archivos / 2455 tests, sin regresiones en el resto del proyecto.
+- `npx tsc --noEmit` — 0 errores.
+- `npm run lint:arch` — 0 errores, 174 advertencias (baseline preexistente, sin regresión).
+- `/verify` (Playwright, admin@test.com) sobre `/app/admin/libro-de-clases`: login OK, navegación
+  sin errores de consola. Con Promoción 277 / Curso A2 (1 alumno real, "Merino Osses Samuel
+  José"): pestañas "Firma", "Eval." y "Res." muestran el nombre precargado con celdas de
+  resultado en `—`. Exportado el PDF real (botón "Exportar PDF", tras despliegue de la Edge
+  Function por el usuario) y verificado archivo descargado — portada/lista de clase con el
+  alumno, profesores y calendario con datos propios, y las 3 secciones de resultados
+  (asistencia semanal, evaluaciones, resumen de asistencia) con el nombre precargado y todas
+  las celdas en `—`, sin notas/asistencia/firmas horneadas en el PDF.
