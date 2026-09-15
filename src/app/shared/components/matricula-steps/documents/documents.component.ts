@@ -68,6 +68,15 @@ export class DocumentsComponent {
         this.uploadingDocType.set(null);
       }
     });
+
+    // Si la subida falla (ej. archivo inválido), apaga ambos spinners — de lo
+    // contrario quedan girando indefinidamente porque nunca llega un éxito que los apague.
+    effect(() => {
+      if (this.data().uploadError) {
+        this.isUploadingPhoto.set(false);
+        this.uploadingDocType.set(null);
+      }
+    });
   }
 
   setPhotoTab(tab: 'camera' | 'upload'): void {

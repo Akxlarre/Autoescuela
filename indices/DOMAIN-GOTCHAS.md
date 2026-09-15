@@ -1125,7 +1125,15 @@
   alta normal de la app (seed, importador, script de migración, backfill), verificar el orden de
   inserción por serie y el formato de los números que se cargan. Si se agrega una sede o un tipo
   de licencia nuevo, asumir que arranca su propia serie en `0001` — no que continúa la de otra.
-- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`
+- **Materializado en fix-252-m:** un seed local no commiteado insertó ~100 filas con
+  `number = 'SEED-NNNNNN'` en varias series (sede × grupo de licencia). Cuando esa fila quedó
+  como la de mayor `id` de su serie, `v_last_number::INT` reventó con `22P02` al confirmar la
+  siguiente matrícula real. Se renumeraron las filas sucias (conservadas, no borradas — eran
+  datos de prueba necesarios) y `get_next_enrollment_number()` ahora filtra
+  `AND e.number ~ '^[0-9]+$'`, así que un `number` no numérico se ignora en vez de romper el
+  cast — pero la regla de aplicabilidad de arriba sigue vigente para cualquier carga futura.
+- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`,
+  `supabase/migrations/20260915100000_fix252_renumber_seed_enrollments.sql`
 
 ### DG-081 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
 - **Trampa:** dar por bueno que "Debe Haber en Caja" del arqueo (`CuadraturaFacade`) cuadra
