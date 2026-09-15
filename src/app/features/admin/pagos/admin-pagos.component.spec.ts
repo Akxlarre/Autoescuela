@@ -57,7 +57,11 @@ describe('AdminPagosComponent — densidad app-like', () => {
         },
         {
           provide: BranchFacade,
-          useValue: { selectedBranchId: signal(null), selectedBranchLabel: signal('Todas') },
+          useValue: {
+            selectedBranchId: signal(null),
+            selectedBranchLabel: signal('Todas'),
+            branches: signal([]),
+          },
         },
         {
           provide: LayoutDrawerFacadeService,
@@ -150,5 +154,173 @@ describe('AdminPagosComponent — densidad app-like', () => {
       expect(openSpy).toHaveBeenCalledTimes(1);
       expect(openSpy.mock.calls[0][1]).toBe('Pagos Recientes');
     });
+  });
+});
+
+// ─── fix-248-m (ASG-m-005): filtros de fecha/curso/sede en la tabla de deudores ───
+describe('AdminPagosComponent — filtros de deudores (fix-248-m)', () => {
+  let component: AdminPagosComponent;
+  let fixture: ReturnType<typeof TestBed.createComponent<AdminPagosComponent>>;
+  let branchIdSig: ReturnType<typeof signal<number | null>>;
+
+  const buildDeudor = (over: Partial<AlumnoDeudor>): AlumnoDeudor =>
+    ({
+      enrollmentId: 1,
+      alumno: 'Alumno',
+      rut: '1-9',
+      totalAPagar: 500000,
+      pagado: 100000,
+      saldo: 400000,
+      cursoTipo: 'class_b',
+      cursoNombre: 'Clase B',
+      fechaMatricula: '2026-03-10T00:00:00Z',
+      sedeId: 1,
+      sedeNombre: 'Sede 1',
+      ...over,
+    }) as AlumnoDeudor;
+
+  const deudores: AlumnoDeudor[] = [
+    buildDeudor({
+      enrollmentId: 1,
+      cursoTipo: 'class_b',
+      fechaMatricula: '2026-01-10T00:00:00Z',
+      sedeId: 1,
+    }),
+    buildDeudor({
+      enrollmentId: 2,
+      cursoTipo: 'professional',
+      fechaMatricula: '2026-02-15T00:00:00Z',
+      sedeId: 1,
+    }),
+    buildDeudor({
+      enrollmentId: 3,
+      cursoTipo: 'class_b',
+      fechaMatricula: '2026-03-20T00:00:00Z',
+      sedeId: 2,
+    }),
+  ];
+
+  function setup(selectedBranchId: number | null): void {
+    branchIdSig = signal<number | null>(selectedBranchId);
+
+    TestBed.configureTestingModule({
+      imports: [AdminPagosComponent],
+      providers: [
+        {
+          provide: PagosFacade,
+          useValue: {
+            isLoading: signal(false),
+            error: signal(null),
+            isGeneratingReport: signal(false),
+            alumnosConDeuda: signal(deudores),
+            pagosRecientes: signal([]),
+            metodosPagoMes: signal([]),
+            ingresosHoy: signal(0),
+            ingresosMes: signal(0),
+            boletasMes: signal(0),
+            totalDeudores: signal(deudores.length),
+            pagosPendientesTotales: signal(0),
+            initialize: vi.fn(),
+            destroyRealtime: vi.fn(),
+            seleccionarEnrollment: vi.fn(),
+            seleccionarParaPago: vi.fn(),
+            generarReporte: vi.fn(),
+          },
+        },
+        {
+          provide: BranchFacade,
+          useValue: {
+            selectedBranchId: branchIdSig,
+            selectedBranchLabel: signal('Todas'),
+            branches: signal([
+              { id: 1, name: 'Sede 1', slug: 'sede-1' },
+              { id: 2, name: 'Sede 2', slug: 'sede-2' },
+            ]),
+          },
+        },
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { open: vi.fn(), close: vi.fn(), isOpen: signal(false) },
+        },
+        { provide: LayoutService, useValue: { tier: signal('desktop') } },
+        { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+      ],
+    });
+
+    fixture = TestBed.createComponent(AdminPagosComponent);
+    component = fixture.componentInstance;
+  }
+
+  it('sin filtros muestra todos los deudores (AC-5)', () => {
+    setup(null);
+    expect((component as any).deudoresFiltrados().length).toBe(3);
+  });
+
+  it('filtra por rango de fechas, inclusive en ambos extremos (AC-1)', () => {
+    setup(null);
+    (component as any).filtroFechaDesde.set('2026-02-01');
+    (component as any).filtroFechaHasta.set('2026-03-20');
+    const ids = (component as any).deudoresFiltrados().map((d: AlumnoDeudor) => d.enrollmentId);
+    expect(ids).toEqual([2, 3]);
+  });
+
+  it('filtra por tipo de curso (AC-2)', () => {
+    setup(null);
+    (component as any).filtroCurso.set('professional');
+    const ids = (component as any).deudoresFiltrados().map((d: AlumnoDeudor) => d.enrollmentId);
+    expect(ids).toEqual([2]);
+  });
+
+  it('combina fecha + curso con AND (AC-4)', () => {
+    setup(null);
+    (component as any).filtroFechaDesde.set('2026-01-01');
+    (component as any).filtroCurso.set('class_b');
+    const ids = (component as any).deudoresFiltrados().map((d: AlumnoDeudor) => d.enrollmentId);
+    expect(ids).toEqual([1, 3]);
+  });
+
+  it('filtros se aplican antes de paginar — deudoresVisibles refleja el resultado filtrado (AC-6)', () => {
+    setup(null);
+    (component as any).filtroCurso.set('professional');
+    expect((component as any).deudoresVisibles().length).toBe(1);
+    expect((component as any).totalPaginasDeudores()).toBe(1);
+  });
+
+  it('cambiar un filtro vuelve a la página 1', () => {
+    setup(null);
+    (component as any).paginaDeudoresActual.set(2);
+    (component as any).setFiltroCurso('class_b');
+    expect((component as any).paginaDeudoresActual()).toBe(1);
+  });
+
+  it('mostrarColumnaSede es true cuando selectedBranchId() === null (AC-3)', () => {
+    setup(null);
+    expect((component as any).mostrarColumnaSede()).toBe(true);
+  });
+
+  it('mostrarColumnaSede es false cuando hay una sede específica seleccionada (AC-3)', () => {
+    setup(1);
+    expect((component as any).mostrarColumnaSede()).toBe(false);
+  });
+
+  it('limpiarFiltros resetea fecha/curso y vuelve a la página 1', () => {
+    setup(null);
+    (component as any).setFiltroFechaDesde('2026-02-01');
+    (component as any).setFiltroCurso('class_b');
+    (component as any).paginaDeudoresActual.set(2);
+
+    (component as any).limpiarFiltros();
+
+    expect((component as any).filtroFechaDesde()).toBe('');
+    expect((component as any).filtroCurso()).toBeNull();
+    expect((component as any).paginaDeudoresActual()).toBe(1);
+    expect((component as any).deudoresFiltrados().length).toBe(3);
+  });
+
+  it('hayFiltrosActivos refleja si algún filtro está aplicado', () => {
+    setup(null);
+    expect((component as any).hayFiltrosActivos()).toBe(false);
+    (component as any).setFiltroCurso('class_b');
+    expect((component as any).hayFiltrosActivos()).toBe(true);
   });
 });
