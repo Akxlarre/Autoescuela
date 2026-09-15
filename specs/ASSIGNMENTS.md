@@ -27,7 +27,6 @@
 | ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | spec | P1 | m | Solo admin. Requiere vista previa. Discutir diseño técnico antes de comprometer plan |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
-| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | `m` | fix | P1 | m | Solo nombres de alumnos precargados; notas/asistencia quedan vacías. Evaluaciones/Asistencia digitales no cambian |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -129,6 +128,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | `m` | [fix-250-m-libro-clases-plantilla-imprimible](fixes/fix-250-m-libro-clases-plantilla-imprimible/fix.md) | 2026-09-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---
