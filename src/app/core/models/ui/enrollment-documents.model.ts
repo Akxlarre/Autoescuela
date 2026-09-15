@@ -19,10 +19,7 @@ export interface CarnetPhoto {
 // ─── Document Upload ───
 
 export type DocumentType =
-  | 'hoja_vida_conductor'
-  | 'cedula_identidad'
-  | 'licencia_conducir'
-  | 'autorizacion_notarial';
+  'hoja_vida_conductor' | 'cedula_identidad' | 'licencia_conducir' | 'autorizacion_notarial';
 
 export interface UploadedDocument {
   type: DocumentType;
@@ -104,6 +101,8 @@ export interface EnrollmentDocumentsData {
   hvcValidation: HvcValidation | null;
   // Minor authorization (only when isMinor === true)
   notarialAuthorization: UploadedDocument | null;
+  /** Último error de subida/validación (foto o documento). Null = sin error pendiente. */
+  uploadError: string | null;
 }
 
 /** Max days since HVC issue date before showing expiry warning (RF-082.3) */
