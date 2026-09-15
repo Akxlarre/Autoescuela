@@ -1,6 +1,6 @@
 # Asignación ASG-m-006 — Fix visual en la vista Secretarias de admin (espacio vacío)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

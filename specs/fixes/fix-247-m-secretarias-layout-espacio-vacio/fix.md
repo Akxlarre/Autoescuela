@@ -2,7 +2,8 @@
 
 > id: fix-247-m-secretarias-layout-espacio-vacio
 > refs: ASG-m-006 (specs/assignments/ASG-m-006-fix-visual-vista-secretarias-admin.md)
-> status: in_progress
+> status: done
+> closed: 2026-09-15
 > created: 2026-09-15
 
 ## Root Cause
