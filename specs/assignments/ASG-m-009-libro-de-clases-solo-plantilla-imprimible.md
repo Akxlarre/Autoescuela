@@ -1,6 +1,6 @@
 # Asignación ASG-m-009 — Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

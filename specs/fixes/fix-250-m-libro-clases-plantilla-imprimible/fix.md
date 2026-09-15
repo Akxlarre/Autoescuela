@@ -1,7 +1,8 @@
 # Fix: Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales
 > id: fix-250-m-libro-clases-plantilla-imprimible
 > refs: ASG-m-009 (specs/assignments/ASG-m-009-libro-de-clases-solo-plantilla-imprimible.md)
-> status: in_progress
+> status: done
+> closed: 2026-09-15
 > created: 2026-09-15
 
 ## Root Cause
