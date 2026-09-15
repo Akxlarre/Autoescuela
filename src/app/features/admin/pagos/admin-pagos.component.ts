@@ -269,7 +269,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   </div>
 
                   <!-- Acciones -->
-                  <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
+                  <div
+                    class="deudores-acciones flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end"
+                  >
                     <button
                       class="btn-ghost text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
                       data-llm-action="view-student-payment-detail"
@@ -468,12 +470,24 @@ function toCompact(amount: number): { value: number; suffix: string } {
           background: transparent;
         }
       }
+      /* fix-249-m: anchos fijos (no "auto") para Saldo y Acciones — "auto" se mide por el
+         contenido de CADA fila (cada .deudores-row es su propio grid container), así que el
+         header (mide "Saldo"/"Acciones", texto corto) y las filas (miden nombre+monto+botones,
+         más anchas) resolvían columnas de distinto ancho en píxeles y quedaban desalineados.
+         El drawer deja ~310px de contenido: Acciones apila los 2 botones (deja de necesitar
+         ~200px lado a lado) para que 85px+110px+gaps quepan y aún sobre espacio para Alumno. */
       .deudores-compact .hidden.lg\\:grid {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) auto auto !important;
+        grid-template-columns: minmax(0, 1fr) 85px 110px !important;
       }
       .deudores-compact .deudores-row {
-        grid-template-columns: minmax(0, 1fr) auto auto !important;
+        grid-template-columns: minmax(0, 1fr) 85px 110px !important;
+      }
+      .deudores-compact .deudores-acciones {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.25rem;
+        margin-top: 0 !important;
       }
       .deudores-compact .dc-rut,
       .deudores-compact .dc-sede,
@@ -483,13 +497,17 @@ function toCompact(amount: number): { value: number; suffix: string } {
         display: none !important;
       }
       /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo.
-         Incluye columna Fecha Matrícula (fix-248-m), siempre visible. */
+         Incluye columna Fecha Matrícula (fix-248-m), siempre visible.
+         Acciones usa minmax(210px, auto) (fix-249-m): con 8 columnas cada "fr" vale poco en
+         píxeles, y "Ver detalle" + "Registrar pago" (flex-none, no encogen) suman ~200px —
+         con menos que eso, el flex con justify-end desborda hacia la IZQUIERDA (fuera de su
+         propia celda) y se superpone visualmente con el texto de Saldo. */
       .deudores-grid-cols {
-        grid-template-columns: 1.6fr 0.8fr 0.9fr 1fr 1fr 1fr 1.2fr;
+        grid-template-columns: 1.6fr 0.8fr 0.9fr 1fr 1fr 1fr minmax(210px, auto);
       }
       /* Variante con columna Sede (fix-248-m): solo cuando selectedBranchId() === null. */
       .deudores-grid-cols-sede {
-        grid-template-columns: 1.6fr 0.8fr 0.9fr 0.9fr 1fr 1fr 1fr 1.2fr;
+        grid-template-columns: 1.6fr 0.8fr 0.9fr 0.9fr 1fr 1fr 1fr minmax(210px, auto);
       }
     `,
   ],
