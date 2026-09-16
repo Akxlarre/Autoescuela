@@ -884,9 +884,14 @@
   intentar recrearlo. El resto del patrón (generar link sin enviar correo nativo + despachar
   correo propio vía SMTP con el mismo copy/template) es igual al de la creación.
 - **Regla de aplicabilidad:** cualquier Edge Function de "reenviar invitación" para un rol que
-  ya usa `generateLink({ type: 'invite' })` en su función de creación debe usar
-  `type: 'magiclink'`, no `'invite'`, para el reenvío.
-- **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`
+  ya usa `generateLink({ type: 'invite' })` (o `inviteUserByEmail`, que internamente es el
+  mismo caso) en su función de creación debe usar `type: 'magiclink'`, no `'invite'`, para el
+  reenvío. `generateLink()` no envía correo — si el flujo original dependía del envío nativo
+  de Supabase (`inviteUserByEmail`), el reenvío necesita despachar el correo manualmente
+  (SMTP propio, con una copia del template para mantener el mismo copy visual).
+- **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`,
+  `specs/fixes/fix-254-m-reenvio-invitacion-alumno-inviteuserbyemail-falla` (mismo gotcha,
+  esta vez en `activate-student-account`, que usaba `inviteUserByEmail` para ambos casos).
 
 ### DG-069 — Una fila de `public.users` insertada fuera del flujo de creación normal (seed, SQL directo) puede no tener `supabase_uid`, aunque el flujo "oficial" lo garantice
 - **Trampa:** asumir que una garantía que da la Edge Function de creación (ej.
@@ -1411,6 +1416,30 @@
   esa familia, no un ajuste de Reportes.
 - **Fuente:** `specs/fixes/fix-244-m-reportes-gastos-categoria-otros`.
 
+### DG-092 — `supabase_uid` seteado (`hasAuthAccount = true`) no significa que el usuario activó su cuenta
+- **Trampa:** el link de `auth.admin.inviteUserByEmail()` es de un solo uso — se invalida en
+  cuanto el navegador lo abre, no cuando el usuario termina de crear su contraseña. Si cierra
+  la pestaña en la pantalla de "crear contraseña", o el link se abrió con la app caída, el
+  `supabase_uid` ya quedó vinculado en `public.users` (`hasAuthAccount = true`) pero
+  `first_login` sigue en `true` porque `user_complete_first_login` (RPC que lo pone en
+  `false`) nunca corrió. Cualquier condición de UI que use solo `!hasAuthAccount` para decidir
+  "¿este usuario necesita que le reenvíe la invitación?" da falso negativo en ese estado: el
+  botón de reenvío desaparece justo cuando más se necesita, y no hay otra vía en la UI para
+  generar un link nuevo. Pasó primero con instructores (fix-168-m/fix-169-m) y se repitió
+  después en el drawer de alumnos porque la corrección nunca se replicó (fix-253-m).
+- **Realidad:** la condición correcta para "ofrecer reenviar invitación" es
+  `!hasAuthAccount || firstLogin`, no solo `!hasAuthAccount`. `hasAuthAccount` responde "¿ya
+  existe la fila en `auth.users`?"; `firstLogin` responde "¿ya terminó de configurar su
+  contraseña?" — son dos preguntas independientes y ambas negativas habilitan el reenvío.
+  `activate-student-account`/`activate-instructor-account` ya soportan reenviar sin duplicar
+  al usuario ni la notificación de bienvenida en ambos casos.
+- **Regla de aplicabilidad:** cualquier modelo de UI nuevo que exponga `hasAuthAccount` para un
+  rol con flujo de invitación (alumno, instructor, y cualquier rol futuro que se sume) debe
+  exponer también `firstLogin` y usar la condición combinada — no solo el estado de
+  `supabase_uid`. Ver también DG-069 (fila sin `supabase_uid` por inserción fuera del flujo
+  oficial) — es el otro extremo del mismo problema.
+- **Fuente:** `specs/fixes/fix-169-m-reenviar-invitacion-instructor-sin-cuenta-auth`,
+  `specs/fixes/fix-253-m-reenviar-invitacion-alumno-sin-firstlogin`.
 
 
 ## Convención para agregar una entrada nueva
