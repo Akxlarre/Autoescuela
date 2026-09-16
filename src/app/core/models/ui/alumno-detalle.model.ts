@@ -65,6 +65,9 @@ export interface AlumnoDetalleUI {
   isReinforcement: boolean;
   /** false = el alumno nunca activó su cuenta Auth (invitación pendiente o falló). fix-157-m. */
   hasAuthAccount: boolean;
+  /** true = el alumno tiene cuenta Auth pero nunca completó el primer login (link de activación
+   *  se quemó sin llegar a crear contraseña). fix-253-m. */
+  firstLogin: boolean;
 }
 
 /** Progreso de asistencia para alumnos profesionales (teoría o práctica). */

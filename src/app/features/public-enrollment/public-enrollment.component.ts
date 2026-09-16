@@ -742,6 +742,7 @@ export class PublicEnrollmentComponent {
       requiredDocuments: [],
       hvcValidation: null,
       notarialAuthorization: null,
+      uploadError: this.facade.error(),
     };
   });
 

@@ -16,7 +16,7 @@ import type {
   ClaseCalendario,
 } from '@core/models/ui/libro-de-clases.model';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
-import { getModuleNames, calcAverage, MODULE_COUNT } from '@core/utils/professional-modules';
+import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Injectable({ providedIn: 'root' })
@@ -200,11 +200,11 @@ export class LibroDeClasesFacade {
     await this.loadAlumnos(promotionCourseId, licenseClass);
 
     // Cargar el resto en paralelo (ya tienen _alumnos disponible)
+    this.loadEvaluaciones();
+    this.loadResumenAsistencia();
     await Promise.all([
       this.loadProfesores(promotionCourseId, licenseClass),
       this.loadAsistenciaSemanal(promotionCourseId),
-      this.loadEvaluaciones(promotionCourseId, licenseClass),
-      this.loadResumenAsistencia(promotionCourseId),
       this.loadCalendario(promotionCourseId),
     ]);
   }
@@ -353,9 +353,14 @@ export class LibroDeClasesFacade {
   }
 
   // ── Asistencia semanal ──────────────────────────────────────────────────────
+  // fix-250-m: el Libro de Clases es una plantilla imprimible, no un reflejo de la
+  // asistencia ya registrada en la vista digital — la grilla de semanas/días se arma
+  // desde las sesiones (para el layout de impresión), pero las marcas de asistencia y
+  // la firma semanal NO se precargan desde professional_theory_attendance /
+  // professional_weekly_signatures (quedan vacías para llenarse a mano tras imprimir).
 
   private async loadAsistenciaSemanal(promotionCourseId: number): Promise<void> {
-    // 1. Sesiones teóricas del curso (todas)
+    // Sesiones teóricas del curso (todas) — solo definen la grilla de columnas/semanas.
     const { data: sesiones, error: sesError } = await this.supabase.client
       .from('professional_theory_sessions')
       .select('id, date')
@@ -367,33 +372,7 @@ export class LibroDeClasesFacade {
       return;
     }
 
-    const sessionIds = sesiones.map((s) => s.id);
-
-    // 2. Asistencia + firmas en paralelo
-    const [attRes, firmasRes] = await Promise.all([
-      this.supabase.client
-        .from('professional_theory_attendance')
-        .select('theory_session_prof_id, enrollment_id, status')
-        .in('theory_session_prof_id', sessionIds),
-      this.supabase.client
-        .from('professional_weekly_signatures')
-        .select('enrollment_id, week_start_date, signed_at')
-        .eq('promotion_course_id', promotionCourseId),
-    ]);
-
-    // Build attendance map: sessionId → enrollmentId → status
-    const attMap = new Map<string, AsistenciaStatus>();
-    for (const row of (attRes.data ?? []) as any[]) {
-      attMap.set(`${row.theory_session_prof_id}-${row.enrollment_id}`, row.status);
-    }
-
-    // Build signatures set: "enrollmentId-weekStartDate"
-    const sigSet = new Set<string>();
-    for (const row of (firmasRes.data ?? []) as any[]) {
-      if (row.signed_at) sigSet.add(`${row.enrollment_id}-${row.week_start_date}`);
-    }
-
-    // 3. Agrupar sesiones por semana (lunes a sábado)
+    // Agrupar sesiones por semana (lunes a sábado)
     const alumnos = this._alumnos();
     const weekMap = new Map<string, { sessions: typeof sesiones; monday: string }>();
 
@@ -409,7 +388,7 @@ export class LibroDeClasesFacade {
     const semanas: SemanaAsistencia[] = [];
     let weekNum = 0;
 
-    for (const [monday, { sessions }] of weekMap) {
+    for (const [monday] of weekMap) {
       weekNum++;
 
       // Generate 6 days (Mon-Sat)
@@ -423,18 +402,15 @@ export class LibroDeClasesFacade {
         });
       }
 
+      // Cada día de la semana queda vacío (null = a llenar a mano tras imprimir).
       const alumnosAsistencia: AlumnoAsistenciaSemanal[] = alumnos.map((a) => {
-        const asistenciaDias: (AsistenciaStatus | null)[] = dias.map((dia) => {
-          const session = sessions.find((s) => s.date === dia.date);
-          if (!session) return null;
-          return attMap.get(`${session.id}-${a.enrollmentId}`) ?? null;
-        });
+        const asistenciaDias: (AsistenciaStatus | null)[] = dias.map(() => null);
 
         return {
           enrollmentId: a.enrollmentId,
           nombre: a.nombre,
           asistenciaDias,
-          firmaSemanal: sigSet.has(`${a.enrollmentId}-${monday}`),
+          firmaSemanal: false,
         };
       });
 
@@ -453,108 +429,33 @@ export class LibroDeClasesFacade {
 
   // ── Evaluaciones ────────────────────────────────────────────────────────────
 
-  private async loadEvaluaciones(promotionCourseId: number, licenseClass: string): Promise<void> {
+  // fix-250-m: no se precargan notas desde professional_module_grades — el Libro de
+  // Clases solo trae los nombres de alumnos, notas vacías para llenarse a mano.
+  private loadEvaluaciones(): void {
     const alumnos = this._alumnos();
-    const enrollmentIds = alumnos.map((a) => a.enrollmentId);
-    if (enrollmentIds.length === 0) {
-      this._evaluaciones.set([]);
-      return;
-    }
+    const notasVacias: (number | null)[] = Array.from({ length: MODULE_COUNT }, () => null);
 
-    const { data, error } = await this.supabase.client
-      .from('professional_module_grades')
-      .select('enrollment_id, module_number, grade, passed, status')
-      .in('enrollment_id', enrollmentIds);
-
-    if (error) {
-      this._evaluaciones.set([]);
-      return;
-    }
-
-    // Agrupar notas por enrollment
-    const gradesMap = new Map<number, Map<number, number | null>>();
-    for (const row of (data ?? []) as any[]) {
-      if (!gradesMap.has(row.enrollment_id)) {
-        gradesMap.set(row.enrollment_id, new Map());
-      }
-      gradesMap.get(row.enrollment_id)!.set(row.module_number, row.grade);
-    }
-
-    const filas: FilaEvaluacionLibro[] = alumnos.map((a) => {
-      const grades = gradesMap.get(a.enrollmentId);
-      const notas: (number | null)[] = Array.from(
-        { length: MODULE_COUNT },
-        (_, i) => grades?.get(i + 1) ?? null,
-      );
-      const notaFinal = calcAverage(notas);
-
-      return {
-        nombre: a.nombre,
-        rut: a.rut,
-        notas,
-        notaFinal,
-        aprobado: notaFinal !== null && notaFinal >= 75,
-      };
-    });
+    const filas: FilaEvaluacionLibro[] = alumnos.map((a) => ({
+      nombre: a.nombre,
+      rut: a.rut,
+      notas: [...notasVacias],
+      notaFinal: null,
+      aprobado: false,
+    }));
 
     this._evaluaciones.set(filas);
   }
 
   // ── Resumen de asistencia ───────────────────────────────────────────────────
 
-  private async loadResumenAsistencia(promotionCourseId: number): Promise<void> {
-    const alumnos = this._alumnos();
-    if (alumnos.length === 0) {
-      this._resumenAsistencia.set([]);
-      return;
-    }
-
-    // Sesiones completadas del curso
-    const [theoryRes, practiceRes] = await Promise.all([
-      this.supabase.client
-        .from('professional_theory_sessions')
-        .select('id')
-        .eq('promotion_course_id', promotionCourseId)
-        .eq('status', 'completed'),
-      this.supabase.client
-        .from('professional_practice_sessions')
-        .select('id')
-        .eq('promotion_course_id', promotionCourseId)
-        .eq('status', 'completed'),
-    ]);
-
-    const theoryIds = (theoryRes.data ?? []).map((s: any) => s.id);
-    const practiceIds = (practiceRes.data ?? []).map((s: any) => s.id);
-
-    // Registros de asistencia
-    const [theoryAttRes, practiceAttRes] = await Promise.all([
-      theoryIds.length > 0
-        ? this.supabase.client
-            .from('professional_theory_attendance')
-            .select('enrollment_id, status')
-            .in('theory_session_prof_id', theoryIds)
-        : Promise.resolve({ data: [] as any[], error: null }),
-      practiceIds.length > 0
-        ? this.supabase.client
-            .from('professional_practice_attendance')
-            .select('enrollment_id, status')
-            .in('session_id', practiceIds)
-        : Promise.resolve({ data: [] as any[], error: null }),
-    ]);
-
-    const countPresent = (rows: any[], enrollmentId: number): number =>
-      (rows ?? []).filter((r) => r.enrollment_id === enrollmentId && r.status === 'present').length;
-
-    const resumen: ResumenAsistenciaLibro[] = alumnos.map((a) => {
-      const teoriaAsistida = countPresent(theoryAttRes.data as any[], a.enrollmentId);
-      const practicaAsistida = countPresent(practiceAttRes.data as any[], a.enrollmentId);
-      const pctTeoria =
-        theoryIds.length > 0 ? Math.round((teoriaAsistida / theoryIds.length) * 100) : 0;
-      const pctPractica =
-        practiceIds.length > 0 ? Math.round((practicaAsistida / practiceIds.length) * 100) : 0;
-
-      return { nombre: a.nombre, pctPractica, pctTeorica: pctTeoria };
-    });
+  // fix-250-m: no se precargan porcentajes desde professional_theory_attendance /
+  // professional_practice_attendance — solo los nombres, listos para completarse a mano.
+  private loadResumenAsistencia(): void {
+    const resumen: ResumenAsistenciaLibro[] = this._alumnos().map((a) => ({
+      nombre: a.nombre,
+      pctPractica: null,
+      pctTeorica: null,
+    }));
 
     this._resumenAsistencia.set(resumen);
   }

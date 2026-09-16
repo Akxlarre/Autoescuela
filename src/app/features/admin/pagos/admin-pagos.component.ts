@@ -26,13 +26,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { PagosRecientesDrawerComponent } from './pagos-recientes-drawer.component';
-import { formatCLP, toISODate } from '@core/utils/date.utils';
+import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -53,6 +54,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     DatePipe,
     DatePickerModule,
     DateInputComponent,
+    SelectModule,
     DialogModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
@@ -95,8 +97,49 @@ function toCompact(amount: number): { value: number; suffix: string } {
             </p>
           </div>
           <span class="text-xs text-text-muted">
-            {{ facade.alumnosConDeuda().length }} alumnos
+            {{ deudoresFiltrados().length }} de {{ facade.alumnosConDeuda().length }} alumnos
           </span>
+        </div>
+
+        <!-- ── Filtros (fix-248-m / ASG-m-005) — client-side sobre alumnosConDeuda() ── -->
+        <div
+          class="shrink-0 flex flex-col sm:flex-row gap-3 px-6 py-3 border-b border-border-muted"
+        >
+          <app-date-input
+            [value]="filtroFechaDesde()"
+            (valueChange)="setFiltroFechaDesde($event)"
+            placeholder="Matrícula desde"
+            [max]="filtroFechaHasta()"
+            data-llm-description="filter debtors by enrollment date, start of range"
+          />
+          <app-date-input
+            [value]="filtroFechaHasta()"
+            (valueChange)="setFiltroFechaHasta($event)"
+            placeholder="Matrícula hasta"
+            [min]="filtroFechaDesde()"
+            data-llm-description="filter debtors by enrollment date, end of range"
+          />
+          <p-select
+            [options]="cursoOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todos los cursos"
+            [ngModel]="filtroCurso()"
+            (ngModelChange)="setFiltroCurso($event)"
+            styleClass="w-full sm:w-48"
+            data-llm-description="filter debtors by course type, class B or professional"
+          />
+          @if (hayFiltrosActivos()) {
+            <button
+              type="button"
+              class="btn-ghost shrink-0"
+              (click)="limpiarFiltros()"
+              data-llm-action="clear-debtor-filters"
+            >
+              <app-icon name="x" [size]="14" />
+              Limpiar filtros
+            </button>
+          }
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto">
@@ -141,10 +184,16 @@ function toCompact(amount: number): { value: number; suffix: string } {
             </div>
           } @else {
             <div
-              class="micro-label deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
+              class="micro-label hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
+              [class.deudores-grid-cols-sede]="mostrarColumnaSede()"
+              [class.deudores-grid-cols]="!mostrarColumnaSede()"
             >
               <span>Alumno</span>
               <span class="dc-rut">RUT</span>
+              @if (mostrarColumnaSede()) {
+                <span class="dc-sede">Sede</span>
+              }
+              <span class="dc-fecha">Fecha Matrícula</span>
               <span class="text-right dc-total">Total a Pagar</span>
               <span class="text-right dc-pagado">Pagado</span>
               <span class="text-right">Saldo</span>
@@ -153,7 +202,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
             <div class="rows-divider">
               @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
                 <div
-                  class="deudores-row deudores-grid-cols p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
+                  class="deudores-row p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
+                  [class.deudores-grid-cols-sede]="mostrarColumnaSede()"
+                  [class.deudores-grid-cols]="!mostrarColumnaSede()"
                 >
                   <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
                   <div class="flex flex-col min-w-0">
@@ -163,12 +214,28 @@ function toCompact(amount: number): { value: number; suffix: string } {
                     <!-- RUT Mobile only -->
                     <span class="text-xs lg:hidden mt-0.5 text-text-secondary">
                       RUT: {{ alumno.rut }}
+                      @if (mostrarColumnaSede()) {
+                        · {{ alumno.sedeNombre }}
+                      }
+                      · {{ fechaCorta(alumno.fechaMatricula) }}
                     </span>
                   </div>
 
                   <!-- RUT Desktop only -->
                   <span class="hidden lg:block text-sm text-text-secondary dc-rut">
                     {{ alumno.rut }}
+                  </span>
+
+                  <!-- Sede Desktop only -->
+                  @if (mostrarColumnaSede()) {
+                    <span class="hidden lg:block text-sm text-text-secondary truncate dc-sede">
+                      {{ alumno.sedeNombre }}
+                    </span>
+                  }
+
+                  <!-- Fecha Matrícula Desktop only -->
+                  <span class="hidden lg:block text-sm text-text-secondary dc-fecha">
+                    {{ fechaCorta(alumno.fechaMatricula) }}
                   </span>
 
                   <!-- Finanzas -->
@@ -202,7 +269,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   </div>
 
                   <!-- Acciones -->
-                  <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
+                  <div
+                    class="deudores-acciones flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end"
+                  >
                     <button
                       class="btn-ghost text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
                       data-llm-action="view-student-payment-detail"
@@ -401,21 +470,44 @@ function toCompact(amount: number): { value: number; suffix: string } {
           background: transparent;
         }
       }
+      /* fix-249-m: anchos fijos (no "auto") para Saldo y Acciones — "auto" se mide por el
+         contenido de CADA fila (cada .deudores-row es su propio grid container), así que el
+         header (mide "Saldo"/"Acciones", texto corto) y las filas (miden nombre+monto+botones,
+         más anchas) resolvían columnas de distinto ancho en píxeles y quedaban desalineados.
+         El drawer deja ~310px de contenido: Acciones apila los 2 botones (deja de necesitar
+         ~200px lado a lado) para que 85px+110px+gaps quepan y aún sobre espacio para Alumno. */
       .deudores-compact .hidden.lg\\:grid {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) auto auto !important;
+        grid-template-columns: minmax(0, 1fr) 85px 110px !important;
       }
       .deudores-compact .deudores-row {
-        grid-template-columns: minmax(0, 1fr) auto auto !important;
+        grid-template-columns: minmax(0, 1fr) 85px 110px !important;
+      }
+      .deudores-compact .deudores-acciones {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.25rem;
+        margin-top: 0 !important;
       }
       .deudores-compact .dc-rut,
+      .deudores-compact .dc-sede,
+      .deudores-compact .dc-fecha,
       .deudores-compact .dc-total,
       .deudores-compact .dc-pagado {
         display: none !important;
       }
-      /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo. */
+      /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo.
+         Incluye columna Fecha Matrícula (fix-248-m), siempre visible.
+         Acciones usa minmax(210px, auto) (fix-249-m): con 8 columnas cada "fr" vale poco en
+         píxeles, y "Ver detalle" + "Registrar pago" (flex-none, no encogen) suman ~200px —
+         con menos que eso, el flex con justify-end desborda hacia la IZQUIERDA (fuera de su
+         propia celda) y se superpone visualmente con el texto de Saldo. */
       .deudores-grid-cols {
-        grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1.2fr;
+        grid-template-columns: 1.6fr 0.8fr 0.9fr 1fr 1fr 1fr minmax(210px, auto);
+      }
+      /* Variante con columna Sede (fix-248-m): solo cuando selectedBranchId() === null. */
+      .deudores-grid-cols-sede {
+        grid-template-columns: 1.6fr 0.8fr 0.9fr 0.9fr 1fr 1fr 1fr minmax(210px, auto);
       }
     `,
   ],
@@ -460,6 +552,11 @@ export class AdminPagosComponent implements AfterViewInit {
 
   // Funciones puras expuestas al template
   protected readonly clp = formatCLP;
+
+  protected fechaCorta(fecha: string | null): string {
+    if (!fecha) return '—';
+    return formatChileanDate(fecha, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
 
   // ── Computed: display values KPI (K / M) ─────────────────────────────────────
   protected readonly ingresosHoyDisplay = computed(() => toCompact(this.facade.ingresosHoy()));
@@ -528,6 +625,71 @@ export class AdminPagosComponent implements AfterViewInit {
   }
   protected readonly today = new Date();
 
+  // ── Filtros de deudores (fix-248-m / ASG-m-005) ──────────────────────────────
+  // Client-side sobre alumnosConDeuda() — mismo patrón que
+  // PagosRecientesDrawerComponent.pagosFiltrados(). Se aplican ANTES de paginar/recortar.
+  protected readonly filtroFechaDesde = signal('');
+  protected readonly filtroFechaHasta = signal('');
+  protected readonly filtroCurso = signal<string | null>(null);
+
+  protected readonly cursoOptions = [
+    { label: 'Todos los cursos', value: null },
+    { label: 'Clase B', value: 'class_b' },
+    { label: 'Profesional', value: 'professional' },
+  ];
+
+  // Sin filtro de sede: si el admin quiere ver una sede en particular, ya tiene el
+  // selector de sede del topbar para eso. La columna sí se mantiene — cuando el
+  // topbar está en "Todas las sedes" ayuda a distinguir a qué sede pertenece cada fila.
+  protected readonly mostrarColumnaSede = computed(
+    () => this.branchFacade.selectedBranchId() === null,
+  );
+
+  protected readonly deudoresFiltrados = computed<AlumnoDeudor[]>(() => {
+    const desde = this.filtroFechaDesde();
+    const hasta = this.filtroFechaHasta();
+    const curso = this.filtroCurso();
+
+    return this.facade.alumnosConDeuda().filter((d) => {
+      const fecha = d.fechaMatricula?.slice(0, 10) ?? null;
+      const matchDesde = !desde || (fecha !== null && fecha >= desde);
+      const matchHasta = !hasta || (fecha !== null && fecha <= hasta);
+      const matchCurso = !curso || d.cursoTipo === curso;
+      return matchDesde && matchHasta && matchCurso;
+    });
+  });
+
+  // Cada setter vuelve a la página 1 — evita quedar en una página fuera de rango
+  // (vacía) si el resultado filtrado tiene menos páginas que la actual.
+  protected setFiltroFechaDesde(value: string): void {
+    this.filtroFechaDesde.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected setFiltroFechaHasta(value: string): void {
+    this.filtroFechaHasta.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected setFiltroCurso(value: string | null): void {
+    this.filtroCurso.set(value);
+    this.paginaDeudoresActual.set(1);
+  }
+
+  protected readonly hayFiltrosActivos = computed(
+    () =>
+      this.filtroFechaDesde() !== '' ||
+      this.filtroFechaHasta() !== '' ||
+      this.filtroCurso() !== null,
+  );
+
+  protected limpiarFiltros(): void {
+    this.filtroFechaDesde.set('');
+    this.filtroFechaHasta.set('');
+    this.filtroCurso.set(null);
+    this.paginaDeudoresActual.set(1);
+  }
+
   // ── Densidad adaptativa: Deudores (fix-132-m / ASG-b-076) ────────────────────
   // Desktop: paginador real (10/página, mismo patrón que alumnos-list-content).
   // Tablet/mobile: presupuesto + "Cargar más" — mismo patrón que admin-secretarias.
@@ -546,12 +708,12 @@ export class AdminPagosComponent implements AfterViewInit {
   protected readonly totalPaginasDeudores = computed(() =>
     Math.max(
       1,
-      Math.ceil(this.facade.alumnosConDeuda().length / AdminPagosComponent.DEUDORES_PAGE_SIZE),
+      Math.ceil(this.deudoresFiltrados().length / AdminPagosComponent.DEUDORES_PAGE_SIZE),
     ),
   );
 
   protected readonly rangoDeudoresMostrando = computed(() => {
-    const total = this.facade.alumnosConDeuda().length;
+    const total = this.deudoresFiltrados().length;
     if (total === 0) return '';
     const start = (this.paginaDeudoresActual() - 1) * AdminPagosComponent.DEUDORES_PAGE_SIZE + 1;
     const end = Math.min(
@@ -562,7 +724,7 @@ export class AdminPagosComponent implements AfterViewInit {
   });
 
   protected readonly deudoresVisibles = computed<AlumnoDeudor[]>(() => {
-    const todos = this.facade.alumnosConDeuda();
+    const todos = this.deudoresFiltrados();
     if (this.isDesktopTier()) {
       const start = (this.paginaDeudoresActual() - 1) * AdminPagosComponent.DEUDORES_PAGE_SIZE;
       return todos.slice(start, start + AdminPagosComponent.DEUDORES_PAGE_SIZE);
@@ -573,7 +735,7 @@ export class AdminPagosComponent implements AfterViewInit {
   protected readonly remainingDeudores = computed(() => {
     const max = this.maxVisibleDeudores();
     if (max === null) return 0;
-    return Math.max(0, this.facade.alumnosConDeuda().length - max);
+    return Math.max(0, this.deudoresFiltrados().length - max);
   });
 
   protected loadMoreDeudores(): void {

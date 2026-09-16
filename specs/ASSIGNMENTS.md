@@ -10,7 +10,7 @@
 > flujo SDD normal desde ahí.
 >
 > ⚠️ **Multi-rama**: si cada persona trabaja en su propia rama, este archivo puede
-> quedar desactualizado entre ramas. Commiteá y pusheá los cambios acá **de inmediato**
+> quedar desactualizado entre ramas. Commitea y pushea los cambios acá **de inmediato**
 > (antes de armar tu rama de feature) para que el resto del equipo vea la reclamación
 > a tiempo. Ver sección "Conflictos entre ramas" al final.
 
@@ -304,7 +304,7 @@
 - **`Tipo sugerido`:** `spec` (feature nueva) / `fix` (bug con AC afectados) / `hotfix` (fix urgente simple) — quien reclama puede cambiarlo con `--as=` si al leer el contexto no coincide.
 - **Reclamar:** solo se puede reclamar una asignación con `Asignado a: cualquiera`, o una asignada específicamente a tu propio código de autor. Una vez `Reclamada`, nadie más puede tomarla.
 - **Cerrar:** marcar como `Completada` es **manual** — se mueve la fila cuando el track resultante (spec/fix/hotfix) llega a `done`/se cierra. No se sincroniza automáticamente con `/spec-verify` ni `/fix-close`.
-- **Archivos involucrados:** cada `ASG-X-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapás con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
+- **Archivos involucrados:** cada `ASG-X-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapas con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
 
 ### Conflictos entre ramas
 

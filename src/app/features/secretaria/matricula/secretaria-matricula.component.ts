@@ -309,6 +309,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
           : [],
       hvcValidation: this.docs.hvcValidation(),
       notarialAuthorization: this.docs.documents().get('autorizacion_notarial') ?? null,
+      uploadError: this.docs.error(),
     };
   });
 
@@ -676,9 +677,15 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const { enrollmentId } = this.enrollment.draft();
     if (!enrollmentId) return;
     if (event.type === 'id_photo') {
-      const normalizedFile = await normalizePhoto(event.file);
-      const dataUrl = await this.fileToDataUrl(normalizedFile);
-      await this.docs.uploadCarnetPhoto(dataUrl, normalizedFile.name, enrollmentId);
+      try {
+        const normalizedFile = await normalizePhoto(event.file);
+        const dataUrl = await this.fileToDataUrl(normalizedFile);
+        await this.docs.uploadCarnetPhoto(dataUrl, normalizedFile.name, enrollmentId);
+      } catch {
+        const message = 'El archivo no es una imagen. Sube una foto, no un PDF u otro documento.';
+        this.docs.setUploadError(message);
+        this.toast.error('Error al subir la foto', message);
+      }
     } else {
       await this.docs.uploadDocument(event.type as DocumentType, event.file, enrollmentId);
     }
