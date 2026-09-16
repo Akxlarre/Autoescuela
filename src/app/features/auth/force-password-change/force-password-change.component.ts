@@ -69,15 +69,25 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               <label for="new-password" class="text-sm font-medium text-text-secondary">
                 Nueva Contraseña
               </label>
-              <input
-                id="new-password"
-                type="password"
-                formControlName="password"
-                class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
-                placeholder="Mínimo 8 caracteres"
-                required
-                data-llm-description="input for the new account password"
-              />
+              <div class="relative">
+                <input
+                  id="new-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) pl-(--input-padding-x) pr-10 font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  data-llm-description="input for the new account password"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-text-muted transition-(--transition-color) hover:text-text-primary"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="18" />
+                </button>
+              </div>
             </div>
 
             <button
@@ -113,6 +123,7 @@ export class ForcePasswordChangeComponent {
 
   readonly loading = signal(false);
   readonly errorMsg = signal('');
+  readonly showPassword = signal(false);
 
   readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
   readonly errorMsgRef = viewChild<ElementRef<HTMLElement>>('errorMsgRef');
@@ -139,6 +150,10 @@ export class ForcePasswordChangeComponent {
         ease: 'power2.out',
       });
     }
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword.update((val) => !val);
   }
 
   hideError() {
