@@ -24,7 +24,6 @@
 | ASG-m-001 | Validación de años de licencia previa en matrícula profesional | `i` | fix | P1 | m | A2/A4/Conv. A4 → 2 años licencia B; A5/A3/Conv. A5 → 2 años licencia A2/A4 |
 | ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | `i` | fix | P1 | m | Aplica a B y Profesional, ambas escuelas. Pago sin firma queda pendiente de aplicar, no se pierde |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
-| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | spec | P1 | m | Solo admin. Requiere vista previa. Discutir diseño técnico antes de comprometer plan |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
 
@@ -153,6 +152,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | [0016-m-editor-plantillas-documentos](specs/0016-m-editor-plantillas-documentos/spec.md) | 2026-09-16 |
 <!-- AUTO-GENERATED:END -->
 
 ---
