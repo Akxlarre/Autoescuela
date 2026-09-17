@@ -49,6 +49,29 @@ describe('earlyLicenseWarningFn()', () => {
     });
     expect(warning?.message).toContain(today);
   });
+
+  it('sin courseType, cae por defecto a "clase B" (compatibilidad previa a fix-033-i)', () => {
+    const warning = earlyLicenseWarningFn('professional', yearsAgoIso(1));
+    expect(warning?.message).toContain('licencia clase B');
+  });
+
+  it('courseType professional_a2/a4 exige "clase B" en el mensaje (fix-033-i)', () => {
+    expect(
+      earlyLicenseWarningFn('professional', yearsAgoIso(1), 'professional_a2')?.message,
+    ).toContain('licencia clase B');
+    expect(
+      earlyLicenseWarningFn('professional', yearsAgoIso(1), 'professional_a4')?.message,
+    ).toContain('licencia clase B');
+  });
+
+  it('courseType professional_a5/a3 exige "A2 o A4" en el mensaje, no "clase B" (fix-033-i)', () => {
+    const a5 = earlyLicenseWarningFn('professional', yearsAgoIso(1), 'professional_a5');
+    expect(a5?.message).toContain('licencia A2 o A4');
+    expect(a5?.message).not.toContain('clase B');
+
+    const a3 = earlyLicenseWarningFn('professional', yearsAgoIso(1), 'professional_a3');
+    expect(a3?.message).toContain('licencia A2 o A4');
+  });
 });
 
 describe('hasRequiredProfessionalLicenseFn()', () => {

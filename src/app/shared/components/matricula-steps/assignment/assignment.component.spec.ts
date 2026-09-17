@@ -5,7 +5,11 @@ import type {
   PromotionGroup,
 } from '@core/models/ui/enrollment-assignment.model';
 
-function buildPromotionGroups(startDate: string | null, promotionId = 1): PromotionGroup[] {
+function buildPromotionGroups(
+  startDate: string | null,
+  promotionId = 1,
+  licenseClass: string | null = 'A2',
+): PromotionGroup[] {
   return [
     {
       label: 'Promoción A2 – P-01',
@@ -19,6 +23,7 @@ function buildPromotionGroups(startDate: string | null, promotionId = 1): Promot
           maxCapacity: 20,
           status: 'open',
           startDate,
+          licenseClass,
         },
       ],
     },
@@ -106,5 +111,63 @@ describe('licenseWarningFn()', () => {
       }),
     );
     expect(warning?.valid).toBe(true);
+  });
+});
+
+describe('licenseWarningFn() — licencia previa según clase objetivo (fix-033-i, ASG-m-001)', () => {
+  it('A2 exige licencia clase B en el mensaje', () => {
+    const warning = licenseWarningFn(
+      buildData({
+        promotionGroups: buildPromotionGroups('2026-08-10', 1, 'A2'),
+        promotionId: 1,
+        licenseObtainedDate: '2025-06-10',
+      }),
+    );
+    expect(warning?.message).toContain('licencia clase B');
+  });
+
+  it('A4 exige licencia clase B en el mensaje', () => {
+    const warning = licenseWarningFn(
+      buildData({
+        promotionGroups: buildPromotionGroups('2026-08-10', 1, 'A4'),
+        promotionId: 1,
+        licenseObtainedDate: '2025-06-10',
+      }),
+    );
+    expect(warning?.message).toContain('licencia clase B');
+  });
+
+  it('A5 exige licencia A2 o A4 en el mensaje (no "clase B")', () => {
+    const warning = licenseWarningFn(
+      buildData({
+        promotionGroups: buildPromotionGroups('2026-08-10', 1, 'A5'),
+        promotionId: 1,
+        licenseObtainedDate: '2025-06-10',
+      }),
+    );
+    expect(warning?.message).toContain('licencia A2 o A4');
+    expect(warning?.message).not.toContain('clase B');
+  });
+
+  it('A3 exige licencia A2 o A4 en el mensaje', () => {
+    const warning = licenseWarningFn(
+      buildData({
+        promotionGroups: buildPromotionGroups('2026-08-10', 1, 'A3'),
+        promotionId: 1,
+        licenseObtainedDate: '2025-06-10',
+      }),
+    );
+    expect(warning?.message).toContain('licencia A2 o A4');
+  });
+
+  it('licenseClass desconocida cae por defecto a "clase B" (compatibilidad con fix-089-m)', () => {
+    const warning = licenseWarningFn(
+      buildData({
+        promotionGroups: buildPromotionGroups('2026-08-10', 1, null),
+        promotionId: 1,
+        licenseObtainedDate: '2025-06-10',
+      }),
+    );
+    expect(warning?.message).toContain('licencia clase B');
   });
 });

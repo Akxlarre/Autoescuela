@@ -12,7 +12,10 @@ import {
   PromotionOption,
 } from '@core/models/ui/enrollment-assignment.model';
 import type { LicenseValidation } from '@core/models/ui/enrollment-personal-data.model';
-import { calcLicenseSeniority } from '@core/utils/license-seniority.utils';
+import {
+  calcLicenseSeniority,
+  requiredPriorLicenseLabel,
+} from '@core/utils/license-seniority.utils';
 
 /** Busca la promoción seleccionada (por id) dentro de los grupos agrupados por promoción. */
 export function findSelectedPromotion(
@@ -28,14 +31,20 @@ export function findSelectedPromotion(
 }
 
 /**
- * Advertencia de antigüedad de licencia clase B contra la fecha de inicio de la
- * promoción elegida (no bloqueante — fix-089). Solo aplica en la vista profesional.
+ * Advertencia de antigüedad de licencia previa contra la fecha de inicio de la promoción
+ * elegida (no bloqueante — fix-089). La licencia exigida depende de la `licenseClass` del
+ * curso objetivo — "clase B" para A2/A4, "A2 o A4" para A5/A3 (fix-033-i, ASG-m-001; ver
+ * `requiredPriorLicenseLabel`). Solo aplica en la vista profesional.
  */
 export function licenseWarningFn(data: EnrollmentAssignmentData): LicenseValidation | null {
   if (data.view !== 'professional') return null;
   const promotion = findSelectedPromotion(data.promotionGroups, data.promotionId);
   if (!promotion) return null;
-  return calcLicenseSeniority(data.licenseObtainedDate, promotion.startDate);
+  return calcLicenseSeniority(
+    data.licenseObtainedDate,
+    promotion.startDate,
+    requiredPriorLicenseLabel(promotion.licenseClass),
+  );
 }
 
 @Component({

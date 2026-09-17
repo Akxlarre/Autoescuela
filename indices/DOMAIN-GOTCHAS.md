@@ -1442,6 +1442,47 @@
   `specs/fixes/fix-253-m-reenviar-invitacion-alumno-sin-firstlogin`.
 
 
+### DG-093 — `MATERIALIZED` en un CTE con subqueries correlacionadas es un arma de doble filo: soluciona la duplicación WHERE/SELECT pero bloquea el pushdown de OTROS filtros del cliente
+- **Trampa (parte 1, fix-032-i):** `v_class_b_schedule_availability` exponía `slot_status`
+  como una columna `CASE` con 2 `NOT EXISTS` correlacionados (conflicto de instructor /
+  conflicto de vehículo). Al no ser una columna real, Postgres no cachea su resultado —
+  cuando PostgREST arma `?slot_status=eq.available`, el filtro y la columna de salida son
+  **dos referencias independientes** a la misma expresión, evaluadas por separado: el
+  `EXPLAIN ANALYZE` mostró **4 SubPlans casi idénticos** (2 NOT EXISTS × 2 referencias) y
+  1.033.204 buffer hits para devolver 3.348 filas — 1 a 4.5s reales por carga en
+  `/app/**/agenda`. Fusionar los 2 `NOT EXISTS` en 1 con `OR` y envolver el cálculo en un CTE
+  `AS MATERIALIZED` (forzando una sola evaluación) bajó esto a 114.990 buffer hits, verificado
+  sin cambios en qué slots se marcan `available`/`occupied`.
+- **Trampa (parte 2, hotfix-003-i, el mismo día):** ese `MATERIALIZED` rompió producción
+  (`57014 canceling statement due to statement timeout`) apenas se probó con el filtro real
+  que aplica el cliente además de `slot_status` — `agenda.facade.ts` también filtra por rango
+  de fecha (`.gte('slot_start', ...).lt('slot_start', ...)`). `MATERIALIZED` es una barrera de
+  optimización: fuerza a Postgres a resolver **todo** el CTE (4.368 filas, 28 días × todos los
+  instructores/vehículos) antes de aplicar CUALQUIER filtro externo, incluido ese rango de
+  fecha — el `EXPLAIN` mostró `Rows Removed by Filter: 3373` de 4368, es decir, se calculó el
+  conflicto para el 77% de filas que después se descartaron igual. Una prueba aislada con ese
+  filtro corrió en 563ms (no lo suficientemente lento para notarlo en el SQL Editor), pero
+  bajo carga real (Agenda dispara ~10 peticiones concurrentes al cargar la página) ese exceso
+  de trabajo por conexión superó el `statement_timeout` de la API.
+- **Realidad:** la corrección fue sacar `MATERIALIZED` (el CTE se referencia una sola vez, así
+  que Postgres 12+ lo inlinea por defecto sin el hint, recuperando la libertad de aplicar
+  cualquier filtro externo — incluido el de fecha — antes de evaluar el `NOT EXISTS`),
+  **manteniendo** la fusión de los 2 `NOT EXISTS` en 1 con `OR` (esa parte nunca fue el
+  problema). Verificado en producción con carga real: sin error, mismo resultado de negocio.
+- **Regla de aplicabilidad:** `MATERIALIZED` en un CTE con subqueries correlacionadas **solo**
+  es seguro si la única forma en que el cliente va a consultar esa columna es el filtro que ya
+  contemplaste al medir. Si existe (o puede existir) **cualquier otro filtro externo** sobre
+  columnas del mismo CTE (rango de fecha, otro campo, paginación), `MATERIALIZED` le impide a
+  Postgres aplicarlo antes de calcular — probá siempre con la query **completa** que arma el
+  consumidor real (todos sus `.eq()`/`.gte()`/`.lt()`/`.order()`), nunca solo con el filtro que
+  motivó la optimización. Si hay más de un filtro posible, preferí fusionar subqueries
+  redundantes (la parte 1, sin costo) pero dejar el CTE **sin** `MATERIALIZED` — el filtro
+  duplicado (WHERE + SELECT) es un costo menor y predecible; un `MATERIALIZED` que bloquea
+  pushdown de un filtro real es un riesgo de timeout en producción bajo carga.
+- **Fuente:** `specs/fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta`,
+  `specs/hotfixes/hotfix-003-i-agenda-materialized-cte-bloquea-filtro-fecha`,
+  `supabase/migrations/20260917110000_hotfix003_remove_materialized_class_b_schedule_availability.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

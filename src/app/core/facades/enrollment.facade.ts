@@ -970,6 +970,7 @@ export class EnrollmentFacade {
         maxCapacity: row.max_students,
         status: row.status === 'planned' || row.status === 'in_progress' ? 'open' : 'finished',
         startDate: promo.start_date ?? null,
+        licenseClass: course.license_class ?? null,
       };
 
       const existing = groupMap.get(groupKey) ?? [];

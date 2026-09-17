@@ -251,11 +251,11 @@
             </div>
             <div class="flex flex-col gap-1.5">
               <app-date-input
-                label="Fecha de obtención licencia B"
+                label="Fecha de obtención de la licencia previa"
                 [required]="true"
                 [value]="data().licenseDate ?? ''"
                 (valueChange)="emitField('licenseDate', $event)"
-                data-llm-description="Date the student obtained their class B driver's license, used to warn if under 2 years before the professional course starts"
+                data-llm-description="Date the student obtained the previous driver's license selected above, used to warn if it doesn't meet the seniority required before the professional course starts"
               />
             </div>
           </div>
@@ -276,7 +276,7 @@
                 />
                 <div>
                   <p class="text-sm font-bold text-warning">
-                    Licencia clase B con menos de 2 años de antigüedad (estimado a hoy)
+                    Licencia previa con menos de 2 años de antigüedad (estimado a hoy)
                   </p>
                   <p class="text-xs text-text-secondary mt-1">
                     {{ earlyWarning.message }} Este cálculo es referencial — se recalculará contra

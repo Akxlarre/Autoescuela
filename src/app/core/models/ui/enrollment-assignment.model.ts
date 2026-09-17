@@ -89,8 +89,11 @@ export interface PromotionOption {
   maxCapacity: number;
   status: PromotionStatus;
   /** Fecha de inicio de la promoción (professional_promotions.start_date), para validar
-   *  antigüedad de licencia clase B (fix-089). */
+   *  antigüedad de licencia previa (fix-089). */
   startDate: string | null;
+  /** `courses.license_class` del curso objetivo (A2/A3/A4/A5) — determina qué licencia
+   *  previa exige la advertencia de antigüedad (fix-033-i, ASG-m-001). */
+  licenseClass: string | null;
 }
 
 export interface PromotionGroup {
