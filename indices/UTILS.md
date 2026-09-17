@@ -38,6 +38,8 @@
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
+| `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
+| `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` — mapa de descripciones en español simple para los tokens `{{token}}` del editor de plantillas (fallback al token crudo si no está mapeado) |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |

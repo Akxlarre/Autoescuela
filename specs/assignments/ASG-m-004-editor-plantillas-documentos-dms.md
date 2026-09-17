@@ -1,6 +1,6 @@
 # Asignación ASG-m-004 — Editor de plantillas para contratos y certificados generados por Edge Function
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1

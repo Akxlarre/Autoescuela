@@ -152,7 +152,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
-| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | [0016-m-editor-plantillas-documentos](specs/0016-m-editor-plantillas-documentos/spec.md) | 2026-09-16 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -270,6 +269,7 @@
 | ASG-m-005 | Filtros en la tabla principal de la vista Pagos | [fix-248-m-filtros-tabla-pagos](fixes/fix-248-m-filtros-tabla-pagos/fix.md) | 2026-09-15 |
 | ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | [fix-247-m-secretarias-layout-espacio-vacio](fixes/fix-247-m-secretarias-layout-espacio-vacio/fix.md) | 2026-09-15 |
 | ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | [fix-250-m-libro-clases-plantilla-imprimible](fixes/fix-250-m-libro-clases-plantilla-imprimible/fix.md) | 2026-09-15 |
+| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | [0016-m-editor-plantillas-documentos](specs/0016-m-editor-plantillas-documentos/spec.md) | 2026-09-16 |
 <!-- AUTO-GENERATED:END -->
 
 ---

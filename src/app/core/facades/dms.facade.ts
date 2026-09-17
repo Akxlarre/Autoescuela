@@ -13,13 +13,10 @@ import type {
   InstructorWithDocsRow,
   DmsInstructorDocRow,
   SchoolDocRow,
-  TemplateCard,
   DmsKpis,
-  TemplateCategory,
   UploadStudentDocPayload,
   UploadInstructorDocPayload,
   UploadSchoolDocPayload,
-  UploadTemplatePayload,
 } from '@core/models/ui/dms.model';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -60,13 +57,6 @@ const LABELS_TIPO_ESCUELA: Record<string, string> = {
   resolucion_mtt: 'Resolución MTT',
   decreto: 'Decreto',
   otro: 'Otro',
-};
-
-const LABELS_CATEGORIA_PLANTILLA: Record<string, string> = {
-  clase_b: 'Clase B',
-  clase_profesional: 'Clase Profesional',
-  administrativo: 'Administrativo',
-  general: 'General',
 };
 
 // ─── Raw Supabase types ───────────────────────────────────────────────────────
@@ -159,18 +149,6 @@ interface RawSchoolDoc {
     | null;
 }
 
-interface RawTemplate {
-  id: number;
-  name: string;
-  description: string | null;
-  category: string;
-  format: string;
-  version: string | null;
-  file_url: string;
-  download_count: number;
-  active: boolean;
-}
-
 // ─── Facade ───────────────────────────────────────────────────────────────────
 
 /**
@@ -260,7 +238,6 @@ export class DmsFacade {
   private readonly _studentsWithDocs = signal<StudentWithDocsRow[]>([]);
   private readonly _recentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _schoolDocs = signal<SchoolDocRow[]>([]);
-  private readonly _templates = signal<TemplateCard[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
@@ -312,7 +289,6 @@ export class DmsFacade {
   readonly studentsWithDocs = this._studentsWithDocs.asReadonly();
   readonly recentDocs = this._recentDocs.asReadonly();
   readonly schoolDocs = this._schoolDocs.asReadonly();
-  readonly templates = this._templates.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
@@ -334,14 +310,11 @@ export class DmsFacade {
   readonly previewDoc = this._previewDoc.asReadonly();
   readonly previewDocLoading = this._previewDocLoading.asReadonly();
 
-  readonly kpis = computed(
-    (): DmsKpis => ({
-      totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
-      totalSchoolDocs: this._schoolDocs().length,
-      totalTemplates: this._templates().length,
-      recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
-    }),
-  );
+  readonly kpis = computed((): DmsKpis => ({
+    totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
+    totalSchoolDocs: this._schoolDocs().length,
+    recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
+  }));
 
   // ── Métodos de Acción ────────────────────────────────────────────────────────
 
@@ -416,18 +389,6 @@ export class DmsFacade {
   /**
    * Abre el drawer para crear una nueva plantilla.
    */
-  openTemplate(): void {
-    import('../../features/admin/documentos/dms-template-drawer/dms-template-drawer.component').then(
-      (m) => {
-        this.layoutDrawer.open(
-          m.DmsTemplateDrawerComponent,
-          'Nueva plantilla institucional',
-          'folder',
-        );
-      },
-    );
-  }
-
   /**
    * Abre el drawer con la lista de documentos de un alumno (reemplaza la antigua
    * subruta de página completa /documentos/alumnos/:id). Usa push(): si ya hay un drawer
@@ -824,51 +785,6 @@ export class DmsFacade {
     await this.refreshSilently();
   }
 
-  // ── Tab 3 — Plantillas ───────────────────────────────────────────────────────
-
-  async uploadTemplate(payload: UploadTemplatePayload): Promise<void> {
-    const ext = payload.file.name.split('.').pop()?.toLowerCase() ?? 'pdf';
-    const path = `templates/${Date.now()}_${payload.name.replace(/\s+/g, '_')}.${ext}`;
-
-    const { error: uploadError } = await this.supabase.client.storage
-      .from('documents')
-      .upload(path, payload.file, { upsert: false });
-    if (uploadError) throw uploadError;
-
-    const { error: insertError } = await this.supabase.client.from('document_templates').insert({
-      name: payload.name,
-      description: payload.description ?? null,
-      category: payload.category,
-      format: ext === 'docx' ? 'docx' : ext === 'xlsx' ? 'xlsx' : 'pdf',
-      version: 'v1.0',
-      file_url: path,
-      download_count: 0,
-      active: true,
-    });
-    if (insertError) throw insertError;
-
-    await this.refreshSilently();
-  }
-
-  async deleteTemplate(templateId: number): Promise<void> {
-    // Soft delete
-    const { error } = await this.supabase.client
-      .from('document_templates')
-      .update({ active: false })
-      .eq('id', templateId);
-    if (error) throw error;
-    await this.refreshSilently();
-  }
-
-  /** Fire-and-forget: incrementa contador de descargas */
-  incrementDownload(templateId: number): void {
-    void this.supabase.client.rpc('increment_template_download', { template_id: templateId });
-    // Actualización optimista local
-    this._templates.update((ts) =>
-      ts.map((t) => (t.id === templateId ? { ...t, downloadCount: t.downloadCount + 1 } : t)),
-    );
-  }
-
   clearError(): void {
     this._error.set(null);
   }
@@ -908,38 +824,23 @@ export class DmsFacade {
         );
       if (branchId !== null) instructorsQuery = instructorsQuery.eq('users.branch_id', branchId);
 
-      const [
-        vDocsRes,
-        schoolDocsRes,
-        templatesRes,
-        studentsRes,
-        instructorsRes,
-        instructorDocsRes,
-      ] = await Promise.all([
-        this.supabase.client
-          .from('v_dms_student_documents')
-          .select('*')
-          .order('document_at', { ascending: false }),
+      const [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes] =
+        await Promise.all([
+          this.supabase.client
+            .from('v_dms_student_documents')
+            .select('*')
+            .order('document_at', { ascending: false }),
 
-        schoolDocsQuery,
+          schoolDocsQuery,
 
-        this.supabase.client
-          .from('document_templates')
-          .select(
-            'id, name, description, category, format, version, file_url, download_count, active',
-          )
-          .eq('active', true)
-          .order('category', { ascending: true })
-          .order('name', { ascending: true }),
+          studentsQuery,
 
-        studentsQuery,
+          instructorsQuery,
 
-        instructorsQuery,
-
-        this.supabase.client
-          .from('instructor_documents')
-          .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
-      ]);
+          this.supabase.client
+            .from('instructor_documents')
+            .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
+        ]);
 
       // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
       // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
@@ -1085,21 +986,6 @@ export class DmsFacade {
         };
       });
 
-      // Procesar plantillas
-      const rawTemplates = (templatesRes.data ?? []) as unknown as RawTemplate[];
-      const templates: TemplateCard[] = rawTemplates.map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        category: (t.category as TemplateCategory) ?? 'general',
-        format: this.resolveFormat(t.format),
-        version: t.version ?? 'v1.0',
-        fileUrl: t.file_url,
-        downloadCount: t.download_count,
-        categoryLabel: LABELS_CATEGORIA_PLANTILLA[t.category] ?? t.category,
-        formatColor: this.resolveFormatColor(t.format),
-      }));
-
       // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
       if (!this.dmsGuard.isCurrent(requestToken)) return;
 
@@ -1107,7 +993,6 @@ export class DmsFacade {
       this._studentsWithDocs.set(studentsWithDocs);
       this._instructorsWithDocs.set(instructorsWithDocs);
       this._schoolDocs.set(schoolDocs);
-      this._templates.set(templates);
     } catch (err) {
       this._error.set(
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos',
@@ -1160,19 +1045,5 @@ export class DmsFacade {
       instructorName,
       typeLabel: LABELS_TIPO_INSTRUCTOR[d.type] ?? d.type,
     };
-  }
-
-  private resolveFormat(raw: string): 'pdf' | 'docx' | 'xlsx' {
-    const lower = raw?.toLowerCase() ?? 'pdf';
-    if (lower === 'docx') return 'docx';
-    if (lower === 'xlsx') return 'xlsx';
-    return 'pdf';
-  }
-
-  private resolveFormatColor(raw: string): string {
-    const lower = raw?.toLowerCase() ?? 'pdf';
-    if (lower === 'docx') return 'background: var(--state-info-bg, #EFF6FF); color: #2563EB;';
-    if (lower === 'xlsx') return 'background: var(--state-success-bg, #F0FDF4); color: #16A34A;';
-    return 'background: var(--state-error-bg, #FEF2F2); color: #DC2626;';
   }
 }

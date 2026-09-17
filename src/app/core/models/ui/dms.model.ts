@@ -4,8 +4,6 @@
  */
 
 export type DmsTab = 'students' | 'school' | 'templates' | 'instructors';
-export type TemplateCategory = 'clase_b' | 'clase_profesional' | 'administrativo' | 'general';
-export type TemplateCategoryFilter = 'all' | TemplateCategory;
 
 export interface StudentWithDocsRow {
   studentId: number;
@@ -81,23 +79,9 @@ export interface SchoolDocRow {
   typeLabel: string; // derivado del type
 }
 
-export interface TemplateCard {
-  id: number;
-  name: string;
-  description: string | null;
-  category: TemplateCategory;
-  format: 'pdf' | 'docx' | 'xlsx';
-  version: string;
-  fileUrl: string;
-  downloadCount: number;
-  categoryLabel: string; // derivado
-  formatColor: string; // derivado del format
-}
-
 export interface DmsKpis {
   totalStudentDocs: number;
   totalSchoolDocs: number;
-  totalTemplates: number;
   recentUploads: number;
 }
 
@@ -120,12 +104,6 @@ export interface UploadInstructorDocPayload {
   instructorId: number;
 }
 
-export interface UploadTemplatePayload {
-  file: File;
-  name: string;
-  description?: string;
-  category: TemplateCategory;
-}
 export interface DmsViewerDocument {
   url: string;
   name: string;

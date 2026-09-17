@@ -1750,7 +1750,6 @@ async function generateAndSaveFinalContract(
         email: branch.email ?? null,
         phone: branch.phone ?? null,
       },
-      convalidation: null,
     };
 
     // Parse base64 signature
@@ -2332,7 +2331,6 @@ async function handleGenerateContractPreview(supabase: any, body: any) {
       email: branch.email ?? null,
       phone: branch.phone ?? null,
     },
-    convalidation: null,
   };
 
   const logo = await loadPngForPdf(LOGO_URL);

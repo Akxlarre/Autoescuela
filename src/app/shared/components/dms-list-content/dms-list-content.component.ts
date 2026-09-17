@@ -14,6 +14,7 @@ import {
 import { SlicePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -25,20 +26,40 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
+import { DocumentClauseFieldComponent } from '@shared/components/document-clause-field/document-clause-field.component';
 import type {
   DmsTab,
   StudentWithDocsRow,
   DmsStudentDocRow,
   InstructorWithDocsRow,
   SchoolDocRow,
-  TemplateCard,
-  TemplateCategoryFilter,
 } from '@core/models/ui/dms.model';
+import {
+  DOCUMENT_TYPE_LABELS,
+  type DocumentTemplateForm,
+  type DocumentType,
+} from '@core/models/ui/document-content-template.model';
+import type { BranchOption } from '@core/models/ui/branch.model';
+
+interface DocumentTypeOption {
+  label: string;
+  value: DocumentType;
+}
+
+const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
+  { label: DOCUMENT_TYPE_LABELS.contract_b, value: 'contract_b' },
+  { label: DOCUMENT_TYPE_LABELS.certificate_b, value: 'certificate_b' },
+  { label: DOCUMENT_TYPE_LABELS.contract_professional, value: 'contract_professional' },
+  { label: DOCUMENT_TYPE_LABELS.certificate_professional, value: 'certificate_professional' },
+];
 
 /**
- * DmsListContentComponent — Organismo Dumb para el Repositorio de Documentos.
+ * DmsListContentComponent — Dumb para el Repositorio de Documentos.
  * Reutilizable entre Portal Admin y Portal Secretaria.
- * isAdmin controla visibilidad de botones eliminar y "Nueva plantilla".
+ * isAdmin controla visibilidad de botones eliminar y del editor de plantillas (spec 0016-m).
+ * El editor de plantillas (tab "templates") no inyecta ningún Facade acá — recibe su estado
+ * (`templateForm`, etc.) por input() y emite eventos que el Smart Component resuelve contra
+ * `DocumentContentTemplatesFacade`, igual que el resto de las tabs resuelven contra `DmsFacade`.
  */
 @Component({
   selector: 'app-dms-list-content',
@@ -50,6 +71,7 @@ import type {
     SlicePipe,
     TableModule,
     TagModule,
+    SelectModule,
     FormsModule,
     SectionHeroComponent,
     EmptyStateComponent,
@@ -59,6 +81,7 @@ import type {
     CardHoverDirective,
     BentoGridLayoutDirective,
     TabsComponent,
+    DocumentClauseFieldComponent,
   ],
   template: `
     <div
@@ -81,7 +104,7 @@ import type {
       <!-- ── TABS (siempre presentes, config estática, no depende de isLoading) ── -->
       <app-tabs
         class="bento-banner"
-        [tabs]="tabs"
+        [tabs]="tabs()"
         [activeId]="activeTab()"
         variant="segmented"
         [wrap]="true"
@@ -522,135 +545,135 @@ import type {
                 </div>
               }
 
-              <!-- ══ TAB: PLANTILLAS ══════════════════════════════════════════ -->
+              <!-- ══ TAB: PLANTILLAS (editor de contenido, spec 0016-m) ══════════ -->
               @case ('templates') {
                 <div
                   class="bento-card p-0 overflow-hidden flex flex-col h-full min-h-0"
                   appCardHover
                 >
                   <div
-                    class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
+                    class="px-5 py-4 border-b border-border-subtle flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-surface"
                   >
                     <div>
                       <h2 class="text-text-primary font-semibold m-0 flex items-center gap-1.5">
                         Plantillas
                         <app-help-hint
-                          text="Descarga el documento, complétalo con los datos del alumno e imprímelo. Una vez firmado, súbelo al expediente del alumno desde la pestaña <strong>Documentos del Alumno</strong>."
+                          text="Edita el texto de los contratos y certificados que se generan automáticamente. Los cambios se publican de inmediato."
                         />
                       </h2>
                       <p class="text-xs text-text-secondary m-0 mt-1">
-                        Formularios y contratos estándar listos para descargar y completar
+                        Editor de contenido de contratos y certificados por sede
                       </p>
                     </div>
-                    @if (isAdmin()) {
-                      <button
-                        type="button"
-                        class="btn-primary py-2 px-3 text-xs"
-                        data-llm-action="upload-template"
-                        (click)="uploadTemplate.emit()"
-                      >
-                        <app-icon name="upload" [size]="14" />
-                        Nueva plantilla
-                      </button>
-                    }
+
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p-select
+                        [options]="templateBranches()"
+                        [ngModel]="selectedTemplateBranchId()"
+                        (ngModelChange)="onTemplateBranchChange($event)"
+                        optionLabel="name"
+                        optionValue="id"
+                        placeholder="Sede"
+                        appendTo="body"
+                        [style]="{ 'min-width': '180px', height: '36px' }"
+                        data-llm-action="select-document-template-branch"
+                      />
+                      <p-select
+                        [options]="templateDocumentTypeOptions()"
+                        [ngModel]="selectedTemplateDocumentType()"
+                        (ngModelChange)="onTemplateDocumentTypeChange($event)"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Tipo de documento"
+                        appendTo="body"
+                        [style]="{ 'min-width': '200px', height: '36px' }"
+                        data-llm-action="select-document-template-type"
+                      />
+                    </div>
                   </div>
 
-                  <!-- Filtro de categorías -->
+                  <!-- Acciones -->
                   <div
-                    class="px-5 py-3 border-b border-border-subtle bg-surface shrink-0 flex flex-wrap gap-2"
+                    class="px-5 py-3 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface shrink-0"
                   >
-                    @for (cat of categoryFilters; track cat.id) {
-                      <button
-                        type="button"
-                        class="px-4 py-1.5 text-sm font-semibold rounded-full transition-all duration-150 cursor-pointer border-0"
-                        [class.bg-text-primary]="categoryFilter() === cat.id"
-                        [class.text-surface]="categoryFilter() === cat.id"
-                        [class.bg-subtle]="categoryFilter() !== cat.id"
-                        [class.text-text-secondary]="categoryFilter() !== cat.id"
-                        [class.hover:bg-border-subtle]="categoryFilter() !== cat.id"
-                        data-llm-action="filter-templates-by-category"
-                        (click)="setCategoryFilter(cat.id)"
-                      >
-                        {{ cat.label }}
-                      </button>
-                    }
+                    <button
+                      type="button"
+                      class="btn-secondary btn-sm"
+                      data-llm-action="view-published-document-template"
+                      [disabled]="
+                        templateIsGeneratingPreview() || selectedTemplateBranchId() === null
+                      "
+                      (click)="onTemplateViewPublished()"
+                    >
+                      <app-icon
+                        [name]="isTemplateActionPending('view') ? 'loader-circle' : 'eye'"
+                        [size]="14"
+                        [class.animate-spin]="isTemplateActionPending('view')"
+                      />
+                      Ver documento actual
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-secondary btn-sm"
+                      data-llm-action="preview-document-template"
+                      [disabled]="templateIsGeneratingPreview() || !templateForm()"
+                      (click)="onTemplatePreview()"
+                    >
+                      <app-icon
+                        [name]="
+                          isTemplateActionPending('preview') ? 'loader-circle' : 'file-search'
+                        "
+                        [size]="14"
+                        [class.animate-spin]="isTemplateActionPending('preview')"
+                      />
+                      Vista previa
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-primary btn-sm"
+                      data-llm-action="publish-document-template"
+                      [disabled]="templateIsPublishing() || !templateForm()"
+                      (click)="templatePublishRequested.emit()"
+                    >
+                      <app-icon
+                        [name]="templateIsPublishing() ? 'loader-circle' : 'upload'"
+                        [size]="14"
+                        [class.animate-spin]="templateIsPublishing()"
+                      />
+                      Publicar
+                    </button>
                   </div>
 
-                  <!-- Grid de cards + nota (scroll interno) -->
-                  <div class="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-6">
-                    @if (filteredTemplates().length === 0) {
-                      <div class="flex-1 flex items-center justify-center">
-                        <app-empty-state
-                          message="Sin plantillas"
-                          subtitle="No hay plantillas en esta categoría."
-                          icon="folder"
-                        />
+                  <!-- Secciones editables (scroll interno) -->
+                  <div class="flex-1 min-h-0 overflow-y-auto p-5">
+                    @if (templateIsLoading()) {
+                      <div class="flex flex-col gap-3">
+                        <app-skeleton-block variant="rect" width="100%" height="90px" />
+                        <app-skeleton-block variant="rect" width="100%" height="90px" />
+                        <app-skeleton-block variant="rect" width="100%" height="90px" />
+                      </div>
+                    } @else if (templateForm(); as form) {
+                      <div class="flex flex-col gap-4">
+                        @for (section of form.sections; track section.id) {
+                          <app-document-clause-field
+                            [sectionId]="section.id"
+                            [label]="section.label"
+                            [body]="section.body"
+                            [maxLength]="section.maxLength"
+                            [availableTokens]="section.availableTokens"
+                            (bodyChange)="
+                              templateSectionChanged.emit({ sectionId: section.id, body: $event })
+                            "
+                          />
+                        }
                       </div>
                     } @else {
-                      <div class="dms-templates-grid grid gap-4">
-                        @for (tpl of filteredTemplates(); track tpl.id) {
-                          <div
-                            class="bento-card flex flex-col gap-4 p-5 min-h-0 h-auto cursor-default"
-                            appCardHover
-                          >
-                            <!-- Header: badge formato + nombre + categoría -->
-                            <div class="flex items-start gap-3">
-                              <div
-                                class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
-                                [style]="tpl.formatColor"
-                              >
-                                {{ tpl.format.toUpperCase() }}
-                              </div>
-                              <div class="flex-1 min-w-0">
-                                <p class="item-title leading-snug m-0">
-                                  {{ tpl.name }}
-                                </p>
-                                <app-badge variant="neutral" class="mt-1">{{
-                                  tpl.categoryLabel
-                                }}</app-badge>
-                              </div>
-                            </div>
-
-                            <!-- Descripción -->
-                            @if (tpl.description) {
-                              <p class="text-xs leading-relaxed flex-1 m-0 text-text-secondary">
-                                {{ tpl.description }}
-                              </p>
-                            }
-
-                            <!-- Footer: versión + descargas + acciones -->
-                            <div
-                              class="flex items-center justify-between pt-3 border-t border-border-subtle"
-                            >
-                              <div class="text-xs text-text-muted">
-                                <span>{{ tpl.version }}</span>
-                                <span class="mx-1">·</span>
-                                <span>{{ tpl.downloadCount }} descargas</span>
-                              </div>
-                              <div class="flex items-center gap-2">
-                                @if (isAdmin()) {
-                                  <button
-                                    type="button"
-                                    class="text-xs font-medium cursor-pointer border-0 bg-transparent text-error"
-                                    data-llm-action="delete-template"
-                                    (click)="deleteTemplate.emit(tpl.id)"
-                                  >
-                                    Eliminar
-                                  </button>
-                                }
-                                <button
-                                  type="button"
-                                  class="inline-flex items-center gap-1 text-xs font-semibold cursor-pointer border-0 bg-transparent transition-colors duration-150 text-brand"
-                                  data-llm-action="download-template"
-                                  (click)="downloadTemplate.emit(tpl)"
-                                >
-                                  <app-icon name="download" [size]="13" />
-                                  Descargar
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        }
+                      <div class="flex-1 flex items-center justify-center">
+                        <app-empty-state
+                          message="Selecciona una sede"
+                          subtitle="Elige una sede y un tipo de documento para empezar a editar."
+                          icon="folder"
+                        />
                       </div>
                     }
                   </div>
@@ -713,79 +736,66 @@ export class DmsListContentComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
-  constructor() {
-    // SWR-aware: el grid vive en @else, se anima cuando loading → false.
-    effect(() => {
-      const ready = !this.isLoading();
-      const grid = this.bentoGrid()?.nativeElement;
-      if (ready && grid) {
-        Promise.resolve().then(() => {
-          this.gsap.animateBentoGrid(grid);
-        });
-      }
-    });
-  }
-
   // ── Inputs ────────────────────────────────────────────────────────────────
   readonly basePath = input.required<string>();
   readonly studentsWithDocs = input<StudentWithDocsRow[]>([]);
   readonly recentDocs = input<DmsStudentDocRow[]>([]);
   readonly instructorsWithDocs = input<InstructorWithDocsRow[]>([]);
   readonly schoolDocs = input<SchoolDocRow[]>([]);
-  readonly templates = input<TemplateCard[]>([]);
   readonly isLoading = input<boolean>(false);
   readonly isAdmin = input<boolean>(false);
   /** Admin con selector de sede en "Todas las sedes" → muestra la columna Sede en Alumnos. */
   readonly showSedeColumn = input<boolean>(false);
 
+  // ── Inputs — editor de plantillas (spec 0016-m) ─────────────────────────────
+  readonly templateBranches = input<BranchOption[]>([]);
+  readonly templateForm = input<DocumentTemplateForm | null>(null);
+  readonly templateIsLoading = input<boolean>(false);
+  readonly templateIsPublishing = input<boolean>(false);
+  readonly templateIsGeneratingPreview = input<boolean>(false);
+
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly uploadStudentDoc = output<void>();
   readonly uploadInstructorDoc = output<void>();
   readonly uploadSchoolDoc = output<void>();
-  readonly uploadTemplate = output<void>();
   readonly viewStudentDocs = output<{ studentId: number; enrollmentId: number }>();
   readonly viewInstructorDocs = output<number>();
   readonly viewDocument = output<{ url: string; fileName: string }>();
   readonly deleteStudentDoc = output<{ id: string; source: string }>();
   readonly deleteSchoolDoc = output<number>();
-  readonly deleteTemplate = output<number>();
-  readonly downloadTemplate = output<TemplateCard>();
+
+  // ── Outputs — editor de plantillas (spec 0016-m) ────────────────────────────
+  readonly templateLoadRequested = output<{ branchId: number; documentType: DocumentType }>();
+  readonly templateSectionChanged = output<{ sectionId: string; body: string }>();
+  readonly templatePreviewRequested = output<void>();
+  readonly templateViewPublishedRequested = output<{
+    branchId: number;
+    documentType: DocumentType;
+  }>();
+  readonly templatePublishRequested = output<void>();
 
   readonly activeTab = signal<DmsTab>('students');
-  readonly categoryFilter = signal<TemplateCategoryFilter>('all');
   readonly studentSearch = signal('');
 
   setActiveTab(tabId: string): void {
     this.activeTab.set(tabId as DmsTab);
   }
 
-  setCategoryFilter(catId: string): void {
-    this.categoryFilter.set(catId as TemplateCategoryFilter);
-  }
-
   // ── Config estática ───────────────────────────────────────────────────────
-  readonly tabs: TabOption[] = [
+  private readonly allTabs: TabOption[] = [
     { id: 'students', label: 'Documentos del Alumno', icon: 'user' },
     { id: 'instructors', label: 'Documentos de Instructores', icon: 'shield-check' },
     { id: 'school', label: 'Documentos de la Escuela', icon: 'building-2' },
     { id: 'templates', label: 'Plantillas', icon: 'folder' },
   ];
 
-  readonly categoryFilters = [
-    { id: 'all', label: 'Todas' },
-    { id: 'clase_b', label: 'Clase B' },
-    { id: 'clase_profesional', label: 'Clase Profesional' },
-    { id: 'administrativo', label: 'Administrativo' },
-    { id: 'general', label: 'General' },
-  ];
+  /** "Plantillas" queda oculta para no-admin (AC4) — su RLS ahora es admin-only, no tiene
+   * sentido mostrar una tab que no puede traer datos. */
+  readonly tabs = computed<TabOption[]>(() =>
+    this.isAdmin() ? this.allTabs : this.allTabs.filter((t) => t.id !== 'templates'),
+  );
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  readonly filteredTemplates = computed(() => {
-    const cat = this.categoryFilter();
-    if (cat === 'all') return this.templates();
-    return this.templates().filter((t) => t.category === cat);
-  });
-
   readonly filteredStudentsWithDocs = computed(() => {
     const search = this.studentSearch().toLowerCase().trim();
     if (!search) return this.studentsWithDocs();
@@ -805,10 +815,6 @@ export class DmsListContentComponent {
     if (tab === 'school') {
       return [{ id: 'upload-school', label: 'Subir documento', icon: 'upload', primary: true }];
     }
-    // Templates
-    if (this.isAdmin()) {
-      return [{ id: 'upload-template', label: 'Nueva plantilla', icon: 'upload', primary: true }];
-    }
     return [];
   };
 
@@ -816,6 +822,85 @@ export class DmsListContentComponent {
     if (actionId === 'upload-student') this.uploadStudentDoc.emit();
     else if (actionId === 'upload-instructor') this.uploadInstructorDoc.emit();
     else if (actionId === 'upload-school') this.uploadSchoolDoc.emit();
-    else if (actionId === 'upload-template') this.uploadTemplate.emit();
+  }
+
+  // ── Editor de plantillas (spec 0016-m) ──────────────────────────────────────
+
+  readonly selectedTemplateBranchId = signal<number | null>(null);
+  readonly selectedTemplateDocumentType = signal<DocumentType>('contract_b');
+
+  /** Cuál de los 2 botones que comparten `templateIsGeneratingPreview()` disparó la carga en
+   * curso — así solo ese botón muestra el spinner, no ambos a la vez. */
+  private readonly pendingTemplateAction = signal<'view' | 'preview' | null>(null);
+
+  isTemplateActionPending(action: 'view' | 'preview'): boolean {
+    return this.templateIsGeneratingPreview() && this.pendingTemplateAction() === action;
+  }
+
+  /** Filtra Profesional si la sede seleccionada no dicta cursos profesionales (AC8). */
+  readonly templateDocumentTypeOptions = computed<DocumentTypeOption[]>(() => {
+    const branch = this.templateBranches().find((b) => b.id === this.selectedTemplateBranchId());
+    if (branch?.hasProfessional) return ALL_DOCUMENT_TYPE_OPTIONS;
+    return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => !o.value.includes('professional'));
+  });
+
+  constructor() {
+    // Selecciona la primera sede disponible apenas llega la lista.
+    effect(() => {
+      const branches = this.templateBranches();
+      if (branches.length > 0 && this.selectedTemplateBranchId() === null) {
+        this.selectedTemplateBranchId.set(branches[0].id);
+      }
+    });
+
+    // Pide la carga al Smart Component cada vez que cambia sede o tipo de documento.
+    effect(() => {
+      const branchId = this.selectedTemplateBranchId();
+      const documentType = this.selectedTemplateDocumentType();
+      if (branchId === null) return;
+      this.templateLoadRequested.emit({ branchId, documentType });
+    });
+
+    // SWR-aware: el grid vive en @else, se anima cuando loading → false.
+    effect(() => {
+      const ready = !this.isLoading();
+      const grid = this.bentoGrid()?.nativeElement;
+      if (ready && grid) {
+        Promise.resolve().then(() => {
+          this.gsap.animateBentoGrid(grid);
+        });
+      }
+    });
+  }
+
+  onTemplateBranchChange(branchId: number): void {
+    this.selectedTemplateBranchId.set(branchId);
+    // Si la sede nueva no ofrece Profesional y el tipo elegido lo era, cae a contract_b (AC8).
+    if (
+      !this.templateDocumentTypeOptions().some(
+        (o) => o.value === this.selectedTemplateDocumentType(),
+      )
+    ) {
+      this.selectedTemplateDocumentType.set('contract_b');
+    }
+  }
+
+  onTemplateDocumentTypeChange(documentType: DocumentType): void {
+    this.selectedTemplateDocumentType.set(documentType);
+  }
+
+  onTemplateViewPublished(): void {
+    const branchId = this.selectedTemplateBranchId();
+    if (branchId === null) return;
+    this.pendingTemplateAction.set('view');
+    this.templateViewPublishedRequested.emit({
+      branchId,
+      documentType: this.selectedTemplateDocumentType(),
+    });
+  }
+
+  onTemplatePreview(): void {
+    this.pendingTemplateAction.set('preview');
+    this.templatePreviewRequested.emit();
   }
 }

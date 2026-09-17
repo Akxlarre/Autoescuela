@@ -5,12 +5,18 @@
 // Genera un PDF de contrato de matrícula a partir de los datos del enrollment,
 // lo sube a Supabase Storage y registra/actualiza el registro en digital_contracts.
 //
-// Invocación desde el frontend:
+// Invocación desde el frontend (mode 'real', default):
 //   await supabase.functions.invoke('generate-contract-pdf', {
 //     body: { enrollment_id: 42 }
 //   })
 //
-// Respuesta exitosa: { pdfUrl: "https://...storage.../contracts/42/Contrato_..." }
+// Spec 0016-m — modos adicionales para el editor de plantillas (`document_templates`), ninguno
+// persiste en Storage/digital_contracts, ambos usan un alumno ficticio (nunca datos reales):
+//   mode: 'sample'  → { branch_id, document_type } — contenido REAL de document_templates
+//   mode: 'preview' → { branch_id, document_type, content } — contenido en BORRADOR sin guardar
+// Ambos responden { pdfBase64 } en vez de { pdfUrl, pdfPath }.
+//
+// Respuesta exitosa (mode 'real'): { pdfUrl: "https://...storage.../contracts/42/Contrato_..." }
 // @ts-nocheck
 
 // Setup type definitions for built-in Supabase Runtime APIs
@@ -45,7 +51,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     // 1. Parse request body
-    const { enrollment_id } = await req.json();
+    const body = await req.json();
+    const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
+
+    // 2. Create Supabase admin client (service_role for full access)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (mode === 'preview' || mode === 'sample') {
+      return await handlePreviewOrSample(supabase, mode, body);
+    }
+
+    // ── mode: 'real' (comportamiento existente, sin cambios de contrato público) ──
+    const { enrollment_id } = body;
 
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return new Response(JSON.stringify({ error: 'enrollment_id (number) is required' }), {
@@ -53,11 +72,6 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // 2. Create Supabase admin client (service_role for full access)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 3. Fetch enrollment with related data
     const { data: enrollment, error: fetchError } = await supabase
@@ -67,6 +81,7 @@ Deno.serve(async (req: Request) => {
         id,
         student_id,
         course_id,
+        branch_id,
         number,
         base_price,
         discount,
@@ -112,15 +127,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 3b. Fetch license_validations por separado para evitar dependencia del caché FK de PostgREST.
-    const { data: licenseValidation } = await supabase
-      .from('license_validations')
-      .select('convalidated_license, reduced_hours')
-      .eq('enrollment_id', enrollment_id)
-      .maybeSingle();
-
     // Flatten nested relations
-    const data = flattenEnrollment(enrollment, licenseValidation);
+    const data = flattenEnrollment(enrollment);
 
     // 3c. Número previsto para drafts sin confirmar aún (secretaría genera/previsualiza el
     // contrato en el paso 5 del wizard, ANTES de la confirmación final — que es donde recién se
@@ -144,11 +152,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // 4. Generate structured PDF directly from enrollment data
-    const [idPhoto, logo] = await Promise.all([
+    const documentType: DocumentType =
+      data.course.license_class === 'B' ? 'contract_b' : 'contract_professional';
+    const [idPhoto, logo, content] = await Promise.all([
       tryLoadIdPhoto(supabase, enrollment_id),
       loadPngForPdf(LOGO_URL),
+      fetchDocumentContent(supabase, enrollment.branch_id, documentType),
     ]);
-    const pdfBytes = buildStructuredPdf(data, null, idPhoto, logo);
+    const pdfBytes = buildStructuredPdf(data, null, idPhoto, logo, content);
 
     // 5. Build filename and upload to Storage
     const studentName = sanitizeFilename(
@@ -211,10 +222,7 @@ Deno.serve(async (req: Request) => {
 // Helper functions
 // ══════════════════════════════════════════════════════════════════════════════
 
-function flattenEnrollment(
-  raw: any,
-  licenseValidation?: { convalidated_license: 'A4' | 'A3'; reduced_hours: number } | null,
-): EnrollmentData {
+function flattenEnrollment(raw: any): EnrollmentData {
   return {
     id: raw.id,
     number: raw.number,
@@ -250,7 +258,6 @@ function flattenEnrollment(
       email: raw.branches.email ?? null,
       phone: raw.branches.phone ?? null,
     },
-    convalidation: licenseValidation ?? null,
   };
 }
 
@@ -269,3 +276,150 @@ async function computeHash(data: Uint8Array): Promise<string> {
 }
 
 // PDF generation functions are imported from ../_shared/contract-pdf.ts
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Spec 0016-m — modos 'preview'/'sample' (editor de plantillas, sin persistencia)
+// ══════════════════════════════════════════════════════════════════════════════
+
+type DocumentType = 'contract_b' | 'contract_professional';
+
+/** Alumno ficticio para preview/vista default — nunca corresponde a un enrollment real
+ * (confirmado con el owner, 2026-09-16). */
+const SAMPLE_STUDENT = {
+  rut: '11.111.111-1',
+  first_names: 'Alumno',
+  paternal_last_name: 'De Prueba',
+  maternal_last_name: 'Ejemplo',
+  email: 'alumno.prueba@ejemplo.cl',
+  phone: '+56 9 1111 1111',
+};
+
+/** `courses.base_price` real de la sede para el tipo de curso de la muestra — evita mostrarle a
+ * quien edita un precio inventado que podría confundirse con un valor vigente (fix post-0016-m,
+ * hallazgo del owner). Si la sede no tiene ese curso sembrado, cae a un valor fijo razonable. */
+async function fetchSampleBasePrice(
+  supabase: any,
+  branchId: number,
+  licenseClass: string,
+): Promise<number> {
+  const { data } = await supabase
+    .from('courses')
+    .select('base_price')
+    .eq('branch_id', branchId)
+    .eq('license_class', licenseClass)
+    .eq('active', true)
+    .not('base_price', 'is', null)
+    .limit(1)
+    .maybeSingle();
+  return data?.base_price ?? 500000;
+}
+
+function buildSampleEnrollmentData(
+  branch: {
+    name: string;
+    address: string | null;
+    slug: string | null;
+    email: string | null;
+    phone: string | null;
+  },
+  documentType: DocumentType,
+  basePrice: number,
+): EnrollmentData {
+  const isClassB = documentType === 'contract_b';
+  return {
+    id: 0,
+    number: 'MUESTRA',
+    base_price: basePrice,
+    discount: 0,
+    total_paid: null,
+    pending_balance: null,
+    payment_mode: 'total',
+    created_at: new Date().toISOString(),
+    student: {
+      birth_date: '2000-01-01',
+      address: 'Direcci\xF3n de ejemplo 123',
+      user: SAMPLE_STUDENT,
+    },
+    course: {
+      name: isClassB ? 'Curso Clase B' : 'Curso Profesional A4',
+      license_class: isClassB ? 'B' : 'A4',
+      duration_weeks: null,
+      practical_hours: isClassB ? 9 : null,
+      theory_hours: isClassB ? 12 : null,
+    },
+    branch: {
+      name: branch.name,
+      address: branch.address,
+      slug: branch.slug,
+      email: branch.email,
+      phone: branch.phone,
+    },
+  };
+}
+
+async function fetchDocumentContent(
+  supabase: any,
+  branchId: number,
+  documentType: DocumentType,
+): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from('document_templates')
+    .select('content')
+    .eq('branch_id', branchId)
+    .eq('document_type', documentType)
+    .maybeSingle();
+  return (data?.content as Record<string, string>) ?? {};
+}
+
+function jsonRes(body: object, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/** `btoa` no acepta `Uint8Array` directo — convierte byte a byte a un string binario primero. */
+function encodeBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+async function handlePreviewOrSample(
+  supabase: any,
+  mode: 'preview' | 'sample',
+  body: any,
+): Promise<Response> {
+  const { branch_id, document_type, content: draftContent } = body;
+
+  if (!branch_id || typeof branch_id !== 'number') {
+    return jsonRes({ error: 'branch_id (number) is required for preview/sample' }, 400);
+  }
+  if (document_type !== 'contract_b' && document_type !== 'contract_professional') {
+    return jsonRes({ error: "document_type must be 'contract_b' or 'contract_professional'" }, 400);
+  }
+
+  const { data: branch, error: branchErr } = await supabase
+    .from('branches')
+    .select('name, address, slug, email, phone')
+    .eq('id', branch_id)
+    .single();
+  if (branchErr || !branch) {
+    return jsonRes({ error: `Branch ${branch_id} not found` }, 404);
+  }
+
+  // 'preview' = borrador sin guardar (nunca toca document_templates). 'sample' = contenido REAL
+  // ya publicado, para la vista de solo lectura del documento default.
+  const content =
+    mode === 'preview'
+      ? ((draftContent as Record<string, string>) ?? {})
+      : await fetchDocumentContent(supabase, branch_id, document_type);
+
+  const licenseClass = document_type === 'contract_b' ? 'B' : 'A4';
+  const basePrice = await fetchSampleBasePrice(supabase, branch_id, licenseClass);
+  const data = buildSampleEnrollmentData(branch, document_type, basePrice);
+  const logo = await loadPngForPdf(LOGO_URL);
+  const pdfBytes = buildStructuredPdf(data, null, null, logo, content);
+
+  return jsonRes({ pdfBase64: encodeBase64(pdfBytes) });
+}
