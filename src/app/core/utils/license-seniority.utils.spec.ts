@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calcLicenseSeniority } from './license-seniority.utils';
+import {
+  calcLicenseSeniority,
+  requiredPriorLicenseLabel,
+  licenseClassFromCourseType,
+} from './license-seniority.utils';
 
 describe('calcLicenseSeniority()', () => {
   it('retorna válido sin mensaje si falta la fecha de licencia', () => {
@@ -77,5 +81,58 @@ describe('calcLicenseSeniority()', () => {
       message: '',
       seniorityYears: null,
     });
+  });
+
+  it('usa "clase B" por defecto cuando no se pasa requiredLicenseLabel (compatibilidad fix-089-m)', () => {
+    const result = calcLicenseSeniority('2025-06-10', '2026-08-10');
+    expect(result.message).toContain('licencia clase B');
+  });
+
+  it('nombra la licencia previa exigida cuando se pasa requiredLicenseLabel', () => {
+    const result = calcLicenseSeniority('2025-06-10', '2026-08-10', 'A2 o A4');
+    expect(result.message).toContain('licencia A2 o A4');
+    expect(result.message).not.toContain('clase B');
+  });
+});
+
+describe('requiredPriorLicenseLabel() — fix-033-i, ASG-m-001', () => {
+  it('A2 exige clase B', () => {
+    expect(requiredPriorLicenseLabel('A2')).toBe('clase B');
+  });
+
+  it('A4 exige clase B', () => {
+    expect(requiredPriorLicenseLabel('A4')).toBe('clase B');
+  });
+
+  it('A5 exige A2 o A4', () => {
+    expect(requiredPriorLicenseLabel('A5')).toBe('A2 o A4');
+  });
+
+  it('A3 exige A2 o A4', () => {
+    expect(requiredPriorLicenseLabel('A3')).toBe('A2 o A4');
+  });
+
+  it('es case-insensitive (minúsculas)', () => {
+    expect(requiredPriorLicenseLabel('a5')).toBe('A2 o A4');
+  });
+
+  it('cae a "clase B" por defecto para valor null o desconocido', () => {
+    expect(requiredPriorLicenseLabel(null)).toBe('clase B');
+    expect(requiredPriorLicenseLabel('X9')).toBe('clase B');
+  });
+});
+
+describe('licenseClassFromCourseType() — fix-033-i, ASG-m-001', () => {
+  it('mapea cada courseType profesional a su license_class', () => {
+    expect(licenseClassFromCourseType('professional_a2')).toBe('A2');
+    expect(licenseClassFromCourseType('professional_a3')).toBe('A3');
+    expect(licenseClassFromCourseType('professional_a4')).toBe('A4');
+    expect(licenseClassFromCourseType('professional_a5')).toBe('A5');
+  });
+
+  it('retorna null para cursos no profesionales o valor null', () => {
+    expect(licenseClassFromCourseType('class_b')).toBeNull();
+    expect(licenseClassFromCourseType('singular')).toBeNull();
+    expect(licenseClassFromCourseType(null)).toBeNull();
   });
 });

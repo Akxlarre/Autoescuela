@@ -1,14 +1,14 @@
 # Asignación ASG-m-001 — Validación de años de licencia previa en matrícula profesional
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-17
+> **resulting_track:** fix-033-i-validacion-anos-licencia-clase-profesional
 
 ---
 

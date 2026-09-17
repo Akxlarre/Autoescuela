@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-001 | Validación de años de licencia previa en matrícula profesional | `i` | fix | P1 | m | A2/A4/Conv. A4 → 2 años licencia B; A5/A3/Conv. A5 → 2 años licencia A2/A4 |
 | ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | `i` | fix | P1 | m | Aplica a B y Profesional, ambas escuelas. Pago sin firma queda pendiente de aplicar, no se pierde |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
 | ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | `m` | spec | P1 | m | Solo admin. Requiere vista previa. Discutir diseño técnico antes de comprometer plan |
@@ -270,6 +269,7 @@
 | ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | [fix-247-m-secretarias-layout-espacio-vacio](fixes/fix-247-m-secretarias-layout-espacio-vacio/fix.md) | 2026-09-15 |
 | ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | [fix-250-m-libro-clases-plantilla-imprimible](fixes/fix-250-m-libro-clases-plantilla-imprimible/fix.md) | 2026-09-15 |
 | ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
+| ASG-m-001 | Validación de años de licencia previa en matrícula profesional | [fix-033-i-validacion-anos-licencia-clase-profesional](fixes/fix-033-i-validacion-anos-licencia-clase-profesional/fix.md) | 2026-09-17 |
 <!-- AUTO-GENERATED:END -->
 
 ---

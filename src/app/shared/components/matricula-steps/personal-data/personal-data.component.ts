@@ -22,7 +22,11 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { calcAge, getAgeStatus } from '@core/utils/age.utils';
-import { calcLicenseSeniority } from '@core/utils/license-seniority.utils';
+import {
+  calcLicenseSeniority,
+  licenseClassFromCourseType,
+  requiredPriorLicenseLabel,
+} from '@core/utils/license-seniority.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
@@ -35,17 +39,23 @@ interface CategoryMeta {
 }
 
 /**
- * Advertencia temprana (no bloqueante) de antigüedad de licencia clase B, estimada
+ * Advertencia temprana (no bloqueante) de antigüedad de licencia previa, estimada
  * contra la fecha de HOY — solo para dar feedback inmediato en este paso. El chequeo
  * definitivo (contra la fecha de inicio de la promoción elegida) ocurre en el Step 2
- * (fix-089).
+ * (fix-089). La licencia exigida depende de `courseType` (A2/A4 → clase B; A5/A3 →
+ * A2 o A4 — fix-033-i, ASG-m-001).
  */
 export function earlyLicenseWarningFn(
   category: CourseCategory | null,
   licenseDate: string | null,
+  courseType: string | null = null,
 ): LicenseValidation | null {
   if (category !== 'professional') return null;
-  return calcLicenseSeniority(licenseDate, todayIso());
+  return calcLicenseSeniority(
+    licenseDate,
+    todayIso(),
+    requiredPriorLicenseLabel(licenseClassFromCourseType(courseType)),
+  );
 }
 
 /**
@@ -156,13 +166,14 @@ export class PersonalDataComponent {
   readonly rutValid = computed(() => validateRut(this.data().rut));
   readonly emailValid = computed(() => validateEmail(this.data().email));
 
-  readonly ageStatus = computed((): AgeAlertStatus =>
-    getAgeStatus(this.data().birthDate, this.data().courseType),
+  readonly ageStatus = computed(
+    (): AgeAlertStatus => getAgeStatus(this.data().birthDate, this.data().courseType),
   );
 
-  /** Advertencia temprana de antigüedad de licencia B, estimada a hoy (fix-089). */
+  /** Advertencia temprana de antigüedad de licencia previa, estimada a hoy (fix-089,
+   *  clase-aware desde fix-033-i). */
   readonly earlyLicenseWarning = computed<LicenseValidation | null>(() =>
-    earlyLicenseWarningFn(this.selectedCategory(), this.data().licenseDate),
+    earlyLicenseWarningFn(this.selectedCategory(), this.data().licenseDate, this.data().courseType),
   );
 
   readonly courseMeta = computed<CourseOption | null>(
