@@ -1442,6 +1442,33 @@
   `specs/fixes/fix-253-m-reenviar-invitacion-alumno-sin-firstlogin`.
 
 
+### DG-093 — Una columna `CASE`/computada referenciada en `WHERE` y `SELECT` a la vez se evalúa dos veces en una vista no materializada
+- **Trampa:** `v_class_b_schedule_availability` exponía `slot_status` como una columna `CASE`
+  con 2 `NOT EXISTS` correlacionados (conflicto de instructor / conflicto de vehículo). Al
+  no ser una columna real, Postgres no cachea su resultado — cuando PostgREST arma
+  `?slot_status=eq.available`, el filtro y la columna de salida son **dos referencias
+  independientes** a la misma expresión, y Postgres las evalúa por separado: el `EXPLAIN
+  ANALYZE` mostró **4 SubPlans casi idénticos** (2 NOT EXISTS × 2 referencias) y 1.033.204
+  buffer hits para devolver 3.348 filas — 1 a 4.5s reales por carga en `/app/**/agenda`.
+  Con el volumen bajo que había antes del reset de datos de prueba (`0008-i`) nunca fue
+  perceptible; quedó expuesto recién con volumen realista.
+- **Realidad:** envolver el cálculo en un CTE marcado `AS MATERIALIZED` fuerza a Postgres a
+  resolverlo **una sola vez** por fila, sin importar cuántas veces la query externa
+  referencie la columna resultante (filtro y/o `SELECT`). Además, cuando la condición de
+  conflicto es "A o B" (como acá: instructor ocupado O vehículo ocupado), fusionar los 2
+  `NOT EXISTS` en 1 solo con `OR` (`NOT (A OR B) == NOT A AND NOT B`) reduce a la mitad las
+  subqueries correlacionadas antes de materializar. Combinado: 1.052.309 → 114.990 buffer
+  hits (~9x menos), 1254ms → 499ms de ejecución, verificado sin cambios en qué slots se
+  marcan `available`/`occupied` (comparación fila a fila viejo-vs-nuevo, 0 diferencias).
+- **Regla de aplicabilidad:** cualquier vista/CTE de este proyecto que exponga una columna
+  `CASE`/booleana computada a partir de subqueries correlacionadas, y que el cliente
+  (PostgREST) vaya a filtrar por esa misma columna, necesita `MATERIALIZED` en el CTE que la
+  calcula — si no, el filtro del cliente duplica el cómputo sin que se note en el código
+  Angular, solo en `EXPLAIN ANALYZE` contra la BD real. No aplica a vistas cuyas columnas de
+  salida sean todas columnas reales (sin `CASE`/subquery) — ahí no hay nada que duplicar.
+- **Fuente:** `specs/fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta`,
+  `supabase/migrations/20260917100000_fix032_optimize_class_b_schedule_availability_view.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

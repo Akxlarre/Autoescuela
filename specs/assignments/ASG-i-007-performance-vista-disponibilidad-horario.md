@@ -1,6 +1,6 @@
 # Asignación ASG-i-007 — Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda)
 
-> **status:** reclamada (absorbida, sin track nuevo)
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1

@@ -1,7 +1,8 @@
 # Fix: Agenda Clase B — vista de disponibilidad tarda ~8s al cambiar de semana
 > id: fix-032-i-agenda-clase-b-vista-disponibilidad-lenta
 > refs: 0008-i-reset-y-poblar-datos-prueba, ASG-i-007
-> status: in_progress
+> status: done
+> closed: 2026-09-17
 > created: 2026-09-07
 > updated: 2026-09-17 — causa raíz confirmada (antes era hipótesis), absorbe ASG-i-007
 
@@ -76,3 +77,39 @@ no la falta de índice ni el rango de 28 días en sí.
 - **Tests de regresión de double-booking (obligatorio, esta vista decide reservas dobles):**
   comparar resultados viejo-vs-nuevo — ningún slot que hoy se marca `occupied`/`available`
   puede cambiar de estado tras la reescritura. No basta con medir que quedó más rápido.
+
+## Resultado de la verificación (2026-09-17, aplicado a producción — `skvekggejikzxhzsjmkz`)
+
+Aplicado en transacción real (`BEGIN`/dry-run con `ROLLBACK` primero, sin error, luego repetido
+con `COMMIT`). Respaldo de la vista vieja materializado como tabla
+(`v_class_b_schedule_availability_old_backup`) antes de aplicar, para poder comparar.
+
+**`EXPLAIN (ANALYZE, BUFFERS)` — antes vs. después:**
+
+| Métrica | Antes | Después | Mejora |
+|---|---|---|---|
+| Buffer hits | 1.052.309 | **114.990** | **~9.1x menos** |
+| Execution Time | 1254.99 ms | **499.53 ms** | **~2.5x más rápido** |
+| SubPlans de conflicto | 4 casi idénticos (2 refs × 2 NOT EXISTS) | **1 solo** SubPlan, resuelto vía `BitmapOr` sobre `idx_class_b_sessions_date_instructor` + `idx_class_b_sessions_date_vehicle` | Confirma la fusión de los 2 NOT EXISTS en 1 con OR |
+
+El plan `después` ya no repite la subquery de conflicto — el CTE `slot_availability`
+(`MATERIALIZED`) se resuelve una sola vez y el filtro `slot_status = 'available'` se aplica
+sobre ese resultado ya calculado (`CTE Scan on slot_availability` + `Filter`), en vez de
+re-evaluar el `CASE` con sus `NOT EXISTS` por cada referencia.
+
+**Regresión de double-booking:**
+
+```sql
+SELECT old.instructor_id, old.vehicle_id, old.slot_start, old.slot_status AS status_viejo, new.slot_status AS status_nuevo
+FROM v_class_b_schedule_availability_old_backup old
+JOIN v_class_b_schedule_availability new
+  ON old.instructor_id = new.instructor_id
+ AND old.vehicle_id = new.vehicle_id
+ AND old.slot_start = new.slot_start
+WHERE old.slot_status IS DISTINCT FROM new.slot_status;
+```
+
+**Resultado: 0 filas.** Ningún slot cambió de `available` a `occupied` ni viceversa —
+la reescritura preserva exactamente la misma semántica de disponibilidad.
+
+✅ **Ambas condiciones del test de regresión cumplidas con evidencia real. Fix verificado.**
