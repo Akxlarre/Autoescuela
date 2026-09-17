@@ -1,8 +1,9 @@
 # Fix: Agenda Clase B — vista de disponibilidad tarda ~8s al cambiar de semana
 > id: fix-032-i-agenda-clase-b-vista-disponibilidad-lenta
-> refs: 0008-i-reset-y-poblar-datos-prueba
+> refs: 0008-i-reset-y-poblar-datos-prueba, ASG-i-007
 > status: in_progress
 > created: 2026-09-07
+> updated: 2026-09-17 — causa raíz confirmada (antes era hipótesis), absorbe ASG-i-007
 
 ## Root Cause
 <!-- Qué estaba mal y por qué pasó. Una sola causa raíz. -->
@@ -21,12 +22,23 @@ Con el volumen bajo que existía antes de `0008-i` (unas pocas decenas de sesion
 lentitud nunca fue perceptible — es un bug preexistente, no introducido por el reset/seed,
 que quedó expuesto recién al probar con datos realistas.
 
-**Hipótesis a confirmar durante la implementación** (no confirmada aún, requiere leer la
-definición SQL de la vista):
-- La vista no aplica el filtro de fecha/instructor ANTES de cruzar con otras tablas
-  (calcula disponibilidad para un rango más amplio del necesario y filtra después), o
-- Falta un índice de soporte para el/los JOIN que arma internamente, o
-- Hace cálculo repetido por cada slot/instructor sin materializar resultados intermedios.
+**Causa raíz confirmada (2026-09-17, ver `ASG-i-007`, auditoría de performance independiente
+sobre la misma vista — no era una hipótesis distinta, es el mismo bug con mejor diagnóstico):**
+`EXPLAIN ANALYZE` contra el proyecto `skvekggejikzxhzsjmkz` muestra **1.033.204 buffer hits**
+para devolver solo 3.348 filas. La vista genera slots vía `CROSS JOIN LATERAL generate_series`
+(28 días completos) y por cada slot corre **dos `NOT EXISTS` correlacionados** contra
+`class_b_sessions` (conflicto de instructor / conflicto de vehículo). Los índices de soporte SÍ
+existen (`idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`), pero como
+`slot_status` es una columna `CASE` computada (no real), Postgres no puede cachear el resultado
+y termina evaluando la misma lógica **dos veces por fila** cuando el cliente filtra con
+`.eq('slot_status', 'available')`: una vez como *join filter* interno, otra para calcular la
+columna de salida. El plan muestra 4 SubPlans casi idénticos y ~15.000 invocaciones de índice en
+total para una tabla que hoy tiene pocas filas — escala mal a medida que crecen
+instructores/vehículos/sesiones agendadas.
+
+~~Hipótesis previas (28 días sin filtro temprano / falta de índice) descartadas~~ — los índices
+de soporte existen; el problema es el doble cómputo de `NOT EXISTS` sobre una columna `CASE`,
+no la falta de índice ni el rango de 28 días en sí.
 
 ## ACs Afectados
 <!-- Lista los ACs de la spec original que este fix corrige. -->
@@ -35,17 +47,32 @@ definición SQL de la vista):
 
 ## Cambio
 <!-- Archivo tocado y descripción en una línea. Un fix = un cambio puntual. -->
-- **Archivo:** migración SQL que redefine `v_class_b_schedule_availability` (ubicar en
-  `supabase/migrations/`, buscar la migración original de la vista primero para no duplicar
-  lógica de negocio al reescribirla).
-- **Qué cambia:** optimizar la vista (filtrado temprano por fecha/instructor y/o índice de
-  soporte) para que el tiempo de respuesta baje a un rango normal (<500ms) con el volumen de
-  prueba actual (~1680 sesiones).
+- **Archivo:** migración SQL que redefine `v_class_b_schedule_availability` (ubicar
+  `supabase/migrations/20260730100000_instructors_vehicles_both_branches.sql:148`, la
+  definición vigente, para no duplicar lógica de negocio al reescribirla — y
+  `supabase/migrations/20260811110000_fix152_class_b_sessions_prevent_double_booking.sql`
+  para el contexto de por qué es doble `NOT EXISTS`).
+- **Qué cambia:** reescribir el cálculo de disponibilidad para que el conflicto de
+  instructor/vehículo se compute **una sola vez** por slot (ej. un `LEFT JOIN` a una subquery
+  de sesiones "ocupantes" en vez de dos `NOT EXISTS` correlacionados recalculados dos veces),
+  o evaluar una vista materializada + refresh incremental si el `LEFT JOIN` no alcanza — el
+  cálculo no depende de inputs por-request, solo de la fecha actual y el estado de
+  `class_b_sessions`.
+- **Fuera de alcance:** cualquier cambio a la lógica de negocio de qué cuenta como "conflicto"
+  (branch scoping, `both_branches`, etc.) — esa semántica ya está resuelta, solo se toca la
+  forma en que se computa.
+- Requiere actualizar `indices/DATABASE.md` (regla del proyecto) con la nueva definición.
+- Facade consumidor a revisar si cambia el contrato de columnas:
+  `src/app/core/facades/agenda.facade.ts:381` (`fetchAvailableSlots`).
 
 ## Test de Regresión
 <!-- El test que prueba que el fix funciona. Debe quedar verde post-fix. -->
 - Manual (no hay test automatizado de performance en el proyecto): repetir la medición del
   Network tab del navegador — `v_class_b_schedule_availability` al cambiar de semana en
   `/app/**/agenda` debe responder en <1s con el dataset de `0008-i` cargado (~1680 sesiones).
-- `EXPLAIN ANALYZE` de la query subyacente de la vista antes/después, confirmando que deja de
-  hacer `Seq Scan` sobre el conjunto completo si esa resulta ser la causa raíz confirmada.
+- `EXPLAIN ANALYZE` de la query subyacente antes/después, confirmando que el número de buffer
+  hits baja de forma sustancial (línea base: 1.033.204) y que el plan deja de mostrar 4
+  SubPlans casi idénticos para el mismo cálculo de conflicto.
+- **Tests de regresión de double-booking (obligatorio, esta vista decide reservas dobles):**
+  comparar resultados viejo-vs-nuevo — ningún slot que hoy se marca `occupied`/`available`
+  puede cambiar de estado tras la reescritura. No basta con medir que quedó más rápido.

@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | `i` | fix | P1 | b | 1-4.5s por carga, confirmado con EXPLAIN ANALYZE (1M+ buffer hits). Requiere migración + tests de regresión de double-booking antes de tocar producción |
 | ASG-m-001 | Validación de años de licencia previa en matrícula profesional | `i` | fix | P1 | m | A2/A4/Conv. A4 → 2 años licencia B; A5/A3/Conv. A5 → 2 años licencia A2/A4 |
 | ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | `i` | fix | P1 | m | Aplica a B y Profesional, ambas escuelas. Pago sin firma queda pendiente de aplicar, no se pierde |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
@@ -153,6 +152,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
+| ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | `i` | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
 <!-- AUTO-GENERATED:END -->
 
 ---
