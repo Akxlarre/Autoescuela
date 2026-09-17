@@ -2349,7 +2349,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20260730100000_instructors_vehicles_both_branches.sql` (definición de negocio) → optimizada en `20260917100000_fix032_optimize_class_b_schedule_availability_view.sql` (fix-032-i): los 2 `NOT EXISTS` de conflicto (instructor/vehículo) se fusionaron en 1 con `OR`, y el cálculo se aisló en un CTE `MATERIALIZED` para que Postgres lo resuelva una sola vez por fila en vez de duplicarlo entre el filtro `slot_status='available'` y la columna de salida (causa raíz confirmada: 1.033.204 buffer hits / 4 SubPlans casi idénticos con `EXPLAIN ANALYZE`). Misma semántica de negocio, sin cambios de columnas expuestas. |
+| `v_class_b_schedule_availability` | `20260730100000_instructors_vehicles_both_branches.sql` (definición de negocio) → optimizada en `20260917100000_fix032_optimize_class_b_schedule_availability_view.sql` (fix-032-i: fusiona los 2 `NOT EXISTS` de conflicto instructor/vehículo en 1 con `OR`) → corregida en `20260917110000_hotfix003_remove_materialized_class_b_schedule_availability.sql` (hotfix-003-i: **sin** `MATERIALIZED` — ese hint causó timeout `57014` en producción al bloquear el pushdown del filtro de fecha real de `agenda.facade.ts`; ver DG-093). Misma semántica de negocio en todo el historial, sin cambios de columnas expuestas. |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
