@@ -1,14 +1,14 @@
 # Asignación ASG-m-004 — Editor de plantillas para contratos y certificados generados por Edge Function
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-16
+> **resulting_track:** 0016-m-editor-plantillas-documentos
 
 ---
 

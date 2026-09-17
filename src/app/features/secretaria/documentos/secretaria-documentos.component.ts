@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
-import type { TemplateCard } from '@core/models/ui/dms.model';
 
 /**
  * SecretariaDocumentosComponent — Smart Page DMS (Secretaria).
@@ -19,20 +18,16 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
       [recentDocs]="facade.recentDocs()"
       [instructorsWithDocs]="facade.instructorsWithDocs()"
       [schoolDocs]="facade.schoolDocs()"
-      [templates]="facade.templates()"
       [isLoading]="facade.isLoading()"
       [isAdmin]="false"
       (uploadStudentDoc)="openUploadStudentDrawer()"
       (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"
-      (uploadTemplate)="onNoop()"
       (viewStudentDocs)="onViewStudentDocs($event)"
       (viewInstructorDocs)="onViewInstructorDocs($event)"
       (viewDocument)="onViewDocument($event.url, $event.fileName)"
       (deleteStudentDoc)="onNoop()"
       (deleteSchoolDoc)="onNoop()"
-      (deleteTemplate)="onNoop()"
-      (downloadTemplate)="onDownloadTemplate($event)"
     />
   `,
 })
@@ -69,11 +64,6 @@ export class SecretariaDocumentosComponent implements OnInit {
 
   onViewDocument(url: string, fileName?: string): void {
     this.facade.openDocument(url, fileName);
-  }
-
-  onDownloadTemplate(template: TemplateCard): void {
-    window.open(template.fileUrl, '_blank');
-    this.facade.incrementDownload(template.id);
   }
 
   /** Secretaria no puede eliminar — handler no-op requerido por el tipo del output */

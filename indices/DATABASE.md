@@ -73,7 +73,7 @@
 | `consents` | M6 - Matrí. | `id` (bigserial), `user_id` (null en leads), `subject_rut`, `branch_id` (**NOT NULL** — ante qué responsable se otorgó), `consent_type` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico`\|`comunicaciones_operativas`\|`comunicaciones_promocionales`), `granted` (BOOL NOT NULL — **`false` = negativa expresa, se registra como fila**), `granted_at`, `revoked_at` (única columna actualizable), `ip` (la escribe el trigger), `policy_version`, `source` (`public`\|`secretaria` — **sin `papel`**: nunca se digita una matrícula en ficha física), `granted_by_representative` (BOOL — lo otorgó el apoderado de un menor; **su identidad NO se guarda acá**, consta en la autorización notarial del expediente) | `user_id`→users, `enrollment_id`→enrollments, `branch_id`→branches · CHECK `consents_subject_identifiable` (user_id O subject_rut) | Admin/Sec: SELECT (`select_consents`) · **Titular: SELECT** de sus propias filas, **todas** las finalidades (`select_consents_self`, `20260909130000` — sin restricción por `consent_type`: leer los propios datos es un derecho de acceso general, Art. 14 ter/ARCO, no algo acotado a esta spec) · authenticated: INSERT · Admin: UPDATE (acotado a `revoked_at` por trigger) · **Titular (self-service): UPDATE** de `revoked_at` en sus propias filas, **solo** `consent_type='comunicaciones_promocionales'` (`update_consents_self_revoke_promocional`) · **DELETE: ninguna policy, en ningún rol** · **`anon`: ninguna policy + REVOKE ALL** — el flujo público escribe vía Edge Function con `service_role` | ✅ Definida (`20260817130000`) · **Spec 0009-m (Ley 21.719).** APPEND-ONLY: `trg_consents_append_only` lanza excepción ante cualquier UPDATE que no sea `revoked_at` (RLS no restringe por columna). IP server-side vía `trg_consents_set_ip` + `request_client_ip()` — ⚠️ la función del trigger es **SECURITY INVOKER a propósito**: en una DEFINER, `current_user` es el dueño y la rama `service_role` nunca se toma, guardando la IP del runtime de la EF en vez de la del alumno. · **`20260818130000` (spec 0010-m, Ley 21.719 Art. 16):** agregado `test_psicologico` al CHECK de `consent_type` — consentimiento reforzado del test psicométrico EPQ. Gate de persistencia en dos capas (cliente en `PublicEnrollmentFacade.submitPreInscription()` + servidor en `handleSubmitPreInscription()` de la EF `public-enrollment`): sin un draft `test_psicologico` con `granted:true`, `professional_pre_registrations.psych_test_answers` queda `NULL` aunque el body traiga las 81 respuestas — verificado empíricamente en Supabase local. · **`20260909120000` (spec 0040-b, Ley 21.719):** agregadas `comunicaciones_operativas`/`comunicaciones_promocionales` al CHECK de `consent_type`. **No son simétricas**: la operativa se ampara en Art. 13 c) (ejecución del contrato) y siempre se persiste con `granted=true` (es un acuse de información, no una elección — pedirla como checkbox violaría el Art. 12 inciso 5°, que presume no libremente otorgado el consentimiento recabado para algo ya necesario para el contrato); la promocional es consentimiento real bajo Art. 12, con su propia policy de auto-revocación (`update_consents_self_revoke_promocional`) porque el Art. 12 exige que el medio de revocación esté "permanentemente disponible" para el titular. · **`20260909130000` (spec 0040-b, hallazgo durante T3.4):** agregada `select_consents_self` — hasta esta migración el titular no podía ni SELECT sus propios consentimientos (`select_consents` solo cubría admin/secretaria), lo que dejaba `ConsentsFacade.loadByUser()` devolviendo `[]` para cualquier alumno sin ningún error visible — un falso "no tienes registros". Detectado al construir `AlumnoPrivacidadComponent`, antes de llegar a QA. |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
-| `document_templates` | M6 - Matrí. | `id`, `name` | `updated_by` | Admin: CRUD, Sec: R, Stu: R, Inst: R | ✅ Definida |
+| `document_templates` | M6 - Matrí. | `id`, `branch_id`, `document_type`, `content` (JSONB) | `updated_by`, `branch_id` | Admin: CRUD (solo admin, sin acceso Sec/Stu/Inst) | ✅ Definida · **Reestructurada spec 0016-m (`20260916000000`)**: de "archivo descargable" (columnas `file_url`/`format`/`version`/`download_count`/`active`/`category`, en desuso real) a "contenido editable por cláusula/sección" que alimenta `generate-contract-pdf`/`generate-certificate-*-pdf`. RLS cerrada a admin-only (antes SELECT abierto a cualquier autenticado). |
 | `vehicles` | M7 - Flota | `id`, `license_plate` (UNIQUE NOT NULL), `both_branches` (BOOL, def false) | `branch_id` | Admin: CRUD, Sec: **CRU por sede** (`insert`/`update` acotado a su propia sede, nunca `both_branches=true` — spec 0004-m; antes admin-only pese a documentar "Sec: CRUD"), Inst: R | ✅ Definida · `20260730100000` (spec 0004-m): columna `both_branches` + RLS `insert_vehicles`/`update_vehicles` habilitada para secretary |
 | `vehicle_documents` | M7 - Flota | `id`, `type` | `vehicle_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `maintenance_records` | M7 - Flota | `id`, `type` | `vehicle_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -953,31 +953,27 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `document_templates` — 🔒 RLS
 
-> Plantillas descargables del DMS: contratos, formularios MTT, comprobantes. Solo Admin gestiona.
+> Contenido editable por cláusula/sección de contratos y certificados generados vía Edge Function. Una fila por sede x tipo de documento. El texto puede contener placeholders {{token}} sustituidos en runtime por supabase/functions/_shared/template-tokens.ts — ver specs/specs/0016-m-editor-plantillas-documentos/plan.md.
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `name` | TEXT | NO | — | — |
 | `description` | TEXT | sí | — | — |
-| `category` | TEXT | NO | — | — |
-| `format` | TEXT | NO | — | — |
-| `version` | TEXT | sí | — | — |
-| `file_url` | TEXT | NO | — | — |
-| `download_count` | INTEGER | sí | `0` | — |
-| `active` | BOOLEAN | sí | `true` | — |
 | `updated_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `document_type` | TEXT | NO | — | — |
+| `content` | JSONB | NO | `'{}'::jsonb` | — |
 
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_document_templates | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| select_document_templates | SELECT | `auth_user_role() = 'admin'` | — |
 | insert_document_templates | INSERT | — | `auth_user_role() = 'admin'` |
 | update_document_templates | UPDATE | `auth_user_role() = 'admin'` | — |
-| delete_document_templates | DELETE | `auth_user_role() = 'admin'` | — |
 
 ### `enrollments` — 🔒 RLS
 
@@ -2425,7 +2421,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
 
 
 <!-- AUTO-GENERATED:END -->

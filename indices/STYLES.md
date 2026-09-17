@@ -328,19 +328,19 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--text-primary` | 265 | `var(--color-primary-text)` |
 | `--state-error` | 232 | `#f87171` |
 | `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 212 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 210 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 192 | `#18181b` |
 | `--state-success` | 176 | `#4ade80` |
 | `--border-default` | 139 | `rgba(255, 255, 255, 0.28)` |
-| `--color-primary` | 133 | `#38bdf8` |
+| `--color-primary` | 131 | `#38bdf8` |
 | `--state-warning` | 124 | `#fbbf24` |
 | `--bg-elevated` | 76 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
-| `--bg-subtle` | 53 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 53 | `200ms` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--text-xs` | 52 | `0.75rem` |
+| `--bg-subtle` | 51 | `rgba(255, 255, 255, 0.1)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 39 | `—` |
 | `--color-primary-text` | 37 | `#ffffff` |
@@ -354,8 +354,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
 | `.card` | 284 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 177 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 177 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 178 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 175 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 13 | `src/styles/tokens/_variables.scss` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 51 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 861 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 858 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
