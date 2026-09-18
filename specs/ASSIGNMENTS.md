@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | `i` | fix | P1 | m | Aplica a B y Profesional, ambas escuelas. Pago sin firma queda pendiente de aplicar, no se pierde |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
@@ -279,6 +278,7 @@
 | ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | [0016-m-editor-plantillas-documentos](specs/0016-m-editor-plantillas-documentos/spec.md) | 2026-09-16 |
 | ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
 | ASG-m-001 | Validación de años de licencia previa en matrícula profesional | [fix-033-i-validacion-anos-licencia-clase-profesional](fixes/fix-033-i-validacion-anos-licencia-clase-profesional/fix.md) | 2026-09-17 |
+| ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | [fix-034-i-orden-pago-firma-y-pasos-por-nombre](fixes/fix-034-i-orden-pago-firma-y-pasos-por-nombre/fix.md) | 2026-09-18 |
 <!-- AUTO-GENERATED:END -->
 
 ---

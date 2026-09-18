@@ -1,14 +1,22 @@
 # Asignación ASG-m-002 — Mover el paso de Pago antes de la Firma de contrato en matrícula
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-18
+> **resulting_track:** fix-034-i-orden-pago-firma-y-pasos-por-nombre
+
+> **Nota de reclamación (2026-09-18):** alcance acotado tras discusión con el equipo —
+> solo flujo presencial (Admin/Secretaria), la matrícula pública online se bloquea aparte
+> (`ASG-i-013`, no se resuelve el caso de pago por pasarela sin firmar). Sin alerta a la
+> secretaria (se cancela en el momento). Sin migración de datos de borradores (no hay
+> producción real hoy). Se corrige además la causa raíz de fondo: el wizard identificará
+> los pasos por nombre en vez de por número, para que este riesgo no se repita en futuros
+> reordenamientos. Ver `fix-034-i` para el detalle completo.
 
 ---
 

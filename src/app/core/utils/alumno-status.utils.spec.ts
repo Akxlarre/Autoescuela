@@ -15,20 +15,30 @@ const exp = (overrides: Partial<AlumnoExpediente>): AlumnoExpediente => ({
   ...overrides,
 });
 
-describe('getExpedienteStatus()', () => {
-  it('retorna Completo cuando los 4 documentos están presentes', () => {
-    const status = getExpedienteStatus(exp({ ci: true, foto: true, medico: true, semep: true }));
-    expect(status).toEqual({ label: 'Completo', severity: 'success', count: '4/4' });
-  });
-
-  it('retorna Pendiente cuando no hay ningún documento', () => {
-    const status = getExpedienteStatus(exp({}));
-    expect(status).toEqual({ label: 'Pendiente', severity: 'danger', count: '0/4' });
-  });
-
-  it('retorna Parcial cuando hay al menos uno pero no todos', () => {
+describe('getExpedienteStatus() (fix-035-i: solo CI + Foto cuentan para el estado)', () => {
+  it('retorna Completo cuando CI y Foto están presentes', () => {
     const status = getExpedienteStatus(exp({ ci: true, foto: true }));
-    expect(status).toEqual({ label: 'Parcial', severity: 'warn', count: '2/4' });
+    expect(status).toEqual({ label: 'Completo', severity: 'success', count: '2/2' });
+  });
+
+  it('retorna Pendiente cuando no hay ni CI ni Foto', () => {
+    const status = getExpedienteStatus(exp({}));
+    expect(status).toEqual({ label: 'Pendiente', severity: 'danger', count: '0/2' });
+  });
+
+  it('retorna Parcial cuando hay uno de los dos pero no ambos', () => {
+    const status = getExpedienteStatus(exp({ ci: true, foto: false }));
+    expect(status).toEqual({ label: 'Parcial', severity: 'warn', count: '1/2' });
+  });
+
+  it('medico y semep en true no afectan el resultado si CI+Foto ya están completos', () => {
+    const status = getExpedienteStatus(exp({ ci: true, foto: true, medico: true, semep: true }));
+    expect(status).toEqual({ label: 'Completo', severity: 'success', count: '2/2' });
+  });
+
+  it('medico y semep en false no degradan el resultado si CI+Foto ya están completos', () => {
+    const status = getExpedienteStatus(exp({ ci: true, foto: true, medico: false, semep: false }));
+    expect(status).toEqual({ label: 'Completo', severity: 'success', count: '2/2' });
   });
 });
 

@@ -57,7 +57,7 @@ import type {
   Requirement,
   DraftSummary,
 } from '@core/models/ui/enrollment-wizard.model';
-import { ENROLLMENT_STEPS } from '@core/models/ui/enrollment-wizard.model';
+import { ENROLLMENT_STEPS, ENROLLMENT_STEP } from '@core/models/ui/enrollment-wizard.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Tipos internos ───
@@ -1237,10 +1237,11 @@ export class EnrollmentFacade {
         return false;
       }
 
-      await this.refreshEnrollment();
-      this.updateStepStatus(4, 'completed');
-      this.goToStep(5);
-      return true;
+      // fix-034-i: Contrato pasa a ser el paso final (ENROLLMENT_STEP.CONTRACT) — firmarlo
+      // activa la matrícula (confirmEnrollment ya hizo su propio refreshEnrollment()).
+      this.updateStepStatus(ENROLLMENT_STEP.CONTRACT, 'completed');
+      const enrollmentNumber = await this.confirmEnrollment();
+      return enrollmentNumber !== null;
     } catch (e) {
       this._error.set('Error inesperado al subir contrato firmado');
       return false;
@@ -1333,7 +1334,8 @@ export class EnrollmentFacade {
 
   /**
    * Registra la firma digital del contrato (sin archivo físico).
-   * Actualiza digital_contracts + enrollments.contract_accepted y avanza al paso 6.
+   * Actualiza digital_contracts + enrollments.contract_accepted y activa la matrícula
+   * (fix-034-i: Contrato es ahora el paso final, ver ENROLLMENT_STEP.CONTRACT).
    */
   async markContractSigned(meta: {
     signerName: string | null;
@@ -1374,10 +1376,9 @@ export class EnrollmentFacade {
         return false;
       }
 
-      await this.refreshEnrollment();
-      this.updateStepStatus(4, 'completed');
-      this.goToStep(5);
-      return true;
+      this.updateStepStatus(ENROLLMENT_STEP.CONTRACT, 'completed');
+      const enrollmentNumber = await this.confirmEnrollment();
+      return enrollmentNumber !== null;
     } catch {
       this._error.set('Error inesperado al registrar firma');
       return false;
@@ -1462,8 +1463,13 @@ export class EnrollmentFacade {
 
   /**
    * Confirma la matrícula y registra el pago en una sola transacción atómica.
-   * Reemplaza la secuencia recordPayment() + confirmEnrollment() que dejaba
+   * Reemplazaba la secuencia recordPayment() + confirmEnrollment() que dejaba
    * una ventana de fallo entre ambas operaciones.
+   *
+   * fix-034-i: el wizard presencial ya no la usa — con Pago antes de Contrato, la
+   * activación de la matrícula ocurre al firmar (ver `confirmEnrollment()`,
+   * `uploadSignedContract()`), no al pagar. Se conserva por si algún otro flujo la
+   * necesita; si nada la usa a futuro, es candidata a eliminar.
    *
    * Retorna el número de matrícula generado, o null si falló.
    */
@@ -1653,8 +1659,8 @@ export class EnrollmentFacade {
       1: 'Datos personales',
       2: 'Asignación',
       3: 'Documentos',
-      4: 'Contrato',
-      5: 'Pago',
+      4: 'Pago',
+      5: 'Contrato',
       6: 'Confirmación',
     };
 
@@ -1814,9 +1820,17 @@ export class EnrollmentFacade {
         await this.docsFacade.loadDocuments(enrollmentId);
       }
 
-      // 6b. Rehidratar step 4 (contrato) si el paso es >= 4: sin esto, `_contractFileUrl`
-      // queda null en la re-entrada y el botón "Contrato Firmado" no abre nada.
-      if (currentStep >= 4) {
+      // 6b. Rehidratar step de Pago si el paso es >= ENROLLMENT_STEP.PAYMENT (fix-034-i:
+      // Pago pasó a ir antes que Contrato — antes este bloque comparaba contra 5).
+      if (currentStep >= ENROLLMENT_STEP.PAYMENT) {
+        await this.paymentFacade.rehydrateFromEnrollment(enrollmentId);
+      }
+
+      // 7. Rehidratar step de Contrato si el paso es >= ENROLLMENT_STEP.CONTRACT: sin esto,
+      // `_contractFileUrl` queda null en la re-entrada y el botón "Contrato Firmado" no abre
+      // nada (fix-034-i: Contrato pasó a ir después de Pago — antes este bloque comparaba
+      // contra 4).
+      if (currentStep >= ENROLLMENT_STEP.CONTRACT) {
         const { data: contract } = await this.supabase.client
           .from('digital_contracts')
           .select('file_url')
@@ -1825,11 +1839,6 @@ export class EnrollmentFacade {
         if (contract?.file_url) {
           this._contractFileUrl.set(contract.file_url);
         }
-      }
-
-      // 7. Rehidratar step 5 (pago) si el paso es >= 5
-      if (currentStep >= 5) {
-        await this.paymentFacade.rehydrateFromEnrollment(enrollmentId);
       }
 
       // 8. Setear step actual y marcar pasos anteriores como completed
