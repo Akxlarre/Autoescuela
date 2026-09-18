@@ -41,6 +41,14 @@
 > coordinarse si las toman personas distintas. `010` depende del guard que salga de `008`.
 > `011` va al final (documentación, necesita los tracks resultantes para linkear). `012` es
 > el cierre — QA visual real antes de dar la entrega por lista, corre última.
+>
+> **`013` agregada 2026-09-18** (mismo alcance, motivo distinto): al definir `ASG-m-002`
+> (reordenar Pago/Firma en el wizard) se identificó que la matrícula pública online
+> (`/inscripcion`) es el único flujo donde un pago real por pasarela podría quedar
+> "huérfano" sin nadie presente para cancelarlo — a diferencia del flujo presencial
+> (Admin/Secretaria), donde el mismo caso se resuelve cancelando en el momento. Se decidió
+> acotar `ASG-m-002` a presencial y bloquear `/inscripcion` en vez de resolver ese caso
+> ahora. Reutiliza el guard de `008`/mecanismo de fase, no es una tanda aparte.
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
@@ -49,6 +57,7 @@
 | ASG-i-010 | Pantalla de aviso "módulo no habilitado todavía" (piloto) | `cualquiera` | hotfix | P2 | i | No reusar `acceso-denegado` — es un caso distinto (fase, no permisos) |
 | ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | `cualquiera` | hotfix | P3 | i | Hacer después de que 008/009 tengan track, para poder linkear |
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `cualquiera` | fix | P1 | i | Corre última — depende de 008/009/010 ya mergeadas. Usa los recorridos del documento de testing entregado al equipo |
+| ASG-i-013 | Bloquear matrícula pública online (/inscripcion) para el piloto | `cualquiera` | fix | P1 | i | Sin guard hoy y procesa pagos reales por pasarela — no alcanza con "no enlazarla". Surgió al acotar ASG-m-002 al flujo presencial |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
