@@ -82,6 +82,8 @@ export interface EnrollmentPaymentData {
   /** Singular courses require full payment — disables "pendiente" option */
   isSingularCourse: boolean;
   singularAlert: SingularPaymentAlert;
+  /** N° de documento de respaldo del pago (boleta, comprobante, etc.) — opcional (fix-036-i) */
+  documentNumber: string | null;
   /** pricing !== null && paymentMethod !== null */
   canAdvance: boolean;
 }

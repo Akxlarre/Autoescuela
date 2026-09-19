@@ -59,6 +59,8 @@ export class EnrollmentPaymentFacade {
   });
   private readonly _selectedDiscountId = signal<number | null>(null);
   private readonly _availableDiscounts = signal<AvailableDiscount[]>([]);
+  /** N° de documento de respaldo del pago (boleta, comprobante, etc.) — opcional (fix-036-i) */
+  private readonly _documentNumber = signal<string | null>(null);
 
   // ── UI state ──
   private readonly _isProcessing = signal(false);
@@ -73,6 +75,7 @@ export class EnrollmentPaymentFacade {
   readonly discount = this._discount.asReadonly();
   readonly selectedDiscountId = this._selectedDiscountId.asReadonly();
   readonly availableDiscounts = this._availableDiscounts.asReadonly();
+  readonly documentNumber = this._documentNumber.asReadonly();
   readonly isProcessing = this._isProcessing.asReadonly();
   readonly error = this._error.asReadonly();
 
@@ -113,6 +116,11 @@ export class EnrollmentPaymentFacade {
 
   setPaymentMethod(method: PaymentMethod): void {
     this._paymentMethod.set(method);
+  }
+
+  /** N° de documento de respaldo del pago (boleta, comprobante, etc.) — opcional (fix-036-i) */
+  setDocumentNumber(value: string | null): void {
+    this._documentNumber.set(value);
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -246,6 +254,7 @@ export class EnrollmentPaymentFacade {
         payment_date: isPending ? null : new Date().toISOString().split('T')[0],
         requires_receipt: true,
         registered_by: registeredBy,
+        document_number: this._documentNumber() || null,
       };
 
       const { error: paymentError } = await this.supabase.client
@@ -415,6 +424,7 @@ export class EnrollmentPaymentFacade {
       else if (payment.card_amount > 0) method = 'tarjeta';
       else if (payment.status === 'pending') method = 'pendiente';
       this._paymentMethod.set(method);
+      this._documentNumber.set(payment.document_number ?? null);
     }
 
     // Cargar discount application
@@ -444,6 +454,7 @@ export class EnrollmentPaymentFacade {
     this._discount.set({ enabled: false, amount: null, reason: '' });
     this._selectedDiscountId.set(null);
     this._availableDiscounts.set([]);
+    this._documentNumber.set(null);
     this._isProcessing.set(false);
     this._error.set(null);
   }

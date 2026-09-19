@@ -279,6 +279,7 @@
 | ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
 | ASG-m-001 | Validación de años de licencia previa en matrícula profesional | [fix-033-i-validacion-anos-licencia-clase-profesional](fixes/fix-033-i-validacion-anos-licencia-clase-profesional/fix.md) | 2026-09-17 |
 | ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | [fix-034-i-orden-pago-firma-y-pasos-por-nombre](fixes/fix-034-i-orden-pago-firma-y-pasos-por-nombre/fix.md) | 2026-09-18 |
+| ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
 <!-- AUTO-GENERATED:END -->
 
 ---

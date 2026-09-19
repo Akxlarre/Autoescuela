@@ -337,6 +337,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       selectedDiscountId: this.payment.selectedDiscountId(),
       isSingularCourse: pd?.courseType === 'singular',
       singularAlert: { visible: false, message: '' },
+      documentNumber: this.payment.documentNumber(),
       canAdvance: this.payment.canConfirmPayment(),
     };
   });
@@ -738,6 +739,10 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       }
     } else if (!newId) {
       this.payment.setDiscount(data.discount);
+    }
+
+    if (data.documentNumber !== this.payment.documentNumber()) {
+      this.payment.setDocumentNumber(data.documentNumber);
     }
   }
 

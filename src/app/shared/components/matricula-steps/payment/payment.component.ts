@@ -46,6 +46,10 @@ export class PaymentComponent {
     this.dataChange.emit({ ...this.data(), paymentMethod: method });
   }
 
+  onDocumentNumberChange(value: string): void {
+    this.dataChange.emit({ ...this.data(), documentNumber: value || null });
+  }
+
   /** Selecciona o deselecciona un descuento predefinido (toggle). */
   selectPredefinedDiscount(id: number): void {
     const current = this.data().selectedDiscountId;

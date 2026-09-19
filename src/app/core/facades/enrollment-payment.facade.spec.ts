@@ -352,6 +352,44 @@ describe('EnrollmentPaymentFacade', () => {
         expect(ok).toBe(true);
       });
     });
+
+    // ── fix-036-i: N° de documento/boleta en el pago de matrícula nueva ──
+    describe('document_number (fix-036-i)', () => {
+      beforeEach(() => {
+        facade.computePricing({
+          courseLabel: 'Clase B',
+          basePrice: 300000,
+          practicalClassesIncluded: 12,
+          isDeposit: false,
+        });
+        facade.setPaymentMethod('efectivo');
+      });
+
+      it('incluye el N° de documento en el INSERT de payments cuando se seteó', async () => {
+        facade.setDocumentNumber('REC-01234');
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(builder.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ document_number: 'REC-01234' }),
+        );
+      });
+
+      it('el INSERT queda con document_number null cuando no se seteó ninguno', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(builder.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ document_number: null }),
+        );
+      });
+    });
   });
 
   // ── Reset ──

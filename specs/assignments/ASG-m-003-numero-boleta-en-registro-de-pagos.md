@@ -1,14 +1,25 @@
 # Asignación ASG-m-003 — Campo de número de boleta al registrar un pago
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-19
+> **resulting_track:** fix-036-i-boleta-pago-matricula-nueva
+
+## Nota de reclamación
+
+Investigado antes de implementar: la columna `payments.document_number` ya existe en
+el esquema (RF-027) y ya se pide en la UI para el pago de una cuota/pago pendiente
+(`registrar-pago-drawer.component.ts`) como campo opcional de texto libre, sin
+validación de unicidad — responde la pregunta abierta de "Notas para quien la
+reclame". Falta únicamente en el paso de Pago del wizard de matrícula nueva. El fix
+resultante solo agrega el campo faltante ahí, replicando el mismo patrón ya
+validado en producción. No se toca el historial/detalle de pagos (eso es
+ASG-m-005, fuera de alcance de esta asignación).
 
 ---
 
