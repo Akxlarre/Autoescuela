@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
 
@@ -51,12 +50,9 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-008 | Ocultar portales Instructor y Alumno para el lanzamiento piloto | `cualquiera` | fix | P1 | i | Guard de fase + menú. No borrar código de los portales |
 | ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | `cualquiera` | fix | P1 | i | ⚠️ Revisar si Promociones alimenta datos que la matrícula profesional necesita antes de ocultarla — puede requerir decisión de producto |
-| ASG-i-010 | Pantalla de aviso "módulo no habilitado todavía" (piloto) | `cualquiera` | hotfix | P2 | i | No reusar `acceso-denegado` — es un caso distinto (fase, no permisos) |
 | ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | `cualquiera` | hotfix | P3 | i | Hacer después de que 008/009 tengan track, para poder linkear |
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `cualquiera` | fix | P1 | i | Corre última — depende de 008/009/010 ya mergeadas. Usa los recorridos del documento de testing entregado al equipo |
-| ASG-i-013 | Bloquear matrícula pública online (/inscripcion) para el piloto | `cualquiera` | fix | P1 | i | Sin guard hoy y procesa pagos reales por pasarela — no alcanza con "no enlazarla". Surgió al acotar ASG-m-002 al flujo presencial |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -279,6 +275,9 @@
 | ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
 | ASG-m-001 | Validación de años de licencia previa en matrícula profesional | [fix-033-i-validacion-anos-licencia-clase-profesional](fixes/fix-033-i-validacion-anos-licencia-clase-profesional/fix.md) | 2026-09-17 |
 | ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | [fix-034-i-orden-pago-firma-y-pasos-por-nombre](fixes/fix-034-i-orden-pago-firma-y-pasos-por-nombre/fix.md) | 2026-09-18 |
+| ASG-i-008 | Ocultar portales Instructor y Alumno para el lanzamiento piloto | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
+| ASG-i-010 | Pantalla de aviso "módulo no habilitado todavía" (piloto) | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
+| ASG-i-013 | Bloquear matrícula pública online (/inscripcion) para el piloto | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
 <!-- AUTO-GENERATED:END -->
 

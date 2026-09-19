@@ -14,6 +14,7 @@
 | `firstLoginGuard` | `CanActivateFn` | Fuerza cambio de contraseña en primer login (`first_login=true`) | Rutas de portal tras autenticar |
 | `enrollmentDraftGuard` | `CanDeactivateFn` | Confirma salida si hay un draft de matrícula activo (no guardado) | `SecretariaMatriculaComponent` |
 | `professionalBranchGuard` | `CanActivateFn` | Bloquea rutas profesionales de secretaría si la sede no ofrece Clase Profesional (fix-028-m/029) | 11 rutas profesionales de secretaría |
+| `pilotPhaseGuard(module)` | `CanActivateFn` (factory) | Bloquea un módulo mientras esté en `core/config/pilot-phase.config.ts` (`isBlockedInPilot`), redirige a `/modulo-no-disponible`. Sin dependencia de `AuthFacade` — aplica igual a rutas públicas. Fuente única de verdad del flag en `pilot-phase.config.ts`, no repetida en el guard (fix-255-m) | `/inscripcion`, `/inscripcion/retorno`, `/app/instructor/**`, `/app/alumno/**` |
 
 ## Auto-Index — Guards detectados por AST (generado automáticamente)
 
@@ -24,6 +25,7 @@
 | `enrollmentDraftGuard` | `CanDeactivateFn` | `EnrollmentFacade`, `ConfirmModalService` | `src/app/core/guards/enrollment-draft.guard.ts` |
 | `firstLoginGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/first-login.guard.ts` |
 | `guestGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/guest.guard.ts` |
+| `pilotPhaseGuard` | `CanActivateFn` | `Router` | `src/app/core/guards/pilot-phase.guard.ts` |
 | `professionalBranchGuard` | `CanActivateFn` | `AuthFacade`, `BranchFacade`, `Router` | `src/app/core/guards/professional-branch.guard.ts` |
 | `roleRedirectGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/role-redirect.guard.ts` |
 | `hasRoleGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/role.guard.ts` |

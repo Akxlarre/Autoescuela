@@ -6,6 +6,7 @@ import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
 import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
+import { pilotPhaseGuard } from '@core/guards/pilot-phase.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -53,10 +54,20 @@ export const routes: Routes = [
         (m) => m.AccesoDenegadoComponent,
       ),
   },
+  {
+    path: 'modulo-no-disponible',
+    loadComponent: () =>
+      import('./features/modulo-no-disponible/modulo-no-disponible.component').then(
+        (m) => m.ModuloNoDisponibleComponent,
+      ),
+  },
 
   // Matrícula pública — sin autenticación, sin AppShell
+  // fix-255-m: bloqueada durante la fase piloto (ver pilot-phase.config.ts) — procesa
+  // pagos reales por pasarela y no debe quedar alcanzable por URL directa.
   {
     path: 'inscripcion',
+    canActivate: [pilotPhaseGuard('inscripcion-publica')],
     loadComponent: () =>
       import('./features/public-enrollment/public-enrollment.component').then(
         (m) => m.PublicEnrollmentComponent,
@@ -64,6 +75,7 @@ export const routes: Routes = [
   },
   {
     path: 'inscripcion/retorno',
+    canActivate: [pilotPhaseGuard('inscripcion-publica')],
     loadComponent: () =>
       import('./features/public-enrollment/retorno/public-enrollment-retorno.component').then(
         (m) => m.PublicEnrollmentRetornoComponent,
@@ -593,7 +605,7 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'instructor',
-        canActivate: [hasRoleGuard(['instructor'])],
+        canActivate: [hasRoleGuard(['instructor']), pilotPhaseGuard('instructor')],
         children: [
           {
             path: 'dashboard',
@@ -684,7 +696,7 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'alumno',
-        canActivate: [hasRoleGuard(['alumno'])],
+        canActivate: [hasRoleGuard(['alumno']), pilotPhaseGuard('alumno')],
         children: [
           {
             path: 'dashboard',

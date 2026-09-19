@@ -65,6 +65,14 @@ describe('MenuConfigService', () => {
     expect(service.menuItems()).toEqual([]);
   });
 
+  it('fix-255-m: instructor/alumno quedan sin ítems mientras la fase piloto los bloquea', () => {
+    setup('instructor');
+    expect(service.menuItems()).toEqual([]);
+    TestBed.resetTestingModule();
+    setup('alumno');
+    expect(service.menuItems()).toEqual([]);
+  });
+
   it('every group should have at least one item', () => {
     const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno'];
     for (const role of roles) {

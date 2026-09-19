@@ -1,5 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /** Item de navegación lateral. `icon` es el nombre kebab-case de Lucide. */
 export interface NavItem {
@@ -35,9 +36,9 @@ export class MenuConfigService {
       case 'secretaria':
         return SECRETARIA_NAV;
       case 'instructor':
-        return INSTRUCTOR_NAV;
+        return isBlockedInPilot('instructor') ? [] : INSTRUCTOR_NAV;
       case 'alumno':
-        return ALUMNO_NAV;
+        return isBlockedInPilot('alumno') ? [] : ALUMNO_NAV;
       default:
         return [];
     }

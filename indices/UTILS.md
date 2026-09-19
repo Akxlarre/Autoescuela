@@ -39,7 +39,7 @@
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
-| `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` — mapa de descripciones en español simple para los tokens `{{token}}` del editor de plantillas (fallback al token crudo si no está mapeado) |
+| `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |
@@ -53,7 +53,7 @@
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
-| `src/app/core/utils/license-seniority.utils.ts` | `calcLicenseSeniority` |
+| `src/app/core/utils/license-seniority.utils.ts` | `requiredPriorLicenseLabel`, `licenseClassFromCourseType`, `calcLicenseSeniority` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
 | `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
