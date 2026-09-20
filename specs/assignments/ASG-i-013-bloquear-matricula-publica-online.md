@@ -1,14 +1,14 @@
 # Asignación ASG-i-013 — Bloquear matrícula pública online (/inscripcion) para el piloto
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-18
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-19
+> **resulting_track:** fix-255-m-piloto-guard-fase-portales-inscripcion
 
 ---
 

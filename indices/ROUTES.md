@@ -16,8 +16,9 @@
 | `/force-password-change` | `ForcePasswordChangeComponent` | `firstLoginGuard` | `src/app/app.routes.ts` |
 | `/recuperar-contrasena` | `RecuperarContrasenaComponent` | `guestGuard` | `src/app/app.routes.ts` |
 | `/acceso-denegado` | `AccesoDenegadoComponent` | — | `src/app/app.routes.ts` |
-| `/inscripcion` | `PublicEnrollmentComponent` | — | `src/app/app.routes.ts` |
-| `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | — | `src/app/app.routes.ts` |
+| `/modulo-no-disponible` | `ModuloNoDisponibleComponent` | — | `src/app/app.routes.ts` |
+| `/inscripcion` | `PublicEnrollmentComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
+| `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
 | `/politica-privacidad/:branchSlug` | `PoliticaPrivacidadComponent` | — | `src/app/app.routes.ts` |
 | `/app` | `AppShellComponent` | `authGuard` | `src/app/app.routes.ts` |
 | `/app` | — | `roleRedirectGuard` | `src/app/app.routes.ts` |
@@ -89,7 +90,7 @@
 | `/app/secretaria/servicios-especiales` | `SecretariaServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/configuracion-web` | `AdminConfiguracionWebComponent` | — | `src/app/app.routes.ts` |
-| `/app/instructor` | — | `hasRoleGuard(['instructor'])` | `src/app/app.routes.ts` |
+| `/app/instructor` | — | `hasRoleGuard(['instructor'])`, `pilotPhaseGuard('instructor')` | `src/app/app.routes.ts` |
 | `/app/instructor/dashboard` | `InstructorDashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/alumnos` | `InstructorAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/alumnos/:id` | → redirect a `:id/ficha` | — | `src/app/app.routes.ts` |
@@ -101,7 +102,7 @@
 | `/app/instructor/liquidacion` | `InstructorLiquidacionComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/notificaciones` | `InstructorNotificacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor/tareas` | `InstructorTareasComponent` | — | `src/app/app.routes.ts` |
-| `/app/alumno` | — | `hasRoleGuard(['alumno'])` | `src/app/app.routes.ts` |
+| `/app/alumno` | — | `hasRoleGuard(['alumno'])`, `pilotPhaseGuard('alumno')` | `src/app/app.routes.ts` |
 | `/app/alumno/dashboard` | `AlumnoDashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/alumno/clases` | `AlumnoClasesComponent` | — | `src/app/app.routes.ts` |
 | `/app/alumno/pagos` | `AlumnoPagosComponent` | — | `src/app/app.routes.ts` |
