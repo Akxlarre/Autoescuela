@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-003 | Campo de número de boleta al registrar un pago | `i` | fix | P1 | m | Cubre matrícula nueva y pago de cuota pendiente |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
 
