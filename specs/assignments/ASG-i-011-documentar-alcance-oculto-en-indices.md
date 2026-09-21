@@ -1,14 +1,14 @@
 # Asignación ASG-i-011 — Documentar el alcance "oculto en esta fase" en los índices
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P3
 > **created:** 2026-09-15
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-21
+> **resulting_track:** hotfix-109-m-documentar-rutas-ocultas-fase-piloto
 
 ---
 
