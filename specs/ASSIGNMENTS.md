@@ -10,7 +10,7 @@
 > flujo SDD normal desde ahí.
 >
 > ⚠️ **Multi-rama**: si cada persona trabaja en su propia rama, este archivo puede
-> quedar desactualizado entre ramas. Commiteá y pusheá los cambios acá **de inmediato**
+> quedar desactualizado entre ramas. Commitea y pushea los cambios acá **de inmediato**
 > (antes de armar tu rama de feature) para que el resto del equipo vea la reclamación
 > a tiempo. Ver sección "Conflictos entre ramas" al final.
 
@@ -20,7 +20,37 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | `i` | fix | P1 | b | 1-4.5s por carga, confirmado con EXPLAIN ANALYZE (1M+ buffer hits). Requiere migración + tests de regresión de double-booking antes de tocar producción |
+| ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
+| ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
+
+### Tanda alcance de lanzamiento piloto — 2026-09-15
+
+> Decisión de alcance de equipo (estudio previo + reunión, ver documento "Piloto
+> Secretaría-Admin"): la primera entrega es **todo el proyecto salvo Instructor y Alumno**
+> (no interactúan con el sistema todavía — queda para una fase posterior). Dentro de Clase
+> Profesional, además, solo queda visible **Matricular a Clase Profesional** y la **Base de
+> Alumnos Profesional** — el resto de sus módulos (pre-inscritos, relatores, promociones,
+> asistencia, certificados, evaluaciones, archivo, ex-alumnos-profesional) queda oculto en
+> esta fase. Clase B se entrega completa, sin recortes. "Ocultar" = fuera de menú y bloqueado
+> por guard — el código de los 4 portales sigue existiendo tal cual, no se borra nada.
+>
+> **Orden sugerido:** `008` y `009` comparten archivos (`app.routes.ts`,
+> `menu-config.service.ts`) y el mismo mecanismo de "fase" — conviene resolverlas juntas o
+> coordinarse si las toman personas distintas. `010` depende del guard que salga de `008`.
+> `011` va al final (documentación, necesita los tracks resultantes para linkear). `012` es
+> el cierre — QA visual real antes de dar la entrega por lista, corre última.
+>
+> **`013` agregada 2026-09-18** (mismo alcance, motivo distinto): al definir `ASG-m-002`
+> (reordenar Pago/Firma en el wizard) se identificó que la matrícula pública online
+> (`/inscripcion`) es el único flujo donde un pago real por pasarela podría quedar
+> "huérfano" sin nadie presente para cancelarlo — a diferencia del flujo presencial
+> (Admin/Secretaria), donde el mismo caso se resuelve cancelando en el momento. Se decidió
+> acotar `ASG-m-002` a presencial y bloquear `/inscripcion` en vez de resolver ese caso
+> ahora. Reutiliza el guard de `008`/mecanismo de fase, no es una tanda aparte.
+
+| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
+|----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `cualquiera` | fix | P1 | i | Corre última — depende de 008/009/010 ya mergeadas. Usa los recorridos del documento de testing entregado al equipo |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -236,6 +266,19 @@
 | ASG-i-005 | Eliminar notificaciones (individual/todas) + drawer "Ver todas" con historial completo | [0013-m-eliminar-notificaciones-drawer-historial](specs/0013-m-eliminar-notificaciones-drawer-historial/spec.md) | 2026-09-04 |
 | ASG-b-092 | Mudar los Organismos a una carpeta que refleje su rol | [fix-156-b-guardrail-rol-dumb-organismo](fixes/fix-156-b-guardrail-rol-dumb-organismo/fix.md) | 2026-09-07 |
 | ASG-i-006 | Resetear y repoblar la BD de prueba con datos masivos realistas | [0008-i-reset-y-poblar-datos-prueba](specs/0008-i-reset-y-poblar-datos-prueba/spec.md) | 2026-09-07 |
+| ASG-m-005 | Filtros en la tabla principal de la vista Pagos | [fix-248-m-filtros-tabla-pagos](fixes/fix-248-m-filtros-tabla-pagos/fix.md) | 2026-09-15 |
+| ASG-m-006 | Fix visual en la vista Secretarias de admin (espacio vacío) | [fix-247-m-secretarias-layout-espacio-vacio](fixes/fix-247-m-secretarias-layout-espacio-vacio/fix.md) | 2026-09-15 |
+| ASG-m-009 | Libro de Clases debe ser una plantilla imprimible, no un reflejo de datos digitales | [fix-250-m-libro-clases-plantilla-imprimible](fixes/fix-250-m-libro-clases-plantilla-imprimible/fix.md) | 2026-09-15 |
+| ASG-m-004 | Editor de plantillas para contratos y certificados generados por Edge Function | [0016-m-editor-plantillas-documentos](specs/0016-m-editor-plantillas-documentos/spec.md) | 2026-09-16 |
+| ASG-i-007 | Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda) | [fix-032-i-agenda-clase-b-vista-disponibilidad-lenta](fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta/fix.md) | 2026-09-17 |
+| ASG-m-001 | Validación de años de licencia previa en matrícula profesional | [fix-033-i-validacion-anos-licencia-clase-profesional](fixes/fix-033-i-validacion-anos-licencia-clase-profesional/fix.md) | 2026-09-17 |
+| ASG-m-002 | Mover el paso de Pago antes de la Firma de contrato en matrícula | [fix-034-i-orden-pago-firma-y-pasos-por-nombre](fixes/fix-034-i-orden-pago-firma-y-pasos-por-nombre/fix.md) | 2026-09-18 |
+| ASG-i-008 | Ocultar portales Instructor y Alumno para el lanzamiento piloto | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
+| ASG-i-010 | Pantalla de aviso "módulo no habilitado todavía" (piloto) | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
+| ASG-i-013 | Bloquear matrícula pública online (/inscripcion) para el piloto | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
+| ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
+| ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | [fix-256-m-recorte-clase-profesional-matricula-base-alumnos](fixes/fix-256-m-recorte-clase-profesional-matricula-base-alumnos/fix.md) | 2026-09-21 |
+| ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | [hotfix-109-m-documentar-rutas-ocultas-fase-piloto](hotfixes/hotfix-109-m-documentar-rutas-ocultas-fase-piloto/hotfix.md) | 2026-09-21 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -270,7 +313,7 @@
 - **`Tipo sugerido`:** `spec` (feature nueva) / `fix` (bug con AC afectados) / `hotfix` (fix urgente simple) — quien reclama puede cambiarlo con `--as=` si al leer el contexto no coincide.
 - **Reclamar:** solo se puede reclamar una asignación con `Asignado a: cualquiera`, o una asignada específicamente a tu propio código de autor. Una vez `Reclamada`, nadie más puede tomarla.
 - **Cerrar:** marcar como `Completada` es **manual** — se mueve la fila cuando el track resultante (spec/fix/hotfix) llega a `done`/se cierra. No se sincroniza automáticamente con `/spec-verify` ni `/fix-close`.
-- **Archivos involucrados:** cada `ASG-X-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapás con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
+- **Archivos involucrados:** cada `ASG-X-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapas con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
 
 ### Conflictos entre ramas
 

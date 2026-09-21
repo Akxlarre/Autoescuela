@@ -3,6 +3,7 @@ import { PagosFacade, mapEstado } from './pagos.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -50,6 +51,9 @@ describe('PagosFacade', () => {
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: ToastService, useValue: toastSpy },
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+        // Evita depender del signal real (leído sync desde localStorage) — sin esto,
+        // el branchId efectivo queda a merced de estado ambiental entre tests (fix-248-m).
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
         {
           provide: NotificationsFacade,
           useValue: { notifyUsers: vi.fn().mockResolvedValue(undefined) },
@@ -147,6 +151,56 @@ describe('PagosFacade', () => {
       // los que quedan fuera son los deudores más chicos, no unos al azar.
       expect(orderSpy).toHaveBeenCalledWith('pending_balance', { ascending: false });
       expect(limitSpy).toHaveBeenCalledWith(200);
+    });
+  });
+
+  // ── fix-248-m: filtros de fecha/curso/sede en la tabla de deudores ──
+  describe('fetchAlumnosConDeuda — mapeo de curso/fecha/sede (fix-248-m)', () => {
+    it('mapea cursoTipo, cursoNombre, fechaMatricula, sedeId y sedeNombre desde el join', async () => {
+      const genericMock = supabaseSpy.client.from();
+      const row = {
+        id: 1,
+        base_price: 500000,
+        discount: 0,
+        total_paid: 100000,
+        pending_balance: 400000,
+        created_at: '2026-03-10T12:00:00Z',
+        branch_id: 2,
+        students: { users: { first_names: 'Ana', paternal_last_name: 'Soto', rut: '1-9' } },
+        courses: { type: 'class_b', name: 'Clase B' },
+        branches: { name: 'Conductores Chillán' },
+      };
+      // AuthFacade mockea currentUser() = null → resolveBranchScope cae a
+      // NO_BRANCH_SCOPE (-1), no a null. Por eso todo método branch-scoped SIEMPRE
+      // llama a `.eq('branch_id', ...)` en este describe — ambos caminos de la tabla
+      // `enrollments` (fetchAlumnosConDeuda y fetchPagosPendientes) necesitan resolver
+      // ese `.eq()` final para no cortar el Promise.all de fetchAll().
+      const limitEqSpy = vi.fn().mockResolvedValue({ data: [row], error: null });
+      const limitSpy = vi.fn().mockReturnValue({ eq: limitEqSpy });
+      const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
+      const neqEqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const neqSpy = vi.fn().mockReturnValue({ order: orderSpy, eq: neqEqSpy });
+      const gtSpy = vi.fn().mockReturnValue({ neq: neqSpy });
+      const enrollmentsSelectSpy = vi.fn().mockReturnValue({ gt: gtSpy });
+
+      supabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'enrollments' ? { select: enrollmentsSelectSpy } : genericMock,
+      );
+      supabaseSpy.client.channel = vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      });
+
+      await facade.initialize();
+      await flushMicrotasks();
+
+      const deudores = facade.alumnosConDeuda();
+      expect(deudores).toHaveLength(1);
+      expect(deudores[0].cursoTipo).toBe('class_b');
+      expect(deudores[0].cursoNombre).toBe('Clase B');
+      expect(deudores[0].fechaMatricula).toBe('2026-03-10T12:00:00Z');
+      expect(deudores[0].sedeId).toBe(2);
+      expect(deudores[0].sedeNombre).toBe('Conductores Chillán');
     });
   });
 

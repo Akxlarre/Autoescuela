@@ -1200,4 +1200,151 @@ describe('EnrollmentFacade', () => {
       expect(facade.error()).toBeNull();
     });
   });
+
+  // fix-034-i (ASG-m-002): Pago pasa a ir antes que Contrato en el wizard presencial —
+  // firmar el contrato es ahora lo que activa la matrícula, no registrar el pago.
+  describe('uploadSignedContract — activa la matrícula al firmar (fix-034-i)', () => {
+    beforeEach(() => {
+      mockSupabase.client.storage.from = vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: null }),
+      });
+    });
+
+    it('retorna false si no hay borrador (sin enrollmentId/studentId)', async () => {
+      const file = new File(['x'], 'contrato.pdf', { type: 'application/pdf' });
+      const result = await facade.uploadSignedContract(file);
+      expect(result).toBe(false);
+    });
+
+    it('al firmar, marca el paso Contrato (5) completado y activa la matrícula (confirmEnrollment)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0099', error: null });
+      const file = new File(['x'], 'contrato.pdf', { type: 'application/pdf' });
+
+      const result = await facade.uploadSignedContract(file);
+
+      expect(result).toBe(true);
+      // confirmEnrollment() genera el número vía RPC — si se llamó, la matrícula se activó.
+      expect(mockSupabase.client.rpc).toHaveBeenCalled();
+      expect(facade.steps().find((s) => s.step === 5)?.status).toBe('completed');
+      expect(facade.steps().find((s) => s.step === 6)?.status).toBe('completed');
+    });
+
+    it('si falla la subida a Storage, NO activa la matrícula (rpc no se llama)', async () => {
+      mockSupabase.client.storage.from = vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: new Error('storage down') }),
+      });
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      const file = new File(['x'], 'contrato.pdf', { type: 'application/pdf' });
+
+      const result = await facade.uploadSignedContract(file);
+
+      expect(result).toBe(false);
+      expect(mockSupabase.client.rpc).not.toHaveBeenCalled();
+    });
+  });
+
+  // fix-034-i: resumeDraft() debe rehidratar Pago en el paso 4 y Contrato en el paso 5 —
+  // antes era al revés (4=Contrato, 5=Pago). Un mismatch acá pisaría datos del paso
+  // equivocado al reanudar un borrador.
+  describe('resumeDraft — rehidrata Pago/Contrato según el paso, en el orden nuevo (fix-034-i)', () => {
+    function buildResumeMocks(currentStep: number) {
+      const enrollmentRow = {
+        id: 77,
+        student_id: 5,
+        course_id: 9,
+        branch_id: 1,
+        current_step: currentStep,
+        payment_mode: null,
+        promotion_course_id: null,
+      };
+      const studentRow = {
+        id: 5,
+        birth_date: '2000-01-01',
+        gender: 'M',
+        address: '',
+        is_minor: false,
+        current_license_class: null,
+        license_obtained_date: null,
+        users: {
+          id: 12,
+          rut: '11.111.111-1',
+          first_names: 'Ana',
+          paternal_last_name: 'Soto',
+          maternal_last_name: '',
+          email: 'ana@test.cl',
+          phone: '+56900000000',
+        },
+      };
+      const courseRow = {
+        id: 9,
+        license_class: 'B',
+        code: 'B1',
+        name: 'Clase B',
+        type: 'class_b',
+        is_reinforcement: false,
+        active: true,
+        branch_id: 1,
+      };
+
+      const enrollmentsBuilder = createMockQueryBuilder(enrollmentRow, null);
+      const studentsBuilder = createMockQueryBuilder(studentRow, null);
+      const coursesBuilder = createMockQueryBuilder([courseRow], null);
+      const sessionsBuilder = createMockQueryBuilder([], null);
+      const contractBuilder = createMockQueryBuilder({ file_url: 'contracts/77/x.pdf' }, null);
+
+      mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+        switch (table) {
+          case 'enrollments':
+            return enrollmentsBuilder;
+          case 'students':
+            return studentsBuilder;
+          case 'courses':
+            return coursesBuilder;
+          case 'class_b_sessions':
+            return sessionsBuilder;
+          case 'digital_contracts':
+            return contractBuilder;
+          default:
+            return createMockQueryBuilder(null, null);
+        }
+      });
+
+      mockDocs.loadDocuments = vi.fn().mockResolvedValue(undefined);
+      mockPayment.rehydrateFromEnrollment = vi.fn().mockResolvedValue(undefined);
+
+      return { contractBuilder };
+    }
+
+    it('en el paso 4 (Pago), rehidrata el pago pero NO consulta digital_contracts', async () => {
+      buildResumeMocks(4);
+
+      const ok = await facade.resumeDraft(77);
+
+      expect(ok).toBe(true);
+      expect(mockPayment.rehydrateFromEnrollment).toHaveBeenCalledWith(77);
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('digital_contracts');
+    });
+
+    it('en el paso 5 (Contrato), rehidrata pago Y contrato (>= 4 y >= 5 se cumplen ambos)', async () => {
+      const { contractBuilder } = buildResumeMocks(5);
+
+      const ok = await facade.resumeDraft(77);
+
+      expect(ok).toBe(true);
+      expect(mockPayment.rehydrateFromEnrollment).toHaveBeenCalledWith(77);
+      expect(contractBuilder.select).toHaveBeenCalledWith('file_url');
+    });
+
+    it('en el paso 3 (Documentos), NO rehidrata ni pago ni contrato — todavía no llega a ninguno', async () => {
+      buildResumeMocks(3);
+
+      const ok = await facade.resumeDraft(77);
+
+      expect(ok).toBe(true);
+      expect(mockPayment.rehydrateFromEnrollment).not.toHaveBeenCalled();
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('digital_contracts');
+    });
+  });
 });

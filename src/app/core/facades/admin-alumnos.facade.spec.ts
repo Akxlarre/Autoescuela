@@ -68,6 +68,30 @@ describe('AdminAlumnosFacade', () => {
     expect(facade.error()).toBeNull();
   });
 
+  // ─── fix-035-i: deriveExpediente() debe reconocer la clave de foto vigente ───
+  describe('deriveExpediente() — detección de foto (fix-035-i)', () => {
+    it('marca foto=true cuando el documento tiene type "id_photo" (clave actual del wizard)', () => {
+      const expediente = (facade as any).deriveExpediente([
+        { type: 'id_photo', status: 'uploaded' },
+      ]);
+      expect(expediente.foto).toBe(true);
+    });
+
+    it('marca foto=true cuando el documento tiene type "foto_carnet" (clave legacy)', () => {
+      const expediente = (facade as any).deriveExpediente([
+        { type: 'foto_carnet', status: 'uploaded' },
+      ]);
+      expect(expediente.foto).toBe(true);
+    });
+
+    it('marca foto=false cuando no hay ningún documento de foto', () => {
+      const expediente = (facade as any).deriveExpediente([
+        { type: 'cedula_identidad', status: 'uploaded' },
+      ]);
+      expect(expediente.foto).toBe(false);
+    });
+  });
+
   // ─── Spec 0005-m: guard de requestId contra respuestas stale ──────────────
   describe('Request guard — respuestas stale (AC1, AC-E1, AC-E2)', () => {
     function makeDeferred<T>(): {

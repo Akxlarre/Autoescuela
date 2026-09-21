@@ -145,19 +145,6 @@ function cursoCompleto(): Record<string, TableConfig> {
       ],
     },
     professional_practice_sessions: { data: [] },
-    professional_theory_attendance: {
-      data: [{ theory_session_prof_id: 1, enrollment_id: 10, status: 'present' }],
-    },
-    professional_practice_attendance: { data: [] },
-    professional_weekly_signatures: {
-      data: [{ enrollment_id: 10, week_start_date: '2026-07-06', signed_at: '2026-07-06T10:00' }],
-    },
-    professional_module_grades: {
-      data: [
-        { enrollment_id: 10, module_number: 1, grade: 80, passed: true, status: 'graded' },
-        { enrollment_id: 10, module_number: 2, grade: 90, passed: true, status: 'graded' },
-      ],
-    },
   };
 }
 
@@ -216,27 +203,44 @@ describe('LibroDeClasesFacade', () => {
       expect(prof[5].lecturerName).toBe('Pau Prat'); // módulo 6 → practice
     });
 
-    it('evaluaciones: promedio de módulos con nota y aprobado ≥ 75; sin notas → null', async () => {
-      const { facade } = setup(cursoCompleto());
+    it('evaluaciones: plantilla imprimible — nombres precargados, notas y nota final vacías (fix-250-m)', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
       await facade.selectPromocion(1);
       const [ana, zoe] = facade.evaluaciones();
-      expect(ana.notaFinal).toBe(85); // (80+90)/2
-      expect(ana.aprobado).toBe(true);
+      expect(ana.nombre).toBe('Araya Soto Ana');
+      expect(ana.notas.every((n) => n === null)).toBe(true);
+      expect(ana.notaFinal).toBeNull();
+      expect(ana.aprobado).toBe(false);
       expect(zoe.notaFinal).toBeNull();
       expect(zoe.aprobado).toBe(false);
+      // No debe leer la tabla de notas transaccionales — la vista es una plantilla, no un reflejo.
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('professional_module_grades');
     });
 
-    it('asistencia semanal: agrupa por semana Lun–Sáb, marca presente y firma', async () => {
-      const { facade } = setup(cursoCompleto());
+    it('asistencia semanal: plantilla imprimible — grilla de semana/días armada, marcas y firma vacías (fix-250-m)', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
       await facade.selectPromocion(1);
       const semanas = facade.asistenciaSemanal();
       expect(semanas).toHaveLength(1); // 06 y 07 jul caen en la misma semana
       expect(semanas[0].dias).toHaveLength(6);
       const ana = semanas[0].alumnos.find((a) => a.enrollmentId === 10)!;
-      expect(ana.asistenciaDias[0]).toBe('present'); // lunes 06
-      expect(ana.firmaSemanal).toBe(true);
+      expect(ana.asistenciaDias.every((d) => d === null)).toBe(true);
+      expect(ana.firmaSemanal).toBe(false);
       const zoe = semanas[0].alumnos.find((a) => a.enrollmentId === 20)!;
       expect(zoe.firmaSemanal).toBe(false);
+      // No debe leer asistencia/firmas transaccionales — la vista es una plantilla, no un reflejo.
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('professional_theory_attendance');
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('professional_weekly_signatures');
+    });
+
+    it('resumen asistencia: plantilla imprimible — nombres precargados, porcentajes vacíos (fix-250-m)', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      await facade.selectPromocion(1);
+      const resumen = facade.resumenAsistencia();
+      expect(resumen.map((r) => r.nombre)).toEqual(['Araya Soto Ana', 'Zúñiga Zoe']);
+      expect(resumen.every((r) => r.pctPractica === null && r.pctTeorica === null)).toBe(true);
+      // No debe leer asistencia práctica/teórica transaccional.
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('professional_practice_attendance');
     });
 
     it('calendario excluye sesiones canceladas y renumera', async () => {

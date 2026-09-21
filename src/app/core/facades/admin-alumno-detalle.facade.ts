@@ -398,7 +398,7 @@ export class AdminAlumnoDetalleFacade {
         .select(
           `
           id, status, created_at,
-          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, supabase_uid),
+          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, supabase_uid, first_login),
           enrollments(
             id, number, created_at, total_paid, pending_balance, branch_id,
             license_group, promotion_course_id, registration_channel,
@@ -528,6 +528,7 @@ export class AdminAlumnoDetalleFacade {
         certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
         isReinforcement: courseIsReinforcement,
         hasAuthAccount: !!u.supabase_uid,
+        firstLogin: !!u.first_login,
       });
 
       // ── Step 2: Queries según tipo de licencia ──

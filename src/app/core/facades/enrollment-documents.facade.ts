@@ -103,6 +103,15 @@ export class EnrollmentDocumentsFacade {
     this._cameraState.set(state);
   }
 
+  /**
+   * Registra un error de validación previo al upload (ej. `normalizePhoto` fallido
+   * porque el archivo no es una imagen decodificable). Reutiliza el signal `_error`
+   * existente para que la UI lo muestre igual que un error de red.
+   */
+  setUploadError(message: string): void {
+    this._error.set(message);
+  }
+
   setPhotoTab(tab: PhotoTab): void {
     this._photoTab.set(tab);
   }

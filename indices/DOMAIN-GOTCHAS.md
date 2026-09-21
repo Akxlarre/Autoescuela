@@ -884,9 +884,14 @@
   intentar recrearlo. El resto del patrón (generar link sin enviar correo nativo + despachar
   correo propio vía SMTP con el mismo copy/template) es igual al de la creación.
 - **Regla de aplicabilidad:** cualquier Edge Function de "reenviar invitación" para un rol que
-  ya usa `generateLink({ type: 'invite' })` en su función de creación debe usar
-  `type: 'magiclink'`, no `'invite'`, para el reenvío.
-- **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`
+  ya usa `generateLink({ type: 'invite' })` (o `inviteUserByEmail`, que internamente es el
+  mismo caso) en su función de creación debe usar `type: 'magiclink'`, no `'invite'`, para el
+  reenvío. `generateLink()` no envía correo — si el flujo original dependía del envío nativo
+  de Supabase (`inviteUserByEmail`), el reenvío necesita despachar el correo manualmente
+  (SMTP propio, con una copia del template para mantener el mismo copy visual).
+- **Fuente:** `specs/fixes/fix-168-m-reenviar-invitacion-instructor`,
+  `specs/fixes/fix-254-m-reenvio-invitacion-alumno-inviteuserbyemail-falla` (mismo gotcha,
+  esta vez en `activate-student-account`, que usaba `inviteUserByEmail` para ambos casos).
 
 ### DG-069 — Una fila de `public.users` insertada fuera del flujo de creación normal (seed, SQL directo) puede no tener `supabase_uid`, aunque el flujo "oficial" lo garantice
 - **Trampa:** asumir que una garantía que da la Edge Function de creación (ej.
@@ -1125,7 +1130,15 @@
   alta normal de la app (seed, importador, script de migración, backfill), verificar el orden de
   inserción por serie y el formato de los números que se cargan. Si se agrega una sede o un tipo
   de licencia nuevo, asumir que arranca su propia serie en `0001` — no que continúa la de otra.
-- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`
+- **Materializado en fix-252-m:** un seed local no commiteado insertó ~100 filas con
+  `number = 'SEED-NNNNNN'` en varias series (sede × grupo de licencia). Cuando esa fila quedó
+  como la de mayor `id` de su serie, `v_last_number::INT` reventó con `22P02` al confirmar la
+  siguiente matrícula real. Se renumeraron las filas sucias (conservadas, no borradas — eran
+  datos de prueba necesarios) y `get_next_enrollment_number()` ahora filtra
+  `AND e.number ~ '^[0-9]+$'`, así que un `number` no numérico se ignora en vez de romper el
+  cast — pero la regla de aplicabilidad de arriba sigue vigente para cualquier carga futura.
+- **Fuente:** `supabase/migrations/20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql`,
+  `supabase/migrations/20260915100000_fix252_renumber_seed_enrollments.sql`
 
 ### DG-081 — El arqueo de caja física asume 100% efectivo en cualquier tabla que no declare `payment_method`
 - **Trampa:** dar por bueno que "Debe Haber en Caja" del arqueo (`CuadraturaFacade`) cuadra
@@ -1403,7 +1416,72 @@
   esa familia, no un ajuste de Reportes.
 - **Fuente:** `specs/fixes/fix-244-m-reportes-gastos-categoria-otros`.
 
+### DG-092 — `supabase_uid` seteado (`hasAuthAccount = true`) no significa que el usuario activó su cuenta
+- **Trampa:** el link de `auth.admin.inviteUserByEmail()` es de un solo uso — se invalida en
+  cuanto el navegador lo abre, no cuando el usuario termina de crear su contraseña. Si cierra
+  la pestaña en la pantalla de "crear contraseña", o el link se abrió con la app caída, el
+  `supabase_uid` ya quedó vinculado en `public.users` (`hasAuthAccount = true`) pero
+  `first_login` sigue en `true` porque `user_complete_first_login` (RPC que lo pone en
+  `false`) nunca corrió. Cualquier condición de UI que use solo `!hasAuthAccount` para decidir
+  "¿este usuario necesita que le reenvíe la invitación?" da falso negativo en ese estado: el
+  botón de reenvío desaparece justo cuando más se necesita, y no hay otra vía en la UI para
+  generar un link nuevo. Pasó primero con instructores (fix-168-m/fix-169-m) y se repitió
+  después en el drawer de alumnos porque la corrección nunca se replicó (fix-253-m).
+- **Realidad:** la condición correcta para "ofrecer reenviar invitación" es
+  `!hasAuthAccount || firstLogin`, no solo `!hasAuthAccount`. `hasAuthAccount` responde "¿ya
+  existe la fila en `auth.users`?"; `firstLogin` responde "¿ya terminó de configurar su
+  contraseña?" — son dos preguntas independientes y ambas negativas habilitan el reenvío.
+  `activate-student-account`/`activate-instructor-account` ya soportan reenviar sin duplicar
+  al usuario ni la notificación de bienvenida en ambos casos.
+- **Regla de aplicabilidad:** cualquier modelo de UI nuevo que exponga `hasAuthAccount` para un
+  rol con flujo de invitación (alumno, instructor, y cualquier rol futuro que se sume) debe
+  exponer también `firstLogin` y usar la condición combinada — no solo el estado de
+  `supabase_uid`. Ver también DG-069 (fila sin `supabase_uid` por inserción fuera del flujo
+  oficial) — es el otro extremo del mismo problema.
+- **Fuente:** `specs/fixes/fix-169-m-reenviar-invitacion-instructor-sin-cuenta-auth`,
+  `specs/fixes/fix-253-m-reenviar-invitacion-alumno-sin-firstlogin`.
 
+
+### DG-093 — `MATERIALIZED` en un CTE con subqueries correlacionadas es un arma de doble filo: soluciona la duplicación WHERE/SELECT pero bloquea el pushdown de OTROS filtros del cliente
+- **Trampa (parte 1, fix-032-i):** `v_class_b_schedule_availability` exponía `slot_status`
+  como una columna `CASE` con 2 `NOT EXISTS` correlacionados (conflicto de instructor /
+  conflicto de vehículo). Al no ser una columna real, Postgres no cachea su resultado —
+  cuando PostgREST arma `?slot_status=eq.available`, el filtro y la columna de salida son
+  **dos referencias independientes** a la misma expresión, evaluadas por separado: el
+  `EXPLAIN ANALYZE` mostró **4 SubPlans casi idénticos** (2 NOT EXISTS × 2 referencias) y
+  1.033.204 buffer hits para devolver 3.348 filas — 1 a 4.5s reales por carga en
+  `/app/**/agenda`. Fusionar los 2 `NOT EXISTS` en 1 con `OR` y envolver el cálculo en un CTE
+  `AS MATERIALIZED` (forzando una sola evaluación) bajó esto a 114.990 buffer hits, verificado
+  sin cambios en qué slots se marcan `available`/`occupied`.
+- **Trampa (parte 2, hotfix-003-i, el mismo día):** ese `MATERIALIZED` rompió producción
+  (`57014 canceling statement due to statement timeout`) apenas se probó con el filtro real
+  que aplica el cliente además de `slot_status` — `agenda.facade.ts` también filtra por rango
+  de fecha (`.gte('slot_start', ...).lt('slot_start', ...)`). `MATERIALIZED` es una barrera de
+  optimización: fuerza a Postgres a resolver **todo** el CTE (4.368 filas, 28 días × todos los
+  instructores/vehículos) antes de aplicar CUALQUIER filtro externo, incluido ese rango de
+  fecha — el `EXPLAIN` mostró `Rows Removed by Filter: 3373` de 4368, es decir, se calculó el
+  conflicto para el 77% de filas que después se descartaron igual. Una prueba aislada con ese
+  filtro corrió en 563ms (no lo suficientemente lento para notarlo en el SQL Editor), pero
+  bajo carga real (Agenda dispara ~10 peticiones concurrentes al cargar la página) ese exceso
+  de trabajo por conexión superó el `statement_timeout` de la API.
+- **Realidad:** la corrección fue sacar `MATERIALIZED` (el CTE se referencia una sola vez, así
+  que Postgres 12+ lo inlinea por defecto sin el hint, recuperando la libertad de aplicar
+  cualquier filtro externo — incluido el de fecha — antes de evaluar el `NOT EXISTS`),
+  **manteniendo** la fusión de los 2 `NOT EXISTS` en 1 con `OR` (esa parte nunca fue el
+  problema). Verificado en producción con carga real: sin error, mismo resultado de negocio.
+- **Regla de aplicabilidad:** `MATERIALIZED` en un CTE con subqueries correlacionadas **solo**
+  es seguro si la única forma en que el cliente va a consultar esa columna es el filtro que ya
+  contemplaste al medir. Si existe (o puede existir) **cualquier otro filtro externo** sobre
+  columnas del mismo CTE (rango de fecha, otro campo, paginación), `MATERIALIZED` le impide a
+  Postgres aplicarlo antes de calcular — probá siempre con la query **completa** que arma el
+  consumidor real (todos sus `.eq()`/`.gte()`/`.lt()`/`.order()`), nunca solo con el filtro que
+  motivó la optimización. Si hay más de un filtro posible, preferí fusionar subqueries
+  redundantes (la parte 1, sin costo) pero dejar el CTE **sin** `MATERIALIZED` — el filtro
+  duplicado (WHERE + SELECT) es un costo menor y predecible; un `MATERIALIZED` que bloquea
+  pushdown de un filtro real es un riesgo de timeout en producción bajo carga.
+- **Fuente:** `specs/fixes/fix-032-i-agenda-clase-b-vista-disponibilidad-lenta`,
+  `specs/hotfixes/hotfix-003-i-agenda-materialized-cte-bloquea-filtro-fecha`,
+  `supabase/migrations/20260917110000_hotfix003_remove_materialized_class_b_schedule_availability.sql`.
 
 ## Convención para agregar una entrada nueva
 

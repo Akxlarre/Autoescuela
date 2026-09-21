@@ -1,0 +1,54 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/assert@*": "1.0.19",
+    "jsr:@std/internal@^1.0.12": "1.0.14"
+  },
+  "jsr": {
+    "@std/assert@1.0.19": {
+      "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/internal@1.0.14": {
+      "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@analogjs/vite-plugin-angular@^2.4.0",
+        "npm:@analogjs/vitest-angular@^2.4.0",
+        "npm:@angular/animations@^21.2.0",
+        "npm:@angular/build@^21.2.0",
+        "npm:@angular/cli@^21.2.0",
+        "npm:@angular/common@^21.2.0",
+        "npm:@angular/compiler-cli@^21.2.0",
+        "npm:@angular/compiler@^21.2.0",
+        "npm:@angular/core@^21.2.0",
+        "npm:@angular/forms@^21.2.0",
+        "npm:@angular/platform-browser@^21.2.0",
+        "npm:@angular/router@^21.2.0",
+        "npm:@primeng/themes@^21.0.4",
+        "npm:@supabase/supabase-js@^2.98.0",
+        "npm:@tailwindcss/postcss@^4.2.1",
+        "npm:flag-icons@^7.5.0",
+        "npm:gsap@^3.14.2",
+        "npm:happy-dom@^20.8.9",
+        "npm:jsdom@^29.0.1",
+        "npm:lucide-angular@0.575",
+        "npm:postcss@^8.5.6",
+        "npm:prettier@^3.8.1",
+        "npm:primeng@^21.1.1",
+        "npm:rxjs@7.8",
+        "npm:tailwindcss@^4.2.1",
+        "npm:tslib@^2.3.0",
+        "npm:typescript@~5.9.2",
+        "npm:vitest@^4.0.18",
+        "npm:xlsx@~0.18.5",
+        "npm:zone.js@~0.16.1"
+      ]
+    }
+  }
+}

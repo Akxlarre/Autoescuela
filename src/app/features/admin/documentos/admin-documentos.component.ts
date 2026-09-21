@@ -2,12 +2,17 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { DocumentContentTemplatesFacade } from '@core/facades/document-content-templates.facade';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
-import type { TemplateCard } from '@core/models/ui/dms.model';
+import type { DocumentType } from '@core/models/ui/document-content-template.model';
 
 /**
  * AdminDocumentosComponent — Smart Page del Módulo DMS (Admin).
  * Admin tiene CRUD completo: subir, ver, eliminar documentos.
+ * Además orquesta el editor de plantillas (spec 0016-m) — inyecta
+ * `DocumentContentTemplatesFacade` acá (no en `DmsListContentComponent`, que sigue siendo Dumb) y
+ * resuelve los eventos `template*` que la tab "Plantillas" emite.
  */
 @Component({
   selector: 'app-admin-documentos',
@@ -22,28 +27,36 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
       [recentDocs]="facade.recentDocs()"
       [instructorsWithDocs]="facade.instructorsWithDocs()"
       [schoolDocs]="facade.schoolDocs()"
-      [templates]="facade.templates()"
       [isLoading]="facade.isLoading()"
       [isAdmin]="isAdmin()"
       [showSedeColumn]="showSedeColumn()"
+      [templateBranches]="branchFacade.branches()"
+      [templateForm]="templatesFacade.form()"
+      [templateIsLoading]="templatesFacade.isLoading()"
+      [templateIsPublishing]="templatesFacade.isPublishing()"
+      [templateIsGeneratingPreview]="templatesFacade.isGeneratingPreview()"
       (uploadStudentDoc)="openUploadStudentDrawer()"
       (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"
-      (uploadTemplate)="facade.openTemplate()"
       (viewStudentDocs)="onViewStudentDocs($event)"
       (viewInstructorDocs)="onViewInstructorDocs($event)"
       (viewDocument)="onViewDocument($event.url, $event.fileName)"
       (deleteStudentDoc)="onDeleteStudentDoc($event)"
       (deleteSchoolDoc)="onDeleteSchoolDoc($event)"
-      (deleteTemplate)="onDeleteTemplate($event)"
-      (downloadTemplate)="onDownloadTemplate($event)"
+      (templateLoadRequested)="onTemplateLoadRequested($event)"
+      (templateSectionChanged)="onTemplateSectionChanged($event)"
+      (templatePreviewRequested)="onTemplatePreview()"
+      (templateViewPublishedRequested)="onTemplateViewPublished($event)"
+      (templatePublishRequested)="onTemplatePublish()"
     />
   `,
 })
 export class AdminDocumentosComponent {
   readonly facade = inject(DmsFacade);
+  readonly templatesFacade = inject(DocumentContentTemplatesFacade);
+  readonly branchFacade = inject(BranchFacade);
   private readonly authFacade = inject(AuthFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  private readonly dmsViewer = inject(DmsViewerService);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
@@ -124,24 +137,38 @@ export class AdminDocumentosComponent {
     }
   }
 
-  async onDeleteTemplate(id: number): Promise<void> {
-    const confirmed = await this.facade.confirm({
-      title: 'Eliminar plantilla',
-      message: '¿Estás seguro de que quieres eliminar esta plantilla? (desactivación suave)',
-      severity: 'danger',
-      confirmLabel: 'Eliminar',
-      cancelLabel: 'Cancelar',
-    });
-    if (!confirmed) return;
-    try {
-      await this.facade.deleteTemplate(id);
-    } catch (err) {
-      console.error('Error al eliminar plantilla:', err);
-    }
+  // ── Editor de plantillas (spec 0016-m) ──────────────────────────────────────
+
+  onTemplateLoadRequested(event: { branchId: number; documentType: DocumentType }): void {
+    void this.templatesFacade.load(event.branchId, event.documentType);
   }
 
-  onDownloadTemplate(template: TemplateCard): void {
-    window.open(template.fileUrl, '_blank');
-    this.facade.incrementDownload(template.id);
+  onTemplateSectionChanged(event: { sectionId: string; body: string }): void {
+    this.templatesFacade.updateSection(event.sectionId, event.body);
+  }
+
+  async onTemplatePreview(): Promise<void> {
+    const pdfBase64 = await this.templatesFacade.preview();
+    this.openPdf(pdfBase64, 'Vista previa');
+  }
+
+  async onTemplateViewPublished(event: {
+    branchId: number;
+    documentType: DocumentType;
+  }): Promise<void> {
+    const pdfBase64 = await this.templatesFacade.viewPublished(event.branchId, event.documentType);
+    this.openPdf(pdfBase64, 'Documento actual');
+  }
+
+  async onTemplatePublish(): Promise<void> {
+    await this.templatesFacade.publish();
+  }
+
+  private openPdf(pdfBase64: string | null, title: string): void {
+    if (!pdfBase64) return;
+    const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    this.dmsViewer.open({ url, name: title, type: 'pdf' });
   }
 }

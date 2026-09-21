@@ -174,8 +174,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         this.enrollment.setPaymentMode('total');
       }
 
-      // Paso 5: recalcula pricing (reactivo a cambio de paymentMode)
-      if (step === 5 && pd) {
+      // Paso de Pago (fix-034-i: ahora es la posición 4, antes 5): recalcula pricing
+      // (reactivo a cambio de paymentMode)
+      if (step === 4 && pd) {
         const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
         const paymentMode = this.enrollment.paymentMode();
         // Fallback al base_price del enrollment en BD por si courseOptions aún no cargó
@@ -309,10 +310,48 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
           : [],
       hvcValidation: this.docs.hvcValidation(),
       notarialAuthorization: this.docs.documents().get('autorizacion_notarial') ?? null,
+      uploadError: this.docs.error(),
     };
   });
 
-  readonly step4Data = computed<EnrollmentContractData>(() => {
+  // fix-034-i: step4Data pasó a ser Pago (antes Contrato) — Pago va antes que Firma en el
+  // wizard presencial. El contenido de "step4Data" y "step5Data" se intercambió tal cual;
+  // los nombres siguen atados a la POSICIÓN del panel, no al significado de negocio.
+  readonly step4Data = computed<EnrollmentPaymentData>(() => {
+    const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
+    const pd = this.enrollment.personalData();
+    const pricing = this.payment.pricing();
+    return {
+      studentSummary: summary,
+      pricing: pricing ?? {
+        courseLabel: summary.courseLabel,
+        practicalClassesIncluded: 12,
+        basePrice: 0,
+        isDeposit: false,
+        amountDue: 0,
+      },
+      discount: this.payment.discount(),
+      totalToPay: this.payment.totalToPay(),
+      paymentMethod: this.payment.paymentMethod(),
+      availableDiscounts: this.payment.availableDiscounts(),
+      selectedDiscountId: this.payment.selectedDiscountId(),
+      isSingularCourse: pd?.courseType === 'singular',
+      singularAlert: { visible: false, message: '' },
+      documentNumber: this.payment.documentNumber(),
+      canAdvance: this.payment.canConfirmPayment(),
+    };
+  });
+
+  /** Slug de la sede activa, para resolver la política de privacidad que corresponde. */
+  readonly activeBranchSlug = computed(
+    () => this.branchFacade.branches().find((b) => b.id === this.activeBranchId())?.slug ?? '',
+  );
+
+  /** Política de privacidad de la sede activa (spec 0009-m). */
+  readonly privacyPolicy = computed(() => getPrivacyPolicy(this.activeBranchSlug()));
+
+  // fix-034-i: step5Data pasó a ser Contrato (antes Pago).
+  readonly step5Data = computed<EnrollmentContractData>(() => {
     const pd = this.enrollment.personalData();
     const birthDateStr = pd?.birthDate;
     const isMinor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
@@ -334,38 +373,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         this.privacyPolicy()?.policyCheckboxLabel ??
         'Declaro haber leído la Política de Privacidad.',
       privacyPolicyUrl: `/politica-privacidad/${this.activeBranchSlug()}`,
-    };
-  });
-
-  /** Slug de la sede activa, para resolver la política de privacidad que corresponde. */
-  readonly activeBranchSlug = computed(
-    () => this.branchFacade.branches().find((b) => b.id === this.activeBranchId())?.slug ?? '',
-  );
-
-  /** Política de privacidad de la sede activa (spec 0009-m). */
-  readonly privacyPolicy = computed(() => getPrivacyPolicy(this.activeBranchSlug()));
-
-  readonly step5Data = computed<EnrollmentPaymentData>(() => {
-    const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
-    const pd = this.enrollment.personalData();
-    const pricing = this.payment.pricing();
-    return {
-      studentSummary: summary,
-      pricing: pricing ?? {
-        courseLabel: summary.courseLabel,
-        practicalClassesIncluded: 12,
-        basePrice: 0,
-        isDeposit: false,
-        amountDue: 0,
-      },
-      discount: this.payment.discount(),
-      totalToPay: this.payment.totalToPay(),
-      paymentMethod: this.payment.paymentMethod(),
-      availableDiscounts: this.payment.availableDiscounts(),
-      selectedDiscountId: this.payment.selectedDiscountId(),
-      isSingularCourse: pd?.courseType === 'singular',
-      singularAlert: { visible: false, message: '' },
-      canAdvance: this.payment.canConfirmPayment(),
     };
   });
 
@@ -676,9 +683,15 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const { enrollmentId } = this.enrollment.draft();
     if (!enrollmentId) return;
     if (event.type === 'id_photo') {
-      const normalizedFile = await normalizePhoto(event.file);
-      const dataUrl = await this.fileToDataUrl(normalizedFile);
-      await this.docs.uploadCarnetPhoto(dataUrl, normalizedFile.name, enrollmentId);
+      try {
+        const normalizedFile = await normalizePhoto(event.file);
+        const dataUrl = await this.fileToDataUrl(normalizedFile);
+        await this.docs.uploadCarnetPhoto(dataUrl, normalizedFile.name, enrollmentId);
+      } catch {
+        const message = 'El archivo no es una imagen. Sube una foto, no un PDF u otro documento.';
+        this.docs.setUploadError(message);
+        this.toast.error('Error al subir la foto', message);
+      }
     } else {
       await this.docs.uploadDocument(event.type as DocumentType, event.file, enrollmentId);
     }
@@ -694,6 +707,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     try {
       const { enrollmentId } = this.enrollment.draft();
       if (enrollmentId) await this.docs.markDocsComplete(enrollmentId, true);
+      // fix-034-i: el siguiente paso es Pago (posición 4) — precargar descuentos elegibles
+      // antes de que se renderice (antes se cargaban al salir de Contrato, que ahora va después).
+      this.loadStep4Discounts();
       this.enrollment.goToStep(4);
     } finally {
       this._isSaving.set(false);
@@ -709,33 +725,38 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Paso 4: Contrato ─────────────────────────────────────────────────────
-  async onGenerateContract(): Promise<void> {
-    this._contractStatus.set('generating');
-    const url = await this.enrollment.generateContract();
-    this._contractPdfUrl.set(url);
-    this._contractStatus.set(url ? 'generated' : 'error');
-    this._contractGeneratedAt.set(url ? new Date().toISOString() : null);
-  }
+  // ── Paso 4: Pago (fix-034-i: antes era Contrato — Pago va antes que Firma) ──
+  onStep4DataChange(data: EnrollmentPaymentData): void {
+    if (data.paymentMethod) this.payment.setPaymentMethod(data.paymentMethod);
 
-  onStep4DataChange(data: EnrollmentContractData): void {
-    this._signedContractUpload.set(data.signedContract);
+    const newId = data.selectedDiscountId;
+    const currentId = this.payment.selectedDiscountId();
+    if (newId !== currentId) {
+      if (newId === null) {
+        this.payment.clearDiscount();
+      } else {
+        this.payment.applyPredefinedDiscount(newId);
+      }
+    } else if (!newId) {
+      this.payment.setDiscount(data.discount);
+    }
+
+    if (data.documentNumber !== this.payment.documentNumber()) {
+      this.payment.setDocumentNumber(data.documentNumber);
+    }
   }
 
   async onStep4Next(): Promise<void> {
-    const upload = this._signedContractUpload();
+    if (!this.step4Data().canAdvance) return;
     this._isSaving.set(true);
     try {
-      if (upload?.file) {
-        // uploadSignedContract persiste el contrato y hace goToStep(5) internamente
-        await this.enrollment.uploadSignedContract(upload.file);
-        // Pre-cargar descuentos para el siguiente paso de pago (fire-and-forget)
-        this.loadStep4Discounts();
-      } else if (this.enrollment.contractAccepted()) {
-        // Re-entrada: contrato ya aceptado en sesión anterior → avanzar a pago
-        this.loadStep4Discounts();
-        this.enrollment.goToStep(5);
-      }
+      const { enrollmentId } = this.enrollment.draft();
+      const registeredBy = this.auth.currentUser()?.dbId ?? null;
+      // fix-034-i: solo registra el pago — NO activa la matrícula todavía (eso ocurre al
+      // firmar el contrato, ahora paso 5). Antes esta acción era confirmWithPayment(), que
+      // hacía ambas cosas a la vez porque Pago era el último paso antes de Confirmación.
+      const ok = await this.payment.recordPayment(enrollmentId, registeredBy);
+      if (ok) this.enrollment.goToStep(5);
     } finally {
       this._isSaving.set(false);
     }
@@ -754,29 +775,32 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     );
   }
 
-  // ── Paso 5: Pago ──────────────────────────────────────────────────────────
-  onStep5DataChange(data: EnrollmentPaymentData): void {
-    if (data.paymentMethod) this.payment.setPaymentMethod(data.paymentMethod);
+  // ── Paso 5: Contrato (fix-034-i: antes era Pago) — al firmar, activa la matrícula ──
+  async onGenerateContract(): Promise<void> {
+    this._contractStatus.set('generating');
+    const url = await this.enrollment.generateContract();
+    this._contractPdfUrl.set(url);
+    this._contractStatus.set(url ? 'generated' : 'error');
+    this._contractGeneratedAt.set(url ? new Date().toISOString() : null);
+  }
 
-    const newId = data.selectedDiscountId;
-    const currentId = this.payment.selectedDiscountId();
-    if (newId !== currentId) {
-      if (newId === null) {
-        this.payment.clearDiscount();
-      } else {
-        this.payment.applyPredefinedDiscount(newId);
-      }
-    } else if (!newId) {
-      this.payment.setDiscount(data.discount);
-    }
+  onStep5DataChange(data: EnrollmentContractData): void {
+    this._signedContractUpload.set(data.signedContract);
   }
 
   async onStep5Next(): Promise<void> {
-    if (!this.step5Data().canAdvance) return;
+    const upload = this._signedContractUpload();
     this._isSaving.set(true);
     try {
-      const number = await this.enrollment.confirmWithPayment();
-      if (number) this.enrollment.goToStep(6);
+      if (upload?.file) {
+        // uploadSignedContract ahora activa la matrícula internamente (confirmEnrollment)
+        const ok = await this.enrollment.uploadSignedContract(upload.file);
+        if (ok) this.enrollment.goToStep(6);
+      } else if (this.enrollment.contractAccepted()) {
+        // Re-entrada: contrato ya aceptado en sesión anterior → activar y avanzar
+        const number = await this.enrollment.confirmEnrollment();
+        if (number) this.enrollment.goToStep(6);
+      }
     } finally {
       this._isSaving.set(false);
     }

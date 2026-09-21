@@ -72,8 +72,9 @@ export interface FilaEvaluacionLibro {
 
 export interface ResumenAsistenciaLibro {
   nombre: string;
-  pctPractica: number;
-  pctTeorica: number;
+  /** null: el Libro de Clases es una plantilla imprimible, no se precarga desde BD (fix-250-m). */
+  pctPractica: number | null;
+  pctTeorica: number | null;
 }
 
 // ── Calendario de clases ─────────────────────────────────────────────────────

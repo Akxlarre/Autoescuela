@@ -6,6 +6,7 @@ import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
 import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
+import { pilotPhaseGuard } from '@core/guards/pilot-phase.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -53,10 +54,20 @@ export const routes: Routes = [
         (m) => m.AccesoDenegadoComponent,
       ),
   },
+  {
+    path: 'modulo-no-disponible',
+    loadComponent: () =>
+      import('./features/modulo-no-disponible/modulo-no-disponible.component').then(
+        (m) => m.ModuloNoDisponibleComponent,
+      ),
+  },
 
   // Matrícula pública — sin autenticación, sin AppShell
+  // fix-255-m: bloqueada durante la fase piloto (ver pilot-phase.config.ts) — procesa
+  // pagos reales por pasarela y no debe quedar alcanzable por URL directa.
   {
     path: 'inscripcion',
+    canActivate: [pilotPhaseGuard('inscripcion-publica')],
     loadComponent: () =>
       import('./features/public-enrollment/public-enrollment.component').then(
         (m) => m.PublicEnrollmentComponent,
@@ -64,6 +75,7 @@ export const routes: Routes = [
   },
   {
     path: 'inscripcion/retorno',
+    canActivate: [pilotPhaseGuard('inscripcion-publica')],
     loadComponent: () =>
       import('./features/public-enrollment/retorno/public-enrollment-retorno.component').then(
         (m) => m.PublicEnrollmentRetornoComponent,
@@ -118,6 +130,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/pre-inscritos',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/alumnos/pre-inscritos/admin-pre-inscritos.component').then(
                 (m) => m.AdminPreInscritosComponent,
@@ -139,6 +152,7 @@ export const routes: Routes = [
           },
           {
             path: 'ex-alumnos-profesional',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/ex-alumnos-profesional/admin-ex-alumnos-profesional.component').then(
                 (m) => m.AdminExAlumnosProfesionalComponent,
@@ -299,6 +313,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/relatores',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-relatores/admin-profesional-relatores.component').then(
                 (m) => m.AdminProfesionalRelatoresComponent,
@@ -313,6 +328,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/asistencia',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-asistencia/admin-profesional-asistencia.component').then(
                 (m) => m.AdminProfesionalAsistenciaComponent,
@@ -320,6 +336,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/certificados',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-certificados/admin-profesional-certificados.component').then(
                 (m) => m.AdminProfesionalCertificadosComponent,
@@ -327,6 +344,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/evaluaciones',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-evaluaciones/admin-profesional-evaluaciones.component').then(
                 (m) => m.AdminProfesionalEvaluacionesComponent,
@@ -334,6 +352,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/archivo',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-archivo/admin-profesional-archivo.component').then(
                 (m) => m.AdminProfesionalArchivoComponent,
@@ -394,7 +413,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/pre-inscritos',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/alumnos-pre-inscritos/secretaria-alumnos-pre-inscritos.component').then(
                 (m) => m.SecretariaAlumnosPreInscritosComponent,
@@ -495,7 +514,7 @@ export const routes: Routes = [
 
           {
             path: 'profesional/relatores',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/profesional-relatores/secretaria-profesional-relatores.component').then(
                 (m) => m.SecretariaProfesionalRelatoresComponent,
@@ -511,7 +530,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/asistencia',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/profesional-asistencia/secretaria-profesional-asistencia.component').then(
                 (m) => m.SecretariaProfesionalAsistenciaComponent,
@@ -519,7 +538,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/evaluaciones',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/profesional-notas/secretaria-profesional-notas.component').then(
                 (m) => m.SecretariaProfesionalNotasComponent,
@@ -527,7 +546,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/certificados',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/profesional-certificados/secretaria-profesional-certificados.component').then(
                 (m) => m.SecretariaProfesionalCertificadosComponent,
@@ -535,7 +554,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/archivo',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/profesional-archivo/secretaria-profesional-archivo.component').then(
                 (m) => m.SecretariaProfesionalArchivoComponent,
@@ -557,7 +576,7 @@ export const routes: Routes = [
           },
           {
             path: 'ex-alumnos-profesional',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/ex-alumnos-profesional/secretaria-ex-alumnos-profesional.component').then(
                 (m) => m.SecretariaExAlumnosProfesionalComponent,
@@ -593,7 +612,7 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'instructor',
-        canActivate: [hasRoleGuard(['instructor'])],
+        canActivate: [hasRoleGuard(['instructor']), pilotPhaseGuard('instructor')],
         children: [
           {
             path: 'dashboard',
@@ -684,7 +703,7 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'alumno',
-        canActivate: [hasRoleGuard(['alumno'])],
+        canActivate: [hasRoleGuard(['alumno']), pilotPhaseGuard('alumno')],
         children: [
           {
             path: 'dashboard',

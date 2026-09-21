@@ -752,7 +752,9 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
     const client = {
       from: vi.fn(() => {
         const idx = fromCallCount++;
-        const batchIndex = Math.floor(idx / 6);
+        // 5 llamadas .from() por batch en fetchAllData() (spec 0016-m: se quitó la 6ª,
+        // document_templates, movida a DocumentContentTemplatesFacade).
+        const batchIndex = Math.floor(idx / 5);
         const builder: any = {
           select: vi.fn(() => builder),
           eq: vi.fn(() => builder),

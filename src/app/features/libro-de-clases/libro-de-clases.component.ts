@@ -646,20 +646,28 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                         <td class="text-center">{{ idx + 1 }}</td>
                         <td>{{ r.nombre }}</td>
                         <td class="text-center font-mono">
-                          <span
-                            [class.text-success]="r.pctPractica >= 75"
-                            [class.text-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
-                            [class.text-error]="r.pctPractica < 50"
-                            >{{ r.pctPractica }}%</span
-                          >
+                          @if (r.pctPractica !== null) {
+                            <span
+                              [class.text-success]="r.pctPractica >= 75"
+                              [class.text-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
+                              [class.text-error]="r.pctPractica < 50"
+                              >{{ r.pctPractica }}%</span
+                            >
+                          } @else {
+                            <span class="text-text-muted">—</span>
+                          }
                         </td>
                         <td class="text-center font-mono">
-                          <span
-                            [class.text-success]="r.pctTeorica >= 75"
-                            [class.text-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
-                            [class.text-error]="r.pctTeorica < 50"
-                            >{{ r.pctTeorica }}%</span
-                          >
+                          @if (r.pctTeorica !== null) {
+                            <span
+                              [class.text-success]="r.pctTeorica >= 75"
+                              [class.text-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
+                              [class.text-error]="r.pctTeorica < 50"
+                              >{{ r.pctTeorica }}%</span
+                            >
+                          } @else {
+                            <span class="text-text-muted">—</span>
+                          }
                         </td>
                       </tr>
                     }

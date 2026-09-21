@@ -4,6 +4,7 @@
 // Used by: generate-contract-pdf, public-enrollment (preview action).
 
 import { escapePdfWinAnsi, assemblePdf } from './pdf-utils.ts';
+import { substituteTokens } from './template-tokens.ts';
 
 // ─── Types ───
 
@@ -52,10 +53,6 @@ export interface EnrollmentData {
     /** Fono del membrete (`branches.phone`). */
     phone?: string | null;
   };
-  convalidation: {
-    convalidated_license: 'A4' | 'A3';
-    reduced_hours: number;
-  } | null;
 }
 
 /**
@@ -193,6 +190,15 @@ export function buildStructuredPdf(
   idPhoto?: AnyPdfImage | null,
   /** Logo/sello de la escuela, esquina superior izquierda — ver `LOGO_URL` en el docblock. */
   logo?: AnyPdfImage | null,
+  /**
+   * Contenido editable de `document_templates` (spec 0016-m), una clave por cláusula ('primero',
+   * 'segundo', ..., 'quinto', 'sexto'). Default `{}` — si una clave falta (fila sin sembrar, sede
+   * nueva, etc.) se usa el texto hardcodeado histórico de esa cláusula como fallback (AC-E1), así
+   * que un contrato nunca sale con una cláusula vacía. Cada valor puede traer placeholders
+   * `{{token}}` para las cláusulas con lógica de negocio embebida (QUINTO, SEXTO) — ver
+   * `substituteTokens` y la tabla de tokens en `specs/specs/0016-m-editor-plantillas-documentos/plan.md`.
+   */
+  content: Record<string, string> = {},
 ): Uint8Array {
   const u = data.student.user;
   // Orden real del físico (folio 3564: "VENEGAS ESPINOSA VANESSA BELÉN"): apellido paterno,
@@ -430,13 +436,26 @@ export function buildStructuredPdf(
   );
 
   // ─── Cláusulas ───
+  //
+  // `tokens` cubre TODOS los placeholders posibles de este tipo de documento — se aplica el mismo
+  // mapa a cada cláusula vía `substituteTokens`/`applyClause`; una clave que no aparece en el
+  // texto de esa cláusula simplemente no se toca (no-op), así que no hace falta un mapa distinto
+  // por cláusula.
+  let tokens: Record<string, string>;
+
   if (isClassB) {
     // Fijo en 12, como el físico (folio 3564): son 12 CLASES normadas por el Decreto 39/1985, no
     // el valor de `practical_hours` (que mide horas totales, no cantidad de clases — cada clase
     // dura 45 min, así que 9 horas prácticas = 12 clases; usar el campo tal cual fue el bug).
     const practicalClasses = 12;
     const theoryClasses = data.course.theory_hours ?? 0;
-    clause(
+    tokens = { claseTeoricas: String(theoryClasses) };
+
+    const applyClause = (key: string, title: string, fallback: string) =>
+      clause(title, substituteTokens(content[key] ?? fallback, tokens));
+
+    applyClause(
+      'primero',
       'PRIMERO:',
       `El Alumno se compromete por este acto a asistir al 100% de las ${practicalClasses} clases ` +
         'pr\xE1cticas de conducci\xF3n (una hora pedag\xF3gica cada clase, normado por Decreto 39/1985) ' +
@@ -445,19 +464,22 @@ export function buildStructuredPdf(
         'calendario siguiente pactado. Para recuperar las clases perdidas, se deber\xE1 cancelar $9.000 ' +
         'por cada una.',
     );
-    clause(
+    applyClause(
+      'segundo',
       'SEGUNDO:',
       `Las ${theoryClasses} clases te\xF3ricas ser\xE1n v\xEDa Zoom desde las 19:00 a 21:00 hrs. En caso ` +
         'de no poder estar presente en la clase, esta se debe solicitar v\xEDa correo electr\xF3nico, y se ' +
         'podr\xE1 acceder al taller de psicot\xE9cnico las veces que necesite.',
     );
-    clause(
+    applyClause(
+      'tercero',
       'TERCERO:',
       `${brandName} proporcionar\xE1 el veh\xEDculo para rendir el examen pr\xE1ctico s\xF3lo en la ` +
         'Direcci\xF3n de Tr\xE1nsito de Chill\xE1n, para la fecha y hora solicitada por \xE9sta, no ' +
         'pudi\xE9ndose repetir este proceso ante un fracaso en el examen pr\xE1ctico.',
     );
-    clause(
+    applyClause(
+      'cuarto',
       'CUARTO:',
       `${brandName} se reserva el derecho de cambio del instructor o veh\xEDculo, si concurren para ` +
         'ello motivos que lo avalen. De igual manera el Alumno podr\xE1 solicitar cambio de instructor, ' +
@@ -466,13 +488,24 @@ export function buildStructuredPdf(
   } else {
     const courseHours =
       data.course.license_class === 'A3' || data.course.license_class === 'A5' ? 160 : 150;
-    clause(
+    tokens = {
+      nombreAlumno: fullName.toUpperCase(),
+      claseLicencia: data.course.license_class,
+      horasCurso: String(courseHours),
+    };
+
+    const applyClause = (key: string, title: string, fallback: string) =>
+      clause(title, substituteTokens(content[key] ?? fallback, tokens));
+
+    applyClause(
+      'primero',
       'PRIMERO:',
       `El Sr(a). ${fullName.toUpperCase()} se matricula en este acto en ${brandName}, en el Curso de ` +
         `Conducci\xF3n para optar a la Licencia Profesional Clase ${data.course.license_class} tal como ` +
         'lo determina el Art\xEDculo N\xB016, Inciso N\xB07, del Decreto N\xB0251/98.',
     );
-    clause(
+    applyClause(
+      'segundo',
       'SEGUNDO:',
       `El alumno se compromete a asistir al curso enunciado precedentemente, que tiene una duraci\xF3n ` +
         `de ${courseHours} horas, seg\xFAn consta en Resoluci\xF3n N\xB0467 de fecha 27/12/2013 del ` +
@@ -480,14 +513,16 @@ export function buildStructuredPdf(
         'concurrencia no puede ser inferior a un 80% de las clases te\xF3ricas y un 100% a las clases ' +
         'pr\xE1cticas. El curso se aprobar\xE1 con un 75% de calificaci\xF3n general como m\xEDnimo.',
     );
-    clause(
+    applyClause(
+      'tercero',
       'TERCERO:',
       'En este acto el Alumno presenta en ORIGINAL los siguientes documentos, dejando una copia de ' +
         'cada uno: Certificado de Antecedentes y Hoja de Vida del Conductor. En FOTOCOPIA, C\xE9dula de ' +
         'Identidad y Licencia de Conducir por ambos lados. Adem\xE1s, debe haber aprobado el examen ' +
         'sicol\xF3gico (Test EPQ-R) previamente realizado.',
     );
-    clause(
+    applyClause(
+      'cuarto',
       'CUARTO:',
       'Al t\xE9rmino del curso, previa aprobaci\xF3n de todos los m\xF3dulos (m\xEDnimo un 75%) y ' +
         'cumplimiento de los porcentajes de asistencia se\xF1alados en la cl\xE1usula SEGUNDO, se le ' +
@@ -514,7 +549,29 @@ export function buildStructuredPdf(
   const balance = hasRealPayment
     ? (data.pending_balance ?? Math.max(netPrice - paid, 0))
     : Math.max(netPrice - paid, 0);
-  clause(
+  const policyUrl = data.branch.slug
+    ? `${APP_BASE_URL}/politica-privacidad/${data.branch.slug}`
+    : APP_BASE_URL;
+
+  // QUINTO y SEXTO calculan sus valores en código igual que siempre (montos, saldo, URL de
+  // política de privacidad) — solo el texto alrededor pasa a ser editable, vía los mismos tokens
+  // que ya trae `tokens` de PRIMERO–CUARTO.
+  Object.assign(tokens, {
+    valorCurso: formatCurrency(netPrice),
+    textoDescuento:
+      data.discount > 0
+        ? ` (precio base ${formatCurrency(data.base_price)}, con un descuento de ${formatCurrency(data.discount)})`
+        : '',
+    montoPagado: formatCurrency(paid),
+    saldoPendiente: formatCurrency(balance),
+    emailContacto: data.branch.email ?? 'la Escuela',
+    politicaPrivacidadUrl: policyUrl,
+  });
+  const applyClause = (key: string, title: string, fallback: string) =>
+    clause(title, substituteTokens(content[key] ?? fallback, tokens));
+
+  applyClause(
+    'quinto',
     'QUINTO:',
     `El valor acordado del curso es de ${formatCurrency(netPrice)}` +
       (data.discount > 0
@@ -528,10 +585,8 @@ export function buildStructuredPdf(
       `facultar\xE1 a ${brandName} para ejercer los derechos de cobranza que estime conveniente.`,
   );
 
-  const policyUrl = data.branch.slug
-    ? `${APP_BASE_URL}/politica-privacidad/${data.branch.slug}`
-    : APP_BASE_URL;
-  clause(
+  applyClause(
+    'sexto',
     'SEXTO: Protecci\xF3n de datos personales (Ley N\xB0 21.719).',
     `Los datos personales del Alumno ser\xE1n tratados por ${legal.legalName || brandName} conforme a ` +
       'la Ley N\xB0 21.719 sobre protecci\xF3n de datos personales, con la finalidad de ejecutar este ' +
@@ -542,18 +597,6 @@ export function buildStructuredPdf(
       `${data.branch.email ?? 'la Escuela'}. El detalle completo del tratamiento est\xE1 en la Pol\xEDtica ` +
       `de Privacidad, disponible en ${policyUrl}.`,
   );
-
-  if (data.convalidation) {
-    clause(
-      `S\xC9PTIMO: Convalidaci\xF3n simult\xE1nea de Licencia ${data.convalidation.convalidated_license}.`,
-      `El Alumno se matricula en el curso ${data.course.license_class} con convalidaci\xF3n ` +
-        `simult\xE1nea de la Licencia ${data.convalidation.convalidated_license}, la que se cursar\xE1 ` +
-        'dentro de la misma promoci\xF3n bajo un libro de clases independiente. Las ' +
-        `${data.convalidation.reduced_hours} horas convalidadas quedan cubiertas por el valor \xFAnico ` +
-        'de esta matr\xEDcula. La apertura del libro de clases de la licencia convalidada ser\xE1 ' +
-        'informada al Alumno por la administraci\xF3n.',
-    );
-  }
 
   // ─── Firmas ───
   // Más aire antes de la línea que antes: la firma física va sobre esa línea, y pegada al

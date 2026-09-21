@@ -1,14 +1,23 @@
 # Asignación ASG-i-007 — Performance crítica en `v_class_b_schedule_availability` (Horario/Agenda)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-08
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-17
+> **resulting_track:** fix-032-i-agenda-clase-b-vista-disponibilidad-lenta
+
+> **Nota de reclamación (2026-09-17):** al reclamar esta asignación se detectó que
+> `fix-032-i-agenda-clase-b-vista-disponibilidad-lenta` (creado 2026-09-07, ya `in_progress`
+> y activo en `specs/.active`) es el **mismo bug** — misma vista
+> (`v_class_b_schedule_availability`), misma pantalla (`/app/**/agenda`), descubierto un día
+> antes con una hipótesis de causa raíz sin confirmar. En vez de crear `fix-033-i` duplicado,
+> se inyectó la causa raíz confirmada de esta asignación (EXPLAIN ANALYZE, 1M+ buffer hits,
+> doble `NOT EXISTS` sobre columna `CASE`) directamente en `fix-032-i`, que sigue siendo el
+> track vigente. Esta asignación queda cerrada sin generar un track propio.
 
 ---
 

@@ -563,7 +563,9 @@ export class AdminAlumnosFacade {
     const types = new Set(docs.map((d) => d.type).filter(Boolean));
     return {
       ci: types.has('cedula_identidad'),
-      foto: types.has('foto_carnet'),
+      // 'id_photo' es la clave actual (wizard de matrícula); 'foto_carnet' queda como
+      // fallback legacy para alumnos matriculados antes del rename (fix-035-i).
+      foto: types.has('id_photo') || types.has('foto_carnet'),
       medico: types.has('certificado_medico'),
       semep: types.has('semep'),
     };

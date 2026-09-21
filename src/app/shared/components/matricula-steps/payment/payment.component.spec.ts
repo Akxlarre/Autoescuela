@@ -22,6 +22,7 @@ describe('PaymentComponent — appliedDiscountLabel (hotfix-088-m)', () => {
       selectedDiscountId: null,
       isSingularCourse: false,
       singularAlert: { visible: false, message: '' },
+      documentNumber: null,
       canAdvance: false,
       ...overrides,
     });

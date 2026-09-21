@@ -143,15 +143,19 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               />
             </div>
 
-            <!-- Alumno sin cuenta Auth: la invitación nunca se envió o falló -->
-            @if (facade.alumno() && !facade.alumno()!.hasAuthAccount) {
+            <!-- Alumno sin cuenta activada: nunca tuvo cuenta Auth (invitación nunca se
+                 envió o falló) o nunca completó el primer login (fix-253-m, ej. el link
+                 de activación se quemó sin llegar a crear contraseña) -->
+            @if (
+              facade.alumno() && (!facade.alumno()!.hasAuthAccount || facade.alumno()!.firstLogin)
+            ) {
               <div
                 class="flex flex-col gap-2 p-3 rounded-lg text-sm bg-warning-subtle text-warning"
                 style="border: 1px solid var(--state-warning-border)"
               >
                 <span class="flex items-center gap-2 font-medium">
                   <app-icon name="alert-triangle" [size]="16" />
-                  Este alumno todavía no tiene cuenta para ingresar al sistema.
+                  Este alumno todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
                 <button
                   type="button"

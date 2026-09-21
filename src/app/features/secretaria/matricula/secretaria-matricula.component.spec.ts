@@ -10,6 +10,13 @@ import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade
 import { ToastService } from '@core/services/ui/toast.service';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { normalizePhoto } from '@core/utils/image.utils';
+
+// `normalizePhoto` usa `<img>.onload/onerror`, que happy-dom no dispara de forma realista.
+// Mockeado para controlar por test si la "imagen" es válida o rechaza (fix-251-m).
+vi.mock('@core/utils/image.utils', () => ({
+  normalizePhoto: vi.fn(),
+}));
 
 // Nota: este componente usa `templateUrl`, y el pipeline de Vitest del proyecto no resuelve
 // recursos externos (ver comentario en vitest.config.ts). Por eso el test instancia la clase
@@ -177,5 +184,74 @@ describe('SecretariaMatriculaComponent — Refuerzo Clase B sin pago parcial (sp
   it('no llama setPaymentMode si ya estaba en "total" (evita loop innecesario)', () => {
     const { enrollmentFacadeSpy } = setup({ courseType: 'class_b_reinforcement' }, 'total');
     expect(enrollmentFacadeSpy.setPaymentMode).not.toHaveBeenCalled();
+  });
+});
+
+// Foto carnet no-imagen (ej. PDF) ya no cuelga el flujo de subida — fix-251-m.
+describe('SecretariaMatriculaComponent — error al subir foto carnet inválida (fix-251-m)', () => {
+  it('captura el rechazo de normalizePhoto, notifica error y no invoca uploadCarnetPhoto', async () => {
+    vi.mocked(normalizePhoto).mockRejectedValueOnce(new Error('Image load failed'));
+
+    const enrollmentFacadeSpy: any = {
+      currentStep: vi.fn().mockReturnValue(2),
+      personalData: vi.fn().mockReturnValue(null),
+      courseOptions: vi.fn().mockReturnValue([]),
+      paymentMode: vi.fn().mockReturnValue('full'),
+      enrollmentBasePrice: vi.fn().mockReturnValue(0),
+      selectedInstructorId: vi.fn().mockReturnValue(null),
+      scheduleGrid: vi.fn().mockReturnValue(null),
+      activeDrafts: vi.fn().mockReturnValue([]),
+      docsComplete: vi.fn().mockReturnValue(true),
+      loadCourses: vi.fn().mockResolvedValue(undefined),
+      loadInstructors: vi.fn().mockResolvedValue(undefined),
+      loadScheduleGrid: vi.fn().mockResolvedValue(undefined),
+      loadActiveDrafts: vi.fn().mockResolvedValue([]),
+      draft: vi.fn().mockReturnValue({ enrollmentId: 123, studentId: 456 }),
+      reset: vi.fn(),
+    };
+    const docsFacadeSpy = {
+      uploadCarnetPhoto: vi.fn(),
+      setUploadError: vi.fn(),
+      reset: vi.fn(),
+    };
+    const toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { setActions: vi.fn(), setBadge: vi.fn() },
+        },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: 1 }),
+            whenReady: Promise.resolve(),
+          },
+        },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: EnrollmentFacade, useValue: enrollmentFacadeSpy },
+        { provide: EnrollmentDocumentsFacade, useValue: docsFacadeSpy },
+        { provide: EnrollmentPaymentFacade, useValue: { reset: vi.fn() } },
+        { provide: ToastService, useValue: toastSpy },
+      ],
+    });
+
+    const component = TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent());
+    TestBed.tick();
+
+    const pdfFile = new File(['%PDF-1.4'], 'cedula.pdf', { type: 'application/pdf' });
+    await component.onDocFileSelected({ type: 'id_photo', file: pdfFile });
+
+    expect(docsFacadeSpy.uploadCarnetPhoto).not.toHaveBeenCalled();
+    expect(docsFacadeSpy.setUploadError).toHaveBeenCalledWith(expect.any(String));
+    expect(toastSpy.error).toHaveBeenCalled();
   });
 });
