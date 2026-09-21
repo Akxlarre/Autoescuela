@@ -1,14 +1,14 @@
 # Asignación ASG-m-007 — Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes
 
-> **status:** pendiente
+> **status:** claimed
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-14
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-09-21
+> **resulting_track:** [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md)
 
 ---
 

@@ -97,7 +97,7 @@ const DRAFT_VACIO: TemplateDraft = { id: null, name: '', subject: '', body: '', 
           <div class="card p-3 space-y-2">
             <p class="micro-label">Variables disponibles</p>
             <p class="text-xs text-text-muted">
-              Se reemplazan por los datos de cada alumno al enviar. Si escribís una que no existe,
+              Se reemplazan por los datos de cada alumno al enviar. Si escribes una que no existe,
               queda vacía y el envío no se rompe.
             </p>
             <div class="flex flex-wrap gap-1.5">
@@ -138,7 +138,7 @@ const DRAFT_VACIO: TemplateDraft = { id: null, name: '', subject: '', body: '', 
             <app-empty-state
               icon="file-text"
               message="Todavía no hay plantillas"
-              subtitle="Creá una para no reescribir los comunicados que se repiten."
+              subtitle="Crea una para no reescribir los comunicados que se repiten."
             />
           } @else {
             <ul class="card p-0 overflow-hidden divide-y divide-border-subtle">

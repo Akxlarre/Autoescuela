@@ -356,7 +356,7 @@ export class AnnouncementsFacade {
     // vez de decir lo que pasa. Se corta antes, con el motivo real (fix-168-b).
     if (branchId === NO_BRANCH_SCOPE) {
       throw new Error(
-        'Tu usuario no tiene una sede asignada. Pedile a administración que te la asigne.',
+        'Tu usuario no tiene una sede asignada. Pídele a administración que te la asigne.',
       );
     }
 
@@ -402,7 +402,7 @@ export class AnnouncementsFacade {
    */
   async loadPreviewHtml(draft: AnnouncementDraft): Promise<boolean> {
     if (draft.subject.trim().length === 0 || draft.body.trim().length === 0) {
-      this._error.set('Escribí el asunto y el mensaje antes de previsualizar.');
+      this._error.set('Escribe el asunto y el mensaje antes de previsualizar.');
       return false;
     }
 
@@ -444,7 +444,7 @@ export class AnnouncementsFacade {
    */
   async schedule(draft: AnnouncementDraft): Promise<boolean> {
     if (!draft.scheduledFor) {
-      this._error.set('Falta la fecha de envío. Para enviar ahora, usá "Enviar comunicado".');
+      this._error.set('Falta la fecha de envío. Para enviar ahora, usa "Enviar comunicado".');
       return false;
     }
     if (!isScheduledForValid(draft.scheduledFor)) {

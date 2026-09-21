@@ -99,7 +99,7 @@ export class NotificationTemplatesFacade {
   async save(draft: TemplateDraft): Promise<boolean> {
     const validation = validateTemplateDraft(draft);
     if (!validation.valid) {
-      this._error.set('Completá nombre, asunto y mensaje de la plantilla.');
+      this._error.set('Completa nombre, asunto y mensaje de la plantilla.');
       return false;
     }
 

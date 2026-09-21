@@ -382,7 +382,7 @@ function toLocalInputValue(date: Date): string {
                     data-llm-description="optional saved template to prefill subject and body"
                   />
                   <p class="field-hint">
-                    Podés editar el texto después: la plantilla es un punto de partida.
+                    Puedes editar el texto después: la plantilla es un punto de partida.
                   </p>
                 </div>
               }
