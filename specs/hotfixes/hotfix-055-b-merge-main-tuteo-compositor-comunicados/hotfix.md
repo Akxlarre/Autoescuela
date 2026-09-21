@@ -24,5 +24,8 @@ de `hotfix-104-m` que **sobreviven** en el template nuevo.
 
 ## Fuera de alcance
 El voseo que esta rama introdujo **después** de `hotfix-104-m` (0042-b, 0043-b, fix-168-b) no se
-toca acá: es una limpieza aparte, con su propio alcance porque incluye copy de Edge Functions que
-requiere redeploy.
+toca acá: es una limpieza aparte. Un escaneo de las líneas nuevas de la rama frente a `main` (sin
+comentarios ni tests) encontró **7 líneas en 4 archivos de `src/`, ninguna en Edge Functions**, así
+que no requiere redeploy: `announcements.facade.ts` (3), `notification-templates.facade.ts` (1),
+`announcement-composer-drawer.component.ts` (1) y `template-manager-drawer.component.ts` (2). La
+lista de formas buscadas es acotada; puede haber alguna variante que no esté.
