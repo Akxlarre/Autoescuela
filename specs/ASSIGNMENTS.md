@@ -50,8 +50,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | `cualquiera` | fix | P1 | i | ⚠️ Revisar si Promociones alimenta datos que la matrícula profesional necesita antes de ocultarla — puede requerir decisión de producto |
-| ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | `cualquiera` | hotfix | P3 | i | Hacer después de que 008/009 tengan track, para poder linkear |
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `cualquiera` | fix | P1 | i | Corre última — depende de 008/009/010 ya mergeadas. Usa los recorridos del documento de testing entregado al equipo |
 
 ### Tanda reunión con el cliente — 2026-07-28
@@ -279,6 +277,8 @@
 | ASG-i-010 | Pantalla de aviso "módulo no habilitado todavía" (piloto) | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
 | ASG-i-013 | Bloquear matrícula pública online (/inscripcion) para el piloto | [fix-255-m-piloto-guard-fase-portales-inscripcion](fixes/fix-255-m-piloto-guard-fase-portales-inscripcion/fix.md) | 2026-09-19 |
 | ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
+| ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | [fix-256-m-recorte-clase-profesional-matricula-base-alumnos](fixes/fix-256-m-recorte-clase-profesional-matricula-base-alumnos/fix.md) | 2026-09-21 |
+| ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | [hotfix-109-m-documentar-rutas-ocultas-fase-piloto](hotfixes/hotfix-109-m-documentar-rutas-ocultas-fase-piloto/hotfix.md) | 2026-09-21 |
 <!-- AUTO-GENERATED:END -->
 
 ---
