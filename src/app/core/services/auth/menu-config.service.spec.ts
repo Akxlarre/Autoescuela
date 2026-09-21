@@ -102,6 +102,32 @@ describe('MenuConfigService', () => {
     }
   });
 
+  it('fix-256-m/fix-257-m: oculta los 6 ítems recortados de Academia Profesional en admin y secretaria, pero mantiene Promociones', () => {
+    const hiddenRoutes = [
+      'relatores',
+      'asistencia',
+      'evaluaciones',
+      'certificados',
+      'archivo',
+      'ex-alumnos-profesional',
+    ];
+    for (const role of ['admin', 'secretaria'] as const) {
+      TestBed.resetTestingModule();
+      setup(role);
+      const academiaProfesional = service
+        .menuItems()
+        .find((g) => g.group === 'Academia Profesional');
+      expect(academiaProfesional).toBeTruthy();
+      const routerLinks = academiaProfesional!.items.map((i) => i.routerLink);
+      for (const hidden of hiddenRoutes) {
+        expect(routerLinks.some((r) => r.includes(hidden))).toBe(false);
+      }
+      expect(routerLinks.some((r) => r.endsWith('/alumnos'))).toBe(true);
+      expect(routerLinks.some((r) => r.endsWith('/libro-de-clases'))).toBe(true);
+      expect(routerLinks.some((r) => r.includes('promociones'))).toBe(true);
+    }
+  });
+
   it('every routerLink should start with /', () => {
     const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno'];
     for (const role of roles) {
