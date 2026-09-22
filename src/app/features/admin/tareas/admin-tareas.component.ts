@@ -20,6 +20,7 @@ import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.c
 import { AnnouncementComposerDrawerComponent } from '@features/comunicados/announcement-composer-drawer.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { AnnouncementsFacade } from '@core/facades/announcements.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -90,6 +91,7 @@ type Canal = 'tareas' | 'comunicados';
           appCardHover
           [announcements]="announcements.announcements()"
           [loading]="announcements.isLoading()"
+          (cancelRequested)="onCancelarComunicado($event)"
         />
       }
     </div>
@@ -98,6 +100,7 @@ type Canal = 'tareas' | 'comunicados';
 export class AdminTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
   protected readonly announcements = inject(AnnouncementsFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutService = inject(LayoutService);
   private readonly drawer = inject(LayoutDrawerFacadeService);
@@ -202,6 +205,17 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  }
+
+  protected async onCancelarComunicado(announcementId: number): Promise<void> {
+    const confirmado = await this.confirmModal.confirm({
+      title: 'Cancelar comunicado',
+      message: 'No se va a enviar. Queda registrado como cancelado.',
+      confirmLabel: 'Cancelar envío',
+      cancelLabel: 'Volver',
+      severity: 'danger',
+    });
+    if (confirmado) await this.announcements.cancelScheduled(announcementId);
   }
 
   protected onCanalChange(canal: string): void {

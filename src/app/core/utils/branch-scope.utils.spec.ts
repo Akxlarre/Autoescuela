@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_BRANCH_SCOPE, resolveBranchScope } from './branch-scope.utils';
+import { NO_BRANCH_SCOPE, canChooseBranch, resolveBranchScope } from './branch-scope.utils';
 
 /**
  * Núcleo funcional del aislamiento por sede (fix-027).
@@ -65,5 +65,41 @@ describe('resolveBranchScope', () => {
 
   it('NO_BRANCH_SCOPE es un id inexistente (negativo)', () => {
     expect(NO_BRANCH_SCOPE).toBeLessThan(0);
+  });
+});
+
+// Extraído en fix-168-b: hay queries donde el branch_id resuelto no sirve como filtro
+// (en `announcements`, NULL significa "a todas las sedes") y lo único que importa es
+// quién puede elegir sede. La regla de rol vive en un solo lugar a propósito: la causa
+// de ese fix fue reimplementarla a mano en un facade.
+describe('canChooseBranch', () => {
+  it('el admin elige', () => {
+    expect(canChooseBranch('admin')).toBe(true);
+  });
+
+  it('la secretaria sin grant queda anclada', () => {
+    expect(canChooseBranch('secretaria')).toBe(false);
+  });
+
+  it('la secretaria CON grant multi-sede elige (spec 0017)', () => {
+    expect(canChooseBranch('secretaria', true)).toBe(true);
+  });
+
+  it('un rol desconocido queda anclado, no elige', () => {
+    expect(canChooseBranch(undefined)).toBe(false);
+  });
+
+  it('coincide con la rama que toma resolveBranchScope', () => {
+    // Si divergieran, el helper y sus consumidores dirían cosas distintas sobre el
+    // mismo usuario, que es exactamente el bug que este predicado viene a evitar.
+    for (const [role, grant] of [
+      ['admin', false],
+      ['secretaria', false],
+      ['secretaria', true],
+      ['instructor', false],
+    ] as const) {
+      const eligeSegunScope = resolveBranchScope(role, 9, 4, grant) === 4;
+      expect(canChooseBranch(role, grant)).toBe(eligeSegunScope);
+    }
   });
 });

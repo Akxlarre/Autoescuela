@@ -276,6 +276,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   // Signals
   protected readonly activeTab = signal<ConfigTab>('general');
 
+  // Role Checks
+  protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+
   // Tab definitions
   protected readonly tabs = [
     {
@@ -305,9 +308,6 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
       icon: 'help-circle',
     },
   ];
-
-  // Role Checks
-  protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   /** Sede efectiva: para admin viene del selector global (puede ser null); para secretaria viene fija del user. */
   protected readonly effectiveBranchId = computed<number | null>(() => {

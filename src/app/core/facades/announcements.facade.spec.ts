@@ -13,6 +13,8 @@ const DRAFT: AnnouncementDraft = {
   body: 'Por el feriado no habrá clases prácticas.',
   filters: { branchId: 1, courseType: 'class_b', enrollmentStatus: 'active' },
   excludedUserIds: [],
+  scheduledFor: null,
+  templateId: null,
 };
 
 describe('AnnouncementsFacade', () => {
@@ -23,6 +25,11 @@ describe('AnnouncementsFacade', () => {
   let historialRows: any[];
   /** Lo que la facade manda al INSERT de `announcements`, para poder afirmarlo. */
   let insertPayload: any;
+  /** Idem para el UPDATE, y los filtros que se le aplicaron. */
+  let updatePayload: any;
+  let updateFilters: string[];
+  /** Filtros aplicados al SELECT del historial (fix-168-b). */
+  let historialFilters: string[];
 
   /** Encadena el mock de PostgREST para las dos consultas que hace la facade. */
   function buildClient() {
@@ -37,12 +44,31 @@ describe('AnnouncementsFacade', () => {
               insertPayload = payload;
               return { select: vi.fn().mockReturnValue({ maybeSingle: insertSelectSingle }) };
             }),
-            update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
+            update: vi.fn().mockImplementation((payload: any) => {
+              updatePayload = payload;
+              updateFilters = [];
+              // `update().eq().eq()` encadena: se registran todos los filtros aplicados
+              // para poder afirmar que cancelar solo toca lo que sigue programado.
+              const chain: any = {
+                eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+                  updateFilters.push(`${col}=${val}`);
+                  return chain;
+                }),
+                then: (resolve: any) => resolve({ error: null }),
+              };
+              return chain;
+            }),
+            select: vi.fn().mockImplementation(() => {
+              // Registra los filtros del historial: el bug de fix-168-b era invisible
+              // mirando las filas devueltas — había que mirar QUÉ se le pedía a la BD.
+              const chain: any = {
+                eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+                  historialFilters.push(`${col}=${val}`);
+                  return chain;
+                }),
                 order: vi.fn().mockResolvedValue({ data: historialRows, error: null }),
-              }),
-              order: vi.fn().mockResolvedValue({ data: historialRows, error: null }),
+              };
+              return chain;
             }),
           };
         }
@@ -60,6 +86,9 @@ describe('AnnouncementsFacade', () => {
 
   beforeEach(() => {
     historialRows = [];
+    updatePayload = undefined;
+    updateFilters = [];
+    historialFilters = [];
     supabaseSpy = { client: buildClient() };
 
     TestBed.configureTestingModule({
@@ -386,6 +415,214 @@ describe('AnnouncementsFacade', () => {
       await facade.initialize();
 
       expect(supabaseSpy.client.from.mock.calls.length).toBeGreaterThan(llamadasIniciales);
+    });
+  });
+
+  // ── fix-168-b ──────────────────────────────────────────────────────────────
+  //
+  // `selectedBranchId` se persiste en localStorage bajo una clave sin namespacing por
+  // usuario que nadie limpia al cerrar sesión. Para un admin es una comodidad; para una
+  // secretaria es un filtro que no eligió, no ve y no puede corregir — no tiene selector
+  // de sede en el topbar. El síntoma era el peor posible: historial vacío, sin error.
+  //
+  // Estos tests miran QUÉ se le pide a la BD, no qué filas vuelven: el mock siempre
+  // devuelve lo mismo, así que un test sobre las filas no habría visto nada.
+  describe('scope de sede del historial (fix-168-b)', () => {
+    function comoSecretaria(extra: Record<string, unknown> = {}): void {
+      (TestBed.inject(AuthFacade) as any).currentUser.mockReturnValue({
+        role: 'secretaria',
+        dbId: 8,
+        branchId: 1,
+        ...extra,
+      });
+    }
+
+    function sedePersistida(id: number | null): void {
+      (TestBed.inject(BranchFacade) as any).selectedBranchId.mockReturnValue(id);
+    }
+
+    it('una secretaria ignora la sede persistida de otro usuario', async () => {
+      comoSecretaria();
+      sedePersistida(2); // el admin dejó elegida otra sede en este navegador
+
+      await facade.initialize();
+
+      expect(historialFilters).not.toContain('branch_id=2');
+    });
+
+    // El primer intento de fix ancló a la secretaria con eq(branch_id, la suya) y le
+    // borró de la pantalla los comunicados que administración manda a TODAS las sedes
+    // —que llegaron a sus propios alumnos—. En esta tabla NULL significa "a todas", no
+    // "sin sede", y quien resuelve eso bien es la RLS (branch_visible), no el cliente.
+    it('una secretaria no filtra en el cliente: la RLS le da su sede Y los multi-sede', async () => {
+      comoSecretaria();
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toEqual([]);
+    });
+
+    it('un admin sí respeta el selector de sede', async () => {
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toContain('branch_id=2');
+    });
+
+    it('un admin en "todas las sedes" consulta sin filtro', async () => {
+      sedePersistida(null);
+
+      await facade.initialize();
+
+      expect(historialFilters).toEqual([]);
+    });
+
+    // Spec 0017: el grant multi-sede la hace comportarse como admin para el scope.
+    it('una secretaria con grant multi-sede respeta el selector', async () => {
+      comoSecretaria({ canAccessBothBranches: true });
+      sedePersistida(2);
+
+      await facade.initialize();
+
+      expect(historialFilters).toContain('branch_id=2');
+    });
+
+    // El grant de spec 0017 amplía lo que se puede LEER, no lo que se escribe acá: la
+    // policy `insert_announcements` exige `branch_id = auth_user_branch_id()` para todo
+    // rol `secretary`. Mandar la sede del selector le daría un 403 de la BD.
+    it('una secretaria con grant igual manda con SU sede: la RLS del INSERT la ancla', async () => {
+      comoSecretaria({ canAccessBothBranches: true });
+      invokeSpy.mockResolvedValue({
+        data: { recipientsTotal: 1, processed: 1, sent: 1, failed: 0, done: true },
+        error: null,
+      });
+
+      await facade.send({ ...DRAFT, filters: { ...DRAFT.filters, branchId: 2 } });
+
+      expect(insertPayload.branch_id).toBe(1);
+    });
+
+    // El centinela sirve para filtrar, no para guardar: `branch_id` es una FK, así que
+    // mandarlo daría un error de integridad crudo en vez de decir qué pasa.
+    it('el centinela nunca llega al INSERT: el envío se corta antes con el motivo real', async () => {
+      comoSecretaria({ branchId: null });
+
+      const ok = await facade.send(DRAFT);
+
+      expect(ok).toBe(false);
+      expect(insertSelectSingle).not.toHaveBeenCalled();
+      expect(facade.error()).toContain('no tiene una sede asignada');
+    });
+  });
+
+  describe('schedule() y cancelScheduled() — spec 0042-b', () => {
+    it('AC5 · programar persiste el comunicado SIN despachar nada', async () => {
+      const cuando = new Date(Date.now() + 86_400_000).toISOString();
+
+      const ok = await facade.schedule({ ...DRAFT, scheduledFor: cuando });
+
+      expect(ok).toBe(true);
+      expect(insertPayload.status).toBe('programado');
+      expect(insertPayload.scheduled_for).toBe(cuando);
+      // Lo que separa programar de enviar: la Edge Function no se toca.
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it('AC5 · guarda los filtros del segmento, no una lista de destinatarios', async () => {
+      await facade.schedule({
+        ...DRAFT,
+        scheduledFor: new Date(Date.now() + 3600_000).toISOString(),
+      });
+
+      // El segmento se resuelve recién al enviar: quien revoque en el medio queda fuera.
+      expect(insertPayload.segment_filters).toMatchObject({ courseType: 'class_b' });
+      expect(insertPayload.recipients_total ?? 0).toBe(0);
+    });
+
+    it('programar con fecha pasada no persiste nada', async () => {
+      const ayer = new Date(Date.now() - 86_400_000).toISOString();
+
+      const ok = await facade.schedule({ ...DRAFT, scheduledFor: ayer });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('programar sin fecha no persiste nada: para eso está send()', async () => {
+      expect(await facade.schedule({ ...DRAFT, scheduledFor: null })).toBe(false);
+    });
+
+    it('AC8 · cancelar pasa a cancelado y NO borra la fila', async () => {
+      const ok = await facade.cancelScheduled(77);
+
+      expect(ok).toBe(true);
+      expect(updatePayload).toMatchObject({ status: 'cancelado' });
+    });
+
+    it('AC8 · cancelar solo afecta a lo que sigue programado', async () => {
+      await facade.cancelScheduled(77);
+
+      // Sin este filtro, cancelar podría pisar un comunicado que ya arrancó a salir.
+      expect(updateFilters.join(',')).toContain('programado');
+    });
+  });
+
+  describe('loadPreviewHtml() — spec 0043-b', () => {
+    it('AC1 · pide el HTML a la Edge Function y lo expone', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html>hola</html>' }, error: null });
+
+      const ok = await facade.loadPreviewHtml(DRAFT);
+
+      expect(ok).toBe(true);
+      expect(facade.previewHtml()).toBe('<html>hola</html>');
+      expect(invokeSpy).toHaveBeenCalledWith(
+        'send-announcement',
+        expect.objectContaining({ body: expect.objectContaining({ previewOnly: true }) }),
+      );
+    });
+
+    it('AC1 · manda el asunto y el cuerpo tal como se redactaron, con los marcadores', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html></html>' }, error: null });
+
+      await facade.loadPreviewHtml({ ...DRAFT, body: 'Hola {{nombre}}' });
+
+      // Los marcadores los resuelve el servidor: mandarlos ya sustituidos desde acá
+      // haría que el preview muestre algo distinto de lo que se va a guardar.
+      expect(invokeSpy.mock.calls[0][1].body.preview.body).toBe('Hola {{nombre}}');
+    });
+
+    // AC-E2 — un preview vacío no dice nada; mejor avisar que gastar un round-trip.
+    it('AC-E2 · con cuerpo vacío no llama a la Edge Function', async () => {
+      const ok = await facade.loadPreviewHtml({ ...DRAFT, body: '   ' });
+
+      expect(ok).toBe(false);
+      expect(invokeSpy).not.toHaveBeenCalled();
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('AC-E2 · con asunto vacío tampoco', async () => {
+      expect(await facade.loadPreviewHtml({ ...DRAFT, subject: '' })).toBe(false);
+      expect(invokeSpy).not.toHaveBeenCalled();
+    });
+
+    it('si la función falla, expone el error y no deja HTML viejo', async () => {
+      invokeSpy.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      const ok = await facade.loadPreviewHtml(DRAFT);
+
+      expect(ok).toBe(false);
+      expect(facade.previewHtml()).toBeNull();
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('isLoadingPreviewHtml vuelve a false aunque falle', async () => {
+      invokeSpy.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      await facade.loadPreviewHtml(DRAFT);
+
+      expect(facade.isLoadingPreviewHtml()).toBe(false);
     });
   });
 });

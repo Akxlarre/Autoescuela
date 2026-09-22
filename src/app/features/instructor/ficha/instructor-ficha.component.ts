@@ -275,7 +275,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                     <table class="w-full text-left border-collapse">
                       <thead>
                         <tr class="micro-label border-b border-border-subtle">
-                          <th class="p-4 font-semibold">N°</th>
+                          <th class="p-4 font-semibold">N° / Tema</th>
                           <th class="p-4 font-semibold">Fecha</th>
                           <th class="p-4 font-semibold">Hora</th>
                           <th class="p-4 font-semibold">Instructor</th>
@@ -292,11 +292,16 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                             class="border-b transition-colors border-border-subtle"
                             [style.background]="row.date ? '' : 'var(--bg-elevated)'"
                           >
-                            <td class="p-4 w-14">
-                              <div
-                                class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
-                              >
-                                {{ row.classNumber }}
+                            <td class="p-4 w-28">
+                              <div class="flex flex-col gap-1 items-start">
+                                <div
+                                  class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
+                                >
+                                  {{ row.classNumber }}
+                                </div>
+                                @if (row.topic) {
+                                  <span class="text-xs text-text-muted max-w-[120px] truncate" [title]="row.topic">{{ row.topic }}</span>
+                                }
                               </div>
                             </td>
                             <td class="p-4 whitespace-nowrap">
@@ -395,6 +400,11 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                               {{ row.classNumber }}
                             </div>
                             <div class="min-w-0">
+                              @if (row.topic) {
+                                <span class="text-xs font-semibold text-text-primary line-clamp-1 mb-0.5">
+                                  {{ row.topic }}
+                                </span>
+                              }
                               @if (row.date) {
                                 <span
                                   class="text-sm font-semibold block"
