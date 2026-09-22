@@ -151,7 +151,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | `i` | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-28 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -258,6 +257,7 @@
 | ASG-b-093 | Áreas táctiles bajo 44×44 en componentes compartidos (`app-tabs`, `app-section-hero`) | [fix-150-b-areas-tactiles-compartidos](fixes/fix-150-b-areas-tactiles-compartidos/fix.md) | 2026-08-25 |
 | ASG-i-001 | Revisar ortografía y voseo argentino | [fix-215-m-ortografia-voseo-app](fixes/fix-215-m-ortografia-voseo-app/fix.md) | 2026-08-25 |
 | ASG-b-086 | App-like: `/admin/libro-de-clases` + `/secretaria/libro-de-clases` | [0005-i-app-like-libro-de-clases](specs/0005-i-app-like-libro-de-clases/spec.md) | 2026-08-26 |
+| ASG-b-085 | App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout) | [0006-i-app-like-alumno-detalle](specs/0006-i-app-like-alumno-detalle/spec.md) | 2026-08-30 |
 | ASG-b-096 | Consolidar las 2 páginas duplicadas de ex-alumnos Clase B en un `*-content` compartido | [0007-i-ex-alumnos-content-unificado](specs/0007-i-ex-alumnos-content-unificado/spec.md) | 2026-08-31 |
 | ASG-b-088 | Investigación empírica: simular datos y validar el umbral de virtual scroll | [0039-b-benchmark-umbral-virtual-scroll](specs/0039-b-benchmark-umbral-virtual-scroll/spec.md) | 2026-09-01 |
 | ASG-b-099 | Listado de Flota no destaca vehículos con documentos vencidos | [fix-153-b-flota-listado-alerta-documento-vencido](fixes/fix-153-b-flota-listado-alerta-documento-vencido/fix.md) | 2026-09-01 |

@@ -1,6 +1,6 @@
 # Asignación ASG-b-085 — App-like: `/admin/alumnos/:id` + `/secretaria/alumnos/:id` (⚠️ la más grande y riesgosa del rollout)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** spec
 > **priority:** P2
