@@ -8,7 +8,7 @@
 > **created_by:** i
 > **claimed_by:** —
 > **claimed_at:** —
-> **resulting_track:** fix-039-i-buscador-alumnos-no-tokeniza
+> **resulting_track:** —
 
 ---
 

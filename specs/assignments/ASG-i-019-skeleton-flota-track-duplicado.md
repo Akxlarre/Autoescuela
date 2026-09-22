@@ -8,7 +8,7 @@
 > **created_by:** i
 > **claimed_by:** —
 > **claimed_at:** —
-> **resulting_track:** hotfix-005-i-skeleton-flota-track-duplicado
+> **resulting_track:** —
 
 ---
 

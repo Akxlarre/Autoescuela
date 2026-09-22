@@ -8,7 +8,7 @@
 > **created_by:** i
 > **claimed_by:** —
 > **claimed_at:** —
-> **resulting_track:** hotfix-006-i-disabled-attribute-reactive-form-configuracion-web
+> **resulting_track:** —
 
 ---
 

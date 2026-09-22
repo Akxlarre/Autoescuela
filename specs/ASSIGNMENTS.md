@@ -38,7 +38,6 @@
 | ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-038-i-date-input-id-colision`. Alcance a re-confirmar archivo por archivo antes de implementar |
 | ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-039-i-buscador-alumnos-no-tokeniza`. Alcance a re-confirmar archivo por archivo antes de implementar |
 | ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | `cualquiera` | fix | P1 | i | Track ya redactado: `fix-040-i-rematricular-prefill-race-condition`. Fix mecánico de bajo riesgo (agregar `await`) |
-| ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | `cualquiera` | fix | P0 | i | Track ya redactado: `fix-041-i-guard-recorte-clase-profesional-faltante`. Único hallazgo de severidad alta de la tanda |
 | ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-004-i-papelera-alumnos-sin-label-visible` |
 | ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-005-i-skeleton-flota-track-duplicado` |
 | ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-006-i-disabled-attribute-reactive-form-configuracion-web` |
@@ -171,13 +170,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `—` | [fix-038-i-date-input-id-colision](fixes/fix-038-i-date-input-id-colision/fix.md) | — |
-| ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | `—` | [fix-039-i-buscador-alumnos-no-tokeniza](fixes/fix-039-i-buscador-alumnos-no-tokeniza/fix.md) | — |
-| ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | `—` | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | — |
-| ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | `—` | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | — |
-| ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | `—` | [hotfix-004-i-papelera-alumnos-sin-label-visible](hotfixes/hotfix-004-i-papelera-alumnos-sin-label-visible/hotfix.md) | — |
-| ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | `—` | [hotfix-005-i-skeleton-flota-track-duplicado](hotfixes/hotfix-005-i-skeleton-flota-track-duplicado/hotfix.md) | — |
-| ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | `—` | [hotfix-006-i-disabled-attribute-reactive-form-configuracion-web](hotfixes/hotfix-006-i-disabled-attribute-reactive-form-configuracion-web/hotfix.md) | — |
+| ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | `i` | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | 2026-09-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---

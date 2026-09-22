@@ -1,13 +1,13 @@
 # Asignación ASG-i-017 — 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-22
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-22
 > **resulting_track:** fix-041-i-guard-recorte-clase-profesional-faltante
 
 ---
