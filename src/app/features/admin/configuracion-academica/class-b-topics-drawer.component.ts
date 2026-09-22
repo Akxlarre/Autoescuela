@@ -45,7 +45,9 @@ import { ClassBTopicsFacade } from '@core/facades/class-b-topics.facade';
               <app-skeleton-block variant="rect" width="100%" height="44px" />
             }
           </div>
-        } @else {
+        } @else if (facade.topics().length > 0) {
+          <!-- Solo se pinta si hay algo que pintar: si la carga falla, una tarjeta con borde y
+               sin filas se lee como un hueco sin explicación, debajo del banner de error. -->
           <ul class="card p-0 overflow-hidden divide-y divide-border-subtle">
             @for (item of facade.topics(); track item.class_number) {
               <li class="flex items-center gap-3 px-3 py-2">
