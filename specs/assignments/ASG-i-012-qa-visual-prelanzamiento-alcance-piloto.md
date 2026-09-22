@@ -1,14 +1,14 @@
 # Asignación ASG-i-012 — QA visual pre-lanzamiento del alcance piloto
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-15
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-22
+> **resulting_track:** fix-037-i-qa-visual-piloto
 
 ---
 

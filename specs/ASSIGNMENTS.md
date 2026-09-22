@@ -49,7 +49,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `cualquiera` | fix | P1 | i | Corre última — depende de 008/009/010 ya mergeadas. Usa los recorridos del documento de testing entregado al equipo |
 
 ### Tanda reunión con el cliente — 2026-07-28
 
@@ -150,6 +149,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
