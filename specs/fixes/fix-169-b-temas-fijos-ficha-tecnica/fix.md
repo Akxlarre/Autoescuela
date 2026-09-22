@@ -15,8 +15,12 @@ Además, admin debe poder editar los 12 temas desde Ajustes.
 
 ## Acceptance Criteria
 
-- [x] **AC1** — El tema de cada clase se muestra en la Ficha Técnica del detalle de alumno Clase B,
-      en la vista admin/secretaría y en la del instructor.
+- [x] **AC1a** — El tema de cada clase se muestra en la Ficha Técnica del detalle de alumno Clase B,
+      vista admin/secretaría. **Verificado en pantalla.**
+- [~] **AC1b** — Ídem en el portal del instructor. **No verificado en pantalla**: ese portal está
+      apagado por `pilotPhaseGuard('instructor')` (fase piloto, `fix-255-m`, viene de `main`), así
+      que la ruta redirige a `/modulo-no-disponible` y no hay forma de mirarla sin levantar la
+      fase. Verificado hasta donde se puede sin la UI — ver "Alcance de AC1b" abajo.
 - [x] **AC2** — Sección en Ajustes, solo admin, para editar los 12 temas.
 - [x] **AC3** — Los 12 temas por defecto quedan seedeados vía migración, con los textos exactos de
       la asignación.
@@ -129,6 +133,49 @@ filas=12 policies=3 :: 1=Psicotécnico / Pre-conducción | 2=Partidas y detencio
 
 **Semáforos:** `lint:arch` exit 0 con ARCH-11 de vuelta en 6 (el baseline pre-existente), y
 `ng build` exit 0.
+
+### Verificación visual (`/verify`, 2026-09-22, migración ya aplicada)
+
+Como admin, 1280×800:
+
+- **Drawer en Ajustes:** las 12 filas con los textos exactos. La tarjeta queda entre "Plantillas
+  de Comunicado" y "Descuentos Predefinidos", visualmente indistinguible de sus vecinas.
+- **Edición (AC2):** se editó la clase 3, persistió en la BD y **`updated_at` se actualizó**
+  (`updated_at > created_at`), lo que confirma que el trigger quedó bien enganchado a
+  `public.set_updated_at()`. Valor original restaurado por la misma UI.
+- **Ficha Técnica admin (AC1a):** columna "N° / Tema" con los 12 temas.
+- **La ruta standalone devuelve 404** y el ítem "Config. Académica" ya no está en el menú.
+- Consola limpia, sin 4xx, modo oscuro con buen contraste, cero clases sin CSS propias.
+
+**Un defecto que ningún probe detectó y solo se vio mirando la captura:** con la carga fallida
+quedaba una tarjeta con borde y sin filas debajo del banner de error. Corregido en
+`hotfix-057-b`.
+
+**Observación no corregida:** en la Ficha Técnica el tema se trunca a `max-w-32` (128 px) en una
+tabla de 7 columnas dentro de un drawer, así que la mayoría se lee a medias (tiene `title` con el
+texto completo). Es decisión de diseño de quien hizo esa vista, no un defecto de este fix.
+
+### Alcance de AC1b — qué se verificó sin poder ver la pantalla
+
+El portal del instructor está bloqueado por la fase piloto. Intentar levantarlo aunque fuera
+temporalmente para el QA lo impide el **Spec Gate**, y su bypass debe escribirlo el dueño, no el
+agente. Así que se verificó lo que sí es verificable, que además es **la única parte que podía
+diferir de la vista admin ya comprobada**: el acceso por RLS.
+
+Autenticando de verdad contra la BD como cada rol (`verify-instructor-rls.mjs`, 7/7):
+
+| Comprobación | Resultado |
+|---|---|
+| El instructor puede leer la malla | 200, 12 filas |
+| Con los textos correctos | clase 1 y clase 12 exactas |
+| El instructor **no** puede editarla | bloqueado por RLS |
+| El alumno también puede leer | 12 filas |
+| La clase 1 quedó intacta tras el intento | sí |
+
+Lo que queda sin evidencia visual es únicamente el render del template del instructor, que usa el
+**mismo mapeo** (`classTopics.find(t => t.class_number === i)?.topic`) y el mismo patrón de
+plantilla que la vista admin ya verificada en pantalla. **No es equivalente a haberlo visto:**
+queda pendiente de mirar cuando se levante la fase piloto del portal instructor.
 
 ### Nota de método
 
