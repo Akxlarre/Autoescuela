@@ -29,6 +29,9 @@ describe('AdminAlumnoDetalleFacade', () => {
             single: vi.fn().mockResolvedValue({ data: null, error: null }),
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
+          limit: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
         }),
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ error: null }),
@@ -419,9 +422,11 @@ describe('AdminAlumnoDetalleFacade', () => {
           eq: vi.fn(() => b),
           in: vi.fn(() => b),
           order: vi.fn(() => b),
+          limit: vi.fn(() => b),
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
           single: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
+          maybeSingle: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
           then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
         };
         builders.set(table, b);

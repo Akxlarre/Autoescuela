@@ -1,4 +1,4 @@
-﻿import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -226,6 +226,13 @@ export class InstructorAlumnosFacade {
 
         if (e2) throw e2;
 
+        const { data: classTopicsResult } = await this.supabase.client
+          .from('class_b_topics')
+          .select('*')
+          .order('class_number', { ascending: true });
+
+        const classTopics = (classTopicsResult ?? []) as any[];
+
         const user = (enrollmentData.students as any)?.users;
         const completed = (sessions || []).filter((s) => s.status === 'completed').length;
 
@@ -246,6 +253,7 @@ export class InstructorAlumnosFacade {
             grade: s ? s.evaluation_grade : null,
             kmStart: s ? s.km_start : null,
             kmEnd: s ? s.km_end : null,
+            topic: (classTopics as any[]).find((t) => Number(t.class_number) === i)?.topic,
             instructorName,
             vehiclePlate: s?.vehicles ? (s.vehicles as any).license_plate : '',
             notes: s ? s.notes : null,

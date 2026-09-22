@@ -361,7 +361,7 @@
 | `app-alumnos-list-content` | `alumnos`, `isLoading`, `isExporting`, `isGeneratingFicha`, `trashView`, `basePath`, `alumnosPorVencer`, `showSedeColumn` | `refreshRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested`, `fichaExportRequested` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
 | `app-alumnos-por-vencer-drawer` | — | — | `src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts` |
 | `app-alumnos-profesional-list-content` | `alumnos`, `isLoading`, `trashView`, `basePath` | `refreshRequested`, `preInscritosRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled` | `src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts` |
-| `app-announcements-content` | `announcements`, `loading` | `announcementClicked` | `src/app/shared/components/announcements-content/announcements-content.component.ts` |
+| `app-announcements-content` | `announcements`, `loading` | `announcementClicked`, `cancelRequested` | `src/app/shared/components/announcements-content/announcements-content.component.ts` |
 | `app-asistencia-clase-b-content` | `kpis`, `clasesPracticas`, `alertas`, `instructores`, `isLoading`, `isSaving`, `savingAlertaId`, `maxVisible`, `showBranchColumn`, `cycles`, `selectedCycleId`, `clasesCiclo`, `rosterCiclo`, `addableStudents`, `isLoadingCiclos`, `isLoadingCycle`, `isLoadingAddable`, `sendingClassId`, `selectedDate` | `markAttendance`, `justifyAbsence`, `removeSchedule`, `reactivateSchedule`, `sendReminder`, `dateChange`, `refreshRequested`, `iniciarClase`, `finalizarClase`, `selectCycle`, `saveCicloZoomLink`, `updateCicloTopic`, `sendCicloZoom`, `moveCicloStudent`, `requestAddable`, `addCicloStudent` | `src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts` |
 | `app-async-btn` | `label`, `icon`, `loading`, `success`, `error`, `disabled`, `loadingLabel`, `successLabel`, `errorLabel`, `llmAction` | — | `src/app/shared/components/async-btn/async-btn.component.ts` |
 | `app-badge` | `variant` | — | `src/app/shared/components/badge/badge.component.ts` |
@@ -454,3 +454,5 @@
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->
+|   \ A d m i n C o n f i g u r a c i o n A c a d e m i c a C o m p o n e n t \   |   S m a r t   /   C o n f i g u r a c i � n   |   M a l l a   c u r r i c u l a r   d e   C l a s e   B .   E d i t o r   i n l i n e   d e   t a b l a .   |   \  e a t u r e s / a d m i n / c o n f i g u r a c i o n - a c a d e m i c a / a d m i n - c o n f i g u r a c i o n - a c a d e m i c a . c o m p o n e n t . t s \   |   '  E s t a b l e   |  
+ 

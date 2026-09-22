@@ -49,7 +49,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         <table class="tabla-ficha w-full">
           <thead>
             <tr>
-              <th scope="col" class="sticky top-0 z-10">N°</th>
+              <th scope="col" class="sticky top-0 z-10">N° / Tema</th>
               <th scope="col" class="sticky top-0 z-10">Fecha / Hora</th>
               <th scope="col" class="sticky top-0 z-10">Instructor</th>
               <th scope="col" class="sticky top-0 z-10 text-right">Kilometraje</th>
@@ -67,7 +67,14 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 [class.fila-cancelada]="!clase.ausente && clase.cancelada"
                 class="group transition-colors hover:bg-elevated/50"
               >
-                <td class="font-bold text-text-primary">#{{ clase.numero }}</td>
+                <td>
+                  <div class="flex flex-col gap-0.5">
+                    <span class="font-bold text-text-primary">#{{ clase.numero }}</span>
+                    @if (clase.topic) {
+                      <span class="text-xs text-text-muted truncate max-w-32" [title]="clase.topic">{{ clase.topic }}</span>
+                    }
+                  </div>
+                </td>
                 <td>
                   <div class="flex flex-col gap-0.5">
                     <span class="text-xs font-semibold">{{ clase.fecha || '-' }}</span>
@@ -171,9 +178,14 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             class="p-4 rounded-xl border border-border-subtle bg-surface shadow-sm flex flex-col gap-3"
           >
             <div class="flex items-center justify-between">
-              <span class="text-2xs px-2 py-0.5 rounded bg-elevated font-bold text-text-primary"
-                >SESIÓN #{{ clase.numero }}</span
-              >
+              <div class="flex flex-col gap-1">
+                <span class="text-2xs px-2 py-0.5 rounded bg-elevated font-bold text-text-primary w-fit"
+                  >SESIÓN #{{ clase.numero }}</span
+                >
+                @if (clase.topic) {
+                  <span class="text-xs font-medium text-text-secondary line-clamp-1">{{ clase.topic }}</span>
+                }
+              </div>
               <div class="flex items-center gap-2">
                 @if (!clase.completada) {
                   <button

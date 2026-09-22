@@ -5,7 +5,13 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import {
+  NO_BRANCH_SCOPE,
+  canChooseBranch,
+  resolveBranchScope,
+} from '@core/utils/branch-scope.utils';
 import { ANNOUNCEMENT_BATCH_SIZE, buildBatches } from '@core/utils/announcement-recipients.utils';
+import { isScheduledForValid } from '@core/utils/announcement-template.utils';
 import type {
   AnnouncementDraft,
   AnnouncementRow,
@@ -38,6 +44,8 @@ export class AnnouncementsFacade {
   private readonly _announcements = signal<AnnouncementRow[]>([]);
   private readonly _preview = signal<RecipientPreview[]>([]);
   private readonly _isLoadingPreview = signal(false);
+  private readonly _previewHtml = signal<string | null>(null);
+  private readonly _isLoadingPreviewHtml = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _isSending = signal(false);
   private readonly _progress = signal<SendProgress>(EMPTY_PROGRESS);
@@ -51,6 +59,8 @@ export class AnnouncementsFacade {
   readonly announcements = this._announcements.asReadonly();
   readonly preview = this._preview.asReadonly();
   readonly isLoadingPreview = this._isLoadingPreview.asReadonly();
+  readonly previewHtml = this._previewHtml.asReadonly();
+  readonly isLoadingPreviewHtml = this._isLoadingPreviewHtml.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSending = this._isSending.asReadonly();
   readonly progress = this._progress.asReadonly();
@@ -95,12 +105,12 @@ export class AnnouncementsFacade {
 
   private async fetchAnnouncements(): Promise<void> {
     const requestToken = this.historialGuard.next();
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.branchScope();
 
     let query = this.supabase.client
       .from('announcements')
       .select(
-        'id, subject, kind, branch_id, sent_at, recipients_total, email_ok_count, email_failed_count, users:sent_by(first_names, paternal_last_name), branches:branch_id(name)',
+        'id, subject, kind, branch_id, sent_at, status, scheduled_for, recipients_total, email_ok_count, email_failed_count, users:sent_by(first_names, paternal_last_name), branches:branch_id(name)',
       );
 
     // null = admin en "todas las sedes" → sin filtro.
@@ -128,6 +138,11 @@ export class AnnouncementsFacade {
         : 'Desconocido',
       sentAt: row.sent_at,
       branchLabel: row.branches?.name ?? 'Todas las sedes',
+      status: row.status,
+      scheduledFor: row.scheduled_for,
+      // Solo lo programado se cancela: uno en 'enviando' ya está saliendo, y cortarlo
+      // a mitad dejaría a unos alumnos con el correo y a otros sin él.
+      canCancel: row.status === 'programado',
     };
   }
 
@@ -222,10 +237,46 @@ export class AnnouncementsFacade {
     this._preview.set([]);
   }
 
-  /** La secretaria queda fijada a su sede; el admin elige. */
-  private effectiveBranchId(filters: RecipientSegmentFilters): number | null {
+  /**
+   * Scope de sede del historial y del segmento (fix-168-b).
+   *
+   * Delega en `resolveBranchScope()` en vez de decidir por rol acá. La versión escrita a
+   * mano que había antes leía `selectedBranchId` para todos, y esa selección vive en
+   * `localStorage` bajo una clave sin namespacing por usuario que nadie limpia al cerrar
+   * sesión: una secretaria heredaba la sede que otro había elegido en ese navegador y su
+   * historial quedaba vacío, sin error y sin selector con el que darse cuenta.
+   *
+   * `selected` se pasa aparte porque el historial no tiene filtros de segmento: lee la
+   * sede del selector, mientras que el compositor lee la del draft.
+   */
+  private resolveScope(selected: number | null): number | null {
     const user = this.authFacade.currentUser();
-    return user?.role === 'admin' ? filters.branchId : (user?.branchId ?? null);
+    // Sin `canAccessBothBranches` a propósito: el grant de spec 0017 amplía lo que se
+    // puede LEER, no lo que se puede escribir acá. La policy `insert_announcements`
+    // exige `branch_id = auth_user_branch_id()` para todo rol `secretary`, con grant o
+    // sin él, así que pasarle el grant al helper haría que el compositor mandara una
+    // sede que la BD va a rechazar con 403.
+    return resolveBranchScope(user?.role, user?.branchId, selected);
+  }
+
+  /**
+   * Sede del historial. **No** usa `resolveBranchScope()` a propósito.
+   *
+   * En `announcements`, `branch_id IS NULL` significa "a todas las sedes", no "sin sede":
+   * anclar a la secretaria con `eq(branch_id, la suya)` le escondería los comunicados que
+   * administración mandó a todos y que llegaron a sus propios alumnos. Para ella el scope
+   * correcto ya lo pone la RLS (`branch_visible`: su sede **o** NULL), así que el cliente
+   * solo debe filtrar cuando hay un selector de sede real que respetar.
+   */
+  private branchScope(): number | null {
+    const user = this.authFacade.currentUser();
+    if (!canChooseBranch(user?.role, user?.canAccessBothBranches)) return null;
+    return this.branchFacade.selectedBranchId();
+  }
+
+  /** Sede del segmento: la del draft para quien puede elegirla. */
+  private effectiveBranchId(filters: RecipientSegmentFilters): number | null {
+    return this.resolveScope(filters.branchId);
   }
 
   // ── Envío ──────────────────────────────────────────────────────────────────
@@ -300,6 +351,15 @@ export class AnnouncementsFacade {
     const user = this.authFacade.currentUser();
     const branchId = this.effectiveBranchId(draft.filters);
 
+    // `NO_BRANCH_SCOPE` es un centinela para FILTRAR, no un valor para guardar: acá
+    // `branch_id` es una FK, así que mandarlo produciría un error de integridad crudo en
+    // vez de decir lo que pasa. Se corta antes, con el motivo real (fix-168-b).
+    if (branchId === NO_BRANCH_SCOPE) {
+      throw new Error(
+        'Tu usuario no tiene una sede asignada. Pídele a administración que te la asigne.',
+      );
+    }
+
     const { data, error } = await this.supabase.client
       .from('announcements')
       .insert({
@@ -314,12 +374,127 @@ export class AnnouncementsFacade {
           excludedUserIds: draft.excludedUserIds,
         },
         sent_by: user?.dbId,
+        template_id: draft.templateId,
+        // `enviado` es el default de la columna, así que un envío inmediato no necesita
+        // decir nada; programar sí.
+        status: draft.scheduledFor ? 'programado' : 'enviado',
+        scheduled_for: draft.scheduledFor,
       })
       .select('id')
       .maybeSingle();
 
     if (error || !data) throw error ?? new Error('No se pudo registrar el comunicado.');
     return data.id;
+  }
+
+  // ── Preview del correo (spec 0043-b) ───────────────────────────────────────
+
+  /**
+   * Pide a la Edge Function el HTML del correo tal como va a salir.
+   *
+   * El HTML lo arma el servidor, no el cliente: el wrapper de marca tiene una sola fuente
+   * en `_shared/announcement-send.ts`, y duplicarlo acá haría que las dos versiones
+   * divergieran en el primer cambio de diseño. Un preview que miente es peor que no tener
+   * preview.
+   *
+   * Se mandan asunto y cuerpo **con los marcadores sin resolver**: el servidor los sustituye
+   * con datos de ejemplo. Resolverlos acá mostraría algo distinto de lo que se persiste.
+   */
+  async loadPreviewHtml(draft: AnnouncementDraft): Promise<boolean> {
+    if (draft.subject.trim().length === 0 || draft.body.trim().length === 0) {
+      this._error.set('Escribe el asunto y el mensaje antes de previsualizar.');
+      return false;
+    }
+
+    this._isLoadingPreviewHtml.set(true);
+    this._error.set(null);
+    this._previewHtml.set(null);
+
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('send-announcement', {
+        body: {
+          previewOnly: true,
+          preview: { subject: draft.subject, body: draft.body },
+        },
+      });
+
+      if (error || !data?.html) throw error ?? new Error('No se pudo generar la vista previa.');
+
+      this._previewHtml.set(data.html);
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo generar la vista previa.');
+      return false;
+    } finally {
+      this._isLoadingPreviewHtml.set(false);
+    }
+  }
+
+  clearPreviewHtml(): void {
+    this._previewHtml.set(null);
+  }
+
+  // ── Programación (spec 0042-b) ─────────────────────────────────────────────
+
+  /**
+   * Deja el comunicado agendado y NO envía nada: el dispatcher lo tomará cuando llegue la
+   * hora. Se guardan los filtros del segmento, no una lista de destinatarios — la lista se
+   * resuelve recién al enviar, así que quien revoque su consentimiento entre medio queda
+   * fuera (AC6).
+   */
+  async schedule(draft: AnnouncementDraft): Promise<boolean> {
+    if (!draft.scheduledFor) {
+      this._error.set('Falta la fecha de envío. Para enviar ahora, usa "Enviar comunicado".');
+      return false;
+    }
+    if (!isScheduledForValid(draft.scheduledFor)) {
+      this._error.set('La fecha de envío tiene que ser futura.');
+      return false;
+    }
+
+    this._isSending.set(true);
+    this._error.set(null);
+
+    try {
+      await this.insertAnnouncement(draft);
+      this.toast.success('Comunicado programado.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo programar el comunicado.');
+      return false;
+    } finally {
+      this._isSending.set(false);
+    }
+  }
+
+  /**
+   * Cancela un comunicado que todavía no salió. No borra la fila: queda como `cancelado`
+   * porque es parte del registro de qué se decidió comunicar y qué no.
+   *
+   * El filtro por `status='programado'` no es redundante: sin él, cancelar podría pisar un
+   * comunicado que el dispatcher ya empezó a despachar, y quedaría a mitad de camino con
+   * unos alumnos avisados y otros no.
+   */
+  async cancelScheduled(announcementId: number): Promise<boolean> {
+    this._error.set(null);
+
+    try {
+      const { error } = await this.supabase.client
+        .from('announcements')
+        .update({ status: 'cancelado' })
+        .eq('id', announcementId)
+        .eq('status', 'programado');
+
+      if (error) throw error;
+
+      this.toast.success('Comunicado cancelado.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.setError(err, 'No se pudo cancelar el comunicado.');
+      return false;
+    }
   }
 
   /** Devuelve `null` si el lote falló, para que el llamador decida si sigue. */

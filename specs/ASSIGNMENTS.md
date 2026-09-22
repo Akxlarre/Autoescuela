@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | `b` | fix | P1 | m | 12 temas por defecto listados en la asignación. Solo admin edita |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
 
 ### Tanda alcance de lanzamiento piloto — 2026-09-15
@@ -279,6 +278,7 @@
 | ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
 | ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | [fix-256-m-recorte-clase-profesional-matricula-base-alumnos](fixes/fix-256-m-recorte-clase-profesional-matricula-base-alumnos/fix.md) | 2026-09-21 |
 | ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | [hotfix-109-m-documentar-rutas-ocultas-fase-piloto](hotfixes/hotfix-109-m-documentar-rutas-ocultas-fase-piloto/hotfix.md) | 2026-09-21 |
+| ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md) | 2026-09-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---

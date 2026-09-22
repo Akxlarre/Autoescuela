@@ -1,4 +1,4 @@
-﻿import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
@@ -557,48 +557,54 @@ export class AdminAlumnoDetalleFacade {
     // Cantidad de clases requeridas se deriva del curso de la matrícula (spec 0006-m) —
     // ya no asume 12 fijo. Fallback a 12 si no hay dato (regresión Clase B estándar, AC-E1).
     const clasesRequeridas = classCountFromPracticalHours(practicalHours) || PRACTICAS_REQUERIDAS_B;
-    const [attendanceResult, evidenceResult, sessionResult, paymentsResult] = await Promise.all([
-      enrollmentId
-        ? this.supabase.client
-            .from('class_b_practice_attendance')
-            .select(
-              `
+    const [attendanceResult, evidenceResult, sessionResult, paymentsResult, classTopicsResult] =
+      await Promise.all([
+        enrollmentId
+          ? this.supabase.client
+              .from('class_b_practice_attendance')
+              .select(
+                `
               id, status, justification, recorded_at, archived_at,
               class_b_sessions!inner(
                 id, enrollment_id, class_number, scheduled_at, status,
                 instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))
               )
             `,
-            )
-            .eq('class_b_sessions.enrollment_id', enrollmentId)
-            .order('recorded_at', { ascending: false })
-        : Promise.resolve({ data: [] as any[] }),
-      enrollmentId
-        ? this.supabase.client
-            .from('absence_evidence')
-            .select('*')
-            .eq('enrollment_id', enrollmentId)
-            .order('document_date', { ascending: false })
-        : Promise.resolve({ data: [] }),
-      enrollmentId
-        ? this.supabase.client
-            .from('class_b_sessions')
-            .select(
-              '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
-            )
-            .eq('enrollment_id', enrollmentId)
-            .order('class_number', { ascending: true })
-        : Promise.resolve({ data: [] }),
-      enrollmentId
-        ? this.supabase.client
-            .from('payments')
-            .select('*')
-            .eq('enrollment_id', enrollmentId)
-            .order('payment_date', { ascending: true })
-        : Promise.resolve({ data: [] }),
-    ]);
+              )
+              .eq('class_b_sessions.enrollment_id', enrollmentId)
+              .order('recorded_at', { ascending: false })
+          : Promise.resolve({ data: [] as any[] }),
+        enrollmentId
+          ? this.supabase.client
+              .from('absence_evidence')
+              .select('*')
+              .eq('enrollment_id', enrollmentId)
+              .order('document_date', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        enrollmentId
+          ? this.supabase.client
+              .from('class_b_sessions')
+              .select(
+                '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
+              )
+              .eq('enrollment_id', enrollmentId)
+              .order('class_number', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        enrollmentId
+          ? this.supabase.client
+              .from('payments')
+              .select('*')
+              .eq('enrollment_id', enrollmentId)
+              .order('payment_date', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        this.supabase.client
+          .from('class_b_topics')
+          .select('*')
+          .order('class_number', { ascending: true }),
+      ]);
 
     const attendanceRows = (attendanceResult.data ?? []) as any[];
+    const classTopics = (classTopicsResult.data ?? []) as any[];
     // fix-191-m: la asistencia archivada es el registro histórico de una ocurrencia previa de
     // una sesión reciclada por reagendamiento — sigue visible en el historial de inasistencias
     // (marcada `reagendada`), pero no describe el estado actual de la sesión.
@@ -707,6 +713,7 @@ export class AdminAlumnoDetalleFacade {
           hora:
             this.formatHour(ses.start_time, ses.end_time) ??
             this.formatTimeFromScheduledAt(ses.scheduled_at),
+          topic: (classTopics as any[]).find((t) => Number(t.class_number) === num)?.topic,
           instructor,
           kmInicio: ses.km_start,
           kmFin: ses.km_end,
