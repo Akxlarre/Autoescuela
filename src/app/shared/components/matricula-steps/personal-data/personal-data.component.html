@@ -314,7 +314,7 @@
               @for (cat of availableCategories(); track cat.value) {
                 <button
                   type="button"
-                  class="flex flex-col items-center gap-2 p-3 border-2 rounded-xl transition-all hover:border-brand/40 active:scale-95"
+                  class="flex flex-col items-center gap-2 p-3 border-2 rounded-xl transition-all cursor-pointer hover:border-brand/40 active:scale-95"
                   [class.border-brand]="selectedCategory() === cat.value"
                   [class.bg-brand-muted]="selectedCategory() === cat.value"
                   [class.border-border-default]="selectedCategory() !== cat.value"

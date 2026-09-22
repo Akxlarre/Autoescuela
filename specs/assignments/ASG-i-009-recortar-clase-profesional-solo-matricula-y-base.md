@@ -1,14 +1,14 @@
 # Asignación ASG-i-009 — Recortar Clase Profesional a solo Matrícula + Base de Alumnos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-15
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-21
+> **resulting_track:** fix-256-m-recorte-clase-profesional-matricula-base-alumnos
 
 ---
 

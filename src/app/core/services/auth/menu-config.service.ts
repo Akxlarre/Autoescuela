@@ -10,6 +10,8 @@ export interface NavItem {
   routerLink: string;
   badge?: number;
   requiresProfessional?: boolean;
+  /** fix-256-m: oculto mientras `pilot-phase.config.ts` bloquee `'clase-profesional-recorte'`. */
+  hiddenInPilotRecorte?: boolean;
 }
 
 /** Grupo de items de navegación con encabezado de sección. */
@@ -32,9 +34,9 @@ export class MenuConfigService {
   readonly menuItems = computed<NavGroup[]>(() => {
     switch (this.auth.currentUser()?.role) {
       case 'admin':
-        return ADMIN_NAV;
+        return filterClaseProfesionalRecorte(ADMIN_NAV);
       case 'secretaria':
-        return SECRETARIA_NAV;
+        return filterClaseProfesionalRecorte(SECRETARIA_NAV);
       case 'instructor':
         return isBlockedInPilot('instructor') ? [] : INSTRUCTOR_NAV;
       case 'alumno':
@@ -43,6 +45,20 @@ export class MenuConfigService {
         return [];
     }
   });
+}
+
+/**
+ * fix-256-m: filtra del grupo "Academia Profesional" los ítems marcados
+ * `hiddenInPilotRecorte` mientras `pilot-phase.config.ts` bloquee
+ * `'clase-profesional-recorte'`. Único lugar que aplica este recorte al menú.
+ */
+function filterClaseProfesionalRecorte(nav: NavGroup[]): NavGroup[] {
+  if (!isBlockedInPilot('clase-profesional-recorte')) return nav;
+  return nav.map((group) =>
+    group.group === 'Academia Profesional'
+      ? { ...group, items: group.items.filter((item) => !item.hiddenInPilotRecorte) }
+      : group,
+  );
 }
 
 // ── Configuración de navegación por rol ──────────────────────────────────────
@@ -86,18 +102,21 @@ const ADMIN_NAV: NavGroup[] = [
         icon: 'monitor',
         routerLink: '/app/admin/clase-profesional/relatores',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Asistencia Prof.',
         icon: 'clipboard-list',
         routerLink: '/app/admin/clase-profesional/asistencia',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Evaluaciones',
         icon: 'file-spreadsheet',
         routerLink: '/app/admin/clase-profesional/evaluaciones',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Libro de Clases',
@@ -110,18 +129,21 @@ const ADMIN_NAV: NavGroup[] = [
         icon: 'award',
         routerLink: '/app/admin/clase-profesional/certificados',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Archivo',
         icon: 'archive',
         routerLink: '/app/admin/clase-profesional/archivo',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Ex-Alumnos Prof.',
         icon: 'user-minus',
         routerLink: '/app/admin/ex-alumnos-profesional',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
     ],
   },
@@ -213,18 +235,21 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'monitor',
         routerLink: '/app/secretaria/profesional/relatores',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Asistencia Prof.',
         icon: 'clipboard-list',
         routerLink: '/app/secretaria/profesional/asistencia',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Evaluaciones',
         icon: 'file-spreadsheet',
         routerLink: '/app/secretaria/profesional/evaluaciones',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Libro de Clases',
@@ -237,18 +262,21 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'award',
         routerLink: '/app/secretaria/profesional/certificados',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Archivo',
         icon: 'archive',
         routerLink: '/app/secretaria/profesional/archivo',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
       {
         label: 'Ex-Alumnos Prof.',
         icon: 'user-minus',
         routerLink: '/app/secretaria/ex-alumnos-profesional',
         requiresProfessional: true,
+        hiddenInPilotRecorte: true,
       },
     ],
   },
