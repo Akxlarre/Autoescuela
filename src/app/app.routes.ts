@@ -123,6 +123,7 @@ export const routes: Routes = [
           },
           {
             path: 'clase-profesional/alumnos',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/alumnos-profesional/admin-alumnos-profesional.component').then(
                 (m) => m.AdminAlumnosProfesionalComponent,
@@ -292,6 +293,7 @@ export const routes: Routes = [
           },
           {
             path: 'libro-de-clases',
+            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/libro-de-clases/libro-de-clases.component').then(
                 (m) => m.LibroDeClasesComponent,
@@ -405,7 +407,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/alumnos',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/secretaria/alumnos-profesional/secretaria-alumnos-profesional.component').then(
                 (m) => m.SecretariaAlumnosProfesionalComponent,
@@ -591,7 +593,7 @@ export const routes: Routes = [
           },
           {
             path: 'libro-de-clases',
-            canActivate: [professionalBranchGuard],
+            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/libro-de-clases/libro-de-clases.component').then(
                 (m) => m.LibroDeClasesComponent,

@@ -1,6 +1,6 @@
 # Asignación ASG-i-017 — 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P0

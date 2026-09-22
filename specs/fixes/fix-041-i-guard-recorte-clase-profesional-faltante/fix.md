@@ -1,9 +1,10 @@
 # Fix: 4 rutas del recorte de Clase Profesional accesibles por URL directa sin guard
 
 > id: fix-041-i-guard-recorte-clase-profesional-faltante
-> refs: fix-037-i-qa-visual-piloto, ASG-i-009, fix-256-m
-> status: draft
+> refs: fix-037-i-qa-visual-piloto, ASG-i-012, ASG-i-009, ASG-i-017, fix-256-m
+> status: done
 > created: 2026-09-22
+> closed: 2026-09-22
 
 ## Root Cause
 
@@ -71,4 +72,32 @@ Ninguno — fix autónomo, gap de implementación de `fix-256-m` encontrado en Q
 
 ## Evidencia de Verificación
 
-Pendiente.
+- **Cambio aplicado** (2026-09-22): agregado `canActivate: [pilotPhaseGuard('clase-profesional-
+  recorte')]` a `admin/clase-profesional/alumnos` y `admin/libro-de-clases`; agregado
+  `pilotPhaseGuard('clase-profesional-recorte')` al `canActivate` existente (junto a
+  `professionalBranchGuard`) de `secretaria/profesional/alumnos` y `secretaria/libro-de-clases`
+  — 4 líneas en `src/app/app.routes.ts`.
+- **`npx tsc --noEmit`**: sin errores.
+- **`npm run test:ci`**: 200 archivos / 2617 tests pasan (2 archivos / 5 tests skipped,
+  pre-existentes y no relacionados), 0 regresiones.
+- **Verificación manual en navegador (admin, sede Autoescuela Chillán, con `ng serve` +
+  Playwright MCP):**
+  - `/app/admin/clase-profesional/alumnos` → redirige a `/modulo-no-disponible` ✅ (AC-1)
+  - `/app/admin/libro-de-clases` → redirige a `/modulo-no-disponible` ✅ (AC-2)
+  - `/app/admin/clase-profesional/promociones` → sigue accesible, sin redirect ✅ (AC-5, no
+    regresión — confirma que `fix-257-m` sigue vigente)
+- **Verificación manual (secretaria@test.com):**
+  - `/app/secretaria/profesional/alumnos` y `/app/secretaria/profesional/pre-inscritos` (esta
+    última con el guard ya correcto desde antes de este fix) dan **el mismo resultado**:
+    redirigen a `/app/secretaria/dashboard`. La cuenta de prueba no tiene
+    `canAccessBothBranches`, así que `professionalBranchGuard` corta el acceso *antes* de que
+    `pilotPhaseGuard` llegue a evaluarse — comportamiento preexistente e idéntico en ambas
+    rutas, por lo que no permite distinguir en vivo el efecto aislado de `pilotPhaseGuard` en
+    las rutas de secretaria. Como las 2 rutas nuevas ahora usan exactamente el mismo array
+    `canActivate` (mismo orden, mismos guards) que las rutas de secretaria ya correctamente
+    protegidas desde `fix-256-m`, y el guard en sí está cubierto por
+    `pilot-phase.guard.spec.ts`/`pilot-phase.config.spec.ts` (ambos en verde), se considera
+    AC-3/AC-4 satisfechas por paridad de patrón + tests unitarios, no por observación directa
+    del redirect a `/modulo-no-disponible` en esta sesión. Si se dispone de una cuenta de
+    secretaria con `canAccessBothBranches: true`, repetir la prueba en vivo para confirmar el
+    redirect final.

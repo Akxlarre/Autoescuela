@@ -170,7 +170,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | `i` | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | 2026-09-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -299,6 +298,7 @@
 | ASG-m-003 | Campo de número de boleta al registrar un pago | [fix-036-i-boleta-pago-matricula-nueva](fixes/fix-036-i-boleta-pago-matricula-nueva/fix.md) | 2026-09-19 |
 | ASG-i-009 | Recortar Clase Profesional a solo Matrícula + Base de Alumnos | [fix-256-m-recorte-clase-profesional-matricula-base-alumnos](fixes/fix-256-m-recorte-clase-profesional-matricula-base-alumnos/fix.md) | 2026-09-21 |
 | ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | [hotfix-109-m-documentar-rutas-ocultas-fase-piloto](hotfixes/hotfix-109-m-documentar-rutas-ocultas-fase-piloto/hotfix.md) | 2026-09-21 |
+| ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | 2026-09-22 |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md) | 2026-09-22 |
 <!-- AUTO-GENERATED:END -->
 
