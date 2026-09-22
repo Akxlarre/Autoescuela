@@ -168,6 +168,8 @@ export interface ClasePracticaUI {
   scheduledAt: string | null;
   /** Hora "HH:MM-HH:MM" (ej: "15:50-16:35") o null si pendiente */
   hora: string | null;
+  /** Tema correspondiente a la sesión según configuracion-web */
+  topic?: string;
   /** Nombre completo del instructor o null si pendiente */
   instructor: string | null;
   kmInicio: number | null;

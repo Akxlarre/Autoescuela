@@ -191,7 +191,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (82 tablas, acumulado de las migraciones)
+## Esquema efectivo (83 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -713,6 +713,24 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_class_b_theory_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
 
 **Índices:** `idx_class_b_theory_sessions_branch`
+
+### `class_b_topics` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | UUID | NO | `gen_random_uuid()` | — |
+| `class_number` UQ | INT | NO | — | — |
+| `topic` | TEXT | NO | — | — |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_topics | SELECT | `auth.uid() IS NOT NULL` | — |
+| insert_class_b_topics | INSERT | — | `auth_user_role() = 'admin'` |
+| update_class_b_topics | UPDATE | `auth_user_role() = 'admin'` | `auth_user_role() = 'admin'` |
 
 ### `class_book` — 🔒 RLS
 

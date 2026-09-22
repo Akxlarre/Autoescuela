@@ -454,3 +454,5 @@
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->
+|   \ A d m i n C o n f i g u r a c i o n A c a d e m i c a C o m p o n e n t \   |   S m a r t   /   C o n f i g u r a c i ó n   |   M a l l a   c u r r i c u l a r   d e   C l a s e   B .   E d i t o r   i n l i n e   d e   t a b l a .   |   \  e a t u r e s / a d m i n / c o n f i g u r a c i o n - a c a d e m i c a / a d m i n - c o n f i g u r a c i o n - a c a d e m i c a . c o m p o n e n t . t s \   |   '  E s t a b l e   |  
+ 

@@ -86,6 +86,7 @@ export interface FichaTecnicaRow {
   grade: number | null; // 1-5
   kmStart: number | null;
   kmEnd: number | null;
+  topic?: string;
   instructorName: string; // por si hubo reemplazo
   vehiclePlate: string;
   notes: string | null;

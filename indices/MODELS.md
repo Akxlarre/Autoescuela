@@ -89,6 +89,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ClassBPracticeAttendance` | `dto` | `src/app/core/models/dto/class-b-practice-attendance.model.ts` |
 | `ClassBSession` | `dto` | `src/app/core/models/dto/class-b-session.model.ts` |
 | `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
+| `ClassBTopic`, `ClassBTopicInsert`, `ClassBTopicUpdate` | `dto` | `src/app/core/models/dto/class-b-topics.model.ts` |
 | `ClassBook` | `dto` | `src/app/core/models/dto/class-book.model.ts` |
 | `ConsentType`, `ConsentSource`, `Consent` | `dto` | `src/app/core/models/dto/consent.model.ts` |
 | `Course` | `dto` | `src/app/core/models/dto/course.model.ts` |

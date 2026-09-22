@@ -12,6 +12,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ConsentsFacade } from '@core/facades/consents.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { TemplateManagerDrawerComponent } from '@features/comunicados/template-manager-drawer.component';
+import { ClassBTopicsDrawerComponent } from '@features/admin/configuracion-academica/class-b-topics-drawer.component';
 import { ThemeService } from '@core/services/ui/theme.service';
 import {
   AgendaSettingsService,
@@ -409,6 +410,28 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
 
+            <!-- Malla de temas Clase B (ASG-m-007 / fix-169-b). Mismo criterio que
+                 plantillas: es configuración institucional de admin, no un ítem de menú. -->
+            @if (isAdmin()) {
+              <div class="card p-4 space-y-3">
+                <div class="space-y-0.5">
+                  <p class="item-title">Temas de las Clases Prácticas (Clase B)</p>
+                  <p class="text-xs text-text-muted">
+                    Define el tema fijo de cada una de las 12 clases
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  data-llm-action="open-class-b-topics-manager"
+                  (click)="abrirTemasClaseB()"
+                >
+                  <app-icon name="book-open" [size]="14" />
+                  <span>Editar Temas</span>
+                </button>
+              </div>
+            }
+
             @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
                 <div class="space-y-0.5">
@@ -701,6 +724,10 @@ export class AjustesDrawerComponent {
 
   abrirPlantillas(): void {
     this.layoutDrawer.push(TemplateManagerDrawerComponent, 'Plantillas de Comunicado', 'file-text');
+  }
+
+  abrirTemasClaseB(): void {
+    this.layoutDrawer.push(ClassBTopicsDrawerComponent, 'Temas de Clases (Clase B)', 'book-open');
   }
 
   abrirPreciosCursos(): void {

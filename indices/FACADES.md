@@ -86,6 +86,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `CertificacionClaseBFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService`, `DmsViewerService`, `NotificationsFacade` | `alumnos`, `log`, `isLoading`, `error`, `generatingId`, `sendingEmailId`, `sendingMasivo`, `isExporting`, `isGeneratingPendientes`, `kpis` | `src/app/core/facades/certificacion-clase-b.facade.ts` |
 | `CertificacionProfesionalFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService`, `DmsViewerService`, `NotificationsFacade` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `log`, `isLoading`, `isLoadingAlumnos`, `error`, `generatingId`, `sendingEmailId`, `sendingMasivo`, `isExporting`, `isGeneratingPendientes`, `kpis` | `src/app/core/facades/certificacion-profesional.facade.ts` |
 | `CiclosTeoricosFacade` | `SupabaseService`, `ToastService`, `BranchFacade` | — | `src/app/core/facades/ciclos-teoricos.facade.ts` |
+| `ClassBTopicsFacade` | `SupabaseService`, `ErrorSanitizerService`, `ToastService` | — | `src/app/core/facades/class-b-topics.facade.ts` |
 | `ConsentsFacade` | `SupabaseService`, `ErrorSanitizerService`, `ToastService` | — | `src/app/core/facades/consents.facade.ts` |
 | `CoursesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/courses.facade.ts` |
 | `CuadraturaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/cuadratura.facade.ts` |
