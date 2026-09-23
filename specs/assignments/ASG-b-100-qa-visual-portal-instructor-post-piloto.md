@@ -28,10 +28,11 @@ portales de Admin/Secretaría: 7 hallazgos que ninguna lectura de código había
 
 - Correr el skill `/verify` contra cada ruta de `/app/instructor/**` que quede expuesta: consola
   sin errores, sin 4xx/5xx, sin datos mock, contrato app-like, claro/oscuro, responsive.
-- **Cerrar AC1b de `fix-169-b`**: confirmar que la Ficha Técnica del instructor muestra el tema de
-  cada clase. Es lo único de ese fix que quedó sin evidencia visual — ya está verificado que la
-  RLS le permite leer los 12 temas y que el mapeo es idéntico al de la vista admin (que sí se vio
-  funcionando), pero **el render de ese template no se miró**.
+- ~~Cerrar AC1b de `fix-169-b`~~ — **ya cerrado el 2026-09-23**. Se levantó el guard en local, se
+  sembraron datos temporales para `instructor@test.com` y se vio en pantalla: la Ficha Técnica del
+  instructor muestra la columna "N° / Tema" con los 12 temas. Todo revertido después (datos
+  borrados, guard restaurado). Queda como antecedente de que **el portal es verificable** con ese
+  procedimiento.
 - Completar al menos una vez los recorridos reales del instructor (ver su clase del día,
   iniciar/finalizar una clase, evaluar), no solo que cada pantalla cargue.
 
@@ -56,6 +57,34 @@ portales de Admin/Secretaría: 7 hallazgos que ninguna lectura de código había
 - `src/app/features/instructor/**` (verificación, no necesariamente modificación)
 - `src/app/core/facades/instructor-alumnos.facade.ts`
 - `src/app/core/config/pilot-phase.config.ts`
+
+## Hallazgo ya encontrado (2026-09-23) — la Ficha Técnica elige la matrícula equivocada
+
+Al levantar el guard en local para cerrar AC1b apareció, en la primera pantalla mirada, un bug
+**pre-existente** del portal. `InstructorAlumnosFacade` resuelve la matrícula del alumno así:
+
+```ts
+.from('enrollments')
+.eq('student_id', studentId)
+.order('id', { ascending: false })
+.limit(1)
+```
+
+Toma **la matrícula de id más alto, sin filtrar por tipo de curso**. Si el alumno tiene una de
+Clase B y una de Profesional —situación normal, no sembrada—, agarra la de id mayor y después
+renderiza contra ella la grilla "Ficha Técnica — Clases Prácticas" de las 12 clases de Clase B.
+
+Observado con el alumno 84 (matrícula 90 Clase B con 12 sesiones, matrícula 160 Profesional A2
+con 0): la tarjeta del listado decía **3/12** y la ficha, para el mismo alumno, **0 % práctico con
+las 12 clases en "Pendiente"**, encabezada por "CURSO: Profesional A2". Los datos estaban bien; la
+pantalla mostraba la matrícula que no era.
+
+Severidad: media-alta. No pierde datos, pero un instructor mirando esa ficha concluye que el
+alumno no hizo ninguna clase. Conviene resolverlo **antes** de exponer el portal.
+
+Sugerencia: filtrar por `courses.type = 'class_b'` al resolver la matrícula de la Ficha Técnica, y
+decidir qué mostrar cuando el alumno tenga más de una (¿selector? ¿la activa?) — esa decisión es
+de negocio y no está tomada.
 
 ## Notas para quien la reclame
 

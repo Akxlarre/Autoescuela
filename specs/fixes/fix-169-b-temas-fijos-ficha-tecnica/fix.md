@@ -17,10 +17,9 @@ Además, admin debe poder editar los 12 temas desde Ajustes.
 
 - [x] **AC1a** — El tema de cada clase se muestra en la Ficha Técnica del detalle de alumno Clase B,
       vista admin/secretaría. **Verificado en pantalla.**
-- [~] **AC1b** — Ídem en el portal del instructor. **No verificado en pantalla**: ese portal está
-      apagado por `pilotPhaseGuard('instructor')` (fase piloto, `fix-255-m`, viene de `main`), así
-      que la ruta redirige a `/modulo-no-disponible` y no hay forma de mirarla sin levantar la
-      fase. Verificado hasta donde se puede sin la UI — ver "Alcance de AC1b" abajo.
+- [x] **AC1b** — Ídem en el portal del instructor. **Verificado en pantalla el 2026-09-23**, tras
+      levantar el guard de fase piloto en local y sembrar datos temporales para
+      `instructor@test.com` (todo revertido después). Ver "Cierre de AC1b" abajo.
 - [x] **AC2** — Sección en Ajustes, solo admin, para editar los 12 temas.
 - [x] **AC3** — Los 12 temas por defecto quedan seedeados vía migración, con los textos exactos de
       la asignación.
@@ -155,7 +154,27 @@ quedaba una tarjeta con borde y sin filas debajo del banner de error. Corregido 
 tabla de 7 columnas dentro de un drawer, así que la mayoría se lee a medias (tiene `title` con el
 texto completo). Es decisión de diseño de quien hizo esa vista, no un defecto de este fix.
 
-### Alcance de AC1b — qué se verificó sin poder ver la pantalla
+### Cierre de AC1b (2026-09-23)
+
+Se cerró viéndolo. Procedimiento, todo revertido al terminar:
+
+1. Bypass del Spec Gate en `specs/.active` (no versionado) y `'instructor'` fuera de
+   `BLOCKED_MODULES`, **solo en local**.
+2. `instructor@test.com` no tenía alumnos, así que se sembraron 12 sesiones **nuevas** en una
+   matrícula Clase B que no tenía ninguna (aditivo — no se reasignó nada de otro instructor, que
+   es data compartida de otros QA).
+3. Login como instructor → Mis Alumnos → Ficha → tab "Ficha Técnica": la tabla muestra la columna
+   **"N° / Tema"** con los 12 temas bajo cada número de clase.
+4. Limpieza verificada: 0 sesiones sembradas, `pilot-phase.config.ts` idéntico a `HEAD`,
+   `specs/.active` vacío, working tree limpio.
+
+**Bug pre-existente encontrado en esa misma pantalla** (no de este fix, anotado en `ASG-b-100`):
+`InstructorAlumnosFacade` resuelve la matrícula con `order('id', desc).limit(1)` sin filtrar por
+tipo de curso, así que en un alumno con Clase B **y** Profesional toma la de id mayor y renderiza
+la grilla de 12 clases B contra la matrícula equivocada. Observado: la tarjeta del listado decía
+3/12 y la ficha del mismo alumno, 0 % con todo en "Pendiente".
+
+### Qué se había verificado antes, sin poder ver la pantalla
 
 El portal del instructor está bloqueado por la fase piloto. Intentar levantarlo aunque fuera
 temporalmente para el QA lo impide el **Spec Gate**, y su bypass debe escribirlo el dueño, no el
@@ -172,10 +191,10 @@ Autenticando de verdad contra la BD como cada rol (`verify-instructor-rls.mjs`, 
 | El alumno también puede leer | 12 filas |
 | La clase 1 quedó intacta tras el intento | sí |
 
-Lo que queda sin evidencia visual es únicamente el render del template del instructor, que usa el
-**mismo mapeo** (`classTopics.find(t => t.class_number === i)?.topic`) y el mismo patrón de
-plantilla que la vista admin ya verificada en pantalla. **No es equivalente a haberlo visto:**
-queda pendiente de mirar cuando se levante la fase piloto del portal instructor.
+En su momento quedó sin evidencia visual el render del template del instructor. Se dejó anotado
+que eso **no equivalía a haberlo visto** — y efectivamente no equivalía: al mirarlo después
+(sección "Cierre de AC1b") el tema se renderizaba bien, pero apareció un bug pre-existente de esa
+misma pantalla que ninguna de estas comprobaciones podía detectar.
 
 ### Nota de método
 
