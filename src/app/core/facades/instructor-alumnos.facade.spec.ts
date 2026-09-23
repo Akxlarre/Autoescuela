@@ -81,4 +81,53 @@ describe('InstructorAlumnosFacade', () => {
     await facade.fetchStudents();
     expect(facade.students()).toEqual([]);
   });
+
+  // ── fix-170-b ──────────────────────────────────────────────────────────────
+  //
+  // La Ficha Técnica del instructor son las 12 clases prácticas de Clase B. Antes
+  // resolvía la matrícula con `order('id', desc).limit(1)` sin filtrar por tipo de
+  // curso, así que en un alumno con Clase B Y Profesional agarraba la de id mayor —
+  // la de Profesional, que no tiene clases B— y pintaba las 12 en blanco.
+  //
+  // Se afirma sobre los filtros que se le piden a PostgREST, no sobre las filas
+  // devueltas: el bug estaba en la consulta, no en el mapeo.
+  describe('loadStudentDetail — matrícula de la Ficha Técnica (fix-170-b)', () => {
+    /** Registra los filtros aplicados a cada tabla consultada. */
+    function mockConFiltros() {
+      const filtros: Record<string, string[]> = {};
+      const from = vi.fn().mockImplementation((tabla: string) => {
+        filtros[tabla] = filtros[tabla] ?? [];
+        const chain: any = {};
+        for (const m of ['select', 'eq', 'in', 'gte', 'lte', 'limit', 'not']) {
+          chain[m] = vi.fn().mockImplementation((...args: unknown[]) => {
+            if (m === 'eq') filtros[tabla].push(`eq:${String(args[0])}=${String(args[1])}`);
+            return chain;
+          });
+        }
+        chain.order = vi.fn().mockResolvedValue({ data: [], error: null });
+        chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+        return chain;
+      });
+      return { from, filtros };
+    }
+
+    it('pide la matrícula filtrando por curso de tipo class_b', async () => {
+      const { from, filtros } = mockConFiltros();
+      supabaseMock.client.from = from;
+
+      await facade.loadStudentDetail(84);
+
+      expect(filtros['enrollments']).toBeDefined();
+      expect(filtros['enrollments'].some((f) => /courses.*type.*class_b/.test(f))).toBe(true);
+    });
+
+    it('sigue acotando al alumno pedido', async () => {
+      const { from, filtros } = mockConFiltros();
+      supabaseMock.client.from = from;
+
+      await facade.loadStudentDetail(84);
+
+      expect(filtros['enrollments']).toContain('eq:student_id=84');
+    });
+  });
 });
