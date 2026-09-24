@@ -11,6 +11,10 @@
 //     body: { promotion_course_id: 42 }
 //   })
 //
+// spec 0018-m: libro de convalidación (Conv. A-3 / Conv. A-4), armado al vuelo desde su curso
+// madre (A5 / A2), sin promotion_course propio:
+//   body: { promotion_course_id: <id del curso madre>, convalidation: 'A3' | 'A4' }
+//
 // Respuesta: { pdfUrl: "https://...storage.../class-books/42/LibroDeClases_A2_PROM-2026-01.pdf" }
 // @ts-nocheck
 
@@ -39,11 +43,28 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { promotion_course_id } = await req.json();
+    const { promotion_course_id, convalidation = null } = await req.json();
 
     if (!promotion_course_id || typeof promotion_course_id !== 'number') {
       return jsonRes({ error: 'promotion_course_id (number) is required' }, 400);
     }
+    if (convalidation !== null && !(convalidation in CONV_BOOKS)) {
+      return jsonRes({ error: "convalidation must be 'A3', 'A4' or null" }, 400);
+    }
+    const convBook = convalidation ? CONV_BOOKS[convalidation as 'A3' | 'A4'] : null;
+
+    // spec 0018-m: cada libro (normal o de convalidación) tiene su propia fila en class_book.
+    const classBookQuery = (client) => {
+      const q = client
+        .from('class_book')
+        .select('sence_code')
+        .eq('promotion_course_id', promotion_course_id);
+      return (
+        convalidation
+          ? q.eq('convalidation_license', convalidation)
+          : q.is('convalidation_license', null)
+      ).maybeSingle();
+    };
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -92,11 +113,7 @@ Deno.serve(async (req: Request) => {
         .order('date'),
 
       // 5. Class book editable fields
-      supabase
-        .from('class_book')
-        .select('sence_code')
-        .eq('promotion_course_id', promotion_course_id)
-        .maybeSingle(),
+      classBookQuery(supabase),
     ]);
 
     if (courseRes.error || !courseRes.data) {
@@ -109,8 +126,63 @@ Deno.serve(async (req: Request) => {
     const licenseClass = course.license_class;
     const classBook = classBookRes.data;
 
+    if (convBook && licenseClass !== convBook.motherLicense) {
+      return jsonRes(
+        {
+          error: `El libro Conv. ${convalidation} cuelga del curso ${convBook.motherLicense}, no de ${licenseClass}`,
+        },
+        400,
+      );
+    }
+
+    // spec 0018-m: en el libro de convalidación solo van los alumnos del curso madre que
+    // convalidan esa licencia (license_validations). Siguen apareciendo también en el libro
+    // de su curso madre (decisión del dueño 2026-09-24).
+    let enrollmentRows = enrollmentsRes.data ?? [];
+    if (convalidation && enrollmentRows.length > 0) {
+      const { data: lv, error: lvError } = await supabase
+        .from('license_validations')
+        .select('enrollment_id')
+        .eq('convalidated_license', convalidation)
+        .in(
+          'enrollment_id',
+          enrollmentRows.map((e) => e.id),
+        );
+      if (lvError) {
+        return jsonRes({ error: `Error leyendo convalidaciones: ${lvError.message}` }, 500);
+      }
+      const convIds = new Set((lv ?? []).map((r) => r.enrollment_id));
+      enrollmentRows = enrollmentRows.filter((e) => convIds.has(e.id));
+    }
+
+    // spec 0018-m: el tramo de convalidación son las últimas N fechas activas del curso madre
+    // (N = días de clase del libro real). Si hay menos, se usan todas y el Calendario imprime
+    // el aviso de bloques sin fecha (AC-E3); nunca se inventan fechas.
+    const allSessions = theoryRes.data ?? [];
+    let bookSessions = allSessions;
+    let courseStartDate = promo.start_date;
+    let courseEndDate = promo.end_date;
+    if (convBook) {
+      const convDates = [
+        ...new Set(allSessions.filter((s) => s.status !== 'cancelled').map((s) => s.date)),
+      ]
+        .sort()
+        .slice(-convBook.sessionDays);
+      if (convDates.length > 0) {
+        courseStartDate = convDates[0];
+        courseEndDate = convDates[convDates.length - 1];
+        bookSessions = allSessions.filter(
+          (s) => s.date >= courseStartDate && s.date <= courseEndDate,
+        );
+      } else {
+        courseStartDate = null;
+        courseEndDate = null;
+        bookSessions = [];
+      }
+    }
+
     // Enrollments
-    const enrollments = (enrollmentsRes.data ?? []).map((e, i) => {
+    const enrollments = enrollmentRows.map((e, i) => {
       const u = e.students.users;
       return {
         id: e.id,
@@ -122,8 +194,10 @@ Deno.serve(async (req: Request) => {
         telefono: u.phone ?? '',
       };
     });
-    // Module names based on license class
-    const moduleNames = getModuleNames(licenseClass);
+    // Module names based on license class (spec 0018-m: 5 asignaturas en convalidación)
+    const moduleNames = convalidation
+      ? getConvalidationModuleNames(convalidation)
+      : getModuleNames(licenseClass);
 
     // Lecturers
     const lecturers = (lecturersRes.data ?? []).map((l) => ({
@@ -140,13 +214,26 @@ Deno.serve(async (req: Request) => {
           startDate: promo.start_date,
           endDate: promo.end_date,
         },
-        course: { name: course.name, code: courseRes.data.code ?? course.code, licenseClass },
+        course: {
+          name: course.name,
+          // spec 0018-m: ID del libro de convalidación = código de la promoción + sufijo
+          // (156.6 / 156.7), igual que el real.
+          code: convBook
+            ? promo.code
+              ? `${promo.code}.${convBook.idSuffix}`
+              : ''
+            : (courseRes.data.code ?? course.code),
+          licenseClass,
+        },
+        convalidation,
+        courseStartDate,
+        courseEndDate,
         branch: { name: branch?.name ?? '', address: branch?.address ?? '' },
         senceCode: classBook?.sence_code ?? '',
         lecturers,
         moduleNames,
         enrollments,
-        theorySessions: theoryRes.data ?? [],
+        theorySessions: bookSessions,
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('PDF generation timeout after 40s')), 40_000),
@@ -154,7 +241,10 @@ Deno.serve(async (req: Request) => {
     ]);
 
     // ── Upload to Storage ──
-    const fileName = `LibroDeClases_${licenseClass}_${promo.code ?? promotion_course_id}.pdf`;
+    // spec 0018-m: nombre distinto para el libro de convalidación — nunca pisa el PDF del
+    // libro de su curso madre, que vive en la misma carpeta.
+    const bookLabel = convalidation ? `Conv${convalidation}` : licenseClass;
+    const fileName = `LibroDeClases_${bookLabel}_${promo.code ?? promotion_course_id}.pdf`;
     const storagePath = `class-books/${promotion_course_id}/${sanitize(fileName)}`;
 
     const { error: uploadError } = await supabase.storage
@@ -174,8 +264,11 @@ Deno.serve(async (req: Request) => {
         pdf_url: storagePath,
         generated_at: new Date().toISOString(),
         status: 'active',
+        convalidation_license: convalidation,
       },
-      { onConflict: 'promotion_course_id' },
+      // spec 0018-m: unicidad (promotion_course_id, convalidation_license) NULLS NOT DISTINCT
+      // — migración 20260924120000. Con 'promotion_course_id' solo, este upsert falla.
+      { onConflict: 'promotion_course_id,convalidation_license' },
     );
 
     // Generar signed URL (TTL 1h) para visualización inmediata en el cliente.
@@ -225,6 +318,43 @@ function getMondayForDate(dateStr: string): string {
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
+}
+
+// spec 0018-m: libros de convalidaci\u00f3n. Espejo de CONVALIDATION_BOOKS en
+// src/app/core/utils/convalidation-book.utils.ts (la Edge Function no puede importar c\u00f3digo
+// de Angular) \u2014 mantener ambos en sincron\u00eda. Valores tomados de libroclasesconva3/4.pdf.
+const CONV_BOOKS: Record<
+  'A3' | 'A4',
+  {
+    motherLicense: 'A5' | 'A2';
+    idSuffix: '6' | '7';
+    sessionDays: number;
+    moduleIndexes: number[];
+    evaluationLicense: 'A3' | 'A4';
+  }
+> = {
+  // Evaluaciones: Infraestructura, Mec\u00e1nica, Transporte de Pasajeros, Conducci\u00f3n, Aspectos Psic.
+  A3: {
+    motherLicense: 'A5',
+    idSuffix: '6',
+    sessionDays: 16,
+    moduleIndexes: [2, 3, 4, 5, 6],
+    evaluationLicense: 'A3',
+  },
+  // Evaluaciones: Prevenci\u00f3n de Riesgos, Mec\u00e1nica, Transporte de Carga, Conducci\u00f3n, Aspectos Psic.
+  A4: {
+    motherLicense: 'A2',
+    idSuffix: '7',
+    sessionDays: 13,
+    moduleIndexes: [1, 3, 4, 5, 6],
+    evaluationLicense: 'A4',
+  },
+};
+
+function getConvalidationModuleNames(conv: 'A3' | 'A4'): string[] {
+  const book = CONV_BOOKS[conv];
+  const all = getModuleNames(book.evaluationLicense);
+  return book.moduleIndexes.map((i) => all[i]);
 }
 
 const BASE_MODULES: Record<number, string> = {
@@ -890,7 +1020,7 @@ function getA3Curriculum(): CurriculumRow[] {
       fecha: '1/17/2022',
       asignatura: 'CONDUCCIÓN',
       materias:
-        'I.CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
+        'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
       horas: '5 horas',
       profesor: 'JORGE PEREZ',
     },
@@ -898,7 +1028,7 @@ function getA3Curriculum(): CurriculumRow[] {
       fecha: '1/18/2022',
       asignatura: 'CONDUCCIÓN',
       materias:
-        'II.OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
+        'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
       horas: '5 horas',
       profesor: 'JORGE PEREZ',
     },
@@ -1419,9 +1549,9 @@ function getA4Curriculum(): CurriculumRow[] {
   const CONDUCCION_III =
     'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.';
   const OPERACION_VEHICULO =
-    'II.OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.';
+    'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.';
   const CHEQUEOS_BASICOS_CONDUCTOR =
-    'I.CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.';
+    'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.';
   const AUXILIOS =
     'PRIMEROS AUXILIOS; Generalidades, definición de primeros auxilios, la importancia de un auxilio adecuado, requisitos que debe reunir un auxiliador, puntos básicos de los primeros auxilios. Paro cardiaco y respiratorio. Shock. Asfixia. Fractura.';
   const COMUNICACION =
@@ -1493,7 +1623,7 @@ function getA4Curriculum(): CurriculumRow[] {
       fecha: '1/18/2022',
       asignatura: 'TRANSPORTE DE CARGA',
       materias:
-        'III. REGLAMENTO DE SEGURIDAD PARA ALMACENAMIENTO, TRANSPORTE Y EXPENDIO DE GAS LICUADO; Transporte de gas licuado en camiones. El personal de operación d los vehículos de transporte de gas licuado. Equipo de los estanques para gas licuado. Transporte de cilindros y condiciones generales para manipular los cilindros durante la carga y descarga. Dispositivos generales. El sistema de escape en camiones que transportan gas licuado.',
+        'III. REGLAMENTO DE SEGURIDAD PARA ALMACENAMIENTO, TRANSPORTE Y EXPENDIO DE GAS LICUADO; Transporte de gas licuado en camiones. El personal de operación de los vehículos de transporte de gas licuado. Equipo de los estanques para gas licuado. Transporte de cilindros y condiciones generales para manipular los cilindros durante la carga y descarga. Dispositivos generales. El sistema de escape en camiones que transportan gas licuado.',
       horas: '3 horas',
       profesor: 'PABLO VARGAS',
     },
@@ -1995,9 +2125,9 @@ function getA5Curriculum(): CurriculumRow[] {
   const CONDUCCION_III =
     'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.';
   const OPERACION_VEHICULO =
-    'II.OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.';
+    'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.';
   const CHEQUEOS_BASICOS_CONDUCTOR =
-    'I.CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.';
+    'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.';
   const AUXILIOS =
     'PRIMEROS AUXILIOS; Generalidades, definición de primeros auxilios, la importancia de un auxilio adecuado, requisitos que debe reunir un auxiliador, puntos básicos de los primeros auxilios. Paro cardiaco y respiratorio. Shock. Asfixia. Fractura.';
   const PROCESOS_PSICOLOGICOS =
@@ -2324,7 +2454,7 @@ function getA5Curriculum(): CurriculumRow[] {
       fecha: '2/12/2022',
       asignatura: 'TRANSPORTE DE CARGA',
       materias:
-        'III. REGLAMENTO DE SEGURIDAD PARA ALMACENAMIENTO, TRANSPORTE Y EXPENDIO DE GAS LICUADO; Transporte de gas licuado en camiones. El personal de operación d los vehículos de transporte de gas licuado. Equipo de los estanques para gas licuado. Transporte de cilindros y condiciones generales para manipular los cilindros durante la carga y descarga. Dispositivos generales. El sistema de escape en camiones que transportan gas licuado.',
+        'III. REGLAMENTO DE SEGURIDAD PARA ALMACENAMIENTO, TRANSPORTE Y EXPENDIO DE GAS LICUADO; Transporte de gas licuado en camiones. El personal de operación de los vehículos de transporte de gas licuado. Equipo de los estanques para gas licuado. Transporte de cilindros y condiciones generales para manipular los cilindros durante la carga y descarga. Dispositivos generales. El sistema de escape en camiones que transportan gas licuado.',
       horas: '3 horas',
       profesor: 'PABLO VARGAS',
     },
@@ -2519,7 +2649,7 @@ function getA5Curriculum(): CurriculumRow[] {
       fecha: '2/25/2022',
       asignatura: 'MANIPULACIÓN DE CARGAS Y SUST. PELIGROSAS',
       materias:
-        'I. LOS ORGANISMOS PARTICIPANTES; Los organismos fiscalizadores que participan en el transporte de carga: S.A.G, S.I.I, Aduana y Ministerio de obras públicas.',
+        'I. LOS ORGANISMOS PARTICIPANTES; Los organismos fiscalizadores que participan en el transporte de carga: S.A.G, S.I. I, Aduana y Ministerio de obras públicas.',
       horas: '3 horas',
       profesor: 'PABLO VARGAS',
     },
@@ -2559,14 +2689,410 @@ function getA5Curriculum(): CurriculumRow[] {
 }
 
 /**
- * Malla curricular verbatim por clase de licencia. `null` = todavía no transcrita
- * (A3/A4/A5, ver tasks.md) — el caller decide el fallback.
+ * spec 0018-m: malla del libro Conv. A-3 (`libroclasesconva3.pdf`, páginas 11-14), 23 filas en
+ * 16 días de clase (CONV_BOOKS.A3.sessionDays). Las celdas FECHA/ASIGNATURA fusionadas del real
+ * (filas 6, 12 y 18, partidas por el salto de página) se repiten en cada fila. 19 filas son
+ * idénticas a textos ya corregidos de las mallas A2-A5 y se reutilizan tal cual; las filas 14 y
+ * 20 tienen contenido propio de convalidación. Ortografía corregida y HORAS en minúscula
+ * (decisión del dueño 2026-09-24).
  */
-function getCurriculum(licenseClass: string): CurriculumRow[] | null {
-  if (licenseClass === 'A2') return getA2Curriculum();
-  if (licenseClass === 'A3') return getA3Curriculum();
-  if (licenseClass === 'A4') return getA4Curriculum();
-  if (licenseClass === 'A5') return getA5Curriculum();
+function getConvA3Curriculum(): CurriculumRow[] {
+  return [
+    {
+      fecha: '2/9/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/10/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/11/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/12/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'I. REGLAMENTACIÓN DEL TRANSPORTE PÚBLICO DE PASAJEROS; Reglamento de los servicios nacionales de transporte público de pasajeros, privado remunerado de pasajeros, servicios especiales de transporte de pasajeros, transporte remunerado de pasajeros desde y hacia aeródromos y aeropuertos, publicidad en los vehículos de transporte público de pasajeros, dimensionales y funcionales, cinturones de seguridad, luces encendidas. Decreto N°122/91. Sobre redes viales básicas.',
+      horas: '5 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/14/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'I. REGLAMENTACIÓN DEL TRANSPORTE PÚBLICO DE PASAJEROS; Reglamento de los servicios nacionales de transporte público de pasajeros, privado remunerado de pasajeros, servicios especiales de transporte de pasajeros, transporte remunerado de pasajeros desde y hacia aeródromos y aeropuertos, publicidad en los vehículos de transporte público de pasajeros, dimensionales y funcionales, cinturones de seguridad, luces encendidas. Decreto N°122/91. Sobre redes viales básicas.',
+      horas: '2 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/14/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'II. OBLIGACIONES DEL CONDUCTOR; Mantener normas relativas a la atención de público. Conducir observando normas técnicas impartidas durante el proceso de instrucción. Seguro obligatorio de accidentes personales. La conducción en vehículos de transporte público y algunas indicaciones como: detención frente a colegios, precaución frente a los vehículos, uso de señales preventivas, disciplina de los pasajeros, los tiempos y velocidades.',
+      horas: '3 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/15/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/16/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'II. OBLIGACIONES DEL CONDUCTOR; Mantener normas relativas a la atención de público. Conducir observando normas técnicas impartidas durante el proceso de instrucción. Seguro obligatorio de accidentes personales. La conducción en vehículos de transporte público y algunas indicaciones como: detención frente a colegios, precaución frente a los vehículos, uso de señales preventivas, disciplina de los pasajeros, los tiempos y velocidades.',
+      horas: '2 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/16/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'III. SERVICIO DE AMBULANCIAS; Disposiciones generales. Legislación vigente, antigüedad de las ambulancias, restricciones y tipos de conducción. Requerimientos solicitados por el servicio de Salud.',
+      horas: '3 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/17/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'II. SERVICIO DE AMBULANCIAS; Disposiciones generales. Legislación vigente, antigüedad de las ambulancias, restricciones y tipos de conducción. Requerimientos solicitados por el servicio de Salud.',
+      horas: '1 hora',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/17/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'III. SERVICIO DE TAXIS; Inicio o término de sus servicios (Art. 47 Ds 212). Servicio de transporte público remunerado (Art. 20 Ds 212). Trazado y tarifa (Art. 48-49 Ds 212). Colores, letras y números. Modalidades (Art. 72 Ds 212). Número de personas (Art. 75 Ds 212). Prohibiciones de llevar acompañantes que no sean pasajeros (Art. 74 Ds 212). Requisitos (Art. 73 Ds 212). Taxímetro.',
+      horas: '4 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/18/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'CHEQUEOS BÁSICOS; Del conductor, cabina, exterior, chequeo de niveles, otros. Verificación de las condiciones del vehículo antes de poner en marcha el motor. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales. El tráfico. Detención para subidas y bajadas de ocupantes del vehículo. Conducción en curvas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/19/2022',
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias:
+        'V. TRANSPORTE REMUNERADO DE ESCOLARES DECRETO 38/92; Condiciones generales, Qué se entiende por escolares. N° de escolares que se pueden transportar. De la identificación del conductor y del acompañante del conductor. Del uso de las luces destellantes en la subida y bajada de los escolares. Duración de los viajes. De los viajes especiales de carácter interurbano. De la contratación del seguro obligatorio, revisión técnica, requisitos de los vehículos (Art. 1 al 13)',
+      horas: '5 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/21/2022',
+      asignatura: 'ASPECTOS PSICOLÓGICOS Y DE COMUNICACIÓN',
+      materias:
+        'ATENCIÓN DE PÚBLICO; Las múltiples funciones de un conductor profesional y su efecto en su atención al cliente. Normas generales de un conductor eficiente, sus defectos a superar en la atención al cliente. La opinión pública del examinador y calificador del conductor. VII.- ALCOHOLISMO Y DROGADICCIÓN; Alcoholismo, definición y los efectos que provoca en la conducción. Drogadicción, qué son las drogas.',
+      horas: '5 horas',
+      profesor: 'HORACIO LABBE',
+    },
+    {
+      fecha: '2/22/2022',
+      asignatura: 'MECÁNICA',
+      materias:
+        'MANTENCIÓN DE VEHÍCULOS DE TRANSPORTE DE PASAJEROS; Revisión del estado del vehículo: antes de poner en marcha el motor, con el motor en funcionamiento, después de estacionado y detenido el motor. Pruebas de funcionamiento. Normas de seguridad aplicada.',
+      horas: '4 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/22/2022',
+      asignatura: 'ASPECTOS PSICOLÓGICOS Y DE COMUNICACIÓN',
+      materias:
+        'VII.- ALCOHOLISMO Y DROGADICCIÓN; Alcoholismo, definición y los efectos que provoca en la conducción. Drogadicción, qué son las drogas, tolerancia, deseo y dependencia a las drogas, clasificación y efectos de las drogas, efectos que provocan las drogas en la conducción.',
+      horas: '1 hora',
+      profesor: 'HORACIO LABBE',
+    },
+    {
+      fecha: '2/23/2022',
+      asignatura: 'ASPECTOS PSICOLÓGICOS Y DE COMUNICACIÓN',
+      materias:
+        'VII.- ALCOHOLISMO Y DROGADICCIÓN; Alcoholismo, definición y los efectos que provoca en la conducción. Drogadicción, qué son las drogas, tolerancia, deseo y dependencia a las drogas, clasificación y efectos de las drogas, efectos que provocan las drogas en la conducción.',
+      horas: '5 horas',
+      profesor: 'HORACIO LABBE',
+    },
+    {
+      fecha: '2/24/2022',
+      asignatura: 'INFRAESTRUCTURA Y EDUCACIÓN VIAL',
+      materias:
+        'REGLAMENTO DE LOS SERVICIOS DE TRANSPORTE POR CALLES Y CAMINOS 163/1984; Prohíbe circulación que expele humo por tubo de escape. Otras revisiones técnicas si es necesario. Profundidad de la banda de rodado. Portar extintores. Portar botiquín. Prestar servicio de alquiler. Colores de los taxis. Pérdida de la patente. Título II de los servicios locomoción colectiva. Art. 12 a 23 y Art. 34 al 51.',
+      horas: '1 hora',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/24/2022',
+      asignatura: 'INFRAESTRUCTURA Y EDUCACIÓN VIAL',
+      materias:
+        'LOS CONDUCTORES Y LAS LICENCIAS; Ninguna persona podrá conducir sin poseer la licencia Art. 5. Los conductores deberán llevar consigo su licencia Art. 6. Se prohíbe al propietario facilitar su vehículo a una persona que no posea licencia Art. 7. Los propietarios de vehículos no podrán celebrar contratos Art. 8. Las licencias sólo podrán otorgarse por la municipalidad Art. 9. Art. 10-14, 17, 19, 22, 24 y 29. Relacionado con licencias y conductores.',
+      horas: '1 hora',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/24/2022',
+      asignatura: 'INFRAESTRUCTURA Y EDUCACIÓN VIAL',
+      materias:
+        'REGLAMENTO DE TRANSPORTE REMUNERADO DE ESCOLARES; Registro remunerado de escolares que se refiere la Ley 19.831, LA CONDUCCIÓN Y LA JORNADA DE TRABAJO; Jornada ordinaria de trabajo del personal de choferes y auxiliares de la locomoción colectiva interurbana. VELOCIDAD; Conducción a mayor velocidad de la que sea razonable y prudente Art. 144, Límites máximos de conducción. Art. 145 - 147.',
+      horas: '2 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/24/2022',
+      asignatura: 'INFRAESTRUCTURA Y EDUCACIÓN VIAL',
+      materias:
+        'XI NORMATIVAS DEL TRANSPORTE DE PASAJEROS; Reglamento servicios nacionales D.S. N°212/92-MTT. Reglamenta y modifica el decreto 212 y deja sin efecto decreto que indica D.S. 80/04. Reglamento servicio especiales paseos giras D.S.237/92. Circulación con luces encendidas modifica decreto 22 de 2006 D.D181/06.',
+      horas: '1 hora',
+      profesor: 'ALBERTO ORMEÑO',
+    },
+    {
+      fecha: '2/25/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/26/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+  ];
+}
+
+/**
+ * spec 0018-m: malla del libro Conv. A-4 (`libroclasesconva4.pdf`, páginas 11-14), 23 filas en
+ * 13 días de clase (CONV_BOOKS.A4.sessionDays). Mismo criterio que getConvA3Curriculum(): celdas
+ * fusionadas repetidas por fila; 21 filas reutilizan textos ya corregidos de A2-A5; las filas
+ * 15 y 18 tienen contenido propio. La fila 20 dice "...de transporte de pasajeros" en un libro
+ * de carga: así viene en el real (igual que el A5 de la 0017-m), se deja como está por decisión
+ * del dueño.
+ */
+function getConvA4Curriculum(): CurriculumRow[] {
+  return [
+    {
+      fecha: '2/12/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'II. REGLAMENTO TRANSPORTE DE CARGA PELIGROSA DECRETO 298/95; Disposiciones preliminares. Los vehículos y su equipamiento. La carga, su acondicionamiento, estiba, descarga y manipulación. Circulación y estacionamiento. Prohibiciones y obligaciones del transportista. Fiscalización.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/12/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'III. REGLAMENTO DE SEGURIDAD PARA ALMACENAMIENTO, TRANSPORTE Y EXPENDIO DE GAS LICUADO; Transporte de gas licuado en camiones. El personal de operación de los vehículos de transporte de gas licuado. Equipo de los estanques para gas licuado. Transporte de cilindros y condiciones generales para manipular los cilindros durante la carga y descarga. Dispositivos generales. El sistema de escape en camiones que transportan gas licuado.',
+      horas: '1 hora',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/12/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'IV. MANIPULACIÓN DE CARGA Y ESTROBADO; Definiciones. Tipos de mercancías y recomendaciones para su embalaje. Tipos de mercancías y recomendaciones para su embalaje. Contenedores: definición, tipos de contenedores y sus respectivas identificación.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/14/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/15/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'I. CHEQUEOS BÁSICOS; Carrocería. Limpieza. Verificaciones luego de poner en marcha el motor. Aplicar procedimientos para la revisión de: El puesto de trabajo del conductor, Posición de la palanca de cambio, Chapa de contacto: posición y efectos. Instrumentos del panel Luces de control interna y externas. Palancas e indicadores. Limpiadores de parabrisas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/16/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'I. ESTABLECE CONDICIONES PARA EL TRANSPORTE DE CARGAS DECRETO N°75/87; Forma de transportar la carga, utilización de banderines, los extremos que puede sobrepasar la carga. El transporte de desperdicios, arena, ripio, tierra u otros materiales (líquidos o sólidos). El transporte de materiales que produzcan polvo, mal olor en zonas urbanas. Los vehículos destinados al transporte de alimentos. Prohibiciones. Los vehículos que transportan contenedores. Límite velocidad.',
+      horas: '3 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/16/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'II. REGLAMENTO TRANSPORTE DE CARGA PELIGROSA DECRETO 298/95; Disposiciones preliminares. Los vehículos y su equipamiento. La carga, su acondicionamiento, estiba, descarga y manipulación. Circulación y estacionamiento. Prohibiciones y obligaciones del transportista. Fiscalización.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/17/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/18/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'II. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. Generalidades sobre los sistemas del vehículo y su incidencia en la conducción. La caja de cambios: Simple, automática. La aceleración del motor y la contaminación. El freno motor. El freno de estacionamiento o freno de mano. El freno de servicio o freno de pie. Los espejos retrovisores.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/19/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'IV. MANIPULACIÓN DE CARGA Y ESTROBADO; Definiciones. Tipos de mercancías y recomendaciones para su embalaje. Tipos de mercancías y recomendaciones para su embalaje. Contenedores: definición, tipos de contenedores y sus respectivas identificación.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/19/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'V. RESOLUCIÓN EX. N°1213/02. De la dirección del trabajo que "establece sistema obligatorio de control de asistencia, de las horas de trabajo y de descanso de la determinación de las remuneraciones para los conductores de vehículos de carga terrestre interurbano".',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/19/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'VI. REGLAMENTO DE SEGURIDAD PARA LAS INSTALACIONES Y OPERACIONES DE PRODUCCIÓN Y REFINACIÓN, ALMACENAMIENTO, DISTRIBUCIÓN Y ABASTECIMIENTO DE COMBUSTIBLES LÍQUIDOS. DECRETO N°160 DEL 07/07/09; Requisitos mínimos de seguridad que deben cumplir las instalaciones de combustibles líquidos derivados del petróleo y biocombustible, y las operaciones asociadas a la producción.',
+      horas: '1 hora',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/21/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'CHEQUEOS BÁSICOS; Del conductor, cabina, exterior, chequeo de niveles, otros. Verificación de las condiciones del vehículo antes de poner en marcha el motor. OPERACIÓN DEL VEHÍCULO EN LA CONDUCCIÓN; Descripción desde el punto de vista del conductor. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales. El tráfico. Detención para subidas y bajadas de ocupantes del vehículo. Conducción en curvas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/22/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/23/2022',
+      asignatura: 'ASPECTOS PSICOLÓGICOS Y DE COMUNICACIÓN',
+      materias:
+        'CONDICIONES FÍSICAS ÓPTIMAS PARA CONDUCIR; Los tiempos de conducción. La mezcla del alcohol con la conducción: qué es el alcohol, cuáles son los efectos del alcohol en el organismo. Cuáles son las consecuencias en la conducción que produce el consumo de alcohol. La mezcla de las drogas con la conducción. Qué son las drogas, clasificación y efectos de las drogas, y efectos que provocan las drogas en la conducción.',
+      horas: '2 horas',
+      profesor: 'HORACIO LABBE',
+    },
+    {
+      fecha: '2/23/2022',
+      asignatura: 'MECÁNICA',
+      materias:
+        'MANTENCIÓN DE VEHÍCULOS DE TRANSPORTE DE CARGA; Revisión del estado del vehículo: antes de poner en marcha el motor, con el motor en funcionamiento, después de estacionado y detenido el motor. Pruebas de funcionamiento. Normas de seguridad aplicada.',
+      horas: '3 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/24/2022',
+      asignatura: 'CONDUCCIÓN',
+      materias:
+        'III. PRECAUCIONES EN LA CONDUCCIÓN; Recomendaciones generales, El tráfico, Detención para subida y bajada de ocupantes del vehículo, Conducción en curvas, Conducción en bajada, Conducción en subida, Conducción en hielo, Uso de cadenas, El clima, Lluvia, Neblina. Empleo correcto de luces: Código de luces, Señalización, Uso de luces altas y bajas.',
+      horas: '5 horas',
+      profesor: 'JORGE PEREZ',
+    },
+    {
+      fecha: '2/25/2022',
+      asignatura: 'ASPECTOS PSICOLÓGICOS Y DE COMUNICACIÓN',
+      materias:
+        'CONDICIONES FÍSICAS ÓPTIMAS PARA CONDUCIR; Los tiempos de conducción. La mezcla del alcohol con la conducción: qué es el alcohol, cuáles son los efectos del alcohol en el organismo. Cuáles son las consecuencias en la conducción que produce el consumo de alcohol. La mezcla de las drogas con la conducción. Qué son las drogas, clasificación y efectos de las drogas, y efectos que provocan las drogas en la conducción.',
+      horas: '2 horas',
+      profesor: 'HORACIO LABBE',
+    },
+    {
+      fecha: '2/25/2022',
+      asignatura: 'PREVENCIÓN DE RIESGOS',
+      materias:
+        'CONDUCCIÓN SEGURA; Conducción a la defensiva. Condiciones adversas para la conducción. Conducción nocturna. Condiciones ambientales. Las curvas. Pendientes. Características del conductor defensivo. Factores para la conducción defensiva. Colisiones.',
+      horas: '1 hora',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/25/2022',
+      asignatura: 'PREVENCIÓN DE RIESGOS',
+      materias:
+        'COMBATE Y PREVENCIÓN DE INCENDIOS; El fuego y sus composiciones. Tipos de fuegos y formas de extinción. Tipo de extintores. Procedimientos a seguir en caso de incendio de vehículos de transporte de pasajeros.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/26/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'VI. REGLAMENTO DE SEGURIDAD PARA LAS INSTALACIONES Y OPERACIONES DE PRODUCCIÓN Y REFINACIÓN, ALMACENAMIENTO, DISTRIBUCIÓN Y ABASTECIMIENTO DE COMBUSTIBLES LÍQUIDOS. DECRETO N°160 DEL 07/07/09; Requisitos mínimos de seguridad que deben cumplir las instalaciones de combustibles líquidos derivados del petróleo y biocombustible, y las operaciones asociadas a la producción.',
+      horas: '1 hora',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/26/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'VII. REGLAMENTO GENERAL DE TRANSPORTE DE GANADO Y CARNE BOVINA. DECRETO SUPREMO N°240 DEL 26/10/93; Normas aplicables para el transporte de animales por vías públicas.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+    {
+      fecha: '2/26/2022',
+      asignatura: 'TRANSPORTE DE CARGA',
+      materias:
+        'VIII. REGLAMENTO DE CONDICIONES PARA EL TRANSPORTE DE PRODUCTOS FORESTALES. DECRETO SUPREMO N°94/91; Condiciones aplicables al transporte por camión, remolque, semirremolque y vehículos especiales, que transiten por calles, caminos y demás vías públicas, o particulares destinadas al uso público, de los productos forestales.',
+      horas: '2 horas',
+      profesor: 'PABLO VARGAS',
+    },
+  ];
+}
+
+/**
+ * Malla curricular por libro. Clase de licencia (A2-A5, spec 0017-m) o libro de convalidación
+ * `CONV_A3` / `CONV_A4` (spec 0018-m). `null` = sin malla: el caller decide el fallback.
+ */
+function getCurriculum(bookKey: string): CurriculumRow[] | null {
+  if (bookKey === 'A2') return getA2Curriculum();
+  if (bookKey === 'A3') return getA3Curriculum();
+  if (bookKey === 'A4') return getA4Curriculum();
+  if (bookKey === 'A5') return getA5Curriculum();
+  if (bookKey === 'CONV_A3') return getConvA3Curriculum();
+  if (bookKey === 'CONV_A4') return getConvA4Curriculum();
   return null;
 }
 
@@ -2580,6 +3106,11 @@ function getCurriculum(licenseClass: string): CurriculumRow[] | null {
 interface ClassBookData {
   promo: { name: string; code: string; startDate: string; endDate: string };
   course: { name: string; code: string; licenseClass: string };
+  /** spec 0018-m: null = libro normal; 'A3'/'A4' = libro de convalidación. */
+  convalidation: 'A3' | 'A4' | null;
+  /** Inicio/término del libro: los de la promoción, o los del tramo de convalidación. */
+  courseStartDate: string | null;
+  courseEndDate: string | null;
   branch: { name: string; address: string };
   senceCode: string;
   lecturers: { name: string; role: string | null }[];
@@ -2688,6 +3219,23 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       block += ` ${dx.toFixed(3)} 0 Td (${esc(words[i])}) Tj`;
     }
     ops += block + ' ET\n';
+  };
+
+  /**
+   * spec 0018-m (feedback del dueño 2026-09-24): texto de UNA línea para una celda de tabla de
+   * alto fijo (drawGridTable). Parte en CELL_FONT; si no cabe en `maxWidth` (medido con el ancho
+   * real, no por caracteres), achica de a 0.5pt hasta CELL_FONT_MIN; si aun así no cabe (nombre
+   * extremadamente largo), corta con "..." — nunca se sale del borde de la celda.
+   */
+  const CELL_FONT = 10;
+  const CELL_FONT_MIN = 7;
+  const fitCellText = (text: string, maxWidth: number): { text: string; size: number } => {
+    let size = CELL_FONT;
+    while (size > CELL_FONT_MIN && textWidth(text, size, false) > maxWidth) size -= 0.5;
+    if (textWidth(text, size, false) <= maxWidth) return { text, size };
+    let cut = text;
+    while (cut.length > 1 && textWidth(`${cut}...`, size, false) > maxWidth) cut = cut.slice(0, -1);
+    return { text: `${cut.trimEnd()}...`, size };
   };
 
   const wrapToWidth = (text: string, maxWidth: number, size: number): string[] => {
@@ -2811,7 +3359,10 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       const values = opts.cellText(r);
       let x = ML;
       for (let c = 0; c < opts.columns.length; c++) {
-        T(x + 4, rowTop - rowH + 5, (values[c] ?? '').slice(0, 60), 'F1', 8);
+        // spec 0018-m (feedback del dueño 2026-09-24): letra de celda más grande (10pt, antes 8pt)
+        // y centrada en el alto de la fila; nunca se sale de la celda (ver fitCellText).
+        const cell = fitCellText(values[c] ?? '', opts.columns[c].w - 8);
+        T(x + 4, rowTop - (rowH + cell.size * 0.7) / 2, cell.text, 'F1', cell.size);
         x += opts.columns[c].w;
       }
       // Grilla de la fila: bordes verticales + horizontal inferior.
@@ -2859,15 +3410,20 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
     { label: 'NOMBRE DE LA AUTOESCUELA', value: d.branch.name, h: 30 },
     {
       label: 'NOMBRE E ID. ACTIVIDAD DE CAPACITACIÓN',
-      value: `CURSO PROFESIONAL CLASE ${d.course.licenseClass}`,
+      // spec 0018-m: el libro de convalidación dice "CURSO CONVALIDACIÓN CLASE A-3/A-4",
+      // igual que el real.
+      value: d.convalidation
+        ? `CURSO CONVALIDACIÓN CLASE A-${d.convalidation.slice(1)}`
+        : `CURSO PROFESIONAL CLASE ${d.course.licenseClass}`,
       idSuffix: { code: d.course.code, offset: 260 },
       h: 42,
     },
     { label: 'CÓDIGO AUTORIZADO POR SENCE', value: d.senceCode || '—', h: 30 },
-    { label: 'FECHA DE INICIO CURSO', value: fmtDate(d.promo.startDate), h: 30 },
+    // spec 0018-m: en convalidación, las fechas del tramo (no las de la promoción).
+    { label: 'FECHA DE INICIO CURSO', value: fmtDate(d.courseStartDate), h: 30 },
     {
       label: 'FECHA DE TÉRMINO DE CURSO',
-      value: fmtDate(d.promo.endDate),
+      value: fmtDate(d.courseEndDate),
       h: 30,
     },
     { label: 'LUGAR DE EJECUCIÓN', value: d.branch.address || '—', h: 30 },
@@ -3040,7 +3596,7 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
         // de Excel del real, pedido del dueño 2026-09-22). El rango de fechas por semana ya
         // se ve en las cabeceras de columna, así que no hace falta repetirlo aparte.
         ...(weekNum === 1
-          ? { subtitleLabel: 'Inicio del curso:', subtitleValue: fmtDate(d.promo.startDate) }
+          ? { subtitleLabel: 'Inicio del curso:', subtitleValue: fmtDate(d.courseStartDate) }
           : {}),
         columns: [
           { label: 'N°', w: 28 },
@@ -3056,6 +3612,16 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
           const e = d.enrollments[r - 1];
           const days = dias.map((date, di) => {
             if (di === 6) return 'DOMINGO';
+            // spec 0018-m: en el libro de convalidación, los días de la semana que quedan
+            // fuera del tramo (antes del inicio o después del término) van con "-", como en
+            // la página 7 del real; solo los días DENTRO del tramo sin clase son "LIBRE".
+            if (
+              d.convalidation &&
+              ((d.courseStartDate && date < d.courseStartDate) ||
+                (d.courseEndDate && date > d.courseEndDate))
+            ) {
+              return '-';
+            }
             const hasSession = weekSessions.some(
               (s) => s.date === date && s.status !== 'cancelled',
             );
@@ -3072,7 +3638,8 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   // RECUPERACION DE FERIADOS
   // ===========================================================================
 
-  {
+  // spec 0018-m (AC6): el libro real de convalidación no tiene esta página.
+  if (!d.convalidation) {
     const dateColW = 90;
     const sigColW = 220;
     const dateColCount = 5;
@@ -3149,7 +3716,9 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   //    "día de descanso programático"; solo feriados reales pausan una fecha.
 
   {
-    const curriculum = getCurriculum(d.course.licenseClass);
+    const curriculum = getCurriculum(
+      d.convalidation ? `CONV_${d.convalidation}` : d.course.licenseClass,
+    );
     const colN = 25,
       colFecha = 65,
       colAsig = 130,
@@ -3316,6 +3885,13 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   // EVALUACIONES
   // ===========================================================================
 
+  // spec 0018-m: 7 asignaturas en un libro normal, 5 en convalidación (moduleNames ya viene
+  // resuelto). Todas las columnas mantienen el ancho del libro normal y en convalidación la
+  // tabla simplemente termina antes, igual que en el real (libroclasesconva3/4.pdf p. 16: la
+  // tabla llega a x=702 en vez de x=818, con las mismas columnas). NOTA FINAL no absorbe el
+  // espacio sobrante (feedback del dueño 2026-09-24).
+  const evalModW = 66;
+  const evalNotaFinalW = PW - 25 - 215 - 7 * evalModW;
   drawGridTable({
     title: 'EVALUACIONES CLASE PROFESIONAL',
     columns: [
@@ -3324,14 +3900,14 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       // spec 0017-m (confirmado por el dueño 2026-09-22): columnas por nombre de asignatura
       // real, no "Mód. N" — mismo orden y nombres que usa getModuleNames() para el
       // Calendario, verificado contra los libros reales de A2/A3/A4/A5.
-      ...d.moduleNames.map((name) => ({ label: name, w: 66 })),
-      { label: 'NOTA FINAL', w: PW - 25 - 215 - 7 * 66 },
+      ...d.moduleNames.map((name) => ({ label: name, w: evalModW })),
+      { label: 'NOTA FINAL', w: evalNotaFinalW },
     ],
     rowCount: Math.max(d.enrollments.length, 25),
     // Plantilla imprimible: notas y nota final se llenan a mano.
     cellText: (r) => {
       const e = d.enrollments[r - 1];
-      return [`${r}`, e?.nombre ?? '', '', '', '', '', '', '', '', ''];
+      return [`${r}`, e?.nombre ?? '', ...Array(d.moduleNames.length + 1).fill('')];
     },
   });
 

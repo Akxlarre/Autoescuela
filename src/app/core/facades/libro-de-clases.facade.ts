@@ -6,7 +6,9 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { PromocionOption, CursoOption } from '@core/models/ui/sesion-profesional.model';
 import type {
+  ConvalidationLicense,
   LibroCabecera,
+  LibroOption,
   ProfesorModulo,
   AlumnoLibro,
   SemanaAsistencia,
@@ -16,8 +18,20 @@ import type {
   ClaseCalendario,
 } from '@core/models/ui/libro-de-clases.model';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
-import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
+import { getModuleNames } from '@core/utils/professional-modules';
+import {
+  CONVALIDATION_BOOKS,
+  buildBookOptions,
+  buildConvalidationBookId,
+  getConvalidationBookName,
+  getConvalidationModuleNames,
+  parseBookKey,
+  selectConvalidationDates,
+} from '@core/utils/convalidation-book.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+
+/** Sesión teórica del curso: solo fecha + status (define la grilla, nunca contenido). */
+type SesionTeorica = { id: number; date: string; status: string | null };
 
 @Injectable({ providedIn: 'root' })
 export class LibroDeClasesFacade {
@@ -32,6 +46,8 @@ export class LibroDeClasesFacade {
   private readonly _cursos = signal<CursoOption[]>([]);
   private readonly _selectedPromocionId = signal<number | null>(null);
   private readonly _selectedCursoId = signal<number | null>(null);
+  /** spec 0018-m: libro de convalidación seleccionado (null = libro normal del curso). */
+  private readonly _selectedConvalidation = signal<ConvalidationLicense | null>(null);
   private readonly _cabecera = signal<LibroCabecera | null>(null);
   private readonly _profesores = signal<ProfesorModulo[]>([]);
   private readonly _alumnos = signal<AlumnoLibro[]>([]);
@@ -51,7 +67,18 @@ export class LibroDeClasesFacade {
   readonly promociones = this._promociones.asReadonly();
   readonly cursos = this._cursos.asReadonly();
   readonly selectedPromocionId = this._selectedPromocionId.asReadonly();
+  /** promotion_course del libro seleccionado (en convalidación, el del curso madre). */
   readonly selectedCursoId = this._selectedCursoId.asReadonly();
+  readonly selectedConvalidation = this._selectedConvalidation.asReadonly();
+  /** spec 0018-m: los libros del selector — cursos de la promoción + Conv. A-3 / Conv. A-4. */
+  readonly libros = computed<LibroOption[]>(() => buildBookOptions(this._cursos()));
+  /** Clave del libro seleccionado (`LibroOption.key`), o null. */
+  readonly selectedLibroKey = computed<string | null>(() => {
+    const id = this._selectedCursoId();
+    if (id === null) return null;
+    const conv = this._selectedConvalidation();
+    return conv ? `${id}:${conv}` : String(id);
+  });
   readonly cabecera = this._cabecera.asReadonly();
   readonly profesores = this._profesores.asReadonly();
   readonly alumnos = this._alumnos.asReadonly();
@@ -150,6 +177,7 @@ export class LibroDeClasesFacade {
   async selectPromocion(promoId: number): Promise<void> {
     this._selectedPromocionId.set(promoId);
     this._selectedCursoId.set(null);
+    this._selectedConvalidation.set(null);
     this._cursos.set([]);
     this.clearSections();
 
@@ -175,8 +203,22 @@ export class LibroDeClasesFacade {
 
   // ── Selección de curso → cargar TODAS las secciones ────────────────────────
 
+  /** Libro normal de un curso. Equivale a `selectLibro(String(promotionCourseId))`. */
   async selectCurso(promotionCourseId: number): Promise<void> {
+    await this.selectLibro(String(promotionCourseId));
+  }
+
+  /**
+   * spec 0018-m: selecciona un libro por su `LibroOption.key` — un curso (`"12"`) o un libro de
+   * convalidación colgado de su curso madre (`"12:A4"`). Una clave inválida no cambia nada.
+   */
+  async selectLibro(key: string): Promise<void> {
+    const parsed = parseBookKey(key);
+    if (!parsed) return;
+    const { promotionCourseId, convalidation } = parsed;
+
     this._selectedCursoId.set(promotionCourseId);
+    this._selectedConvalidation.set(convalidation);
     this._isLoadingSections.set(true);
     this._error.set(null);
 
@@ -194,24 +236,64 @@ export class LibroDeClasesFacade {
   }
 
   private async loadAllSections(promotionCourseId: number): Promise<void> {
+    const conv = this._selectedConvalidation();
+
+    // Sesiones teóricas del curso (en convalidación, las del curso madre). Solo definen la
+    // grilla de semanas/días y el calendario; en convalidación se acotan al tramo final
+    // (spec 0018-m: últimas N fechas activas).
+    const sesiones = await this.fetchSesionesTeoricas(promotionCourseId);
+    const tramo = conv
+      ? selectConvalidationDates(sesiones, CONVALIDATION_BOOKS[conv].sessionDays)
+      : null;
+    const sesionesLibro =
+      tramo === null
+        ? sesiones
+        : tramo.length === 0
+          ? []
+          : sesiones.filter((s) => s.date >= tramo[0] && s.date <= tramo[tramo.length - 1]);
+
     // Cabecera + alumnos primero (evaluaciones y resumen dependen de _alumnos)
-    await this.loadCabecera(promotionCourseId);
+    await this.loadCabecera(promotionCourseId, conv, tramo);
     const licenseClass = this._cabecera()?.licenseClass ?? 'A2';
-    await this.loadAlumnos(promotionCourseId, licenseClass);
+    await this.loadAlumnos(promotionCourseId, licenseClass, conv);
 
     // Cargar el resto en paralelo (ya tienen _alumnos disponible)
     this.loadEvaluaciones();
     this.loadResumenAsistencia();
-    await Promise.all([
-      this.loadProfesores(promotionCourseId, licenseClass),
-      this.loadAsistenciaSemanal(promotionCourseId),
-      this.loadCalendario(promotionCourseId),
-    ]);
+    this.loadAsistenciaSemanal(sesionesLibro);
+    await this.loadProfesores(promotionCourseId, conv);
+    this.loadCalendario(sesionesLibro);
+  }
+
+  private async fetchSesionesTeoricas(promotionCourseId: number): Promise<SesionTeorica[]> {
+    const { data, error } = await this.supabase.client
+      .from('professional_theory_sessions')
+      .select('id, date, status')
+      .eq('promotion_course_id', promotionCourseId)
+      .order('date');
+    if (error || !data) return [];
+    return data as SesionTeorica[];
   }
 
   // ── Cabecera ────────────────────────────────────────────────────────────────
 
-  private async loadCabecera(promotionCourseId: number): Promise<void> {
+  private async loadCabecera(
+    promotionCourseId: number,
+    conv: ConvalidationLicense | null,
+    tramo: string[] | null,
+  ): Promise<void> {
+    // spec 0018-m: cada libro (normal o de convalidación) tiene su propia fila en class_book.
+    const classBookQuery = this.supabase.client
+      .from('class_book')
+      .select(
+        `id, sence_code, sence_code_updated_at,
+         sence_code_updater:users!class_book_sence_code_updated_by_fkey(first_names, paternal_last_name)`,
+      )
+      .eq('promotion_course_id', promotionCourseId);
+    const classBookByBook = conv
+      ? classBookQuery.eq('convalidation_license', conv)
+      : classBookQuery.is('convalidation_license', null);
+
     // Cargar datos del curso y del libro en paralelo
     const [pcRes, cbRes] = await Promise.all([
       this.supabase.client
@@ -225,14 +307,7 @@ export class LibroDeClasesFacade {
         )
         .eq('id', promotionCourseId)
         .single(),
-      this.supabase.client
-        .from('class_book')
-        .select(
-          `id, sence_code, sence_code_updated_at,
-           sence_code_updater:users!class_book_sence_code_updated_by_fkey(first_names, paternal_last_name)`,
-        )
-        .eq('promotion_course_id', promotionCourseId)
-        .maybeSingle(),
+      classBookByBook.maybeSingle(),
     ]);
 
     if (pcRes.error || !pcRes.data) throw new Error('Curso no encontrado');
@@ -242,15 +317,22 @@ export class LibroDeClasesFacade {
     const branch = promo.branches;
     const classBook = cbRes.data as any;
     const updater = classBook?.sence_code_updater;
+    const promotionCode: string = promo.code ?? '';
 
+    // spec 0018-m: el libro de convalidación tiene su propio nombre, ID (código de la promoción
+    // + sufijo .6/.7), clase (la licencia que se convalida), 5 asignaturas y fechas del tramo.
     this._cabecera.set({
+      convalidation: conv,
+      moduleNames: conv ? getConvalidationModuleNames(conv) : getModuleNames(course.license_class),
       promotionName: promo.name ?? promo.code,
-      promotionCode: promo.code ?? '',
-      courseName: course.name,
-      bookId: (pcRes.data as any).code ?? '',
-      licenseClass: course.license_class,
-      startDate: promo.start_date,
-      endDate: promo.end_date ?? '',
+      promotionCode,
+      courseName: conv ? getConvalidationBookName(conv) : course.name,
+      bookId: conv
+        ? buildConvalidationBookId(promotionCode, conv)
+        : ((pcRes.data as any).code ?? ''),
+      licenseClass: conv ?? course.license_class,
+      startDate: tramo ? (tramo[0] ?? '') : promo.start_date,
+      endDate: tramo ? (tramo[tramo.length - 1] ?? '') : (promo.end_date ?? ''),
       branchName: branch?.name ?? '',
       branchAddress: branch?.address ?? '',
       status: promo.status ?? '',
@@ -265,7 +347,10 @@ export class LibroDeClasesFacade {
 
   // ── Profesores por módulo ───────────────────────────────────────────────────
 
-  private async loadProfesores(promotionCourseId: number, licenseClass: string): Promise<void> {
+  private async loadProfesores(
+    promotionCourseId: number,
+    conv: ConvalidationLicense | null,
+  ): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('promotion_course_lecturers')
       .select('lecturer_id, role, lecturers!inner(first_names, paternal_last_name)')
@@ -273,7 +358,11 @@ export class LibroDeClasesFacade {
 
     if (error) return;
 
-    const moduleNames = getModuleNames(licenseClass);
+    const moduleNames = this._cabecera()?.moduleNames ?? [];
+    // Número de módulo real de cada asignatura (Conducción = 6 también en convalidación).
+    const moduleNumbers = conv
+      ? CONVALIDATION_BOOKS[conv].moduleIndexes.map((i) => i + 1)
+      : moduleNames.map((_, i) => i + 1);
 
     // Map lecturers — en el PDF hay 8 módulos (1-7 + Conducción separada),
     // pero en la BD hay 7 módulos. Los relatores se asignan por curso, no por módulo.
@@ -284,9 +373,9 @@ export class LibroDeClasesFacade {
     }));
 
     const profesores: ProfesorModulo[] = moduleNames.map((modName, i) => ({
-      moduleNumber: i + 1,
+      moduleNumber: moduleNumbers[i],
       moduleName: modName,
-      lecturerName: this.pickLecturerForModule(lecturers, i + 1),
+      lecturerName: this.pickLecturerForModule(lecturers, moduleNumbers[i]),
     }));
 
     this._profesores.set(profesores);
@@ -314,7 +403,11 @@ export class LibroDeClasesFacade {
 
   // ── Lista de alumnos ────────────────────────────────────────────────────────
 
-  private async loadAlumnos(promotionCourseId: number, licenseClass: string): Promise<void> {
+  private async loadAlumnos(
+    promotionCourseId: number,
+    licenseClass: string,
+    conv: ConvalidationLicense | null,
+  ): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('enrollments')
       .select(
@@ -329,7 +422,24 @@ export class LibroDeClasesFacade {
 
     if (error) return;
 
-    const alumnos: AlumnoLibro[] = (data as any[]).map((e) => {
+    // spec 0018-m: en el libro de convalidación solo van los alumnos del curso madre que
+    // convalidan esa licencia. En el libro normal siguen apareciendo todos (AC3).
+    let rows = data as any[];
+    if (conv && rows.length > 0) {
+      const { data: lv, error: lvError } = await this.supabase.client
+        .from('license_validations')
+        .select('enrollment_id')
+        .eq('convalidated_license', conv)
+        .in(
+          'enrollment_id',
+          rows.map((e) => e.id),
+        );
+      if (lvError) throw new Error('Error cargando convalidaciones');
+      const convIds = new Set(((lv ?? []) as { enrollment_id: number }[]).map((r) => r.enrollment_id));
+      rows = rows.filter((e) => convIds.has(e.id));
+    }
+
+    const alumnos: AlumnoLibro[] = rows.map((e) => {
       const u = e.students.users;
       const nombre = [u.paternal_last_name, u.maternal_last_name, u.first_names]
         .filter(Boolean)
@@ -358,15 +468,9 @@ export class LibroDeClasesFacade {
   // la firma semanal NO se precargan desde professional_theory_attendance /
   // professional_weekly_signatures (quedan vacías para llenarse a mano tras imprimir).
 
-  private async loadAsistenciaSemanal(promotionCourseId: number): Promise<void> {
-    // Sesiones teóricas del curso (todas) — solo definen la grilla de columnas/semanas.
-    const { data: sesiones, error: sesError } = await this.supabase.client
-      .from('professional_theory_sessions')
-      .select('id, date')
-      .eq('promotion_course_id', promotionCourseId)
-      .order('date');
-
-    if (sesError || !sesiones || sesiones.length === 0) {
+  /** `sesiones`: las del libro (en convalidación, solo las del tramo — spec 0018-m). */
+  private loadAsistenciaSemanal(sesiones: SesionTeorica[]): void {
+    if (sesiones.length === 0) {
       this._asistenciaSemanal.set([]);
       return;
     }
@@ -432,7 +536,9 @@ export class LibroDeClasesFacade {
   // Clases solo trae los nombres de alumnos, notas vacías para llenarse a mano.
   private loadEvaluaciones(): void {
     const alumnos = this._alumnos();
-    const notasVacias: (number | null)[] = Array.from({ length: MODULE_COUNT }, () => null);
+    // 7 asignaturas en un libro normal, 5 en convalidación (spec 0018-m).
+    const moduleCount = this._cabecera()?.moduleNames.length ?? 0;
+    const notasVacias: (number | null)[] = Array.from({ length: moduleCount }, () => null);
 
     const filas: FilaEvaluacionLibro[] = alumnos.map((a) => ({
       nombre: a.nombre,
@@ -461,23 +567,13 @@ export class LibroDeClasesFacade {
 
   // ── Calendario de clases ────────────────────────────────────────────────────
 
-  private async loadCalendario(promotionCourseId: number): Promise<void> {
-    const { data, error } = await this.supabase.client
-      .from('professional_theory_sessions')
-      .select('id, date, status')
-      .eq('promotion_course_id', promotionCourseId)
-      .order('date');
-
-    if (error || !data) {
-      this._calendario.set([]);
-      return;
-    }
-
+  /** `sesiones`: las del libro (en convalidación, solo las del tramo — spec 0018-m). */
+  private loadCalendario(sesiones: SesionTeorica[]): void {
     // Los relatores ya están cargados en _profesores
     const profesores = this._profesores();
     const defaultProfesor = profesores.length > 0 ? profesores[0].lecturerName : '—';
 
-    const calendario: ClaseCalendario[] = data
+    const calendario: ClaseCalendario[] = sesiones
       .filter((s) => s.status !== 'cancelled')
       .map((s, i) => ({
         numero: i + 1,
@@ -529,6 +625,8 @@ export class LibroDeClasesFacade {
           .insert({
             branch_id: branchId,
             promotion_course_id: promotionCourseId,
+            // spec 0018-m: fila propia por libro (null = libro normal del curso).
+            convalidation_license: cabecera.convalidation,
             period: cabecera.promotionCode,
             status: 'draft',
             sence_code: senceCode,
@@ -574,7 +672,14 @@ export class LibroDeClasesFacade {
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-class-book-pdf',
-        { body: { promotion_course_id: promotionCourseId }, signal: abort.signal },
+        {
+          // spec 0018-m: en convalidación va el curso madre + la licencia convalidada.
+          body: {
+            promotion_course_id: promotionCourseId,
+            convalidation: this._selectedConvalidation(),
+          },
+          signal: abort.signal,
+        },
       );
 
       if (error) {
@@ -631,6 +736,7 @@ export class LibroDeClasesFacade {
     this._cursos.set([]);
     this._selectedPromocionId.set(null);
     this._selectedCursoId.set(null);
+    this._selectedConvalidation.set(null);
     this.clearSections();
   }
 

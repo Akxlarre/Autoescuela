@@ -26,7 +26,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { LibroDeClasesSubnavComponent } from '@shared/components/libro-de-clases-subnav/libro-de-clases-subnav.component';
-import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
+import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
 
 @Component({
   selector: 'app-libro-de-clases',
@@ -89,15 +89,15 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
             <div class="flex-1">
               <label class="mb-1 block text-xs font-medium text-text-secondary">Curso</label>
               <p-select
-                [options]="cursoOptions()"
-                optionLabel="courseCode"
-                optionValue="id"
+                [options]="facade.libros()"
+                optionLabel="label"
+                optionValue="key"
                 placeholder="Seleccionar curso"
-                [ngModel]="facade.selectedCursoId()"
-                (ngModelChange)="onCursoChange($event)"
+                [ngModel]="facade.selectedLibroKey()"
+                (ngModelChange)="onLibroChange($event)"
                 styleClass="w-full"
                 appendTo="body"
-                [disabled]="facade.cursos().length === 0"
+                [disabled]="facade.libros().length === 0"
                 data-llm-description="select course for class book"
               />
             </div>
@@ -593,7 +593,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     @if (facade.evaluaciones().length === 0) {
                       <tr>
                         <td
-                          [attr.colspan]="MODULE_COUNT + 3"
+                          [attr.colspan]="moduleHeaders().length + 3"
                           class="py-6 text-center text-text-muted"
                         >
                           Sin evaluaciones registradas
@@ -805,7 +805,6 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
 
   @ViewChild('bentoGrid') private readonly bentoGrid!: ElementRef<HTMLElement>;
 
-  readonly MODULE_COUNT = MODULE_COUNT;
   readonly skeletonRows = [0, 1, 2, 3, 4, 5, 6];
 
   /** Sección visible del subnav — reemplaza el `openSections: Set<string>` del acordeón. */
@@ -878,14 +877,17 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
     this.facade.promociones().map((p) => ({ ...p, name: `${p.name} (${p.code})` })),
   );
 
-  readonly cursoOptions = computed(() =>
-    this.facade.cursos().map((c) => ({ ...c, courseCode: `${c.courseCode} — ${c.courseName}` })),
-  );
-
+  /**
+   * Encabezados de Evaluaciones con el número de módulo real: 7 en un libro normal, 5 en un
+   * libro de convalidación (spec 0018-m — ej. Conv. A-4 = Mód. 2, 4, 5, 6, 7).
+   */
   readonly moduleHeaders = computed(() => {
     const cab = this.facade.cabecera();
     if (!cab) return [];
-    return getModuleNames(cab.licenseClass).map((_, i) => `Mód. ${i + 1}`);
+    const numbers = cab.convalidation
+      ? CONVALIDATION_BOOKS[cab.convalidation].moduleIndexes.map((i) => i + 1)
+      : cab.moduleNames.map((_, i) => i + 1);
+    return numbers.map((n) => `Mód. ${n}`);
   });
 
   readonly editSenceCode = signal('');
@@ -936,8 +938,9 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
   onPromoChange(id: number): void {
     void this.facade.selectPromocion(id);
   }
-  onCursoChange(id: number): void {
-    void this.facade.selectCurso(id);
+  /** `key` = `LibroOption.key`: un curso o un libro de convalidación (spec 0018-m). */
+  onLibroChange(key: string): void {
+    void this.facade.selectLibro(key);
   }
   onSaveClassBook(): void {
     void this.facade.saveClassBookFields(this.editSenceCode());

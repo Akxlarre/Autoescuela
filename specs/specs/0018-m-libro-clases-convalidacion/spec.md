@@ -1,6 +1,6 @@
 # Spec 0018-m — Libros de Clases de convalidación (Conv. A-3 y Conv. A-4)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-24
 > **Owner:** Matías
 > **Priority:** P1
@@ -94,7 +94,10 @@ convalidación, se deberá migrar a la opción A en una spec aparte.
   - Conv. A-4: Prevención de Riesgos, Transporte de Carga, Conducción, Aspectos Psicológicos y
     de Comunicación, Mecánica.
 
-  Cada columna lleva su fecha de evaluación, como en el real.
+  Sin fecha impresa por columna. Los 6 libros reales (también los 4 normales) traen la fecha de
+  la prueba de la cohorte 2022, pero el sistema no conoce esa fecha para los cursos actuales.
+  Decisión del dueño 2026-09-24: los 6 libros sin fecha en Evaluaciones, igual que los libros
+  normales de la 0017-m.
 - **AC10 (pantalla y código SENCE)**: Given un libro de convalidación elegido en el selector,
   When se ve en pantalla, Then muestra las mismas secciones que un curso normal, incluido el
   código SENCE **editable**: vacío por defecto (igual que los demás cursos) y, si el
@@ -200,3 +203,4 @@ convalidación, se deberá migrar a la opción A en una spec aparte.
 - 2026-09-24 — AC10: pantalla igual a un curso normal, con código SENCE editable (migración
   aditiva en `class_book`); N = 16/13 según los libros reales. Decisiones del dueño.
 - 2026-09-24 — aprobada por Matías (owner).
+- 2026-09-24 — cerrada (`done`): 14/14 AC, ver [acceptance.md](./acceptance.md).

@@ -1,8 +1,30 @@
 import type { AsistenciaStatus } from './sesion-profesional.model';
 
+// ── Selector de libro (spec 0018-m) ─────────────────────────────────────────
+
+/** Licencia que se convalida: Conv. A-3 (alumnos A5) o Conv. A-4 (alumnos A2). */
+export type ConvalidationLicense = 'A3' | 'A4';
+
+/**
+ * Una de las 6 opciones del selector del Libro de Clases: los 4 cursos de la promoción más
+ * los 2 libros de convalidación. Un libro de convalidación no tiene `promotion_course` propio
+ * (spec 0018-m, opción B): `promotionCourseId` apunta a su curso madre.
+ */
+export interface LibroOption {
+  /** Identificador estable del libro: `"<promotionCourseId>"` o `"<promotionCourseId>:A3|A4"`. */
+  key: string;
+  promotionCourseId: number;
+  convalidation: ConvalidationLicense | null;
+  label: string;
+}
+
 // ── Cabecera del Libro ───────────────────────────────────────────────────────
 
 export interface LibroCabecera {
+  /** `null` = libro normal del curso; 'A3'/'A4' = libro de convalidación (spec 0018-m). */
+  convalidation: ConvalidationLicense | null;
+  /** Asignaturas de la página de Evaluaciones: 7 en un libro normal, 5 en convalidación. */
+  moduleNames: string[];
   promotionName: string;
   promotionCode: string;
   courseName: string;
