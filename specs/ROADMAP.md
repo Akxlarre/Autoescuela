@@ -16,6 +16,8 @@
 
 | ID | Título | Prioridad | Owner | Notas |
 |----|--------|-----------|-------|-------|
+| [0017-m](./specs/0017-m-libro-clases-pdf-replica-exacta/spec.md) | Libro de Clases PDF: réplica exacta del libro físico real | P1 | Matías | Aprobada 2026-09-22. Reescribe `generate-class-book-pdf` para igualar tamaño de página (1008×612pt, medido del PDF real), reglamento completo, antecedentes de alumnos, asistencia semanal de 7 días, recuperación de feriados y calendario curricular. |
+| [0018-m](./specs/0018-m-libro-clases-convalidacion/spec.md) | Libros de Clases de convalidación (Conv. A-3 y Conv. A-4) | P1 | Matías | Draft 2026-09-24. Opción B: armados al vuelo en el Libro de Clases, sin `promotion_courses` nuevos. Alumnos que convalidan precargados (nombre y RUN). Réplica de `libroclasesconva3/4.pdf`. |
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
