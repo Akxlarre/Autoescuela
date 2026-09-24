@@ -26,6 +26,12 @@ alter table document_templates
   add column if not exists document_type text,
   add column if not exists content jsonb not null default '{}'::jsonb;
 
+-- `drop ... if exists` antes de agregar: sin esto, correr la migración sobre una base donde ya
+-- se aplicó aborta con `42710: constraint already exists` y corta el `db push` entero, dejando
+-- sin correr todo lo que venga después (hotfix-058-b). Mismo patrón que las policies de abajo.
+alter table document_templates
+  drop constraint if exists document_templates_document_type_check;
+
 alter table document_templates
   add constraint document_templates_document_type_check
   check (document_type in ('contract_b', 'contract_professional', 'certificate_b', 'certificate_professional'));
@@ -33,6 +39,9 @@ alter table document_templates
 alter table document_templates
   alter column branch_id set not null,
   alter column document_type set not null;
+
+alter table document_templates
+  drop constraint if exists uq_document_templates_branch_type;
 
 alter table document_templates
   add constraint uq_document_templates_branch_type unique (branch_id, document_type);
