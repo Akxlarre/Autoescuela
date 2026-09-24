@@ -1,14 +1,14 @@
 # Asignación ASG-i-016 — "Re-matricular" desde Ex-Alumnos no precarga datos (race condition)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-22
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-23
+> **resulting_track:** fix-040-i-rematricular-prefill-race-condition
 
 ---
 

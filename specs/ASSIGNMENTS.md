@@ -37,7 +37,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-038-i-date-input-id-colision`. Alcance a re-confirmar archivo por archivo antes de implementar |
 | ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-039-i-buscador-alumnos-no-tokeniza`. Alcance a re-confirmar archivo por archivo antes de implementar |
-| ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | `cualquiera` | fix | P1 | i | Track ya redactado: `fix-040-i-rematricular-prefill-race-condition`. Fix mecánico de bajo riesgo (agregar `await`) |
 | ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-004-i-papelera-alumnos-sin-label-visible` |
 | ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-005-i-skeleton-flota-track-duplicado` |
 | ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-006-i-disabled-attribute-reactive-form-configuracion-web` |
@@ -170,6 +169,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | `i` | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | 2026-09-23 |
 <!-- AUTO-GENERATED:END -->
 
 ---
