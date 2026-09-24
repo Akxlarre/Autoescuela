@@ -33,6 +33,7 @@
 | `src/app/core/utils/class-schedule-timing.utils.ts` | `isClassStartOverdue` |
 | `src/app/core/utils/consent-builder.utils.ts` | `ConsentBuilderInput`, `buildEnrollmentConsents`, `buildMedicalCertificateConsent`, `buildPsychTestConsent`, `CommunicationsConsentInput`, `buildCommunicationsConsents` |
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
+| `src/app/core/utils/convalidation-book.utils.ts` | `CONVALIDATION_BOOKS`, `getConvalidationBookName`, `buildConvalidationBookId`, `getConvalidationModuleNames`, `selectConvalidationDates`, `buildBookOptions`, `parseBookKey` (spec 0018-m — libros Conv. A-3/A-4 armados al vuelo desde el curso madre; espejo `CONV_BOOKS` en `generate-class-book-pdf`) |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |

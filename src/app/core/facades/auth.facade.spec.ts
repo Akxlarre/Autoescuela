@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { User } from '@core/models/dto/user.model';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 describe('AuthFacade', () => {
@@ -114,6 +115,29 @@ describe('AuthFacade', () => {
     service.setUser(user);
     service.logout();
     expect(service.currentUser()).toBeNull();
+  });
+
+  // fix-171-b: la sede activa vive en localStorage bajo una clave sin namespacing por
+  // usuario. Si no se limpia al cerrar sesión, en una PC compartida el siguiente usuario
+  // hereda la sede del anterior — ya pasó: una secretaria vio su historial de comunicados
+  // vacío, sin error, por heredar una sede ajena (fix-168-b).
+  it('logout() limpia la sede activa para que no la herede el próximo usuario', () => {
+    const branchFacade = TestBed.inject(BranchFacade);
+    const resetSpy = vi.spyOn(branchFacade, 'reset');
+
+    service.logout({ redirect: false });
+
+    expect(resetSpy).toHaveBeenCalled();
+  });
+
+  it('logout() deja la sede en null, no solo llama al reset', () => {
+    const branchFacade = TestBed.inject(BranchFacade);
+    branchFacade.selectBranch(2);
+    expect(branchFacade.selectedBranchId()).toBe(2);
+
+    service.logout({ redirect: false });
+
+    expect(branchFacade.selectedBranchId()).toBeNull();
   });
 
   it("logout() should navigate to '/'", () => {

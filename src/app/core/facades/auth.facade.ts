@@ -241,6 +241,12 @@ export class AuthFacade {
     const { redirect = true } = options;
     this.disposeRealtime();
     this.supabase.signOut();
+    // La sede activa vive en `localStorage` bajo una clave sin namespacing por usuario, y
+    // `BranchFacade` la re-lee al construirse, antes de que se sepa quién se autenticó. Si no
+    // se limpia acá, en una PC compartida —el mostrador— el próximo usuario hereda la sede del
+    // anterior: ya dejó a una secretaria viendo su historial de comunicados vacío, sin error y
+    // sin selector con el que darse cuenta (fix-168-b, fix-171-b).
+    this.branchFacade.reset();
     this._currentUser.set(null);
     if (redirect) {
       this.router.navigate(['/']);
