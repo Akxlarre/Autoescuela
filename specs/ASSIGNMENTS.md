@@ -35,7 +35,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-038-i-date-input-id-colision`. Alcance a re-confirmar archivo por archivo antes de implementar |
 | ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-039-i-buscador-alumnos-no-tokeniza`. Alcance a re-confirmar archivo por archivo antes de implementar |
 | ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-004-i-papelera-alumnos-sin-label-visible` |
 | ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-005-i-skeleton-flota-track-duplicado` |
@@ -169,6 +168,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `i` | [fix-038-i-date-input-id-colision](fixes/fix-038-i-date-input-id-colision/fix.md) | 2026-09-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---
