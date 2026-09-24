@@ -187,7 +187,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
 | `LayoutTier` | `ui` | `src/app/core/models/ui/layout.model.ts` |
 | `LibroClasesSubnavSection` | `ui` | `src/app/core/models/ui/libro-clases-subnav.model.ts` |
-| `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
+| `ConvalidationLicense`, `LibroOption`, `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
 | `TemplateVariable`, `TemplateVariableValues`, `TemplateDraft`, `TemplateRow` | `ui` | `src/app/core/models/ui/notification-template.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |

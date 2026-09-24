@@ -4,7 +4,7 @@ import { LibroDeClasesComponent } from './libro-de-clases.component';
 import { LibroDeClasesFacade } from '@core/facades/libro-de-clases.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import type { SemanaAsistencia } from '@core/models/ui/libro-de-clases.model';
+import type { LibroCabecera, SemanaAsistencia } from '@core/models/ui/libro-de-clases.model';
 
 // Paginación de "Control de Asistencia (Firma Diaria)" por semana (spec 0005-i, AC3): reemplaza
 // el listado de todas las semanas apiladas. Estado de UI puro en el Smart Component — no toca el
@@ -19,6 +19,54 @@ function buildSemana(weekStartDate: string, weekLabel: string): SemanaAsistencia
     alumnos: [],
   } as unknown as SemanaAsistencia;
 }
+
+describe('LibroDeClasesComponent — encabezados de Evaluaciones (spec 0018-m)', () => {
+  function setup(cabecera: Partial<LibroCabecera> | null) {
+    const facadeMock = {
+      cabecera: () => cabecera,
+      asistenciaSemanal: signal<SemanaAsistencia[]>([]),
+      reset: vi.fn(),
+      initialize: vi.fn(),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LibroDeClasesFacade, useValue: facadeMock },
+        { provide: BranchFacade, useValue: { setProfessionalOnly: vi.fn() } },
+        { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+      ],
+    });
+    return TestBed.runInInjectionContext(() => new LibroDeClasesComponent());
+  }
+
+  beforeEach(() => TestBed.resetTestingModule());
+
+  it('libro normal: 7 módulos numerados 1..7', () => {
+    const component = setup({ convalidation: null, moduleNames: Array(7).fill('x') });
+    expect(component.moduleHeaders()).toEqual([
+      'Mód. 1',
+      'Mód. 2',
+      'Mód. 3',
+      'Mód. 4',
+      'Mód. 5',
+      'Mód. 6',
+      'Mód. 7',
+    ]);
+  });
+
+  it('Conv. A-4: 5 columnas con el número de módulo real', () => {
+    const component = setup({ convalidation: 'A4', moduleNames: Array(5).fill('x') });
+    expect(component.moduleHeaders()).toEqual(['Mód. 2', 'Mód. 4', 'Mód. 5', 'Mód. 6', 'Mód. 7']);
+  });
+
+  it('Conv. A-3: 5 columnas con el número de módulo real', () => {
+    const component = setup({ convalidation: 'A3', moduleNames: Array(5).fill('x') });
+    expect(component.moduleHeaders()).toEqual(['Mód. 3', 'Mód. 4', 'Mód. 5', 'Mód. 6', 'Mód. 7']);
+  });
+
+  it('sin cabecera no hay encabezados', () => {
+    expect(setup(null).moduleHeaders()).toEqual([]);
+  });
+});
 
 describe('LibroDeClasesComponent — paginación de Asistencia por semana (spec 0005-i)', () => {
   let asistenciaSemanalSignal: ReturnType<typeof signal<SemanaAsistencia[]>>;

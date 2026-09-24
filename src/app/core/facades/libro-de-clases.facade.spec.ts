@@ -26,6 +26,7 @@ function createMockSupabase(tables: Record<string, TableConfig>) {
         insert: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -148,6 +149,61 @@ function cursoCompleto(): Record<string, TableConfig> {
   };
 }
 
+/**
+ * spec 0018-m: promoción con curso A2 (id 5) — madre del libro Conv. A-4. 15 fechas activas
+ * (L-S desde 2026-07-06) + 1 cancelada; el tramo Conv. A-4 son las últimas 13 activas.
+ * license_validations devuelve solo la fila que la BD filtraría (enrollment 10 convalida A4).
+ */
+function promocionConConvalidacion(): Record<string, TableConfig> {
+  const tables = cursoCompleto();
+  const activeDates = [
+    '2026-07-06',
+    '2026-07-07',
+    '2026-07-08',
+    '2026-07-09',
+    '2026-07-10',
+    '2026-07-11',
+    '2026-07-13',
+    '2026-07-14',
+    '2026-07-15',
+    '2026-07-16',
+    '2026-07-17',
+    '2026-07-18',
+    '2026-07-20',
+    '2026-07-21',
+    '2026-07-22',
+  ];
+  tables['promotion_courses'] = {
+    data: [{ id: 5, courses: { code: 'PROF-A2-01', name: 'Buses', license_class: 'A2' } }],
+    single: {
+      data: {
+        id: 5,
+        code: 'P26.2',
+        courses: { name: 'Buses', code: 'PROF-A2-01', license_class: 'A2' },
+        professional_promotions: {
+          name: 'Otoño 2026',
+          code: 'P26',
+          start_date: '2026-07-06',
+          end_date: '2026-07-22',
+          status: 'in_progress',
+          branches: { name: 'Centro', address: 'Calle 1' },
+        },
+      },
+      error: null,
+    },
+  };
+  tables['professional_theory_sessions'] = {
+    data: [
+      ...activeDates.map((date, i) => ({ id: i + 1, date, status: 'scheduled' })),
+      { id: 99, date: '2026-07-12', status: 'cancelled' },
+    ],
+  };
+  tables['license_validations'] = {
+    data: [{ enrollment_id: 10, convalidated_license: 'A4' }],
+  };
+  return tables;
+}
+
 describe('LibroDeClasesFacade', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
@@ -260,7 +316,7 @@ describe('LibroDeClasesFacade', () => {
       };
       const { facade, mockSupabase, mockToast } = setup(tables);
       await facade.selectPromocion(1);
-      const ok = await facade.saveClassBookFields('SENCE-1', 'Lun a Vie 9:00');
+      const ok = await facade.saveClassBookFields('SENCE-1');
       expect(ok).toBe(true);
       const insertMock = mockSupabase._builders.get('class_book').insert;
       expect(insertMock).toHaveBeenCalledWith(
@@ -281,16 +337,15 @@ describe('LibroDeClasesFacade', () => {
     it('con libro existente → UPDATE por id y cabecera local sincronizada', async () => {
       const tables = cursoCompleto();
       tables['class_book'] = {
-        maybeSingle: { data: { id: 7, sence_code: 'OLD', horario: 'x' }, error: null },
+        maybeSingle: { data: { id: 7, sence_code: 'OLD' }, error: null },
       };
       const { facade, mockSupabase } = setup(tables);
       await facade.selectPromocion(1);
-      const ok = await facade.saveClassBookFields('NEW', 'Sáb 10:00');
+      const ok = await facade.saveClassBookFields('NEW');
       expect(ok).toBe(true);
       const updateMock = mockSupabase._builders.get('class_book').update;
       expect(updateMock).toHaveBeenCalledWith({
         sence_code: 'NEW',
-        horario: 'Sáb 10:00',
         sence_code_updated_by: 42,
         sence_code_updated_at: expect.any(String),
       });
@@ -299,23 +354,23 @@ describe('LibroDeClasesFacade', () => {
       expect(facade.cabecera()?.senceCodeUpdatedByName).toBe('Ana Admin');
     });
 
-    it('código SENCE sin cambios (solo cambia horario) → no toca el rastro de auditoría', async () => {
+    it('código SENCE sin cambios → no toca el rastro de auditoría', async () => {
       const tables = cursoCompleto();
       tables['class_book'] = {
-        maybeSingle: { data: { id: 7, sence_code: 'SAME', horario: 'x' }, error: null },
+        maybeSingle: { data: { id: 7, sence_code: 'SAME' }, error: null },
       };
       const { facade, mockSupabase } = setup(tables);
       await facade.selectPromocion(1);
-      const ok = await facade.saveClassBookFields('SAME', 'Nuevo horario');
+      const ok = await facade.saveClassBookFields('SAME');
       expect(ok).toBe(true);
       const updateMock = mockSupabase._builders.get('class_book').update;
-      expect(updateMock).toHaveBeenCalledWith({ sence_code: 'SAME', horario: 'Nuevo horario' });
+      expect(updateMock).toHaveBeenCalledWith({ sence_code: 'SAME' });
       expect(facade.cabecera()?.senceCodeUpdatedByName).toBeNull();
     });
 
     it('sin curso seleccionado → false sin tocar la BD', async () => {
       const { facade, mockSupabase } = setup();
-      const ok = await facade.saveClassBookFields('S', 'H');
+      const ok = await facade.saveClassBookFields('S');
       expect(ok).toBe(false);
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('class_book');
     });
@@ -339,6 +394,131 @@ describe('LibroDeClasesFacade', () => {
     it('sin curso seleccionado → null inmediato', async () => {
       const { facade } = setup();
       expect(await facade.exportPdf()).toBeNull();
+    });
+  });
+
+  describe('libros de convalidación (spec 0018-m)', () => {
+    it('el selector suma los libros de convalidación cuyo curso madre existe (AC1)', async () => {
+      const { facade } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      // Solo hay curso A2 → aparece Conv. A-4 (madre A2), no Conv. A-3 (madre A5).
+      expect(facade.libros().map((l) => l.key)).toEqual(['5', '5:A4']);
+      expect(facade.selectedLibroKey()).toBe('5'); // auto-selecciona el primer libro
+    });
+
+    it('el libro normal no filtra alumnos: el que convalida sigue en su curso madre (AC3)', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      expect(facade.alumnos()).toHaveLength(2);
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('license_validations');
+    });
+
+    it('Conv. A-4: solo alumnos del curso madre que convalidan A4 (AC2)', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      expect(facade.alumnos().map((a) => a.nombre)).toEqual(['Araya Soto Ana']);
+      expect(facade.alumnos()[0].rut).toBe('1-9');
+      expect(facade.alumnos()[0].numero).toBe(1);
+      const lv = mockSupabase._builders.get('license_validations');
+      expect(lv.eq).toHaveBeenCalledWith('convalidated_license', 'A4');
+      expect(lv.in).toHaveBeenCalledWith('enrollment_id', [20, 10]);
+    });
+
+    it('Conv. A-4: cabecera con nombre, ID con sufijo .7 y fechas del tramo (AC4, AC5)', async () => {
+      const { facade } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      const cab = facade.cabecera()!;
+      expect(cab.convalidation).toBe('A4');
+      expect(cab.courseName).toBe('Curso Convalidación Clase A-4');
+      expect(cab.bookId).toBe('P26.7');
+      // 15 fechas activas → las últimas 13: del 2026-07-08 al 2026-07-22.
+      expect(cab.startDate).toBe('2026-07-08');
+      expect(cab.endDate).toBe('2026-07-22');
+      expect(cab.moduleNames).toHaveLength(5);
+    });
+
+    it('Conv. A-4: calendario y evaluaciones del tramo (AC5, AC8)', async () => {
+      const { facade } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      expect(facade.calendario()).toHaveLength(13);
+      expect(facade.calendario()[0].fecha).toBe('2026-07-08');
+      expect(facade.evaluaciones()[0].notas).toHaveLength(5);
+      expect(facade.profesores()).toHaveLength(5);
+    });
+
+    it('lee class_book del libro correcto: normal con NULL, convalidación con su licencia', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      const cb = mockSupabase._builders.get('class_book');
+      expect(cb.is).toHaveBeenCalledWith('convalidation_license', null);
+      await facade.selectLibro('5:A4');
+      expect(cb.eq).toHaveBeenCalledWith('convalidation_license', 'A4');
+    });
+
+    it('guardar el código SENCE en Conv. A-4 inserta la fila de convalidación (AC10)', async () => {
+      const tables = promocionConConvalidacion();
+      tables['class_book'] = {
+        maybeSingle: { data: null, error: null },
+        single: { data: { id: 77 }, error: null },
+      };
+      const { facade, mockSupabase } = setup(tables);
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      const ok = await facade.saveClassBookFields('SENCE-CONV');
+      expect(ok).toBe(true);
+      expect(mockSupabase._builders.get('class_book').insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          promotion_course_id: 5,
+          convalidation_license: 'A4',
+          sence_code: 'SENCE-CONV',
+        }),
+      );
+      expect(facade.cabecera()?.senceCode).toBe('SENCE-CONV');
+    });
+
+    it('un libro normal inserta su fila con convalidation_license null', async () => {
+      const tables = cursoCompleto();
+      tables['class_book'] = {
+        maybeSingle: { data: null, error: null },
+        single: { data: { id: 55 }, error: null },
+      };
+      const { facade, mockSupabase } = setup(tables);
+      await facade.selectPromocion(1);
+      await facade.saveClassBookFields('S');
+      expect(mockSupabase._builders.get('class_book').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ convalidation_license: null }),
+      );
+    });
+
+    it('exportPdf envía el curso madre y la convalidación', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      await facade.exportPdf();
+      expect(mockSupabase.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-class-book-pdf',
+        expect.objectContaining({ body: { promotion_course_id: 5, convalidation: 'A4' } }),
+      );
+    });
+
+    it('sin alumnos que convalidan, el libro se arma igual y vacío (AC-E1)', async () => {
+      const tables = promocionConConvalidacion();
+      tables['license_validations'] = { data: [] };
+      const { facade } = setup(tables);
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      expect(facade.alumnos()).toEqual([]);
+      expect(facade.cabecera()?.bookId).toBe('P26.7');
+    });
+
+    it('clave de libro inválida → no cambia la selección', async () => {
+      const { facade } = setup(promocionConConvalidacion());
+      await facade.selectPromocion(1);
+      await facade.selectLibro('xx');
+      expect(facade.selectedLibroKey()).toBe('5');
     });
   });
 
