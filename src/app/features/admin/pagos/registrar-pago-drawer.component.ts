@@ -221,6 +221,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
               <!-- Fecha de pago -->
               <div class="flex flex-col gap-1.5">
                 <app-date-input
+                  [id]="'registrar-pago-fecha-pago'"
                   label="FECHA DE PAGO"
                   [required]="true"
                   [value]="form.get('payment_date')?.value ?? ''"

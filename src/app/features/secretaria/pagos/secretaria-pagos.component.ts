@@ -102,6 +102,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
           class="shrink-0 flex flex-col sm:flex-row gap-3 px-6 py-3 border-b border-border-muted"
         >
           <app-date-input
+            [id]="'secretaria-pagos-filtro-desde'"
             [value]="filtroFechaDesde()"
             (valueChange)="setFiltroFechaDesde($event)"
             placeholder="Matrícula desde"
@@ -109,6 +110,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
             data-llm-description="filter debtors by enrollment date, start of range"
           />
           <app-date-input
+            [id]="'secretaria-pagos-filtro-hasta'"
             [value]="filtroFechaHasta()"
             (valueChange)="setFiltroFechaHasta($event)"
             placeholder="Matrícula hasta"
@@ -335,6 +337,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Desde</label>
               <app-date-input
+                [id]="'secretaria-pagos-reporte-desde'"
                 [inline]="true"
                 [value]="reportStartDateIso"
                 (valueChange)="setReportStartDateIso($event)"
@@ -345,6 +348,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Hasta</label>
               <app-date-input
+                [id]="'secretaria-pagos-reporte-hasta'"
                 [inline]="true"
                 [value]="reportEndDateIso"
                 (valueChange)="setReportEndDateIso($event)"

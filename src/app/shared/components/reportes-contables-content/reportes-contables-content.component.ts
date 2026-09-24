@@ -257,6 +257,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
 
             @if (!isEvolucionTab() && localRango() === 'personalizado') {
               <app-date-input
+                [id]="'reportes-contables-desde'"
                 [value]="localDesde()"
                 (valueChange)="onCustomDateChange('desde', $event)"
                 placeholder="Desde"
@@ -264,6 +265,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
               />
 
               <app-date-input
+                [id]="'reportes-contables-hasta'"
                 [value]="localHasta()"
                 (valueChange)="onCustomDateChange('hasta', $event)"
                 placeholder="Hasta"

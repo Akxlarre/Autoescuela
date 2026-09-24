@@ -168,7 +168,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | `i` | [fix-038-i-date-input-id-colision](fixes/fix-038-i-date-input-id-colision/fix.md) | 2026-09-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -300,6 +299,7 @@
 | ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | 2026-09-22 |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md) | 2026-09-22 |
 | ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | 2026-09-23 |
+| ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | [fix-038-i-date-input-id-colision](fixes/fix-038-i-date-input-id-colision/fix.md) | 2026-09-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---

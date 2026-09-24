@@ -822,6 +822,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       </div>
                       <div class="space-y-1">
                         <app-date-input
+                          [id]="'pre-inscrito-fecha-obtencion-licencia'"
                           label="Fecha obtención"
                           [value]="formLicenseDate()"
                           (valueChange)="formLicenseDate.set($event)"
@@ -875,6 +876,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           <!-- Fecha emisión HVC -->
                           @if (doc.key === 'hvc' && docHvcFile()) {
                             <app-date-input
+                              [id]="'pre-inscrito-fecha-emision-hvc'"
                               label="Fecha de emisión"
                               [value]="docHvcIssueDate()"
                               (valueChange)="docHvcIssueDate.set($event)"

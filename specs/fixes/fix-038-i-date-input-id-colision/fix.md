@@ -2,8 +2,9 @@
 
 > id: fix-038-i-date-input-id-colision
 > refs: fix-037-i-qa-visual-piloto
-> status: draft
+> status: done
 > created: 2026-09-22
+> closed: 2026-09-24
 
 ## Root Cause
 
@@ -88,3 +89,49 @@ Ninguno — fix autónomo, hallazgo de QA sin spec previa.
   input del propio drawer. Sin error de consola, pero es un bug de accesibilidad real: un
   lector de pantalla anunciaría el campo equivocado. Refuerza que el fix debe cubrir **todo**
   `<app-date-input>` sin `[id]`, no solo los que muestran pérdida de valor visible.
+
+- **2026-09-24, verificación de la implementación:**
+  - **Alcance real vs. lo listado originalmente en Cambio:** se verificó archivo por archivo
+    (no se parcheó a ciegas) cuáles de los 6 candidatos tienen efectivamente 2+
+    `<app-date-input>` sin `[id]` en la misma vista. Confirmado con grep que los otros 15
+    archivos del proyecto que usan `<app-date-input>` tienen exactamente 1 instancia cada uno
+    (sin riesgo de colisión intra-archivo) — deliberadamente no tocados, para no exceder el
+    alcance del fix.
+  - Se agregó `[id]` único a: `personal-data.component.html` (`birthDate`/`licenseDate`),
+    `admin-pagos.component.ts` (4 instancias: filtro desde/hasta + reporte desde/hasta),
+    `secretaria-pagos.component.ts` (4 instancias, mismo patrón),
+    `reportes-contables-content.component.ts` (2 instancias),
+    `admin-auditoria.component.ts` (2 instancias),
+    `admin-pre-inscrito-drawer.component.ts` (2 instancias: fecha obtención licencia + fecha
+    emisión HVC).
+  - **Hallazgo adicional durante la implementación:** `registrar-pago-drawer.component.ts` no
+    estaba en la lista original de Cambio, pero es precisamente el componente que causó la
+    colisión cross-componente documentada arriba (2026-09-22, "Registrar Pago" sobre el filtro
+    de Pagos). Se le agregó `[id]="'registrar-pago-fecha-pago'"` a su único
+    `<app-date-input>`. Confirmado vía grep que `secretaria-pagos.component.ts` reutiliza este
+    mismo `RegistrarPagoDrawerComponent` (no hay una variante propia de secretaria que también
+    necesitara el fix).
+  - `npm run test:ci`: 2619/2624 tests verdes (los 5 restantes son fallos preexistentes no
+    relacionados a este fix). Nuevo test en `personal-data.component.spec.ts` (17/17 en
+    standalone) cubre la parte testeable en Vitest: que `emitField('birthDate', ...)` y
+    `emitField('licenseDate', ...)` no se pisan a nivel de estado — el bug real era de DOM
+    (`id` duplicado), no reproducible en Vitest en este proyecto (template rendering excluido,
+    ver nota en el spec). `tsc` limpio.
+  - **AC-1 (matrícula Profesional) — verificado en vivo con Playwright** contra `ng serve`:
+    login admin → `/app/admin/matricula` → sede "Conductores Chillán" → tipo de licencia
+    "Profesional" → tipeado "15031995" en Fecha de nacimiento y "10062020" en Fecha de
+    obtención de la licencia previa. Snapshot de accesibilidad confirmó ambos campos con
+    nombre accesible único (`combobox "Fecha de nacimiento *"` = 15/03/1995,
+    `combobox "Fecha de obtención de la licencia previa *"` = 10/06/2020) — ningún valor se
+    pisó ni se perdió. El botón "Guardar y Continuar" permanece deshabilitado en este punto,
+    pero por los demás campos requeridos sin completar (Licencia previa, curso, email), no por
+    el bug de este fix.
+  - **AC-2 (filtros Pagos) — verificado en vivo con Playwright** en `/app/admin/pagos`:
+    tipeado "01012026" en "Matrícula desde" y "30062026" en "Matrícula hasta". Snapshot
+    confirmó ambos comboboxes con nombre accesible propio y valor independiente
+    (`combobox "Matrícula desde"` = 01/01/2026, `combobox "Matrícula hasta"` = 30/06/2026), y
+    la lista se refiltró correctamente a "0 de 37 alumnos" (comportamiento esperado para ese
+    rango) — confirma que el filtro no solo retiene el valor visual, sino que también dispara
+    la lógica de filtrado con el valor correcto de cada campo.
+  - **AC-3:** cumplido por construcción — cada instancia tocada recibió un `[id]` único y
+    descriptivo; ninguna vista queda con 2+ `<app-date-input>` compartiendo el default `'date'`.

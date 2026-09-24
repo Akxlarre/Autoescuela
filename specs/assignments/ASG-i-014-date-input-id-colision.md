@@ -1,6 +1,6 @@
 # Asignación ASG-i-014 — DateInputComponent: colisión de ID rompe formularios con 2+ fechas
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2

@@ -72,6 +72,7 @@ const ACTION_OPTIONS = [
             <!-- Fecha desde -->
             <div class="flex flex-col gap-1">
               <app-date-input
+                [id]="'admin-auditoria-fecha-desde'"
                 label="Fecha desde"
                 [value]="fechaDesde() ?? ''"
                 (valueChange)="fechaDesde.set($event); applyFilters()"
@@ -82,6 +83,7 @@ const ACTION_OPTIONS = [
             <!-- Fecha hasta -->
             <div class="flex flex-col gap-1">
               <app-date-input
+                [id]="'admin-auditoria-fecha-hasta'"
                 label="Fecha hasta"
                 [value]="fechaHasta() ?? ''"
                 (valueChange)="fechaHasta.set($event); applyFilters()"
