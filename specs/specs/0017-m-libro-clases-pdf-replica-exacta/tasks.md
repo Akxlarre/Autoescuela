@@ -178,8 +178,11 @@ promoción dure 32 días para A3/A4/A5 (o se recorte la malla a 30 bloques), es 
 producto aparte, no de esta spec.
 - [x] Resumen de asistencia: columnas renombradas a "% Asistencia Clase Práctica" / "%
       Asistencia Clase Teórica" / "Firma Conformidad Alumno" (agregada, no existía antes).
-- [ ] Confirmar si existe columna "nivel de escolaridad" en `students`/`users` (si no, la
+- [x] Confirmar si existe columna "nivel de escolaridad" en `students`/`users` (si no, la
       columna de Antecedentes queda en blanco a propósito, ya implementado así).
+      **Confirmado 2026-09-24: no existe** (sin coincidencias en `indices/DATABASE.md`,
+      `supabase/migrations/` ni en `core/models/`). La columna queda en blanco para llenarse a
+      mano; no se crea una columna nueva solo para el PDF.
 - [x] Bug visual detectado por el dueño en el PDF real generado (curso de prueba 21-09-2026):
       el header gris del Calendario de Clases quedaba separado de la primera fila por un hueco
       de 16pt (Rect de 18pt de alto pero `y` bajaba 18pt completos desde la base del texto, que
@@ -296,7 +299,7 @@ convalidación propio. El dueño tiene los libros reales `libroclasesconva3.pdf`
       `promotion_courses` nuevos; siempre 6 libros visibles; alumnos que convalidan precargados;
       fechas según los libros reales. Queda fuera del alcance de la 0017-m.
 
-## Verificación pendiente (no ejecutable en esta sesión)
-- [ ] Generar el PDF real (requiere Supabase local corriendo + `supabase functions serve`) para
-      un curso de prueba y comparar visualmente contra `libroclases.pdf`, página por página.
+## Verificación
+- [x] Generar el PDF real y compararlo visualmente contra `libroclases.pdf`. **Hecho por el dueño
+      el 2026-09-24:** descargó los PDFs generados en producción y confirmó que se ven bien.
 - [x] `npx tsc --noEmit` sobre el archivo — sin errores de sintaxis.

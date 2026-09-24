@@ -1,6 +1,6 @@
 # Spec 0017-m — Libro de Clases PDF: réplica exacta del libro físico real
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-22
 > **Owner:** Matías
 > **Priority:** P1
@@ -187,13 +187,15 @@ real del libro de papel.
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] Confirmar si `students`/`users` tiene columna de "nivel de escolaridad" en
+- [x] Confirmar si `students`/`users` tiene columna de "nivel de escolaridad" en
   `indices/DATABASE.md`; si no existe, esa columna del PDF queda en blanco (no se crea columna
-  nueva solo para el PDF sin que el dueño la pida explícitamente).
-- [ ] El calendario de clases real (páginas 14-26) tiene contenido curricular específico por
+  nueva solo para el PDF sin que el dueño la pida explícitamente). **Resuelto 2026-09-24: no
+  existe; la columna queda en blanco.**
+- [x] El calendario de clases real (páginas 14-26) tiene contenido curricular específico por
   clase A-2 (Transporte de Pasajeros). Confirmar con el dueño si todas las clases (A2/A3/A4/A5)
   comparten la misma plantilla de materias o si cada una requiere su propio texto (impacta el
-  tamaño de la plantilla estática a transcribir).
+  tamaño de la plantilla estática a transcribir). **Resuelto: cada clase tiene su propia malla**
+  (confirmado con los libros reales A3/A4/A5); las 4 se transcribieron por separado.
 
 ---
 
