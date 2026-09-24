@@ -169,7 +169,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | `i` | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | 2026-09-23 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -300,6 +299,7 @@
 | ASG-i-011 | Documentar el alcance "oculto en esta fase" en los índices | [hotfix-109-m-documentar-rutas-ocultas-fase-piloto](hotfixes/hotfix-109-m-documentar-rutas-ocultas-fase-piloto/hotfix.md) | 2026-09-21 |
 | ASG-i-017 | 4 rutas del recorte de Clase Profesional accesibles sin guard (🔴 alta) | [fix-041-i-guard-recorte-clase-profesional-faltante](fixes/fix-041-i-guard-recorte-clase-profesional-faltante/fix.md) | 2026-09-22 |
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md) | 2026-09-22 |
+| ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | 2026-09-23 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -51,7 +51,7 @@ export class AdminExAlumnosProfesionalComponent implements OnInit, OnDestroy {
     if (egresado.branchId !== null) {
       this.branchFacade.selectBranch(egresado.branchId);
     }
-    void this.router.navigate([], {
+    await this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { rut: egresado.rut },
       queryParamsHandling: 'merge',

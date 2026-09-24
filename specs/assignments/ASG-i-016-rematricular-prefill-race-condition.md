@@ -1,6 +1,6 @@
 # Asignación ASG-i-016 — "Re-matricular" desde Ex-Alumnos no precarga datos (race condition)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1

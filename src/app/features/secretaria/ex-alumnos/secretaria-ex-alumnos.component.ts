@@ -73,7 +73,7 @@ export class SecretariaExAlumnosComponent implements OnInit {
       cancelLabel: 'Cancelar',
     });
     if (!confirmed) return;
-    void this.router.navigate([], {
+    await this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { rut: egresado.rut },
       queryParamsHandling: 'merge',

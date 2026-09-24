@@ -1,9 +1,10 @@
 # Fix: "Re-matricular" desde Ex-Alumnos no precarga datos (race condition)
 
 > id: fix-040-i-rematricular-prefill-race-condition
-> refs: fix-037-i-qa-visual-piloto
-> status: draft
+> refs: fix-037-i-qa-visual-piloto, fix-042-i-rematricula-rut-formato-inconsistente
+> status: done
 > created: 2026-09-22
+> closed: 2026-09-23
 
 ## Root Cause
 
@@ -68,4 +69,27 @@ Ninguno — fix autónomo, hallazgo de QA sin spec previa.
 
 ## Evidencia de Verificación
 
-Pendiente.
+- **Cambio aplicado** (2026-09-23): agregado `await` a `router.navigate()` antes de
+  `layoutDrawer.open()` en los 4 archivos (`admin-ex-alumnos.component.ts`,
+  `secretaria-ex-alumnos.component.ts`, `admin-ex-alumnos-profesional.component.ts`,
+  `secretaria-ex-alumnos-profesional.component.ts`).
+- **`npx tsc --noEmit`**: sin errores.
+- **`npm run test:ci`**: 200 archivos / 2617 tests en verde (5 skipped pre-existentes), 0
+  regresiones.
+- **Verificación manual en navegador** (admin, `admin/ex-alumnos`, alumno "Apellido61
+  Materno61 Alumno61" RUT 25000061-8 — mismo repro original): confirmado con Playwright MCP
+  que **la condición de carrera está resuelta** — la URL ya muestra `?rut=25000061-8` antes
+  de que el drawer del wizard termine de renderizarse (antes: el drawer se abría con la URL
+  todavía sin el query param).
+- **Hallazgo adicional durante la verificación:** con la carrera resuelta, el Paso 1 seguía
+  abriendo vacío — pero por una causa **distinta y ya fuera del alcance de este fix**: la
+  búsqueda `findUserByRut()` no encuentra al usuario porque compara el RUT normalizado (con
+  puntos) contra `users.rut`, que para estos alumnos de seed está guardado sin puntos.
+  Confirmado inspeccionando la respuesta de red (`GET .../users?...&rut=eq.25.000.061-8` →
+  `[]`, mientras que la propia query de Ex-Alumnos sí trae `"rut": "25000061-8"` para ese
+  mismo alumno) y reproduciendo el mismo resultado tecleando el RUT a mano en el Paso 1 (sin
+  pasar por Ex-Alumnos en absoluto) — descarta que sea un problema de timing. **Track nuevo
+  creado:** `fix-042-i-rematricula-rut-formato-inconsistente`. AC-1/AC-2 de este fix (Paso 1
+  "precargado" de punta a punta, visible en pantalla) quedan completos recién cuando
+  `fix-042` también se cierre — el `Cambio` declarado en este fix (la corrección del orden de
+  ejecución) está correcto y verificado de forma aislada.

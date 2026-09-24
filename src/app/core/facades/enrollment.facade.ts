@@ -12,7 +12,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
-import { normalizeRutForStorage } from '@core/utils/rut.utils';
+import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
@@ -444,12 +444,17 @@ export class EnrollmentFacade {
     currentLicense: string | null;
     licenseDate: string | null;
   } | null> {
+    // fix-042: `users.rut` no siempre está guardado con puntos (datos de seed/importados
+    // pueden quedarse sin formatear) — aceptar ambas variantes del mismo RUT.
+    const dotted = normalizeRutForStorage(rut);
+    const cleaned = cleanRut(rut).toUpperCase();
+    const plain = `${cleaned.slice(0, -1)}-${cleaned.slice(-1)}`;
     const { data: user, error } = await this.supabase.client
       .from('users')
       .select(
         'id, first_names, paternal_last_name, maternal_last_name, email, phone, students(id, birth_date, gender, address, current_license_class, license_obtained_date)',
       )
-      .eq('rut', normalizeRutForStorage(rut))
+      .or(`rut.eq.${dotted},rut.eq.${plain}`)
       .maybeSingle();
 
     if (error || !user) return null;

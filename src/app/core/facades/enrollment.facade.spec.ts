@@ -537,6 +537,27 @@ describe('EnrollmentFacade', () => {
       const result = await facade.findUserByRut('12345678-9');
       expect(result).toBeNull();
     });
+
+    it('fix-042: encuentra al usuario aunque users.rut esté guardado sin puntos (datos de seed)', async () => {
+      const mockUser = {
+        id: 1,
+        first_names: 'Alumno61',
+        paternal_last_name: 'Apellido61',
+        maternal_last_name: 'Materno61',
+        email: 'alumno.seed61@test-data.local',
+        phone: '+56900000000',
+        students: null,
+      };
+      const builder = createMockQueryBuilder(mockUser);
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      const result = await facade.findUserByRut('25000061-8');
+
+      expect(result).not.toBeNull();
+      expect(result?.firstNames).toBe('Alumno61');
+      // La búsqueda debe aceptar ambas variantes del mismo RUT (con y sin puntos).
+      expect(builder.or).toHaveBeenCalledWith('rut.eq.25.000.061-8,rut.eq.25000061-8');
+    });
   });
 
   // ── Re-matrícula: precarga de datos (fix-020) ──
