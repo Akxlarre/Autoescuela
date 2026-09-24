@@ -752,7 +752,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `sence_code` | TEXT | sí | — | — |
-| `horario` | TEXT | sí | — | — |
+| `horario` | TEXT | sí | — | — (no leída/escrita desde código — el Libro de Clases muestra un horario fijo, fix-258-m) |
 | `sence_code_updated_by` | INT | sí | — | → `users.id` |
 | `sence_code_updated_at` | TIMESTAMPTZ | sí | — | — |
 

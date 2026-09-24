@@ -16,7 +16,6 @@ export interface LibroCabecera {
   /** Campos editables del libro (almacenados en class_book) */
   classBookId: number | null;
   senceCode: string;
-  horario: string;
   /** Auditoría del último cambio al Código SENCE (RF-103, fiscalizable) */
   senceCodeUpdatedByName: string | null;
   senceCodeUpdatedAt: string | null;

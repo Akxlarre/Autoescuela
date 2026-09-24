@@ -228,7 +228,7 @@ export class LibroDeClasesFacade {
       this.supabase.client
         .from('class_book')
         .select(
-          `id, sence_code, horario, sence_code_updated_at,
+          `id, sence_code, sence_code_updated_at,
            sence_code_updater:users!class_book_sence_code_updated_by_fkey(first_names, paternal_last_name)`,
         )
         .eq('promotion_course_id', promotionCourseId)
@@ -256,7 +256,6 @@ export class LibroDeClasesFacade {
       status: promo.status ?? '',
       classBookId: classBook?.id ?? null,
       senceCode: classBook?.sence_code ?? '',
-      horario: classBook?.horario ?? '',
       senceCodeUpdatedByName: updater
         ? `${updater.first_names} ${updater.paternal_last_name}`
         : null,
@@ -491,15 +490,15 @@ export class LibroDeClasesFacade {
     this._calendario.set(calendario);
   }
 
-  // ── Campos editables (Código SENCE, Horario) ────────────────────────────────
+  // ── Campos editables (Código SENCE) ─────────────────────────────────────────
 
-  async saveClassBookFields(senceCode: string, horario: string): Promise<boolean> {
+  async saveClassBookFields(senceCode: string): Promise<boolean> {
     const cabecera = this._cabecera();
     const promotionCourseId = this._selectedCursoId();
     if (!cabecera || !promotionCourseId) return false;
 
     // El código SENCE es un dato oficial fiscalizable (RF-103): registrar quién lo cambió
-    // y cuándo, pero solo si efectivamente cambió (no tocar el rastro si solo cambió horario).
+    // y cuándo, pero solo si efectivamente cambió.
     const codeChanged = senceCode !== cabecera.senceCode;
     const updatedByDbId = this.auth.currentUser()?.dbId ?? null;
     const nowIso = new Date().toISOString();
@@ -519,7 +518,7 @@ export class LibroDeClasesFacade {
         // UPDATE existente
         const { error } = await this.supabase.client
           .from('class_book')
-          .update({ sence_code: senceCode, horario, ...auditFields })
+          .update({ sence_code: senceCode, ...auditFields })
           .eq('id', cabecera.classBookId);
         if (error) throw error;
       } else {
@@ -533,7 +532,6 @@ export class LibroDeClasesFacade {
             period: cabecera.promotionCode,
             status: 'draft',
             sence_code: senceCode,
-            horario,
             ...auditFields,
           })
           .select('id')
@@ -545,7 +543,6 @@ export class LibroDeClasesFacade {
           ...cabecera,
           classBookId: data.id,
           senceCode,
-          horario,
           ...auditPatch,
         });
         this.toast.success('Datos del libro guardados');
@@ -553,7 +550,7 @@ export class LibroDeClasesFacade {
       }
 
       // Actualizar cabecera local
-      this._cabecera.set({ ...cabecera, senceCode, horario, ...auditPatch });
+      this._cabecera.set({ ...cabecera, senceCode, ...auditPatch });
       this.toast.success('Datos del libro guardados');
       return true;
     } catch (err) {

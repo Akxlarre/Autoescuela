@@ -238,6 +238,10 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                       <span class="font-medium text-text-secondary">Dirección:</span>
                       {{ cab.branchAddress || '—' }}
                     </p>
+                    <p>
+                      <span class="font-medium text-text-secondary">Horario:</span>
+                      {{ fixedHorario }}
+                    </p>
                   </div>
                 </div>
                 <div class="mt-4 border-t pt-4 border-border-default">
@@ -268,19 +272,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                           {{ formatTimestamp(cab.senceCodeUpdatedAt) }}
                         </p>
                       }
-                    </div>
-                    <div>
-                      <label class="mb-1 block text-xs font-medium text-text-secondary"
-                        >Horario</label
-                      >
-                      <input
-                        type="text"
-                        class="ldc-input"
-                        placeholder="Ej: L-V 17:30-22:30, S 9:00-14:00"
-                        [ngModel]="editHorario()"
-                        (ngModelChange)="editHorario.set($event)"
-                        data-llm-description="input for class schedule"
-                      />
                     </div>
                   </div>
                   <div class="mt-3 flex items-center gap-3">
@@ -898,12 +889,14 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
   });
 
   readonly editSenceCode = signal('');
-  readonly editHorario = signal('');
+
+  /** Horario fijo de la escuela — ya no es editable por curso (fix-258-m). */
+  readonly fixedHorario = 'Lunes a Viernes de 17:30 a 22:30 hrs. Sábado de 9:00 a 14:00 hrs.';
 
   readonly hasEditableChanges = computed(() => {
     const cab = this.facade.cabecera();
     if (!cab) return false;
-    return this.editSenceCode() !== cab.senceCode || this.editHorario() !== cab.horario;
+    return this.editSenceCode() !== cab.senceCode;
   });
 
   constructor() {
@@ -911,7 +904,6 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
       const cab = this.facade.cabecera();
       if (cab) {
         this.editSenceCode.set(cab.senceCode);
-        this.editHorario.set(cab.horario);
       }
     });
 
@@ -948,7 +940,7 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
     void this.facade.selectCurso(id);
   }
   onSaveClassBook(): void {
-    void this.facade.saveClassBookFields(this.editSenceCode(), this.editHorario());
+    void this.facade.saveClassBookFields(this.editSenceCode());
   }
 
   onSectionChange(id: string): void {
