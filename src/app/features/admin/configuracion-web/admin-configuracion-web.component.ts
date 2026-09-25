@@ -382,7 +382,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
       name: ['', Validators.required],
       shortName: ['', Validators.required],
       slogan: ['', Validators.required],
-      theme: ['azul' as 'azul' | 'roja', Validators.required],
+      theme: [{ value: 'azul' as 'azul' | 'roja', disabled: true }, Validators.required],
       domain: ['', Validators.required],
       logo: [''],
       ogImage: [''],

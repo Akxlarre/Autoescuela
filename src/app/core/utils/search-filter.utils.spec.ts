@@ -1,4 +1,10 @@
-import { normalizeSearchText, matchesSearch, filterBySearch } from './search-filter.utils';
+import {
+  normalizeSearchText,
+  matchesSearch,
+  filterBySearch,
+  matchesSearchTokens,
+  filterBySearchTokens,
+} from './search-filter.utils';
 
 describe('normalizeSearchText', () => {
   it('pasa a minúsculas y quita acentos', () => {
@@ -75,5 +81,68 @@ describe('filterBySearch', () => {
 
   it('no rompe con campos null (alumno sin correo)', () => {
     expect(filterBySearch(alumnos, 'sin correo', getFields)).toEqual([alumnos[2]]);
+  });
+});
+
+// ── fix-039-i: tokeniza el término y exige que cada token matchee en algún campo,
+// en vez de comparar el término completo contra cada campo por separado ──
+describe('matchesSearchTokens', () => {
+  it('encuentra "nombre apellido" cuando están en campos separados', () => {
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Camila Reyes')).toBe(true);
+  });
+
+  it('encuentra el mismo caso con el orden de tokens invertido', () => {
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Reyes Camila')).toBe(true);
+  });
+
+  it('sigue funcionando con un solo término (compatibilidad con matchesSearch)', () => {
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Camila')).toBe(true);
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Reyes')).toBe(true);
+  });
+
+  it('no matchea si un token no está en ningún campo', () => {
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Camila Martinez')).toBe(false);
+  });
+
+  it('ignora mayúsculas y acentos en los tokens', () => {
+    expect(matchesSearchTokens(['José Núñez'], 'JOSÉ nuñez')).toBe(true);
+  });
+
+  it('término vacío siempre matchea', () => {
+    expect(matchesSearchTokens(['cualquier cosa'], '')).toBe(true);
+    expect(matchesSearchTokens(['cualquier cosa'], '   ')).toBe(true);
+  });
+
+  it('ignora campos null/undefined sin romper', () => {
+    expect(matchesSearchTokens([null, 'Reyes Muñoz', undefined], 'reyes')).toBe(true);
+  });
+
+  it('espacios múltiples entre tokens no generan tokens vacíos que rompan el match', () => {
+    expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Camila    Reyes')).toBe(true);
+  });
+});
+
+describe('filterBySearchTokens', () => {
+  interface Alumno {
+    nombre: string;
+    apellido: string;
+  }
+  const alumnos: Alumno[] = [
+    { nombre: 'Camila Andrea', apellido: 'Reyes Muñoz' },
+    { nombre: 'Ana', apellido: 'Martínez' },
+  ];
+  const getFields = (a: Alumno) => [a.nombre, a.apellido];
+
+  it('filtra por nombre + apellido combinados en cualquier orden', () => {
+    expect(filterBySearchTokens(alumnos, 'Camila Reyes', getFields)).toEqual([alumnos[0]]);
+    expect(filterBySearchTokens(alumnos, 'Reyes Camila', getFields)).toEqual([alumnos[0]]);
+  });
+
+  it('término vacío devuelve todo el arreglo (misma referencia)', () => {
+    expect(filterBySearchTokens(alumnos, '', getFields)).toBe(alumnos);
+  });
+
+  it('sin resultados devuelve arreglo vacío', () => {
+    expect(filterBySearchTokens(alumnos, 'Camila Martinez', getFields)).toEqual([]);
   });
 });

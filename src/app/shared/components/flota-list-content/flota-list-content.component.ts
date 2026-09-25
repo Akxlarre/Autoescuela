@@ -171,7 +171,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
             <!-- VISTA Desktop Skeleton -->
             <div class="desktop-view hide-on-squeeze p-4">
               <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
-                @for (w of ['15%', '20%', '15%', '10%', '10%', '12%']; track w) {
+                @for (w of ['15%', '20%', '15%', '10%', '10%', '12%']; track $index) {
                   <app-skeleton-block variant="text" [width]="w" height="11px" />
                 }
               </div>

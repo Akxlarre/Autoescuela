@@ -12,6 +12,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import {
   getExpedienteStatus as computeExpedienteStatus,
   getAlumnoStatusSeverity,
@@ -741,12 +742,10 @@ export class AlumnosListContentComponent implements AfterViewInit {
     const expediente = this.selectedExpediente();
 
     return this.alumnos().filter((a) => {
-      const matchSearch =
-        !term ||
-        a.nombre.toLowerCase().includes(term) ||
-        a.apellido.toLowerCase().includes(term) ||
-        a.rut.includes(term) ||
-        a.nroExpedientes.some((n) => n.toLowerCase().includes(term));
+      const matchSearch = matchesSearchTokens(
+        [a.nombre, a.apellido, a.rut, ...a.nroExpedientes],
+        term,
+      );
 
       const matchCurso = !curso || a.cursos.some((c) => c.nombre === curso);
       const matchEstado = !estado || a.status === estado;

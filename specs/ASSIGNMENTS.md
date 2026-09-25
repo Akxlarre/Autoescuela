@@ -36,10 +36,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | `cualquiera` | fix | P2 | i | Track ya redactado: `fix-039-i-buscador-alumnos-no-tokeniza`. Alcance a re-confirmar archivo por archivo antes de implementar |
-| ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-004-i-papelera-alumnos-sin-label-visible` |
-| ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-005-i-skeleton-flota-track-duplicado` |
-| ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | `cualquiera` | hotfix | P3 | i | Track ya redactado: `hotfix-006-i-disabled-attribute-reactive-form-configuracion-web` |
 
 ### Tanda alcance de lanzamiento piloto — 2026-09-15
 
@@ -301,6 +297,10 @@
 | ASG-m-007 | Tema fijo por número de clase en Ficha Técnica (Clase B) + edición en Ajustes | [fix-169-b-temas-fijos-ficha-tecnica](fixes/fix-169-b-temas-fijos-ficha-tecnica/fix.md) | 2026-09-22 |
 | ASG-i-016 | "Re-matricular" desde Ex-Alumnos no precarga datos (race condition) | [fix-040-i-rematricular-prefill-race-condition](fixes/fix-040-i-rematricular-prefill-race-condition/fix.md) | 2026-09-23 |
 | ASG-i-014 | DateInputComponent: colisión de ID rompe formularios con 2+ fechas | [fix-038-i-date-input-id-colision](fixes/fix-038-i-date-input-id-colision/fix.md) | 2026-09-24 |
+| ASG-i-015 | Buscador de listados no tokeniza "nombre + apellido" | [fix-039-i-buscador-alumnos-no-tokeniza](fixes/fix-039-i-buscador-alumnos-no-tokeniza/fix.md) | 2026-09-24 |
+| ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | [hotfix-004-i-papelera-alumnos-sin-label-visible](hotfixes/hotfix-004-i-papelera-alumnos-sin-label-visible/hotfix.md) | 2026-09-24 |
+| ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | [hotfix-005-i-skeleton-flota-track-duplicado](hotfixes/hotfix-005-i-skeleton-flota-track-duplicado/hotfix.md) | 2026-09-24 |
+| ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | [hotfix-006-i-disabled-attribute-reactive-form-configuracion-web](hotfixes/hotfix-006-i-disabled-attribute-reactive-form-configuracion-web/hotfix.md) | 2026-09-24 |
 <!-- AUTO-GENERATED:END -->
 
 ---

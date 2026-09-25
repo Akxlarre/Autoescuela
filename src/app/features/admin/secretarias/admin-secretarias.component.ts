@@ -13,6 +13,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -499,9 +500,7 @@ export class AdminSecretariasComponent {
 
     const term = this.searchTerm().toLowerCase().trim();
     if (term) {
-      results = results.filter(
-        (s) => s.nombre.toLowerCase().includes(term) || s.email.toLowerCase().includes(term),
-      );
+      results = results.filter((s) => matchesSearchTokens([s.nombre, s.email], term));
     }
     if (this.filtroSede()) {
       results = results.filter((s) => s.sede === this.filtroSede());

@@ -1,9 +1,11 @@
 # Fix: Buscador de listados de alumnos no tokeniza "nombre + apellido"
 
 > id: fix-039-i-buscador-alumnos-no-tokeniza
-> refs: fix-037-i-qa-visual-piloto
-> status: draft
+> refs: fix-037-i-qa-visual-piloto, ASG-i-015
+> status: done
 > created: 2026-09-22
+> activated: 2026-09-24
+> closed: 2026-09-24
 
 ## Root Cause
 
@@ -79,3 +81,58 @@ Ninguno — fix autónomo, hallazgo de QA sin spec previa.
   `alumnos-list-content.component.ts` (reproducido con evidencia clara), pero el alcance de "7
   archivos afectados" debe confirmarse archivo por archivo antes de aplicar la utilidad
   compartida a todos.
+
+- **2026-09-24, verificación archivo por archivo (ASG-i-015, previa a implementar):**
+  confirmado con lectura directa de código, no solo grep:
+  - `alumnos-list-content.component.ts` y `alumnos-profesional-list-content.component.ts`:
+    campos `nombre`/`apellido` separados → reproduce el bug tal cual el Root Cause. Ambos ya
+    buscan por N° de matrícula (`nroExpedientes` / `nroMatricula` respectivamente) — sin
+    trabajo adicional en ese frente, solo aplican `matchesSearchTokens`.
+  - `ex-alumnos-content.component.ts` y `ex-alumnos-profesional-content.component.ts`: el
+    campo `nombre` de `EgresadoTableRow` ya viene concatenado ("Nombre completo para
+    mostrar"), no separado en nombre/apellido — el síntoma del Root Cause (0 resultados con
+    2 tokens repartidos) no aplica igual porque `.includes(term)` sobre un string ya
+    combinado matchea si el orden coincide, pero SÍ falla si el usuario invierte el orden
+    ("Reyes Camila" en vez de "Camila Reyes"). Se benefician de `matchesSearchTokens` para
+    ese caso. Ambos ya buscan por `nroExpediente` (N° de matrícula) — sin trabajo adicional
+    ahí.
+  - `admin-secretarias.component.ts`, `admin-profesional-relatores.component.ts`,
+    `admin-ex-alumnos-comentarios-drawer.component.ts`: mismo caso de `nombre` concatenado
+    (sin split), y **ninguno de los 3 tiene concepto de N° de matrícula** — secretarias y
+    relatores no tienen `enrollments`, y el drawer de comentarios busca por texto de opinión,
+    no por alumno. Se les aplica igual `matchesSearchTokens` sobre `nombre` (beneficio:
+    orden invertido), pero no se agrega ninguna columna de matrícula porque no existe el dato
+    para ese dominio.
+  - **Conclusión de alcance:** los 7 archivos reciben `matchesSearchTokens`. La búsqueda por
+    N° de matrícula que pedía el usuario en paralelo ya estaba cubierta en los 4 archivos
+    donde aplica (alumnos/ex-alumnos B y Profesional) — no requiere cambio de código, solo se
+    confirma y se documenta acá.
+
+  - **Corrección durante implementación:** `admin-ex-alumnos-comentarios-drawer.component.ts`
+    se revirtió a su comparación original (`||` de 3 substrings independientes: nombre, texto
+    del comentario, rating) tras romper 2 tests existentes. Causa: al combinar `nombre` +
+    `texto` + `rating` en un solo haystack tokenizado, un token numérico corto (ej. "3") pasaba
+    a matchear como substring dentro de OTRO registro no relacionado (ej. "13" contiene "3"),
+    devolviendo falsos positivos cruzados entre campos de distinta naturaleza (nombre propio
+    vs texto libre vs rating numérico) que el comportamiento anterior no producía. Este archivo
+    ya estaba marcado como "beneficio menor" en el análisis de alcance (nombre es un único
+    campo, sin el bug real de nombre/apellido separados) — no se justifica forzar la
+    tokenización acá a costa de romper el contrato de búsqueda existente. AC-2 para este
+    archivo específico queda sin aplicar; el resto (6 de 7) sí la recibió.
+
+  - `npm run test:ci`: 2670/2670 verdes (5 skipped, sin relación), incluyendo los 25 tests
+    nuevos de `matchesSearchTokens`/`filterBySearchTokens` en `search-filter.utils.spec.ts`.
+    `tsc --noEmit` limpio.
+  - **AC-1 verificado en vivo con Playwright** contra `ng serve`: en `/app/admin/alumnos`,
+    buscar "Camila Reyes" devuelve exactamente 1 resultado ("Reyes Muñoz Camila Andrea", de
+    129 alumnos totales) — antes del fix este mismo término devolvía "No se encontraron
+    alumnos" según el QA original.
+  - **AC-2 verificado por lectura de código** (no requiere QA visual repetido por archivo,
+    ya que `matchesSearchTokens` tiene cobertura unitaria completa y cada componente solo
+    cambió la llamada de filtro, no la lógica de UI): aplicado en
+    `alumnos-list-content.component.ts`, `alumnos-profesional-list-content.component.ts`,
+    `ex-alumnos-content.component.ts`, `ex-alumnos-profesional-content.component.ts`,
+    `admin-secretarias.component.ts`, `admin-profesional-relatores.component.ts`. Excluido
+    `admin-ex-alumnos-comentarios-drawer.component.ts` (ver nota de corrección arriba).
+  - **AC-3:** cubierto por los tests de `matchesSearchTokens` (`'sigue funcionando con un solo
+    término'`) y por el suite completo en verde — sin regresión en búsquedas de 1 término.

@@ -1,14 +1,14 @@
 # Asignación ASG-i-019 — Skeleton de Flota dispara NG0955 por track key duplicado
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P3
 > **created:** 2026-09-22
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-24
+> **resulting_track:** hotfix-005-i-skeleton-flota-track-duplicado
 
 ---
 

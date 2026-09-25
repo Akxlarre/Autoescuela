@@ -12,6 +12,7 @@ import {
 import { CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -416,11 +417,7 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
     });
 
     return enPeriodo.filter((e) => {
-      const matchSearch =
-        !term ||
-        e.nombre.toLowerCase().includes(term) ||
-        e.rut.toLowerCase().includes(term) ||
-        (e.nroExpediente?.toLowerCase().includes(term) ?? false);
+      const matchSearch = matchesSearchTokens([e.nombre, e.rut, e.nroExpediente], term);
       const matchClase = !this.selectedClase || e.licencia === this.selectedClase;
       return matchSearch && matchClase;
     });

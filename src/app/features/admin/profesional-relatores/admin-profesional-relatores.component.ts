@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -416,11 +417,8 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
 
     const term = this.searchTerm().toLowerCase().trim();
     if (term) {
-      results = results.filter(
-        (r) =>
-          r.nombre.toLowerCase().includes(term) ||
-          r.rut.toLowerCase().includes(term) ||
-          r.specializations.some((s) => s.toLowerCase().includes(term)),
+      results = results.filter((r) =>
+        matchesSearchTokens([r.nombre, r.rut, ...r.specializations], term),
       );
     }
     const especialidad = this.filtroEspecialidad();

@@ -78,7 +78,6 @@ const CDN_URL =
               optionLabel="label"
               optionValue="value"
               styleClass="w-full opacity-80"
-              [disabled]="true"
             />
             <span class="text-xs text-text-muted mt-1"
               >El tema visual está fijado para cada sede.</span

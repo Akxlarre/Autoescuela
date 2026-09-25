@@ -1,8 +1,10 @@
 # Hotfix: Skeleton de Flota dispara NG0955 por track key duplicado
 
 > id: hotfix-005-i-skeleton-flota-track-duplicado
-> refs: fix-037-i-qa-visual-piloto
+> refs: fix-037-i-qa-visual-piloto, ASG-i-019
+> status: done
 > created: 2026-09-22
+> closed: 2026-09-24
 
 ## Problema
 
@@ -36,3 +38,14 @@ Sistema Visual (`visual-system.md`) que exige tracking correcto en todo `@for`.
 
 - Verificación manual: `/verify` en `/app/admin/flota` con red simulada lenta (para capturar el
   estado de loading) confirmando 0 warnings NG0955 en consola.
+
+## Evidencia de Verificación
+
+- **2026-09-24:** confirmado que el mismo patrón (`@for` sobre array literal con valores
+  repetidos, trackeando por valor) NO se repite en ningún otro skeleton del proyecto — grep de
+  `@for (\w+ of [...]; track \w+)` sobre todo `src/app` muestra que el resto usa enteros
+  secuenciales únicos (`[1, 2, 3]`, etc.), sin colisión posible. Cambio acotado a la única
+  línea afectada (`flota-list-content.component.ts:174`, `track w` → `track $index`).
+  `tsc --noEmit` limpio. Verificado en vivo con Playwright en `/app/admin/flota`: 0 mensajes
+  `NG0955` en toda la consola de la sesión (110 mensajes debug/log revisados, ninguno es
+  warning ni error).

@@ -26,3 +26,30 @@ export function filterBySearch<T>(
   if (normalizedQuery === '') return items;
   return items.filter((item) => matchesSearch(getFields(item), normalizedQuery));
 }
+
+/**
+ * Como `matchesSearch`, pero tokeniza `query` por espacios y exige que CADA token matchee
+ * en algún campo — no que la query completa esté en un único campo. Permite buscar
+ * "nombre apellido" (en cualquier orden) aunque estén repartidos en campos separados.
+ * Query vacía siempre matchea.
+ */
+export function matchesSearchTokens(
+  fields: Array<string | null | undefined>,
+  query: string,
+): boolean {
+  const tokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  const haystack = fields.map((f) => normalizeSearchText(f)).join(' ');
+  return tokens.every((token) => haystack.includes(token));
+}
+
+/** Filtra `items` por `query` tokenizada usando los campos que devuelva `getFields` por item. */
+export function filterBySearchTokens<T>(
+  items: T[],
+  query: string,
+  getFields: (item: T) => Array<string | null | undefined>,
+): T[] {
+  const tokens = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return items;
+  return items.filter((item) => matchesSearchTokens(getFields(item), query));
+}

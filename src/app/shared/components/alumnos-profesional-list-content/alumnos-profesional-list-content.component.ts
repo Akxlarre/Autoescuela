@@ -11,6 +11,7 @@ import {
   AfterViewInit,
 } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
@@ -492,12 +493,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   filteredAlumnos(): AlumnoProfesionalTableRow[] {
     const term = this.searchTerm.toLowerCase();
     return this.alumnos().filter((a) => {
-      const matchSearch =
-        !term ||
-        a.nombre.toLowerCase().includes(term) ||
-        a.apellido.toLowerCase().includes(term) ||
-        a.rut.includes(term) ||
-        a.nroMatricula.toLowerCase().includes(term);
+      const matchSearch = matchesSearchTokens([a.nombre, a.apellido, a.rut, a.nroMatricula], term);
       const matchClase = !this.selectedClase || a.licenseClass === this.selectedClase;
       const matchEstado = !this.selectedEstado || a.estado === this.selectedEstado;
       return matchSearch && matchClase && matchEstado;

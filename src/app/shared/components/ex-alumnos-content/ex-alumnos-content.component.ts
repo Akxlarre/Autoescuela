@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -442,11 +443,8 @@ export class ExAlumnosContentComponent {
     const term = this.searchTerm().toLowerCase().trim();
     if (!term) return enPeriodo;
 
-    return enPeriodo.filter(
-      (e: EgresadoTableRow) =>
-        e.nombre.toLowerCase().includes(term) ||
-        e.rut.toLowerCase().includes(term) ||
-        (e.nroExpediente?.toLowerCase().includes(term) ?? false),
+    return enPeriodo.filter((e: EgresadoTableRow) =>
+      matchesSearchTokens([e.nombre, e.rut, e.nroExpediente], term),
     );
   });
 

@@ -1,8 +1,10 @@
 # Hotfix: `[disabled]="true"` en control reactivo dispara warning de Angular
 
 > id: hotfix-006-i-disabled-attribute-reactive-form-configuracion-web
-> refs: fix-037-i-qa-visual-piloto
+> refs: fix-037-i-qa-visual-piloto, ASG-i-020
+> status: done
 > created: 2026-09-22
+> closed: 2026-09-24
 
 ## Problema
 
@@ -43,3 +45,19 @@ deshabilitado), pero ensucia la consola en cada carga de la pestaña "General".
 - Verificación manual: `/verify` en `admin/configuracion-web` pestaña "General", confirmando
   0 warnings de consola y que el selector de Tema Visual sigue mostrándose deshabilitado con el
   texto "El tema visual está fijado para cada sede."
+
+## Evidencia de Verificación
+
+- **2026-09-24:** el control `theme` vive en `admin-configuracion-web.component.ts:385`
+  (`fb.group` raíz, no en `general-tab.component.ts` donde solo se consume vía `[formGroup]`).
+  Cambiado a `[{ value: 'azul', disabled: true }, Validators.required]` y removido
+  `[disabled]="true"` del template en `general-tab.component.ts`. Confirmado que
+  `form.patchValue()` (línea 613) y `form.getRawValue()` (línea 702) siguen poblando/leyendo
+  el valor de `theme` correctamente pese a estar deshabilitado — `patchValue`/`getRawValue`
+  de Angular siempre incluyen controles disabled, a diferencia de `.value`, así que no hay
+  regresión funcional.
+  - `tsc --noEmit` limpio. `npm run test:ci`: 2670/2670 verdes (5 skipped, sin relación).
+  - **Verificado en vivo con Playwright** en `/app/admin/configuracion-web`, sede
+    "Autoescuela Chillán": el selector "Tema Visual" sigue mostrándose deshabilitado (opacidad
+    reducida) con el valor correcto precargado ("Roja (Red/Orange)") y el texto explicativo
+    intacto. 0 mensajes de warning/error en toda la consola de la sesión.

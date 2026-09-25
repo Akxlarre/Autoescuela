@@ -1,14 +1,14 @@
 # Asignación ASG-i-018 — Botón "Papelera" de listados de alumnos sin label visible
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P3
 > **created:** 2026-09-22
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-24
+> **resulting_track:** hotfix-004-i-papelera-alumnos-sin-label-visible
 
 ---
 

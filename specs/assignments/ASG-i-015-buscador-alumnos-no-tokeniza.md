@@ -1,14 +1,14 @@
 # Asignación ASG-i-015 — Buscador de listados no tokeniza "nombre + apellido"
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-22
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-24
+> **resulting_track:** fix-039-i-buscador-alumnos-no-tokeniza
 
 ---
 
