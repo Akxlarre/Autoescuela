@@ -6,6 +6,7 @@ import {
   formatDeltaLabel,
   formatMinutesAsHours,
   isValidRange,
+  pickerDatesToRange,
   marginPct,
   previousRange,
   resolvePresetRange,
@@ -120,6 +121,26 @@ describe('isValidRange', () => {
   it('rechaza desde > hasta o fechas vacías', () => {
     expect(isValidRange({ from: '2026-09-02', to: '2026-09-01' })).toBe(false);
     expect(isValidRange({ from: '', to: '2026-09-01' })).toBe(false);
+  });
+});
+
+describe('pickerDatesToRange (fix-176-b)', () => {
+  it('convierte el par [inicio, fin] del calendario de rango a ISO local', () => {
+    expect(pickerDatesToRange([new Date(2026, 8, 3), new Date(2026, 8, 20)])).toEqual({
+      from: '2026-09-03',
+      to: '2026-09-20',
+    });
+  });
+  it('sin fin elegido, el rango es un solo día', () => {
+    expect(pickerDatesToRange([new Date(2026, 8, 3), null])).toEqual({
+      from: '2026-09-03',
+      to: '2026-09-03',
+    });
+  });
+  it('sin inicio o sin selección devuelve null', () => {
+    expect(pickerDatesToRange(null)).toBeNull();
+    expect(pickerDatesToRange([])).toBeNull();
+    expect(pickerDatesToRange([null, new Date(2026, 8, 3)])).toBeNull();
   });
 });
 

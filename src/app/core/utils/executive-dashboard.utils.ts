@@ -114,6 +114,24 @@ export function isValidRange(range: ExecDateRange): boolean {
 }
 
 /**
+ * Valor de un `p-datepicker` en `selectionMode="range"` (`[inicio, fin]`, fechas locales) →
+ * rango ISO. Con solo el inicio elegido, el rango es ese día. Sin inicio → `null` (fix-176-b).
+ */
+export function pickerDatesToRange(
+  dates: readonly (Date | null)[] | null | undefined,
+): ExecDateRange | null {
+  const start = dates?.[0];
+  if (!start) return null;
+  const end = dates?.[1] ?? start;
+  return { from: localIso(start), to: localIso(end) };
+}
+
+function localIso(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
  * Período anterior de igual largo (AC11).
  * - Si el rango arranca el día 1 y no cruza de año, se desplaza por meses calendario
  *   (sep 1–27 → ago 1–27; mar completo → feb completo; ene–sep → mismo tramo año anterior).
