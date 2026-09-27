@@ -1,6 +1,6 @@
 # Asignación ASG-m-008 — Rediseño del Dashboard de admin como KPIs/reportes de empresa
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P1

@@ -1,6 +1,6 @@
 # Spec 0044-b — Dashboard Ejecutivo de Admin (fase 1: Clase B)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-27
 > **Owner:** Benjamín
 > **Priority:** P1
@@ -316,3 +316,4 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 - 2026-09-27 — D1 y D3 resueltas por el owner; D5 resuelta investigando el código. Quedan D2 y D4.
 - 2026-09-27 — D2 (liquidaciones, devengado) y D4 (sin servicios especiales) resueltas. Status → approved.
 - 2026-09-27 — métrica de éxito §8 ajustada: el dashboard no cuadra 1:1 con Reportes Contables por diseño (alcance Clase B + sueldos).
+- 2026-09-27 — implementada y verificada (28/28 ACs, ver acceptance.md). Status → done.

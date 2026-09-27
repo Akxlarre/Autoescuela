@@ -1,7 +1,7 @@
 # Plan 0044-b — Dashboard Ejecutivo de Admin (fase 1: Clase B)
 
 > **Spec:** [spec.md](./spec.md)
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-27
 > **Talla:** **L** — ⚠️ Revisar plan antes de implementar (tamaño alto). Estimación > 3 días.
 
@@ -261,3 +261,4 @@ página + QA 1 d.
 
 - 2026-09-27 — plan inicial (talla L confirmada por el owner)
 - 2026-09-27 — R6 resuelto (admin no usa clases en vivo/actividad), R5 → extender `app-kpi-card-variant`. Plan aprobado.
+- 2026-09-27 — implementado. Desvíos (detalle en acceptance.md): KPIs operativos en la tira del hero slim y 4 tarjetas financieras (con 8 tarjetas la celda de tabs no tenía alto útil); filtro de período en la cabecera de KPIs (el hero slim no proyecta contenido); `app-receivables-aging-panel` dibuja su propia barra (la leyenda de `app-horizontal-bar-chart` formatea horas); `app-kpi-card-variant` + input `compact`; sin borrar drawers (T4.2).
