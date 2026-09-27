@@ -195,6 +195,33 @@ describe('ExecutiveDashboardFacade', () => {
     expect(facade.kpis()?.ingresos.value).toBe(222);
   });
 
+  it('fix-174-b: una carga vieja no apaga el skeleton de la vigente', async () => {
+    const { facade, rpc } = setup();
+    // Cada carga dispara 7 RPC; las de cada ronda quedan retenidas hasta liberar esa ronda.
+    const pending: Array<Array<() => void>> = [[], []];
+    let calls = 0;
+    rpc.mockImplementation((name: string) => {
+      const roundIdx = Math.floor(calls++ / 7);
+      return new Promise((resolve) =>
+        pending[roundIdx].push(() => resolve(defaultResponses()[name])),
+      );
+    });
+    const release = (roundIdx: number) => pending[roundIdx].forEach((r) => r());
+
+    const first = facade.initialize(); // carga 1 (sin datos → skeleton)
+    const second = facade.applyRange({ from: '2026-08-01', to: '2026-08-31' }, 'last_month'); // carga 2
+    expect(facade.isLoading()).toBe(true);
+
+    release(0); // termina la carga vieja
+    await first;
+    expect(facade.isLoading()).toBe(true); // la vigente sigue en vuelo
+
+    release(1); // termina la vigente
+    await second;
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.kpis()).not.toBeNull();
+  });
+
   it('series usa el año del fin del rango', async () => {
     const { facade, rpc } = setup();
     facade.setRange({ from: '2025-03-01', to: '2025-03-31' }, 'custom');

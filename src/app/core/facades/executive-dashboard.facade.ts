@@ -68,6 +68,8 @@ export class ExecutiveDashboardFacade {
   private readonly _todayOps = signal<TodayOpsSummary | null>(null);
   private readonly _errors = signal<Partial<Record<ExecSection, string>>>({});
   private _initialized = false;
+  /** Número de la última carga con skeleton (ver `loadWithSkeleton`). */
+  private _skeletonTicket = 0;
 
   /** Guard anti respuestas fuera de orden (facades.md §7, AC-E3). */
   private readonly fetchGuard = createRequestGuard();
@@ -110,12 +112,7 @@ export class ExecutiveDashboardFacade {
       return;
     }
     this._initialized = true;
-    this._isLoading.set(true);
-    try {
-      await this.fetchAll();
-    } finally {
-      this._isLoading.set(false);
-    }
+    await this.loadWithSkeleton();
   }
 
   /** Cambia el período y recarga (sin skeleton si ya hay datos — AC23). */
@@ -134,11 +131,20 @@ export class ExecutiveDashboardFacade {
       await this.refreshSilently();
       return;
     }
+    await this.loadWithSkeleton();
+  }
+
+  /**
+   * Carga con skeleton. Solo la carga más reciente apaga `_isLoading`: si se disparó otra
+   * mientras esta esperaba, la vieja no debe dejar los paneles vacíos (fix-174-b).
+   */
+  private async loadWithSkeleton(): Promise<void> {
+    const ticket = ++this._skeletonTicket;
     this._isLoading.set(true);
     try {
       await this.fetchAll();
     } finally {
-      this._isLoading.set(false);
+      if (ticket === this._skeletonTicket) this._isLoading.set(false);
     }
   }
 
