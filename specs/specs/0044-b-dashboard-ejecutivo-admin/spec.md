@@ -261,8 +261,10 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 
 - El admin abre `/admin/dashboard` al menos 3 veces por semana (medible vía `audit_log`/analytics
   si existe).
-- Los números de Ingresos/Gastos del dashboard cuadran con Contabilidad para el mismo mes y sede
-  (validación manual con el dueño en el primer cierre de mes).
+- Los KPIs financieros declaran explícitamente su alcance ("Solo Clase B", "incluye sueldos
+  devengados de instructores") y la diferencia con Reportes Contables (que suma todos los cursos
+  y no incluye sueldos de instructores) es explicable partida por partida en el primer cierre de
+  mes con el dueño. Alinear Reportes Contables queda fuera de esta spec (ticket aparte).
 
 ---
 
@@ -313,3 +315,4 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 - 2026-09-27 — borrador de US (8) y ACs (23 + 5 edge cases); decisiones D1–D5 abiertas
 - 2026-09-27 — D1 y D3 resueltas por el owner; D5 resuelta investigando el código. Quedan D2 y D4.
 - 2026-09-27 — D2 (liquidaciones, devengado) y D4 (sin servicios especiales) resueltas. Status → approved.
+- 2026-09-27 — métrica de éxito §8 ajustada: el dashboard no cuadra 1:1 con Reportes Contables por diseño (alcance Clase B + sueldos).
