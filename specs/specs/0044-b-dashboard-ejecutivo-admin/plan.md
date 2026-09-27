@@ -1,7 +1,7 @@
 # Plan 0044-b — Dashboard Ejecutivo de Admin (fase 1: Clase B)
 
 > **Spec:** [spec.md](./spec.md)
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-09-27
 > **Talla:** **L** — ⚠️ Revisar plan antes de implementar (tamaño alto). Estimación > 3 días.
 
@@ -55,6 +55,7 @@ puros → Facade → componentes Dumb → página.
 |------|--------|--------|
 | `src/app/features/dashboard/dashboard.component.ts` | Reescritura del template y del TS: inyecta `ExecutiveDashboardFacade` + `DashboardAlertsFacade` (alertas); **deja de inyectar `DashboardFacade`**; se van accesos rápidos, actividad reciente y panel de clases en vivo. | AC20, AC22, estructura §7 de la spec. |
 | `src/app/features/dashboard/dashboard.component.scss` | Ajustes de grilla app-like. | AC22. |
+| `src/app/shared/components/kpi-card/kpi-card-variant.component.ts` | Inputs opcionales `secondaryTrend`/`secondaryTrendLabel` (retrocompatibles). | R5 — Δ vs año anterior. |
 | `src/app/app.config.ts` | Registrar íconos Lucide nuevos (si aparecen). | Regla de íconos. |
 | `indices/COMPONENTS.md`, `FACADES.md`, `MODELS.md`, `UTILS.md`, `DATABASE.md`, `USAGE-MAP.md` | Documentar artefactos nuevos. | Paso SINCRONIZAR. |
 
@@ -230,8 +231,8 @@ suscribir 6 tablas por un dashboard que no necesita actualizarse al segundo.
 | R2 | Instructor con `both_branches = true`: su costo se imputa solo a su sede principal (`users.branch_id`). | Media | Mismo criterio que Liquidaciones → consistente. Documentar en el tooltip. |
 | R3 | `class_b_sessions.status` tiene 7 valores (`scheduled`, `reserved`, `in_progress`, `completed`, `cancelled`, `no_show`, `absent`); si se cuenta mal, la tasa de cancelación engaña. | Media | Definir el denominador en la RPC con los valores exactos y cubrirlo en QA SQL. |
 | R4 | `SECURITY INVOKER` + RLS por fila puede ser lento con 24 meses de pagos. | Baja | Hay `idx_enrollments_branch_date`; medir con `EXPLAIN ANALYZE` en local; si hace falta, índice en `payments(payment_date)`. |
-| R5 | `app-kpi-card-variant` tiene un solo `trend`; mostrar 2 deltas puede requerir extenderlo. | Media | Primero intentar `trend` = Δ período + `trendLabel` = "vs año ant. +X%". Si no se lee bien, agregar input opcional `secondaryTrend` (retrocompatible) en vez de crear otra card. |
-| R6 | Borrar el contenido actual del dashboard admin elimina "Clases en vivo" y "Actividad reciente" que el admin quizás usa. | Media | Validar con el owner en `/verify`; los drawers no se borran hasta confirmar que quedan huérfanos. |
+| R5 | `app-kpi-card-variant` tiene un solo `trend`; mostrar 2 deltas requiere extenderlo. | Alta | **Owner (2026-09-27): probablemente sí.** Agregar inputs opcionales `secondaryTrend` + `secondaryTrendLabel` a `app-kpi-card-variant` (retrocompatibles, default `undefined` → no renderiza nada), en vez de crear otra card. Verificar en `USAGE-MAP.md` que ningún consumidor cambie. |
+| R6 | Borrar el contenido actual del dashboard admin elimina "Clases en vivo" y "Actividad reciente". | — | **Resuelto (owner, 2026-09-27): el admin no los usa.** Se eliminan del dashboard admin; los drawers se borran si quedan huérfanos (verificar `USAGE-MAP.md`). |
 | R7 | El dashboard y Reportes Contables muestran "Ingresos" distintos. | Alta | Por diseño (§8 spec). Rotular "Ingresos Clase B" y tooltip con la definición. |
 
 ---
@@ -259,3 +260,4 @@ página + QA 1 d.
 ## Changelog
 
 - 2026-09-27 — plan inicial (talla L confirmada por el owner)
+- 2026-09-27 — R6 resuelto (admin no usa clases en vivo/actividad), R5 → extender `app-kpi-card-variant`. Plan aprobado.
