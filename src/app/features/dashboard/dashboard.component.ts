@@ -32,6 +32,7 @@ import {
   buildExecKpiCards,
   chileTodayIso,
   describeRange,
+  toHeroKpi,
 } from '@core/utils/executive-dashboard.utils';
 import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
 
@@ -75,22 +76,17 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
       #bentoGrid
       aria-label="Dashboard ejecutivo"
     >
-      <!-- ── Hero: título + filtro de período ── -->
+      <!-- ── Hero slim: título + contexto (sede y período) ── -->
       <app-section-hero
-        class="bento-hero"
         title="Dashboard ejecutivo"
         [contextLine]="contextLine()"
         [actions]="[]"
         [animateOnInit]="false"
         density="slim"
-      >
-        <app-exec-period-filter
-          [preset]="facade.preset()"
-          [range]="facade.range()"
-          [today]="today"
-          (rangeChange)="onRangeChange($event)"
-        />
-      </app-section-hero>
+        [kpis]="heroKpis()"
+        [loading]="kpisLoading()"
+        [loadingKpiCount]="4"
+      />
 
       <!-- ── KPIs (2 filas × 4) ── -->
       @if (facade.sectionError('kpis') && !facade.kpis()) {
@@ -105,33 +101,46 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
           />
         </div>
       } @else {
-        <div class="bento-banner exec-kpis">
-          @for (card of kpiCards(); track card.id; let first = $first) {
-            <div class="exec-kpi" [pTooltip]="card.tooltip" tooltipPosition="bottom">
-              <app-kpi-card-variant
-                [label]="card.label"
-                [value]="card.value"
-                [prefix]="card.prefix"
-                [suffix]="card.suffix"
-                [icon]="card.icon"
-                [color]="card.color"
-                [accent]="first"
-                [trend]="card.trend"
-                [trendLabel]="card.trendLabel"
-                [secondaryTrend]="card.secondaryTrend"
-                [secondaryTrendLabel]="card.secondaryTrendLabel"
-                [invertTrend]="card.invertTrend"
-                [subValue]="card.subValue"
-                [loading]="kpisLoading()"
-              />
-            </div>
-          } @empty {
-            @for (i of placeholderCards; track i) {
-              <div class="exec-kpi">
-                <app-kpi-card-variant label="" [value]="0" [loading]="true" />
+        <div class="bento-banner flex flex-col gap-3">
+          <!-- Filtro de período: vive acá porque el hero slim no proyecta contenido -->
+          <div class="flex flex-wrap items-end justify-between gap-2">
+            <p class="micro-label m-0">Indicadores del período · Clase B</p>
+            <app-exec-period-filter
+              [preset]="facade.preset()"
+              [range]="facade.range()"
+              [today]="today"
+              (rangeChange)="onRangeChange($event)"
+            />
+          </div>
+          <div class="exec-kpis">
+            @for (card of financeCards(); track card.id; let first = $first) {
+              <div class="exec-kpi" [pTooltip]="card.tooltip" tooltipPosition="bottom">
+                <app-kpi-card-variant
+                  [label]="card.label"
+                  [value]="card.value"
+                  [prefix]="card.prefix"
+                  [suffix]="card.suffix"
+                  [icon]="card.icon"
+                  [color]="card.color"
+                  [accent]="first"
+                  [trend]="card.trend"
+                  [trendLabel]="card.trendLabel"
+                  [secondaryTrend]="card.secondaryTrend"
+                  [secondaryTrendLabel]="card.secondaryTrendLabel"
+                  [invertTrend]="card.invertTrend"
+                  [subValue]="card.subValue"
+                  [compact]="true"
+                  [loading]="kpisLoading()"
+                />
               </div>
+            } @empty {
+              @for (i of placeholderCards; track i) {
+                <div class="exec-kpi">
+                  <app-kpi-card-variant label="" [value]="0" [compact]="true" [loading]="true" />
+                </div>
+              }
             }
-          }
+          </div>
         </div>
       }
 
@@ -305,7 +314,7 @@ export class DashboardComponent {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   protected readonly today = chileTodayIso();
-  protected readonly placeholderCards = [1, 2, 3, 4, 5, 6, 7, 8];
+  protected readonly placeholderCards = [1, 2, 3, 4];
 
   protected readonly tabs: TabOption[] = [
     { id: 'tendencias', label: 'Tendencias', icon: 'trending-up' },
@@ -326,6 +335,10 @@ export class DashboardComponent {
     const kpis = this.facade.kpis();
     return kpis ? buildExecKpiCards(kpis, this.facade.receivables()) : [];
   });
+  /** Plata (ingresos, gastos, resultado, cartera) → tarjetas grandes. */
+  protected readonly financeCards = computed(() => this.kpiCards().slice(0, 4));
+  /** Operación (matrículas, alumnos, clases, cancelación) → tira de KPIs del hero slim. */
+  protected readonly heroKpis = computed(() => this.kpiCards().slice(4).map(toHeroKpi));
 
   protected readonly seriesYear = computed(
     () => this.facade.series()?.currentYear ?? Number(this.facade.range().to.slice(0, 4)),
@@ -378,7 +391,7 @@ export class DashboardComponent {
 
   protected alertIcon(severity: string): string {
     if (severity === 'warning') return 'triangle-alert';
-    if (severity === 'error') return 'octagon-alert';
+    if (severity === 'error') return 'circle-x';
     if (severity === 'success') return 'check-circle';
     return 'info';
   }

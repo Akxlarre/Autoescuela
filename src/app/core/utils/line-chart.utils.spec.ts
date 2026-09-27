@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildLinePath, formatCompactNumber, niceMax, pointY, yTicks } from './line-chart.utils';
+import {
+  buildLinePath,
+  formatCompactNumber,
+  niceMax,
+  niceTickCount,
+  pointY,
+  yTicks,
+} from './line-chart.utils';
 
 describe('niceMax', () => {
   it('redondea hacia arriba a un número "limpio"', () => {
@@ -12,6 +19,16 @@ describe('niceMax', () => {
   it('serie vacía o en 0 no divide por cero', () => {
     expect(niceMax(0)).toBe(1);
     expect(niceMax(-5)).toBe(1);
+  });
+});
+
+describe('niceTickCount', () => {
+  it('elige un número de tramos que da ticks redondos', () => {
+    expect(niceTickCount(5_000_000)).toBe(5); // 1M, 2M, …
+    expect(niceTickCount(8_000_000)).toBe(4); // 2M, 4M, …
+    expect(niceTickCount(15)).toBe(3); // 5, 10, 15
+    expect(niceTickCount(2_500_000)).toBe(5); // 0,5M
+    expect(niceTickCount(1)).toBe(4);
   });
 });
 

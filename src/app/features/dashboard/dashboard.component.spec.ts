@@ -96,6 +96,19 @@ describe('DashboardComponent (dashboard ejecutivo)', () => {
       aprobacionEnsayosPct: null,
     });
     expect(component.kpiCards()).toHaveLength(8);
+    // 4 financieros como tarjetas grandes, 4 operativos en la tira del hero
+    expect(component.financeCards().map((c: { id: string }) => c.id)).toEqual([
+      'ingresos',
+      'gastos',
+      'resultado',
+      'saldo',
+    ]);
+    expect(component.heroKpis().map((k: { id: string }) => k.id)).toEqual([
+      'matriculas',
+      'activos',
+      'clases',
+      'cancelacion',
+    ]);
   });
 
   it('switch de layout por contenedor: desktop → paneles lado a lado', () => {

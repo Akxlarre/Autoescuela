@@ -13,6 +13,28 @@ export function niceMax(max: number): number {
   return step * base;
 }
 
+/**
+ * Cantidad de tramos del eje Y para que cada tick sea un número redondo, según el primer
+ * dígito de `max` (que ya viene de `niceMax`): 5 → 1,2,3,4,5 · 8 → 2,4,6,8 · 15 → 5,10,15.
+ */
+export function niceTickCount(max: number): number {
+  if (!Number.isFinite(max) || max <= 0) return 4;
+  const lead = max / 10 ** Math.floor(Math.log10(max));
+  const byLead: [number, number][] = [
+    [1, 4],
+    [1.5, 3],
+    [2, 4],
+    [2.5, 5],
+    [3, 3],
+    [4, 4],
+    [5, 5],
+    [6, 3],
+    [8, 4],
+    [10, 5],
+  ];
+  return byLead.find(([l]) => Math.abs(l - lead) < 1e-9)?.[1] ?? 4;
+}
+
 /** Valores del eje Y de 0 a `max` en `count` tramos iguales. */
 export function yTicks(max: number, count = 4): number[] {
   return Array.from({ length: count + 1 }, (_, i) => (max / count) * i);

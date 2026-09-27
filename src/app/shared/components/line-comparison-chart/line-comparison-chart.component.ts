@@ -4,6 +4,7 @@ import {
   buildLinePath,
   formatCompactNumber,
   niceMax,
+  niceTickCount,
   pointX,
   pointY,
   yTicks,
@@ -164,7 +165,7 @@ export class LineComparisonChartComponent {
     return niceMax(Math.max(0, ...all));
   });
 
-  protected readonly ticks = computed(() => yTicks(this.max(), 4));
+  protected readonly ticks = computed(() => yTicks(this.max(), niceTickCount(this.max())));
 
   protected readonly currentPath = computed(() =>
     buildLinePath(

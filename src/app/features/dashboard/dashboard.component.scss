@@ -12,8 +12,13 @@
 
 .exec-kpis {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
+
+  // Montos CLP largos ($12.345.678): bajo 480px de contenedor no caben 2 por fila.
+  @container layoutmain (min-width: 480px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   // 768px = $bp-md de _bento-grid.scss (mismo literal que usa secretaria-matricula).
   @container layoutmain (min-width: 768px) {

@@ -20,6 +20,7 @@ import type {
   StudentStageCounts,
   TodayOpsSummary,
 } from '@core/models/ui/executive-dashboard.model';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
   ExecInstructorHoursRowDto,
   ExecKpisDto,
@@ -428,12 +429,11 @@ export function buildExecKpiCards(
       ...base,
       ...withDeltas(s.resultado),
       id: 'resultado',
-      label: 'Resultado operacional',
+      label: `Resultado · margen ${margin}`,
       value: Math.abs(res),
       prefix: res < 0 ? '-$' : '$',
       icon: 'landmark',
       color: res < 0 ? 'error' : 'default',
-      trendLabel: `${prevLabel(s.resultado.deltaPrev)} · Margen ${margin}`,
       tooltip: 'Ingresos Clase B menos gastos (incluye sueldos devengados de instructores).',
     },
     {
@@ -487,6 +487,29 @@ export function buildExecKpiCards(
       tooltip: '(Canceladas + inasistencias) / (realizadas + canceladas + inasistencias).',
     },
   ];
+}
+
+/**
+ * Convierte una tarjeta KPI al formato compacto de la tira de KPIs del hero slim.
+ * El hero muestra un solo trend: va el de período anterior; el de año anterior pasa a subValue.
+ */
+export function toHeroKpi(card: ExecKpiCard): SectionHeroKpi {
+  const yoyText =
+    card.secondaryTrend !== undefined
+      ? `${card.secondaryTrend > 0 ? '+' : ''}${pctText(card.secondaryTrend)} vs año ant.`
+      : card.secondaryTrendLabel;
+  return {
+    id: card.id,
+    label: card.label,
+    value: card.value.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
+    prefix: card.prefix,
+    suffix: card.suffix,
+    trend: card.trend,
+    trendSuffix: '%',
+    trendLabel: card.trend !== undefined ? 'vs per. ant.' : undefined,
+    subValue: card.subValue || yoyText,
+    color: card.color,
+  };
 }
 
 export function mapTodayOps(dto: ExecTodayOpsDto): TodayOpsSummary {

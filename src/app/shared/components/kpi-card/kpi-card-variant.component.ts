@@ -27,6 +27,7 @@ import { trendView } from '@core/utils/kpi-trend.utils';
       appCardHover
       class="bento-card flex flex-col gap-2 h-full"
       [class.card-accent]="accent()"
+      [class.kpi-compact]="compact()"
       [attr.data-color-variant]="color()"
       [attr.aria-busy]="loading()"
     >
@@ -61,19 +62,25 @@ import { trendView } from '@core/utils/kpi-trend.utils';
         <div class="flex flex-col gap-2">
           <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
             @if (prefix()) {
-              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
+              <span
+                class="font-bold align-baseline text-text-primary"
+                [class]="compact() ? 'text-lg' : 'text-2xl md:text-3xl'"
+              >
                 {{ prefix() }}
               </span>
             }
             <span
               #valueEl
               class="font-display font-bold align-baseline truncate leading-none text-text-primary"
-              [style.font-size]="'clamp(var(--text-2xl), 8vw, var(--text-4xl))'"
+              [style.font-size]="valueFontSize()"
               title="{{ value() }}"
               >{{ value() }}</span
             >
             @if (suffix()) {
-              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
+              <span
+                class="font-bold align-baseline text-text-primary"
+                [class]="compact() ? 'text-lg' : 'text-2xl md:text-3xl'"
+              >
                 {{ suffix() }}
               </span>
             }
@@ -140,6 +147,11 @@ import { trendView } from '@core/utils/kpi-trend.utils';
         display: block;
         height: 100%;
       }
+      /* Modo compacto: menos aire para grillas densas (spec 0044-b). */
+      .kpi-compact {
+        padding: var(--space-4);
+        gap: var(--space-1);
+      }
     `,
   ],
 })
@@ -162,6 +174,12 @@ export class KpiCardVariantComponent {
   /** Segunda comparación opcional (ej. vs año anterior). `undefined` = no se muestra. */
   readonly secondaryTrend = input<number | undefined>(undefined);
   readonly secondaryTrendLabel = input<string>('');
+  /** Número más chico, para grillas densas con montos largos (ej. $12.345.678). */
+  readonly compact = input<boolean>(false);
+
+  protected readonly valueFontSize = computed(() =>
+    this.compact() ? 'var(--text-2xl)' : 'clamp(var(--text-2xl), 8vw, var(--text-4xl))',
+  );
 
   protected readonly labelColor = computed(() => {
     switch (this.color()) {

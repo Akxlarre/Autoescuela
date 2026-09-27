@@ -18,6 +18,7 @@ import {
   buildExecKpiCards,
   describeRange,
   seriesCurrentMonth,
+  toHeroKpi,
 } from './executive-dashboard.utils';
 import type { ExecKpiSummary } from '@core/models/ui/executive-dashboard.model';
 
@@ -403,7 +404,7 @@ describe('buildExecKpiCards', () => {
     expect(c.value).toBe(500);
     expect(c.prefix).toBe('-$');
     expect(c.color).toBe('error');
-    expect(c.trendLabel).toContain('Margen -50%');
+    expect(c.label).toBe('Resultado · margen -50%');
   });
 
   it('saldo por cobrar sin cartera cargada → 0', () => {
@@ -415,6 +416,45 @@ describe('buildExecKpiCards', () => {
     const cards = buildExecKpiCards(summary, receivables);
     expect(cards[6].subValue).toBe('6 en agenda');
     expect(cards[7].subValue).toBe('Sin clases en el período');
+  });
+});
+
+describe('toHeroKpi', () => {
+  const card = {
+    id: 'matriculas',
+    label: 'Nuevas matrículas',
+    value: 9,
+    prefix: '',
+    suffix: '',
+    icon: 'user-plus',
+    color: 'default' as const,
+    trend: 28.6,
+    trendLabel: 'vs período anterior',
+    secondaryTrend: 50,
+    secondaryTrendLabel: 'vs año anterior',
+    invertTrend: false,
+    subValue: '',
+    tooltip: '',
+  };
+
+  it('usa el trend de período anterior y mueve el de año anterior al subValue', () => {
+    const k = toHeroKpi(card);
+    expect(k.trend).toBe(28.6);
+    expect(k.trendLabel).toBe('vs per. ant.');
+    expect(k.subValue).toBe('+50% vs año ant.');
+  });
+
+  it('respeta el subValue propio y formatea decimales en es-CL', () => {
+    const k = toHeroKpi({
+      ...card,
+      value: 3.1,
+      suffix: '%',
+      trend: undefined,
+      subValue: 'de las clases',
+    });
+    expect(k.value).toBe('3,1');
+    expect(k.trendLabel).toBeUndefined();
+    expect(k.subValue).toBe('de las clases');
   });
 });
 

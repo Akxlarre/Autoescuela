@@ -143,6 +143,8 @@ const PROVIDED_ICONS = new Set([
   'receipt',
   'tag',
   'wallet',
+  'hand-coins',
+  'badge-check',
   'at-sign',
   'bell',
   'bell-off',

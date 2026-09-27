@@ -9,7 +9,9 @@
 
 .chart-body {
   flex: 1;
-  min-height: 220px;
+  // Piso bajo a propósito: en desktop el alto lo da la celda .bento-fill (≈ 900px de
+  // viewport deja ~180px para el trazado); bajo este piso, la celda scrollea por dentro.
+  min-height: 160px;
   display: grid;
   grid-template-columns: 44px 1fr;
   grid-template-rows: 1fr auto;
