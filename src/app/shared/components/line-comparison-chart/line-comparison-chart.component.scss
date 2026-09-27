@@ -1,0 +1,149 @@
+// app-line-comparison-chart (spec 0044-b) — solo tokens del DS.
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.chart-body {
+  flex: 1;
+  min-height: 220px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: 1fr auto;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+}
+
+.y-axis {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.y-tick {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.plot {
+  position: relative;
+  grid-row: 1;
+  grid-column: 2;
+  min-height: 0;
+}
+
+.plot-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.grid-line {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+
+.line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line--current {
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+}
+
+.line--previous {
+  stroke: var(--text-muted);
+  stroke-width: 1.75;
+  stroke-dasharray: 5 4;
+}
+
+.hover-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.hover-col {
+  position: relative;
+}
+
+.hover-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px dashed var(--border-default, var(--border-subtle));
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  transform: translate(-50%, 50%);
+  border: 2px solid var(--card-bg, var(--bg-surface));
+}
+
+.dot--current {
+  background: var(--color-primary);
+}
+
+.dot--previous {
+  background: var(--text-muted);
+}
+
+.tooltip {
+  position: absolute;
+  top: 4px;
+  transform: translateX(12px);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.tooltip--flip {
+  transform: translateX(calc(-100% - 12px));
+}
+
+.x-axis {
+  grid-row: 2;
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.x-tick {
+  text-align: center;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+.legend-line {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+}
+
+.legend-line--current {
+  border-top: 2.5px solid var(--color-primary);
+}
+
+.legend-line--previous {
+  border-top: 2px dashed var(--text-muted);
+}

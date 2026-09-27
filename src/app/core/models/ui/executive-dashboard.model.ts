@@ -22,6 +22,12 @@ export interface ExecDateRange {
   to: string;
 }
 
+/** Evento del filtro de período: rango elegido + preset que lo originó. */
+export interface ExecRangeChange {
+  range: ExecDateRange;
+  preset: ExecPeriodPreset;
+}
+
 /** Dirección de una variación porcentual (AC11/AC12). */
 export type DeltaKind = 'up' | 'down' | 'new' | 'none';
 
@@ -121,6 +127,29 @@ export interface TodayOpsSummary {
   instructoresActivos: number;
   vehiculosDisponibles: number;
   vehiculosMantencion: number;
+}
+
+/** Configuración de una tarjeta KPI lista para `app-kpi-card-variant`. */
+export interface ExecKpiCard {
+  id: string;
+  label: string;
+  value: number;
+  prefix: string;
+  suffix: string;
+  icon: string;
+  color: 'default' | 'success' | 'warning' | 'error';
+  /** Δ% vs período anterior; `undefined` si no hay base para comparar. */
+  trend?: number;
+  trendLabel: string;
+  /** Δ% vs año anterior; `undefined` si no hay base para comparar. */
+  secondaryTrend?: number;
+  secondaryTrendLabel: string;
+  /** Subir es malo (gastos). */
+  invertTrend: boolean;
+  /** Texto que reemplaza a trendLabel (tarjetas sin comparación). */
+  subValue: string;
+  /** Explicación de cómo se calcula (tooltip). */
+  tooltip: string;
 }
 
 /** Secciones del dashboard que pueden fallar de forma independiente (AC-E2). */

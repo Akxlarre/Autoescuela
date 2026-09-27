@@ -3,79 +3,49 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   effect,
   inject,
-  afterNextRender,
   ElementRef,
+  signal,
   viewChild,
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import type {
-  SectionHeroAction,
-  SectionHeroChip,
-  SectionHeroKpi,
-} from '@core/models/ui/section-hero.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
-import { DashboardFacade } from '@core/facades/dashboard.facade';
+import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
+import { ExecPeriodFilterComponent } from '@shared/components/exec-period-filter/exec-period-filter.component';
+import { LineComparisonChartComponent } from '@shared/components/line-comparison-chart/line-comparison-chart.component';
+import { InstructorHoursTableComponent } from '@shared/components/instructor-hours-table/instructor-hours-table.component';
+import { StudentStagesPanelComponent } from '@shared/components/student-stages-panel/student-stages-panel.component';
+import { ReceivablesAgingPanelComponent } from '@shared/components/receivables-aging-panel/receivables-aging-panel.component';
+import { TodayOpsStripComponent } from '@shared/components/today-ops-strip/today-ops-strip.component';
+import { ExecutiveDashboardFacade } from '@core/facades/executive-dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
-import { LayoutService } from '@core/services/ui/layout.service';
-import { sliceByBudget } from '@core/utils/layout-tier.utils';
-import { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
-import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
-import { RegistrarPagoDrawerComponent } from '../admin/pagos/registrar-pago-drawer.component';
-import { PagosFacade } from '@core/facades/pagos.facade';
-import { RegistrarEgresoDrawerComponent } from '../admin/contabilidad-cuadratura/registrar-egreso-drawer.component';
-import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
-import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
-import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
-import { DailyAgendaDrawerComponent } from './daily-agenda-drawer/daily-agenda-drawer.component';
-import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { AuthFacade } from '@core/facades/auth.facade';
-import { RouterLink } from '@angular/router';
-import { AgendaFacade } from '@core/facades/agenda.facade';
-import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
-import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
-import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
-import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
+import type { ExecRangeChange } from '@core/models/ui/executive-dashboard.model';
+import {
+  buildExecKpiCards,
+  chileTodayIso,
+  describeRange,
+} from '@core/utils/executive-dashboard.utils';
+import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
+
+type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
 
 /**
- * DashboardComponent — Página principal de la aplicación.
+ * Dashboard Ejecutivo de Admin (spec 0044-b) — `/admin/dashboard`.
  *
- * Esta página es la REFERENCIA CANÓNICA del sistema de diseño.
- * Demuestra la composición correcta de todos los patrones del blueprint:
+ * Vista de negocio para el dueño: KPIs financieros y operativos de Clase B con comparación
+ * contra el período anterior y el año anterior, tendencias de 12 meses, productividad de
+ * instructores, estado de alumnos, cartera y un resumen compacto de la operación de hoy.
  *
- * ┌── Patrones ilustrados ──────────────────────────────────────────────┐
- * │  app-kpi-card      → métricas con contador GSAP animado            │
- * │  indicator-live    → dot pulsante de estado en tiempo real         │
- * │  app-icon          → iconos Lucide (cero emojis)                   │
- * │  [appCardHover]    → hover GSAP en todas las cards                 │
- * │  [appBentoGridLayout] → grid con FLIP animation en reflow          │
- * │  animateBentoGrid  → stagger de entrada de las celdas              │
- * │  animateHero       → blur + scale en el banner principal           │
- * │  staggerListItems  → entrada escalonada en listas de actividad     │
- * │  skeleton → content → [appAnimateIn] en transición de carga        │
- * └─────────────────────────────────────────────────────────────────────┘
- *
- * CÓMO ADAPTAR AL PROYECTO:
- * 1. Reemplaza los `kpis` y `activities` estáticos con señales del Facade.
- * 2. Crea un `DashboardFacade` en `core/services/dashboard.facade.ts`.
- * 3. Expón los datos con `toSignal()` y conéctalos a los inputs de los componentes.
- *
- * @example (en app.routes.ts)
- * {
- *   path: 'dashboard',
- *   loadComponent: () =>
- *     import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
- * }
+ * App-like: hero + 2 filas de KPIs + una celda .bento-fill con tabs que scrollea por dentro.
+ * El dashboard de secretaría es otro componente y no cambia (AC21).
  */
 @Component({
   selector: 'app-dashboard',
@@ -85,497 +55,338 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
   imports: [
     TooltipModule,
     BentoGridLayoutDirective,
-    CardHoverDirective,
     IconComponent,
     SectionHeroComponent,
     EmptyStateComponent,
-    LiveClassesPanelComponent,
+    KpiCardVariantComponent,
+    TabsComponent,
+    ExecPeriodFilterComponent,
+    LineComparisonChartComponent,
+    InstructorHoursTableComponent,
+    StudentStagesPanelComponent,
+    ReceivablesAgingPanelComponent,
+    TodayOpsStripComponent,
   ],
   template: `
-    <!-- ═══════════════════════════════════════════════════════════════
-         BENTO GRID — contenedor principal del dashboard
-         [appBentoGridLayout] habilita FLIP animation en reflows
-    ════════════════════════════════════════════════════════════════ -->
     <section
-      class="bento-grid bento-grid--fill-screen-2 w-full"
+      class="bento-grid bento-grid--fill-screen-kpi exec-grid w-full"
       [class.force-compact]="isDrawerOpen()"
       appBentoGridLayout
       #bentoGrid
-      aria-label="Panel de control"
+      aria-label="Dashboard ejecutivo"
     >
-      <!-- ── HERO slim — título + KPIs en una sola barra ────────────────── -->
+      <!-- ── Hero: título + filtro de período ── -->
       <app-section-hero
-        [title]="heroSectionTitle()"
-        [contextLine]="heroContextLine()"
-        [chips]="heroChips()"
-        [actions]="heroActions()"
+        class="bento-hero"
+        title="Dashboard ejecutivo"
+        [contextLine]="contextLine()"
+        [actions]="[]"
         [animateOnInit]="false"
         density="slim"
-        [kpis]="heroKpis()"
-        [loading]="loading()"
-        [loadingKpiCount]="4"
-        (actionClick)="handleQuickAction($event)"
-      />
-
-      <!-- ── Izquierda: Live Classes (Lista vertical compacta) ─── -->
-      <app-live-classes-panel
-        class="bento-wide bento-card bento-fill w-full"
-        appCardHover
-        data-row-span-md="2"
-        data-row-span="2"
-        [classes]="liveClasses()"
-        [loading]="loading()"
-        [maxItems]="liveClassesBudget()"
-        (actionClick)="handleLiveClassAction($event)"
-        (viewAllClick)="openAgenda()"
-      />
-
-      <!-- ── Derecha Arriba: Actividad reciente ─── -->
-      <div
-        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
-        appCardHover
       >
-        <!-- Header de sección -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <app-icon name="activity" [size]="16" class="text-brand" />
-            <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
-          </div>
+        <app-exec-period-filter
+          [preset]="facade.preset()"
+          [range]="facade.range()"
+          [today]="today"
+          (rangeChange)="onRangeChange($event)"
+        />
+      </app-section-hero>
+
+      <!-- ── KPIs (2 filas × 4) ── -->
+      @if (facade.sectionError('kpis') && !facade.kpis()) {
+        <div class="bento-banner card flex items-center justify-center">
+          <app-empty-state
+            icon="triangle-alert"
+            message="No se pudieron cargar los indicadores"
+            [subtitle]="facade.sectionError('kpis') ?? ''"
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="retry()"
+          />
+        </div>
+      } @else {
+        <div class="bento-banner exec-kpis">
+          @for (card of kpiCards(); track card.id; let first = $first) {
+            <div class="exec-kpi" [pTooltip]="card.tooltip" tooltipPosition="bottom">
+              <app-kpi-card-variant
+                [label]="card.label"
+                [value]="card.value"
+                [prefix]="card.prefix"
+                [suffix]="card.suffix"
+                [icon]="card.icon"
+                [color]="card.color"
+                [accent]="first"
+                [trend]="card.trend"
+                [trendLabel]="card.trendLabel"
+                [secondaryTrend]="card.secondaryTrend"
+                [secondaryTrendLabel]="card.secondaryTrendLabel"
+                [invertTrend]="card.invertTrend"
+                [subValue]="card.subValue"
+                [loading]="kpisLoading()"
+              />
+            </div>
+          } @empty {
+            @for (i of placeholderCards; track i) {
+              <div class="exec-kpi">
+                <app-kpi-card-variant label="" [value]="0" [loading]="true" />
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- ── Celda protagonista: tabs con scroll interno ── -->
+      <div class="bento-banner bento-card bento-fill flex flex-col min-h-0 overflow-hidden">
+        <div class="shrink-0 border-b border-border-subtle mb-4">
+          <app-tabs [tabs]="tabs" [activeId]="activeTab()" (activeIdChange)="setTab($event)" />
         </div>
 
-        <!-- Lista de actividad con stagger -->
-        @if (loading()) {
-          <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2, 3]; track i) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-              >
-                <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-1">
-                  <div class="h-4 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-3 bg-border-subtle rounded w-1/3"></div>
-                </div>
-                <!-- Timestamp placeholder -->
-                <div class="shrink-0 w-24 h-3 bg-border-subtle rounded self-center"></div>
-              </li>
-            }
-          </ul>
-        } @else {
-          <div class="scroll-fade flex-1 min-h-0">
-            <ul
-              #activityList
-              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-            >
-              @for (item of visibleActivities(); track item.id; let i = $index) {
-                <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                >
-                  <!-- Ícono del evento -->
-                  <div
-                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                    [style.background]="item.iconBg"
-                    [style.color]="item.iconColor"
-                  >
-                    <app-icon [name]="item.icon" [size]="14" />
-                  </div>
-
-                  <!-- Contenido del evento -->
-                  <div class="flex-1 min-w-0">
-                    <p
-                      class="m-0 text-sm font-medium text-text-primary truncate"
-                      [pTooltip]="item.title"
-                      tooltipPosition="top"
-                    >
-                      {{ item.title }}
-                    </p>
-                    <p
-                      class="m-0 text-xs text-text-muted truncate"
-                      [pTooltip]="item.description"
-                      tooltipPosition="bottom"
-                    >
-                      {{ item.description }}
-                    </p>
-                  </div>
-
-                  <!-- Timestamp -->
-                  <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
-                </li>
-              } @empty {
-                <li class="flex-1 flex flex-col justify-center py-6">
+        <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+          @switch (activeTab()) {
+            @case ('tendencias') {
+              @if (facade.sectionError('series')) {
+                <div class="h-full flex items-center justify-center">
                   <app-empty-state
-                    icon="activity"
-                    message="Sin actividad reciente"
-                    subtitle="Aún no hay registros en la escuela."
+                    icon="triangle-alert"
+                    message="No se pudieron cargar las tendencias"
+                    actionLabel="Reintentar"
+                    actionIcon="refresh-cw"
+                    (action)="retry()"
                   />
-                </li>
+                </div>
+              } @else {
+                <div class="exec-split" [class.exec-split--row]="isDesktopLayout()">
+                  <app-line-comparison-chart
+                    class="exec-split__item"
+                    title="Ventas mensuales Clase B"
+                    subtitle="Pagos recibidos por mes"
+                    [points]="facade.series()?.ingresos ?? []"
+                    [currentYear]="seriesYear()"
+                    [money]="true"
+                    [loading]="loading()"
+                  />
+                  <app-line-comparison-chart
+                    class="exec-split__item"
+                    title="Matrículas y estacionalidad"
+                    subtitle="Nuevas matrículas Clase B por mes"
+                    [points]="facade.series()?.matriculas ?? []"
+                    [currentYear]="seriesYear()"
+                    [loading]="loading()"
+                  />
+                </div>
               }
-            </ul>
-          </div>
-          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-            <button
-              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-              (click)="openRecentActivity()"
-              data-llm-action="ver-toda-actividad-reciente"
-            >
-              Ver toda la actividad
-            </button>
-          </div>
-        }
-      </div>
+            }
+            @case ('instructores') {
+              @if (facade.sectionError('instructores')) {
+                <div class="h-full flex items-center justify-center">
+                  <app-empty-state
+                    icon="triangle-alert"
+                    message="No se pudieron cargar las horas de instrucción"
+                    actionLabel="Reintentar"
+                    actionIcon="refresh-cw"
+                    (action)="retry()"
+                  />
+                </div>
+              } @else {
+                <app-instructor-hours-table
+                  class="h-full"
+                  [rows]="facade.instructorHours()"
+                  [loading]="loading()"
+                />
+              }
+            }
+            @case ('alumnos') {
+              <div class="exec-split" [class.exec-split--row]="isDesktopLayout()">
+                <app-student-stages-panel
+                  class="exec-split__item"
+                  [stages]="facade.stages()"
+                  [examPassRate]="facade.kpis()?.aprobacionEnsayosPct ?? null"
+                  [loading]="loading()"
+                />
+                @if (facade.sectionError('cartera')) {
+                  <div class="exec-split__item flex items-center justify-center">
+                    <app-empty-state
+                      icon="triangle-alert"
+                      message="No se pudo cargar la cartera"
+                      actionLabel="Reintentar"
+                      actionIcon="refresh-cw"
+                      (action)="retry()"
+                    />
+                  </div>
+                } @else {
+                  <app-receivables-aging-panel
+                    class="exec-split__item"
+                    [summary]="facade.receivables()"
+                    [loading]="loading()"
+                  />
+                }
+              </div>
+            }
+            @case ('hoy') {
+              <div class="exec-split" [class.exec-split--row]="isDesktopLayout()">
+                @if (facade.sectionError('hoy')) {
+                  <div class="exec-split__item flex items-center justify-center">
+                    <app-empty-state
+                      icon="triangle-alert"
+                      message="No se pudo cargar la operación de hoy"
+                      actionLabel="Reintentar"
+                      actionIcon="refresh-cw"
+                      (action)="retry()"
+                    />
+                  </div>
+                } @else {
+                  <app-today-ops-strip
+                    class="exec-split__item"
+                    [ops]="facade.todayOps()"
+                    [loading]="loading()"
+                  />
+                }
 
-      <!-- ── Derecha Abajo: Alertas Importantes ───── -->
-      <div
-        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
-        appCardHover
-      >
-        <!-- Header de sección -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <app-icon name="bell" [size]="16" class="text-warning" />
-            <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
-          </div>
+                <div class="exec-split__item flex flex-col min-h-0">
+                  <div class="flex items-center justify-between gap-2 mb-3 shrink-0">
+                    <div class="flex items-center gap-2">
+                      <app-icon name="bell" [size]="16" class="text-text-secondary" />
+                      <h2 class="item-title m-0">Alertas</h2>
+                    </div>
+                    @if (alerts().length) {
+                      <button
+                        class="btn-ghost cursor-pointer"
+                        (click)="openAlerts()"
+                        data-llm-action="ver-todas-alertas-dashboard"
+                      >
+                        Ver todas
+                      </button>
+                    }
+                  </div>
+                  <ul class="m-0 p-0 list-none flex flex-col gap-1">
+                    @for (alert of visibleAlerts(); track alert.id) {
+                      <li
+                        class="flex items-start gap-3 py-2 border-b last:border-b-0 border-border-subtle"
+                      >
+                        <app-icon
+                          [name]="alertIcon(alert.severity)"
+                          [size]="14"
+                          class="shrink-0 mt-0.5"
+                          [style.color]="alertColor(alert.severity)"
+                        />
+                        <div class="flex-1 min-w-0">
+                          <p class="m-0 text-sm text-text-primary truncate">{{ alert.title }}</p>
+                          <p class="m-0 text-xs text-text-muted truncate">
+                            {{ alert.description }}
+                          </p>
+                        </div>
+                      </li>
+                    } @empty {
+                      <li class="py-4">
+                        <app-empty-state
+                          icon="bell"
+                          message="Todo en orden"
+                          subtitle="No hay alertas importantes por revisar."
+                        />
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            }
+          }
         </div>
-
-        @if (loading()) {
-          <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2]; track i) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-              >
-                <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-1">
-                  <div class="h-4 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-3 bg-border-subtle rounded w-1/3"></div>
-                </div>
-                <!-- Botón descartar placeholder -->
-                <div class="shrink-0 w-6 h-6 rounded-full bg-border-subtle self-center"></div>
-              </li>
-            }
-          </ul>
-        } @else {
-          <div class="scroll-fade flex-1 min-h-0">
-            <ul
-              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-            >
-              @for (alert of visibleAlerts(); track alert.id; let i = $index) {
-                <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                >
-                  <!-- Ícono del evento (según severity) -->
-                  <div
-                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                    [style.background]="getAlertBg(alert.severity)"
-                    [style.color]="getAlertColor(alert.severity)"
-                  >
-                    <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
-                  </div>
-
-                  <!-- Contenido del evento -->
-                  <div class="flex-1 min-w-0">
-                    <p
-                      class="m-0 text-sm font-medium text-text-primary truncate"
-                      [pTooltip]="alert.title"
-                      tooltipPosition="top"
-                    >
-                      {{ alert.title }}
-                    </p>
-                    <p
-                      class="m-0 text-xs text-text-muted truncate"
-                      [pTooltip]="alert.description"
-                      tooltipPosition="bottom"
-                    >
-                      {{ alert.description }}
-                    </p>
-                  </div>
-
-                  <!-- Botón descartar -->
-                  <button
-                    aria-label="Descartar"
-                    class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
-                    (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
-                    pTooltip="Descartar"
-                    data-llm-action="descartar-alerta-dashboard"
-                  >
-                    <app-icon name="x" [size]="12" />
-                  </button>
-                </li>
-              } @empty {
-                <li class="flex-1 flex flex-col justify-center py-6">
-                  <app-empty-state
-                    icon="bell"
-                    message="Todo en orden"
-                    subtitle="No hay alertas importantes por revisar."
-                  />
-                </li>
-              }
-            </ul>
-          </div>
-          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-            <button
-              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-              (click)="openAlerts()"
-              data-llm-action="ver-todas-alertas-dashboard"
-            >
-              Ver todas las alertas
-            </button>
-          </div>
-        }
       </div>
     </section>
   `,
-  styles: [
-    `
-      /* Scrollbar minimalista pero visible por defecto (affordance de scroll) */
-      .custom-scrollbar {
-        scrollbar-width: thin;
-        scrollbar-color: var(--text-muted) transparent;
-      }
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: var(--text-muted);
-        border-radius: 4px;
-      }
-      .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: var(--text-secondary);
-      }
-
-      /* Fade inferior: insinúa que la lista tiene más contenido para scrollear */
-      .scroll-fade {
-        position: relative;
-      }
-      .scroll-fade::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 28px;
-        background: linear-gradient(to bottom, transparent, var(--card-bg));
-        pointer-events: none;
-      }
-    `,
-  ],
 })
 export class DashboardComponent {
-  private readonly dashboardFacade = inject(DashboardFacade);
-  protected readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
-  private readonly layoutService = inject(LayoutService);
+  protected readonly facade = inject(ExecutiveDashboardFacade);
+  private readonly alertsFacade = inject(DashboardAlertsFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly auth = inject(AuthFacade);
+  private readonly layoutService = inject(LayoutService);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
-  private readonly agendaFacade = inject(AgendaFacade);
-  private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
-  private readonly pagosFacade = inject(PagosFacade);
-  private readonly cuadraturaFacade = inject(CuadraturaFacade);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
-  // ── Estado ────────────────────────────────────────────────────────────────
+  protected readonly today = chileTodayIso();
+  protected readonly placeholderCards = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  readonly loading = computed(() => this.dashboardFacade.loading());
+  protected readonly tabs: TabOption[] = [
+    { id: 'tendencias', label: 'Tendencias', icon: 'trending-up' },
+    { id: 'instructores', label: 'Instructores', icon: 'users' },
+    { id: 'alumnos', label: 'Alumnos y cartera', shortLabel: 'Alumnos', icon: 'graduation-cap' },
+    { id: 'hoy', label: 'Operación de hoy', shortLabel: 'Hoy', icon: 'calendar-clock' },
+  ];
+  protected readonly activeTab = signal<ExecTab>('tendencias');
+
+  // ── Estado derivado ─────────────────────────────────────────────────────────
+  protected readonly loading = computed(() => this.facade.isLoading());
+  protected readonly kpisLoading = computed(() => this.loading() && !this.facade.kpis());
   protected readonly isDrawerOpen = computed(() => this.layoutDrawer.isOpen());
-  protected readonly fallbackName = computed(
-    () => this.auth.currentUser()?.name || 'Administrador',
-  );
+  /** Switch de layout por CONTENEDOR (visual-system: nunca por lg: de Tailwind). */
+  protected readonly isDesktopLayout = computed(() => this.layoutService.tier() === 'desktop');
 
-  // ── Datos derivados del Facade ────────────────────────────────────────────
-
-  readonly hero = computed(() => this.dashboardFacade.data()?.hero);
-  readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
-  readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
-  readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
-  readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
-  readonly liveClasses = computed(() => this.dashboardFacade.data()?.liveClasses ?? []);
-
-  // ── Densidad adaptativa (spec 0028): presupuestos por tier del contenedor ──
-  // desktop = sin límite (scroll interno); tablet/mobile = resumen + "Ver todas".
-  private readonly isDesktopTier = computed(() => this.layoutService.tier() === 'desktop');
-  readonly liveClassesBudget = computed(() => (this.isDesktopTier() ? null : 4));
-  readonly visibleActivities = computed(() =>
-    sliceByBudget(this.activities(), this.isDesktopTier() ? null : 3),
-  );
-  readonly visibleAlerts = computed(() =>
-    sliceByBudget(this.alerts(), this.isDesktopTier() ? null : 3),
-  );
-
-  readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
-  readonly heroContextLine = computed(() => this.hero()?.date ?? '');
-  readonly heroChips = computed((): SectionHeroChip[] => {
-    const h = this.hero();
-    if (!h) return [];
-    const chips: SectionHeroChip[] = [
-      { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
-    ];
-    const alertCount = this.dashboardAlertsFacade.alertCount();
-    if (alertCount > 0) {
-      chips.push({
-        label: `${alertCount} alertas urgentes`,
-        icon: 'alert-triangle',
-        style: 'error',
-      });
-    }
-    return chips;
+  protected readonly kpiCards = computed(() => {
+    const kpis = this.facade.kpis();
+    return kpis ? buildExecKpiCards(kpis, this.facade.receivables()) : [];
   });
-  readonly heroActions = computed((): SectionHeroAction[] =>
-    this.quickActions().map((a) => ({
-      id: a.id,
-      label: a.label,
-      icon: a.icon,
-      primary: a.id === 'qa1' || a.id === 'qa3',
-      route: undefined,
-    })),
+
+  protected readonly seriesYear = computed(
+    () => this.facade.series()?.currentYear ?? Number(this.facade.range().to.slice(0, 4)),
   );
 
-  readonly heroKpis = computed((): SectionHeroKpi[] =>
-    this.kpis().map((k) => ({
-      id: k.id,
-      label: k.label,
-      value: k.value,
-      prefix: k.prefix,
-      suffix: k.suffix,
-      trend: k.trend,
-      trendSuffix: k.trendSuffix,
-      trendLabel: k.trendLabel,
-      color: k.color as SectionHeroKpi['color'],
-      icon: k.icon,
-    })),
-  );
+  protected readonly contextLine = computed(() => {
+    const branchId = this.branchFacade.selectedBranchId();
+    const sede = branchId === null ? 'Todas las escuelas' : this.branchFacade.selectedBranchLabel();
+    return `Clase B · ${sede} · ${describeRange(this.facade.range())}`;
+  });
+
+  protected readonly alerts = computed(() => this.alertsFacade.activeAlerts());
+  protected readonly visibleAlerts = computed(() => this.alerts().slice(0, 5));
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.dashboardFacade.destroyRealtime());
-
+    // Branch-scoped (facades.md §7): recarga al cambiar de sede. SWR dentro del Facade.
     effect(() => {
-      this.branchFacade.selectedBranchId(); // tracking reactivo
-      void this.dashboardFacade.initialize();
-      void this.dashboardAlertsFacade.initialize();
+      this.branchFacade.selectedBranchId(); // tracking
+      void this.facade.reload();
+      void this.alertsFacade.initialize();
     });
 
-    // SWR Lifecycle Hook: animar grid solo la primera vez que salen los datos de loading
+    // Animar el grid una sola vez, cuando termina la primera carga.
     let gridAnimated = false;
     effect(() => {
-      const isReady = !this.loading();
+      const ready = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
-
-      if (isReady && el && !gridAnimated) {
+      if (ready && el && !gridAnimated) {
         gridAnimated = true;
-        Promise.resolve().then(() => {
-          this.gsap.animateBentoGrid(el);
-        });
+        Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
       }
     });
   }
 
-  handleQuickAction(actionId: string): void {
-    if (actionId === 'qa1') {
-      this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
-    } else if (actionId === 'qa2') {
-      this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
-    } else if (actionId === 'qa3') {
-      this.pagosFacade.seleccionarParaPago(null);
-      void this.pagosFacade.initialize();
-      this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
-    } else if (actionId === 'qa4') {
-      this.cuadraturaFacade.egresoTipoPreset.set('combustible');
-      this.layoutDrawer.open(RegistrarEgresoDrawerComponent, 'Registrar Egreso', 'wallet');
-    }
+  protected onRangeChange(change: ExecRangeChange): void {
+    void this.facade.applyRange(change.range, change.preset);
   }
 
-  async handleLiveClassAction(cls: LiveClassModel) {
-    const plan = resolveLiveClassActionPlan(cls);
-
-    if (plan.flow === 'iniciar') {
-      this.asistenciaFacade.selectPractica(plan.row as any);
-      const { AdminIniciarClaseDrawerComponent } =
-        await import('../admin/asistencia/admin-iniciar-clase-drawer.component');
-      this.layoutDrawer.open(AdminIniciarClaseDrawerComponent, 'Iniciar Clase Práctica', 'play');
-    } else if (plan.flow === 'finalizar') {
-      this.asistenciaFacade.selectPractica(plan.row as any);
-      const { AdminFinalizarClaseDrawerComponent } =
-        await import('../admin/asistencia/admin-finalizar-clase-drawer.component');
-      this.layoutDrawer.open(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
-    } else {
-      // Flujo normal informativo
-      const startTime = to24hTime(cls.scheduledAt);
-      const slot: any = {
-        id: cls.id,
-        date: cls.scheduledAt.split('T')[0],
-        startTime,
-        endTime: addMinutesToTime(startTime, 45),
-        status: cls.status,
-        instructorId: 0,
-        instructorName: cls.instructorName,
-        vehicleId: 0,
-        vehiclePlate: cls.vehicle || '',
-        studentName: cls.studentName,
-        classNumber: 0,
-        kmStart: cls.kmStart,
-        kmEnd: cls.kmEnd,
-        notes: cls.notes,
-      };
-
-      this.agendaFacade.setSelectedSlot(slot);
-      const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';
-      this.layoutDrawer.open(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
-    }
+  protected setTab(id: string): void {
+    this.activeTab.set(id as ExecTab);
   }
 
-  openRecentActivity() {
-    this.layoutDrawer.open(RecentActivityDrawerComponent, 'Actividad Reciente', 'activity');
+  protected retry(): void {
+    void this.facade.reload();
   }
 
-  openAlerts() {
+  protected openAlerts(): void {
     this.layoutDrawer.open(AlertsDrawerComponent, 'Todas las Alertas', 'bell');
   }
 
-  openAgenda() {
-    this.layoutDrawer.open(DailyAgendaDrawerComponent, 'Agenda de Hoy', 'calendar-clock');
+  protected alertIcon(severity: string): string {
+    if (severity === 'warning') return 'triangle-alert';
+    if (severity === 'error') return 'octagon-alert';
+    if (severity === 'success') return 'check-circle';
+    return 'info';
   }
 
-  getAlertIcon(severity: string): string {
-    switch (severity) {
-      case 'warning':
-        return 'triangle-alert';
-      case 'error':
-        return 'octagon-alert';
-      case 'success':
-        return 'check-circle';
-      case 'info':
-      default:
-        return 'info';
-    }
-  }
-
-  getAlertColor(severity: string): string {
-    switch (severity) {
-      case 'warning':
-        return 'var(--state-warning)';
-      case 'error':
-        return 'var(--state-error)';
-      case 'success':
-        return 'var(--state-success)';
-      default:
-        return 'var(--text-primary)';
-    }
-  }
-
-  getAlertBg(severity: string): string {
-    switch (severity) {
-      case 'warning':
-        return 'var(--state-warning-bg)';
-      case 'error':
-        return 'var(--state-error-bg)';
-      case 'success':
-        return 'var(--state-success-bg)';
-      default:
-        return 'var(--bg-subtle)';
-    }
+  protected alertColor(severity: string): string {
+    if (severity === 'warning') return 'var(--state-warning)';
+    if (severity === 'error') return 'var(--state-error)';
+    if (severity === 'success') return 'var(--state-success)';
+    return 'var(--text-secondary)';
   }
 }

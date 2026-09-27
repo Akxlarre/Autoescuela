@@ -15,7 +15,11 @@ import {
   mapKpiSummary,
   mapReceivables,
   mapInstructorHours,
+  buildExecKpiCards,
+  describeRange,
+  seriesCurrentMonth,
 } from './executive-dashboard.utils';
+import type { ExecKpiSummary } from '@core/models/ui/executive-dashboard.model';
 
 describe('resolvePresetRange (AC1)', () => {
   it('this_month = del 1 del mes hasta hoy (month-to-date)', () => {
@@ -223,6 +227,14 @@ describe('buildMonthlySeries (AC13, AC14)', () => {
   });
 });
 
+describe('seriesCurrentMonth', () => {
+  it('año actual → mes en curso; pasado → 12; futuro → 0', () => {
+    expect(seriesCurrentMonth(2026, '2026-09-27')).toBe(9);
+    expect(seriesCurrentMonth(2025, '2026-09-27')).toBe(12);
+    expect(seriesCurrentMonth(2027, '2026-09-27')).toBe(0);
+  });
+});
+
 describe('chileTodayIso', () => {
   it('usa la fecha de Chile, no la UTC (DG-071)', () => {
     // 2026-09-28 01:30 UTC = 2026-09-27 22:30 en Santiago (UTC-3)
@@ -309,6 +321,100 @@ describe('mapReceivables (AC6)', () => {
     expect(r.total).toBe(150);
     expect(r.alumnos).toBe(3);
     expect(r.buckets[3].label).toBe('Más de 90 días');
+  });
+});
+
+describe('describeRange', () => {
+  it('mismo año: el año va una sola vez', () => {
+    expect(describeRange({ from: '2026-09-01', to: '2026-09-27' })).toBe('1 sep – 27 sep 2026');
+  });
+  it('cruza años: ambos años', () => {
+    expect(describeRange({ from: '2025-11-01', to: '2026-02-15' })).toBe(
+      '1 nov 2025 – 15 feb 2026',
+    );
+  });
+  it('un solo día', () => {
+    expect(describeRange({ from: '2026-09-27', to: '2026-09-27' })).toBe('27 sep 2026');
+  });
+});
+
+describe('buildExecKpiCards', () => {
+  const summary: ExecKpiSummary = {
+    ingresos: {
+      value: 1000,
+      deltaPrev: { pct: 14.7, kind: 'up' },
+      deltaYoy: { pct: null, kind: 'new' },
+    },
+    gastos: {
+      value: 1500,
+      deltaPrev: { pct: 10, kind: 'up' },
+      deltaYoy: { pct: -5, kind: 'down' },
+    },
+    gastosDesglose: { variables: 500, fijos: 500, instructores: 500 },
+    resultado: {
+      value: -500,
+      deltaPrev: { pct: null, kind: 'none' },
+      deltaYoy: { pct: null, kind: 'none' },
+    },
+    margenPct: -50,
+    nuevasMatriculas: {
+      value: 2,
+      deltaPrev: { pct: 0, kind: 'none' },
+      deltaYoy: { pct: 100, kind: 'up' },
+    },
+    alumnosActivos: 3,
+    clasesRealizadas: 20,
+    clasesEnAgenda: 6,
+    tasaCancelacionPct: null,
+    aprobacionEnsayosPct: 50,
+  };
+  const receivables = { total: 235_000, alumnos: 3, buckets: [] };
+
+  it('arma las 8 tarjetas en orden', () => {
+    const cards = buildExecKpiCards(summary, receivables);
+    expect(cards.map((c) => c.id)).toEqual([
+      'ingresos',
+      'gastos',
+      'resultado',
+      'saldo',
+      'matriculas',
+      'activos',
+      'clases',
+      'cancelacion',
+    ]);
+  });
+
+  it('ingresos: delta vs período anterior y "nuevo" vs año anterior sin porcentaje', () => {
+    const c = buildExecKpiCards(summary, receivables)[0];
+    expect(c.trend).toBe(14.7);
+    expect(c.secondaryTrend).toBeUndefined();
+    expect(c.secondaryTrendLabel).toBe('Sin base el año anterior');
+    expect(c.label).toContain('Clase B');
+  });
+
+  it('gastos invierte el color y explica que incluye sueldos', () => {
+    const c = buildExecKpiCards(summary, receivables)[1];
+    expect(c.invertTrend).toBe(true);
+    expect(c.tooltip).toContain('sueldos devengados');
+  });
+
+  it('resultado negativo muestra el signo en el prefijo y el margen', () => {
+    const c = buildExecKpiCards(summary, receivables)[2];
+    expect(c.value).toBe(500);
+    expect(c.prefix).toBe('-$');
+    expect(c.color).toBe('error');
+    expect(c.trendLabel).toContain('Margen -50%');
+  });
+
+  it('saldo por cobrar sin cartera cargada → 0', () => {
+    const c = buildExecKpiCards(summary, null)[3];
+    expect(c.value).toBe(0);
+  });
+
+  it('clases incluye las que están en agenda; cancelación sin datos → "—"', () => {
+    const cards = buildExecKpiCards(summary, receivables);
+    expect(cards[6].subValue).toBe('6 en agenda');
+    expect(cards[7].subValue).toBe('Sin clases en el período');
   });
 });
 

@@ -10,6 +10,7 @@ import type {
   ExecDateRange,
   ExecDelta,
   ExecKpi,
+  ExecKpiCard,
   ExecKpiSummary,
   ExecMonthlySeries,
   ExecPeriodPreset,
@@ -196,6 +197,16 @@ export function monthShortLabel(month: number): string {
   return MONTH_LABELS[month - 1] ?? '';
 }
 
+/** `{2026-09-01, 2026-09-27}` → `1 sep – 27 sep 2026` (texto del hero). */
+export function describeRange(range: ExecDateRange): string {
+  const a = parseIso(range.from);
+  const b = parseIso(range.to);
+  const day = (x: Ymd) => `${x.d} ${monthShortLabel(x.m).toLowerCase()}`;
+  if (range.from === range.to) return `${day(b)} ${b.y}`;
+  if (a.y === b.y) return `${day(a)} – ${day(b)} ${b.y}`;
+  return `${day(a)} ${a.y} – ${day(b)} ${b.y}`;
+}
+
 /**
  * Convierte las 24 filas de `exec_dashboard_monthly_series` en 2 series de 12 puntos
  * (AC13/AC14). Los meses posteriores a `currentMonth` del año actual quedan en `null`
@@ -221,6 +232,16 @@ export function buildMonthlySeries(
     });
 
   return { currentYear, ingresos: build('ingresos'), matriculas: build('matriculas') };
+}
+
+/**
+ * Hasta qué mes se dibuja la serie del año `seriesYear`: el mes en curso si es el año actual,
+ * 12 si es un año pasado y 0 si es futuro.
+ */
+export function seriesCurrentMonth(seriesYear: number, todayIsoStr: string): number {
+  const today = parseIso(todayIsoStr);
+  if (seriesYear === today.y) return today.m;
+  return seriesYear < today.y ? 12 : 0;
 }
 
 /** Fecha de hoy en Chile (`YYYY-MM-DD`), independiente de la zona del navegador (DG-071). */
@@ -324,6 +345,148 @@ export function mapInstructorHours(rows: ExecInstructorHoursRowDto[]): Instructo
       horasLabel: formatMinutesAsHours(Number(r.minutos) || 0),
     }))
     .sort((a, b) => b.minutos - a.minutos || a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+// ── Tarjetas KPI ───────────────────────────────────────────────────────────
+
+function trendOf(delta: ExecDelta): number | undefined {
+  return delta.pct === null ? undefined : delta.pct;
+}
+
+function prevLabel(delta: ExecDelta): string {
+  if (delta.pct !== null) return 'vs período anterior';
+  return delta.kind === 'new' ? 'Nuevo vs período anterior' : 'Sin base el período anterior';
+}
+
+function yoyLabel(delta: ExecDelta): string {
+  return delta.pct !== null ? 'vs año anterior' : 'Sin base el año anterior';
+}
+
+function withDeltas(kpi: ExecKpi) {
+  return {
+    trend: trendOf(kpi.deltaPrev),
+    trendLabel: prevLabel(kpi.deltaPrev),
+    secondaryTrend: trendOf(kpi.deltaYoy),
+    secondaryTrendLabel: yoyLabel(kpi.deltaYoy),
+  };
+}
+
+function pctText(n: number): string {
+  return `${String(n).replace('.', ',')}%`;
+}
+
+/**
+ * Las 8 tarjetas KPI del Dashboard Ejecutivo, en orden de lectura: primero plata
+ * (ingresos, gastos, resultado, cartera), después operación (matrículas, alumnos,
+ * clases, cancelación).
+ */
+export function buildExecKpiCards(
+  s: ExecKpiSummary,
+  receivables: ReceivablesSummary | null,
+): ExecKpiCard[] {
+  const res = s.resultado.value;
+  const margin = s.margenPct === null ? 'sin ingresos' : pctText(s.margenPct);
+  const d = s.gastosDesglose;
+  const clp = (n: number) => `$${Math.round(n).toLocaleString('es-CL')}`;
+
+  const base = {
+    prefix: '',
+    suffix: '',
+    color: 'default' as const,
+    trendLabel: '',
+    secondaryTrendLabel: '',
+    invertTrend: false,
+    subValue: '',
+  };
+
+  return [
+    {
+      ...base,
+      ...withDeltas(s.ingresos),
+      id: 'ingresos',
+      label: 'Ingresos Clase B',
+      value: s.ingresos.value,
+      prefix: '$',
+      icon: 'trending-up',
+      tooltip: 'Pagos recibidos de matrículas Clase B en el período (no incluye pagos pendientes).',
+    },
+    {
+      ...base,
+      ...withDeltas(s.gastos),
+      id: 'gastos',
+      label: 'Gastos',
+      value: s.gastos.value,
+      prefix: '$',
+      icon: 'receipt',
+      invertTrend: true,
+      tooltip:
+        `Egresos ${clp(d.variables)} + gastos fijos ${clp(d.fijos)} + sueldos devengados de ` +
+        `instructores ${clp(d.instructores)}. Los meses sin liquidar se valorizan con la ` +
+        'tarifa por hora actual de la sede.',
+    },
+    {
+      ...base,
+      ...withDeltas(s.resultado),
+      id: 'resultado',
+      label: 'Resultado operacional',
+      value: Math.abs(res),
+      prefix: res < 0 ? '-$' : '$',
+      icon: 'landmark',
+      color: res < 0 ? 'error' : 'default',
+      trendLabel: `${prevLabel(s.resultado.deltaPrev)} · Margen ${margin}`,
+      tooltip: 'Ingresos Clase B menos gastos (incluye sueldos devengados de instructores).',
+    },
+    {
+      ...base,
+      id: 'saldo',
+      label: 'Saldo por cobrar',
+      value: receivables?.total ?? 0,
+      prefix: '$',
+      icon: 'hand-coins',
+      color: (receivables?.total ?? 0) > 0 ? 'warning' : 'default',
+      subValue: `${receivables?.alumnos ?? 0} alumnos con saldo`,
+      tooltip: 'Deuda vigente de matrículas Clase B. Es la foto de hoy, no depende del período.',
+    },
+    {
+      ...base,
+      ...withDeltas(s.nuevasMatriculas),
+      id: 'matriculas',
+      label: 'Nuevas matrículas',
+      value: s.nuevasMatriculas.value,
+      icon: 'user-plus',
+      tooltip: 'Matrículas Clase B confirmadas en el período (sin borradores ni canceladas).',
+    },
+    {
+      ...base,
+      id: 'activos',
+      label: 'Alumnos activos',
+      value: s.alumnosActivos,
+      icon: 'users',
+      subValue: 'En proceso formativo',
+      tooltip: 'Matrículas Clase B activas hoy.',
+    },
+    {
+      ...base,
+      id: 'clases',
+      label: 'Clases realizadas',
+      value: s.clasesRealizadas,
+      icon: 'car',
+      subValue: `${s.clasesEnAgenda} en agenda`,
+      tooltip: 'Clases prácticas completadas en el período y las que quedan agendadas en él.',
+    },
+    {
+      ...base,
+      id: 'cancelacion',
+      label: 'Cancelación e inasistencia',
+      value: s.tasaCancelacionPct ?? 0,
+      suffix: '%',
+      icon: 'circle-x',
+      color: (s.tasaCancelacionPct ?? 0) >= 20 ? 'warning' : 'default',
+      subValue:
+        s.tasaCancelacionPct === null ? 'Sin clases en el período' : 'de las clases del período',
+      tooltip: '(Canceladas + inasistencias) / (realizadas + canceladas + inasistencias).',
+    },
+  ];
 }
 
 export function mapTodayOps(dto: ExecTodayOpsDto): TodayOpsSummary {

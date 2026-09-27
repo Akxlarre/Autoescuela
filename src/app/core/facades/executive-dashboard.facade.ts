@@ -30,6 +30,7 @@ import {
   mapTodayOps,
   previousRange,
   resolvePresetRange,
+  seriesCurrentMonth,
   yoyRange,
 } from '@core/utils/executive-dashboard.utils';
 
@@ -151,17 +152,18 @@ export class ExecutiveDashboardFacade {
 
   private async fetchAll(): Promise<void> {
     const token = this.fetchGuard.next();
-    const branchId = this.branchFacade.selectedBranchId();
     const range = this._range();
-    const prev = previousRange(range);
-    const yoy = yoyRange(range);
-
-    const today = chileTodayIso();
     const seriesYear = Number(range.to.slice(0, 4));
-    const todayYear = Number(today.slice(0, 4));
-    const currentMonth =
-      seriesYear === todayYear ? Number(today.slice(5, 7)) : seriesYear < todayYear ? 12 : 0;
+    const results = await this.requestAll(range, seriesYear, this.branchFacade.selectedBranchId());
 
+    // Una fetch más reciente ya se disparó: descartar este resultado (AC-E3).
+    if (!this.fetchGuard.isCurrent(token)) return;
+
+    this.applyResults(results, seriesYear, seriesCurrentMonth(seriesYear, chileTodayIso()));
+  }
+
+  /** Dispara las 7 RPC en paralelo; cada una puede fallar sola (AC-E2). */
+  private requestAll(range: ExecDateRange, seriesYear: number, branchId: number | null) {
     const kpisOf = (r: ExecDateRange) =>
       this.rpc<ExecKpisDto>('exec_dashboard_kpis', {
         p_from: r.from,
@@ -169,10 +171,10 @@ export class ExecutiveDashboardFacade {
         p_branch_id: branchId,
       });
 
-    const [curr, prevK, yoyK, series, hours, receivables, today_] = await Promise.allSettled([
+    return Promise.allSettled([
       kpisOf(range),
-      kpisOf(prev),
-      kpisOf(yoy),
+      kpisOf(previousRange(range)),
+      kpisOf(yoyRange(range)),
       this.rpc<ExecMonthlySeriesRowDto[]>('exec_dashboard_monthly_series', {
         p_year: seriesYear,
         p_branch_id: branchId,
@@ -184,11 +186,16 @@ export class ExecutiveDashboardFacade {
       }),
       this.rpc<ExecReceivablesRowDto[]>('exec_dashboard_receivables', { p_branch_id: branchId }),
       this.rpc<ExecTodayOpsDto>('exec_dashboard_today_ops', { p_branch_id: branchId }),
-    ]);
+    ] as const);
+  }
 
-    // Una fetch más reciente ya se disparó: descartar este resultado (AC-E3).
-    if (!this.fetchGuard.isCurrent(token)) return;
-
+  /** Mapea cada respuesta a su signal; las que fallaron quedan marcadas por sección. */
+  private applyResults(
+    results: Awaited<ReturnType<ExecutiveDashboardFacade['requestAll']>>,
+    seriesYear: number,
+    currentMonth: number,
+  ): void {
+    const [curr, prevK, yoyK, series, hours, receivables, today_] = results;
     const errors: Partial<Record<ExecSection, string>> = {};
 
     if (

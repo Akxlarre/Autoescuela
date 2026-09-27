@@ -124,6 +124,8 @@ import {
   Receipt,
   Tag,
   Wallet,
+  HandCoins,
+  BadgeCheck,
   // ── Communication ──
   AtSign,
   Bell,
@@ -420,6 +422,8 @@ export const appConfig: ApplicationConfig = {
         Receipt,
         Tag,
         Wallet,
+        HandCoins,
+        BadgeCheck,
         // ── Communication ──
         AtSign,
         Bell,

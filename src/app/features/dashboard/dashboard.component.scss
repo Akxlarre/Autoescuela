@@ -1,6 +1,51 @@
 // ══════════════════════════════════════════════════════════════════════════
-// DashboardComponent — estilos específicos
+// Dashboard Ejecutivo de Admin (spec 0044-b)
 // ══════════════════════════════════════════════════════════════════════════
+//
+// Los 8 KPIs viven en UNA celda .bento-banner con su propia grilla (no como 8
+// .bento-square sueltos): --fill-screen-kpi reserva exactamente una fila auto para
+// los KPIs; 8 celdas sueltas ocuparían 2 filas del grid y empujarían la celda
+// .bento-fill fuera del template (quedaría en una fila auto-generada sin alto).
+//
+// Breakpoints por CONTENEDOR (layoutmain), no por viewport: un drawer abierto
+// angosta el main y la grilla se adapta igual (visual-system: patrón app-like).
 
-// Ya no hay necesidad de declarar propiedades de glass ni layout aquí, 
-// Tailwind gestiona la estructura usando los design tokens del proyecto.
+.exec-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+
+  // 768px = $bp-md de _bento-grid.scss (mismo literal que usa secretaria-matricula).
+  @container layoutmain (min-width: 768px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+.exec-kpi {
+  min-width: 0;
+  height: 100%;
+}
+
+// Dos paneles lado a lado en desktop (por contenedor), apilados si no.
+.exec-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 100%;
+}
+
+.exec-split--row {
+  flex-direction: row;
+  height: 100%;
+}
+
+.exec-split__item {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 280px;
+}
+
+.exec-split--row > .exec-split__item {
+  min-height: 0;
+}
