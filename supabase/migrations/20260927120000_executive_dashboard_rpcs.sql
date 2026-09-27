@@ -168,7 +168,8 @@ BEGIN
     SELECT COUNT(*)::INT AS nuevas
     FROM b_enrollments e
     WHERE (e.created_at AT TIME ZONE 'America/Santiago')::date BETWEEN p_from AND p_to
-      AND e.status NOT IN ('draft', 'cancelled')
+      -- pending_payment = checkout online iniciado y no pagado (fix-172-b): no es matrícula.
+      AND e.status NOT IN ('draft', 'cancelled', 'pending_payment')
   ),
   sesiones AS (
     SELECT
@@ -292,7 +293,7 @@ BEGIN
       EXTRACT(MONTH FROM (e.created_at AT TIME ZONE 'America/Santiago'))::INT AS e_m,
       COUNT(*)::INT AS total
     FROM b_enrollments e
-    WHERE e.status NOT IN ('draft', 'cancelled')
+    WHERE e.status NOT IN ('draft', 'cancelled', 'pending_payment')
       AND (e.created_at AT TIME ZONE 'America/Santiago')::date >= make_date(p_year - 1, 1, 1)
       AND (e.created_at AT TIME ZONE 'America/Santiago')::date <  make_date(p_year + 1, 1, 1)
     GROUP BY 1, 2
@@ -401,7 +402,8 @@ BEGIN
       FROM public.enrollments e
       WHERE e.license_group = 'class_b'
         AND (p_branch_id IS NULL OR e.branch_id = p_branch_id)
-        AND e.status NOT IN ('draft', 'cancelled')
+        -- pending_payment: su saldo es el precio completo de un checkout abandonado (fix-172-b).
+        AND e.status NOT IN ('draft', 'cancelled', 'pending_payment')
         AND COALESCE(e.pending_balance, 0) > 0
     ) x
   )

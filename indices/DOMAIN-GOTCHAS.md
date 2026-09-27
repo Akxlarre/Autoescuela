@@ -1483,6 +1483,22 @@
   `specs/hotfixes/hotfix-003-i-agenda-materialized-cte-bloquea-filtro-fecha`,
   `supabase/migrations/20260917110000_hotfix003_remove_materialized_class_b_schedule_availability.sql`.
 
+### DG-094 — Una matrícula `pending_payment` tiene `pending_balance` = precio completo, pero no es una matrícula
+- **Trampa:** en una agregación sobre `enrollments` (conteo de matrículas, deuda, cartera),
+  excluir solo `draft` y `cancelled` asumiendo que el resto son matrículas reales.
+- **Realidad:** el checkout online (`public-enrollment`, acción `initiate-payment`) crea la
+  matrícula en `status = 'pending_payment'` con `pending_balance` igual al precio completo antes
+  de que exista un solo peso pagado. Si el alumno abandona, la fila queda así hasta que
+  `cleanup_expired_public_enrollment()` la cancela — y esa función es "manual o pg_cron", sin
+  garantía de que corra. Cualquier KPI de deuda o de matrículas nuevas la cuenta como real.
+- **Regla de aplicabilidad:** toda query nueva que **agregue** `enrollments` (sumas de saldo,
+  conteos, series) debe excluir el set completo de estados que no son matrícula:
+  `draft`, `pending_payment`, `cancelled`. Mismo patrón que DG-028 (sets de exclusión que se
+  desincronizan): si aparece un estado nuevo en `enrollments.status`, revisar todas las
+  agregaciones, no solo la pantalla que lo motivó.
+- **Fuente:** `specs/fixes/fix-172-b-dashboard-ejecutivo-excluir-pending-payment`,
+  `supabase/migrations/20260317120000_pending_payment_enrollment_status.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
