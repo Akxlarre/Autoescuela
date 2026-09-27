@@ -181,4 +181,4 @@
 
 ## Changelog
 
-- 2026-09-27 — tasks iniciales (21 tareas en 6 fases)
+- 2026-09-27 — tasks iniciales (22 tareas en 6 fases)
