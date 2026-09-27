@@ -6,6 +6,10 @@
 > created: 2026-09-22
 > closed: 2026-09-22
 
+> ⚠️ **Revertido por fix-260-m (2026-09-27).** El diagnóstico era incorrecto: el "(Bloqueado)"
+> del menú venía de `requiresProfessional` (sede sin Clase Profesional), no del recorte piloto.
+> `fix-256-m` deja "Base Alumnos Prof." y "Libro de Clases" explícitamente accesibles.
+
 ## Root Cause
 
 `ASG-i-009`/`fix-256-m` (2026-09-15) ocultó del menú lateral 6+ módulos de Clase Profesional
