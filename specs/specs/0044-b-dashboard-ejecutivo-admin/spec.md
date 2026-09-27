@@ -102,8 +102,10 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 ### KPIs financieros
 
 - **AC3 — Ingresos**: Given pagos registrados, Then "Ingresos" = suma de
-  `payments.total_amount` con `payment_date` dentro del período, excluyendo pagos anulados/
-  fallidos, de matrículas Clase B de la sede filtrada.
+  `payments.total_amount` con `status IN ('paid', 'completado')` y `payment_date` dentro del
+  período, de matrículas Clase B (`enrollments.license_group = 'class_b'`) de la sede filtrada.
+  Los placeholders `status = 'pending'` (matrícula confirmada sin pago inicial) **no** cuentan
+  (ver D5).
 - **AC4 — Gastos**: Then "Gastos" = `expenses.amount` (por `date`) + `fixed_expenses.amount`
   (por `date`) + costo de instructores del período (`instructor_monthly_payments`, ver decisión
   abierta D2), y la tarjeta muestra el desglose de las 3 fuentes.
@@ -149,7 +151,7 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 - **AC17 — Estado de alumnos (Clase B)**: Then muestra conteos de: nuevos del período (AC7);
   en curso (`status='active'` y `certificate_enabled = false`); pendientes de examen municipal
   (`status='active'` y `certificate_enabled = true`); finalizados (`status='completed'`); con
-  saldo pendiente (AC6). ⚠️ Derivación propuesta — ver decisión abierta D1.
+  saldo pendiente (AC6). Derivación confirmada por el owner (D1).
 - **AC18 — Ensayos de examen**: Then % de aprobación = `class_b_exam_scores.passed = true` /
   total de ensayos con `date` en el período. Sin ensayos → "—".
 - **AC19 — Operación de hoy (compacto)**: Then un bloque secundario con clases de hoy
@@ -215,8 +217,8 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
   `/secretaria/dashboard`) → **no hace falta dividir componentes** para aislar a la secretaria.
 
 ### Capacidades nuevas requeridas
-- Agregaciones para series de 24 meses (año actual + anterior) sin traer todas las filas al
-  cliente — probablemente función(es) SQL/RPC (ver D3).
+- Funciones SQL/RPC de agregación (decisión D3) para KPIs, series de 24 meses (año actual +
+  anterior), cartera por antigüedad y horas por instructor — sin traer filas crudas al cliente.
 - Librería/componente de gráficos de líneas (verificar en `indices/COMPONENTS.md` si ya existe
   uno; si no, evaluar Chart.js vía PrimeNG `p-chart`).
 
@@ -224,7 +226,7 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 
 ## 6. Datos y modelo (preliminar)
 
-- Tablas nuevas / modificadas: ninguna tabla nueva. Posibles funciones SQL de agregación (D3).
+- Tablas nuevas / modificadas: ninguna tabla nueva. Funciones SQL/RPC de agregación nuevas (D3), vía migración idempotente.
 - Modelos UI nuevos: `ExecutiveKpi` (valor + Δ período + Δ YoY), `MonthlySeries`,
   `InstructorHoursRow`, `StudentStageCounts`, `ReceivableAging` en `core/models/ui/`.
 - RLS requerida: las agregaciones deben respetar RLS (`security_invoker` / `SECURITY INVOKER`) y
@@ -261,22 +263,35 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 
 - [x] ~~¿Separar el dashboard admin del de secretaria?~~ **Resuelto:** ya son componentes y rutas
       separadas (`/admin/dashboard` vs `/secretaria/dashboard`). Se rediseña solo el de admin.
-- [ ] **D1 — Etapas de alumno.** `enrollments.status` solo tiene `draft | pending_docs | active |
-      completed | cancelled`; no existe un estado "pendiente de examen municipal". Propuesta
-      (AC17): usar `certificate_enabled = true` (lo pone el trigger
-      `verify_class_b_certificate_enablement` al completar clase 12 + 100% teoría) como "curso
-      terminado, pendiente de examen". Confirmar con el dueño que ese es el significado.
+- [x] **D1 — Etapas de alumno. Resuelto (owner, 2026-09-27):** `enrollments.status` solo tiene
+      `draft | pending_docs | active | completed | cancelled`. "Pendiente de examen municipal" =
+      `status='active'` y `certificate_enabled = true` (lo pone el trigger
+      `verify_class_b_certificate_enablement` al completar clase 12 + 100% teoría).
 - [ ] **D2 — Costo de instructores.** `fixed_expenses` ya tiene una categoría "sueldos". Riesgo de
       **doble conteo** si además se suma `instructor_monthly_payments`. Decidir: ¿los sueldos de
       instructores se cargan en `fixed_expenses`, o solo viven en liquidaciones? ¿Se usa
       `base_salary` (costo devengado) o `net_payment`/`paid_at` (caja)?
-- [ ] **D3 — Dónde se agrega.** ¿Funciones SQL/RPC (recomendado para las series de 24 meses y la
-      cartera) o agregación en el Facade?
+- [x] **D3 — Dónde se agrega. Resuelto (owner, 2026-09-27):** funciones SQL/RPC. El Facade solo
+      llama a las RPC y mapea DTO → modelo UI; la matemática de Δ% y formato va en funciones puras
+      de `core/utils/` (testeables sin Angular).
 - [ ] **D4 — Servicios especiales.** ¿"Ingresos" incluye `special_service_sales`? Ojo: esa tabla
       no tiene `branch_id`, así que el filtro de sede tendría que derivarse (vía `registered_by`
       o `student_id`).
-- [ ] **D5 — Pagos a contar.** Confirmar qué valores de `payments.status` cuentan como ingreso
-      (excluir anulados/fallidos).
+- [x] **D5 — Pagos a contar. Resuelto (investigado en código, 2026-09-27):** contar
+      `status IN ('paid', 'completado')`.
+      - `'paid'` es lo que escriben todos los flujos reales (`PagosFacade.registrarNuevoPago()` y
+        la RPC `confirm_enrollment_with_payment`), y es lo que suma `recalculate_enrollment_balance`
+        para el saldo del alumno.
+      - `'pending'` solo lo produce la RPC al confirmar una matrícula **sin pago inicial**: es un
+        placeholder de deuda con $0 recibido y `payment_date = NULL` (fix-135-m). No es ingreso.
+      - `'completado'` no lo escribe ningún flujo actual, pero `CuadraturaFacade` lo incluye
+        (`.in('status', ['paid','completado'])`). Se incluye igual para que el dashboard **cuadre
+        con Cuadratura** si existen filas legacy.
+      - No existe estado "anulado": anular un pago es `DELETE` (solo admin), así que la fila
+        desaparece sola.
+      - Hallazgo lateral: el `DashboardFacade` actual y `ReportesContablesFacade` **no filtran por
+        status**; hoy no suman placeholders solo porque `payment_date` es `NULL` y cae fuera del
+        rango de fechas. Las RPC nuevas filtran explícito para no depender de eso.
 - Originado de Asignación ASG-m-008 (specs/assignments/ASG-m-008-dashboard-admin-kpis-empresa.md)
 
 ---
@@ -285,3 +300,4 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 
 - 2026-09-27 — draft inicial por Benjamín (reclamada desde ASG-m-008)
 - 2026-09-27 — borrador de US (8) y ACs (23 + 5 edge cases); decisiones D1–D5 abiertas
+- 2026-09-27 — D1 y D3 resueltas por el owner; D5 resuelta investigando el código. Quedan D2 y D4.
