@@ -12,6 +12,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { trendView } from '@core/utils/kpi-trend.utils';
 
 /**
  * KpiCardVariantComponent — Variante de molécula de métrica (KPI) con subtexto estadístico.
@@ -26,6 +27,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       appCardHover
       class="bento-card flex flex-col gap-2 h-full"
       [class.card-accent]="accent()"
+      [class.kpi-compact]="compact()"
       [attr.data-color-variant]="color()"
       [attr.aria-busy]="loading()"
     >
@@ -42,11 +44,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       } @else {
         <!-- Modo Contenido Real -->
         <div class="flex items-start justify-between gap-3 mb-1">
-          <span
-            class="text-2xs uppercase font-bold tracking-wider"
-            [style.color]="labelColor()"
-            >{{ label() }}</span
-          >
+          <span class="text-2xs uppercase font-bold tracking-wider" [style.color]="labelColor()">{{
+            label()
+          }}</span>
           @if (icon(); as iconName) {
             <div
               class="flex items-center justify-center rounded-md w-7 h-7"
@@ -62,19 +62,25 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         <div class="flex flex-col gap-2">
           <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
             @if (prefix()) {
-              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
+              <span
+                class="font-bold align-baseline text-text-primary"
+                [class]="compact() ? 'text-lg' : 'text-2xl md:text-3xl'"
+              >
                 {{ prefix() }}
               </span>
             }
             <span
               #valueEl
               class="font-display font-bold align-baseline truncate leading-none text-text-primary"
-              [style.font-size]="'clamp(var(--text-2xl), 8vw, var(--text-4xl))'"
+              [style.font-size]="valueFontSize()"
               title="{{ value() }}"
               >{{ value() }}</span
             >
             @if (suffix()) {
-              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
+              <span
+                class="font-bold align-baseline text-text-primary"
+                [class]="compact() ? 'text-lg' : 'text-2xl md:text-3xl'"
+              >
                 {{ suffix() }}
               </span>
             }
@@ -83,10 +89,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           <!-- Barra de progreso opcional -->
           @if (progressPercent() !== undefined) {
             <div class="w-full flex flex-col gap-1.5 mt-1">
-              <div
-                class="w-full bg-elevated rounded-full overflow-hidden"
-                style="height: 6px;"
-              >
+              <div class="w-full bg-elevated rounded-full overflow-hidden" style="height: 6px;">
                 <div
                   class="h-full rounded-full transition-all duration-700 ease-out"
                   [style.width.%]="progressPercent()"
@@ -107,16 +110,34 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           @if (trend() !== undefined) {
             <span
               class="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded"
-              [style.color]="trendColor()"
+              [style.color]="primaryView().color"
             >
-              <app-icon [name]="trendIcon()" [size]="12" />
-              <span>{{ trendDisplay() }}</span>
+              <app-icon [name]="primaryView().icon" [size]="12" />
+              <span>{{ primaryView().text }}</span>
             </span>
           }
           @if (subValue() || trendLabel()) {
             <span class="text-xs text-text-muted">{{ subValue() || trendLabel() }}</span>
           }
         </div>
+
+        <!-- Segunda comparación opcional (ej. vs año anterior — spec 0044-b) -->
+        @if (secondaryTrend() !== undefined || secondaryTrendLabel()) {
+          <div class="flex items-center gap-1 flex-wrap">
+            @if (secondaryTrend() !== undefined) {
+              <span
+                class="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded"
+                [style.color]="secondaryView().color"
+              >
+                <app-icon [name]="secondaryView().icon" [size]="12" />
+                <span>{{ secondaryView().text }}</span>
+              </span>
+            }
+            @if (secondaryTrendLabel()) {
+              <span class="text-xs text-text-muted">{{ secondaryTrendLabel() }}</span>
+            }
+          </div>
+        }
       }
     </div>
   `,
@@ -125,6 +146,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       :host {
         display: block;
         height: 100%;
+      }
+      /* Modo compacto: menos aire para grillas densas (spec 0044-b). */
+      .kpi-compact {
+        padding: var(--space-4);
+        gap: var(--space-1);
       }
     `,
   ],
@@ -143,6 +169,17 @@ export class KpiCardVariantComponent {
   readonly color = input<'default' | 'success' | 'warning' | 'error'>('default');
   readonly loading = input<boolean>(false);
   readonly progressPercent = input<number | undefined>(undefined);
+  /** Invierte el color de las tendencias: subir = error (ej. gastos). Default: false. */
+  readonly invertTrend = input<boolean>(false);
+  /** Segunda comparación opcional (ej. vs año anterior). `undefined` = no se muestra. */
+  readonly secondaryTrend = input<number | undefined>(undefined);
+  readonly secondaryTrendLabel = input<string>('');
+  /** Número más chico, para grillas densas con montos largos (ej. $12.345.678). */
+  readonly compact = input<boolean>(false);
+
+  protected readonly valueFontSize = computed(() =>
+    this.compact() ? 'var(--text-2xl)' : 'clamp(var(--text-2xl), 8vw, var(--text-4xl))',
+  );
 
   protected readonly labelColor = computed(() => {
     switch (this.color()) {
@@ -186,20 +223,12 @@ export class KpiCardVariantComponent {
     }
   });
 
-  protected readonly trendIsUp = computed(() => (this.trend() ?? 0) >= 0);
-  protected readonly trendIcon = computed(() =>
-    this.trendIsUp() ? 'trending-up' : 'trending-down',
+  protected readonly primaryView = computed(() =>
+    trendView(this.trend() ?? 0, this.trendSuffix(), this.invertTrend()),
   );
-  protected readonly trendColor = computed(() =>
-    (this.trend() ?? 0) >= 0 ? 'var(--state-success)' : 'var(--state-error)',
+  protected readonly secondaryView = computed(() =>
+    trendView(this.secondaryTrend() ?? 0, this.trendSuffix(), this.invertTrend()),
   );
-
-  protected readonly trendDisplay = computed(() => {
-    const t = this.trend() ?? 0;
-    const sign = t >= 0 ? '+' : '';
-    const abs = Math.abs(t);
-    return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}${this.trendSuffix()}`;
-  });
 
   private readonly valueEl = viewChild<ElementRef<HTMLElement>>('valueEl');
   private readonly gsap = inject(GsapAnimationsService);

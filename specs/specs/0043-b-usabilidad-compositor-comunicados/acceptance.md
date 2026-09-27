@@ -192,7 +192,7 @@ Cero comunicados creados, cero destinatarios materializados, cero notificaciones
 - ❌ No se tocó el envío, el consentimiento ni la programación de `0041-b`/`0042-b`. Los 82 tests
   de esas specs siguen verdes sin modificarlos.
 - ❌ No se cambió el canal, ni se agregó recurrencia.
-- ❌ Envío de archivos sigue diferido (backlog `0044-b`).
+- ❌ Envío de archivos sigue diferido (backlog `0045-b`, antes `0044-b`).
 - ❌ El cuerpo sigue siendo texto plano.
 - ❌ No se rediseñó el módulo Comunicación completo (hero, KPIs y tabs quedaron como estaban).
 

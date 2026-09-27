@@ -36,7 +36,7 @@
 | `/app/admin` | — | `hasRoleGuard(['admin'])` | `src/app/app.routes.ts` |
 | `/app/admin/dashboard` | `DashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/alumnos` | `AdminAlumnosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | — | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/pre-inscritos` | `AdminPreInscritosComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/alumnos/:id` | `AdminAlumnoDetalleComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/ex-alumnos` | `AdminExAlumnosComponent` | — | `src/app/app.routes.ts` |
@@ -59,7 +59,7 @@
 | `/app/admin/usuarios` | `AdminUsuariosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/secretarias` | `AdminSecretariasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | — | `src/app/app.routes.ts` |
+| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/servicios-especiales` | `AdminServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/notificaciones` | `AdminNotificacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/relatores` | `AdminProfesionalRelatoresComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
@@ -74,7 +74,7 @@
 | `/app/secretaria/dashboard` | `SecretariaDashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/alumnos` | `SecretariaAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/alumnos/:id` | `AdminAlumnoDetalleComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/profesional/alumnos` | `SecretariaAlumnosProfesionalComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
+| `/app/secretaria/profesional/alumnos` | `SecretariaAlumnosProfesionalComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/pre-inscritos` | `SecretariaAlumnosPreInscritosComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/agenda` | `SecretariaAgendaComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/asistencia` | `SecretariaAsistenciaComponent` | — | `src/app/app.routes.ts` |
@@ -99,7 +99,7 @@
 | `/app/secretaria/ex-alumnos` | `SecretariaExAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/ex-alumnos-profesional` | `SecretariaExAlumnosProfesionalComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/servicios-especiales` | `SecretariaServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
+| `/app/secretaria/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/configuracion-web` | `AdminConfiguracionWebComponent` | — | `src/app/app.routes.ts` |
 | `/app/instructor` | — | `hasRoleGuard(['instructor'])`, `pilotPhaseGuard('instructor')` | `src/app/app.routes.ts` |
 | `/app/instructor/dashboard` | `InstructorDashboardComponent` | — | `src/app/app.routes.ts` |

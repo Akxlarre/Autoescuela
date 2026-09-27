@@ -94,7 +94,7 @@ salga, y encontrar lo que está programado sin leer una fila de metadatos.
 - ❌ **Rediseñar el envío, el consentimiento o la programación.** El comportamiento de `0041-b` y
   `0042-b` no se toca: esto es solo la superficie.
 - ❌ **Cambiar el canal, agregar recurrencia o adjuntos.**
-- ❌ **Envío de archivos** — sigue diferido, ahora como `0044-b` en el backlog.
+- ❌ **Envío de archivos** — sigue diferido, ahora como `0045-b` en el backlog (renumerado desde `0044-b` el 2026-09-27).
 - ❌ **Editor de texto enriquecido.** El cuerpo sigue siendo texto plano.
 - ❌ **Rediseño del módulo Comunicación completo** (tabs, hero, KPIs). Solo compositor, historial
   y editor de plantillas.

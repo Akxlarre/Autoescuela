@@ -100,6 +100,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `Discount` | `dto` | `src/app/core/models/dto/discount.model.ts` |
 | `DocumentType`, `DocumentTemplate` | `dto` | `src/app/core/models/dto/document-template.model.ts` |
 | `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
+| `ExecKpisDto`, `ExecMonthlySeriesRowDto`, `ExecInstructorHoursRowDto`, `ExecReceivablesRowDto`, `ExecTodayOpsDto` | `dto` | `src/app/core/models/dto/executive-dashboard.model.ts` |
 | `Expense` | `dto` | `src/app/core/models/dto/expense.model.ts` |
 | `FixedExpense` | `dto` | `src/app/core/models/dto/fixed-expense.model.ts` |
 | `InstructorAdvance` | `dto` | `src/app/core/models/dto/instructor-advance.model.ts` |
@@ -181,6 +182,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
 | `EnrollmentWizardStep`, `StepStatus`, `StepConfig`, `CourseSummary`, `Requirement`, `SidebarSummary`, `EnrollmentWizardState`, `DraftSummary` | `ui` | `src/app/core/models/ui/enrollment-wizard.model.ts` |
 | `CeldaNota`, `FilaEvaluacion`, `CursoEstado`, `CursoResumen`, `PromocionConCursos`, `GrillaEvaluacion` | `ui` | `src/app/core/models/ui/evaluaciones-profesional.model.ts` |
+| `ExecPeriodPreset`, `ExecPeriodOption`, `ExecDateRange`, `ExecRangeChange`, `DeltaKind`, `ExecDelta`, `DeltaTone`, `ExecKpi`, `ExecExpenseBreakdown`, `ExecKpiSummary`, `ExecMonthlyPoint`, `ExecMonthlySeries`, `InstructorHoursRow`, `StudentStageCounts`, `ReceivableAgingBucket`, `ReceivablesSummary`, `TodayOpsSummary`, `ExecKpiCard`, `ExecSection` | `ui` | `src/app/core/models/ui/executive-dashboard.model.ts` |
 | `AlumnoQuickActionType`, `AlumnoQuickAction`, `ActionResult`, `AlumnoResult`, `InstructorResult`, `SearchResult`, `SearchResultGroup` | `ui` | `src/app/core/models/ui/global-search.model.ts` |
 | `HistorialCierre`, `HistorialFiltro` | `ui` | `src/app/core/models/ui/historial-cuadraturas.model.ts` |
 | `InstructorDashboardData`, `InstructorDashboardKpis`, `InstructorClassRow`, `InstructorStudentCard`, `InstructorStudentDetail`, `FichaTecnicaRow`, `EvaluationFormData`, `ClassClosureData`, `EvaluationChecklistItem`, `ScheduleBlock`, `WeekScheduleKpis`, `ScheduleDay`, `DaySchedule`, `WeekSchedule`, `MonthlyHoursRow`, `LiquidacionKpis`, `SessionDetailRow`, `AttendanceClassRow`, `UpcomingDay` | `ui` | `src/app/core/models/ui/instructor-portal.model.ts` |

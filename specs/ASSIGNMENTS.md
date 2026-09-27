@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | `b` | spec | P1 | m | KPIs a sacar de la página mock de Jorge Pérez. Secretaria mantiene su dashboard actual |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
@@ -301,6 +300,7 @@
 | ASG-i-018 | Botón "Papelera" de listados de alumnos sin label visible | [hotfix-004-i-papelera-alumnos-sin-label-visible](hotfixes/hotfix-004-i-papelera-alumnos-sin-label-visible/hotfix.md) | 2026-09-24 |
 | ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | [hotfix-005-i-skeleton-flota-track-duplicado](hotfixes/hotfix-005-i-skeleton-flota-track-duplicado/hotfix.md) | 2026-09-24 |
 | ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | [hotfix-006-i-disabled-attribute-reactive-form-configuracion-web](hotfixes/hotfix-006-i-disabled-attribute-reactive-form-configuracion-web/hotfix.md) | 2026-09-24 |
+| ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | [0044-b-dashboard-ejecutivo-admin](specs/0044-b-dashboard-ejecutivo-admin/spec.md) | 2026-09-27 |
 <!-- AUTO-GENERATED:END -->
 
 ---
