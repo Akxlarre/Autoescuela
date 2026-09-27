@@ -7,6 +7,7 @@ import {
   inject,
   ElementRef,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -355,10 +356,14 @@ export class DashboardComponent {
 
   constructor() {
     // Branch-scoped (facades.md §7): recarga al cambiar de sede. SWR dentro del Facade.
+    // Solo la sede es dependencia: reload()/initialize() leen signals (rango, datos) antes de su
+    // primer await y, sin untracked(), cada cambio de período re-dispararía este effect (fix-173-b).
     effect(() => {
       this.branchFacade.selectedBranchId(); // tracking
-      void this.facade.reload();
-      void this.alertsFacade.initialize();
+      untracked(() => {
+        void this.facade.reload();
+        void this.alertsFacade.initialize();
+      });
     });
 
     // Animar el grid una sola vez, cuando termina la primera carga.

@@ -25,7 +25,11 @@ function setup(opts: { branchId?: number | null; tier?: 'mobile' | 'tablet' | 'd
     receivables: signal(null),
     series: signal(null),
     applyRange: vi.fn().mockResolvedValue(undefined),
-    reload: vi.fn().mockResolvedValue(undefined),
+    // Como el Facade real: lee signals de forma síncrona antes de su primer await.
+    reload: vi.fn(async () => {
+      facade.range();
+      facade.kpis();
+    }),
     sectionError: vi.fn(() => null),
   };
   const branch = {
@@ -115,6 +119,22 @@ describe('DashboardComponent (dashboard ejecutivo)', () => {
     expect(setup({ tier: 'desktop' }).component.isDesktopLayout()).toBe(true);
     TestBed.resetTestingModule();
     expect(setup({ tier: 'tablet' }).component.isDesktopLayout()).toBe(false);
+  });
+
+  it('fix-173-b: cambiar el período no re-dispara el effect de sede', () => {
+    const { facade, branch } = setup();
+    TestBed.tick();
+    expect(facade.reload).toHaveBeenCalledTimes(1);
+
+    // applyRange() del Facade real escribe _range: el effect NO debe reaccionar a eso.
+    facade.range.set({ from: '2026-08-01', to: '2026-08-31' });
+    TestBed.tick();
+    expect(facade.reload).toHaveBeenCalledTimes(1);
+
+    // Cambiar de sede sí recarga.
+    branch.selectedBranchId.set(2);
+    TestBed.tick();
+    expect(facade.reload).toHaveBeenCalledTimes(2);
   });
 
   it('reintentar recarga el Facade', () => {
