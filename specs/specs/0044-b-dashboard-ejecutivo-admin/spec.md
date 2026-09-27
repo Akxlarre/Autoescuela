@@ -1,6 +1,6 @@
 # Spec 0044-b — Dashboard Ejecutivo de Admin (fase 1: Clase B)
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-09-27
 > **Owner:** Benjamín
 > **Priority:** P1
@@ -107,8 +107,13 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
   Los placeholders `status = 'pending'` (matrícula confirmada sin pago inicial) **no** cuentan
   (ver D5).
 - **AC4 — Gastos**: Then "Gastos" = `expenses.amount` (por `date`) + `fixed_expenses.amount`
-  (por `date`) + costo de instructores del período (`instructor_monthly_payments`, ver decisión
-  abierta D2), y la tarjeta muestra el desglose de las 3 fuentes.
+  (por `date`) + **costo devengado de instructores** del período (D2), y la tarjeta muestra el
+  desglose de las 3 fuentes. Costo devengado por instructor-mes (`period = 'YYYY-MM'`):
+  - si existe fila en `instructor_monthly_payments` → su `base_salary` (valor congelado al pagar);
+  - si no (mes aún no liquidado) → `instructor_monthly_hours.total_equivalent` × tarifa por hora
+    de la sede del instructor (`branch_payroll_config`), igual que calcula `LiquidacionesFacade`.
+  - Sede del instructor = `users.branch_id` del instructor (mismo criterio que Liquidaciones).
+  - Rangos que no calzan con meses completos: el costo del mes se prorratea por días incluidos.
 - **AC5 — Resultado operacional**: Then "Resultado operacional" = Ingresos − Gastos (AC3 − AC4)
   y muestra el margen % (resultado / ingresos). Con ingresos = 0 el margen se muestra "—", no
   `NaN` ni `-Infinity`.
@@ -198,6 +203,8 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 - ❌ Aprobación real del examen municipal (no hay dato oficial; `student_surveys.obtained_license`
   es autodeclarado — se deja para una iteración futura).
 - ❌ Rediseñar Contabilidad/Reportes (`admin/contabilidad-reportes`).
+- ❌ Ventas de servicios especiales (`special_service_sales`) en "Ingresos" (D4).
+- ❌ Cursos singulares (`standalone_course_enrollments`) — no son Clase B.
 
 ---
 
@@ -267,16 +274,20 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
       `draft | pending_docs | active | completed | cancelled`. "Pendiente de examen municipal" =
       `status='active'` y `certificate_enabled = true` (lo pone el trigger
       `verify_class_b_certificate_enablement` al completar clase 12 + 100% teoría).
-- [ ] **D2 — Costo de instructores.** `fixed_expenses` ya tiene una categoría "sueldos". Riesgo de
-      **doble conteo** si además se suma `instructor_monthly_payments`. Decidir: ¿los sueldos de
-      instructores se cargan en `fixed_expenses`, o solo viven en liquidaciones? ¿Se usa
-      `base_salary` (costo devengado) o `net_payment`/`paid_at` (caja)?
+- [x] **D2 — Costo de instructores. Resuelto (owner, 2026-09-27):** los sueldos de instructores
+      viven **solo en Liquidaciones** (no en `fixed_expenses`, sin doble conteo) y se cuenta lo
+      **devengado**, no lo pagado. Regla de cálculo en AC4.
+      - Hallazgo: `instructor_monthly_payments` solo tiene fila cuando el mes ya se pagó
+        (`LiquidacionesFacade.registrarPago()`), por eso el mes en curso se calcula en vivo.
+      - ⚠️ Riesgo conocido: meses pasados no liquidados se valorizan con la tarifa **actual** de la
+        sede (no hay historial de tarifas). Aceptable para fase 1; documentar en el tooltip.
+      - Supuesto: la categoría "sueldos" de `fixed_expenses` corresponde a otro personal
+        (secretarias, etc.), así que se suma completa.
 - [x] **D3 — Dónde se agrega. Resuelto (owner, 2026-09-27):** funciones SQL/RPC. El Facade solo
       llama a las RPC y mapea DTO → modelo UI; la matemática de Δ% y formato va en funciones puras
       de `core/utils/` (testeables sin Angular).
-- [ ] **D4 — Servicios especiales.** ¿"Ingresos" incluye `special_service_sales`? Ojo: esa tabla
-      no tiene `branch_id`, así que el filtro de sede tendría que derivarse (vía `registered_by`
-      o `student_id`).
+- [x] **D4 — Servicios especiales. Resuelto (owner, 2026-09-27):** **no** se incluyen en
+      "Ingresos" en esta fase (ver Out of scope).
 - [x] **D5 — Pagos a contar. Resuelto (investigado en código, 2026-09-27):** contar
       `status IN ('paid', 'completado')`.
       - `'paid'` es lo que escriben todos los flujos reales (`PagosFacade.registrarNuevoPago()` y
@@ -301,3 +312,4 @@ cartera morosa en el mismo mes en que ocurren, no al cierre.
 - 2026-09-27 — draft inicial por Benjamín (reclamada desde ASG-m-008)
 - 2026-09-27 — borrador de US (8) y ACs (23 + 5 edge cases); decisiones D1–D5 abiertas
 - 2026-09-27 — D1 y D3 resueltas por el owner; D5 resuelta investigando el código. Quedan D2 y D4.
+- 2026-09-27 — D2 (liquidaciones, devengado) y D4 (sin servicios especiales) resueltas. Status → approved.

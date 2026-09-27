@@ -20,7 +20,7 @@
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
 | 0044-b | Enviar archivos en un comunicado | P2 | Benjamín | Sin spec todavía. Diferido de `0042-b` el 2026-09-10 por decisión del owner. Renumerado de 0043-b a 0044-b cuando 0043-b se usó para la spec de usabilidad. **No adjuntar por SMTP**: un PDF a cientos de destinatarios multiplica el tráfico y es señal de spam (riesgo de reputación de dominio, `indices/NOTIFICATIONS-MAP.md` §9.4) — la forma sana es subir a Storage (bucket privado `documents`, ya existe) y mandar enlace. La decisión de fondo que la spec debe resolver es el **control de acceso al enlace**: firmado con expiración vs. exige login del alumno. |
-| [0044](./specs/0044-b-dashboard-ejecutivo-admin/spec.md) | Dashboard Ejecutivo de Admin (fase 1: Clase B) | P1 | Benjamín | Draft. Reclamada desde ASG-m-008. Referencia: mock de Jorge Pérez (autoescuela-chillan-demo.vercel.app/dashboard). |
+| [0044](./specs/0044-b-dashboard-ejecutivo-admin/spec.md) | Dashboard Ejecutivo de Admin (fase 1: Clase B) | P1 | Benjamín | Approved. Reclamada desde ASG-m-008. Referencia: mock de Jorge Pérez (autoescuela-chillan-demo.vercel.app/dashboard). |
 
 ---
 
