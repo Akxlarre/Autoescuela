@@ -158,6 +158,10 @@ export class ExecutiveDashboardFacade {
 
   private async fetchAll(): Promise<void> {
     const token = this.fetchGuard.next();
+    // Un preset ("Este mes", …) se re-resuelve contra hoy en cada carga: el Facade es singleton
+    // y la app puede quedar abierta al cambiar de mes (fix-175-b). Los rangos custom no se tocan.
+    const preset = this._preset();
+    if (preset !== 'custom') this._range.set(resolvePresetRange(preset, chileTodayIso()));
     const range = this._range();
     const seriesYear = Number(range.to.slice(0, 4));
     const results = await this.requestAll(range, seriesYear, this.branchFacade.selectedBranchId());

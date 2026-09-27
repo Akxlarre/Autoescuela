@@ -86,7 +86,8 @@ describe('ExecutiveDashboardFacade', () => {
 
   it('AC11: llama exec_dashboard_kpis para el rango, el período anterior y el año anterior', async () => {
     const { facade, rpc } = setup();
-    facade.setRange({ from: '2026-09-01', to: '2026-09-27' }, 'this_month');
+    // custom: un preset se re-resolvería contra la fecha real del día (fix-175-b).
+    facade.setRange({ from: '2026-09-01', to: '2026-09-27' }, 'custom');
     await facade.initialize();
 
     expect(kpiCalls(rpc)).toEqual([
@@ -220,6 +221,31 @@ describe('ExecutiveDashboardFacade', () => {
     await second;
     expect(facade.isLoading()).toBe(false);
     expect(facade.kpis()).not.toBeNull();
+  });
+
+  it('fix-175-b: "Este mes" se re-resuelve al cambiar de mes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-30T15:00:00Z')); // 30-sep en Chile
+      const { facade, rpc } = setup();
+      await facade.initialize();
+      expect(kpiCalls(rpc)[0]).toMatchObject({ p_from: '2026-09-01', p_to: '2026-09-30' });
+
+      vi.setSystemTime(new Date('2026-10-02T15:00:00Z')); // la app siguió abierta
+      rpc.mockClear();
+      await facade.reload();
+      expect(facade.range()).toEqual({ from: '2026-10-01', to: '2026-10-02' });
+      expect(kpiCalls(rpc)[0]).toMatchObject({ p_from: '2026-10-01', p_to: '2026-10-02' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fix-175-b: un rango personalizado no se re-resuelve', async () => {
+    const { facade } = setup();
+    await facade.applyRange({ from: '2025-03-01', to: '2025-03-15' }, 'custom');
+    await facade.reload();
+    expect(facade.range()).toEqual({ from: '2025-03-01', to: '2025-03-15' });
   });
 
   it('series usa el año del fin del rango', async () => {
