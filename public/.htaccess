@@ -1,0 +1,43 @@
+# Autoescuela — Apache/LiteSpeed config de la SPA Angular en cPanel (spec 0046-b).
+# Viaja dentro del build (public/ → dist). NO nombrar el dominio acá: es provisorio y
+# vive solo en la variable APP_DOMAIN del environment Production (AC10).
+
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # HTTPS forzado (AC7). Excluye el desafío de AutoSSL de cPanel.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # El manifiesto del pipeline de deploy no es público.
+  RewriteRule ^\.deploy-manifest\.json$ - [F,L]
+
+  # Archivo o carpeta real → se sirve tal cual.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Ruta con extensión que no existe (chunk de una versión borrada, typo) → 404 real.
+  # Sin esto Apache devolvería index.html con 200 y el navegador fallaría con un error
+  # de sintaxis de JS en vez de un 404 legible.
+  RewriteCond %{REQUEST_URI} \.[a-z0-9]{1,5}$ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  # Cualquier otra ruta → la SPA resuelve (AC5).
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Caché (AC6): index.html y version.json siempre se revalidan; los archivos con hash
+# de contenido en el nombre son inmutables.
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|version\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "-[A-Za-z0-9]{8}\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
