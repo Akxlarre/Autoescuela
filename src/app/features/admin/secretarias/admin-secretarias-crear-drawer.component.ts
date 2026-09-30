@@ -270,7 +270,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               <div class="flex items-center gap-3">
                 <button
                   class="estado-btn"
-                  [class.estado-btn--inactive]="!verTodasLasSedes()"
+                  [class.estado-btn--selected]="!verTodasLasSedes()"
                   (click)="verTodasLasSedes.set(false)"
                   data-llm-action="toggle-secretary-all-branches-grant"
                 >
@@ -279,7 +279,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 </button>
                 <button
                   class="estado-btn"
-                  [class.estado-btn--grant]="verTodasLasSedes()"
+                  [class.estado-btn--selected]="verTodasLasSedes()"
                   (click)="verTodasLasSedes.set(true)"
                   data-llm-action="toggle-secretary-all-branches-grant"
                 >
@@ -396,12 +396,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
       cursor: pointer;
       transition: all var(--duration-fast);
     }
-    .estado-btn--inactive {
-      border-color: var(--border-strong, var(--text-muted));
-      background: var(--bg-elevated);
-      color: var(--text-secondary);
-    }
-    .estado-btn--grant {
+    /* Opción seleccionada del toggle "Acceso a sedes": mismo estilo para ambas opciones
+       (hotfix-110-m). */
+    .estado-btn--selected {
       border-color: var(--ds-brand);
       background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
       color: var(--ds-brand);

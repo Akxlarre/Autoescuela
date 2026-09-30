@@ -1,7 +1,7 @@
 # Asignación ASG-i-024 — Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29

@@ -1,7 +1,7 @@
 # Asignación ASG-i-033 — Testing: Documentos (DMS), plantillas y certificación Clase B
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29
