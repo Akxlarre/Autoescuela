@@ -1,7 +1,7 @@
 # Asignación ASG-i-027 — Testing: Asistencia Clase B, inasistencias y penalización
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29

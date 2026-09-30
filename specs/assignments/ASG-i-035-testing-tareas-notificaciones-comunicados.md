@@ -1,7 +1,7 @@
 # Asignación ASG-i-035 — Testing: Tareas/observaciones, notificaciones y comunicados
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29

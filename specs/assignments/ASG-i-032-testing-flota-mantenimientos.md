@@ -1,7 +1,7 @@
 # Asignación ASG-i-032 — Testing: Flota, documentos de vehículo y mantenimientos
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29

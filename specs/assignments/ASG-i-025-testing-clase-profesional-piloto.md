@@ -1,7 +1,7 @@
 # Asignación ASG-i-025 — Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29

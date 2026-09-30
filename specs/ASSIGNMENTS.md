@@ -39,6 +39,25 @@
 > arrancan ya, en paralelo. `029` (Contabilidad) y `030` (Dashboards) conviene correrlas al final,
 > sobre los datos que generaron las demás. Cada bug encontrado va a **su propio** fix/hotfix.
 >
+> **Reparto (2026-09-30, por Matías).** Por esfuerzo estimado (casos de cada archivo de
+> `specs/testing-piloto/` × dificultad + hallazgos 🔴 a confirmar), no por cantidad de
+> asignaciones, agrupando cadenas de módulos para que las dependencias queden en una persona:
+>
+> | Quién | Bloque | Asignaciones | Esfuerzo aprox. |
+> |---|---|---|---|
+> | `i` Ignacio | Dinero: matrícula → pagos → contabilidad | 023, 028, 031, 029, 030, 036 | ~1.620 |
+> | `m` Matías | Ciclo académico del alumno (038 primero: bloquea casos de 024 y 033) | 038, 027, 024, 033, 025 | ~1.540 |
+> | `b` Benjamín | Plataforma y seguridad (037 concentra 25 de los 🔴 → Fase 0) | 037, 022, 034, 026, 032, 035 | ~1.650 |
+>
+> **Datos de prueba — dos cuidados:**
+> 1. Nadie tiene que esperar a otro para tener datos: el seed de `0008-i` ya trae alumnos,
+>    matrículas, agenda, pagos y asistencia. Los datos **especiales** que el seed no trae (fechas
+>    pasadas, documentos vencidos, alumnos con 2 matrículas, 12/12 prácticas) conviene sembrarlos
+>    **una sola vez para todos**, no cada uno por su lado.
+> 2. La BD es compartida: para acciones que cambian estado (anular, cancelar, egresar, pagar,
+>    marcar inasistencia) usa un alumno de prueba propio o uno del seed acordado con el resto,
+>    para no romperle el caso a otro. Mirar datos existentes no tiene problema.
+>
 > | ASG | Módulo | Tipo | Dificultad | Prioridad |
 > |---|---|---|---|---|
 > | 021 | Infra: suite Playwright E2E | Infraestructura | Alta | P0 |
@@ -61,23 +80,23 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `cualquiera` | fix | P0 | i | Integración/E2E · Media |
-| ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `cualquiera` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
-| ASG-i-024 | Testing: Base de Alumnos B, ficha y ex-alumnos | `cualquiera` | fix | P0 | i | Integración · Alta |
-| ASG-i-025 | Testing: Clase Profesional en el piloto | `cualquiera` | fix | P1 | i | Integración · Alta |
-| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `cualquiera` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
-| ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `cualquiera` | fix | P1 | i | Integración · Alta |
-| ASG-i-028 | Testing: Pagos, abonos y descuentos | `cualquiera` | fix | P0 | i | E2E · Alta |
-| ASG-i-029 | Testing: Contabilidad | `cualquiera` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-030 | Testing: Dashboards | `cualquiera` | fix | P1 | i | Integración · Media · correr al final |
-| ASG-i-031 | Testing: Servicios especiales | `cualquiera` | fix | P2 | i | Funcional · Baja |
-| ASG-i-032 | Testing: Flota y mantenimientos | `cualquiera` | fix | P1 | i | Funcional · Media |
-| ASG-i-033 | Testing: Documentos (DMS) y certificación B | `cualquiera` | fix | P1 | i | Funcional · Media |
-| ASG-i-034 | Testing: Instructores, secretarias y usuarios | `cualquiera` | fix | P1 | i | Integración · Media |
-| ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `cualquiera` | fix | P1 | i | Integración · Media |
-| ASG-i-036 | Testing: Auditoría y Configuración web | `cualquiera` | fix | P2 | i | Funcional · Baja |
-| ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `cualquiera` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
-| ASG-i-038 | Decisión: ¿quién pone la nota de evaluación B durante el piloto? | `cualquiera` | spec | P0 | i | Sin nota nadie se certifica ni egresa. Choca con la regla de `fix-115-m`. Bloquea casos de 024 y 033 |
+| ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `b` | fix | P0 | i | Integración/E2E · Media |
+| ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
+| ASG-i-024 | Testing: Base de Alumnos B, ficha y ex-alumnos | `m` | fix | P0 | i | Integración · Alta |
+| ASG-i-025 | Testing: Clase Profesional en el piloto | `m` | fix | P1 | i | Integración · Alta |
+| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
+| ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `m` | fix | P1 | i | Integración · Alta |
+| ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
+| ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
+| ASG-i-030 | Testing: Dashboards | `i` | fix | P1 | i | Integración · Media · correr al final |
+| ASG-i-031 | Testing: Servicios especiales | `i` | fix | P2 | i | Funcional · Baja |
+| ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
+| ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
+| ASG-i-034 | Testing: Instructores, secretarias y usuarios | `b` | fix | P1 | i | Integración · Media |
+| ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
+| ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
+| ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `b` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
+| ASG-i-038 | Decisión: ¿quién pone la nota de evaluación B durante el piloto? | `m` | spec | P0 | i | Sin nota nadie se certifica ni egresa. Choca con la regla de `fix-115-m`. Bloquea casos de 024 y 033 |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
