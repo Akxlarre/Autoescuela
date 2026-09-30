@@ -221,7 +221,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-021 | Montar la suite Playwright E2E automatizada (base de la tanda de testing) | `m` | [0019-m-suite-playwright-e2e](specs/0019-m-suite-playwright-e2e/spec.md) | 2026-09-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -359,6 +358,7 @@
 | ASG-i-019 | Skeleton de Flota dispara NG0955 por track key duplicado | [hotfix-005-i-skeleton-flota-track-duplicado](hotfixes/hotfix-005-i-skeleton-flota-track-duplicado/hotfix.md) | 2026-09-24 |
 | ASG-i-020 | `[disabled]="true"` en control reactivo dispara warning de Angular | [hotfix-006-i-disabled-attribute-reactive-form-configuracion-web](hotfixes/hotfix-006-i-disabled-attribute-reactive-form-configuracion-web/hotfix.md) | 2026-09-24 |
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | [0044-b-dashboard-ejecutivo-admin](specs/0044-b-dashboard-ejecutivo-admin/spec.md) | 2026-09-27 |
+| ASG-i-021 | Montar la suite Playwright E2E automatizada (base de la tanda de testing) | [0019-m-suite-playwright-e2e](specs/0019-m-suite-playwright-e2e/spec.md) | 2026-09-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---

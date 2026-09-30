@@ -77,3 +77,8 @@ docs/2TESTPSICOLOGICO.doc
 /*.xlsx
 /*.csv
 /*.pdf
+
+# Suite E2E Playwright (spec 0019-m): sesiones guardadas (contienen tokens) y artefactos locales
+e2e/.auth/
+playwright-report/
+test-results/

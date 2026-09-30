@@ -1,6 +1,6 @@
 # Asignación ASG-i-021 — Montar la suite Playwright E2E automatizada (base de la tanda de testing)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P0

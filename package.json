@@ -17,7 +17,9 @@
     "assignments:sync": "node scripts/assignments-sync.js",
     "check:bento": "node scripts/check-bento-classes.js",
     "test:ci": "vitest run --reporter=verbose",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "private": true,
   "type": "module",
@@ -49,6 +51,7 @@
     "@angular/build": "^21.2.0",
     "@angular/cli": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.63.0",
     "happy-dom": "^20.8.9",
     "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
