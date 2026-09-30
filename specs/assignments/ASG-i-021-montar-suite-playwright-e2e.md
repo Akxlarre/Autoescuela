@@ -1,14 +1,14 @@
 # Asignación ASG-i-021 — Montar la suite Playwright E2E automatizada (base de la tanda de testing)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-09-30
+> **resulting_track:** 0019-m-suite-playwright-e2e
 
 ---
 
@@ -28,10 +28,20 @@ de la tanda (la capa manual de cada módulo NO depende de esta).
 
 - Instalar `@playwright/test` y crear `playwright.config.ts` + carpeta `e2e/` (confirmar ubicación
   con el equipo; `e2e/` en la raíz es lo convencional y no choca con la estructura de `src/`).
-- `webServer` que levante `ng serve` contra **Supabase local** (`npx supabase start`) — nunca
-  contra producción.
-- **Datos reproducibles:** reusar el reset/seed de spec `0008-i` para partir de un estado
-  conocido antes de cada corrida (o por archivo de test).
+- `webServer` que levante `ng serve` contra la **BD de desarrollo en la nube** (la misma que usa
+  el equipo a diario, `environment.development.ts`) — nunca contra producción. No se usa
+  Supabase local: nadie del equipo lo usa para desarrollar.
+- **Convivencia con la BD compartida** (la usan los 3 devs mientras la suite corre):
+  - **Prohibido ejecutar el reset de `0008-i`** desde la suite: borra instructores/alumnos que
+    otros pueden estar usando. Los tests parten de los datos que el seed ya dejó.
+  - **Sin conteos absolutos:** nada de "hay 250 alumnos". Usar comparaciones relativas (antes
+    vs después de la acción) o validar forma/estado ("el KPI muestra un número, no un error").
+  - **Datos propios marcados y limpiados:** todo registro que cree un test lleva un prefijo
+    identificable (ej. `E2E-`) y se borra al terminar (`afterEach`/`afterAll`). El prefijo
+    permite barrer a mano lo que quede si un test se cae a mitad de camino.
+  - Si más adelante algún test que modifica datos no se puede escribir con estas reglas (ej.
+    totales exactos de contabilidad), se evalúa un **proyecto Supabase separado para E2E**,
+    donde sí se podría resetear. No es parte de esta asignación.
 - **Fixtures de sesión por rol** (`storageState`): admin, secretaria sede A, secretaria sede B,
   secretaria con grant multi-sede. Cada rol en su propio `BrowserContext` — esto resuelve el
   problema del UAT de que 2 pestañas comparten `localStorage` y una sesión pisa a la otra.
@@ -50,7 +60,8 @@ de la tanda (la capa manual de cada módulo NO depende de esta).
 
 ## Referencias
 
-- `specs/specs/0008-i-reset-y-poblar-datos-prueba/spec.md` (seed de datos)
+- `specs/specs/0008-i-reset-y-poblar-datos-prueba/spec.md` (seed de datos que la suite
+  aprovecha; su reset NO se ejecuta desde la suite)
 - `docs/UAT-PLAN.md` — nota del Paquete 5 sobre `localStorage` compartido entre pestañas
 - `.claude/skills/verify/SKILL.md` (checks que ya usa el QA asistido: consola, red, app-like)
 

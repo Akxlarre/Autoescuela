@@ -61,7 +61,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-021 | Montar la suite Playwright E2E automatizada | `cualquiera` | spec | P0 | i | Prerequisito solo de la capa Playwright del resto de la tanda |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `cualquiera` | fix | P0 | i | Integración/E2E · Media |
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `cualquiera` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-024 | Testing: Base de Alumnos B, ficha y ex-alumnos | `cualquiera` | fix | P0 | i | Integración · Alta |
@@ -222,6 +221,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-021 | Montar la suite Playwright E2E automatizada (base de la tanda de testing) | `m` | [0019-m-suite-playwright-e2e](specs/0019-m-suite-playwright-e2e/spec.md) | 2026-09-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---
