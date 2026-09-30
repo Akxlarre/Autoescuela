@@ -22,6 +22,64 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
+### Tanda testing profundo del piloto por módulo — 2026-09-29
+
+> Testing de la primera entrega (piloto Admin/Secretaria: todo salvo portales Instructor y
+> Alumno, matrícula pública online y 7 módulos de Clase Profesional — ver
+> `src/app/core/config/pilot-phase.config.ts`). **Una asignación por módulo**, cada una con
+> 3 capas: **(1) Funcional** — verificar los ACs de las specs/fixes que ya documentan el módulo;
+> **(2) E2E manual** — checklist de casos, incluidos los que cruzan a otros módulos;
+> **(3) Playwright** — casos a automatizar en la suite nueva.
+>
+> **Tipo:** *Funcional* = el módulo se prueba casi solo, contra sus propios ACs. *Integración* =
+> sus datos dependen de otros módulos o los alimentan. *E2E* = flujo de negocio de punta a punta
+> que cruza varios módulos y roles.
+>
+> **Orden:** `021` (montar Playwright) es prerequisito **solo de la capa 3**; las pasadas manuales
+> arrancan ya, en paralelo. `029` (Contabilidad) y `030` (Dashboards) conviene correrlas al final,
+> sobre los datos que generaron las demás. Cada bug encontrado va a **su propio** fix/hotfix.
+>
+> | ASG | Módulo | Tipo | Dificultad | Prioridad |
+> |---|---|---|---|---|
+> | 021 | Infra: suite Playwright E2E | Infraestructura | Alta | P0 |
+> | 022 | Autenticación, sesión, roles y fase piloto | Integración/E2E | Media | P0 |
+> | 023 | Matrícula presencial (B, refuerzo, Profesional) | E2E | Alta | P0 |
+> | 024 | Base de Alumnos B, ficha y ex-alumnos | Integración | Alta | P0 |
+> | 025 | Clase Profesional piloto (Alumnos, Promociones, Libro) | Integración | Alta | P1 |
+> | 026 | Agenda y Triple Match | E2E | Alta | P0 |
+> | 027 | Asistencia B, inasistencias y penalización | Integración | Alta | P1 |
+> | 028 | Pagos y descuentos | E2E | Alta | P0 |
+> | 029 | Contabilidad (cuadratura, reportes, liquidaciones…) | Integración | Alta | P0 |
+> | 030 | Dashboards (admin, ejecutivo, secretaria) | Integración | Media | P1 |
+> | 031 | Servicios especiales | Funcional | Baja | P2 |
+> | 032 | Flota y mantenimientos | Funcional | Media | P1 |
+> | 033 | Documentos (DMS) y certificación B | Funcional | Media | P1 |
+> | 034 | Instructores, secretarias y usuarios | Integración | Media | P1 |
+> | 035 | Tareas, notificaciones y comunicados | Integración | Media | P1 |
+> | 036 | Auditoría y Configuración web | Funcional | Baja | P2 |
+> | 037 | Transversal: multi-sede (RLS), responsive, temas, app-like | E2E | Alta | P0 |
+
+| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
+|----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-021 | Montar la suite Playwright E2E automatizada | `cualquiera` | spec | P0 | i | Prerequisito solo de la capa Playwright del resto de la tanda |
+| ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `cualquiera` | fix | P0 | i | Integración/E2E · Media |
+| ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `cualquiera` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
+| ASG-i-024 | Testing: Base de Alumnos B, ficha y ex-alumnos | `cualquiera` | fix | P0 | i | Integración · Alta |
+| ASG-i-025 | Testing: Clase Profesional en el piloto | `cualquiera` | fix | P1 | i | Integración · Alta |
+| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `cualquiera` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
+| ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `cualquiera` | fix | P1 | i | Integración · Alta |
+| ASG-i-028 | Testing: Pagos, abonos y descuentos | `cualquiera` | fix | P0 | i | E2E · Alta |
+| ASG-i-029 | Testing: Contabilidad | `cualquiera` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
+| ASG-i-030 | Testing: Dashboards | `cualquiera` | fix | P1 | i | Integración · Media · correr al final |
+| ASG-i-031 | Testing: Servicios especiales | `cualquiera` | fix | P2 | i | Funcional · Baja |
+| ASG-i-032 | Testing: Flota y mantenimientos | `cualquiera` | fix | P1 | i | Funcional · Media |
+| ASG-i-033 | Testing: Documentos (DMS) y certificación B | `cualquiera` | fix | P1 | i | Funcional · Media |
+| ASG-i-034 | Testing: Instructores, secretarias y usuarios | `cualquiera` | fix | P1 | i | Integración · Media |
+| ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `cualquiera` | fix | P1 | i | Integración · Media |
+| ASG-i-036 | Testing: Auditoría y Configuración web | `cualquiera` | fix | P2 | i | Funcional · Baja |
+| ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `cualquiera` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
+| ASG-i-038 | Decisión: ¿quién pone la nota de evaluación B durante el piloto? | `cualquiera` | spec | P0 | i | Sin nota nadie se certifica ni egresa. Choca con la regla de `fix-115-m`. Bloquea casos de 024 y 033 |
+
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
 > Salió de `ASG-i-012` (QA visual pre-lanzamiento, cerrada). Los 7 tracks ya están redactados
