@@ -1,0 +1,193 @@
+# Deploy de la app Angular a producción (cPanel, FTPS) — spec 0046-b.
+#
+# Publicar:  git tag v1.2.0 && git push origin v1.2.0   → build + tests → aprobación → subida
+# Rollback:  Actions → "Deploy app (producción)" → Run workflow → tag anterior
+#
+# El dominio NO se escribe acá: vive en la variable APP_DOMAIN del environment Production (es
+# provisorio y va a cambiar). Setup y checklist de cambio de dominio: docs/DEPLOY.md.
+
+name: Deploy app (producción)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag ya existente a desplegar (rollback), ej. v1.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build y gate de calidad
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      tag: ${{ steps.ref.outputs.tag }}
+    steps:
+      - name: Resolver tag
+        id: ref
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          PUSHED_TAG: ${{ github.ref_name }}
+        run: |
+          TAG="${INPUT_TAG:-$PUSHED_TAG}"
+          if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+            echo "::error::'$TAG' no es un tag de versión válido (se espera v*, ej. v1.2.0)."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.ref.outputs.tag }}
+          fetch-depth: 0
+
+      # AC-E5: solo se despliega código que ya está en main.
+      - name: Verificar que el tag está en la historia de main
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::El tag ${{ steps.ref.outputs.tag }} apunta a $SHA, que no está en main. Solo se despliegan tags creados sobre commits de main."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Gate de calidad (AC1): cualquier rojo corta acá y no se pide aprobación.
+      - name: Tests (test:ci)
+        run: npm run test:ci
+      - name: Lint arquitectónico (lint:arch)
+        run: npm run lint:arch
+      - name: Micro-suite del plan de deploy
+        run: node scripts/lib/deploy-manifest.test.mjs
+
+      - name: Build de producción
+        run: npx ng build --configuration production
+
+      # AC8: trazabilidad de la versión publicada. El SHA sale de git y no de GITHUB_SHA,
+      # porque en workflow_dispatch GITHUB_SHA es el de la rama por defecto, no el del tag.
+      - name: Escribir version.json
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          export SHA="$(git rev-parse HEAD)"
+          node -e "require('fs').writeFileSync('dist/Autoescuela/browser/version.json', JSON.stringify({
+            tag: process.env.TAG,
+            sha: process.env.SHA,
+            builtAt: new Date().toISOString(),
+            run: process.env.GITHUB_RUN_ID
+          }, null, 2) + '\n')"
+          test -f dist/Autoescuela/browser/.htaccess || { echo "::error::.htaccess no está en el build"; exit 1; }
+          cat dist/Autoescuela/browser/version.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/Autoescuela/browser/
+          include-hidden-files: true # .htaccess
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    name: Subida FTPS
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # AC2: la aprobación la exige el environment (Required reviewers).
+    environment:
+      name: Production
+      url: https://${{ vars.APP_DOMAIN }}
+    # AC-E1: nunca dos subidas en paralelo; no se cancela una subida en curso.
+    concurrency:
+      group: deploy-app-production
+      cancel-in-progress: false
+    steps:
+      # AC-E2: fallar claro y antes de tocar el servidor si falta configuración.
+      - name: Verificar configuración del environment
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+        run: |
+          missing=()
+          [ -n "$FTP_SERVER" ]   || missing+=("secret FTP_SERVER")
+          [ -n "$FTP_USERNAME" ] || missing+=("secret FTP_USERNAME")
+          [ -n "$FTP_PASSWORD" ] || missing+=("secret FTP_PASSWORD")
+          [ -n "$APP_DOMAIN" ]   || missing+=("variable APP_DOMAIN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Falta configurar en el environment Production: ${missing[*]}. No se subió nada. Ver docs/DEPLOY.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+          sparse-checkout: scripts
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
+      - name: Instalar lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Subir por FTPS
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # FTPS obligatorio y con certificado verificado (AC3). --env-password lee LFTP_PASSWORD
+          # sin que la contraseña pase por la línea de comandos.
+          cat > session.lftp <<EOF
+          set cmd:fail-exit yes
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ssl:verify-certificate yes
+          set net:max-retries 2
+          set net:timeout 30
+          open --env-password -u "$FTP_USERNAME" "$FTP_SERVER"
+          EOF
+
+          # 1. Manifiesto del deploy anterior (no existe en el primero).
+          mkdir -p remote
+          { cat session.lftp; echo 'set cmd:fail-exit no'; echo 'get -O remote .deploy-manifest.json'; } > get.lftp
+          lftp -f get.lftp || true
+
+          # 2. Qué borrar (función pura con test) + manifiesto nuevo.
+          node scripts/deploy-ftp-plan.js site remote/.deploy-manifest.json
+
+          # 3. Subida en orden seguro (AC4): todo menos index.html → version.json → index.html
+          #    → borrados de hace 2 versiones (AC-E3) → manifiesto nuevo al final.
+          {
+            cat session.lftp
+            echo 'mirror --reverse --verbose --parallel=4 --no-perms --exclude-glob index.html --exclude-glob version.json --exclude-glob .deploy-manifest.json site/ ./'
+            echo 'put site/version.json -o version.json'
+            echo 'put site/index.html -o index.html'
+            while IFS= read -r f; do [ -n "$f" ] && echo "rm -f \"$f\""; done < delete-list.txt
+            echo 'put site/.deploy-manifest.json -o .deploy-manifest.json'
+            echo 'bye'
+          } > deploy.lftp
+
+          lftp -f deploy.lftp
+
+      - name: Resumen
+        env:
+          APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+        run: |
+          echo "### Desplegado ${{ needs.build.outputs.tag }} en https://$APP_DOMAIN" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verificar: https://$APP_DOMAIN/version.json" >> "$GITHUB_STEP_SUMMARY"
