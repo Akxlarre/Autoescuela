@@ -53,7 +53,7 @@ La lógica vive en `scripts/lib/deploy-manifest.js`, con su test en
 |---|---|
 | Required reviewers | `Akxlarre`, `SorkoTheProgram`, `m-fuentesr` |
 | Deployment branches and tags | *Selected* → regla de **tag** `v*` |
-| Secret `FTP_SERVER` | host FTP (hoy `ftp.autoescuelachillan.cl`) |
+| Secret `FTP_SERVER` | hostname **del servidor** que figura en el certificado TLS (hoy `rs7-va.serverhostgroup.com`), no `ftp.<dominio>` — ver Problemas conocidos |
 | Secret `FTP_USERNAME` | cuenta FTP dedicada, **enjaulada en el docroot del subdominio** |
 | Secret `FTP_PASSWORD` | contraseña de esa cuenta |
 | Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.autoescuelachillan.cl`) |
@@ -78,11 +78,15 @@ falta tocar código. Al cambiarlo:
 
 ## Problemas conocidos
 
-- **El certificado del FTP no calza con el host**: en hosting compartido, el certificado puede ser
-  el del servidor (`rs7-va…`) y no el de tu dominio. Usa como `FTP_SERVER` el hostname que figura en
-  el certificado. **No** desactives `ssl:verify-certificate`.
+- **El certificado del FTP no calza con el host** (`certificate common name doesn't match requested host name`):
+  en este hosting compartido el FTP presenta el certificado Let's Encrypt **del servidor**, no el de
+  tu dominio. Por eso `FTP_SERVER` es `rs7-va.serverhostgroup.com` (misma IP que
+  `ftp.autoescuelachillan.cl`, verificado 2026-10-01). Si el hosting mueve la cuenta de servidor,
+  ver el nombre nuevo con:
+  `echo | openssl s_client -starttls ftp -connect ftp.<dominio>:21 2>/dev/null | openssl x509 -noout -ext subjectAltName`
+  y usar uno de los DNS listados. **No** desactives `ssl:verify-certificate`.
 - **IP de GitHub bloqueada** (cPHulk / Imunify360) tras varios logins fallidos: desbloquear desde
   cPanel → *Bloqueador de IP*, y corregir las credenciales antes de reintentar.
 - **Rutas de la SPA con "extensión"** (ej. `/algo/archivo.pdf`) responden 404: el `.htaccess`
   trata toda ruta con extensión como archivo. Hoy ninguna ruta de `indices/ROUTES.md` es así.
-- **`test:ci` es lento** (~19 min en Windows local); el job `build` tiene 45 min de timeout.
+- **`test:ci` es lento en Windows local** (~19 min); en el runner Linux de GitHub tarda ~1,5 min y el job `build` completo ~2,5 min (timeout: 45 min).
