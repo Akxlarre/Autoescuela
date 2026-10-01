@@ -80,6 +80,47 @@
 | ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `cualquiera` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
 | ASG-i-038 | Decisión: ¿quién pone la nota de evaluación B durante el piloto? | `cualquiera` | spec | P0 | i | Sin nota nadie se certifica ni egresa. Choca con la regla de `fix-115-m`. Bloquea casos de 024 y 033 |
 
+### Tanda fixes del testing del piloto — 2026-09-30
+
+> Salen de las sospechas 🔴 de los checklists de `specs/testing-piloto/` (resumen en
+> `specs/testing-piloto/000-resumen.md`). El 2026-09-30 se hizo una **confirmación en vivo de solo
+> lectura** contra la BD del piloto; el resultado está al inicio de cada asignación.
+> **Las marcadas ⏳ NO están confirmadas**: su paso 1 es confirmarlas (con datos de prueba creados
+> para eso, nunca sobre datos que usen otros). Si no se reproducen, se cierran como "no aplica".
+> Agrupadas por causa, no por bug suelto.
+>
+> **Orden sugerido:** `039` y `040` ya (hotfix de minutos) → `041`–`047` seguridad, antes de
+> entregar → `048`–`053` dinero y clases → `054`–`057` patrones transversales, en paralelo con el
+> testing. `052` depende en parte de `ASG-i-038`.
+>
+> **Solapes a coordinar:** `041`+`042` (mismo helper de autorización en edge functions) ·
+> `043`+`044`+`045` (RLS de `users`/sede) · `048`+`049`+`051` (`cuadratura.facade.ts`, saldo).
+>
+> **Dato de diseño:** la llave pública (anon key) pasa `verify_jwt`; exigir "JWT válido" no basta,
+> hay que verificar un usuario real y su rol (`041`, `042`).
+
+| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
+|----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-039 | Sacar las credenciales de prueba de `/login` | `cualquiera` | hotfix | P0 | i | ✅ Confirmada en vivo; minutos |
+| ASG-i-040 | XSS almacenado en la landing pública | `cualquiera` | hotfix | P0 | i | ✅ Confirmada en código |
+| ASG-i-041 | Edge functions que responden sin sesión (5) | `cualquiera` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
+| ASG-i-042 | Edge functions sin validar rol ni sede (~11) | `cualquiera` | spec | P0 | i | ✅ 9/11 confirmadas en vivo, 2 ⏳. Helper compartido en `_shared/` |
+| ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `cualquiera` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
+| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `cualquiera` | fix | P0 | i | ⏳ Puede partirse en 2 |
+| ASG-i-045 | RLS que filtra por rol pero no por sede | `cualquiera` | spec | P0 | i | 🟡 Lectura de clases y ventas confirmada; `students`/`payments` SELECT sí filtra; escritura ⏳ |
+| ASG-i-046 | Storage: leer/sobrescribir archivos de otra sede, subida anónima | `cualquiera` | fix | P0 | i | 🟡 Listar otras sedes confirmado; resto ⏳ |
+| ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `cualquiera` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
+| ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `cualquiera` | fix | P0 | i | ⏳ |
+| ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `cualquiera` | fix | P0 | i | ⏳ |
+| ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `cualquiera` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
+| ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `cualquiera` | fix | P0 | i | ⏳ |
+| ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `cualquiera` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `cualquiera` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
+| ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `cualquiera` | spec | P1 | i | ⏳ Inventario en `037` §1 |
+| ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `cualquiera` | fix | P1 | i | ⏳ Inventario en `037` §1 |
+| ASG-i-056 | Canales Realtime que escuchan tablas no publicadas (6) | `cualquiera` | fix | P1 | i | ⏳ Una migración |
+| ASG-i-057 | Comunicados a >200 alumnos nunca terminan | `cualquiera` | fix | P1 | i | ⏳ |
+
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
 > Salió de `ASG-i-012` (QA visual pre-lanzamiento, cerrada). Los 7 tracks ya están redactados
