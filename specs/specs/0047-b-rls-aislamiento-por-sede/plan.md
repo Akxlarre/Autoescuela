@@ -9,11 +9,15 @@
 
 ## 1. Resumen ejecutivo
 
-Una migración idempotente que (a) crea 4 helpers `SECURITY DEFINER` que responden "¿esta fila
-está en una sede visible para el usuario actual?" para tablas sin `branch_id` directo, y (b)
-reescribe las policies de 17 tablas para que la cláusula de **secretaria** pase por esos helpers
-(o por `branch_visible(branch_id)` cuando la tabla tiene la columna). Las cláusulas de admin,
-instructor y alumno se copian **textualmente** de `pg_policies` remoto.
+Una migración idempotente que reescribe las policies de 17 tablas para que la cláusula de
+**secretaria** exija la sede, sin funciones nuevas. Las cláusulas de admin, instructor y alumno se
+copian **textualmente** de `pg_policies` remoto.
+
+> **Cambio de diseño durante la ejecución (2026-10-01):** la primera versión usaba helpers
+> `SECURITY DEFINER` que recibían la fila (`enrollment_branch_visible(enrollment_id)`, etc.).
+> Se descartó por DG-016: una función `SECURITY DEFINER` en una policy corre una vez **por fila**
+> y ya causó timeouts dos veces (fix-060/061). Se reemplazó por expresiones inline que Postgres
+> evalúa una vez por query (abajo). Las secciones 2 y 3 reflejan el diseño final.
 
 Sin cambios en `src/app`: los facades ya filtran por sede, así que la app ve lo mismo.
 
@@ -28,40 +32,41 @@ Sin cambios en `src/app`: los facades ya filtran por sede, así que la app ve lo
 Para `UPDATE` no se declara `WITH CHECK`: Postgres aplica el `USING` también a la fila nueva, lo
 que impide mover una fila a la otra sede (AC-E3).
 
-### Helpers nuevos (`SECURITY DEFINER`, `STABLE`, `search_path = ''`)
+### Alcance por sede (replica `branch_visible()`, evaluado una vez por query)
 
-| Helper | Regla | Espejo de |
-|---|---|---|
-| `enrollment_branch_visible(enrollment_id)` | `branch_visible(enrollments.branch_id)`; `false` si no existe | policies de `digital_contracts` / `student_documents` |
-| `class_b_session_branch_visible(session_id)` | la matrícula de la clase | — |
-| `student_user_branch_visible(user_id)` | grant multi-sede **o** `users.branch_id = sede propia` | `select_students` |
-| `instructor_branch_visible(instructor_id)` | `branch_visible(users.branch_id)` **o** `instructors.both_branches` | `select_instructors` |
+Con `G = (SELECT auth_can_access_both_branches())` y `B = (SELECT auth_user_branch_id())`
+(ambos InitPlan):
 
-Por qué `SECURITY DEFINER`: evitan recursión de RLS (la policy de `students` no puede consultar
-`students` con RLS) y son más baratas que un `IN (subquery)` por fila. Solo devuelven un booleano
-sobre el usuario actual: no filtran datos.
+| Forma | Expresión |
+|---|---|
+| `branch_id` directo | `G OR branch_id IS NULL OR branch_id = B` |
+| Vía matrícula | `G OR enrollment_id IN (SELECT e.id FROM enrollments e WHERE e.branch_id IS NULL OR e.branch_id = B)` |
+| Vía instructor | `G OR instructor_id IN (SELECT i.id FROM instructors i JOIN users u … WHERE i.both_branches OR u.branch_id IS NULL OR u.branch_id = B)` (= `select_instructors`) |
+| Alumno (`students`) | `G OR EXISTS (users u WHERE u.id = students.user_id AND u.branch_id = B)` (= `select_students`, fix-061) |
+
+El `IN (subquery)` no correlacionado se planifica como `hashed SubPlan` (una vez por query).
 
 ## 3. Tablas y cláusula de secretaria
 
 | Tabla | S | I | U | D | Alcance |
 |---|---|---|---|---|---|
-| `class_b_sessions` | ✓ | ✓ | ✓ | ✓ | `enrollment_branch_visible(enrollment_id)` |
-| `class_b_practice_attendance` | ✓ | ✓ | ✓ | ✓ | `class_b_session_branch_visible(class_b_session_id)` |
-| `class_b_theory_sessions` | ✓ | ✓ | ✓ | ✓ | `branch_visible(branch_id)` |
-| `absence_evidence` | ✓ | ✓ | ✓ | ✓ | `enrollment_branch_visible(enrollment_id)` |
-| `students` | — | ✓ | ✓ | ✓ | `student_user_branch_visible(user_id)` |
-| `payments` | ✓ | ✓ | ✓ | (admin) | `enrollment_branch_visible(enrollment_id)` |
-| `discount_applications` | ✓ | ✓ | (admin) | (admin) | `enrollment_branch_visible(enrollment_id)` |
-| `instructor_advances` | ✓ | ✓ | (admin) | (admin) | `instructor_branch_visible(instructor_id)` |
-| `instructor_replacements` | ✓ | ✓ | (admin) | (admin) | `instructor_branch_visible(absent_instructor_id)` |
-| `special_service_sales` | ✓ | ✓ | ✓ | ✓ | `branch_visible(branch_id)` |
-| `standalone_courses` | ✓ | ✓ | ✓ | ✓ | `branch_visible(branch_id)` |
-| `standalone_course_enrollments` | ✓ | ✓ | ✓ | ✓ | `branch_visible(curso.branch_id)` (subquery sobre `standalone_courses`) |
-| `student_documents` | — | ✓ | — | — | `enrollment_branch_visible(enrollment_id)` |
-| `school_documents` | ✓ | ✓ | (admin) | (admin) | `branch_visible(branch_id)` |
-| `digital_contracts` | — | ✓ | ✓ | — | `enrollment_branch_visible(enrollment_id)` |
-| `certificates` | ✓ | ✓ | (admin) | (admin) | matrícula visible, o (sin matrícula) alumno visible |
-| `certificate_issuance_log` | ✓ | (admin) | (admin) | (admin) | `EXISTS` sobre `certificates` (hereda su RLS) |
+| `class_b_sessions` | ✓ | ✓ | ✓ | ✓ | vía matrícula |
+| `class_b_practice_attendance` | ✓ | ✓ | ✓ | ✓ | vía clase → matrícula |
+| `class_b_theory_sessions` | ✓ | ✓ | ✓ | ✓ | `branch_id` directo |
+| `absence_evidence` | ✓ | ✓ | ✓ | ✓ | vía matrícula |
+| `students` | — | ✓ | ✓ | ✓ | alumno |
+| `payments` | ✓ | ✓ | ✓ | (admin) | vía matrícula |
+| `discount_applications` | ✓ | ✓ | (admin) | (admin) | vía matrícula |
+| `instructor_advances` | ✓ | ✓ | (admin) | (admin) | vía instructor |
+| `instructor_replacements` | ✓ | ✓ | (admin) | (admin) | vía instructor ausente |
+| `special_service_sales` | ✓ | ✓ | ✓ | ✓ | `branch_id` directo |
+| `standalone_courses` | ✓ | ✓ | ✓ | ✓ | `branch_id` directo |
+| `standalone_course_enrollments` | ✓ | ✓ | ✓ | ✓ | vía curso |
+| `student_documents` | — | ✓ | — | — | vía matrícula |
+| `school_documents` | ✓ | ✓ | (admin) | (admin) | `branch_id` directo |
+| `digital_contracts` | — | ✓ | ✓ | — | vía matrícula |
+| `certificates` | ✓ | ✓ | (admin) | (admin) | vía matrícula, o (sin matrícula) vía alumno |
+| `certificate_issuance_log` | ✓ | (admin) | (admin) | (admin) | `certificate_id IN (SELECT id FROM certificates)` (hereda su RLS) |
 
 "—" = la policy vigente ya filtra por sede y no se toca. "(admin)" = ya es solo admin.
 

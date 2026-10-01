@@ -40,6 +40,12 @@ CREATE POLICY "select_demo" ON demo FOR SELECT USING (user_id = auth_user_id());
 CREATE POLICY "delete_demo" ON demo FOR DELETE USING (true);
 DROP POLICY IF EXISTS "delete_demo" ON demo;
 
+DROP POLICY IF EXISTS join_demo ON public.demo;
+CREATE POLICY join_demo ON public.demo
+  FOR SELECT USING (user_id IN (SELECT u.id FROM users u JOIN branches b ON b.id = u.branch_id));
+
+CREATE POLICY "storage_ajena" ON storage.objects FOR SELECT USING (true);
+
 CREATE OR REPLACE FUNCTION demo_helper(p_id INT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -79,6 +85,10 @@ check('ALTER SET DEFAULT', demo.columns.get('amount')?.default === '100');
 check('índice', demo.indexes.has('idx_demo_user'));
 check('policy viva', demo.policies.has('select_demo') && demo.policies.get('select_demo').cmd === 'SELECT');
 check('DROP POLICY (AC3)', !demo.policies.has('delete_demo'));
+// Un JOIN … ON alias.col dentro del cuerpo no es una policy sobre otro schema (spec 0047-b).
+check('policy con JOIN … ON alias.col en el cuerpo', demo.policies.has('join_demo'));
+check('policy sobre schema ajeno (storage.*) se ignora sin warning',
+  !state.warnings.some(w => w.includes('objects') || w.includes('storage')));
 check('COMMENT → descripción', demo.description?.includes('demostración'));
 check('función con $$ (split no roto)', state.functions.has('demo_helper'));
 check('vista', state.views.has('v_demo'));
