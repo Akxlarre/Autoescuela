@@ -78,7 +78,7 @@ describe('ExAlumnosFacade', () => {
       id: 99,
       number: 'EXP-123',
       pending_balance: 0,
-      updated_at: '2026-01-15T00:00:00Z',
+      completed_at: '2026-01-15T00:00:00Z',
       license_group: 'class_b',
       courses: { name: 'Clase B', code: 'B' },
       branches: { id: 7, name: 'Sede Central' },
@@ -117,7 +117,7 @@ describe('ExAlumnosFacade', () => {
       id: 100,
       number: 'EXP-200',
       pending_balance: 0,
-      updated_at: '2026-01-15T00:00:00Z',
+      completed_at: '2026-01-15T00:00:00Z',
       license_group: 'class_b',
       courses: { name: 'Clase B', code: 'B' },
       branches: { id: 3, name: 'Sede Norte' },
@@ -156,7 +156,7 @@ describe('ExAlumnosFacade', () => {
       id: 101,
       number: 'EXP-201',
       pending_balance: 0,
-      updated_at: '2025-12-28T18:30:00Z',
+      completed_at: '2025-12-28T18:30:00Z',
       license_group: 'class_b',
       courses: { name: 'Clase B', code: 'B' },
       branches: { id: 1, name: 'Sede Centro' },
@@ -189,12 +189,66 @@ describe('ExAlumnosFacade', () => {
     expect(egresado.anio).toBe(2025);
   });
 
+  describe('fecha de egreso — fix-266-m', () => {
+    function mockEgresados(rows: unknown[]) {
+      const order = vi.fn().mockResolvedValue({ data: rows, error: null });
+      const select = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order }),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      (supabaseSpy as any).client = { from: vi.fn().mockReturnValue({ select }) };
+      return { order, select };
+    }
+
+    const row = {
+      id: 102,
+      number: 'EXP-202',
+      pending_balance: 0,
+      // Egresó el 2026-09-30; la matrícula se modificó por última vez en 2024 (y un pago
+      // posterior al egreso la volvería a modificar): ninguna de las dos es la fecha de egreso.
+      completed_at: '2026-09-30T15:00:00Z',
+      updated_at: '2024-03-10T12:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 1, name: 'Sede Centro' },
+      students: {
+        id: 57,
+        users: {
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: null,
+          rut: '44.444.444-4',
+          email: 'eva@correo.cl',
+        },
+      },
+    };
+
+    it('el año y la fecha de egreso salen de completed_at, no de updated_at', async () => {
+      mockEgresados([row]);
+
+      await facade.loadEgresados();
+
+      const egresado = facade.egresadosClaseBList()[0];
+      expect(egresado.fechaEgreso).toBe('2026-09-30');
+      expect(egresado.anio).toBe(2026);
+    });
+
+    it('pide completed_at y ordena por ella, del egreso más reciente al más antiguo', async () => {
+      const { order, select } = mockEgresados([row]);
+
+      await facade.loadEgresados();
+
+      expect(select.mock.calls[0][0]).toMatch(/\bcompleted_at\b/);
+      expect(order).toHaveBeenCalledWith('completed_at', { ascending: false });
+    });
+  });
+
   it('mapea convalidatedLicense desde license_validations para egresados profesionales (fix-195)', async () => {
     const row = {
       id: 300,
       number: 'EXP-300',
       pending_balance: 0,
-      updated_at: '2026-01-15T00:00:00Z',
+      completed_at: '2026-01-15T00:00:00Z',
       license_group: 'professional',
       courses: { name: 'Profesional A2', code: 'professional_a2' },
       branches: { id: 1, name: 'Sede Central' },
@@ -275,6 +329,8 @@ describe('ExAlumnosFacade', () => {
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('status', 'completed');
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('license_group', 'class_b');
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('branch_id', 7);
+      // fix-266-m: "egresados del año" se cuenta por fecha de egreso, no por última modificación.
+      expect(enrollmentsChain.gte).toHaveBeenCalledWith('completed_at', expect.any(String));
       expect(scopedFacade.annualEgresadosTotal()).toBe(2);
     });
   });

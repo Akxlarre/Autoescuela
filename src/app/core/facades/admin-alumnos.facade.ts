@@ -113,6 +113,11 @@ export class AdminAlumnosFacade {
     this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
   );
   readonly drawerMode = this._drawerMode.asReadonly();
+  /**
+   * La columna Sede solo aporta cuando la lista mezcla sedes: admin, o secretaria con grant
+   * multi-sede, con "Todas las sedes" elegido (fix-269-m).
+   */
+  readonly showSedeColumn = computed(() => this.getActiveBranchId() === null);
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 
@@ -202,6 +207,19 @@ export class AdminAlumnosFacade {
     this._trashView.set(value);
     this._initialized = false;
     await this.initialize();
+  }
+
+  /**
+   * Sale de la Papelera al abandonar la pantalla (hotfix-112-m). El facade es un singleton: sin
+   * esto, la vista quedaba "pegada" y al volver a Alumnos se abría la Papelera.
+   * No dispara una carga (la pantalla ya no existe): invalida la caché para que la próxima
+   * entrada cargue la lista activa.
+   */
+  leaveTrashView(): void {
+    if (!this._trashView()) return;
+    this._trashView.set(false);
+    this._alumnos.set([]);
+    this._initialized = false;
   }
 
   async restaurarAlumno(studentId: number): Promise<void> {

@@ -379,6 +379,55 @@ describe('AdminAlumnoDetalleFacade', () => {
         }),
       ).rejects.toThrow('Ya existe un usuario con ese correo electrónico');
     });
+
+    describe('error real de la Edge Function — fix-268-m', () => {
+      const perfil = {
+        first_names: 'Juan',
+        paternal_last_name: 'Pérez',
+        maternal_last_name: 'Soto',
+        email: 'duplicado@example.com',
+        phone: '',
+      };
+
+      /** Lo que devuelve `functions.invoke()` ante un no-2xx: mensaje fijo + Response en context. */
+      function mockNon2xx(status: number, error: string): void {
+        const err = new Error('Edge Function returned a non-2xx status code');
+        err.name = 'FunctionsHttpError';
+        (err as any).context = { status, json: () => Promise.resolve({ error }) };
+        supabaseSpy.client.functions = {
+          invoke: vi.fn().mockResolvedValue({ data: null, error: err }),
+        };
+      }
+
+      const EMAIL_EN_USO = 'Ya existe otro usuario registrado con ese correo electrónico.';
+
+      it('email en uso, alumno con cuenta Auth (409): mensaje claro', async () => {
+        mockNon2xx(409, 'Ya existe un usuario con ese correo electrónico');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('email en uso, alumno sin cuenta Auth (500 por users_email_key): mismo mensaje claro', async () => {
+        mockNon2xx(
+          500,
+          'Error al actualizar el alumno: duplicate key value violates unique constraint "users_email_key"',
+        );
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('otro rechazo de negocio (4xx): muestra el mensaje que envió la función', async () => {
+        mockNon2xx(403, 'Solo administradores y secretarias pueden editar alumnos');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(
+          'Solo administradores y secretarias pueden editar alumnos',
+        );
+      });
+
+      it('fallo interno (5xx) que no es el email: no expone el texto técnico', async () => {
+        mockNon2xx(500, 'Error al actualizar el alumno: deadlock detected');
+        const rejection = facade.actualizarPerfilAlumno(55, perfil);
+        await expect(rejection).rejects.toThrow();
+        await expect(rejection).rejects.not.toThrow(/deadlock/);
+      });
+    });
   });
 
   describe('enviarInvitacion — fix-157-m', () => {
@@ -1199,6 +1248,109 @@ describe('AdminAlumnoDetalleFacade', () => {
         ]);
 
         expect(facade.alumno()?.enrollments.map((e) => e.id)).toEqual([306]);
+      });
+
+      describe('matrícula mostrada — fix-265-m', () => {
+        it('un borrador más reciente no se muestra como matrícula principal (B15)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(305, 'draft', '2026-03-01'),
+            makeEnrollmentRow(306, 'active', '2026-01-01'),
+          ]);
+
+          expect(facade.alumno()?.enrollmentId).toBe(306);
+          expect(facade.alumno()?.matricula).toBe('#000306');
+          expect(facade.alumno()?.estado).toBe('Activo');
+        });
+
+        it('un refresco conserva la matrícula elegida en el selector (B21)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          await facade.refresh();
+
+          expect(facade.alumno()?.enrollmentId).toBe(304);
+          expect(facade.alumno()?.matricula).toBe('#000304');
+          expect(facade.alumno()?.estado).toBe('Egresado');
+        });
+
+        it('al abrir la ficha de otro alumno no se arrastra la elección anterior', async () => {
+          const mock = await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          // Otro alumno que, por construcción del test, tiene una matrícula con el mismo id.
+          mock.setSingleResult('students', {
+            id: 43,
+            status: 'active',
+            created_at: '2026-01-01',
+            users: {
+              id: 8,
+              rut: '55.555.555-5',
+              first_names: 'Luis',
+              paternal_last_name: 'Soto',
+              maternal_last_name: 'Díaz',
+              email: 'luis@example.com',
+              phone: '987654321',
+            },
+            enrollments: [
+              makeEnrollmentRow(401, 'active', '2026-03-01'),
+              makeEnrollmentRow(304, 'completed', '2026-01-01'),
+            ],
+          });
+          await facade.initialize(43);
+
+          expect(facade.alumno()?.enrollmentId).toBe(401);
+        });
+      });
+
+      describe('errores de carga — hotfix-116-m', () => {
+        /** PostgREST cuando `.single()` no encuentra filas (no existe, o la RLS lo oculta). */
+        const NOT_FOUND = {
+          code: 'PGRST116',
+          message: 'JSON object requested, multiple (or no) rows returned',
+        };
+
+        it('un id que no es un entero positivo deja un error visible, sin consultar ni quedar cargando', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(310, 'active', '2026-01-01')]);
+          mock.client.from.mockClear();
+
+          await facade.initialize(Number('abc'));
+
+          expect(facade.error()).toBe('La dirección no corresponde a ningún alumno.');
+          expect(facade.isLoading()).toBe(false);
+          expect(facade.alumno()).toBeNull();
+          expect(mock.client.from).not.toHaveBeenCalled();
+        });
+
+        it('alumno inexistente o de otra sede (PGRST116): mensaje que dice qué pasó, sin el código técnico', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(311, 'active', '2026-01-01')]);
+          mock.setSingleResult('students', null, NOT_FOUND);
+
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+
+          expect(facade.error()).toBe('El alumno no existe o no tienes acceso a su ficha.');
+          expect(facade.isLoading()).toBe(false);
+        });
+
+        it('tras una carga fallida, volver a abrir al alumno anterior lo carga de nuevo y limpia el error (B12)', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(312, 'active', '2026-01-01')]);
+          const alumno42 = (await mock.client.from('students').single()).data;
+
+          mock.setSingleResult('students', null, NOT_FOUND);
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+          expect(facade.error()).not.toBeNull();
+
+          mock.setSingleResult('students', alumno42);
+          await facade.initialize(42);
+
+          expect(facade.error()).toBeNull();
+          expect(facade.alumno()?.id).toBe(42);
+        });
       });
     });
   });

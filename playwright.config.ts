@@ -12,6 +12,11 @@ export default defineConfig({
   testIgnore: 'support/**',
   globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
+  // Tope de 4 workers y 10 s por aserción: con más carga, la primera pantalla de cada test
+  // (ng serve en modo dev + BD en la nube) no alcanzaba a pintarse en los 5 s por defecto y
+  // fallaban tests al azar (visto al sumar los 44 tests de Alumnos B, fix-264-m).
+  workers: 4,
+  expect: { timeout: 10_000 },
   forbidOnly: !!process.env['CI'],
   retries: 0,
   reporter: [['html', { open: 'never' }], ['list']],

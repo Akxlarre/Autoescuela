@@ -3,9 +3,11 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   signal,
+  untracked,
 } from '@angular/core';
 import {
   AlumnosListContentComponent,
@@ -13,6 +15,7 @@ import {
 } from '@shared/components/alumnos-list-content/alumnos-list-content.component';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 
 @Component({
@@ -25,9 +28,11 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       basePath="/app/secretaria"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
+      [showSedeColumn]="facade.showSedeColumn()"
       (refreshRequested)="facade.initialize()"
       (archivarRequested)="requestArchivar($event)"
       (trashViewToggled)="onTrashViewToggled()"
@@ -49,6 +54,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 })
 export class SecretariaAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly deleteTarget = signal<AlumnoTableRow | null>(null);
@@ -59,9 +65,23 @@ export class SecretariaAlumnosComponent implements OnInit {
     return t ? `${t.nombre} ${t.apellido}` : '';
   });
 
+  constructor() {
+    // fix-269-m: una secretaria con grant multi-sede tiene selector de sede; la lista se
+    // recarga cada vez que lo cambia. La carga inicial también sale de acá (el effect corre
+    // una vez al crear el componente), igual que en AdminAlumnosComponent.
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      // untracked: initialize() lee otros signals (usuario, vista Papelera). Si el effect los
+      // siguiera, cualquier cambio en ellos dispararía una segunda carga solapada con la primera.
+      untracked(() => void this.facade.initialize());
+    });
+  }
+
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
-    this.facade.initialize();
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      this.facade.leaveTrashView();
+    });
   }
 
   protected async requestArchivar(alumnoId: string): Promise<void> {

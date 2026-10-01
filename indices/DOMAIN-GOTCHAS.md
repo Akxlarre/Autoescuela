@@ -1532,6 +1532,20 @@
   compara contra `undefined` y pasa siempre, sin error.
 - **Fuente:** `specs/fixes/fix-263-m-ficha-estado-desde-matricula-egresado`.
 
+### DG-097 — `enrollments.updated_at` no es la fecha en que pasó nada: no tiene trigger propio y la mueven los pagos
+- **Trampa:** usar `enrollments.updated_at` como "fecha en que la matrícula cambió de estado"
+  (fecha de egreso, de anulación, de activación) para mostrarla, ordenar o filtrar por período.
+- **Realidad:** `enrollments` no tiene trigger de `updated_at`: un `UPDATE` que no la escribe a
+  mano no la mueve, así que un cambio de estado hecho desde el cliente la deja como estaba. Y
+  `recalculate_enrollment_balance()` sí la escribe con cada pago, así que se mueve por motivos
+  que no tienen que ver con el estado. Sirve como "algo se tocó alguna vez", nada más.
+- **Regla de aplicabilidad:** si una pantalla o reporte necesita saber **cuándo** ocurrió una
+  transición de estado, esa fecha se guarda en una columna propia mantenida por trigger (como
+  `completed_at` para el egreso), no se infiere de `updated_at`. Antes de usar un `updated_at`
+  de cualquier tabla como fecha de negocio, revisar qué flujos la escriben de verdad.
+- **Fuente:** `specs/fixes/fix-266-m-fecha-egreso-real-completed-at`,
+  `supabase/migrations/20261001120000_enrollments_add_completed_at.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

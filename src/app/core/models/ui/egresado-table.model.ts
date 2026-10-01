@@ -20,10 +20,10 @@ export interface EgresadoTableRow {
   licencia: string;
   /** Grupo de licencia (enrollments.license_group) — para el split B / Profesional */
   licenseGroup: 'class_b' | 'professional';
-  /** Año de egreso derivado de updated_at */
+  /** Año de egreso derivado de `enrollments.completed_at` (fix-266-m) */
   anio: number | null;
   /**
-   * Fecha de egreso completa (ISO `YYYY-MM-DD`), derivada de `updated_at`.
+   * Fecha de egreso completa (ISO `YYYY-MM-DD`), derivada de `enrollments.completed_at`.
    *
    * Existe además de `anio` porque la ventana de período (fix-147-b) necesita precisión de día:
    * con solo el año, alguien que egresó en diciembre quedaba fuera de la ventana de 12 meses

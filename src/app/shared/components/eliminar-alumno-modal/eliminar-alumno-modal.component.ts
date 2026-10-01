@@ -232,6 +232,9 @@ export class EliminarAlumnoModalComponent {
   }
 
   protected onCancelar(): void {
+    // Escape y el clic en el fondo llegan acá igual que el botón Cancelar, que ya se
+    // deshabilita: mientras archiva, el modal no se cierra (hotfix-111-m).
+    if (this.isDeleting()) return;
     this.confirmTextValue.set('');
     this.cancelado.emit();
   }

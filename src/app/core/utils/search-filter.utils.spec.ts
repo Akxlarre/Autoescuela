@@ -120,6 +120,44 @@ describe('matchesSearchTokens', () => {
   it('espacios múltiples entre tokens no generan tokens vacíos que rompan el match', () => {
     expect(matchesSearchTokens(['Camila Andrea', 'Reyes Muñoz'], 'Camila    Reyes')).toBe(true);
   });
+
+  describe('RUT — fix-267-m', () => {
+    const conPuntos = ['Camila', 'Reyes Muñoz', '12.345.678-9', '0042'];
+    const sinPuntos = ['Alumno200', 'Apellido200', '25000200-K', '0200'];
+
+    it.each(['12.345.678-9', '12345678-9', '123456789', '12345678', '12.345', '345.678'])(
+      'RUT guardado con puntos: lo encuentra escribiendo "%s"',
+      (query) => {
+        expect(matchesSearchTokens(conPuntos, query)).toBe(true);
+      },
+    );
+
+    it.each(['25000200-K', '25.000.200-K', '25000200k', '25.000.200', '25000200'])(
+      'RUT guardado sin puntos (seed): lo encuentra escribiendo "%s"',
+      (query) => {
+        expect(matchesSearchTokens(sinPuntos, query)).toBe(true);
+      },
+    );
+
+    it('un RUT distinto no matchea', () => {
+      expect(matchesSearchTokens(conPuntos, '12345679')).toBe(false);
+      expect(matchesSearchTokens(conPuntos, '98.765.432-1')).toBe(false);
+    });
+
+    it('se combina con tokens de texto: nombre + RUT sin puntos', () => {
+      expect(matchesSearchTokens(conPuntos, 'camila 12345678')).toBe(true);
+      expect(matchesSearchTokens(conPuntos, 'pedro 12345678')).toBe(false);
+    });
+
+    it('un token de texto con guion se sigue comparando literal', () => {
+      expect(matchesSearchTokens(['Ana-María', 'Soto'], 'ana-maria')).toBe(true);
+      expect(matchesSearchTokens(['Ana María', 'Soto'], 'ana-maria')).toBe(false);
+    });
+
+    it('un token que es solo puntuación no matchea todo', () => {
+      expect(matchesSearchTokens(['Camila', 'Reyes'], '-')).toBe(false);
+    });
+  });
 });
 
 describe('filterBySearchTokens', () => {
