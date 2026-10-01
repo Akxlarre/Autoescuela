@@ -1,6 +1,6 @@
 # Spec 0046-b — Despliegue a producción de la app Angular en cPanel (GitHub Actions + FTPS)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-29
 > **Owner:** Benjamín
 > **Priority:** P1

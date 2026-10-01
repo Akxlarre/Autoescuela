@@ -101,19 +101,19 @@ Fases 1–4 de la plantilla (datos, facade, UI, conexión) no aplican: no se toc
     - [x] AC-E5: tag `v0.0.0-ace5` sobre commit fuera de `main` (d4676f18, creado con commit-tree sin rama) → `build` falla con "…que no está en main…", `deploy` skipped. Tag borrado. (Un 1er intento sobre un commit anterior al workflow no generó run: GitHub usa el workflow del commit del tag.)
     - [x] AC9 (diseño original) **falló**: dispatch `v0.1.0` (run 36900019092) recompiló el tag y el gate lo frenó por el mismo test de fecha → rediseño D6.
 
-- [ ] **TB.6** — Rollback sin recompilar (D6) + Release por versión
+- [x] **TB.6** — Rollback sin recompilar (D6) + Release por versión (2026-10-01)
   - **AC ref:** AC9, AC11, AC-E3, AC-E6
   - **DoD:**
     - [x] Workflow: `build` con modo publicación/rollback, job `release` (YAML lint OK, 0 menciones del dominio)
-    - [ ] Commit + push a `main`
-    - [ ] AC-E6: dispatch `v0.1.0` (sin Release) → falla en `build` con "No hay build publicado…", sin pedir aprobación
-    - [ ] Tag `v0.1.5` → aprobación → publicado → Release `v0.1.5` con `site.zip` (incluye `.htaccess`) (AC11)
-    - [ ] AC-E3 (3er build distinto): el plan borra lo de `v0.1.0` que ni `v0.1.4` ni `v0.1.5` usan; `main-LL72IEMR.js` pasa a 404
-    - [ ] Tag `v0.1.6` → publicado → dispatch `v0.1.5` → sin npm ci/tests/build → `version.json` = v0.1.5 con su SHA y `builtAt` originales (AC9)
+    - [x] Commit + push a `main` (478deb82)
+    - [x] AC-E6: dispatch `v0.1.0` (run 36900860740) → "No hay build publicado para v0.1.0 …" en 16 s, sin aprobación
+    - [x] AC11: `v0.1.5` (run 36900937462) publicado → Release `v0.1.5` con `site.zip` 3,8 MB (`.htaccess` incluido, validado en el job)
+    - [x] AC-E3: el mismo deploy borró 3 archivos exclusivos de `v0.1.0` (`main-LL72IEMR.js`, `chunk-7LXIYDSV.js`, `chunk-DRMS55JA.js`) → 404; `.htaccess` 403; dashboard 200
+    - [x] AC9: `v0.1.6` publicado (run 36901786036) → dispatch `v0.1.5` (run 36902496717): npm ci/tests/lint/build `skipped`, preparación 9 s → `version.json` = v0.1.5, `builtAt 17:41:52`, `run 36900937462` (originales); job `release` skipped
 
 ## Fase C — Cierre
 
-- [ ] **TC.1** — `/spec-verify` + `acceptance.md` con evidencia por AC
-- [ ] **TC.2** — ROADMAP (0046-b → Done), `specs/.active` vacío, memoria del proyecto si surgió algo no obvio
+- [x] **TC.1** — `acceptance.md` con evidencia por AC: 18/18 ✅
+- [x] **TC.2** — ROADMAP (0046-b → Done), `specs/.active` vacío, memoria del proyecto
   - **DoD:**
-    - [ ] Tareas manuales T-DOM-1/2 listadas como pendientes del owner (no bloquean el cierre)
+    - [x] Tareas manuales del owner listadas en `acceptance.md` § Pendientes: regla de tag `v*` en el environment y T-DOM-1/2 (no bloquean el cierre)
