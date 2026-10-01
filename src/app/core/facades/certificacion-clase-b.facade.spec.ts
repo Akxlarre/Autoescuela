@@ -236,6 +236,46 @@ describe('CertificacionClaseBFacade', () => {
       expect(facade.alumnos()[0].clasesTotales).toBe(12);
       expect(facade.alumnos()[0].clasesCompletadas).toBeLessThanOrEqual(12);
     });
+
+    it('fix-262-m: cuenta clases cerradas (status=completed), nunca la nota de evaluación', async () => {
+      const sessionsQuery = makeAwaitableQuery({
+        data: Array.from({ length: 12 }, () => ({ enrollment_id: 3 })),
+        error: null,
+      });
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: makeAwaitableQuery({
+          data: [
+            {
+              id: 3,
+              branch_id: 1,
+              certificate_b_pdf_url: null,
+              courses: { name: 'Clase B', type: 'class_b', practical_hours: 9.0 },
+              students: {
+                id: 7,
+                users: {
+                  first_names: 'Eva',
+                  paternal_last_name: 'Rojas',
+                  maternal_last_name: '',
+                  rut: '33333333-3',
+                  email: 'eva@test.com',
+                },
+              },
+              certificates: [],
+            },
+          ],
+          error: null,
+        }),
+        v_student_progress_b: makeAwaitableQuery({ data: [], error: null }),
+        class_b_sessions: sessionsQuery,
+        certificate_issuance_log: makeAwaitableQuery({ data: [], error: null }),
+      });
+
+      await facade.initialize();
+
+      expect(sessionsQuery.eq).toHaveBeenCalledWith('status', 'completed');
+      expect(sessionsQuery.not).not.toHaveBeenCalled();
+      expect(facade.alumnos()[0].clasesCompletadas).toBe(12);
+    });
   });
 
   describe('generarCertificado()', () => {

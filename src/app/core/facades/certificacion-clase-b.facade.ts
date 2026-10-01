@@ -456,12 +456,13 @@ export class CertificacionClaseBFacade {
       (progressData ?? []).map((p: any) => [p.enrollment_id as number, p]),
     );
 
-    // Step 3: Clases prácticas completadas (con evaluación) por matrícula.
+    // Step 3: Clases prácticas cerradas por matrícula. fix-262-m: cuenta status='completed',
+    // nunca evaluation_grade — la nota no condiciona el certificado (decisión del dueño).
     const { data: completedSessions } = await this.supabase.client
       .from('class_b_sessions')
       .select('enrollment_id')
       .in('enrollment_id', enrollmentIds)
-      .not('evaluation_grade', 'is', null);
+      .eq('status', 'completed');
 
     const practiceCountMap = new Map<number, number>();
     for (const s of (completedSessions ?? []) as any[]) {

@@ -1,7 +1,7 @@
 # Asignación ASG-i-051 — Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

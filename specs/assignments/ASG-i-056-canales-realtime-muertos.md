@@ -1,7 +1,7 @@
 # Asignación ASG-i-056 — Canales de tiempo real que escuchan tablas no publicadas
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30

@@ -1,14 +1,14 @@
 # Asignación ASG-i-038 — Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto?
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-01
+> **resulting_track:** fix-262-m-certificacion-b-sin-requisito-nota
 
 ---
 

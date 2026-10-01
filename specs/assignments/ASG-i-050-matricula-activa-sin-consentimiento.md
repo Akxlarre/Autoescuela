@@ -1,7 +1,7 @@
 # Asignación ASG-i-050 — Matrícula queda activa aunque el mensaje dice "no se confirmó"
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

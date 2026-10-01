@@ -81,6 +81,8 @@ export const RAZON_REAGENDAMIENTO_OPTIONS: { label: string; value: string }[] = 
 
 /** Status de la BD que representa asistencia (ambos flujos escriben 'present' en inglés) */
 const STATUS_PRESENTE = 'present';
+/** `enrollments.status` de una matrícula egresada (Ex-Alumnos). fix-263-m. */
+const ENROLLMENT_STATUS_EGRESADO = 'completed';
 
 /** Clases requeridas por defecto para Clase B. */
 const PRACTICAS_REQUERIDAS_B = 12;
@@ -374,6 +376,8 @@ export class AdminAlumnoDetalleFacade {
       branchId: summary.branchId,
       enrollments: alumno.enrollments,
       matricula: summary.number ? `#${summary.number}` : '—',
+      estado: this.formatEnrollmentStatus(summary.status),
+      egresado: summary.status === ENROLLMENT_STATUS_EGRESADO,
       curso: summary.courseName,
       licenseGroup: summary.licenseGroup,
       totalPagado: summary.totalPagado,
@@ -400,7 +404,7 @@ export class AdminAlumnoDetalleFacade {
           id, status, created_at,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, supabase_uid, first_login),
           enrollments(
-            id, number, created_at, total_paid, pending_balance, branch_id,
+            id, number, status, created_at, total_paid, pending_balance, branch_id,
             license_group, promotion_course_id, registration_channel,
             certificate_b_pdf_url, certificate_professional_pdf_url,
             license_initial_url, license_full_url,
@@ -455,6 +459,7 @@ export class AdminAlumnoDetalleFacade {
             licenseGroup: lg,
             promotionCourseId: (e.promotion_course_id as number | null) ?? null,
             createdAt: e.created_at,
+            status: e.status ?? '',
             certPdfUrl:
               lg === 'professional'
                 ? (e.certificate_professional_pdf_url ?? null)
@@ -521,7 +526,9 @@ export class AdminAlumnoDetalleFacade {
         email: u.email,
         telefono: u.phone ?? '—',
         fechaIngreso: s.created_at.slice(0, 10),
-        estado: this.formatStatus(s.status),
+        // fix-263-m: el estado es el de la matrícula, no students.status (ningún flujo lo escribe).
+        estado: this.formatEnrollmentStatus(lastEnrollment?.status),
+        egresado: lastEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
         licenseGroup,
         totalPagado: lastEnrollment?.total_paid ?? 0,
         saldoPendiente: lastEnrollment?.pending_balance ?? 0,
@@ -610,8 +617,12 @@ export class AdminAlumnoDetalleFacade {
     // (marcada `reagendada`), pero no describe el estado actual de la sesión.
     const attendanceVigente = attendanceRows.filter((r) => r.archived_at == null);
 
+    // fix-262-m: prácticas completadas = clases cerradas (status='completed'), mismo criterio que
+    // la certificación (DG-095). No contar asistencias "presente": pueden existir sin cerrar la
+    // clase (markAttendance) o faltar en una clase cerrada.
     this._progresoPractico.set({
-      completadas: attendanceVigente.filter((r) => r.status === STATUS_PRESENTE).length,
+      completadas: ((sessionResult.data ?? []) as any[]).filter((s) => s.status === 'completed')
+        .length,
       requeridas: clasesRequeridas,
     });
 
@@ -1209,14 +1220,17 @@ export class AdminAlumnoDetalleFacade {
     await this.refreshSilently();
   }
 
-  private formatStatus(status: string | null | undefined): string {
+  /** Etiqueta del `enrollments.status` de la matrícula seleccionada (fix-263-m). */
+  private formatEnrollmentStatus(status: string | null | undefined): string {
+    if (!status) return 'Sin matrícula';
     const map: Record<string, string> = {
+      draft: 'Borrador',
       active: 'Activo',
-      inactive: 'Inactivo',
-      withdrawn: 'Retirado',
-      completed: 'Finalizado',
+      completed: 'Egresado',
+      pending_payment: 'Pago pendiente',
+      cancelled: 'Anulada',
     };
-    return map[status?.toLowerCase() ?? ''] ?? status ?? 'Sin estado';
+    return map[status] ?? status;
   }
 
   // ── Reprogramar Clase ────────────────────────────────────────────────────────

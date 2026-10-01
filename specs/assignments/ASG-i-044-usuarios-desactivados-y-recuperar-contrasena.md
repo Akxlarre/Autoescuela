@@ -1,7 +1,7 @@
 # Asignación ASG-i-044 — Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

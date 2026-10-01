@@ -1,7 +1,7 @@
 # Asignación ASG-i-054 — Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-09-30
