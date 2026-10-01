@@ -6,6 +6,7 @@ import {
   viewChild,
   ElementRef,
   afterNextRender,
+  isDevMode,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -16,6 +17,21 @@ import {
 } from '@shared/components/login-card/login-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+
+// El CLI fija `ngDevMode = false` en `ng build --configuration production`: el bundler elimina las
+// ramas que dependen de él, así las cuentas de prueba no viajan en el JS desplegado (hotfix-007-i).
+declare const ngDevMode: boolean | object | undefined;
+const TEST_ACCOUNTS: readonly string[] =
+  typeof ngDevMode === 'undefined' || ngDevMode
+    ? [
+        'admin@test.com',
+        'secretaria@test.com',
+        'secretaria2@test.com',
+        'alumno@test.com',
+        'instructor@test.com',
+      ]
+    : [];
+const TEST_PASSWORD: string = typeof ngDevMode === 'undefined' || ngDevMode ? 'Test123456' : '';
 
 /**
  * LoginComponent — Smart container de autenticación.
@@ -61,27 +77,27 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         />
       </div>
 
-      <!-- ── Recordatorio de credenciales de prueba ─────────────────── -->
-      <div
-        class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-2xs text-text-muted shadow-sm"
-        aria-label="Credenciales de prueba disponibles"
-      >
-        <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
-          <app-icon name="info" [size]="14" class="text-text-muted" />
-          Credenciales de prueba
-        </p>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
-          <span>admin@test.com</span>
-          <span>secretaria@test.com</span>
-          <span>secretaria2@test.com</span>
-          <span>alumno@test.com</span>
-          <span>instructor@test.com</span>
+      <!-- ── Recordatorio de credenciales de prueba (solo en desarrollo) ─ -->
+      @if (showTestCredentials()) {
+        <div
+          class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-2xs text-text-muted shadow-sm"
+          aria-label="Credenciales de prueba disponibles"
+        >
+          <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
+            <app-icon name="info" [size]="14" class="text-text-muted" />
+            Credenciales de prueba
+          </p>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
+            @for (account of testAccounts; track account) {
+              <span>{{ account }}</span>
+            }
+          </div>
+          <p class="m-0">
+            <span class="font-semibold text-text-secondary">Contraseña:</span>
+            <span class="font-normal"> {{ testPassword }}</span>
+          </p>
         </div>
-        <p class="m-0">
-          <span class="font-semibold text-text-secondary">Contraseña:</span>
-          <span class="font-normal"> Test123456</span>
-        </p>
-      </div>
+      }
       <!-- ── /Recordatorio de credenciales de prueba ────────────────── -->
     </div>
   `,
@@ -94,6 +110,11 @@ export class LoginComponent {
   private readonly gsap = inject(GsapAnimationsService);
 
   readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
+
+  /** Solo `ng serve`: el build de producción no debe exponer las cuentas de prueba (hotfix-007-i). */
+  readonly showTestCredentials = signal(isDevMode());
+  protected readonly testAccounts = TEST_ACCOUNTS;
+  protected readonly testPassword = TEST_PASSWORD;
 
   readonly mode = signal<'login' | 'reset'>('login');
   readonly loading = signal(false);

@@ -1,14 +1,14 @@
 # Asignación ASG-i-039 — Sacar las credenciales de prueba de la pantalla de login
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-09-30
+> **resulting_track:** hotfix-007-i-credenciales-prueba-login-solo-dev
 
 ---
 
