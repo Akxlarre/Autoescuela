@@ -28,3 +28,8 @@ jobs:
       tag: ${{ inputs.version }}
       mode: rollback
     secrets: inherit
+    # GitHub valida los permisos del workflow llamado ANTES de correrlo: su job "release" pide
+    # contents: write y, sin esto, el rollback falla al arrancar ("startup failure") aunque ese
+    # job nunca corre en modo rollback (if: mode == 'publish').
+    permissions:
+      contents: write
