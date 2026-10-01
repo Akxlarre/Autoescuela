@@ -68,6 +68,37 @@ describe('AdminAlumnosFacade', () => {
     expect(facade.error()).toBeNull();
   });
 
+  describe('leaveTrashView — hotfix-112-m', () => {
+    it('apaga la vista Papelera sin consultar la BD, y la próxima entrada recarga la lista activa', async () => {
+      await facade.setTrashView(true);
+      expect(facade.trashView()).toBe(true);
+      const from = supabaseSpy.client.from as ReturnType<typeof vi.fn>;
+      from.mockClear();
+
+      facade.leaveTrashView();
+
+      expect(facade.trashView()).toBe(false);
+      expect(from).not.toHaveBeenCalled();
+
+      // Al volver a la pantalla no se reutiliza la caché de archivados: carga completa.
+      await facade.initialize();
+      expect(from).toHaveBeenCalledWith('students');
+      const neq = from.mock.results[0].value.select.mock.results[0].value.neq;
+      expect(neq).toHaveBeenCalledWith('status', 'archived');
+    });
+
+    it('fuera de la Papelera no hace nada (no invalida la caché de la lista activa)', async () => {
+      await facade.initialize();
+      const from = supabaseSpy.client.from as ReturnType<typeof vi.fn>;
+
+      facade.leaveTrashView();
+
+      expect(facade.trashView()).toBe(false);
+      expect((facade as any)._initialized).toBe(true);
+      expect(from).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ─── fix-035-i: deriveExpediente() debe reconocer la clave de foto vigente ───
   describe('deriveExpediente() — detección de foto (fix-035-i)', () => {
     it('marca foto=true cuando el documento tiene type "id_photo" (clave actual del wizard)', () => {

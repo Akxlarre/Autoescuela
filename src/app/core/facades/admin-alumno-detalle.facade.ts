@@ -85,6 +85,14 @@ const STATUS_PRESENTE = 'present';
 /** `enrollments.status` de una matrícula egresada (Ex-Alumnos). fix-263-m. */
 const ENROLLMENT_STATUS_EGRESADO = 'completed';
 
+/**
+ * Error de PostgREST cuando `.single()` no encuentra la fila (PGRST116): el alumno no existe, o
+ * la RLS lo oculta porque es de otra sede. Desde el cliente los dos casos son indistinguibles.
+ */
+function isRowNotFound(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'PGRST116';
+}
+
 /** Clases requeridas por defecto para Clase B. */
 const PRACTICAS_REQUERIDAS_B = 12;
 
@@ -295,6 +303,17 @@ export class AdminAlumnoDetalleFacade {
    * If visiting the SAME student, refresh silently in background.
    */
   async initialize(studentId: number): Promise<void> {
+    // hotfix-116-m: un id que no viene de la app (URL escrita a mano, "/alumnos/abc") no se
+    // consulta: se muestra el error en vez de dejar la ficha en "Cargando…".
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      this._alumno.set(null);
+      this._initialized = false;
+      this._lastStudentId = null;
+      this._isLoading.set(false);
+      this._error.set('La dirección no corresponde a ningún alumno.');
+      return;
+    }
+
     const isSameStudent = this._initialized && studentId === this._lastStudentId;
 
     this.setupRealtime(studentId);
@@ -329,6 +348,13 @@ export class AdminAlumnoDetalleFacade {
       await this.fetchDetalleData(studentId);
       this._initialized = true;
       this._lastStudentId = studentId;
+    } catch (err) {
+      // hotfix-116-m: sin esto la caché seguía apuntando al alumno anterior; al volver a
+      // abrirlo se trataba como "el mismo", se refrescaba en segundo plano y el error de esta
+      // carga quedaba pegado sobre su ficha.
+      this._initialized = false;
+      this._lastStudentId = null;
+      throw err;
     } finally {
       this._isLoading.set(false);
     }
@@ -554,9 +580,11 @@ export class AdminAlumnoDetalleFacade {
       await this.fetchClassBProgress(enrollmentId, studentId, coursePracticalHours);
     } catch (err) {
       this._error.set(
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al cargar la ficha del alumno',
+        isRowNotFound(err)
+          ? 'El alumno no existe o no tienes acceso a su ficha.'
+          : err instanceof Error
+            ? this.sanitizer.sanitize(err).message
+            : 'Error al cargar la ficha del alumno',
       );
       throw err;
     }

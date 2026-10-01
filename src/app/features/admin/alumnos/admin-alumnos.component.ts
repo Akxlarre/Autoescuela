@@ -27,6 +27,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       basePath="/app/admin"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
@@ -76,7 +77,10 @@ export class AdminAlumnosComponent implements OnInit {
     // La carga inicial ya la dispara el effect() del constructor (se ejecuta
     // una vez al crear el componente) — llamar initialize() acá también
     // duplicaba la query de red (hotfix-055-b).
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      this.facade.leaveTrashView();
+    });
   }
 
   // ── Flujo de borrado ─────────────────────────────────────────────────────

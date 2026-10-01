@@ -115,7 +115,6 @@ test.describe('carga y totales', () => {
   test('A08 (S8): si la carga falla se muestra un error, no "No se encontraron alumnos"', async ({
     pageAs,
   }) => {
-    knownBug('B5 (fix-264-m)');
     const page = await pageAs('admin');
     await page.setViewportSize(DESKTOP);
     await page.route('**/rest/v1/students*', (route) => route.abort());
@@ -290,13 +289,24 @@ test.describe('búsqueda y filtros', () => {
 
   test('F03 (S12): un alumno de "Refuerzo Clase B" se puede filtrar por su curso', async ({
     pageAs,
+    cleanup,
   }) => {
-    knownBug('B3 (fix-264-m)');
+    // Las opciones salen de los cursos presentes en la lista: se siembra uno de refuerzo.
+    const refuerzo = await createE2eAlumno(
+      { label: 'Refuerzo', branchId: SEDE_A, enrollments: [{ courseName: 'Refuerzo Clase B' }] },
+      cleanup,
+    );
     const page = await pageAs('secretariaA');
     await openLista(page, 'secretaria');
     await page.locator('[data-llm-description="Filter students by course type"]').click();
     await expect(page.getByRole('option', { name: 'Clase B', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Refuerzo Clase B' })).toBeVisible();
+    await page.getByRole('option', { name: 'Refuerzo Clase B' }).click();
+
+    await page.locator(SEARCH).fill(refuerzo.paternalLastName);
+    await expect(rowOf(page, refuerzo.paternalLastName)).toHaveCount(1);
+    // Con el filtro puesto no queda ningún alumno de otro curso.
+    await page.locator(SEARCH).fill('');
+    for (const fila of await rows(page).all()) await expect(fila).toContainText('Refuerzo Clase B');
   });
 });
 
@@ -425,7 +435,6 @@ test.describe('archivar, papelera y restaurar', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B6 (fix-264-m)');
     const alumno = await createE2eAlumno({ label: 'Escape', branchId: SEDE_A }, cleanup);
     const page = await pageAs('secretariaA');
     await openLista(page, 'secretaria');
@@ -451,7 +460,6 @@ test.describe('archivar, papelera y restaurar', () => {
   test('M04 (S7): la Papelera no queda "pegada" al salir y volver a la pantalla', async ({
     pageAs,
   }) => {
-    knownBug('B4 (fix-264-m)');
     const page = await pageAs('admin');
     await openLista(page, 'admin');
     await page.locator('[data-llm-action="papelera"]').click();

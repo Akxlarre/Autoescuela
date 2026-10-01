@@ -35,6 +35,7 @@
 | `src/app/core/utils/convalidation-book.utils.ts` | `CONVALIDATION_BOOKS`, `getConvalidationBookName`, `buildConvalidationBookId`, `getConvalidationModuleNames`, `selectConvalidationDates`, `buildBookOptions`, `parseBookKey` |
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
+| `src/app/core/utils/course-filter-options.utils.ts` | `CourseFilterOption`, `buildCourseFilterOptions` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |

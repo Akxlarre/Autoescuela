@@ -1258,6 +1258,51 @@ describe('AdminAlumnoDetalleFacade', () => {
           expect(facade.alumno()?.enrollmentId).toBe(401);
         });
       });
+
+      describe('errores de carga — hotfix-116-m', () => {
+        /** PostgREST cuando `.single()` no encuentra filas (no existe, o la RLS lo oculta). */
+        const NOT_FOUND = {
+          code: 'PGRST116',
+          message: 'JSON object requested, multiple (or no) rows returned',
+        };
+
+        it('un id que no es un entero positivo deja un error visible, sin consultar ni quedar cargando', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(310, 'active', '2026-01-01')]);
+          mock.client.from.mockClear();
+
+          await facade.initialize(Number('abc'));
+
+          expect(facade.error()).toBe('La dirección no corresponde a ningún alumno.');
+          expect(facade.isLoading()).toBe(false);
+          expect(facade.alumno()).toBeNull();
+          expect(mock.client.from).not.toHaveBeenCalled();
+        });
+
+        it('alumno inexistente o de otra sede (PGRST116): mensaje que dice qué pasó, sin el código técnico', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(311, 'active', '2026-01-01')]);
+          mock.setSingleResult('students', null, NOT_FOUND);
+
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+
+          expect(facade.error()).toBe('El alumno no existe o no tienes acceso a su ficha.');
+          expect(facade.isLoading()).toBe(false);
+        });
+
+        it('tras una carga fallida, volver a abrir al alumno anterior lo carga de nuevo y limpia el error (B12)', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(312, 'active', '2026-01-01')]);
+          const alumno42 = (await mock.client.from('students').single()).data;
+
+          mock.setSingleResult('students', null, NOT_FOUND);
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+          expect(facade.error()).not.toBeNull();
+
+          mock.setSingleResult('students', alumno42);
+          await facade.initialize(42);
+
+          expect(facade.error()).toBeNull();
+          expect(facade.alumno()?.id).toBe(42);
+        });
+      });
     });
   });
 

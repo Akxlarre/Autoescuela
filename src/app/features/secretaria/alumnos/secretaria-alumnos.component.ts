@@ -25,6 +25,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       basePath="/app/secretaria"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
@@ -60,7 +61,10 @@ export class SecretariaAlumnosComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      this.facade.leaveTrashView();
+    });
     this.facade.initialize();
   }
 

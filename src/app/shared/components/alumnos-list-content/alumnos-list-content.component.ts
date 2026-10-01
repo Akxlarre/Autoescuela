@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { buildCourseFilterOptions } from '@core/utils/course-filter-options.utils';
 import {
   getExpedienteStatus as computeExpedienteStatus,
   getAlumnoStatusSeverity,
@@ -147,7 +148,7 @@ export interface AlumnoExportRequest {
 
           <!-- Filtros -->
           <p-select
-            [options]="cursos"
+            [options]="cursos()"
             [ngModel]="selectedCurso()"
             (ngModelChange)="updateFilter(selectedCurso, $event)"
             optionLabel="label"
@@ -291,6 +292,19 @@ export interface AlumnoExportRequest {
                 }
               </div>
             </div>
+          </div>
+        } @else if (showLoadError()) {
+          <!-- La carga falló y no hay nada que mostrar: no es una lista vacía (hotfix-113-m).
+               Centrado en el alto disponible de la celda bento-fill. -->
+          <div class="flex-1 flex items-center justify-center bg-surface" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="error() ?? ''"
+              subtitle="No se pudo obtener la lista. Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="refresh()"
+            />
           </div>
         } @else {
           <!-- Contenido principal interactivo -->
@@ -600,6 +614,14 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly basePath = input<string>('/app/secretaria');
   readonly alumnosPorVencer = input<number>(0);
   readonly showSedeColumn = input(false);
+  /** Error de la última carga (signal `error` del facade), o null. */
+  readonly error = input<string | null>(null);
+
+  /**
+   * El estado de error reemplaza a la tabla solo si no hay alumnos que mostrar. Si un refresco en
+   * segundo plano falla con datos ya en pantalla, se siguen mostrando (SWR).
+   */
+  readonly showLoadError = computed(() => !!this.error() && this.alumnos().length === 0);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
@@ -687,10 +709,8 @@ export class AlumnosListContentComponent implements AfterViewInit {
     Math.max(0, this.filteredAlumnos().length - this.mobileShown()),
   );
 
-  readonly cursos = [
-    { label: 'Clase B', value: 'Clase B' },
-    { label: 'Clase B SENCE', value: 'Clase B SENCE' },
-  ];
+  /** Cursos presentes en la lista cargada (hotfix-114-m: antes era una lista fija). */
+  readonly cursos = computed(() => buildCourseFilterOptions(this.alumnos()));
   readonly estados = [
     { label: 'Activo', value: 'Activo' },
     { label: 'Retirado', value: 'Retirado' },

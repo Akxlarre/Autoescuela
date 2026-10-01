@@ -204,6 +204,19 @@ export class AdminAlumnosFacade {
     await this.initialize();
   }
 
+  /**
+   * Sale de la Papelera al abandonar la pantalla (hotfix-112-m). El facade es un singleton: sin
+   * esto, la vista quedaba "pegada" y al volver a Alumnos se abría la Papelera.
+   * No dispara una carga (la pantalla ya no existe): invalida la caché para que la próxima
+   * entrada cargue la lista activa.
+   */
+  leaveTrashView(): void {
+    if (!this._trashView()) return;
+    this._trashView.set(false);
+    this._alumnos.set([]);
+    this._initialized = false;
+  }
+
   async restaurarAlumno(studentId: number): Promise<void> {
     this._isArchiving.set(true);
     try {

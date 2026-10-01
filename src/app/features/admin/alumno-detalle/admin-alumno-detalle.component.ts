@@ -1632,13 +1632,17 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id && !isNaN(Number(id))) {
-      void this.facade.initialize(Number(id)).then(() => {
+    // hotfix-116-m: siempre se llama a initialize(). Un id inválido ("/alumnos/abc") lo resuelve
+    // el facade con un error visible; antes se omitía la llamada y la ficha quedaba cargando.
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.facade
+      .initialize(id)
+      .then(() => {
         const enrollmentId = this.facade.alumno()?.enrollmentId;
         if (enrollmentId) void this.facade.loadHistorialReagendamientos(enrollmentId);
-      });
-    }
+      })
+      // El facade ya dejó el error en su signal `error`, que es lo que muestra la ficha.
+      .catch(() => undefined);
   }
 
   ngOnDestroy(): void {

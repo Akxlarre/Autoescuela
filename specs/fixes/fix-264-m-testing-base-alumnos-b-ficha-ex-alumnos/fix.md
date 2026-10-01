@@ -99,7 +99,7 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | A01 | ✅ | Auto. Admin carga sin errores de consola ni respuestas ≥400 | |
 | A02 | ✅ | Auto. Secretaria carga limpio, solo su sede | |
 | A03 | ✅ | Auto. La secretaria no llega a `/app/admin/alumnos` | |
-| A08 | ❌ | Auto. Con la carga fallida se ve "No se encontraron alumnos · Limpiar filtros" y KPIs en 0 | B5 |
+| A08 | ❌ → ✅ | Auto. Con la carga fallida se ve "No se encontraron alumnos · Limpiar filtros" y KPIs en 0. **Corregido el 2026-10-01** | B5 → `hotfix-113-m` |
 | B01 | ✅ | Auto. Docs Pendientes, Retirado, Pendiente Pago y sin matrícula aparecen | |
 | B02 | ✅ | Auto. Matrícula `completed` no aparece | |
 | B05 | ✅ | Auto. Solo borrador no aparece | |
@@ -115,7 +115,7 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | E07 | ✅ | Auto. Nº de expediente | |
 | E09 | ✅ | Auto. Ignora espacios al inicio y al final | |
 | E10 | ✅ | Auto. Estado vacío con "Limpiar filtros" | |
-| F03 | ❌ | Auto. El filtro Curso solo ofrece "Clase B" y "Clase B SENCE"; existe el curso "Refuerzo Clase B" | B3 |
+| F03 | ❌ → ✅ | Auto. El filtro Curso solo ofrece "Clase B" y "Clase B SENCE"; existe el curso "Refuerzo Clase B". **Corregido el 2026-10-01** | B3 → `hotfix-114-m` |
 | F09 | ✅ | Auto. "Limpiar filtros" vacía la búsqueda y devuelve el total | |
 | G01 | ✅ | Auto. 10 filas por página, reporte "Mostrando 1 a 10 de N" | |
 | H01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
@@ -131,12 +131,12 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | L02 | ✅ | Auto. Modal "con historial" sobre un alumno del seed | |
 | L03 | ✅ | Auto. "borrar" no habilita; "borrarlo" sí | |
 | L05 | ✅ | Auto. Cancelar cierra sin archivar | |
-| L06 | ❌ | Auto. Escape cierra el modal mientras dice "Archivando…"; el archivado termina igual | B6 |
+| L06 | ❌ → ✅ | Auto. Escape cierra el modal mientras dice "Archivando…"; el archivado termina igual. **Corregido el 2026-10-01** | B6 → `hotfix-111-m` |
 | L08 | ✅ | Auto. El foco queda en el campo de texto | |
 | M01 | ✅ | Auto. Archivar → Papelera → restaurar → vuelve a la lista | |
 | M02 | ✅ | Auto. En la Papelera la fila solo tiene Restaurar | |
 | M03 | ✅ | Auto. "← Alumnos" vuelve a la lista activa | |
-| M04 | ❌ | Auto. Papelera → Agenda → volver: se abre la Papelera, no la lista activa | B4 |
+| M04 | ❌ → ✅ | Auto. Papelera → Agenda → volver: se abre la Papelera, no la lista activa. **Corregido el 2026-10-01** | B4 → `hotfix-112-m` |
 | M07 | ✅ | Auto. La secretaria no ve archivados de otra sede | |
 | P01 | ✅ | Auto. Admin "Todas": columna Sede visible | |
 | P02 | ✅ | Auto. Al cambiar de sede recarga sola y oculta la columna | |
@@ -164,9 +164,9 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | A01 | ✅ | Auto. Admin abre la ficha desde la lista; consola y red limpias | |
 | A02 | ✅ | Auto. Igual para secretaria, en `/app/secretaria/alumnos/:id` | |
 | A03 | ✅ | Auto. Secretaria sede 1 con la URL de un alumno de la sede 2: tarjeta de error, sin nombre ni RUT. Ya no aparece "(PGRST116)" | |
-| A04 | ❌ | Auto. Id inexistente: el detalle dice "Error al cargar la ficha del alumno" (repite el título, no dice que no existe) | B11 |
-| A05 | ❌ | Auto. Tras una ficha con error, volver a abrir la ficha anterior sigue mostrando el error. Solo se reproduce con navegación interna (sin recargar) | B12 |
-| A06 | ❌ | Auto. `/alumnos/abc` queda en "Cargando…" para siempre | B13 |
+| A04 | ❌ → ✅ | Auto. Id inexistente: el detalle dice "Error al cargar la ficha del alumno" (repite el título, no dice que no existe). **Corregido el 2026-10-01** | B11 → `hotfix-116-m` |
+| A05 | ❌ → ✅ | Auto. Tras una ficha con error, volver a abrir la ficha anterior sigue mostrando el error. Solo se reproduce con navegación interna (sin recargar). **Corregido el 2026-10-01** | B12 → `hotfix-116-m` |
+| A06 | ❌ → ✅ | Auto. `/alumnos/abc` queda en "Cargando…" para siempre. **Corregido el 2026-10-01** | B13 → `hotfix-116-m` |
 | A09 | ✅ | Auto. La secretaria no entra por la ruta del portal admin | |
 | A13 | ✅ | Auto. "Volver" regresa a la lista de origen (Base y Ex-Alumnos) | |
 | B01 | ✅ | Auto. Título y "Curso · Matrícula #N" | |
@@ -198,7 +198,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | U03 | ✅ | Auto. La búsqueda encuentra a un egresado fuera del período | |
 | U04 | ✅ | Auto. Nombre + apellido, sin tilde, Nº de expediente y RUT con y sin puntos (este último desde `fix-267-m`) | |
 | V01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
-| V02 | ❌ | Auto. "Ver ficha" desde una tarjeta y "Volver" lleva a la Base de Alumnos | B20 |
+| V02 | ❌ → ✅ | Auto. "Ver ficha" desde una tarjeta y "Volver" lleva a la Base de Alumnos. **Corregido el 2026-10-01** | B20 → `hotfix-115-m` |
 | W01 | ✅ | Auto (parcial). Continuar abre "Nueva Matrícula" con `?rut=`. Falta verificar los campos precargados | |
 | W02 | ✅ | Auto. Cancelar no abre nada ni cambia la URL | |
 
@@ -258,23 +258,23 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 |---|---|---|---|
 | B1 | **La exportación de la lista no coincide con la pantalla** (`export-students`): incluye "Finalizado" y solo-Profesional, no conoce "Docs Pendientes", calcula el expediente con 4 documentos y el nombre viejo `foto_carnet` (siempre "Pendiente"), busca sin ignorar tildes ni tokenizar, y desde la Papelera exporta los activos. Toca el mismo archivo que `0009-i` (Ignacio): coordinar | 🟠 Media | por crear |
 | B2 | **Buscar por RUT solo funciona con el formato guardado.** Sin puntos, sin guion o parcial no encuentra. Agravante: los 200 alumnos del seed están guardados sin puntos y los reales con puntos | 🟠 Media | ✅ `fix-267-m` |
-| B3 | **Filtro Curso con opciones fijas**: no se puede filtrar "Refuerzo Clase B" | 🟡 Baja | por crear |
-| B4 | **La Papelera queda "pegada"** al salir de la pantalla y volver | 🟡 Baja | por crear |
-| B5 | **Un error de carga se ve como lista vacía** ("No se encontraron alumnos"), con KPIs en 0 | 🟡 Baja | por crear (relacionado con `ASG-i-055`) |
-| B6 | **El modal de archivar se cierra con Escape/clic afuera mientras archiva**; la operación termina igual y el usuario no ve el resultado en el modal | 🟡 Baja | por crear |
+| B3 | **Filtro Curso con opciones fijas**: no se puede filtrar "Refuerzo Clase B" | 🟡 Baja | ✅ `hotfix-114-m` |
+| B4 | **La Papelera queda "pegada"** al salir de la pantalla y volver | 🟡 Baja | ✅ `hotfix-112-m` |
+| B5 | **Un error de carga se ve como lista vacía** ("No se encontraron alumnos"), con KPIs en 0 | 🟡 Baja | ✅ `hotfix-113-m` |
+| B6 | **El modal de archivar se cierra con Escape/clic afuera mientras archiva**; la operación termina igual y el usuario no ve el resultado en el modal | 🟡 Baja | ✅ `hotfix-111-m` |
 | B7 | **Secretaria con grant multi-sede**: la lista no recarga al cambiar de sede y nunca muestra la columna Sede | 🟡 Baja-Media | por crear |
 | B8 | **"Con deuda" y el saldo ignoran matrículas B anteriores** con deuda | 🟡 Baja | por crear |
 | B9 | **KPI "Por Vencer" siempre 0 y drawer siempre vacío**; el drawer habla de "cuotas" y "Contactar" no hace nada. Requiere decisión: qué debe medir (D05/N02) | 🟠 Media | por crear, tras decisión |
 | B10 | Tiempo real de la lista muerto | 🟠 Media | `ASG-i-056` |
-| B11 | El error de la ficha no dice qué pasó: "Error al cargar la ficha del alumno" tanto si el id no existe como si es de otra sede | 🟡 Baja | por crear |
-| B12 | **El error de la ficha queda "pegado"**: tras una ficha con error, la del alumno anterior se sigue viendo con error hasta recargar | 🟡 Baja | por crear |
-| B13 | **Id no numérico en la URL** deja la ficha en "Cargando…" para siempre | 🟡 Baja | por crear |
+| B11 | El error de la ficha no dice qué pasó: "Error al cargar la ficha del alumno" tanto si el id no existe como si es de otra sede | 🟡 Baja | ✅ `hotfix-116-m` |
+| B12 | **El error de la ficha queda "pegado"**: tras una ficha con error, la del alumno anterior se sigue viendo con error hasta recargar | 🟡 Baja | ✅ `hotfix-116-m` |
+| B13 | **Id no numérico en la URL** deja la ficha en "Cargando…" para siempre | 🟡 Baja | ✅ `hotfix-116-m` |
 | B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | por crear (junto con `ASG-i-054`) |
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | por crear (mismo patrón que `fix-029-i`) |
 | B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043` |
-| B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | por crear |
+| B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
@@ -323,8 +323,9 @@ muestra el error real de cada uno.
 - `npm run test:e2e` — 57 tests: los 13 que ya existían + 44 de este track (20 en
   `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasaban y 20 fallaban a propósito
   por bug conocido (10 en cada archivo). Tras `fix-265-m`, `fix-266-m` y
-  `fix-267-m` quedan 16 marcados (9 en la lista, 7 en la ficha), y la ficha suma un test del
-  trigger de `completed_at`.
+  `fix-267-m` quedaban 16 marcados, y la ficha suma un test del trigger de `completed_at`. Tras
+  los hotfixes `111-m` … `116-m` quedan 8: 5 en la lista (B1 ×2, B7, B8, B10) y 3 en la ficha
+  (B14, B17, B19).
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

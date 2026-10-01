@@ -116,7 +116,6 @@ test.describe('ficha: carga, acceso y URL manipulada', () => {
   test('A03 · A04: el mensaje de "no encontrado" es entendible (sin códigos técnicos)', async ({
     pageAs,
   }) => {
-    knownBug('B11 (fix-264-m)');
     const page = await pageAs('admin');
     await openFicha(page, 'admin', ID_INEXISTENTE);
 
@@ -131,7 +130,6 @@ test.describe('ficha: carga, acceso y URL manipulada', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B12 (fix-264-m)');
     const alumno = await createE2eAlumno(
       { label: 'ErrorPegado', branchId: SEDE_A, enrollments: [{}] },
       cleanup,
@@ -171,7 +169,6 @@ test.describe('ficha: carga, acceso y URL manipulada', () => {
   test('A06 (S13): un id no numérico muestra un error, no "Cargando…" para siempre', async ({
     pageAs,
   }) => {
-    knownBug('B13 (fix-264-m)');
     const page = await pageAs('admin');
     await page.setViewportSize(DESKTOP);
     await page.goto('/app/admin/alumnos/abc');
@@ -617,7 +614,6 @@ test.describe('ex-alumnos', () => {
   test('V01 · V02 (S15): desde una tarjeta (375 px), "Ver ficha" y "Volver" regresan a Ex-Alumnos', async ({
     pageAs,
   }) => {
-    knownBug('B20 (fix-264-m)');
     const page = await pageAs('secretariaA');
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto('/app/secretaria/ex-alumnos');
