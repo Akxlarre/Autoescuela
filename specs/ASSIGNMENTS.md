@@ -119,7 +119,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-040 | XSS almacenado en la landing pública | `cualquiera` | hotfix | P0 | i | ✅ Confirmada en código |
 | ASG-i-041 | Edge functions que responden sin sesión (5) | `cualquiera` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
 | ASG-i-042 | Edge functions sin validar rol ni sede (~11) | `cualquiera` | spec | P0 | i | ✅ 9/11 confirmadas en vivo, 2 ⏳. Helper compartido en `_shared/` |
 | ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `cualquiera` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
@@ -419,6 +418,7 @@
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | [0044-b-dashboard-ejecutivo-admin](specs/0044-b-dashboard-ejecutivo-admin/spec.md) | 2026-09-27 |
 | ASG-i-021 | Montar la suite Playwright E2E automatizada (base de la tanda de testing) | [0019-m-suite-playwright-e2e](specs/0019-m-suite-playwright-e2e/spec.md) | 2026-09-30 |
 | ASG-i-039 | Sacar las credenciales de prueba de la pantalla de login | [hotfix-007-i-credenciales-prueba-login-solo-dev](hotfixes/hotfix-007-i-credenciales-prueba-login-solo-dev/hotfix.md) | 2026-09-30 |
+| ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---

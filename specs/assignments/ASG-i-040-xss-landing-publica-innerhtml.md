@@ -1,14 +1,14 @@
 # Asignación ASG-i-040 — XSS almacenado en la landing pública (innerHTML con texto editable)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-01
+> **resulting_track:** hotfix-008-i-xss-landing-publica-innerhtml
 
 ---
 
