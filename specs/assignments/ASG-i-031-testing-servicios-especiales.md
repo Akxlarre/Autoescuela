@@ -1,7 +1,7 @@
 # Asignación ASG-i-031 — Testing: Servicios especiales
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-29

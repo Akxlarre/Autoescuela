@@ -1,7 +1,7 @@
 # Asignación ASG-i-029 — Testing: Contabilidad (cuadratura, historial, reportes, anticipos, liquidaciones, cursos)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29

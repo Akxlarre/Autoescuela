@@ -1,7 +1,7 @@
 # Asignación ASG-i-034 — Testing: Gestión de instructores, secretarias y usuarios
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29

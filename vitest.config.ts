@@ -15,7 +15,9 @@ export default defineConfig({
     environment: 'happy-dom',
     pool: 'threads',
     setupFiles: ['src/test-setup.ts'],
-    include: ['src/**/*.spec.ts'],
+    // e2e/support/ = funciones puras de la suite Playwright (spec 0019-m). Los e2e/*.spec.ts de
+    // Playwright quedan fuera: los corre `npm run test:e2e`, no Vitest.
+    include: ['src/**/*.spec.ts', 'e2e/support/**/*.spec.ts'],
     // Component template tests need @analogjs/vite-plugin-angular which breaks TestBed for
     // facade/service tests. Excluded until a dual-config solution is implemented.
     exclude: [
