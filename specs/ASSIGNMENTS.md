@@ -120,7 +120,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-041 | Edge functions que responden sin sesión (5) | `cualquiera` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
-| ASG-i-042 | Edge functions sin validar rol ni sede (~11) | `cualquiera` | spec | P0 | i | ✅ 9/11 confirmadas en vivo, 2 ⏳. Helper compartido en `_shared/` |
 | ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `cualquiera` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
 | ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `cualquiera` | fix | P0 | i | ⏳ Puede partirse en 2 |
 | ASG-i-045 | RLS que filtra por rol pero no por sede | `cualquiera` | spec | P0 | i | 🟡 Lectura de clases y ventas confirmada; `students`/`payments` SELECT sí filtra; escritura ⏳ |
@@ -279,6 +278,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | `i` | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
