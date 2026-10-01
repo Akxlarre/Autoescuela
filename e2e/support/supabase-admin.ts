@@ -26,6 +26,20 @@ export function getAdminClient(): Promise<SupabaseClient> {
   return client;
 }
 
+/**
+ * Cliente Supabase en Node logueado con una cuenta de prueba cualquiera (anon key, RLS activa).
+ * Para los tests que comprueban qué puede leer o escribir un rol por fuera de la UI.
+ */
+export async function getClientFor(email: string, password: string): Promise<SupabaseClient> {
+  const sb = createClient(environment.supabase.url, environment.supabase.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error)
+    throw new Error(`[e2e] No se pudo iniciar sesión como ${email} por API: ${error.message}`);
+  return sb;
+}
+
 /** `users.id` (PK numérica) de una cuenta de prueba, buscada por email. */
 export async function getUserDbId(email: string): Promise<{ id: number; branchId: number | null }> {
   const sb = await getAdminClient();

@@ -109,6 +109,56 @@ test('secretaria A ve su agenda', async ({ pageAs }) => {
   AI-readability) o roles ARIA (`getByRole`). Nunca clases CSS: cambian con el diseño.
 - Los archivos de test van en `e2e/` con extensión `.spec.ts`. Lo que está en `e2e/support/`
   son funciones de apoyo; sus `.spec.ts` son tests unitarios de Vitest (`npm run test:ci`).
+- **Ancho de pantalla:** `pageAs()` abre a 1280 px, y a ese ancho varias listas (Alumnos,
+  Ex-Alumnos) ya se muestran como tarjetas, no como tabla. Si el test necesita la tabla, fija
+  antes `page.setViewportSize({ width: 1600, height: 900 })`.
+
+## Alumnos de prueba
+
+Un test que cambia el estado de un alumno (archivar, marcar ex-alumno, editar perfil…) no usa
+alumnos del seed: crea el suyo con `createE2eAlumno()` (`e2e/support/alumnos-seed.ts`).
+
+```ts
+import { createE2eAlumno } from './support/alumnos-seed';
+
+test('archivar', async ({ pageAs, cleanup }) => {
+  const alumno = await createE2eAlumno(
+    { label: 'Archivar', branchId: 1, enrollments: [{ paymentStatus: 'pending' }] },
+    cleanup, // usuario, alumno y matrículas se borran al terminar
+  );
+  // alumno.paternalLastName es único: sirve para buscarlo en la lista.
+});
+```
+
+Cada matrícula acepta curso, estado, estado de pago, saldo, `docsComplete` y fechas. Sin
+`enrollments`, el alumno queda "Pre-inscrito" y sin historial. `markCertificateSent()` deja una
+matrícula con el certificado Clase B "ya enviado" (habilita "Marcar como Ex-Alumno").
+
+El helper crea solo `users`, `students` y `enrollments`: sin clases, pagos ni documentos. Para
+esos casos, por ahora, se lee un alumno del seed (nombres `AlumnoNN ApellidoNN`) sin modificarlo.
+
+`getClientFor(email, password)` (`e2e/support/supabase-admin.ts`) entrega un cliente Supabase
+con la sesión de cualquier cuenta de prueba, para comprobar la RLS por fuera de la UI.
+
+## Tests de bugs conocidos
+
+Cuando un test confirma un bug que todavía no se corrige, no se borra ni se relaja: se escribe con
+el comportamiento **correcto** y se marca con `knownBug()` (de `./support/fixtures`; por dentro es
+un `test.fail()`). La suite queda verde, y el día que el bug se corrija Playwright reporta que el
+test "pasó inesperadamente", lo que obliga a quitar la marca.
+
+```ts
+test('M04: la Papelera no queda pegada', async ({ pageAs }) => {
+  knownBug('B4 (fix-264-m)'); // bug + track de testing donde está descrito
+  // … el test, escrito como debería comportarse la app
+});
+```
+
+Para ver el error real de cada uno (y comprobar que falla por el bug y no por otra causa):
+
+```bash
+E2E_SHOW_KNOWN_BUGS=1 npx playwright test e2e/alumnos-b-lista.spec.ts
+```
 
 ## Errores tolerados
 

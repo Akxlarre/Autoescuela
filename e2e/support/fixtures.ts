@@ -89,4 +89,18 @@ export const test = base.extend<Fixtures>({
   },
 });
 
+/**
+ * Marca el test en curso como "falla esperada por un bug confirmado que aún no se corrige".
+ * El test describe el comportamiento CORRECTO: hoy falla y la suite queda verde; cuando el bug
+ * se corrija, Playwright avisa que "pasó inesperadamente" y hay que quitar la marca.
+ *
+ * `id` identifica el bug en el track de testing que lo encontró (ej. "B4 (fix-264-m)").
+ * Con E2E_SHOW_KNOWN_BUGS=1 la marca se ignora y cada test muestra su error real: sirve para
+ * comprobar que falla por el bug y no por otra causa.
+ */
+export function knownBug(id: string): void {
+  if (process.env['E2E_SHOW_KNOWN_BUGS']) return;
+  test.fail(true, `Bug conocido ${id}. Quitar esta marca cuando se corrija.`);
+}
+
 export { expect };
