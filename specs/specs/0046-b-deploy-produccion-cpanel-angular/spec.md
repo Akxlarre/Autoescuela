@@ -1,6 +1,6 @@
 # Spec 0046-b — Despliegue a producción de la app Angular en cPanel (GitHub Actions + FTPS)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-09-29
 > **Owner:** Benjamín
 > **Priority:** P1
@@ -89,9 +89,16 @@ trazable a un commit y rollback en minutos.
 - **AC8 — Trazabilidad**: Given un despliegue terminado, When se consulta
   `https://<dominio>/version.json`, Then devuelve el tag, el SHA del commit y la fecha de build,
   que coinciden con la ejecución del workflow.
-- **AC9 — Rollback**: Given un tag previo desplegado, When un dev lanza el workflow manualmente
-  (`workflow_dispatch`) indicando ese tag, Then se construye y despliega esa versión (pasando igual
-  por aprobación) y `version.json` refleja ese tag.
+- **AC9 — Rollback sin recompilar**: Given un tag previo desplegado con éxito, When un dev lanza el
+  workflow manualmente (`workflow_dispatch`) indicando ese tag, Then se re-despliega **el mismo
+  build que se aprobó en su momento** (descargado de su GitHub Release), sin `npm ci`, sin tests y
+  sin `ng build`, pasando igual por aprobación, y `version.json` refleja ese tag y su SHA original.
+- **AC11 — Registro de versiones publicadas**: Given un deploy por tag que termina con éxito, When
+  concluye, Then existe un GitHub Release de ese tag con el build exacto (`site.zip`, incluido
+  `.htaccess`) como asset. Un deploy rechazado o fallido no crea Release.
+- **AC-E6 — Rollback a un tag sin build publicado**: Given un tag sin Release (nunca desplegado, o
+  anterior a este mecanismo), When se pide rollback a él, Then el workflow falla con un mensaje
+  explícito ("no hay build publicado para ese tag") antes de pedir aprobación.
 - **AC10 — Dominio desacoplado**: Given que el dominio de producción cambie, When se actualiza,
   Then basta con cambiar la variable `APP_DOMAIN` del environment `Production` (más las tareas
   manuales de §5): cero cambios de código, workflow ni `.htaccess`. Verificable con
@@ -99,9 +106,12 @@ trazable a un commit y rollback en minutos.
 
 ### Edge cases obligatorios
 
-- **AC-E1 — Un solo despliegue a la vez**: Given dos tags pusheados seguidos, When ambos esperan
-  aprobación, Then solo queda viva la ejecución más reciente (la anterior se cancela) y nunca corren
-  dos `deploy` en paralelo contra el FTP.
+- **AC-E1 — Un solo despliegue a la vez**: Given dos tags pusheados seguidos, When ambos llegan a
+  `deploy`, Then nunca corren dos subidas en paralelo contra el FTP: el primero en llegar queda
+  esperando aprobación y el otro queda en cola (`pending`) sin pedirla; si llega un tercero, reemplaza
+  al que estaba en cola. Un deploy que espera aprobación no se cancela solo: el aprobador lo
+  **rechaza** si no corresponde (p. ej. dos tags casi simultáneos donde ganó el turno la versión vieja).
+  Una subida en curso nunca se cancela (`cancel-in-progress: false`).
 - **AC-E2 — Credenciales ausentes o inválidas**: Given secrets faltantes o contraseña incorrecta,
   When corre `deploy`, Then el job falla con un error explícito de conexión o login y el sitio
   publicado queda intacto (sin subida parcial).
@@ -199,6 +209,14 @@ trazable a un commit y rollback en minutos.
 - [x] **D4 — Cutover**: no hay URL previa en uso que redirigir (owner: "no creo").
 - [x] **D5 — Dominio**: provisorio. Las URLs de Supabase pasan a tareas manuales (§5 T-DOM-*),
       no a ACs, y el dominio queda en una sola variable (AC10).
+- [x] **D6 — Rollback sin recompilar** (owner, 2026-10-01): el rollback re-despliega el build
+      original guardado en un GitHub Release por tag. Motivo: el primer rollback real (dispatch
+      `v0.1.0`, run 36900019092) recompiló el tag viejo y el gate lo frenó por un test que dependía
+      de la fecha (arreglado en `main`, pero no en el tag). Recompilar tampoco reproduce el build
+      aprobado (deps/Node pueden cambiar) y es lento. `v0.1.0`–`v0.1.4` no tienen Release → no son
+      destino de rollback (AC-E6).
+- [x] **D7 — AC-E1 reescrito** a lo que GitHub hace de verdad (observado con `v0.1.3`/`v0.1.4`,
+      2026-10-01): un deploy esperando aprobación no se cancela por uno nuevo; el nuevo queda en cola.
 
 ---
 
@@ -209,3 +227,5 @@ trazable a un commit y rollback en minutos.
 - 2026-09-29 — resueltas D1–D4 + D5 (dominio provisorio → URLs de Supabase como tareas
   manuales, AC10 reemplazado por "dominio desacoplado", AC-E4 reescrito y AC-E5 nuevo por el
   disparador con tag). Status → approved.
+- 2026-10-01 — D6/D7: AC9 reescrito (rollback = build original del Release, sin recompilar),
+  AC11 y AC-E6 nuevos, AC-E1 ajustado al comportamiento real de la cola de environments.

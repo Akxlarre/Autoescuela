@@ -1,0 +1,119 @@
+# Botón "Publicar en producción" — fix-177-b.
+#
+# Actions → Publicar en producción → Run workflow → tipo de cambio → Run.
+# Calcula la próxima versión, crea el tag y corre el deploy (gate → aprobación → subida → Release).
+# Nadie tiene que usar la terminal ni saber qué número sigue.
+#
+# El deploy se LLAMA (workflow_call) en vez de dejar que el tag lo dispare: un tag creado con
+# GITHUB_TOKEN no dispara otros workflows (protección anti-loop de GitHub). Eso además garantiza un
+# único run de deploy por versión.
+
+name: Publicar en producción
+
+on:
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: 'Tipo de cambio: arreglo (v0.1.6 → v0.1.7) o mejora (v0.1.6 → v0.2.0)'
+        required: true
+        type: choice
+        options: [arreglo, mejora]
+        default: arreglo
+
+permissions:
+  contents: read
+
+# Dos clics seguidos no deben calcular el mismo número de versión.
+concurrency:
+  group: publicar-produccion
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Calcular versión y crear tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # pushear el tag
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      # F2: solo se publica lo que está en main.
+      - name: Verificar que se lanzó desde main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Publicar solo se puede lanzar desde main (se lanzó desde ${{ github.ref_name }}). En 'Run workflow' elige la rama main. No se creó ningún tag."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Calcular versión
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TIPO: ${{ inputs.tipo }}
+        run: |
+          set -euo pipefail
+
+          # F1: número calculado por función pura con test (scripts/lib/next-version.js).
+          TAG="$(node --input-type=module -e "
+            import { nextVersion } from './scripts/lib/next-version.js';
+            import { execSync } from 'node:child_process';
+            console.log(nextVersion(execSync('git tag -l').toString().split('\n'), process.env.TIPO));
+          ")"
+
+          # F3: la base para "¿hay algo nuevo?" es la última versión PUBLICADA (último Release),
+          # no el último tag: un tag cuyo deploy se rechazó no llegó a producción.
+          LAST="$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName // empty')"
+          if [ -n "$LAST" ] && [ "$(git rev-parse "$LAST^{commit}")" = "$(git rev-parse HEAD)" ]; then
+            echo "::error::No hay cambios nuevos en main desde $LAST (la última versión publicada). No se creó ningún tag."
+            exit 1
+          fi
+
+          # F4: quien aprueba ve qué está aprobando (resumen del run, visible mientras espera).
+          {
+            echo "## Publicar $TAG ($TIPO)"
+            echo
+            if [ -n "$LAST" ]; then
+              echo "Cambios desde **$LAST** (la versión publicada más reciente):"
+              echo
+              git log --no-merges --format='- %s (%an, `%h`)' "$LAST..HEAD" | head -60
+            else
+              echo "Primera versión con Release. Últimos commits de main:"
+              echo
+              git log --no-merges --format='- %s (%an, `%h`)' -20
+            fi
+            echo
+            echo "Para aprobar: botón **Review deployments** en este run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Versión a publicar: $TAG (base publicada: ${LAST:-ninguna})"
+
+      - name: Crear y subir el tag
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
+          TIPO: ${{ inputs.tipo }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG ($TIPO) — publicado por ${{ github.actor }} desde Actions"
+          git push origin "refs/tags/$TAG"
+
+  deploy:
+    name: Deploy
+    needs: version
+    uses: ./.github/workflows/deploy-app-production.yml
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+      mode: publish
+    secrets: inherit
+    permissions:
+      contents: write # el job "release" del deploy crea el GitHub Release

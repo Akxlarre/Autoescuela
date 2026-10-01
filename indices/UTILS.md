@@ -35,6 +35,7 @@
 | `src/app/core/utils/convalidation-book.utils.ts` | `CONVALIDATION_BOOKS`, `getConvalidationBookName`, `buildConvalidationBookId`, `getConvalidationModuleNames`, `selectConvalidationDates`, `buildBookOptions`, `parseBookKey` |
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |
+| `src/app/core/utils/course-filter-options.utils.ts` | `CourseFilterOption`, `buildCourseFilterOptions` |
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
@@ -43,12 +44,14 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange` (fix-176-b: valor de `p-datepicker` range → rango ISO), `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
+| `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `pickFichaEnrollment` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |

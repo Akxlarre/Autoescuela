@@ -1,7 +1,7 @@
 # Asignación ASG-i-046 — Storage: leer y sobrescribir archivos de otra sede, y subida anónima
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

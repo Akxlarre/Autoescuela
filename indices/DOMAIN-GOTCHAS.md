@@ -1499,6 +1499,53 @@
 - **Fuente:** `specs/fixes/fix-172-b-dashboard-ejecutivo-excluir-pending-payment`,
   `supabase/migrations/20260317120000_pending_payment_enrollment_status.sql`.
 
+### DG-095 — Una clase práctica B con nota no es lo mismo que una clase cerrada: certificar cuenta `status = 'completed'`, nunca `evaluation_grade`
+- **Trampa:** contar prácticas completadas de una matrícula Clase B con
+  `class_b_sessions.evaluation_grade IS NOT NULL`, asumiendo que toda clase cerrada tiene nota.
+- **Realidad:** cerrar una clase solo exige el kilometraje de retorno. La nota es opcional, la
+  pone solo el instructor y puede llegar días después o nunca (por ejemplo, con el portal
+  Instructor bloqueado en la fase piloto). Una clase `completed` sin nota es una clase dictada.
+  La nota se usaba como proxy de "cerrada" porque al principio el cierre exigía nota; cuando dejó
+  de exigirla, la certificación y el egreso quedaron bloqueados sin que nadie lo notara.
+  **Decisión del dueño:** la nota de las prácticas B nunca condiciona el certificado ni el egreso.
+- **Regla de aplicabilidad:** toda query que decida si un alumno completó sus prácticas B
+  (certificado, "Curso completo", egreso, progreso) filtra por `status = 'completed'`. La nota
+  solo se usa para mostrar o reportar la evaluación. Lo mismo vale para la asistencia: una fila
+  `class_b_practice_attendance.status = 'present'` tampoco es una clase cerrada.
+  `markAttendance` la escribe sin cerrar la clase, y una clase cerrada puede no tenerla (datos
+  seed o upsert fallido). Si cambia lo que se exige para cerrar una
+  clase, revisar todos los conteos que la usan como proxy, no solo la pantalla del cambio.
+- **Fuente:** `specs/fixes/fix-262-m-certificacion-b-sin-requisito-nota`,
+  `specs/fixes/fix-115-m-ocultar-evaluacion-secretaria-admin`.
+
+### DG-096 — `students.status` es una columna muerta: el estado de un alumno es el `status` de su matrícula
+- **Trampa:** mostrar o decidir el estado de un alumno ("Activo", ex-alumno, retirado) leyendo
+  `students.status`.
+- **Realidad:** ningún flujo escribe `students.status`. Todos los alumnos quedan en `active`
+  desde que se crean, sin importar que hayan egresado o anulado su matrícula. Lo que define a un
+  ex-alumno es `enrollments.status = 'completed'` (`ExAlumnosFacade`, `marcarComoExAlumno`). Un
+  alumno puede tener varias matrículas con estados distintos, así que "el estado del alumno"
+  solo tiene sentido respecto de una matrícula concreta.
+- **Regla de aplicabilidad:** toda UI o query que muestre o filtre por estado de alumno usa
+  `enrollments.status` de la matrícula correspondiente, y lo pide explícitamente en el `select`
+  anidado. Si falta la columna, PostgREST no la devuelve y cualquier filtro `e.status !== 'x'`
+  compara contra `undefined` y pasa siempre, sin error.
+- **Fuente:** `specs/fixes/fix-263-m-ficha-estado-desde-matricula-egresado`.
+
+### DG-097 — `enrollments.updated_at` no es la fecha en que pasó nada: no tiene trigger propio y la mueven los pagos
+- **Trampa:** usar `enrollments.updated_at` como "fecha en que la matrícula cambió de estado"
+  (fecha de egreso, de anulación, de activación) para mostrarla, ordenar o filtrar por período.
+- **Realidad:** `enrollments` no tiene trigger de `updated_at`: un `UPDATE` que no la escribe a
+  mano no la mueve, así que un cambio de estado hecho desde el cliente la deja como estaba. Y
+  `recalculate_enrollment_balance()` sí la escribe con cada pago, así que se mueve por motivos
+  que no tienen que ver con el estado. Sirve como "algo se tocó alguna vez", nada más.
+- **Regla de aplicabilidad:** si una pantalla o reporte necesita saber **cuándo** ocurrió una
+  transición de estado, esa fecha se guarda en una columna propia mantenida por trigger (como
+  `completed_at` para el egreso), no se infiere de `updated_at`. Antes de usar un `updated_at`
+  de cualquier tabla como fecha de negocio, revisar qué flujos la escriben de verdad.
+- **Fuente:** `specs/fixes/fix-266-m-fecha-egreso-real-completed-at`,
+  `supabase/migrations/20261001120000_enrollments_add_completed_at.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

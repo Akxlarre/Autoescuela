@@ -1,0 +1,35 @@
+# Botón "Volver a una versión anterior" — fix-177-b (rollback de 0046-b, AC9).
+#
+# Actions → Volver a una versión anterior → Run workflow → versión (ej. v0.1.6) → Run.
+# Re-sube el build EXACTO que se aprobó para esa versión (el site.zip de su GitHub Release): no
+# recompila ni corre tests, así que tarda segundos y no lo frena un test que hoy falle.
+# Pasa igual por la aprobación del environment Production.
+#
+# Versiones disponibles: la lista de Releases del repo (solo desde v0.1.5 en adelante).
+
+name: Volver a una versión anterior
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a la que volver, ej. v0.1.6 (ver la lista en Releases)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Rollback
+    uses: ./.github/workflows/deploy-app-production.yml
+    with:
+      tag: ${{ inputs.version }}
+      mode: rollback
+    secrets: inherit
+    # GitHub valida los permisos del workflow llamado ANTES de correrlo: su job "release" pide
+    # contents: write y, sin esto, el rollback falla al arrancar ("startup failure") aunque ese
+    # job nunca corre en modo rollback (if: mode == 'publish').
+    permissions:
+      contents: write

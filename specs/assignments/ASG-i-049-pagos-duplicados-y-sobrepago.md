@@ -1,7 +1,7 @@
 # Asignación ASG-i-049 — Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

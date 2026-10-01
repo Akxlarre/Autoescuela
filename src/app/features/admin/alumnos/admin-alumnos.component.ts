@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
   computed,
+  untracked,
 } from '@angular/core';
 import {
   AlumnosListContentComponent,
@@ -27,6 +28,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       basePath="/app/admin"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
@@ -68,7 +70,10 @@ export class AdminAlumnosComponent implements OnInit {
   constructor() {
     effect(() => {
       this.branchFacade.selectedBranchId();
-      this.facade.initialize();
+      // untracked (hotfix-117-m): initialize() lee otros signals (usuario, vista Papelera). Si
+      // el effect los siguiera, un cambio en ellos durante el arranque dispararía una segunda
+      // carga solapada y la tabla se dibujaría vacía por un instante.
+      untracked(() => void this.facade.initialize());
     });
   }
 
@@ -76,7 +81,10 @@ export class AdminAlumnosComponent implements OnInit {
     // La carga inicial ya la dispara el effect() del constructor (se ejecuta
     // una vez al crear el componente) — llamar initialize() acá también
     // duplicaba la query de red (hotfix-055-b).
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      this.facade.leaveTrashView();
+    });
   }
 
   // ── Flujo de borrado ─────────────────────────────────────────────────────

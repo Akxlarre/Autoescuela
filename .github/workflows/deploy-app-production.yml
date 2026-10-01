@@ -1,7 +1,15 @@
-# Deploy de la app Angular a producción (cPanel, FTPS) — spec 0046-b.
+# Deploy de la app Angular a producción (cPanel, FTPS) — spec 0046-b, fix-177-b.
 #
-# Publicar:  git tag v1.2.0 && git push origin v1.2.0   → build + tests → aprobación → subida
-# Rollback:  Actions → "Deploy app (producción)" → Run workflow → tag anterior
+# Es la ÚNICA definición del deploy. Se usa de tres formas:
+#   - Botón "Publicar en producción"        (publicar-produccion.yml → workflow_call, mode=publish)
+#   - Botón "Volver a una versión anterior" (rollback-produccion.yml → workflow_call, mode=rollback)
+#   - Push manual de un tag v* desde la terminal (push → mode=publish)
+#
+# publish  → build + tests → aprobación → subida → GitHub Release del tag con el build (site.zip)
+# rollback → baja el site.zip del Release del tag y lo sube tal cual (sin recompilar ni testear)
+#
+# El modo sale del input `mode`, NUNCA de github.event_name: en un workflow llamado, event_name es
+# el del caller (workflow_dispatch también al publicar).
 #
 # El dominio NO se escribe acá: vive en la variable APP_DOMAIN del environment Production (es
 # provisorio y va a cambiar). Setup y checklist de cambio de dominio: docs/DEPLOY.md.
@@ -11,10 +19,14 @@ name: Deploy app (producción)
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
+  workflow_call:
     inputs:
       tag:
-        description: 'Tag ya existente a desplegar (rollback), ej. v1.1.0'
+        description: 'Tag a desplegar, ej. v1.2.0'
+        required: true
+        type: string
+      mode:
+        description: 'publish (build nuevo) | rollback (build del Release)'
         required: true
         type: string
 
@@ -23,24 +35,34 @@ permissions:
 
 jobs:
   build:
-    name: Build y gate de calidad
+    # publish → build completo con gate de calidad. rollback → build original del Release.
+    name: Preparar build
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
       tag: ${{ steps.ref.outputs.tag }}
+      mode: ${{ steps.ref.outputs.mode }}
     steps:
-      - name: Resolver tag
+      - name: Resolver tag y modo
         id: ref
         env:
           INPUT_TAG: ${{ inputs.tag }}
+          INPUT_MODE: ${{ inputs.mode }}
           PUSHED_TAG: ${{ github.ref_name }}
         run: |
+          # push de tag: no hay inputs → se publica el tag pusheado.
           TAG="${INPUT_TAG:-$PUSHED_TAG}"
+          MODE="${INPUT_MODE:-publish}"
           if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
             echo "::error::'$TAG' no es un tag de versión válido (se espera v*, ej. v1.2.0)."
             exit 1
           fi
+          if [[ "$MODE" != "publish" && "$MODE" != "rollback" ]]; then
+            echo "::error::Modo '$MODE' desconocido (publish | rollback)."
+            exit 1
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
@@ -56,27 +78,36 @@ jobs:
             exit 1
           fi
 
+      # ── Publicación (push de tag) ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
+        if: steps.ref.outputs.mode == 'publish'
         with:
           node-version: '22'
           cache: 'npm'
 
-      - run: npm ci
+      - if: steps.ref.outputs.mode == 'publish'
+        run: npm ci
 
       # Gate de calidad (AC1): cualquier rojo corta acá y no se pide aprobación.
       - name: Tests (test:ci)
+        if: steps.ref.outputs.mode == 'publish'
         run: npm run test:ci
       - name: Lint arquitectónico (lint:arch)
+        if: steps.ref.outputs.mode == 'publish'
         run: npm run lint:arch
-      - name: Micro-suite del plan de deploy
-        run: node scripts/lib/deploy-manifest.test.mjs
+      - name: Micro-suites del pipeline (plan de deploy + versión)
+        if: steps.ref.outputs.mode == 'publish'
+        run: |
+          node scripts/lib/deploy-manifest.test.mjs
+          node scripts/lib/next-version.test.mjs
 
       - name: Build de producción
+        if: steps.ref.outputs.mode == 'publish'
         run: npx ng build --configuration production
 
-      # AC8: trazabilidad de la versión publicada. El SHA sale de git y no de GITHUB_SHA,
-      # porque en workflow_dispatch GITHUB_SHA es el de la rama por defecto, no el del tag.
+      # AC8: trazabilidad de la versión publicada. El SHA sale de git y no de GITHUB_SHA.
       - name: Escribir version.json
+        if: steps.ref.outputs.mode == 'publish'
         env:
           TAG: ${{ steps.ref.outputs.tag }}
         run: |
@@ -87,6 +118,31 @@ jobs:
             builtAt: new Date().toISOString(),
             run: process.env.GITHUB_RUN_ID
           }, null, 2) + '\n')"
+
+      # ── Rollback (dispatch) — AC9 / AC-E6 ────────────────────────────────────────────────
+      # Se re-despliega el build que ya se aprobó, no uno nuevo: recompilar un tag viejo puede
+      # fallar por tests que dependen de la fecha o dar otro build si cambiaron las deps.
+      - name: Descargar el build publicado del tag
+        if: steps.ref.outputs.mode == 'rollback'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          if ! gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern site.zip --dir release 2>/dev/null; then
+            echo "::error::No hay build publicado para $TAG (no existe su GitHub Release con site.zip). Solo se puede volver a versiones desplegadas con este pipeline. No se subió nada."
+            exit 1
+          fi
+          mkdir -p dist/Autoescuela/browser
+          unzip -q release/site.zip -d dist/Autoescuela/browser
+          PUBLISHED_TAG="$(node -p "require('./dist/Autoescuela/browser/version.json').tag")"
+          if [ "$PUBLISHED_TAG" != "$TAG" ]; then
+            echo "::error::El site.zip del Release $TAG dice ser $PUBLISHED_TAG. No se subió nada."
+            exit 1
+          fi
+
+      - name: Validar el build
+        run: |
+          test -f dist/Autoescuela/browser/index.html || { echo "::error::index.html no está en el build"; exit 1; }
           test -f dist/Autoescuela/browser/.htaccess || { echo "::error::.htaccess no está en el build"; exit 1; }
           cat dist/Autoescuela/browser/version.json
 
@@ -191,3 +247,35 @@ jobs:
         run: |
           echo "### Desplegado ${{ needs.build.outputs.tag }} en https://$APP_DOMAIN" >> "$GITHUB_STEP_SUMMARY"
           echo "Verificar: https://$APP_DOMAIN/version.json" >> "$GITHUB_STEP_SUMMARY"
+
+  # AC11: cada versión publicada queda registrada con su build exacto, que es lo que usa el
+  # rollback. Solo tras una subida exitosa de un tag (un deploy rechazado o fallido no registra).
+  release:
+    name: Registrar versión publicada
+    needs: [build, deploy]
+    if: needs.build.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
+      - name: Crear GitHub Release con site.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          (cd site && zip -qr ../site.zip .)
+          unzip -l site.zip | grep -q ' \.htaccess$' || { echo "::error::site.zip quedó sin .htaccess"; exit 1; }
+          SHA="$(node -p "require('./site/version.json').sha")"
+          NOTES="Build publicado en producción por el run ${GITHUB_RUN_ID} (commit ${SHA}). Rollback: Actions → Deploy app (producción) → Run workflow → tag ${TAG}."
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" site.zip --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" site.zip --verify-tag --title "$TAG" --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
+          fi

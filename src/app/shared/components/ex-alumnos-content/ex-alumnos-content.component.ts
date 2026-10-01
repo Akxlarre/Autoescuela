@@ -290,6 +290,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                     <app-egresado-card
                       [egresado]="egresado"
                       [basePath]="basePath()"
+                      [viewQueryParams]="{ from: 'ex-alumnos' }"
                       (reEnrollRequested)="requestReEnroll($event)"
                     />
                   </div>

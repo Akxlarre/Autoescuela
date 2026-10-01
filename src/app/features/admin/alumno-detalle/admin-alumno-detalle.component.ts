@@ -1479,9 +1479,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     // fix-012-i: CTA destacada junto al nombre — solo cuando el certificado de Clase B
     // ya se envió y la matrícula sigue activa (deja de mostrarse una vez marcado).
     const exAlumnoActions: SectionHeroAction[] =
-      alumno.licenseGroup === 'class_b' &&
-      alumno.estado !== 'Finalizado' &&
-      alumno.certificateEmailSent
+      alumno.licenseGroup === 'class_b' && !alumno.egresado && alumno.certificateEmailSent
         ? [
             {
               id: 'marcar-ex-alumno',
@@ -1525,8 +1523,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     return [
       {
         label: alumno.estado,
-        style: alumno.estado?.toLowerCase() === 'activo' ? 'success' : 'warning',
-        icon: 'circle-check',
+        // fix-263-m: activo y egresado son estados sanos; el resto (pago pendiente, anulada…) avisa.
+        style: alumno.egresado || alumno.estado === 'Activo' ? 'success' : 'warning',
+        icon: alumno.egresado ? 'graduation-cap' : 'circle-check',
       },
     ];
   });
@@ -1633,13 +1632,17 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id && !isNaN(Number(id))) {
-      void this.facade.initialize(Number(id)).then(() => {
+    // hotfix-116-m: siempre se llama a initialize(). Un id inválido ("/alumnos/abc") lo resuelve
+    // el facade con un error visible; antes se omitía la llamada y la ficha quedaba cargando.
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.facade
+      .initialize(id)
+      .then(() => {
         const enrollmentId = this.facade.alumno()?.enrollmentId;
         if (enrollmentId) void this.facade.loadHistorialReagendamientos(enrollmentId);
-      });
-    }
+      })
+      // El facade ya dejó el error en su signal `error`, que es lo que muestra la ficha.
+      .catch(() => undefined);
   }
 
   ngOnDestroy(): void {

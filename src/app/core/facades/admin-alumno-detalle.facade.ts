@@ -20,6 +20,8 @@ import type {
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
+import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
+import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
@@ -81,6 +83,16 @@ export const RAZON_REAGENDAMIENTO_OPTIONS: { label: string; value: string }[] = 
 
 /** Status de la BD que representa asistencia (ambos flujos escriben 'present' en inglés) */
 const STATUS_PRESENTE = 'present';
+/** `enrollments.status` de una matrícula egresada (Ex-Alumnos). fix-263-m. */
+const ENROLLMENT_STATUS_EGRESADO = 'completed';
+
+/**
+ * Error de PostgREST cuando `.single()` no encuentra la fila (PGRST116): el alumno no existe, o
+ * la RLS lo oculta porque es de otra sede. Desde el cliente los dos casos son indistinguibles.
+ */
+function isRowNotFound(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'PGRST116';
+}
 
 /** Clases requeridas por defecto para Clase B. */
 const PRACTICAS_REQUERIDAS_B = 12;
@@ -292,6 +304,17 @@ export class AdminAlumnoDetalleFacade {
    * If visiting the SAME student, refresh silently in background.
    */
   async initialize(studentId: number): Promise<void> {
+    // hotfix-116-m: un id que no viene de la app (URL escrita a mano, "/alumnos/abc") no se
+    // consulta: se muestra el error en vez de dejar la ficha en "Cargando…".
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      this._alumno.set(null);
+      this._initialized = false;
+      this._lastStudentId = null;
+      this._isLoading.set(false);
+      this._error.set('La dirección no corresponde a ningún alumno.');
+      return;
+    }
+
     const isSameStudent = this._initialized && studentId === this._lastStudentId;
 
     this.setupRealtime(studentId);
@@ -326,6 +349,13 @@ export class AdminAlumnoDetalleFacade {
       await this.fetchDetalleData(studentId);
       this._initialized = true;
       this._lastStudentId = studentId;
+    } catch (err) {
+      // hotfix-116-m: sin esto la caché seguía apuntando al alumno anterior; al volver a
+      // abrirlo se trataba como "el mismo", se refrescaba en segundo plano y el error de esta
+      // carga quedaba pegado sobre su ficha.
+      this._initialized = false;
+      this._lastStudentId = null;
+      throw err;
     } finally {
       this._isLoading.set(false);
     }
@@ -374,6 +404,8 @@ export class AdminAlumnoDetalleFacade {
       branchId: summary.branchId,
       enrollments: alumno.enrollments,
       matricula: summary.number ? `#${summary.number}` : '—',
+      estado: this.formatEnrollmentStatus(summary.status),
+      egresado: summary.status === ENROLLMENT_STATUS_EGRESADO,
       curso: summary.courseName,
       licenseGroup: summary.licenseGroup,
       totalPagado: summary.totalPagado,
@@ -400,7 +432,7 @@ export class AdminAlumnoDetalleFacade {
           id, status, created_at,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, supabase_uid, first_login),
           enrollments(
-            id, number, created_at, total_paid, pending_balance, branch_id,
+            id, number, status, created_at, total_paid, pending_balance, branch_id,
             license_group, promotion_course_id, registration_channel,
             certificate_b_pdf_url, certificate_professional_pdf_url,
             license_initial_url, license_full_url,
@@ -419,19 +451,24 @@ export class AdminAlumnoDetalleFacade {
       const sorted = ((s.enrollments ?? []) as any[]).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
-      const lastEnrollment = sorted[0] ?? null;
+      // fix-265-m: la matrícula mostrada no es "la más reciente a secas". Nunca un borrador, y
+      // en un refresco de la misma ficha se conserva la que el usuario eligió en el selector.
+      const current = this._alumno();
+      const selectedId = current?.id === studentId ? current.enrollmentId : null;
+      const shownEnrollment = pickFichaEnrollment(sorted, selectedId);
 
-      const lastEnrollmentCourse = Array.isArray(lastEnrollment?.courses)
-        ? lastEnrollment.courses[0]
-        : lastEnrollment?.courses;
-      const courseName = lastEnrollmentCourse?.name;
-      const coursePracticalHours = (lastEnrollmentCourse?.practical_hours as number | null) ?? null;
-      const courseIsReinforcement = lastEnrollmentCourse?.is_reinforcement ?? false;
+      const shownEnrollmentCourse = Array.isArray(shownEnrollment?.courses)
+        ? shownEnrollment.courses[0]
+        : shownEnrollment?.courses;
+      const courseName = shownEnrollmentCourse?.name;
+      const coursePracticalHours =
+        (shownEnrollmentCourse?.practical_hours as number | null) ?? null;
+      const courseIsReinforcement = shownEnrollmentCourse?.is_reinforcement ?? false;
 
-      const enrollmentId = lastEnrollment?.id ?? null;
+      const enrollmentId = shownEnrollment?.id ?? null;
       const licenseGroup: 'class_b' | 'professional' =
-        lastEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
-      const promotionCourseId = (lastEnrollment?.promotion_course_id as number | null) ?? null;
+        shownEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
+      const promotionCourseId = (shownEnrollment?.promotion_course_id as number | null) ?? null;
 
       // Build enrollment summaries for tab selector
       const summaries: EnrollmentSummary[] = sorted
@@ -455,6 +492,7 @@ export class AdminAlumnoDetalleFacade {
             licenseGroup: lg,
             promotionCourseId: (e.promotion_course_id as number | null) ?? null,
             createdAt: e.created_at,
+            status: e.status ?? '',
             certPdfUrl:
               lg === 'professional'
                 ? (e.certificate_professional_pdf_url ?? null)
@@ -484,17 +522,17 @@ export class AdminAlumnoDetalleFacade {
 
       this._certPdfPath.set(
         licenseGroup === 'professional'
-          ? (lastEnrollment?.certificate_professional_pdf_url ?? null)
-          : (lastEnrollment?.certificate_b_pdf_url ?? null),
+          ? (shownEnrollment?.certificate_professional_pdf_url ?? null)
+          : (shownEnrollment?.certificate_b_pdf_url ?? null),
       );
-      this._licenseInitialPath.set(lastEnrollment?.license_initial_url ?? null);
-      this._licenseFullPath.set(lastEnrollment?.license_full_url ?? null);
+      this._licenseInitialPath.set(shownEnrollment?.license_initial_url ?? null);
+      this._licenseFullPath.set(shownEnrollment?.license_full_url ?? null);
 
-      const dcRaw = lastEnrollment?.digital_contracts;
+      const dcRaw = shownEnrollment?.digital_contracts;
       const dc = Array.isArray(dcRaw) ? dcRaw[0] : dcRaw;
       this._contractGeneratedPath.set((dc?.file_url as string) ?? null);
       this._contractSignedPath.set((dc?.signed_contract_url as string) ?? null);
-      const rawChannel = lastEnrollment?.registration_channel;
+      const rawChannel = shownEnrollment?.registration_channel;
 
       let normalized: 'presential' | 'online' | null = null;
 
@@ -507,7 +545,7 @@ export class AdminAlumnoDetalleFacade {
         id: s.id,
         userId: u.id,
         enrollmentId,
-        branchId: (lastEnrollment?.branch_id as number | null) ?? null,
+        branchId: (shownEnrollment?.branch_id as number | null) ?? null,
         enrollments: summaries,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
@@ -516,15 +554,17 @@ export class AdminAlumnoDetalleFacade {
         paternalLastName: u.paternal_last_name,
         maternalLastName: u.maternal_last_name,
         rut: u.rut,
-        matricula: lastEnrollment?.number ? `#${lastEnrollment.number}` : '—',
+        matricula: shownEnrollment?.number ? `#${shownEnrollment.number}` : '—',
         curso: courseName ?? '—',
         email: u.email,
         telefono: u.phone ?? '—',
         fechaIngreso: s.created_at.slice(0, 10),
-        estado: this.formatStatus(s.status),
+        // fix-263-m: el estado es el de la matrícula, no students.status (ningún flujo lo escribe).
+        estado: this.formatEnrollmentStatus(shownEnrollment?.status),
+        egresado: shownEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
         licenseGroup,
-        totalPagado: lastEnrollment?.total_paid ?? 0,
-        saldoPendiente: lastEnrollment?.pending_balance ?? 0,
+        totalPagado: shownEnrollment?.total_paid ?? 0,
+        saldoPendiente: shownEnrollment?.pending_balance ?? 0,
         certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
         isReinforcement: courseIsReinforcement,
         hasAuthAccount: !!u.supabase_uid,
@@ -541,9 +581,11 @@ export class AdminAlumnoDetalleFacade {
       await this.fetchClassBProgress(enrollmentId, studentId, coursePracticalHours);
     } catch (err) {
       this._error.set(
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al cargar la ficha del alumno',
+        isRowNotFound(err)
+          ? 'El alumno no existe o no tienes acceso a su ficha.'
+          : err instanceof Error
+            ? this.sanitizer.sanitize(err).message
+            : 'Error al cargar la ficha del alumno',
       );
       throw err;
     }
@@ -610,8 +652,12 @@ export class AdminAlumnoDetalleFacade {
     // (marcada `reagendada`), pero no describe el estado actual de la sesión.
     const attendanceVigente = attendanceRows.filter((r) => r.archived_at == null);
 
+    // fix-262-m: prácticas completadas = clases cerradas (status='completed'), mismo criterio que
+    // la certificación (DG-095). No contar asistencias "presente": pueden existir sin cerrar la
+    // clase (markAttendance) o faltar en una clase cerrada.
     this._progresoPractico.set({
-      completadas: attendanceVigente.filter((r) => r.status === STATUS_PRESENTE).length,
+      completadas: ((sessionResult.data ?? []) as any[]).filter((s) => s.status === 'completed')
+        .length,
       requeridas: clasesRequeridas,
     });
 
@@ -1070,9 +1116,28 @@ export class AdminAlumnoDetalleFacade {
         currentEmail: currentEmail.trim().toLowerCase(),
       },
     });
-    if (error)
-      throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil');
+    if (error) throw new Error(await this.resolvePerfilErrorMessage(error));
     void this.refreshSilently();
+  }
+
+  /**
+   * fix-268-m (DG-085): el `error` de `functions.invoke()` trae un mensaje fijo; lo que la
+   * función respondió está en su body. Se muestra al usuario si es un rechazo de negocio (4xx)
+   * o el email duplicado; un 5xx cualquiera puede traer texto técnico y queda genérico.
+   */
+  private async resolvePerfilErrorMessage(error: unknown): Promise<string> {
+    const response = await readEdgeFunctionError(error);
+    const message = response?.message ?? '';
+
+    // La función lo informa como 409 si el alumno tiene cuenta Auth, y como 500 con el nombre de
+    // la constraint si no la tiene (el email solo choca en public.users).
+    if (response?.status === 409 || message.includes('users_email_key')) {
+      return 'Ya existe otro usuario registrado con ese correo electrónico.';
+    }
+    if (message && response?.status != null && response.status >= 400 && response.status < 500) {
+      return message;
+    }
+    return this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil';
   }
 
   /**
@@ -1209,14 +1274,17 @@ export class AdminAlumnoDetalleFacade {
     await this.refreshSilently();
   }
 
-  private formatStatus(status: string | null | undefined): string {
+  /** Etiqueta del `enrollments.status` de la matrícula seleccionada (fix-263-m). */
+  private formatEnrollmentStatus(status: string | null | undefined): string {
+    if (!status) return 'Sin matrícula';
     const map: Record<string, string> = {
+      draft: 'Borrador',
       active: 'Activo',
-      inactive: 'Inactivo',
-      withdrawn: 'Retirado',
-      completed: 'Finalizado',
+      completed: 'Egresado',
+      pending_payment: 'Pago pendiente',
+      cancelled: 'Anulada',
     };
-    return map[status?.toLowerCase() ?? ''] ?? status ?? 'Sin estado';
+    return map[status] ?? status;
   }
 
   // ── Reprogramar Clase ────────────────────────────────────────────────────────

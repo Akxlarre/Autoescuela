@@ -259,3 +259,9 @@ del owner en GitHub/cPanel).
 ## Changelog
 
 - 2026-09-29 — plan inicial (talla S).
+- 2026-10-01 — **Rollback sin recompilar (spec D6).** El job `build` pasa a "Preparar build": en
+  push de tag hace el build completo con gate (igual que antes); en `workflow_dispatch` descarga el
+  `site.zip` del GitHub Release del tag y valida que su `version.json` diga ese tag (AC9, AC-E6).
+  Job nuevo `release` (`needs: [build, deploy]`, solo en push, `permissions: contents: write`)
+  crea el Release con el build exacto tras una subida exitosa (AC11). El resto del pipeline
+  (deploy, manifiesto, `.htaccess`) no cambia. Motivo y evidencia: spec §9 D6.

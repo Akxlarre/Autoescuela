@@ -379,6 +379,55 @@ describe('AdminAlumnoDetalleFacade', () => {
         }),
       ).rejects.toThrow('Ya existe un usuario con ese correo electrónico');
     });
+
+    describe('error real de la Edge Function — fix-268-m', () => {
+      const perfil = {
+        first_names: 'Juan',
+        paternal_last_name: 'Pérez',
+        maternal_last_name: 'Soto',
+        email: 'duplicado@example.com',
+        phone: '',
+      };
+
+      /** Lo que devuelve `functions.invoke()` ante un no-2xx: mensaje fijo + Response en context. */
+      function mockNon2xx(status: number, error: string): void {
+        const err = new Error('Edge Function returned a non-2xx status code');
+        err.name = 'FunctionsHttpError';
+        (err as any).context = { status, json: () => Promise.resolve({ error }) };
+        supabaseSpy.client.functions = {
+          invoke: vi.fn().mockResolvedValue({ data: null, error: err }),
+        };
+      }
+
+      const EMAIL_EN_USO = 'Ya existe otro usuario registrado con ese correo electrónico.';
+
+      it('email en uso, alumno con cuenta Auth (409): mensaje claro', async () => {
+        mockNon2xx(409, 'Ya existe un usuario con ese correo electrónico');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('email en uso, alumno sin cuenta Auth (500 por users_email_key): mismo mensaje claro', async () => {
+        mockNon2xx(
+          500,
+          'Error al actualizar el alumno: duplicate key value violates unique constraint "users_email_key"',
+        );
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('otro rechazo de negocio (4xx): muestra el mensaje que envió la función', async () => {
+        mockNon2xx(403, 'Solo administradores y secretarias pueden editar alumnos');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(
+          'Solo administradores y secretarias pueden editar alumnos',
+        );
+      });
+
+      it('fallo interno (5xx) que no es el email: no expone el texto técnico', async () => {
+        mockNon2xx(500, 'Error al actualizar el alumno: deadlock detected');
+        const rejection = facade.actualizarPerfilAlumno(55, perfil);
+        await expect(rejection).rejects.toThrow();
+        await expect(rejection).rejects.not.toThrow(/deadlock/);
+      });
+    });
   });
 
   describe('enviarInvitacion — fix-157-m', () => {
@@ -426,7 +475,8 @@ describe('AdminAlumnoDetalleFacade', () => {
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
           single: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
-          maybeSingle: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
+          maybeSingle: () =>
+            Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
           then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
         };
         builders.set(table, b);
@@ -1027,6 +1077,281 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(facade.progresoPractico().requeridas).toBe(12);
       expect(facade.clasesPracticas()).toHaveLength(12);
       expect(facade.alumno()?.isReinforcement).toBe(false);
+    });
+
+    it('fix-262-m: progresoPractico.completadas cuenta clases cerradas (status=completed), no asistencias', async () => {
+      const mock = makeFlexibleSupabaseMock();
+
+      mock.setSingleResult('students', {
+        id: 42,
+        status: 'active',
+        created_at: '2026-01-01',
+        users: {
+          id: 7,
+          rut: '33.333.333-3',
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: 'Soto',
+          email: 'eva@example.com',
+          phone: '123456789',
+        },
+        enrollments: [
+          {
+            id: 202,
+            number: '2026-0004',
+            created_at: '2026-01-02',
+            total_paid: 0,
+            pending_balance: 0,
+            license_group: 'class_b',
+            promotion_course_id: null,
+            registration_channel: 'in_person',
+            courses: { name: 'Clase B' },
+            digital_contracts: null,
+            status: 'active',
+          },
+        ],
+      });
+
+      // 3 clases cerradas sin asistencia (seed / upsert de asistencia fallido) + 1 clase
+      // agendada con asistencia "presente" marcada sin cerrarla (markAttendance).
+      mock.setResult('class_b_sessions', [
+        { id: 701, enrollment_id: 202, class_number: 1, status: 'completed' },
+        { id: 702, enrollment_id: 202, class_number: 2, status: 'completed' },
+        { id: 703, enrollment_id: 202, class_number: 3, status: 'completed' },
+        { id: 704, enrollment_id: 202, class_number: 4, status: 'scheduled' },
+      ]);
+      mock.setResult('class_b_practice_attendance', [
+        {
+          id: 1,
+          status: 'present',
+          archived_at: null,
+          recorded_at: '2026-06-01',
+          class_b_sessions: { id: 704, enrollment_id: 202, class_number: 4, status: 'scheduled' },
+        },
+      ]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.initialize(42);
+
+      expect(facade.progresoPractico().completadas).toBe(3);
+    });
+
+    describe('estado desde la matrícula — fix-263-m', () => {
+      function makeEnrollmentRow(id: number, status: string, createdAt: string): any {
+        return {
+          id,
+          number: `000${id}`,
+          created_at: createdAt,
+          total_paid: 0,
+          pending_balance: 0,
+          branch_id: 1,
+          license_group: 'class_b',
+          promotion_course_id: null,
+          registration_channel: 'in_person',
+          courses: { name: 'Clase B' },
+          digital_contracts: null,
+          status,
+        };
+      }
+
+      /** students.status siempre 'active' (ningún flujo lo escribe): el estado sale de la matrícula. */
+      async function initWithEnrollments(enrollments: any[]): Promise<any> {
+        const mock = makeFlexibleSupabaseMock();
+        mock.setSingleResult('students', {
+          id: 42,
+          status: 'active',
+          created_at: '2026-01-01',
+          users: {
+            id: 7,
+            rut: '44.444.444-4',
+            first_names: 'Ana',
+            paternal_last_name: 'Pérez',
+            maternal_last_name: 'Gómez',
+            email: 'ana@example.com',
+            phone: '123456789',
+          },
+          enrollments,
+        });
+        mock.setResult('class_b_practice_attendance', []);
+        mock.setResult('class_b_sessions', []);
+
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [
+            AdminAlumnoDetalleFacade,
+            { provide: SupabaseService, useValue: mock },
+            { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+            { provide: DmsViewerService, useValue: dmsViewerSpy },
+            { provide: NotificationsFacade, useValue: notificationsSpy },
+            {
+              provide: AuthFacade,
+              useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) },
+            },
+          ],
+        });
+        facade = TestBed.inject(AdminAlumnoDetalleFacade);
+        await facade.initialize(42);
+        return mock;
+      }
+
+      it('matrícula completed → estado "Egresado" y egresado=true, aunque students.status sea active', async () => {
+        await initWithEnrollments([makeEnrollmentRow(301, 'completed', '2026-02-01')]);
+
+        expect(facade.alumno()?.estado).toBe('Egresado');
+        expect(facade.alumno()?.egresado).toBe(true);
+      });
+
+      it('matrícula active → estado "Activo" y egresado=false', async () => {
+        await initWithEnrollments([makeEnrollmentRow(302, 'active', '2026-02-01')]);
+
+        expect(facade.alumno()?.estado).toBe('Activo');
+        expect(facade.alumno()?.egresado).toBe(false);
+      });
+
+      it('selectEnrollment recalcula el estado según la matrícula elegida', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+        expect(facade.alumno()?.estado).toBe('Activo');
+
+        await facade.selectEnrollment(304);
+
+        expect(facade.alumno()?.estado).toBe('Egresado');
+        expect(facade.alumno()?.egresado).toBe(true);
+      });
+
+      it('la consulta de la ficha pide enrollments.status (sin eso, el estado no se puede derivar)', async () => {
+        const mock = await initWithEnrollments([makeEnrollmentRow(307, 'active', '2026-01-01')]);
+
+        const selectArg: string = mock.client.from('students').select.mock.calls[0][0];
+        const enrollmentsBlock = /enrollments\(([\s\S]*?)courses!inner/.exec(selectArg)?.[1] ?? '';
+        expect(enrollmentsBlock).toMatch(/\bstatus\b/);
+      });
+
+      it('excluye las matrículas draft del selector', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(305, 'draft', '2026-03-01'),
+          makeEnrollmentRow(306, 'active', '2026-01-01'),
+        ]);
+
+        expect(facade.alumno()?.enrollments.map((e) => e.id)).toEqual([306]);
+      });
+
+      describe('matrícula mostrada — fix-265-m', () => {
+        it('un borrador más reciente no se muestra como matrícula principal (B15)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(305, 'draft', '2026-03-01'),
+            makeEnrollmentRow(306, 'active', '2026-01-01'),
+          ]);
+
+          expect(facade.alumno()?.enrollmentId).toBe(306);
+          expect(facade.alumno()?.matricula).toBe('#000306');
+          expect(facade.alumno()?.estado).toBe('Activo');
+        });
+
+        it('un refresco conserva la matrícula elegida en el selector (B21)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          await facade.refresh();
+
+          expect(facade.alumno()?.enrollmentId).toBe(304);
+          expect(facade.alumno()?.matricula).toBe('#000304');
+          expect(facade.alumno()?.estado).toBe('Egresado');
+        });
+
+        it('al abrir la ficha de otro alumno no se arrastra la elección anterior', async () => {
+          const mock = await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          // Otro alumno que, por construcción del test, tiene una matrícula con el mismo id.
+          mock.setSingleResult('students', {
+            id: 43,
+            status: 'active',
+            created_at: '2026-01-01',
+            users: {
+              id: 8,
+              rut: '55.555.555-5',
+              first_names: 'Luis',
+              paternal_last_name: 'Soto',
+              maternal_last_name: 'Díaz',
+              email: 'luis@example.com',
+              phone: '987654321',
+            },
+            enrollments: [
+              makeEnrollmentRow(401, 'active', '2026-03-01'),
+              makeEnrollmentRow(304, 'completed', '2026-01-01'),
+            ],
+          });
+          await facade.initialize(43);
+
+          expect(facade.alumno()?.enrollmentId).toBe(401);
+        });
+      });
+
+      describe('errores de carga — hotfix-116-m', () => {
+        /** PostgREST cuando `.single()` no encuentra filas (no existe, o la RLS lo oculta). */
+        const NOT_FOUND = {
+          code: 'PGRST116',
+          message: 'JSON object requested, multiple (or no) rows returned',
+        };
+
+        it('un id que no es un entero positivo deja un error visible, sin consultar ni quedar cargando', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(310, 'active', '2026-01-01')]);
+          mock.client.from.mockClear();
+
+          await facade.initialize(Number('abc'));
+
+          expect(facade.error()).toBe('La dirección no corresponde a ningún alumno.');
+          expect(facade.isLoading()).toBe(false);
+          expect(facade.alumno()).toBeNull();
+          expect(mock.client.from).not.toHaveBeenCalled();
+        });
+
+        it('alumno inexistente o de otra sede (PGRST116): mensaje que dice qué pasó, sin el código técnico', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(311, 'active', '2026-01-01')]);
+          mock.setSingleResult('students', null, NOT_FOUND);
+
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+
+          expect(facade.error()).toBe('El alumno no existe o no tienes acceso a su ficha.');
+          expect(facade.isLoading()).toBe(false);
+        });
+
+        it('tras una carga fallida, volver a abrir al alumno anterior lo carga de nuevo y limpia el error (B12)', async () => {
+          const mock = await initWithEnrollments([makeEnrollmentRow(312, 'active', '2026-01-01')]);
+          const alumno42 = (await mock.client.from('students').single()).data;
+
+          mock.setSingleResult('students', null, NOT_FOUND);
+          await expect(facade.initialize(999)).rejects.toBeDefined();
+          expect(facade.error()).not.toBeNull();
+
+          mock.setSingleResult('students', alumno42);
+          await facade.initialize(42);
+
+          expect(facade.error()).toBeNull();
+          expect(facade.alumno()?.id).toBe(42);
+        });
+      });
     });
   });
 

@@ -1034,6 +1034,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `license_initial_url` | TEXT | sí | — | — |
 | `license_full_url` | TEXT | sí | — | — |
 | `theory_cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
+| `completed_at` | TIMESTAMPTZ | sí | — | — (fecha de egreso: cuándo pasó a `status = 'completed'`. La escribe el trigger `trg_enrollments_completed_at`, nunca el cliente; `NULL` si no está completada. Ex-Alumnos la usa para el año y el período — **no usar `updated_at` como fecha de egreso**: cambia con cada pago. fix-266-m) |
 
 **Policies:**
 
@@ -2435,6 +2436,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `request_client_ip` | `()` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
+| `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `tasks_set_updated_at` | `()` |

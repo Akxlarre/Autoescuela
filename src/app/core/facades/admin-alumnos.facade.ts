@@ -113,6 +113,11 @@ export class AdminAlumnosFacade {
     this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
   );
   readonly drawerMode = this._drawerMode.asReadonly();
+  /**
+   * La columna Sede solo aporta cuando la lista mezcla sedes: admin, o secretaria con grant
+   * multi-sede, con "Todas las sedes" elegido (fix-269-m).
+   */
+  readonly showSedeColumn = computed(() => this.getActiveBranchId() === null);
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 
@@ -202,6 +207,19 @@ export class AdminAlumnosFacade {
     this._trashView.set(value);
     this._initialized = false;
     await this.initialize();
+  }
+
+  /**
+   * Sale de la Papelera al abandonar la pantalla (hotfix-112-m). El facade es un singleton: sin
+   * esto, la vista quedaba "pegada" y al volver a Alumnos se abría la Papelera.
+   * No dispara una carga (la pantalla ya no existe): invalida la caché para que la próxima
+   * entrada cargue la lista activa.
+   */
+  leaveTrashView(): void {
+    if (!this._trashView()) return;
+    this._trashView.set(false);
+    this._alumnos.set([]);
+    this._initialized = false;
   }
 
   async restaurarAlumno(studentId: number): Promise<void> {
@@ -488,8 +506,8 @@ export class AdminAlumnosFacade {
   }
 
   /**
-   * fix-012-i: enrollment_ids con las 12 prácticas completas (evaluation_grade IS NOT NULL,
-   * mismo criterio que certificacion-clase-b.facade.ts) Y certificado ya enviado por email
+   * fix-012-i: enrollment_ids con las 12 prácticas cerradas (status='completed' — fix-262-m:
+   * nunca evaluation_grade; mismo criterio que certificacion-clase-b.facade.ts) Y certificado ya enviado por email
    * (certificates → certificate_issuance_log action='email_sent') — candidatos a "Marcar
    * como Ex-Alumno" que todavía no se pasaron.
    */
@@ -503,7 +521,7 @@ export class AdminAlumnosFacade {
       .from('class_b_sessions')
       .select('enrollment_id')
       .in('enrollment_id', enrollmentIds)
-      .not('evaluation_grade', 'is', null);
+      .eq('status', 'completed');
 
     const practiceCounts = new Map<number, number>();
     for (const row of (sessions ?? []) as Array<{ enrollment_id: number }>) {

@@ -137,12 +137,20 @@ describe('ExecutiveDashboardFacade', () => {
   });
 
   it('AC23: cambiar el rango con datos ya cargados no vuelve a mostrar skeleton', async () => {
-    const { facade } = setup();
-    await facade.initialize();
-    const p = facade.applyRange({ from: '2026-08-01', to: '2026-08-31' }, 'last_month');
-    expect(facade.isLoading()).toBe(false);
-    await p;
-    expect(facade.range()).toEqual({ from: '2026-08-01', to: '2026-08-31' });
+    // Un preset se re-resuelve contra la fecha real (fix-175-b): sin fijar "hoy", 'last_month'
+    // deja de ser agosto en cuanto cambia el mes y el test falla solo por el calendario.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 8, 15, 12, 0, 0)); // 15-sep-2026, hora local
+    try {
+      const { facade } = setup();
+      await facade.initialize();
+      const p = facade.applyRange({ from: '2026-08-01', to: '2026-08-31' }, 'last_month');
+      expect(facade.isLoading()).toBe(false);
+      await p;
+      expect(facade.range()).toEqual({ from: '2026-08-01', to: '2026-08-31' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('AC-E2: si una RPC falla, solo esa sección queda en error', async () => {

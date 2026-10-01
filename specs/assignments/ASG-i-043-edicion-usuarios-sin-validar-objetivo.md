@@ -1,7 +1,7 @@
 # Asignación ASG-i-043 — Una secretaria puede editar a cualquier usuario (incluido un admin)
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

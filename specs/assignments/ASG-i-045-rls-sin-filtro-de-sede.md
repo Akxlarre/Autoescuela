@@ -1,7 +1,7 @@
 # Asignación ASG-i-045 — RLS que filtra por rol pero no por sede
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P0
 > **created:** 2026-09-30
