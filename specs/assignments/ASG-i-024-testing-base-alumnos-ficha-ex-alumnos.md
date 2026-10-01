@@ -1,14 +1,14 @@
 # Asignación ASG-i-024 — Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-01
+> **resulting_track:** fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos
 
 ---
 
