@@ -1,7 +1,8 @@
 # Fix: Publicar y volver atrás en producción desde botones de GitHub Actions
 > id: fix-177-b-deploy-desde-botones-actions
 > refs: 0046-b-deploy-produccion-cpanel-angular
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Root Cause
@@ -51,6 +52,11 @@ deploy solo se puede invocar por evento de tag o por dispatch, y no como pieza r
 - **`docs/DEPLOY.md`:** el flujo de botones pasa a ser el principal; la terminal queda como
   alternativa.
 
+- **Ajuste en la verificación:** `rollback-produccion.yml` otorga `contents: write` al deploy
+  llamado. GitHub valida los permisos del workflow reutilizable **antes** de correrlo, y el job
+  `release` (que pide `contents: write`) hacía fallar el rollback con *startup failure* aunque en
+  ese modo no corre. Commit 177be741.
+
 ## Test de Regresión
 - `node scripts/lib/next-version.test.mjs` ✓ (F1: arreglo/mejora, tags no semver ignorados,
   orden semver y no lexicográfico (`v0.10.0 > v0.9.0`), repo sin tags → `v0.1.0`)
@@ -60,3 +66,12 @@ deploy solo se puede invocar por evento de tag o por dispatch, y no como pieza r
     `v0.1.7`, un solo run de deploy (F1, F5, AC2, AC11).
   - "Publicar" otra vez sin cambios → falla (F3).
   - "Volver a una versión anterior" con `v0.1.6` → `version.json` = v0.1.6 original (AC9).
+
+## Evidencia (2026-10-01, contra GitHub Actions y cPanel reales)
+- `node scripts/lib/next-version.test.mjs` → 13/13 ✓ (corre también en el gate de cada publicación)
+- **F2** ✓ "Publicar" desde `tmp/fix-177-f2` (run 36906943334) → "Publicar solo se puede lanzar desde main…", deploy skipped, sin tag. Rama borrada.
+- **F1 / F5 / AC2 / AC11** ✓ "Publicar" `arreglo` lanzado por el owner desde la UI (run 36909210032) → "Versión a publicar: v0.1.7 (base publicada: v0.1.6)" → aprobado por Akxlarre → publicado → Release `v0.1.7` con `site.zip`. **Un solo run de deploy**: el tag creado con GITHUB_TOKEN no disparó el workflow por push.
+- **F4** ✓ El owner confirmó haber visto en el run el resumen "Publicar v0.1.7 (arreglo)" con la lista de commits.
+- **F3** ✓ "Publicar" otra vez sin commits nuevos (run 36912644304) → "No hay cambios nuevos en main desde v0.1.7…", sin `v0.1.8`.
+- **AC9** ✓ "Volver a una versión anterior" `v0.1.6`: 1er intento → startup failure por permisos (corregido, ver Cambio); 2º intento (run 36913198913) → aprobado → `version.json` = v0.1.6 con `run 36901786036` y `builtAt 17:48:56` (los del build original); Release skipped.
+- **F6** ✓ Push manual `git push origin v0.1.8` → run por `push` (36913668164) → aprobado → publicado → Release `v0.1.8`; producción = v0.1.8 (`177be741`), dashboard 200, `.htaccess` 403.
