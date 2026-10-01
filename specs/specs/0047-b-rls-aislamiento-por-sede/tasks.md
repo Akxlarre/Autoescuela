@@ -23,7 +23,7 @@ Sin cambios en `src/app`: solo migración SQL + test de RLS.
   - **AC ref:** AC1–AC6
   - **DoD:** test en verde dentro de la transacción; snapshot de `pg_policies` confirma AC6
 
-- [ ] **T5** — Aplicar en la BD remota (requiere visto bueno del owner) y re-correr el test
+- [x] **T5** — Aplicar en la BD remota (requiere visto bueno del owner) y re-correr el test
   - **AC ref:** todos
   - **DoD:** migración aplicada y registrada; test en verde fuera de transacción
 

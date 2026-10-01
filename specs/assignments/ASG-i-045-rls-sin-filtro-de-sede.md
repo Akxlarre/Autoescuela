@@ -1,6 +1,6 @@
 # Asignación ASG-i-045 — RLS que filtra por rol pero no por sede
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P0

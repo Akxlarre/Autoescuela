@@ -1,8 +1,8 @@
 # Acceptance 0047-b — RLS: aislamiento por sede para la secretaria
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md)
-> **Estado:** ensayado en la BD remota dentro de `BEGIN … ROLLBACK` (2026-10-01). **Pendiente:**
-> aplicar la migración en remoto (T5) y re-correr el test fuera de transacción.
+> **Estado:** ✅ PASA. Aplicada en la BD remota el 2026-10-01 (`supabase db push`, visto bueno del owner,
+> registrada como `20261001150000`). Test re-corrido contra la BD real fuera de transacción: 0 fallos.
 
 ## Cómo se verificó
 

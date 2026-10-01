@@ -1,6 +1,6 @@
 # Spec 0047-b — RLS: aislamiento por sede para la secretaria (tablas del piloto)
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-10-01
 > **Owner:** Benjamín
 > **Priority:** P0
@@ -165,4 +165,5 @@ de B y cualquier escritura sobre B es rechazada, sin cambiar nada de lo que ve e
 
 ## Changelog
 
+- 2026-10-01 — aplicada en la BD remota (`supabase db push`, visto bueno del owner); test de RLS en verde fuera de transacción. Cerrada.
 - 2026-10-01 — spec redactada por Benjamín (vía Claude) tras confirmar las policies vigentes en la BD remota
