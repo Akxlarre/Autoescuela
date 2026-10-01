@@ -1,7 +1,7 @@
 # Asignación ASG-i-041 — Edge functions que responden sin sesión
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30

@@ -1,7 +1,7 @@
 # Asignación ASG-i-055 — Escrituras a Supabase que no revisan el error y muestran éxito igual
 
 > **status:** pendiente
-> **owner:** cualquiera
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30

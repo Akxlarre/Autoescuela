@@ -115,25 +115,40 @@
 >
 > **Dato de diseño:** la llave pública (anon key) pasa `verify_jwt`; exigir "JWT válido" no basta,
 > hay que verificar un usuario real y su rol (`041`, `042`).
+>
+> **Reparto (2026-10-01).** Se repartió por esfuerzo estimado (en puntos, 1 = minutos y 10 = spec
+> de alto riesgo), sin separar los grupos de solapes de arriba:
+> - **i (Ignacio):** `041`, `048`, `049`, `050`, `051`. Edge functions sin sesión, junto con su
+>   `042` en curso, más dinero (cuadratura, pagos, matrícula, servicios especiales). ≈18 pts,
+>   ≈23 con `042`.
+> - **b (Benjamín):** `043`, `044`, `045`, `046`. Control de acceso: cuentas, RLS por sede y
+>   Storage por sede, con un mismo criterio de sede para tablas y archivos. Sigue lo que probó en
+>   `022`, `034` y `037`. ≈27 pts.
+> - **m (Matías):** `047`, `052`, `053`, `054`, `055`, `056`, `057`. RPC y auditoría, clases
+>   (acciones masivas, trigger de deserción), fechas UTC, errores tragados, Realtime y
+>   comunicados. ≈25 pts.
+>
+> `055` no incluye los casos de `cuadratura.facade.ts`, que van en `048` (i). `052` ya no espera
+> a `ASG-i-038`, resuelta en `fix-262-m`: la nota no condiciona el certificado.
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-041 | Edge functions que responden sin sesión (5) | `cualquiera` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
-| ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `cualquiera` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
-| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `cualquiera` | fix | P0 | i | ⏳ Puede partirse en 2 |
-| ASG-i-045 | RLS que filtra por rol pero no por sede | `cualquiera` | spec | P0 | i | 🟡 Lectura de clases y ventas confirmada; `students`/`payments` SELECT sí filtra; escritura ⏳ |
-| ASG-i-046 | Storage: leer/sobrescribir archivos de otra sede, subida anónima | `cualquiera` | fix | P0 | i | 🟡 Listar otras sedes confirmado; resto ⏳ |
-| ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `cualquiera` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
-| ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `cualquiera` | fix | P0 | i | ⏳ |
-| ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `cualquiera` | fix | P0 | i | ⏳ |
-| ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `cualquiera` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
-| ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `cualquiera` | fix | P0 | i | ⏳ |
-| ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `cualquiera` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
-| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `cualquiera` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
-| ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `cualquiera` | spec | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `cualquiera` | fix | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-056 | Canales Realtime que escuchan tablas no publicadas (6) | `cualquiera` | fix | P1 | i | ⏳ Una migración |
-| ASG-i-057 | Comunicados a >200 alumnos nunca terminan | `cualquiera` | fix | P1 | i | ⏳ |
+| ASG-i-041 | Edge functions que responden sin sesión (5) | `i` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
+| ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `b` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
+| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `b` | fix | P0 | i | ⏳ Puede partirse en 2 |
+| ASG-i-045 | RLS que filtra por rol pero no por sede | `b` | spec | P0 | i | 🟡 Lectura de clases y ventas confirmada; `students`/`payments` SELECT sí filtra; escritura ⏳ |
+| ASG-i-046 | Storage: leer/sobrescribir archivos de otra sede, subida anónima | `b` | fix | P0 | i | 🟡 Listar otras sedes confirmado; resto ⏳ |
+| ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `m` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
+| ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `i` | fix | P0 | i | ⏳ |
+| ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `i` | fix | P0 | i | ⏳ |
+| ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
+| ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
+| ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
+| ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `m` | spec | P1 | i | ⏳ Inventario en `037` §1 |
+| ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `m` | fix | P1 | i | ⏳ Inventario en `037` §1 |
+| ASG-i-056 | Canales Realtime que escuchan tablas no publicadas (6) | `m` | fix | P1 | i | ⏳ Una migración |
+| ASG-i-057 | Comunicados a >200 alumnos nunca terminan | `m` | fix | P1 | i | ⏳ |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
