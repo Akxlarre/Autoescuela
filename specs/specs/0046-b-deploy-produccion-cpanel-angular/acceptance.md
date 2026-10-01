@@ -70,8 +70,10 @@ regla de tag `v*` en el environment (ver "Pendientes").
 
 ## Pendientes (no bloquean el cierre)
 
-- [ ] **Owner:** agregar en *Environments → Production → Deployment branches and tags* la regla de
-      **tag** `v*`. Es defensa en profundidad: el workflow ya exige tag `v*` ∈ `main`.
+- [ ] **Owner:** agregar en *Environments → Production → Deployment branches and tags* **dos**
+      reglas: rama `main` **y** tag `v*`. Es defensa en profundidad: el workflow ya exige tag
+      `v*` ∈ `main`. ⚠️ Desde fix-177-b los botones corren el deploy con ref `main`, así que
+      con solo la regla de tag quedarían bloqueados.
 - [ ] **Owner, cuando el dominio se use con usuarios reales:** T-DOM-1 (Site URL / Redirect URLs de
       Supabase Auth) y T-DOM-2 (secret `APP_URL` de Edge Functions). Ver `docs/DEPLOY.md`
       § Cambiar de dominio.

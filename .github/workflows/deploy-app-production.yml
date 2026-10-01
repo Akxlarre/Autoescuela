@@ -1,9 +1,15 @@
-# Deploy de la app Angular a producción (cPanel, FTPS) — spec 0046-b.
+# Deploy de la app Angular a producción (cPanel, FTPS) — spec 0046-b, fix-177-b.
 #
-# Publicar:  git tag v1.2.0 && git push origin v1.2.0   → build + tests → aprobación → subida
-#            → GitHub Release del tag con el build exacto (site.zip)
-# Rollback:  Actions → "Deploy app (producción)" → Run workflow → tag anterior
-#            → baja el site.zip de ese Release y lo sube tal cual (sin recompilar ni testear)
+# Es la ÚNICA definición del deploy. Se usa de tres formas:
+#   - Botón "Publicar en producción"        (publicar-produccion.yml → workflow_call, mode=publish)
+#   - Botón "Volver a una versión anterior" (rollback-produccion.yml → workflow_call, mode=rollback)
+#   - Push manual de un tag v* desde la terminal (push → mode=publish)
+#
+# publish  → build + tests → aprobación → subida → GitHub Release del tag con el build (site.zip)
+# rollback → baja el site.zip del Release del tag y lo sube tal cual (sin recompilar ni testear)
+#
+# El modo sale del input `mode`, NUNCA de github.event_name: en un workflow llamado, event_name es
+# el del caller (workflow_dispatch también al publicar).
 #
 # El dominio NO se escribe acá: vive en la variable APP_DOMAIN del environment Production (es
 # provisorio y va a cambiar). Setup y checklist de cambio de dominio: docs/DEPLOY.md.
@@ -13,10 +19,14 @@ name: Deploy app (producción)
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
+  workflow_call:
     inputs:
       tag:
-        description: 'Rollback: tag YA publicado (con Release) a volver a subir, ej. v1.1.0'
+        description: 'Tag a desplegar, ej. v1.2.0'
+        required: true
+        type: string
+      mode:
+        description: 'publish (build nuevo) | rollback (build del Release)'
         required: true
         type: string
 
@@ -25,25 +35,34 @@ permissions:
 
 jobs:
   build:
-    # push de tag → build completo con gate de calidad. dispatch → build original del Release.
+    # publish → build completo con gate de calidad. rollback → build original del Release.
     name: Preparar build
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
       tag: ${{ steps.ref.outputs.tag }}
+      mode: ${{ steps.ref.outputs.mode }}
     steps:
-      - name: Resolver tag
+      - name: Resolver tag y modo
         id: ref
         env:
           INPUT_TAG: ${{ inputs.tag }}
+          INPUT_MODE: ${{ inputs.mode }}
           PUSHED_TAG: ${{ github.ref_name }}
         run: |
+          # push de tag: no hay inputs → se publica el tag pusheado.
           TAG="${INPUT_TAG:-$PUSHED_TAG}"
+          MODE="${INPUT_MODE:-publish}"
           if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
             echo "::error::'$TAG' no es un tag de versión válido (se espera v*, ej. v1.2.0)."
             exit 1
           fi
+          if [[ "$MODE" != "publish" && "$MODE" != "rollback" ]]; then
+            echo "::error::Modo '$MODE' desconocido (publish | rollback)."
+            exit 1
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
@@ -61,32 +80,34 @@ jobs:
 
       # ── Publicación (push de tag) ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
-        if: github.event_name == 'push'
+        if: steps.ref.outputs.mode == 'publish'
         with:
           node-version: '22'
           cache: 'npm'
 
-      - if: github.event_name == 'push'
+      - if: steps.ref.outputs.mode == 'publish'
         run: npm ci
 
       # Gate de calidad (AC1): cualquier rojo corta acá y no se pide aprobación.
       - name: Tests (test:ci)
-        if: github.event_name == 'push'
+        if: steps.ref.outputs.mode == 'publish'
         run: npm run test:ci
       - name: Lint arquitectónico (lint:arch)
-        if: github.event_name == 'push'
+        if: steps.ref.outputs.mode == 'publish'
         run: npm run lint:arch
-      - name: Micro-suite del plan de deploy
-        if: github.event_name == 'push'
-        run: node scripts/lib/deploy-manifest.test.mjs
+      - name: Micro-suites del pipeline (plan de deploy + versión)
+        if: steps.ref.outputs.mode == 'publish'
+        run: |
+          node scripts/lib/deploy-manifest.test.mjs
+          node scripts/lib/next-version.test.mjs
 
       - name: Build de producción
-        if: github.event_name == 'push'
+        if: steps.ref.outputs.mode == 'publish'
         run: npx ng build --configuration production
 
       # AC8: trazabilidad de la versión publicada. El SHA sale de git y no de GITHUB_SHA.
       - name: Escribir version.json
-        if: github.event_name == 'push'
+        if: steps.ref.outputs.mode == 'publish'
         env:
           TAG: ${{ steps.ref.outputs.tag }}
         run: |
@@ -102,7 +123,7 @@ jobs:
       # Se re-despliega el build que ya se aprobó, no uno nuevo: recompilar un tag viejo puede
       # fallar por tests que dependen de la fecha o dar otro build si cambiaron las deps.
       - name: Descargar el build publicado del tag
-        if: github.event_name == 'workflow_dispatch'
+        if: steps.ref.outputs.mode == 'rollback'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.ref.outputs.tag }}
@@ -232,7 +253,7 @@ jobs:
   release:
     name: Registrar versión publicada
     needs: [build, deploy]
-    if: github.event_name == 'push'
+    if: needs.build.outputs.mode == 'publish'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
