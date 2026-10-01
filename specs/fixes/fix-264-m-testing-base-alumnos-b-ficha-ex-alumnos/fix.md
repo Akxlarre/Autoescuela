@@ -175,9 +175,9 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | B10 | ✅ | Auto. Carnet, Certificado, Inasistencias, Ficha Técnica, Consentimientos y Reagendamientos, cada una con `data-llm-action` | |
 | B11 | ✅ | Auto. Cabecera con "Editar Perfil" y "Eliminar Alumno" | |
 | C01 | ✅ | Auto. Con 1 matrícula no hay selector | |
-| C02 | ❌ | Auto. El borrador ya no aparece en el selector (✅ `fix-263-m`), pero **si es el más reciente la ficha lo muestra como matrícula principal** | B15 |
+| C02 | ❌ → ✅ | Auto. El borrador ya no aparece en el selector (✅ `fix-263-m`), pero si era el más reciente la ficha lo mostraba como matrícula principal. **Corregido el 2026-10-01** | B15 → `fix-265-m` |
 | C03 | ✅ | Auto. Cambiar de matrícula cambia número, estado y cantidad de clases | |
-| C04 | ❌ | Auto. Tras guardar un cambio, la ficha vuelve a la matrícula más reciente | B21 |
+| C04 | ❌ → ✅ | Auto. Tras guardar un cambio, la ficha volvía a la matrícula más reciente. **Corregido el 2026-10-01** | B21 → `fix-265-m` |
 | D06 | ✅ | Auto. Refuerzo: "N de 6"; Clase B: "N de 12" | |
 | M01 | ✅ | Auto. Formulario precargado | |
 | M02 | ❌ | Auto. Email de otro usuario: "Ha ocurrido un error inesperado. Por favor, intenta de nuevo." El email no cambia | B17 |
@@ -270,12 +270,12 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B12 | **El error de la ficha queda "pegado"**: tras una ficha con error, la del alumno anterior se sigue viendo con error hasta recargar | 🟡 Baja | por crear |
 | B13 | **Id no numérico en la URL** deja la ficha en "Cargando…" para siempre | 🟡 Baja | por crear |
 | B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | por crear (junto con `ASG-i-054`) |
-| B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | por crear |
+| B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | por crear |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | por crear (mismo patrón que `fix-029-i`) |
 | B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043` |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | por crear |
-| B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | por crear |
+| B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 
@@ -295,7 +295,7 @@ confirmado:
 | `024b` Q01 | ¿La ficha debe abrir los documentos del alumno? (el botón existía en `0006-i` AC3) | S9 |
 | `024b` F04 / F13 | ¿Se permite reprogramar individualmente una clase con inasistencia, y queda en el historial? | S7 |
 | `024b` X02 / X04 | ¿Qué miden las tasas y opiniones, y por sede? | S16 |
-| `024b` C05 / T11 | ¿Qué matrícula abre por defecto la ficha de un alumno con varias? | B15, B21 |
+| `024b` C05 / T11 | ¿Qué matrícula abre por defecto la ficha de un alumno con varias? | — (`fix-265-m` dejó "la más reciente que no sea borrador, cancelada ni pago pendiente", igual que la Base; revisar si se quiere otra regla) |
 
 ## Cambio
 
@@ -321,8 +321,8 @@ muestra el error real de cada uno.
 ## Test de Regresión
 
 - `npm run test:e2e` — 57 tests: los 13 que ya existían + 44 de este track (20 en
-  `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasan y 20 fallan a propósito por
-  bug conocido (10 en cada archivo).
+  `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasaban y 20 fallaban a propósito
+  por bug conocido (10 en cada archivo). Tras `fix-265-m` quedan 18 marcados (8 en la ficha).
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

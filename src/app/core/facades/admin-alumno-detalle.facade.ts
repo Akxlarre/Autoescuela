@@ -20,6 +20,7 @@ import type {
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
+import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
@@ -423,19 +424,24 @@ export class AdminAlumnoDetalleFacade {
       const sorted = ((s.enrollments ?? []) as any[]).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
-      const lastEnrollment = sorted[0] ?? null;
+      // fix-265-m: la matrícula mostrada no es "la más reciente a secas". Nunca un borrador, y
+      // en un refresco de la misma ficha se conserva la que el usuario eligió en el selector.
+      const current = this._alumno();
+      const selectedId = current?.id === studentId ? current.enrollmentId : null;
+      const shownEnrollment = pickFichaEnrollment(sorted, selectedId);
 
-      const lastEnrollmentCourse = Array.isArray(lastEnrollment?.courses)
-        ? lastEnrollment.courses[0]
-        : lastEnrollment?.courses;
-      const courseName = lastEnrollmentCourse?.name;
-      const coursePracticalHours = (lastEnrollmentCourse?.practical_hours as number | null) ?? null;
-      const courseIsReinforcement = lastEnrollmentCourse?.is_reinforcement ?? false;
+      const shownEnrollmentCourse = Array.isArray(shownEnrollment?.courses)
+        ? shownEnrollment.courses[0]
+        : shownEnrollment?.courses;
+      const courseName = shownEnrollmentCourse?.name;
+      const coursePracticalHours =
+        (shownEnrollmentCourse?.practical_hours as number | null) ?? null;
+      const courseIsReinforcement = shownEnrollmentCourse?.is_reinforcement ?? false;
 
-      const enrollmentId = lastEnrollment?.id ?? null;
+      const enrollmentId = shownEnrollment?.id ?? null;
       const licenseGroup: 'class_b' | 'professional' =
-        lastEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
-      const promotionCourseId = (lastEnrollment?.promotion_course_id as number | null) ?? null;
+        shownEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
+      const promotionCourseId = (shownEnrollment?.promotion_course_id as number | null) ?? null;
 
       // Build enrollment summaries for tab selector
       const summaries: EnrollmentSummary[] = sorted
@@ -489,17 +495,17 @@ export class AdminAlumnoDetalleFacade {
 
       this._certPdfPath.set(
         licenseGroup === 'professional'
-          ? (lastEnrollment?.certificate_professional_pdf_url ?? null)
-          : (lastEnrollment?.certificate_b_pdf_url ?? null),
+          ? (shownEnrollment?.certificate_professional_pdf_url ?? null)
+          : (shownEnrollment?.certificate_b_pdf_url ?? null),
       );
-      this._licenseInitialPath.set(lastEnrollment?.license_initial_url ?? null);
-      this._licenseFullPath.set(lastEnrollment?.license_full_url ?? null);
+      this._licenseInitialPath.set(shownEnrollment?.license_initial_url ?? null);
+      this._licenseFullPath.set(shownEnrollment?.license_full_url ?? null);
 
-      const dcRaw = lastEnrollment?.digital_contracts;
+      const dcRaw = shownEnrollment?.digital_contracts;
       const dc = Array.isArray(dcRaw) ? dcRaw[0] : dcRaw;
       this._contractGeneratedPath.set((dc?.file_url as string) ?? null);
       this._contractSignedPath.set((dc?.signed_contract_url as string) ?? null);
-      const rawChannel = lastEnrollment?.registration_channel;
+      const rawChannel = shownEnrollment?.registration_channel;
 
       let normalized: 'presential' | 'online' | null = null;
 
@@ -512,7 +518,7 @@ export class AdminAlumnoDetalleFacade {
         id: s.id,
         userId: u.id,
         enrollmentId,
-        branchId: (lastEnrollment?.branch_id as number | null) ?? null,
+        branchId: (shownEnrollment?.branch_id as number | null) ?? null,
         enrollments: summaries,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
@@ -521,17 +527,17 @@ export class AdminAlumnoDetalleFacade {
         paternalLastName: u.paternal_last_name,
         maternalLastName: u.maternal_last_name,
         rut: u.rut,
-        matricula: lastEnrollment?.number ? `#${lastEnrollment.number}` : '—',
+        matricula: shownEnrollment?.number ? `#${shownEnrollment.number}` : '—',
         curso: courseName ?? '—',
         email: u.email,
         telefono: u.phone ?? '—',
         fechaIngreso: s.created_at.slice(0, 10),
         // fix-263-m: el estado es el de la matrícula, no students.status (ningún flujo lo escribe).
-        estado: this.formatEnrollmentStatus(lastEnrollment?.status),
-        egresado: lastEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
+        estado: this.formatEnrollmentStatus(shownEnrollment?.status),
+        egresado: shownEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
         licenseGroup,
-        totalPagado: lastEnrollment?.total_paid ?? 0,
-        saldoPendiente: lastEnrollment?.pending_balance ?? 0,
+        totalPagado: shownEnrollment?.total_paid ?? 0,
+        saldoPendiente: shownEnrollment?.pending_balance ?? 0,
         certificateEmailSent: emailSentByEnrollment.get(enrollmentId ?? -1) ?? false,
         isReinforcement: courseIsReinforcement,
         hasAuthAccount: !!u.supabase_uid,

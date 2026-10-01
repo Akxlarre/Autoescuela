@@ -49,6 +49,7 @@
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange` (fix-176-b: valor de `p-datepicker` range → rango ISO), `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
+| `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `pickFichaEnrollment` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |

@@ -241,7 +241,6 @@ test.describe('ficha: cabecera y selector de matrículas', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B15 (fix-264-m)');
     const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const alumno = await createE2eAlumno(
       {
@@ -296,7 +295,6 @@ test.describe('ficha: la matrícula elegida se mantiene', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B21 (fix-264-m)');
     const haceUnAno = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
     const alumno = await createE2eAlumno(
       {

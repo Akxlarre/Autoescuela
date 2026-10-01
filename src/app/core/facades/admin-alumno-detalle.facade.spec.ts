@@ -1200,6 +1200,64 @@ describe('AdminAlumnoDetalleFacade', () => {
 
         expect(facade.alumno()?.enrollments.map((e) => e.id)).toEqual([306]);
       });
+
+      describe('matrícula mostrada — fix-265-m', () => {
+        it('un borrador más reciente no se muestra como matrícula principal (B15)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(305, 'draft', '2026-03-01'),
+            makeEnrollmentRow(306, 'active', '2026-01-01'),
+          ]);
+
+          expect(facade.alumno()?.enrollmentId).toBe(306);
+          expect(facade.alumno()?.matricula).toBe('#000306');
+          expect(facade.alumno()?.estado).toBe('Activo');
+        });
+
+        it('un refresco conserva la matrícula elegida en el selector (B21)', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          await facade.refresh();
+
+          expect(facade.alumno()?.enrollmentId).toBe(304);
+          expect(facade.alumno()?.matricula).toBe('#000304');
+          expect(facade.alumno()?.estado).toBe('Egresado');
+        });
+
+        it('al abrir la ficha de otro alumno no se arrastra la elección anterior', async () => {
+          const mock = await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(304, 'completed', '2026-01-01'),
+          ]);
+          await facade.selectEnrollment(304);
+
+          // Otro alumno que, por construcción del test, tiene una matrícula con el mismo id.
+          mock.setSingleResult('students', {
+            id: 43,
+            status: 'active',
+            created_at: '2026-01-01',
+            users: {
+              id: 8,
+              rut: '55.555.555-5',
+              first_names: 'Luis',
+              paternal_last_name: 'Soto',
+              maternal_last_name: 'Díaz',
+              email: 'luis@example.com',
+              phone: '987654321',
+            },
+            enrollments: [
+              makeEnrollmentRow(401, 'active', '2026-03-01'),
+              makeEnrollmentRow(304, 'completed', '2026-01-01'),
+            ],
+          });
+          await facade.initialize(43);
+
+          expect(facade.alumno()?.enrollmentId).toBe(401);
+        });
+      });
     });
   });
 
