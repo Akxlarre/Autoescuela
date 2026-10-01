@@ -113,6 +113,11 @@ export class AdminAlumnosFacade {
     this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
   );
   readonly drawerMode = this._drawerMode.asReadonly();
+  /**
+   * La columna Sede solo aporta cuando la lista mezcla sedes: admin, o secretaria con grant
+   * multi-sede, con "Todas las sedes" elegido (fix-269-m).
+   */
+  readonly showSedeColumn = computed(() => this.getActiveBranchId() === null);
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 

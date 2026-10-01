@@ -21,6 +21,7 @@ import type {
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
+import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
@@ -1115,9 +1116,28 @@ export class AdminAlumnoDetalleFacade {
         currentEmail: currentEmail.trim().toLowerCase(),
       },
     });
-    if (error)
-      throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil');
+    if (error) throw new Error(await this.resolvePerfilErrorMessage(error));
     void this.refreshSilently();
+  }
+
+  /**
+   * fix-268-m (DG-085): el `error` de `functions.invoke()` trae un mensaje fijo; lo que la
+   * función respondió está en su body. Se muestra al usuario si es un rechazo de negocio (4xx)
+   * o el email duplicado; un 5xx cualquiera puede traer texto técnico y queda genérico.
+   */
+  private async resolvePerfilErrorMessage(error: unknown): Promise<string> {
+    const response = await readEdgeFunctionError(error);
+    const message = response?.message ?? '';
+
+    // La función lo informa como 409 si el alumno tiene cuenta Auth, y como 500 con el nombre de
+    // la constraint si no la tiene (el email solo choca en public.users).
+    if (response?.status === 409 || message.includes('users_email_key')) {
+      return 'Ya existe otro usuario registrado con ese correo electrónico.';
+    }
+    if (message && response?.status != null && response.status >= 400 && response.status < 500) {
+      return message;
+    }
+    return this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil';
   }
 
   /**

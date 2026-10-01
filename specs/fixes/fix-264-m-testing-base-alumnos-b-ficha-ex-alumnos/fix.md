@@ -142,7 +142,7 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | P02 | ✅ | Auto. Al cambiar de sede recarga sola y oculta la columna | |
 | P04 | ✅ | Auto. Sede 1 + sede 2 = "Todas" | |
 | P05 | ✅ | Auto. Secretaria sin grant: sin columna ni selector | |
-| P06 | ❌ | Auto. Secretaria multi-sede: al elegir otra sede la lista no cambia; en "Todas" no hay columna Sede | B7 |
+| P06 | ❌ → ✅ | Auto. Secretaria multi-sede: al elegir otra sede la lista no cambia; en "Todas" no hay columna Sede. **Corregido el 2026-10-01** | B7 → `fix-269-m` |
 | P08 | ✅ | Por API: la secretaria de la sede 1 lee 72 `students` y 73 `enrollments`, todos de su sede; 0 de la sede 2 | |
 | Q01 | ❌ | Auto. Un alumno creado en otra sesión no aparece en 10 s sin recargar | B10 → `ASG-i-056` |
 
@@ -180,7 +180,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | C04 | ❌ → ✅ | Auto. Tras guardar un cambio, la ficha volvía a la matrícula más reciente. **Corregido el 2026-10-01** | B21 → `fix-265-m` |
 | D06 | ✅ | Auto. Refuerzo: "N de 6"; Clase B: "N de 12" | |
 | M01 | ✅ | Auto. Formulario precargado | |
-| M02 | ❌ | Auto. Email de otro usuario: "Ha ocurrido un error inesperado. Por favor, intenta de nuevo." El email no cambia | B17 |
+| M02 | ❌ → ✅ | Auto. Email de otro usuario: "Ha ocurrido un error inesperado. Por favor, intenta de nuevo." El email no cambia. **Corregido el 2026-10-01** | B17 → `fix-268-m` |
 | M03 | ✅ | Auto. Nombre y teléfono se guardan y la ficha los refleja | |
 | M04 | ❌ | Por API: la secretaria de la sede 1 cambió el nombre de un alumno `E2E-` de la sede 2. **No se probó contra un admin real** | → `ASG-i-043` |
 | M06 | ✅ | Auto. Nombre vacío deshabilita "Guardar Cambios" | |
@@ -262,7 +262,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B4 | **La Papelera queda "pegada"** al salir de la pantalla y volver | 🟡 Baja | ✅ `hotfix-112-m` |
 | B5 | **Un error de carga se ve como lista vacía** ("No se encontraron alumnos"), con KPIs en 0 | 🟡 Baja | ✅ `hotfix-113-m` |
 | B6 | **El modal de archivar se cierra con Escape/clic afuera mientras archiva**; la operación termina igual y el usuario no ve el resultado en el modal | 🟡 Baja | ✅ `hotfix-111-m` |
-| B7 | **Secretaria con grant multi-sede**: la lista no recarga al cambiar de sede y nunca muestra la columna Sede | 🟡 Baja-Media | por crear |
+| B7 | **Secretaria con grant multi-sede**: la lista no recarga al cambiar de sede y nunca muestra la columna Sede | 🟡 Baja-Media | ✅ `fix-269-m` |
 | B8 | **"Con deuda" y el saldo ignoran matrículas B anteriores** con deuda | 🟡 Baja | por crear |
 | B9 | **KPI "Por Vencer" siempre 0 y drawer siempre vacío**; el drawer habla de "cuotas" y "Contactar" no hace nada. Requiere decisión: qué debe medir (D05/N02) | 🟠 Media | por crear, tras decisión |
 | B10 | Tiempo real de la lista muerto | 🟠 Media | `ASG-i-056` |
@@ -272,10 +272,11 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | por crear (junto con `ASG-i-054`) |
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
-| B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | por crear (mismo patrón que `fix-029-i`) |
+| B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | ✅ `fix-268-m` |
 | B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043` |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
+| B22 | **La lista de Alumnos del admin consulta dos veces al abrir y muestra "0 alumnos" un instante.** No estaba en el checklist: apareció al corregir B7 | 🟡 Baja | ✅ `hotfix-117-m` |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 
@@ -324,8 +325,8 @@ muestra el error real de cada uno.
   `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasaban y 20 fallaban a propósito
   por bug conocido (10 en cada archivo). Tras `fix-265-m`, `fix-266-m` y
   `fix-267-m` quedaban 16 marcados, y la ficha suma un test del trigger de `completed_at`. Tras
-  los hotfixes `111-m` … `116-m` quedan 8: 5 en la lista (B1 ×2, B7, B8, B10) y 3 en la ficha
-  (B14, B17, B19).
+  los hotfixes `111-m` … `116-m` quedaban 8, y tras `fix-268-m` y `fix-269-m` quedan 6: 4 en la
+  lista (B1 ×2, B8, B10) y 2 en la ficha (B14, B19). La suite completa tiene 58 tests.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

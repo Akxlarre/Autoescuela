@@ -44,6 +44,7 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |

@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
   computed,
+  untracked,
 } from '@angular/core';
 import {
   AlumnosListContentComponent,
@@ -69,7 +70,10 @@ export class AdminAlumnosComponent implements OnInit {
   constructor() {
     effect(() => {
       this.branchFacade.selectedBranchId();
-      this.facade.initialize();
+      // untracked (hotfix-117-m): initialize() lee otros signals (usuario, vista Papelera). Si
+      // el effect los siguiera, un cambio en ellos durante el arranque dispararía una segunda
+      // carga solapada y la tabla se dibujaría vacía por un instante.
+      untracked(() => void this.facade.initialize());
     });
   }
 

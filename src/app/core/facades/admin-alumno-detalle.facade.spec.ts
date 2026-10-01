@@ -379,6 +379,55 @@ describe('AdminAlumnoDetalleFacade', () => {
         }),
       ).rejects.toThrow('Ya existe un usuario con ese correo electrónico');
     });
+
+    describe('error real de la Edge Function — fix-268-m', () => {
+      const perfil = {
+        first_names: 'Juan',
+        paternal_last_name: 'Pérez',
+        maternal_last_name: 'Soto',
+        email: 'duplicado@example.com',
+        phone: '',
+      };
+
+      /** Lo que devuelve `functions.invoke()` ante un no-2xx: mensaje fijo + Response en context. */
+      function mockNon2xx(status: number, error: string): void {
+        const err = new Error('Edge Function returned a non-2xx status code');
+        err.name = 'FunctionsHttpError';
+        (err as any).context = { status, json: () => Promise.resolve({ error }) };
+        supabaseSpy.client.functions = {
+          invoke: vi.fn().mockResolvedValue({ data: null, error: err }),
+        };
+      }
+
+      const EMAIL_EN_USO = 'Ya existe otro usuario registrado con ese correo electrónico.';
+
+      it('email en uso, alumno con cuenta Auth (409): mensaje claro', async () => {
+        mockNon2xx(409, 'Ya existe un usuario con ese correo electrónico');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('email en uso, alumno sin cuenta Auth (500 por users_email_key): mismo mensaje claro', async () => {
+        mockNon2xx(
+          500,
+          'Error al actualizar el alumno: duplicate key value violates unique constraint "users_email_key"',
+        );
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(EMAIL_EN_USO);
+      });
+
+      it('otro rechazo de negocio (4xx): muestra el mensaje que envió la función', async () => {
+        mockNon2xx(403, 'Solo administradores y secretarias pueden editar alumnos');
+        await expect(facade.actualizarPerfilAlumno(55, perfil)).rejects.toThrow(
+          'Solo administradores y secretarias pueden editar alumnos',
+        );
+      });
+
+      it('fallo interno (5xx) que no es el email: no expone el texto técnico', async () => {
+        mockNon2xx(500, 'Error al actualizar el alumno: deadlock detected');
+        const rejection = facade.actualizarPerfilAlumno(55, perfil);
+        await expect(rejection).rejects.toThrow();
+        await expect(rejection).rejects.not.toThrow(/deadlock/);
+      });
+    });
   });
 
   describe('enviarInvitacion — fix-157-m', () => {

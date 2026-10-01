@@ -431,7 +431,6 @@ test.describe('ficha: editar perfil', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B17 (fix-264-m)');
     const [alumno, otro] = await Promise.all([
       createE2eAlumno({ label: 'EmailA', branchId: SEDE_A, enrollments: [{}] }, cleanup),
       createE2eAlumno({ label: 'EmailB', branchId: SEDE_A, enrollments: [{}] }, cleanup),
@@ -561,14 +560,24 @@ test.describe('ex-alumnos', () => {
   ] as const) {
     test(`T01 · T10 (${portal}): carga sin errores; "Ver ficha" abre la ficha y "Volver" regresa a Ex-Alumnos`, async ({
       pageAs,
+      cleanup,
     }) => {
+      // Egresado propio: la primera fila de la lista puede ser el alumno E2E- de otro test, que
+      // se borra en cualquier momento.
+      const egresado = await createE2eAlumno(
+        { label: 'VerFicha', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      );
       const page = await pageAs(role);
       const errors = watchErrors(page);
       await openExAlumnos(page, portal);
       await page.waitForLoadState('networkidle');
       errors.expectClean();
 
-      await page.locator('[data-llm-action="view-student-detail"]').first().click();
+      await page.locator(SEARCH_EGRESADOS).fill(egresado.paternalLastName);
+      await egresadoRow(page, egresado.paternalLastName)
+        .locator('[data-llm-action="view-student-detail"]')
+        .click();
       await expect(matricula(page)).toBeVisible(CARGA);
       const volver = hero(page).locator('[data-llm-nav="back"]').first();
       await expect(volver).toContainText('Ex-Alumnos B');
@@ -613,19 +622,32 @@ test.describe('ex-alumnos', () => {
 
   test('V01 · V02 (S15): desde una tarjeta (375 px), "Ver ficha" y "Volver" regresan a Ex-Alumnos', async ({
     pageAs,
+    cleanup,
   }) => {
+    // Egresado propio: la primera tarjeta puede ser el alumno E2E- de otro test.
+    const egresado = await createE2eAlumno(
+      { label: 'Tarjeta', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+      cleanup,
+    );
     const page = await pageAs('secretariaA');
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto('/app/secretaria/ex-alumnos');
 
     const tarjetas = page.locator('[data-llm-description="Ficha resumen de un egresado"]');
-    await expect(tarjetas.first()).toBeVisible();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+    await expect(tarjetas.first()).toBeVisible(CARGA);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(0);
 
-    await page.locator('[data-llm-action="view-student-detail-card"]').first().click();
+    await page.locator(SEARCH_EGRESADOS).fill(egresado.paternalLastName);
+    await tarjetas
+      .filter({ hasText: egresado.paternalLastName })
+      .locator('[data-llm-action="view-student-detail-card"]')
+      .click();
     await expect(matricula(page)).toBeVisible(CARGA);
     await hero(page).locator('[data-llm-nav="back"]').first().click();
     await expect(page).toHaveURL(/\/app\/secretaria\/ex-alumnos$/);

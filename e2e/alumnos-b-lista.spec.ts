@@ -339,7 +339,6 @@ test.describe('sedes', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B7 (fix-264-m)');
     const [alumnoA, alumnoB] = await Promise.all([
       createE2eAlumno({ label: 'SedeA', branchId: SEDE_A, enrollments: [{}] }, cleanup),
       createE2eAlumno({ label: 'SedeB', branchId: SEDE_B, enrollments: [{}] }, cleanup),

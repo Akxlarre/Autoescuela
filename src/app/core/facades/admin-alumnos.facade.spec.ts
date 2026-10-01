@@ -607,6 +607,39 @@ describe('AdminAlumnosFacade', () => {
   });
 
   // ─── spec 0017 (T2.4): grant multi-sede de la secretaria ───────────────────
+  describe('showSedeColumn — fix-269-m', () => {
+    // currentUser / selectedBranchId son mocks, no signals: se fijan antes de la primera lectura.
+    const secretariaConGrant = { role: 'secretaria', branchId: 1, canAccessBothBranches: true };
+
+    it('admin con "Todas las sedes" → muestra la columna', () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      expect(facade.showSedeColumn()).toBe(true);
+    });
+
+    it('admin con una sede elegida → no la muestra', () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      expect(facade.showSedeColumn()).toBe(false);
+    });
+
+    it('secretaria con grant y "Todas las sedes" → muestra la columna', () => {
+      authFacadeSpy.currentUser.mockReturnValue(secretariaConGrant);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      expect(facade.showSedeColumn()).toBe(true);
+    });
+
+    it('secretaria con grant y una sede elegida → no la muestra', () => {
+      authFacadeSpy.currentUser.mockReturnValue(secretariaConGrant);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      expect(facade.showSedeColumn()).toBe(false);
+    });
+
+    it('secretaria sin grant → nunca, aunque el selector esté en null', () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: 1 });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      expect(facade.showSedeColumn()).toBe(false);
+    });
+  });
+
   describe('grant multi-sede (spec 0017, AC1/AC2)', () => {
     function mockStudentsCapturingEq(): { eq: any } {
       const eq = vi.fn(() => builder);
