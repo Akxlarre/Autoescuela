@@ -604,6 +604,7 @@ test.describe('ex-alumnos', () => {
       `${egresado.firstNames} ${egresado.paternalLastName}`,
       egresado.enrollmentNumbers[0],
       egresado.rut,
+      egresado.rut.replace(/[.-]/g, ''), // RUT sin puntos ni guion (fix-267-m)
     ]) {
       await page.locator(SEARCH_EGRESADOS).fill(consulta);
       await expect(fila, `búsqueda "${consulta}"`).toHaveCount(1);

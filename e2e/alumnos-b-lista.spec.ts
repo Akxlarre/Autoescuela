@@ -272,7 +272,6 @@ test.describe('búsqueda y filtros', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B2 (fix-264-m)');
     const alumno = await createE2eAlumno(
       { label: 'Rut', branchId: SEDE_A, enrollments: [{}] },
       cleanup,

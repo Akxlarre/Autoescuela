@@ -111,7 +111,7 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | D04 | ❌ | Auto. La deuda de la matrícula B más antigua no cuenta en "Con deuda" | B8 |
 | D05 | ❌ | El KPI es 0 por construcción: ninguna matrícula válida puede tener `expires_at` | B9 |
 | E01–E05 | ✅ | Auto. Nombre, apellidos, ambos órdenes, sin tilde/ñ, mayúsculas | |
-| E06 | ❌ | Auto. Solo encuentra el RUT escrito igual que está guardado (con puntos). Fallan `99123456-7`, `991234567` y `99123456` | B2 |
+| E06 | ❌ → ✅ | Auto. Solo encontraba el RUT escrito igual que está guardado (con puntos); fallaban `99123456-7`, `991234567` y `99123456`. **Corregido el 2026-10-01** | B2 → `fix-267-m` |
 | E07 | ✅ | Auto. Nº de expediente | |
 | E09 | ✅ | Auto. Ignora espacios al inicio y al final | |
 | E10 | ✅ | Auto. Estado vacío con "Limpiar filtros" | |
@@ -196,7 +196,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | T06 | ✅ | Auto (parcial). Egresado con saldo 0 → "Al día". Falta el caso "Debe $X" | |
 | T10 | ✅ | Auto. "Ver ficha" desde la tabla y "Volver" regresan a Ex-Alumnos B | |
 | U03 | ✅ | Auto. La búsqueda encuentra a un egresado fuera del período | |
-| U04 | ✅ | Auto (parcial). Nombre + apellido, sin tilde, Nº de expediente y RUT con puntos. RUT sin puntos: mismo bug B2 | B2 |
+| U04 | ✅ | Auto. Nombre + apellido, sin tilde, Nº de expediente y RUT con y sin puntos (este último desde `fix-267-m`) | |
 | V01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
 | V02 | ❌ | Auto. "Ver ficha" desde una tarjeta y "Volver" lleva a la Base de Alumnos | B20 |
 | W01 | ✅ | Auto (parcial). Continuar abre "Nueva Matrícula" con `?rut=`. Falta verificar los campos precargados | |
@@ -257,7 +257,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | # | Descripción | Gravedad | Track |
 |---|---|---|---|
 | B1 | **La exportación de la lista no coincide con la pantalla** (`export-students`): incluye "Finalizado" y solo-Profesional, no conoce "Docs Pendientes", calcula el expediente con 4 documentos y el nombre viejo `foto_carnet` (siempre "Pendiente"), busca sin ignorar tildes ni tokenizar, y desde la Papelera exporta los activos. Toca el mismo archivo que `0009-i` (Ignacio): coordinar | 🟠 Media | por crear |
-| B2 | **Buscar por RUT solo funciona con el formato guardado.** Sin puntos, sin guion o parcial no encuentra. Agravante: los 200 alumnos del seed están guardados sin puntos y los reales con puntos | 🟠 Media | por crear |
+| B2 | **Buscar por RUT solo funciona con el formato guardado.** Sin puntos, sin guion o parcial no encuentra. Agravante: los 200 alumnos del seed están guardados sin puntos y los reales con puntos | 🟠 Media | ✅ `fix-267-m` |
 | B3 | **Filtro Curso con opciones fijas**: no se puede filtrar "Refuerzo Clase B" | 🟡 Baja | por crear |
 | B4 | **La Papelera queda "pegada"** al salir de la pantalla y volver | 🟡 Baja | por crear |
 | B5 | **Un error de carga se ve como lista vacía** ("No se encontraron alumnos"), con KPIs en 0 | 🟡 Baja | por crear (relacionado con `ASG-i-055`) |
@@ -322,8 +322,9 @@ muestra el error real de cada uno.
 
 - `npm run test:e2e` — 57 tests: los 13 que ya existían + 44 de este track (20 en
   `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasaban y 20 fallaban a propósito
-  por bug conocido (10 en cada archivo). Tras `fix-265-m` y `fix-266-m`
-  quedan 17 marcados (7 en la ficha), y la ficha suma un test del trigger de `completed_at`.
+  por bug conocido (10 en cada archivo). Tras `fix-265-m`, `fix-266-m` y
+  `fix-267-m` quedan 16 marcados (9 en la lista, 7 en la ficha), y la ficha suma un test del
+  trigger de `completed_at`.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a
