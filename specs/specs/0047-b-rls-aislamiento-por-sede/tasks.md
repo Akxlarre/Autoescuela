@@ -11,15 +11,15 @@ Sin cambios en `src/app`: solo migración SQL + test de RLS.
   - **AC ref:** contexto
   - **DoD:** `pg_policies` leído; fuga medida por impersonación (1.728 clases, 176/61 pagos, 4 ventas)
 
-- [ ] **T2** — Test de RLS `supabase/tests/rls/0047-b-aislamiento-por-sede.sql`
+- [x] **T2** — Test de RLS `supabase/tests/rls/0047-b-aislamiento-por-sede.sql`
   - **AC ref:** AC1–AC5, AC-E1..E3
   - **DoD:** corre contra la BD actual y **falla** (demuestra la fuga) antes de la migración
 
-- [ ] **T3** — Migración `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`
+- [x] **T3** — Migración `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`
   - **AC ref:** AC1–AC6
-  - **DoD:** helpers + 17 tablas; idempotente (`CREATE OR REPLACE`, `DROP POLICY IF EXISTS`)
+  - **DoD:** 17 tablas, sin funciones nuevas (diseño inline por DG-016); idempotente (`DROP POLICY IF EXISTS`)
 
-- [ ] **T4** — Ensayo en `BEGIN; migración; test; ROLLBACK;` contra la BD remota
+- [x] **T4** — Ensayo en `BEGIN; migración; test; ROLLBACK;` contra la BD remota
   - **AC ref:** AC1–AC6
   - **DoD:** test en verde dentro de la transacción; snapshot de `pg_policies` confirma AC6
 
@@ -27,4 +27,4 @@ Sin cambios en `src/app`: solo migración SQL + test de RLS.
   - **AC ref:** todos
   - **DoD:** migración aplicada y registrada; test en verde fuera de transacción
 
-- [ ] **T6** — Índices y cierre: `indices/DATABASE.md` (policies), `indices/DOMAIN-GOTCHAS.md` si aplica, `acceptance.md`
+- [x] **T6** — Índices y cierre: `indices/DATABASE.md` (policies; + fix del parser `sql-schema.js`), `indices/DOMAIN-GOTCHAS.md` (DG-098 + nota en DG-014), `acceptance.md`
