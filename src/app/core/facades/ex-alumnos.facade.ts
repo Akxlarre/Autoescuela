@@ -37,7 +37,8 @@ interface EgresadoRow {
   id: number;
   number: string | null;
   pending_balance: number | null;
-  updated_at: string | null;
+  /** Fecha de egreso real: cuándo la matrícula pasó a `completed` (fix-266-m). */
+  completed_at: string | null;
   license_group: string | null;
   courses: CourseRow | null;
   branches: BranchRow | null;
@@ -144,7 +145,7 @@ export class ExAlumnosFacade {
         id,
         number,
         pending_balance,
-        updated_at,
+        completed_at,
         license_group,
         courses!inner ( name, code ),
         branches ( id, name ),
@@ -161,7 +162,7 @@ export class ExAlumnosFacade {
       `,
       )
       .eq('status', 'completed')
-      .order('updated_at', { ascending: false });
+      .order('completed_at', { ascending: false });
     if (branchId !== null) query = query.eq('branch_id', branchId);
     const { data, error } = await query;
 
@@ -193,9 +194,11 @@ export class ExAlumnosFacade {
     const rut: string = u?.rut ?? '—';
     const correo: string = u?.email ?? '—';
     const licencia: string = this.deriveLicencia(r.courses?.code ?? '', r.courses?.name ?? '');
-    const anio: number | null = r.updated_at ? new Date(r.updated_at).getFullYear() : null;
+    // fix-266-m: la fecha de egreso es completed_at. Antes se usaba updated_at, que no se
+    // actualiza al marcar al ex-alumno y sí cambia con cada pago posterior.
+    const anio: number | null = r.completed_at ? new Date(r.completed_at).getFullYear() : null;
     // fix-147-b: la ventana de período necesita precisión de día, no solo el año.
-    const fechaEgreso: string | null = r.updated_at ? r.updated_at.slice(0, 10) : null;
+    const fechaEgreso: string | null = r.completed_at ? r.completed_at.slice(0, 10) : null;
     const sede: string = r.branches?.name ?? '—';
     const branchId: number | null = r.branches?.id ?? null;
 
@@ -248,7 +251,7 @@ export class ExAlumnosFacade {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed')
         .eq('license_group', 'class_b')
-        .gte('updated_at', startOfYear);
+        .gte('completed_at', startOfYear);
       if (branchId !== null) egresadosCountQuery = egresadosCountQuery.eq('branch_id', branchId);
       const { count: egresadosCount, error: countErr } = await egresadosCountQuery;
 

@@ -188,7 +188,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | O01 | ✅ | Auto. Tras marcar, la ficha dice "Egresado", el botón desaparece, sale de la Base y entra a Ex-Alumnos (regresión de `fix-263-m`) | |
 | O02 | ✅ | Auto. Sin certificado enviado, el botón no aparece | |
 | O03 | ✅ | Auto. Cancelar la confirmación no cambia nada | |
-| O04 | ❌ | Auto. Matrícula con último cambio en 2024, marcada hoy: Ex-Alumnos muestra el año 2024 | B16 |
+| O04 | ❌ → ✅ | Auto. Matrícula con último cambio en 2024, marcada hoy: Ex-Alumnos mostraba el año 2024. **Corregido el 2026-10-01** | B16 → `fix-266-m` |
 | P01 | ✅ | Auto. "Eliminar Alumno" abre el mismo modal de archivar | |
 | P02 | ✅ | Auto. Archiva, muestra el toast y vuelve a la lista, sin errores en consola | |
 | S04 | ✅ | Por API: la secretaria de la sede 1 no puede cambiar el estado de una matrícula de la sede 2, ni archivar a un alumno de la sede 2 (0 filas) | |
@@ -271,7 +271,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B13 | **Id no numérico en la URL** deja la ficha en "Cargando…" para siempre | 🟡 Baja | por crear |
 | B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | por crear (junto con `ASG-i-054`) |
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
-| B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | por crear |
+| B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | por crear (mismo patrón que `fix-029-i`) |
 | B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043` |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | por crear |
@@ -322,7 +322,8 @@ muestra el error real de cada uno.
 
 - `npm run test:e2e` — 57 tests: los 13 que ya existían + 44 de este track (20 en
   `alumnos-b-lista`, 24 en `alumnos-b-ficha`). De los 44, 24 pasaban y 20 fallaban a propósito
-  por bug conocido (10 en cada archivo). Tras `fix-265-m` quedan 18 marcados (8 en la ficha).
+  por bug conocido (10 en cada archivo). Tras `fix-265-m` y `fix-266-m`
+  quedan 17 marcados (7 en la ficha), y la ficha suma un test del trigger de `completed_at`.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

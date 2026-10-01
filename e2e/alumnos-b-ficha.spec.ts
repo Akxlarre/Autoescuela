@@ -8,7 +8,7 @@ import type { Locator, Page } from '@playwright/test';
 import { ACCOUNTS } from './support/accounts';
 import { createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
-import { getClientFor } from './support/supabase-admin';
+import { getAdminClient, getClientFor } from './support/supabase-admin';
 
 const SEDE_A = 1; // Autoescuela Chillán
 const SEDE_B = 2; // Conductores Chillán
@@ -330,7 +330,6 @@ test.describe('ficha: marcar como ex-alumno y archivar', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B16 (fix-264-m)');
     // Matrícula antigua (último cambio hace 2 años) con certificado ya enviado.
     const haceDosAnos = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000).toISOString();
     const alumno = await createE2eAlumno(
@@ -449,6 +448,51 @@ test.describe('ficha: editar perfil', () => {
 
     await expect(page.getByText(/ya existe|ya está (en uso|registrado)/i).first()).toBeVisible();
     await expect(page.locator('[data-llm-info="email"]')).toContainText(alumno.email);
+  });
+});
+
+test.describe('fecha de egreso en la BD (fix-266-m, por API)', () => {
+  test('completed_at se fija al completar la matrícula, no la mueve un cambio de saldo y se borra al reactivarla', async ({
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'FechaEgreso', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const admin = await getAdminClient();
+    const leer = async () => {
+      const { data, error } = await admin
+        .from('enrollments')
+        .select('status, completed_at')
+        .eq('id', alumno.enrollmentIds[0])
+        .single();
+      if (error) throw new Error(error.message);
+      return data as { status: string; completed_at: string | null };
+    };
+
+    // Activa: sin fecha de egreso.
+    expect((await leer()).completed_at).toBeNull();
+
+    // Pasa a completed: el trigger pone la fecha de ahora.
+    const antes = Date.now();
+    await admin
+      .from('enrollments')
+      .update({ status: 'completed' })
+      .eq('id', alumno.enrollmentIds[0]);
+    const egreso = (await leer()).completed_at;
+    expect(egreso).not.toBeNull();
+    expect(Math.abs(new Date(egreso!).getTime() - antes)).toBeLessThan(5 * 60 * 1000);
+
+    // Un cambio que no toca el estado (lo que hace un pago: saldo y updated_at) no la mueve.
+    await admin
+      .from('enrollments')
+      .update({ pending_balance: 1000, updated_at: new Date().toISOString() })
+      .eq('id', alumno.enrollmentIds[0]);
+    expect((await leer()).completed_at).toBe(egreso);
+
+    // Vuelve a activa: deja de tener fecha de egreso.
+    await admin.from('enrollments').update({ status: 'active' }).eq('id', alumno.enrollmentIds[0]);
+    expect((await leer()).completed_at).toBeNull();
   });
 });
 
