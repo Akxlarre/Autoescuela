@@ -92,13 +92,24 @@ Fases 1–4 de la plantilla (datos, facade, UI, conexión) no aplican: no se toc
     - [x] Verificado con fetch desde el navegador integrado (el bash-guard bloquea comandos de red): `/app/admin/dashboard` 200 + `app-root` (AC5) · `index.html` y `version.json` `no-cache`; `main-*.js` y `styles-*.css` `public, max-age=31536000, immutable` (AC6) · `http://…/login` → `https://…/login` (AC7) · `version.json` = {v0.1.0, 75ea92e2} (AC8) · chunk inexistente 404, `.deploy-manifest.json` 403, `.htaccess` 403
     - [x] `/login` renderiza (screenshot); 38 recursos cargados, 0 con status ≥ 400
 
-- [ ] **TB.5** — `v0.1.1` + rollback + edge cases
-  - **AC ref:** AC9, AC-E1, AC-E3, AC-E5
+- [x] **TB.5** — Segundo deploy + edge cases (2026-10-01)
+  - **AC ref:** AC1, AC-E1, AC-E3, AC-E5
   - **DoD:**
-    - [ ] Dos tags seguidos → el pendiente viejo queda "cancelled" (AC-E1)
-    - [ ] Dispatch `tag: v0.1.0` → `version.json` vuelve a `v0.1.0` (AC9)
-    - [ ] Manifiesto en server con `current`/`previous` coherente; sin borrados fuera de la lista (AC-E3)
-    - [ ] Tag sobre commit fuera de `main` → `build` falla con mensaje explícito (AC-E5); tag borrado después
+    - [x] AC1 en la práctica: `v0.1.1`/`v0.1.2` frenados en `build` por un test que dependía de la fecha (`executive-dashboard.facade.spec.ts`, AC23 con preset `last_month`). Sin aprobación pedida. Test arreglado en `main` (1697d8b6); tags borrados.
+    - [x] AC-E1 con `v0.1.3`/`v0.1.4` pusheados juntos: `v0.1.4` (run 36899268413) tomó el turno y quedó `waiting`; `v0.1.3` (run 36899270698) quedó `pending` en cola sin pedir aprobación. Nunca en paralelo. GitHub **no** canceló el que esperaba → AC-E1 reescrito (spec D7). `v0.1.4` aprobado y publicado; `v0.1.3` rechazado por Akxlarre.
+    - [x] AC-E3 (2º deploy): manifiesto remoto leído (sin 550), "542 archivo(s), 0 a borrar" (gracia); `main-LL72IEMR.js` de `v0.1.0` sigue respondiendo 200 con `v0.1.4` publicado (`main-VRPMDIRC.js`).
+    - [x] AC-E5: tag `v0.0.0-ace5` sobre commit fuera de `main` (d4676f18, creado con commit-tree sin rama) → `build` falla con "…que no está en main…", `deploy` skipped. Tag borrado. (Un 1er intento sobre un commit anterior al workflow no generó run: GitHub usa el workflow del commit del tag.)
+    - [x] AC9 (diseño original) **falló**: dispatch `v0.1.0` (run 36900019092) recompiló el tag y el gate lo frenó por el mismo test de fecha → rediseño D6.
+
+- [ ] **TB.6** — Rollback sin recompilar (D6) + Release por versión
+  - **AC ref:** AC9, AC11, AC-E3, AC-E6
+  - **DoD:**
+    - [x] Workflow: `build` con modo publicación/rollback, job `release` (YAML lint OK, 0 menciones del dominio)
+    - [ ] Commit + push a `main`
+    - [ ] AC-E6: dispatch `v0.1.0` (sin Release) → falla en `build` con "No hay build publicado…", sin pedir aprobación
+    - [ ] Tag `v0.1.5` → aprobación → publicado → Release `v0.1.5` con `site.zip` (incluye `.htaccess`) (AC11)
+    - [ ] AC-E3 (3er build distinto): el plan borra lo de `v0.1.0` que ni `v0.1.4` ni `v0.1.5` usan; `main-LL72IEMR.js` pasa a 404
+    - [ ] Tag `v0.1.6` → publicado → dispatch `v0.1.5` → sin npm ci/tests/build → `version.json` = v0.1.5 con su SHA y `builtAt` originales (AC9)
 
 ## Fase C — Cierre
 

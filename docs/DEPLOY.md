@@ -21,15 +21,29 @@ solo para previews de PRs**: no es producción. Por ahora no hay ambiente QA.
    (`lint:arch`) y el build. Si algo falla, no se despliega.
 4. El job `deploy` queda en **Waiting for review**. Lo aprueba cualquiera de: `Akxlarre`,
    `SorkoTheProgram` o `m-fuentesr` (botón *Review deployments*).
-5. Al terminar, `https://<dominio>/version.json` muestra el tag y el commit publicados.
+5. Al terminar, `https://<dominio>/version.json` muestra el tag y el commit publicados, y en
+   **GitHub → Releases** aparece el Release del tag con el build exacto (`site.zip`). Ese Release
+   es lo que usa el rollback: la lista de Releases es la lista de versiones a las que se puede volver.
 
 Un push a `main` **sin** tag no despliega nada. Un tag creado sobre un commit que no está en `main`
 falla en `build`.
+
+**Un deploy a la vez.** Si hay un deploy esperando aprobación y llega otro tag, el nuevo queda en
+cola (*pending*) detrás, sin pedir aprobación todavía. GitHub **no** cancela el que espera: si ya no
+corresponde (p. ej. pusheaste dos tags casi juntos y tomó el turno el más viejo), **recházalo** en
+*Review deployments → Reject* y pasa el siguiente. Una subida en curso nunca se corta.
 
 ## Rollback
 
 **Actions → Deploy app (producción) → Run workflow** → en `tag` pon la versión anterior (ej.
 `v1.1.0`). Pasa por la misma aprobación. `version.json` confirma la vuelta atrás.
+
+El rollback **no recompila**: baja el `site.zip` del Release de ese tag y lo sube tal cual. Es
+rápido (sin `npm ci`, tests ni build) y sube exactamente lo que se aprobó en su momento —
+recompilar un tag viejo puede fallar (tests que dependen de la fecha) o dar otro build (deps
+nuevas). Si el tag no tiene Release, el workflow falla antes de pedir aprobación: solo se puede
+volver a versiones publicadas por este pipeline (`v0.1.5` en adelante; `v0.1.0`–`v0.1.4` son
+anteriores al Release automático).
 
 ## Cómo sube los archivos (y por qué en ese orden)
 
