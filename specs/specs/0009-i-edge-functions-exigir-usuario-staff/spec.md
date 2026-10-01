@@ -1,6 +1,6 @@
 # Spec 0009-i — Edge functions: exigir usuario real con rol de staff
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-10-01
 > **Owner:** Ignacio (i)
 > **Priority:** P0
@@ -26,6 +26,11 @@ saltan la RLS) y no verifican quién las llama más allá de que "haya un token"
   de caja, historial de caja, pagos y financiero solo verifican que exista un usuario autenticado:
   cualquier cuenta (incluido un alumno o un instructor) obtiene la lista completa de alumnos, el
   reporte de nómina o el log de auditoría. Con `branch_id` ajeno o `null` entregan también las otras sedes.
+- **Confirmado en vivo el 2026-10-01** con sesiones de `alumno@test.com` e `instructor@test.com`: ambas
+  obtienen `export-students` (205 alumnos de todas las sedes), `generate-audit-report` (267 filas),
+  `generate-payroll-report`, `generate-financial-report` y el ZIP de `export-certificates-zip`.
+  Con solo la llave pública esas funciones sí responden 401: únicamente `generate-enrollment-sheet` y
+  `export-special-services` responden sin ningún usuario.
 - Sin autenticación también responde `export-special-services` (ASG-i-041), y quedan por revisar
   `generate-student-license-pdf` y `generate-certificate-b-pdf` (escriben en BD/Storage; sin confirmar).
 
@@ -40,9 +45,13 @@ secretaria autenticado.
 
 ## 2. User Stories
 
-- **US1**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US2**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US3**: …
+- **US1**: Como admin o secretaria, quiero seguir exportando fichas, listas y reportes como hoy,
+  para no perder mi trabajo diario.
+- **US2**: Como responsable de la escuela, quiero que ninguna persona sin usuario, ni una cuenta de
+  alumno o instructor, pueda descargar datos de alumnos ni información contable, para proteger los
+  datos personales.
+- **US3**: Como admin, quiero que el log de auditoría solo lo pueda descargar un admin, para que
+  quede reservado igual que su pantalla.
 
 ---
 
@@ -51,14 +60,30 @@ secretaria autenticado.
 > Cada AC debe ser verificable empíricamente. Si no puedes escribir un test o un check
 > manual reproducible, el AC está mal formulado.
 
-- **AC1**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC2**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC3**: …
+Aplican a las **11 funciones**: `export-students`, `generate-enrollment-sheet`,
+`export-certificates-zip`, `generate-audit-report`, `generate-payroll-report`,
+`generate-cash-closing-report`, `generate-cash-history-report`, `generate-payment-report`,
+`generate-financial-report`, `generate-student-license-pdf`, `generate-certificate-b-pdf`.
+
+- **AC1**: Given un admin o una secretaria con sesión, When usa cualquiera de las 11 funciones desde su
+  pantalla, Then obtiene el documento igual que hoy.
+- **AC2**: Given una petición sin sesión (sin header `Authorization`, o con la anon key como token),
+  When llama a cualquiera de las 11 funciones, Then recibe **401** y no se entrega ningún dato.
+- **AC3**: Given una sesión de alumno o de instructor, When llama a cualquiera de las 11 funciones,
+  Then recibe **403** y no se entrega ningún dato.
+- **AC4**: Given una sesión de secretaria, When llama a `generate-audit-report`, Then recibe **403**;
+  con sesión de admin sigue funcionando.
+- **AC5**: Given `generate-enrollment-sheet` (hoy responde 200 con la ficha usando solo la anon key),
+  When se llama con la anon key sola, Then **401**. (`export-special-services`, el otro caso sin
+  usuario, es de `ASG-i-041` y queda fuera de esta spec.)
 
 ### Edge cases obligatorios
 
-- **AC-E1**: Given {{caso límite}}, When …, Then …
-- **AC-E2**: …
+- **AC-E1**: Given un usuario con sesión válida pero sin fila en `users` o con un rol desconocido,
+  When llama a una función, Then **403** (no un 500).
+- **AC-E2**: Given un token vencido o inválido, When llama a una función, Then **401**.
+- **AC-E3**: Given que el rol se resuelve desde la BD a partir del token, When el body trae un campo de
+  rol o de usuario, Then se ignora: el rol nunca viene del navegador.
 
 ---
 
@@ -128,11 +153,16 @@ secretaria autenticado.
 - Alcance **sin bloqueo por sede en el servidor**: solo usuario real con rol admin o secretaria.
 - `generate-audit-report`: **solo admin**, igual que su pantalla (`/app/admin/auditoria`).
 
-**Pendientes:**
-- [ ] Reglas de `export-certificates-zip` (no aparece llamada desde `src/`: confirmar cómo se invoca).
-- [ ] ¿`generate-student-license-pdf` y `generate-certificate-b-pdf` entran en la primera tanda? Escriben en
-      BD/Storage y su fallo sigue sin confirmar en vivo.
-- [ ] Redactar US y AC (esta plantilla los deja vacíos a propósito).
+- `export-certificates-zip`: la llaman con `fetch` directo las dos pantallas de certificación
+  (`certificacion-clase-b.facade.ts:358`, `certificacion-profesional.facade.ts:346`). Misma regla que el
+  resto: admin y secretaria.
+- `generate-student-license-pdf` y `generate-certificate-b-pdf` entran en la spec; sus llamadores son
+  solo pantallas de staff (`admin-alumno-detalle.facade.ts:932`, `certificacion-clase-b.facade.ts`,
+  `document-content-templates.facade.ts` para la vista previa de plantillas).
+- **Orden:** tanda 1 = helper + `generate-enrollment-sheet`, `export-students`, `generate-payroll-report`;
+  tanda 2 = las 8 restantes.
+- Las funciones corren en Supabase: el cambio surte efecto al desplegarlas (`supabase functions deploy`).
+- US y AC aprobados por Ignacio el 2026-10-01.
 
 - Originado de Asignación ASG-i-042 (specs/assignments/ASG-i-042-edge-functions-sin-validar-rol-sede.md)
 

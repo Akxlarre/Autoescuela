@@ -26,6 +26,12 @@
 >
 > Nota de diseño: la anon key pasa `verify_jwt`; el helper debe usar `auth.getUser()` y rechazar
 > si no hay usuario real.
+>
+> **Confirmación adicional (2026-10-01), solo lectura:** con sesiones de `alumno@test.com` e
+> `instructor@test.com`, `export-students`, `generate-audit-report`, `generate-payroll-report`,
+> `generate-financial-report` y `export-certificates-zip` responden **200 con todos los datos**. Con
+> solo la anon key como Bearer esas funciones responden 401 (solo `generate-enrollment-sheet` y
+> `export-special-services` responden sin usuario).
 
 ## Contexto / Objetivo
 
