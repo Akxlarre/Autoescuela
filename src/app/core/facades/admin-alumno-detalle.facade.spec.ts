@@ -426,7 +426,8 @@ describe('AdminAlumnoDetalleFacade', () => {
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
           single: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
-          maybeSingle: () => Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
+          maybeSingle: () =>
+            Promise.resolve(singleResults.get(table) ?? { data: null, error: null }),
           then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
         };
         builders.set(table, b);
@@ -1027,6 +1028,178 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(facade.progresoPractico().requeridas).toBe(12);
       expect(facade.clasesPracticas()).toHaveLength(12);
       expect(facade.alumno()?.isReinforcement).toBe(false);
+    });
+
+    it('fix-262-m: progresoPractico.completadas cuenta clases cerradas (status=completed), no asistencias', async () => {
+      const mock = makeFlexibleSupabaseMock();
+
+      mock.setSingleResult('students', {
+        id: 42,
+        status: 'active',
+        created_at: '2026-01-01',
+        users: {
+          id: 7,
+          rut: '33.333.333-3',
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: 'Soto',
+          email: 'eva@example.com',
+          phone: '123456789',
+        },
+        enrollments: [
+          {
+            id: 202,
+            number: '2026-0004',
+            created_at: '2026-01-02',
+            total_paid: 0,
+            pending_balance: 0,
+            license_group: 'class_b',
+            promotion_course_id: null,
+            registration_channel: 'in_person',
+            courses: { name: 'Clase B' },
+            digital_contracts: null,
+            status: 'active',
+          },
+        ],
+      });
+
+      // 3 clases cerradas sin asistencia (seed / upsert de asistencia fallido) + 1 clase
+      // agendada con asistencia "presente" marcada sin cerrarla (markAttendance).
+      mock.setResult('class_b_sessions', [
+        { id: 701, enrollment_id: 202, class_number: 1, status: 'completed' },
+        { id: 702, enrollment_id: 202, class_number: 2, status: 'completed' },
+        { id: 703, enrollment_id: 202, class_number: 3, status: 'completed' },
+        { id: 704, enrollment_id: 202, class_number: 4, status: 'scheduled' },
+      ]);
+      mock.setResult('class_b_practice_attendance', [
+        {
+          id: 1,
+          status: 'present',
+          archived_at: null,
+          recorded_at: '2026-06-01',
+          class_b_sessions: { id: 704, enrollment_id: 202, class_number: 4, status: 'scheduled' },
+        },
+      ]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.initialize(42);
+
+      expect(facade.progresoPractico().completadas).toBe(3);
+    });
+
+    describe('estado desde la matrícula — fix-263-m', () => {
+      function makeEnrollmentRow(id: number, status: string, createdAt: string): any {
+        return {
+          id,
+          number: `000${id}`,
+          created_at: createdAt,
+          total_paid: 0,
+          pending_balance: 0,
+          branch_id: 1,
+          license_group: 'class_b',
+          promotion_course_id: null,
+          registration_channel: 'in_person',
+          courses: { name: 'Clase B' },
+          digital_contracts: null,
+          status,
+        };
+      }
+
+      /** students.status siempre 'active' (ningún flujo lo escribe): el estado sale de la matrícula. */
+      async function initWithEnrollments(enrollments: any[]): Promise<any> {
+        const mock = makeFlexibleSupabaseMock();
+        mock.setSingleResult('students', {
+          id: 42,
+          status: 'active',
+          created_at: '2026-01-01',
+          users: {
+            id: 7,
+            rut: '44.444.444-4',
+            first_names: 'Ana',
+            paternal_last_name: 'Pérez',
+            maternal_last_name: 'Gómez',
+            email: 'ana@example.com',
+            phone: '123456789',
+          },
+          enrollments,
+        });
+        mock.setResult('class_b_practice_attendance', []);
+        mock.setResult('class_b_sessions', []);
+
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [
+            AdminAlumnoDetalleFacade,
+            { provide: SupabaseService, useValue: mock },
+            { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+            { provide: DmsViewerService, useValue: dmsViewerSpy },
+            { provide: NotificationsFacade, useValue: notificationsSpy },
+            {
+              provide: AuthFacade,
+              useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) },
+            },
+          ],
+        });
+        facade = TestBed.inject(AdminAlumnoDetalleFacade);
+        await facade.initialize(42);
+        return mock;
+      }
+
+      it('matrícula completed → estado "Egresado" y egresado=true, aunque students.status sea active', async () => {
+        await initWithEnrollments([makeEnrollmentRow(301, 'completed', '2026-02-01')]);
+
+        expect(facade.alumno()?.estado).toBe('Egresado');
+        expect(facade.alumno()?.egresado).toBe(true);
+      });
+
+      it('matrícula active → estado "Activo" y egresado=false', async () => {
+        await initWithEnrollments([makeEnrollmentRow(302, 'active', '2026-02-01')]);
+
+        expect(facade.alumno()?.estado).toBe('Activo');
+        expect(facade.alumno()?.egresado).toBe(false);
+      });
+
+      it('selectEnrollment recalcula el estado según la matrícula elegida', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+        expect(facade.alumno()?.estado).toBe('Activo');
+
+        await facade.selectEnrollment(304);
+
+        expect(facade.alumno()?.estado).toBe('Egresado');
+        expect(facade.alumno()?.egresado).toBe(true);
+      });
+
+      it('la consulta de la ficha pide enrollments.status (sin eso, el estado no se puede derivar)', async () => {
+        const mock = await initWithEnrollments([makeEnrollmentRow(307, 'active', '2026-01-01')]);
+
+        const selectArg: string = mock.client.from('students').select.mock.calls[0][0];
+        const enrollmentsBlock = /enrollments\(([\s\S]*?)courses!inner/.exec(selectArg)?.[1] ?? '';
+        expect(enrollmentsBlock).toMatch(/\bstatus\b/);
+      });
+
+      it('excluye las matrículas draft del selector', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(305, 'draft', '2026-03-01'),
+          makeEnrollmentRow(306, 'active', '2026-01-01'),
+        ]);
+
+        expect(facade.alumno()?.enrollments.map((e) => e.id)).toEqual([306]);
+      });
     });
   });
 

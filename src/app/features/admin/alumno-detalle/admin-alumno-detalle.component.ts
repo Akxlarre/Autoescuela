@@ -1479,9 +1479,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     // fix-012-i: CTA destacada junto al nombre — solo cuando el certificado de Clase B
     // ya se envió y la matrícula sigue activa (deja de mostrarse una vez marcado).
     const exAlumnoActions: SectionHeroAction[] =
-      alumno.licenseGroup === 'class_b' &&
-      alumno.estado !== 'Finalizado' &&
-      alumno.certificateEmailSent
+      alumno.licenseGroup === 'class_b' && !alumno.egresado && alumno.certificateEmailSent
         ? [
             {
               id: 'marcar-ex-alumno',
@@ -1525,8 +1523,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     return [
       {
         label: alumno.estado,
-        style: alumno.estado?.toLowerCase() === 'activo' ? 'success' : 'warning',
-        icon: 'circle-check',
+        // fix-263-m: activo y egresado son estados sanos; el resto (pago pendiente, anulada…) avisa.
+        style: alumno.egresado || alumno.estado === 'Activo' ? 'success' : 'warning',
+        icon: alumno.egresado ? 'graduation-cap' : 'circle-check',
       },
     ];
   });

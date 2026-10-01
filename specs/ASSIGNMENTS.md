@@ -96,7 +96,6 @@
 | ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
 | ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `b` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
-| ASG-i-038 | Decisión: ¿quién pone la nota de evaluación B durante el piloto? | `m` | spec | P0 | i | Sin nota nadie se certifica ni egresa. Choca con la regla de `fix-115-m`. Bloquea casos de 024 y 033 |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
@@ -418,6 +417,7 @@
 | ASG-m-008 | Rediseño del Dashboard de admin como KPIs/reportes de empresa | [0044-b-dashboard-ejecutivo-admin](specs/0044-b-dashboard-ejecutivo-admin/spec.md) | 2026-09-27 |
 | ASG-i-021 | Montar la suite Playwright E2E automatizada (base de la tanda de testing) | [0019-m-suite-playwright-e2e](specs/0019-m-suite-playwright-e2e/spec.md) | 2026-09-30 |
 | ASG-i-039 | Sacar las credenciales de prueba de la pantalla de login | [hotfix-007-i-credenciales-prueba-login-solo-dev](hotfixes/hotfix-007-i-credenciales-prueba-login-solo-dev/hotfix.md) | 2026-09-30 |
+| ASG-i-038 | Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto? | [fix-262-m-certificacion-b-sin-requisito-nota](fixes/fix-262-m-certificacion-b-sin-requisito-nota/fix.md) | 2026-10-01 |
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 

@@ -132,15 +132,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // 1.5 Gate H-025: exigir las prácticas completas del curso antes de emitir el certificado.
-    //     Mismo criterio que certificacion-clase-b.facade.ts (evaluation_grade IS NOT NULL) —
-    //     NO usar status='completed' (eso es solo para las fechas del texto del certificado).
-    //     Un admin puede saltarse el gate explícitamente con `force: true` (mismo bypass que
+    //     Mismo criterio que certificacion-clase-b.facade.ts: clases con status='completed'.
+    //     fix-262-m: NUNCA usar evaluation_grade — la nota no condiciona el certificado
+    //     (decisión del dueño; desde fix-115-m una clase se cierra sin nota). Un admin puede saltarse el gate explícitamente con `force: true` (mismo bypass que
     //     ya existe en la UI de admin); una secretaría nunca puede, aunque mande force=true.
     const { count: clasesCompletadas, error: countErr } = await supabase
       .from('class_b_sessions')
       .select('id', { count: 'exact', head: true })
       .eq('enrollment_id', enrollment_id)
-      .not('evaluation_grade', 'is', null);
+      .eq('status', 'completed');
 
     if (countErr) {
       return jsonRes({ error: `Error al validar prácticas: ${countErr.message}` }, 500);

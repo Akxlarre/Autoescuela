@@ -12,6 +12,8 @@ export interface EnrollmentSummary {
   licenseGroup: 'class_b' | 'professional';
   promotionCourseId: number | null;
   createdAt: string;
+  /** `enrollments.status` crudo (active, completed, pending_payment, cancelled…). fix-263-m. */
+  status: string;
   certPdfUrl: string | null;
   /** Carnet Clase B de 6 clases (fondo amarillo). null si aún no se generó. */
   licenseInitialUrl: string | null;
@@ -52,7 +54,10 @@ export interface AlumnoDetalleUI {
   email: string;
   telefono: string;
   fechaIngreso: string;
+  /** Estado legible de la matrícula seleccionada ("Activo", "Egresado", …), no de `students.status`. fix-263-m. */
   estado: string;
+  /** true si la matrícula seleccionada está en `status = 'completed'` (ex-alumno). fix-263-m. */
+  egresado: boolean;
   /** 'class_b' | 'professional' — determina qué secciones de progreso mostrar */
   licenseGroup: 'class_b' | 'professional';
   /** Suma de pagos confirmados (enrollments.total_paid) */

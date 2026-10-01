@@ -414,6 +414,8 @@ describe('AdminAlumnosFacade', () => {
     });
 
     describe('cursoCompletoPendienteEgreso — fix-012-i', () => {
+      let sessionsBuilder: any;
+
       /** Mock por tabla: students devuelve `data`, el resto según lo indicado. */
       function mockStudentsAndCertData(
         students: any[],
@@ -424,10 +426,11 @@ describe('AdminAlumnosFacade', () => {
           neq: vi.fn(() => studentsBuilder),
           order: vi.fn(() => Promise.resolve({ data: students, error: null })),
         };
-        const sessionsBuilder: any = {
+        sessionsBuilder = {
           select: vi.fn(() => sessionsBuilder),
           in: vi.fn(() => sessionsBuilder),
-          not: vi.fn(() => Promise.resolve({ data: opts.sessions ?? [], error: null })),
+          not: vi.fn(() => sessionsBuilder),
+          eq: vi.fn(() => Promise.resolve({ data: opts.sessions ?? [], error: null })),
         };
         const certsBuilder: any = {
           select: vi.fn(() => certsBuilder),
@@ -448,7 +451,22 @@ describe('AdminAlumnosFacade', () => {
         });
       }
 
-      it('marca true cuando hay 12 evaluation_grade + certificado + email enviado', async () => {
+      it('fix-262-m: cuenta clases cerradas (status=completed), nunca la nota de evaluación', async () => {
+        mockStudentsAndCertData([
+          makeStudent({
+            id: 73,
+            users: makeUser({ rut: '73-3' }),
+            enrollments: [makeEnrollment({ id: 504, status: 'active' })],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(sessionsBuilder.eq).toHaveBeenCalledWith('status', 'completed');
+        expect(sessionsBuilder.not).not.toHaveBeenCalled();
+      });
+
+      it('marca true cuando hay 12 clases cerradas + certificado + email enviado', async () => {
         mockStudentsAndCertData(
           [
             makeStudent({
