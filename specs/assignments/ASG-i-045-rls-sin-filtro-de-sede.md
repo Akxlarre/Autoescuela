@@ -1,14 +1,14 @@
 # Asignación ASG-i-045 — RLS que filtra por rol pero no por sede
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** spec
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-01
+> **resulting_track:** 0047-b-rls-aislamiento-por-sede
 
 ---
 

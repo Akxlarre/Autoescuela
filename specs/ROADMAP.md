@@ -9,6 +9,7 @@
 
 | ID | Título | Owner | Activada |
 |----|--------|-------|----------|
+| [0047-b](./specs/0047-b-rls-aislamiento-por-sede/spec.md) | RLS: aislamiento por sede para la secretaria (tablas del piloto) | Benjamín (b) | 2026-10-01 · P0 · origen `ASG-i-045` |
 
 ---
 
