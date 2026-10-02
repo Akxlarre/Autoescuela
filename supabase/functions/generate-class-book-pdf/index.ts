@@ -20,6 +20,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 import {
   escapePdfWinAnsi as esc,
   loadPngForPdf,
@@ -43,6 +44,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // fix-043-i: solo staff. La anon key pasa verify_jwt, así que se exige usuario real + rol.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     const { promotion_course_id, convalidation = null } = await req.json();
 
     if (!promotion_course_id || typeof promotion_course_id !== 'number') {

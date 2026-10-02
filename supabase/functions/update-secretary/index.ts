@@ -116,6 +116,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Con el ban de fix-180-b, desactivarse a uno mismo dejaría al admin sin acceso.
+    if (!active && Number(userId) === callerRow.id) {
+      return errorResponse('No puedes desactivar tu propia cuenta', 400);
+    }
+
     // ── Si el email cambió → actualizar en Supabase Auth ─────────────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
@@ -172,6 +177,27 @@ Deno.serve(async (req: Request) => {
 
     if (updateError) {
       return errorResponse(`Error al actualizar la secretaria: ${updateError.message}`, 500);
+    }
+
+    const { data: authLink } = await supabaseAdmin
+      .from('users')
+      .select('supabase_uid')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // ── Desactivar = banear en Auth (fix-180-b) ──────────────────────────────
+    // users.active por sí solo no impedía el login ni la renovación del token. Con ban, la
+    // cuenta desactivada no puede entrar; reactivar lo quita. Idempotente ('none' = sin ban).
+    if (authLink?.supabase_uid) {
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(authLink?.supabase_uid, {
+        ban_duration: active ? 'none' : '876000h',
+      });
+      if (banError) {
+        return errorResponse(
+          `La secretaria se guardó, pero no se pudo ${active ? 'reactivar' : 'bloquear'} su acceso: ${banError.message}`,
+          500,
+        );
+      }
     }
 
     return jsonResponse({ success: true });

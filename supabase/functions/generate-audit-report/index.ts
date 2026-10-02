@@ -18,6 +18,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -138,6 +139,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    // Solo admin (spec 0009-i), igual que su pantalla /app/admin/auditoria.
+    const access = await requireStaff(req, ['admin']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return jsonError('No autorizado', 401);
 

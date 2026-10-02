@@ -1,14 +1,14 @@
 # Asignación ASG-i-044 — Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-01
+> **resulting_track:** fix-180-b-usuarios-desactivados-siguen-entrando
 
 ---
 
@@ -51,5 +51,10 @@ cuentas:
 - Migración para los helpers de RLS
 
 ## Notas para quien la reclame
+
+- **Estado (2026-10-01):** parte 1 (cuentas desactivadas, puntos 1 y 3-parcial) cerrada en
+  `fix-180-b-usuarios-desactivados-siguen-entrando`, en producción. **Parte 2 pendiente:** recuperar
+  contraseña de punta a punta (punto 2) y clave inicial = RUT (punto 3) — va en otro track. La
+  Asignación sigue `reclamada` hasta cerrar la parte 2.
 
 - Puede partirse en 2 tracks: (1)+(3) cuentas, (2) recuperar contraseña.

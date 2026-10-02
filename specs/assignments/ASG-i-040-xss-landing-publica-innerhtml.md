@@ -1,6 +1,6 @@
 # Asignación ASG-i-040 — XSS almacenado en la landing pública (innerHTML con texto editable)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P0

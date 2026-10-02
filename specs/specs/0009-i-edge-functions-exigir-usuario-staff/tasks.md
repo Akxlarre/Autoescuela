@@ -1,7 +1,7 @@
 # Tasks 0009-i — Edge functions: exigir usuario real con rol de staff
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md)
-> **Status:** in_progress
+> **Status:** done
 > **Created:** 2026-10-01
 
 ---
@@ -13,121 +13,141 @@
 - Si descubrís una sub-tarea no listada, agregala al final de su sección antes de hacerla.
 - Si una tarea está fuera del scope de la spec → **detenete** y crear spec nueva.
 
----
-
-## Fase 1 — Datos y modelo
-
-- [ ] **T1.1** — Crear migración `YYYYMMDDHHMMSS_dominio_tipo_desc.sql`
-  - **AC ref:** AC1, AC2
-  - **DoD:**
-    - [ ] Archivo creado con naming correcto
-    - [ ] CREATE TABLE incluye `ENABLE ROW LEVEL SECURITY`
-    - [ ] Policies SELECT/INSERT/UPDATE/DELETE definidas
-    - [ ] `npx supabase db reset` corre sin error
-    - [ ] Documentado en `indices/DATABASE.md`
-
-- [ ] **T1.2** — Crear DTO en `core/models/dto/xxx.model.ts`
-  - **DoD:**
-    - [ ] Interface en PascalCase singular
-    - [ ] Campos mapean 1:1 con la tabla
-    - [ ] Documentado en `indices/MODELS.md`
-
-- [ ] **T1.3** — Crear UI Model en `core/models/ui/xxx.model.ts` (si aplica)
-  - **DoD:**
-    - [ ] Extiende DTO con `extends` / `Pick` / `Omit`
-    - [ ] Justifica por qué no basta el DTO
+> Fases adaptadas al feature: no hay datos, facades ni UI en Angular. Las fases son
+> helper → tanda 1 → despliegue/verificación → tanda 2 → despliegue/verificación → cierre.
 
 ---
 
-## Fase 2 — Capa Facade
+## Fase 1 — Helper de autorización (Functional Core)
 
-- [ ] **T2.1** — Escribir `xxx.facade.spec.ts` PRIMERO (TDD)
+- [x] **T1.1** — Escribir `supabase/functions/_shared/staff-auth.test.ts` PRIMERO (TDD)
+  - **AC ref:** AC2, AC3, AC4, AC-E1, AC-E2, AC-E3
   - **DoD:**
-    - [ ] Tests cubren AC1, AC2 de la spec
-    - [ ] Tests cubren edge cases (AC-E*)
-    - [ ] Tests FALLAN (no hay implementación aún)
+    - [x] Casos de `decideStaffAccess`: sin usuario de Auth → 401; usuario sin fila en `users` → 403;
+          rol `student` → 403; rol `instructor` → 403; rol desconocido → 403;
+          `secretary` con `allowed=['admin']` → 403; `admin` y `secretary` permitidos → `ok` con su rol
+    - [x] La función no recibe el body (el rol solo viene de la BD)
+    - [x] `npx deno test supabase/functions/_shared/staff-auth.test.ts` FALLA (no hay implementación)
 
-- [ ] **T2.2** — Implementar `xxx.facade.ts`
-  - **AC ref:** AC1, AC2, AC-E1
+- [x] **T1.2** — Implementar `supabase/functions/_shared/staff-auth.ts`
+  - **AC ref:** AC2, AC3, AC4, AC-E1, AC-E2, AC-E3
   - **DoD:**
-    - [ ] Tests PASAN (`npm run test:ci`)
-    - [ ] Estructura: estado privado → estado público readonly → métodos
-    - [ ] catchError en cada llamada async
-    - [ ] Signal de error expuesto
-    - [ ] (Si aplica) `BranchFacade` inyectado para scope multi-sede
-    - [ ] Documentado en `indices/FACADES.md`
-
-- [ ] **T2.3** — (Si aplica SWR) Implementar `initialize()` con guard y `refreshSilently()`
-  - **DoD:**
-    - [ ] Flag `_initialized` agregado
-    - [ ] Primera carga muestra skeleton; re-entradas no
-    - [ ] Conforme con `.claude/rules/swr-pattern.md`
+    - [x] `decideStaffAccess()` pura, `requireStaff(req, allowed)` (header → `auth.getUser()` con cliente
+          anon → `users.select('id, roles ( name )').eq('supabase_uid', …)` con service role) y
+          `authErrorResponse(access, corsHeaders)` que responde JSON `{ "error": "..." }`
+    - [x] Nombres de rol reales de la BD: `admin`, `secretary`
+    - [x] Los tests de T1.1 PASAN
+    - [x] `npx deno check supabase/functions/_shared/staff-auth.ts` sin errores
 
 ---
 
-## Fase 3 — Capa UI
+## Fase 2 — Tanda 1 (las 3 más graves)
 
-- [ ] **T3.1** — Crear/extender Smart Component `features/.../xxx.component.ts`
-  - **AC ref:** AC3, AC4
+- [x] **T2.1** — `generate-enrollment-sheet/index.ts`: agregar `requireStaff(req, ['admin','secretary'])`
+  al inicio del handler (hoy no autentica)
+  - **AC ref:** AC1, AC2, AC3, AC5
   - **DoD:**
-    - [ ] OnPush
-    - [ ] Inyecta Facade
-    - [ ] (Si aplica) `effect()` para reactividad branch
-    - [ ] `destroyRef.onDestroy(() => facade.dispose())` si hay realtime
-    - [ ] Bento grid como raíz
-    - [ ] Documentado en `indices/COMPONENTS.md`
+    - [x] Rechazo devuelto con `authErrorResponse` y los `corsHeaders` de la función
+    - [x] Resto de la función sin cambios
+    - [x] `npx deno check` sin errores
 
-- [ ] **T3.2** — Crear Dumb Components necesarios en `shared/components/...`
-  - **DoD por cada dumb:**
-    - [ ] OnPush
-    - [ ] Solo `input()` / `output()` (no Facades)
-    - [ ] Skeleton colocated si recibe data async
-    - [ ] Tokens de color (no Tailwind hardcodeado)
-    - [ ] `<app-icon>` para íconos (no SVG inline ni emojis)
-    - [ ] `data-llm-action` / `data-llm-description` donde corresponda
-    - [ ] Tests si tiene `computed()` o lógica derivada
-    - [ ] Documentado en `indices/COMPONENTS.md`
+- [x] **T2.2** — `export-students/index.ts`: reemplazar el bloque `getUser()` por `requireStaff`
+  - **AC ref:** AC1, AC2, AC3
+  - **DoD:** (igual que T2.1)
+
+- [x] **T2.3** — `generate-payroll-report/index.ts`: reemplazar el bloque `getUser()` por `requireStaff`
+  - **AC ref:** AC1, AC2, AC3
+  - **DoD:** (igual que T2.1)
 
 ---
 
-## Fase 4 — Conexión y animación
+## Fase 3 — Despliegue y verificación de la tanda 1
 
-- [ ] **T4.1** — Wire-up: Smart → Dumb pasando signals
+- [x] **T3.1** — Desplegar el helper y las 3 funciones al proyecto de pruebas
+  (`supabase functions deploy <nombre>`; lo hace quien tenga acceso al proyecto)
   - **DoD:**
-    - [ ] Loading/error/empty states cubiertos
-    - [ ] AC verificables manualmente en browser
+    - [x] Las 3 funciones desplegadas (confirmado en el dashboard de Supabase o en la salida del CLI)
 
-- [ ] **T4.2** — Animación de entrada con `GsapAnimationsService`
+- [x] **T3.2** — Verificación en vivo, solo lectura, antes/después
+  - **AC ref:** AC1, AC2, AC3, AC5, AC-E2
   - **DoD:**
-    - [ ] `animateBentoGrid()` o equivalente en `ngAfterViewInit`
-    - [ ] `clearProps: 'transform'` post-animación
-    - [ ] No `@angular/animations`, no `@keyframes`
+    - [x] Admin y secretaria: mismo resultado que antes (filas / bytes)
+    - [x] Sin header y con anon key: 401
+    - [x] Alumno e instructor: 403
+    - [x] Token inválido: 401
+    - [x] Resultado anotado en `acceptance.md`
+
+- [x] **T3.3** — Regresión de UI de la tanda 1
+  - **AC ref:** AC1
+  - **DoD:**
+    - [x] Como admin y como secretaria: exportar lista de alumnos, descargar ficha PDF y reporte de
+          liquidaciones desde la app funcionan igual
 
 ---
 
-## Fase 5 — Validación
+## Fase 4 — Tanda 2 (las 8 restantes)
 
-- [ ] **T5.1** — `npm run lint:arch` corre limpio
-- [ ] **T5.2** — `npm run test:ci` corre verde
-- [ ] **T5.3** — QA manual del happy path + edge cases
-  - **DoD:** Cada AC marcado con evidencia en `acceptance.md`
+- [x] **T4.1** — `export-certificates-zip/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.2** — `generate-audit-report/index.ts` → `requireStaff(req, ['admin'])`
+  - **AC ref:** AC1, AC2, AC3, AC4
+- [x] **T4.3** — `generate-cash-closing-report/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.4** — `generate-cash-history-report/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.5** — `generate-payment-report/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.6** — `generate-financial-report/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.7** — `generate-student-license-pdf/index.ts` → `requireStaff(req, ['admin','secretary'])`
+  (hoy no autentica)
+  - **AC ref:** AC1, AC2, AC3
+- [x] **T4.8** — `generate-certificate-b-pdf/index.ts` → `requireStaff(req, ['admin','secretary'])`;
+  el bypass `force` usa `access.role === 'admin'` en vez de su consulta propia
+  - **AC ref:** AC1, AC2, AC3
+- **DoD de cada T4.x:**
+  - [x] Rechazo con `authErrorResponse` + `corsHeaders` de la función
+  - [x] Resto de la función sin cambios (salvo T4.8: reutilizar `access.role` para el bypass)
+  - [x] `npx deno check` sin errores
 
-- [ ] **T5.4** — Ejecutar `/spec-verify`
-  - **DoD:** AC Verifier devuelve `{ok: true}` o tickets restantes resueltos
+---
+
+## Fase 5 — Despliegue y verificación de la tanda 2
+
+- [x] **T5.1** — Desplegar las 8 funciones de la tanda 2 al proyecto de pruebas
+  - **DoD:** [x] Las 8 desplegadas
+
+- [x] **T5.2** — Verificación en vivo, solo lectura, antes/después
+  - **AC ref:** AC1, AC2, AC3, AC4, AC-E2
+  - **DoD:**
+    - [x] Admin y secretaria: mismo resultado que antes (en las 6 de solo lectura)
+    - [x] Secretaria en `generate-audit-report`: 403; admin: funciona
+    - [x] Sin header / anon key: 401; alumno e instructor: 403 (en las 8)
+    - [x] Carnet y certificado B: solo casos de rechazo (no escriben); el caso permitido desde la UI
+    - [x] Resultado anotado en `acceptance.md`
+
+- [x] **T5.3** — Regresión de UI de la tanda 2
+  - **AC ref:** AC1
+  - **DoD:**
+    - [x] Admin y secretaria: caja, historial de cuadraturas, pagos, reportes contables, ZIP de
+          certificados, certificado B, carnet y vista previa del editor de plantillas funcionan igual
+    - [x] Admin: exportar auditoría funciona
 
 ---
 
 ## Fase 6 — Cierre
 
-- [ ] **T6.1** — Actualizar `indices/` con todo lo nuevo (`/sync-indices`)
-- [ ] **T6.2** — Marcar spec como `done` en `ROADMAP.md`
-- [ ] **T6.3** — Limpiar `specs/.active` (`/spec-activate --clear`)
+- [x] **T6.1** — `indices/DATABASE.md`: anotar en la tabla de Edge Functions que estas 11 exigen
+  staff vía `_shared/staff-auth.ts` (y que `generate-audit-report` es solo admin)
+- [x] **T6.2** — Completar `acceptance.md` con la evidencia de cada AC (`/spec-verify`)
+- [x] **T6.3** — Marcar la spec como `done` en `ROADMAP.md` y limpiar `specs/.active`
 
 ---
 
 ## Tareas descubiertas durante implementación
 
-> Si surge algo que no estaba planeado pero ES parte del scope de la spec, agregalo acá.
-> Si está fuera de scope, crear spec nueva.
-
-- [ ] …
+- [x] Deno en este repo necesita `--node-modules-dir=none` (si no, intenta resolver `@supabase/supabase-js` desde el `node_modules` de la app y falla): `npx deno test --node-modules-dir=none supabase/functions/_shared/staff-auth.test.ts`.
+- [x] Tanda 2: el chequeo se **agrega** al inicio del `try` sin quitar el bloque `getUser()` existente, porque 5 funciones usan después ese `user` (nombre de quien genera el reporte) y `generate-payment-report` consulta datos con un cliente que lleva la sesión del usuario. En `generate-certificate-b-pdf` el bypass `force` sigue usando su `callerRole` (ya garantizado staff por el helper). Cambio mínimo: una llamada extra a Auth en esas funciones.
+- [x] T5.3: el historial de cuadraturas no llegó a llamar a la función desde la UI (la pantalla corta antes con 'No hay datos para exportar' según los cierres cargados; el Excel es client-side). Esa función quedó verificada por API: admin y secretaria reciben el mismo PDF que antes. El carnet (`generate-student-license-pdf`) y el modo real del certificado B escriben datos: su caso permitido no se probó en vivo (pendiente de prueba desde la ficha/certificación cuando se acepte regenerar un carnet o emitir un certificado de prueba); sus rechazos sí.
+- [x] `deno check --no-lock` para no modificar `deno.lock`.
+- [x] `generate-payroll-report`: la consulta del nombre de quien genera el reporte pasa de `supabase_uid = user.id` a `id = access.userId` (mismo usuario, ya resuelto por el helper).

@@ -20,6 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -132,9 +133,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-041 | Edge functions que responden sin sesión (5) | `i` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
-| ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `b` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
-| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `b` | fix | P0 | i | ⏳ Puede partirse en 2 |
 | ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `m` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `i` | fix | P0 | i | ⏳ |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `i` | fix | P0 | i | ⏳ |
@@ -290,8 +288,6 @@
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 | ASG-i-024 | Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos | `m` | [fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos](fixes/fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos/fix.md) | 2026-10-01 |
-| ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | `i` | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
-| ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | `b` | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -433,7 +429,12 @@
 | ASG-i-039 | Sacar las credenciales de prueba de la pantalla de login | [hotfix-007-i-credenciales-prueba-login-solo-dev](hotfixes/hotfix-007-i-credenciales-prueba-login-solo-dev/hotfix.md) | 2026-09-30 |
 | ASG-i-038 | Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto? | [fix-262-m-certificacion-b-sin-requisito-nota](fixes/fix-262-m-certificacion-b-sin-requisito-nota/fix.md) | 2026-10-01 |
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
+| ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
+| ASG-i-043 | Una secretaria puede editar a cualquier usuario (incluido un admin) | [fix-179-b-edicion-usuarios-sin-validar-objetivo](fixes/fix-179-b-edicion-usuarios-sin-validar-objetivo/fix.md) | 2026-10-01 |
+| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | [fix-180-b-usuarios-desactivados-siguen-entrando](fixes/fix-180-b-usuarios-desactivados-siguen-entrando/fix.md) | 2026-10-01 |
 | ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
+| ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
+| ASG-i-041 | Edge functions que responden sin sesión | [fix-043-i-edge-functions-sin-sesion](fixes/fix-043-i-edge-functions-sin-sesion/fix.md) | 2026-10-02 |
 <!-- AUTO-GENERATED:END -->
 
 ---

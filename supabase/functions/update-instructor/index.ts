@@ -25,10 +25,15 @@
 //                        Solo admin puede cambiarlo — si el caller es secretary, el campo
 //                        se ignora silenciosamente (no se toca su valor actual).
 //
+// fix-179-b: se valida el OBJETIVO antes de tocar Auth o la BD — userId debe ser el usuario del
+// instructorId, con rol instructor, y una secretaria sin grant solo edita instructores de su sede
+// (o "ambas sedes") sin cambiarles la sede. Antes se aceptaba el userId de cualquiera (un admin).
+//
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authorizeInstructorEdit } from '../_shared/user-edit-authz.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,7 +95,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('id, roles ( name )')
+      .select('id, branch_id, can_access_both_branches, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -144,22 +149,47 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // ── Validar el OBJETIVO (fix-179-b) ──────────────────────────────────────
+    const { data: targetInstructor, error: findInstructorError } = await supabaseAdmin
+      .from('instructors')
+      .select('id, user_id, both_branches, users!inner ( supabase_uid, branch_id, roles ( name ) )')
+      .eq('id', instructorId)
+      .maybeSingle();
+
+    if (findInstructorError) {
+      return errorResponse(`Error al buscar el instructor: ${findInstructorError.message}`, 500);
+    }
+
+    const authz = authorizeInstructorEdit(
+      {
+        role: callerRole,
+        branchId: callerRow.branch_id ?? null,
+        bothBranches: !!callerRow.can_access_both_branches,
+      },
+      targetInstructor
+        ? {
+            instructorUserId: targetInstructor.user_id,
+            role: targetInstructor.users?.roles?.name,
+            branchId: targetInstructor.users?.branch_id ?? null,
+            bothBranches: !!targetInstructor.both_branches,
+          }
+        : null,
+      Number(userId),
+      branchId,
+    );
+    if (!authz.ok) return errorResponse(authz.message, authz.status);
+
     // ── Si el email cambió → actualizar en Supabase Auth ─────────────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
     if (emailChanged) {
-      const { data: targetUser, error: findError } = await supabaseAdmin
-        .from('users')
-        .select('supabase_uid')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (findError || !targetUser?.supabase_uid) {
+      const targetUid = targetInstructor.users?.supabase_uid;
+      if (!targetUid) {
         return errorResponse('No se encontró el usuario en la BD', 404);
       }
 
       const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        targetUser.supabase_uid,
+        targetUid,
         { email: email.trim().toLowerCase() },
       );
 
@@ -177,9 +207,14 @@ Deno.serve(async (req: Request) => {
       paternal_last_name: paternalLastName.trim(),
       maternal_last_name: maternalLastName?.trim() || null,
       phone: phone?.trim() || null,
-      branch_id: branchId ?? null,
       active,
     };
+
+    // La sede solo se escribe si viene en el body (la autorización ya rechazó que una secretaria
+    // sin grant la cambie). Antes un body sin branchId dejaba al instructor sin sede.
+    if (branchId !== undefined) {
+      userPayload['branch_id'] = branchId ?? null;
+    }
 
     if (emailChanged) {
       userPayload['email'] = email.trim().toLowerCase();
@@ -219,6 +254,21 @@ Deno.serve(async (req: Request) => {
 
     if (updateInstructorError) {
       return errorResponse(`Error al actualizar instructor: ${updateInstructorError.message}`, 500);
+    }
+
+    // ── Desactivar = banear en Auth (fix-180-b) ──────────────────────────────
+    // users.active por sí solo no impedía el login ni la renovación del token. Con ban, la
+    // cuenta desactivada no puede entrar; reactivar lo quita. Idempotente ('none' = sin ban).
+    if (targetInstructor.users?.supabase_uid) {
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(targetInstructor.users?.supabase_uid, {
+        ban_duration: active ? 'none' : '876000h',
+      });
+      if (banError) {
+        return errorResponse(
+          `El instructor se guardó, pero no se pudo ${active ? 'reactivar' : 'bloquear'} su acceso: ${banError.message}`,
+          500,
+        );
+      }
     }
 
     // ── Gestionar cambio de vehículo ────────────────────────────────────────

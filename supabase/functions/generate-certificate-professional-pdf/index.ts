@@ -21,6 +21,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 import {
   escapePdfWinAnsi,
   textWidth,
@@ -80,6 +81,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // fix-043-i: solo staff. La anon key pasa verify_jwt, así que se exige usuario real + rol.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     const body = await req.json();
     const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
 
@@ -98,27 +103,8 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
 
-    // 0. Obtener user_id interno del caller (para auditoría)
-    let callerUserId: number | null = null;
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      const userClient = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_ANON_KEY')!,
-        { global: { headers: { Authorization: authHeader } } },
-      );
-      const {
-        data: { user: caller },
-      } = await userClient.auth.getUser();
-      if (caller) {
-        const { data: callerRow } = await supabase
-          .from('users')
-          .select('id')
-          .eq('supabase_uid', caller.id)
-          .maybeSingle();
-        callerUserId = callerRow?.id ?? null;
-      }
-    }
+    // 0. user_id interno del caller (para auditoría) — ya resuelto por requireStaff().
+    const callerUserId: number = access.userId;
 
     // 1. Enrollment + student + user + course (para license_class)
     const { data: enrollment, error: enrollmentErr } = await supabase

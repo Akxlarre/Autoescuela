@@ -29,6 +29,7 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -68,6 +69,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Solo staff en los 3 modos (spec 0009-i). Antes la sesión era opcional; el bypass `force`
+    // sigue exigiendo admin más abajo.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     const body = await req.json();
     const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
 
