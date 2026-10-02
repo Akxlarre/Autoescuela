@@ -83,6 +83,7 @@
 - **Trampa:** asumir que RLS ya protege todo el acceso por sede, o al revés, que basta con leer `branchFacade.selectedBranchId()` para cualquier rol.
 - **Realidad:** decisión de diseño documentada — las RLS de `students`/`instructors`/`select_users` son deliberadamente amplias (para que el selector de destinatarios de Tareas funcione), y el filtro real de sede para la secretaria se hace en PostgREST vía `getActiveBranchId()` (admin → selector del topbar; si no → `user.branchId`). El selector del topbar es **solo-admin** — para la secretaria vale `null`, así que cualquier facade que lea el selector directo se salta el filtro → fuga de PII entre sedes.
 - **Fuente:** `specs/fixes/fix-027-b-aislamiento-sede-secretaria`. **NUNCA tocar la RLS de `users` para "arreglar" esto** — reintroduce la regresión de fix-002.
+- **Actualización (spec 0047-b):** para las tablas operativas de Clase B, pagos, ventas, cursos singulares, anticipos y certificados, la sede **ya la impone también la RLS** (lista en la migración `20261001150000`). El filtro del facade sigue siendo obligatorio (el admin y la secretaria multi-sede ven todo por RLS y dependen de él para el selector); lo que cambió es que dejó de ser la *única* barrera. `users`, `instructors`, flota y Clase Profesional siguen como dice arriba.
 
 ### DG-015 — Una policy de UPDATE más estricta que la de INSERT se expone recién con un upsert
 - **Trampa:** verificar solo la policy INSERT de una tabla y asumir que cubre todo el flujo de escritura.
@@ -1545,6 +1546,33 @@
   de cualquier tabla como fecha de negocio, revisar qué flujos la escriben de verdad.
 - **Fuente:** `specs/fixes/fix-266-m-fecha-egreso-real-completed-at`,
   `supabase/migrations/20261001120000_enrollments_add_completed_at.sql`.
+
+### DG-098 — En RLS, el hueco de sede casi siempre es el INSERT (y el SELECT), no el UPDATE/DELETE
+- **Trampa:** auditar una tabla leyendo solo su policy de UPDATE/DELETE ("solo exige rol → la
+  secretaria puede borrar filas de la otra sede") o, al revés, creer que una tabla con el SELECT
+  ya filtrado por sede está protegida para escritura.
+- **Realidad:** Postgres aplica también la policy de **SELECT** a las filas que un `UPDATE`/`DELETE`
+  con `WHERE` necesita leer. Si el SELECT filtra por sede, esos UPDATE/DELETE sobre la otra sede
+  afectan 0 filas aunque su propia policy sea "solo rol" (pasaba en `students` y
+  `digital_contracts`). El `INSERT` no lee nada: su `WITH CHECK` es la única barrera, y era
+  "solo rol" en `payments`, `class_b_sessions`, `student_documents`, `special_service_sales`,
+  entre otras. Y si el SELECT es "solo rol", todo queda abierto.
+- **Regla de aplicabilidad:** al auditar o escribir RLS por sede, verificar **las cuatro**
+  operaciones impersonando a un usuario real (no leyendo la policy): leer, actualizar y borrar una
+  fila de la otra sede, e **insertar** una fila que apunte a ella. Para el alcance por sede en
+  tablas sin `branch_id`, usar `fk IN (SELECT id FROM padre WHERE branch_id = (SELECT auth_user_branch_id()))`
+  (se evalúa una vez por query como `hashed SubPlan`), no una función `SECURITY DEFINER` que reciba
+  la fila (se ejecuta una vez por fila, DG-016). Ver test reutilizable en
+  `supabase/tests/rls/0047-b-aislamiento-por-sede.sql`.
+- **Regla de aplicabilidad (Storage):** en `storage.objects` la sede no es una columna, está
+  **codificada en la ruta** (`students/<enrollment_id>/…`, `instructor-docs/<instructor_id>/…`,
+  `website-assets/branch-<id>/…`). Cuando una policy de un bucket privado solo mira `bucket_id` +
+  rol, deja leer y sobrescribir todo: hay que cruzar el segmento de la ruta con la sede del usuario.
+  Cuando se agregue un prefijo nuevo al bucket `documents`, sumarlo a la lista blanca de sus
+  policies, o la secretaria no podrá leerlo (prefijo desconocido = denegado).
+- **Fuente:** `specs/specs/0047-b-rls-aislamiento-por-sede`,
+  `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`,
+  `supabase/migrations/20261001200000_storage_aislamiento_por_sede.sql` (test en `supabase/tests/rls/`).
 
 ## Convención para agregar una entrada nueva
 

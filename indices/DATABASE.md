@@ -216,10 +216,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_absence_evidence | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_absence_evidence | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` |
-| update_absence_evidence | UPDATE | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| delete_absence_evidence | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_absence_evidence | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_absence_evidence | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_absence_evidence | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_absence_evidence | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `alert_config` — 🔒 RLS
 
@@ -449,10 +449,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_certificate_issuance_log | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
 | insert_certificate_issuance_log | INSERT | — | `auth_user_role() = 'admin'` |
 | update_certificate_issuance_log | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_certificate_issuance_log | DELETE | `auth_user_role() = 'admin'` | — |
+| select_certificate_issuance_log | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND certificate…` | — |
 
 ### `certificates` — 🔒 RLS
 
@@ -476,10 +476,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_certificates | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_certificates | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 | update_certificates | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_certificates | DELETE | `auth_user_role() = 'admin'` | — |
+| select_certificates | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_certificates | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `class_b_exam_attempts` — 🔒 RLS
 
@@ -557,6 +557,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_class_b_exam_questions | INSERT | — | `auth_user_role() = 'admin'` |
 | update_class_b_exam_questions | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_class_b_exam_questions | DELETE | `auth_user_role() = 'admin'` | — |
+| select_class_b_exam_questions | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
 
 ### `class_b_exam_scores` — 🔒 RLS
 
@@ -602,10 +603,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_practice_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR (auth_user_role()…` | — |
-| insert_class_b_practice_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
-| update_class_b_practice_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| delete_class_b_practice_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_class_b_practice_attendance | SELECT | `auth_user_role() = ANY (ARRAY['admin', 'instructor']) OR (auth_user_role() = …` | — |
+| insert_class_b_practice_attendance | INSERT | — | `auth_user_role() = ANY (ARRAY['admin', 'instructor']) OR (auth_user_role() = …` |
+| update_class_b_practice_attendance | UPDATE | `auth_user_role() = ANY (ARRAY['admin', 'instructor']) OR (auth_user_role() = …` | — |
+| delete_class_b_practice_attendance | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_class_b_practice_attendance_student`, `idx_class_b_practice_attendance_vigente`
 
@@ -648,10 +649,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
-| insert_class_b_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` |
-| update_class_b_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
-| delete_class_b_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_class_b_sessions | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_class_b_sessions | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_class_b_sessions | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_class_b_sessions | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`
 
@@ -709,10 +710,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_theory_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor', 'student')` | — |
-| insert_class_b_theory_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
-| update_class_b_theory_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| delete_class_b_theory_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_class_b_theory_sessions | SELECT | `auth_user_role() = ANY (ARRAY['admin', 'instructor', 'student']) OR (auth_use…` | — |
+| insert_class_b_theory_sessions | INSERT | — | `auth_user_role() = ANY (ARRAY['admin', 'instructor']) OR (auth_user_role() = …` |
+| update_class_b_theory_sessions | UPDATE | `auth_user_role() = ANY (ARRAY['admin', 'instructor']) OR (auth_user_role() = …` | — |
+| delete_class_b_theory_sessions | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_class_b_theory_sessions_branch`
 
@@ -899,10 +900,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_digital_contracts | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_digital_contracts | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
 | select_digital_contracts | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
 | delete_digital_contracts | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+| insert_digital_contracts | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_digital_contracts | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `disciplinary_notes` — 🔒 RLS
 
@@ -943,10 +944,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_discount_applications | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_discount_applications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 | update_discount_applications | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_discount_applications | DELETE | `auth_user_role() = 'admin'` | — |
+| select_discount_applications | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_discount_applications | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `discounts` — 🔒 RLS
 
@@ -1121,10 +1122,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_instructor_advances | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
-| insert_instructor_advances | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 | update_instructor_advances | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_instructor_advances | DELETE | `auth_user_role() = 'admin'` | — |
+| select_instructor_advances | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_instructor_advances | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `instructor_documents` — 🔒 RLS
 
@@ -1146,6 +1147,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | delete_instructor_documents | DELETE | `auth_user_role() = 'admin'` | — |
+| select_instructor_documents | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ( branch_vi…` | — |
+| insert_instructor_documents | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ( branch_vi…` |
+| update_instructor_documents | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ( branch_vi…` | — |
 
 ### `instructor_monthly_hours` — 🔒 RLS
 
@@ -1214,10 +1218,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_instructor_replacements | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_instructor_replacements | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 | update_instructor_replacements | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_instructor_replacements | DELETE | `auth_user_role() = 'admin'` | — |
+| select_instructor_replacements | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_instructor_replacements | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `instructors` — 🔒 RLS
 
@@ -1244,6 +1248,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_instructors | INSERT | — | `auth_user_role() = 'admin'` |
 | update_instructors | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_instructors | DELETE | `auth_user_role() = 'admin'` | — |
+| select_instructors | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ( branch_vi…` | — |
 
 ### `lecturer_monthly_hours` — 🔒 RLS
 
@@ -1482,10 +1487,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_payments | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_payments | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_payments | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
 | delete_payments | DELETE | `auth_user_role() = 'admin'` | — |
+| select_payments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_payments | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_payments | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `pricing_seasons` — 🔒 RLS
 
@@ -1755,6 +1760,15 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `recorded_by` | INT | NO | — | → `users.id` |
 | `notes` | TEXT | sí | — | — |
 
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| admin_all_weekly_signatures | ALL | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
+| secretary_crud_weekly_signatures | ALL | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
+| instructor_read_weekly_signatures | SELECT | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
+| student_read_own_weekly_signatures | SELECT | `EXISTS ( SELECT 1 FROM enrollments e JOIN students s ON s.id = e.student_id J…` | — |
+
 ### `promotion_course_lecturers` — 🔒 RLS
 
 > Relación N:M entre cursos de promoción y relatores. Un curso puede tener '
@@ -1773,6 +1787,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_promotion_course_lecturers | SELECT | `true` | — |
+| insert_promotion_course_lecturers | INSERT | — | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
+| update_promotion_course_lecturers | UPDATE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
+| delete_promotion_course_lecturers | DELETE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
 
 **Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
 
@@ -1877,10 +1894,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_school_documents | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_school_documents | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
 | update_school_documents | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_school_documents | DELETE | `auth_user_role() = 'admin'` | — |
+| select_school_documents | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_school_documents | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `school_schedules` — 🔒 RLS
 
@@ -2041,10 +2058,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_special_service_sales | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_special_service_sales | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_special_service_sales | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_special_service_sales | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_special_service_sales | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_special_service_sales | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_special_service_sales | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_special_service_sales | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_special_service_sales_branch_id`
 
@@ -2071,10 +2088,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_standalone_course_enrollments | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_standalone_course_enrollments | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_standalone_course_enrollments | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_standalone_course_enrollments | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_standalone_course_enrollments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_standalone_course_enrollments | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_standalone_course_enrollments | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_standalone_course_enrollments | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `standalone_courses` — 🔒 RLS
 
@@ -2101,10 +2118,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_standalone_courses | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_standalone_courses | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_standalone_courses | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_standalone_courses | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_standalone_courses | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_standalone_courses | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_standalone_courses | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_standalone_courses | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `student_documents` — 🔒 RLS
 
@@ -2128,9 +2145,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_student_documents | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` |
+| select_student_documents | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
 | delete_student_documents | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
 | update_student_documents | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+| insert_student_documents | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
 ### `student_surveys` — 🔒 RLS
 
@@ -2175,9 +2193,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_students | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_students | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_students | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_students | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( (SELECT …` | — |
+| insert_students | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_students | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_students | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `task_replies` — 🔒 RLS
 
@@ -2233,6 +2252,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | tasks_select | SELECT | `deleted_at IS NULL AND ( (auth_user_role() = 'admin' AND branch_visible(branc…` | — |
 | tasks_delete | DELETE | `auth_user_role() = 'admin' AND branch_visible(branch_id)` | — |
 | tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
+| tasks_update | UPDATE | `deleted_at IS NULL AND EXISTS ( SELECT 1 FROM public.users u JOIN public.role…` | `EXISTS ( SELECT 1 FROM public.users u JOIN public.roles r ON r.id = u.role_id…` |
 
 **Índices:** `idx_tasks_branch_status`, `idx_tasks_due_date`, `idx_tasks_from_user_status`, `idx_tasks_to_user_status`
 
@@ -2264,9 +2284,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | delete_users | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
-| update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 | select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
 | select_users_via_class_relationship | SELECT | `auth_user_role() = 'instructor' AND public.auth_instructor_can_view_student_u…` | — |
+| update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 
 ### `vehicle_assignments` — 🔒 RLS
 
@@ -2348,6 +2368,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
 | delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_vehicles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
+| update_vehicles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
 
 ### `website_config` — 🔒 RLS
 
@@ -2449,6 +2470,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `update_class_book_to_in_review` | `()` |
 | `update_professional_attendance_flag` | `()` |
 | `user_complete_first_login` | `()` |
+| `users_guard_secretary_write` | `()` |
 | `validate_website_config_courses_fk` | `()` |
 | `verify_class_b_certificate_enablement` | `()` |
 | `verify_class_b_dropout_rule` | `()` |

@@ -218,7 +218,8 @@ export function applyStatement(state, stmt, file) {
 
   // ── CREATE POLICY / DROP POLICY ──
   // Policies sobre schemas ajenos (storage.objects, auth.*) — fuera del esquema del app.
-  if (/^(?:CREATE|DROP)\s+POLICY\s+[\s\S]*?\bON\s+(?!public\.)\w+\./i.test(s)) return;
+  // Anclado al encabezado: un JOIN … ON alias.col dentro del USING no cuenta como schema ajeno.
+  if (/^(?:CREATE|DROP)\s+POLICY\s+(?:IF\s+EXISTS\s+)?(?:"[^"]+"|\w+)\s+ON\s+(?!public\.)\w+\./i.test(s)) return;
   m = s.match(/^CREATE\s+POLICY\s+"?([\w\s-]+?)"?\s+ON\s+(?:public\.)?"?(\w+)"?([\s\S]*)$/i);
   if (m) {
     const table = state.tables.get(m[2]);

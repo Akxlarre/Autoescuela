@@ -133,10 +133,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-041 | Edge functions que responden sin sesión (5) | `i` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
-| ASG-i-043 | Secretaria puede editar a cualquier usuario (incl. admin) | `b` | fix | P0 | i | ⏳ Toma de cuenta; requiere migración |
-| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `b` | fix | P0 | i | ⏳ Puede partirse en 2 |
-| ASG-i-045 | RLS que filtra por rol pero no por sede | `b` | spec | P0 | i | 🟡 Lectura de clases y ventas confirmada; `students`/`payments` SELECT sí filtra; escritura ⏳ |
-| ASG-i-046 | Storage: leer/sobrescribir archivos de otra sede, subida anónima | `b` | fix | P0 | i | 🟡 Listar otras sedes confirmado; resto ⏳ |
 | ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `m` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `i` | fix | P0 | i | ⏳ |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `i` | fix | P0 | i | ⏳ |
@@ -434,6 +430,9 @@
 | ASG-i-038 | Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto? | [fix-262-m-certificacion-b-sin-requisito-nota](fixes/fix-262-m-certificacion-b-sin-requisito-nota/fix.md) | 2026-10-01 |
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 | ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
+| ASG-i-043 | Una secretaria puede editar a cualquier usuario (incluido un admin) | [fix-179-b-edicion-usuarios-sin-validar-objetivo](fixes/fix-179-b-edicion-usuarios-sin-validar-objetivo/fix.md) | 2026-10-01 |
+| ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
+| ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
