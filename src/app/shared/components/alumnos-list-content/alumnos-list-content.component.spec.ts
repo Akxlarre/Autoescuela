@@ -171,6 +171,51 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     expect(component.sort()).toEqual({ field: 'alumno', direction: 'asc' });
   });
 
+  describe('opción "todos" y botón "Limpiar filtros" (spec 0022-m)', () => {
+    it('cada selector de filtro abre con su opción "todos" en el valor por defecto', () => {
+      create();
+
+      expect(component.cursos()[0]).toEqual({ label: 'Todos los cursos', value: '' });
+      expect(component.estados[0]).toEqual({ label: 'Todos los estados', value: '' });
+      expect(component.expedienteOpciones[0]).toEqual({ label: 'Expediente: Todos', value: '' });
+    });
+
+    it('sin filtros ni búsqueda no hay filtros activos', () => {
+      create();
+
+      expect(component.hasActiveFilters()).toBe(false);
+    });
+
+    it('un selector o el buscador activan el botón', () => {
+      create();
+      component.updateFilter(component.selectedEstado, 'Activo');
+      expect(component.hasActiveFilters()).toBe(true);
+
+      component.updateFilter(component.selectedEstado, '');
+      component.updateFilter(component.searchTerm, 'pe');
+      expect(component.hasActiveFilters()).toBe(true);
+    });
+
+    it('limpiar deja todo en "todos", vacía el buscador y vuelve a la primera página', () => {
+      create();
+      component.updateFilter(component.searchTerm, 'pe');
+      component.updateFilter(component.selectedCurso, 'Clase B');
+      component.tableFirst.set(10);
+
+      component.resetFilters();
+
+      expect(component.hasActiveFilters()).toBe(false);
+      expect(component.tableFirst()).toBe(0);
+      expect(emitted.at(-1)).toEqual({
+        search: '',
+        curso: '',
+        estado: '',
+        expediente: '',
+        sort: null,
+      });
+    });
+  });
+
   describe('control "Ordenar por" de la vista de tarjetas', () => {
     it('elegir una columna ordena ascendente', () => {
       create();

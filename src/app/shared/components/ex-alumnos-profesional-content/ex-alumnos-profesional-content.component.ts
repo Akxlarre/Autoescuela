@@ -13,6 +13,8 @@ import { CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -65,6 +67,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
     EgresadoCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -123,6 +126,11 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
             [years]="availableYears()"
             [searchActive]="searchTerm.trim().length > 0"
             ariaLabel="Período de egreso"
+          />
+          <app-clear-filters-button
+            llmSubject="professional-graduates"
+            [active]="hasActiveFilters()"
+            (clear)="resetFilters()"
           />
         </div>
 
@@ -378,11 +386,25 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   private static readonly CARDS_STEP = 6;
   protected mobileShown = ExAlumnosProfesionalContentComponent.CARDS_STEP;
 
+  /** Abre con la opción "todos", con el mismo '' por defecto que `selectedClase` (spec 0022-m). */
   readonly claseOptions = computed(() =>
-    [...new Set(this.egresados().map((e) => e.licencia))]
-      .sort()
-      .map((l) => ({ label: l, value: l })),
+    withAllOption(
+      [...new Set(this.egresados().map((e) => e.licencia))]
+        .sort()
+        .map((l) => ({ label: l, value: l })),
+      'Todas las clases',
+      '',
+    ),
   );
+
+  /** Muestra "Limpiar filtros": búsqueda, clase o un período distinto del inicial. */
+  hasActiveFilters(): boolean {
+    return (
+      this.searchTerm !== '' ||
+      this.selectedClase !== '' ||
+      this.periodWindow !== DEFAULT_PERIOD_WINDOW
+    );
+  }
 
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     {
@@ -450,6 +472,8 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   resetFilters(): void {
     this.searchTerm = '';
     this.selectedClase = '';
+    // Igual que Ex-Alumnos B: el período vuelve a su valor inicial, no a "todo el historial".
+    this.periodWindow = DEFAULT_PERIOD_WINDOW;
     this.mobileShown = ExAlumnosProfesionalContentComponent.CARDS_STEP;
   }
 }

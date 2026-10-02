@@ -7,6 +7,8 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 
 /**
  * PagosRecientesDrawerComponent — Historial de pagos recientes + Métodos de Pago del mes.
@@ -28,6 +30,7 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
     BadgeComponent,
     SkeletonBlockComponent,
     DrawerFormComponent,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -86,10 +89,11 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
               type="search"
               placeholder="Buscar por alumno o N° boleta..."
               class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
+              [value]="searchQuery()"
               (input)="onSearch($event)"
             />
           </div>
-          <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <p-select
               [options]="estadoOptions"
               optionLabel="label"
@@ -109,6 +113,11 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
               (ngModelChange)="filtroMetodo.set($event)"
               styleClass="w-full"
               data-llm-description="filter payments by payment method"
+            />
+            <app-clear-filters-button
+              llmSubject="recent-payments"
+              [active]="hasActiveFilters()"
+              (clear)="clearFilters()"
             />
           </div>
         </div>
@@ -189,18 +198,35 @@ export class PagosRecientesDrawerComponent {
   protected readonly filtroEstado = signal<string | null>(null);
   protected readonly filtroMetodo = signal<string | null>(null);
 
-  readonly estadoOptions = [
-    { label: 'Completado', value: 'completado' },
-    { label: 'Pendiente', value: 'pendiente' },
-  ];
+  // Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m).
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Completado', value: 'completado' },
+      { label: 'Pendiente', value: 'pendiente' },
+    ],
+    'Todos los estados',
+  );
 
-  readonly metodoOptions = [
-    { label: 'Transferencia', value: 'Transferencia' },
-    { label: 'Efectivo', value: 'Efectivo' },
-    { label: 'Débito/Crédito', value: 'Débito/Crédito' },
-    { label: 'WebPay', value: 'WebPay' },
-    { label: 'Mixto', value: 'Mixto' },
-  ];
+  readonly metodoOptions = withAllOption(
+    [
+      { label: 'Transferencia', value: 'Transferencia' },
+      { label: 'Efectivo', value: 'Efectivo' },
+      { label: 'Débito/Crédito', value: 'Débito/Crédito' },
+      { label: 'WebPay', value: 'WebPay' },
+      { label: 'Mixto', value: 'Mixto' },
+    ],
+    'Todos los métodos',
+  );
+
+  protected readonly hasActiveFilters = computed(
+    () => this.searchQuery() !== '' || this.filtroEstado() !== null || this.filtroMetodo() !== null,
+  );
+
+  protected clearFilters(): void {
+    this.searchQuery.set('');
+    this.filtroEstado.set(null);
+    this.filtroMetodo.set(null);
+  }
 
   protected readonly pagosFiltrados = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();

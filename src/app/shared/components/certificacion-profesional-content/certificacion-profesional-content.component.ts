@@ -16,6 +16,8 @@ import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { withAllOption } from '@core/utils/filter-options.utils';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -50,6 +52,7 @@ const PAGE_SIZE = 10;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClearFiltersButtonComponent,
     DecimalPipe,
     FormsModule,
     SelectModule,
@@ -181,9 +184,14 @@ const PAGE_SIZE = 10;
               (ngModelChange)="setEstadoFilter($event)"
               optionLabel="label"
               optionValue="value"
-              placeholder="Todos"
+              placeholder="Todos los estados"
               class="h-9"
               data-llm-description="Filter professional certificates by status"
+            />
+            <app-clear-filters-button
+              llmSubject="professional-certificates"
+              [active]="hasActiveFilters()"
+              (clear)="clearFilters()"
             />
 
             @if (pendientesCount() > 0) {
@@ -913,10 +921,25 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
     if (actionId === 'historial') this.abrirHistorialDrawer.emit();
   }
 
-  readonly estadoOptions = [
-    { label: 'Generados', value: 'generado' },
-    { label: 'Pendientes', value: 'pendiente' },
-  ];
+  /** Abre con "Todos los estados" = null, su valor por defecto (spec 0022-m). */
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Generados', value: 'generado' },
+      { label: 'Pendientes', value: 'pendiente' },
+    ],
+    'Todos los estados',
+  );
+
+  /** Muestra "Limpiar filtros": un estado elegido o texto en el buscador. */
+  readonly hasActiveFilters = computed(
+    () => this.estadoFilter() !== null || this.searchQuery() !== '',
+  );
+
+  clearFilters(): void {
+    this.estadoFilter.set(null);
+    this.searchQuery.set('');
+    this.currentPageAlumnos.set(0);
+  }
 
   readonly skeletonRows = Array.from({ length: 6 });
 

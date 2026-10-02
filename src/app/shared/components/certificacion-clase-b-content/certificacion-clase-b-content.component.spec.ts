@@ -107,4 +107,23 @@ describe('CertificacionClaseBContentComponent — bypass de prácticas incomplet
       expect(component.isBlockedForRow(alumno)).toBe(false);
     });
   });
+
+  describe('opción "todos" y "Limpiar filtros" (spec 0022-m)', () => {
+    it('el selector de estado abre con "Todos los estados" = null', () => {
+      expect(component.estadoOptions[0]).toEqual({ label: 'Todos los estados', value: null });
+    });
+
+    it('estado o búsqueda activan el botón; limpiar los deja vacíos', () => {
+      expect(component.hasActiveFilters()).toBe(false);
+
+      component.setEstadoFilter('pendiente');
+      component.setSearchQuery('ana');
+      expect(component.hasActiveFilters()).toBe(true);
+
+      component.clearFilters();
+      expect(component.estadoFilter()).toBeNull();
+      expect(component.searchQuery()).toBe('');
+      expect(component.hasActiveFilters()).toBe(false);
+    });
+  });
 });

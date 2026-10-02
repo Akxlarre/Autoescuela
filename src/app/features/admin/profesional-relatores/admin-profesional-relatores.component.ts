@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -53,6 +55,7 @@ import { RelatorCardComponent } from '@shared/components/relator-card/relator-ca
     RelatorCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
@@ -110,6 +113,11 @@ import { RelatorCardComponent } from '@shared/components/relator-card/relator-ca
             (ngModelChange)="filtroEstado.set($event)"
             class="h-9"
             data-llm-description="filter lecturers by status"
+          />
+          <app-clear-filters-button
+            llmSubject="lecturers"
+            [active]="hasActiveFilters()"
+            (clear)="limpiarFiltros()"
           />
 
           <span class="text-xs text-text-muted ml-auto">
@@ -399,17 +407,32 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   protected readonly filtroEspecialidad = signal<string | null>(null);
   protected readonly filtroEstado = signal<string | null>(null);
 
-  readonly especialidadOptions = [
-    { label: 'Clase A2 (Taxis y colectivos)', value: 'A2' },
-    { label: 'Clase A3 (Buses)', value: 'A3' },
-    { label: 'Clase A4 (Carga simple)', value: 'A4' },
-    { label: 'Clase A5 (Carga profesional)', value: 'A5' },
-  ];
+  // Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m).
+  readonly especialidadOptions = withAllOption(
+    [
+      { label: 'Clase A2 (Taxis y colectivos)', value: 'A2' },
+      { label: 'Clase A3 (Buses)', value: 'A3' },
+      { label: 'Clase A4 (Carga simple)', value: 'A4' },
+      { label: 'Clase A5 (Carga profesional)', value: 'A5' },
+    ],
+    'Todas las especialidades',
+  );
 
-  readonly estadoOptions = [
-    { label: 'Activo', value: 'activo' },
-    { label: 'Inactivo', value: 'inactivo' },
-  ];
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Activo', value: 'activo' },
+      { label: 'Inactivo', value: 'inactivo' },
+    ],
+    'Todos los estados',
+  );
+
+  /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
+  protected readonly hasActiveFilters = computed(
+    () =>
+      this.searchTerm() !== '' ||
+      this.filtroEspecialidad() !== null ||
+      this.filtroEstado() !== null,
+  );
 
   // ── Lista filtrada ─────────────────────────────────────────────────────────
   protected readonly filteredRelatores = computed<RelatorTableRow[]>(() => {

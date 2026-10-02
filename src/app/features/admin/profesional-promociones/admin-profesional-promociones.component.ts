@@ -35,6 +35,8 @@ import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-draw
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 import { getCourseColor } from '@core/utils/course-colors';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { PromocionCardComponent } from '@shared/components/promocion-card/promocion-card.component';
 
 /** Prioridad de estado para el orden de la lista: activas primero, planificadas al final. */
@@ -58,6 +60,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
     ButtonModule,
     TooltipModule,
     SectionHeroComponent,
+    ClearFiltersButtonComponent,
     IconComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
@@ -107,11 +110,15 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
-            [showClear]="true"
             [ngModel]="filtroEstado()"
             (ngModelChange)="filtroEstado.set($event)"
             class="h-9"
             data-llm-description="filter promotions by status"
+          />
+          <app-clear-filters-button
+            llmSubject="promotions"
+            [active]="hasActiveFilters()"
+            (clear)="limpiarFiltros()"
           />
 
           <span class="text-xs text-text-muted ml-auto">
@@ -441,12 +448,21 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly searchTerm = signal('');
   protected readonly filtroEstado = signal<string | null>(null);
 
-  readonly estadoOptions = [
-    { label: 'Planificada', value: 'planned' },
-    { label: 'En curso', value: 'in_progress' },
-    { label: 'Finalizada', value: 'finished' },
-    { label: 'Cancelada', value: 'cancelled' },
-  ];
+  /** Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m). */
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Planificada', value: 'planned' },
+      { label: 'En curso', value: 'in_progress' },
+      { label: 'Finalizada', value: 'finished' },
+      { label: 'Cancelada', value: 'cancelled' },
+    ],
+    'Todos los estados',
+  );
+
+  /** Muestra "Limpiar filtros": estado fuera de "todos" o texto en el buscador. */
+  protected readonly hasActiveFilters = computed(
+    () => this.searchTerm() !== '' || this.filtroEstado() !== null,
+  );
 
   // ── Lista filtrada + ordenada (activas primero, planificadas al final) ─────
   protected readonly filteredPromociones = computed<PromocionTableRow[]>(() => {

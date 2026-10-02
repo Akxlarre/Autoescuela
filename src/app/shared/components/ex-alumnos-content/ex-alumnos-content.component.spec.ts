@@ -161,4 +161,22 @@ describe('ExAlumnosContentComponent', () => {
       expect((component as any).visibleCards().length).toBe(6);
     });
   });
+
+  describe('hasActiveFilters — botón "Limpiar filtros" (spec 0022-m)', () => {
+    it('sin búsqueda y con el período inicial no hay filtros activos', () => {
+      expect((component as any).hasActiveFilters()).toBe(false);
+    });
+
+    it('la búsqueda o un período distinto del inicial lo activan', () => {
+      (component as any).searchTerm.set('ana');
+      expect((component as any).hasActiveFilters()).toBe(true);
+
+      (component as any).searchTerm.set('');
+      (component as any).periodWindow.set('all');
+      expect((component as any).hasActiveFilters()).toBe(true);
+
+      (component as any).clearFilters();
+      expect((component as any).hasActiveFilters()).toBe(false);
+    });
+  });
 });

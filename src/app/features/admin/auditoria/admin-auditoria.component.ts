@@ -24,12 +24,17 @@ import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 
-const ACTION_OPTIONS = [
-  { label: 'Crear', value: 'Crear' },
-  { label: 'Actualizar', value: 'Actualizar' },
-  { label: 'Eliminar', value: 'Eliminar' },
-];
+const ACTION_OPTIONS = withAllOption(
+  [
+    { label: 'Crear', value: 'Crear' },
+    { label: 'Actualizar', value: 'Actualizar' },
+    { label: 'Eliminar', value: 'Eliminar' },
+  ],
+  'Todas las acciones',
+);
 
 @Component({
   selector: 'app-admin-auditoria',
@@ -47,6 +52,7 @@ const ACTION_OPTIONS = [
     CardHoverDirective,
     DateInputComponent,
     StableWidthDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
@@ -139,16 +145,13 @@ const ACTION_OPTIONS = [
 
           <!-- Acciones de filtro -->
           <div class="flex items-center justify-between flex-wrap gap-3">
-            <button
-              class="filter-clear-btn flex items-center gap-2 text-sm text-text-secondary"
-              (click)="clearFilters()"
-              data-llm-action="limpiar-filtros-auditoria"
-            >
-              <app-icon name="refresh-cw" [size]="14" />
-              Limpiar Filtros
-            </button>
+            <app-clear-filters-button
+              llmSubject="audit-log"
+              [active]="hasActiveFilters()"
+              (clear)="clearFilters()"
+            />
 
-            <div class="relative">
+            <div class="relative ml-auto">
               <button
                 type="button"
                 class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
@@ -366,13 +369,6 @@ const ACTION_OPTIONS = [
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
     }
 
-    .filter-clear-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-    }
-
     .brand-link {
       color: var(--ds-brand);
       text-decoration: none;
@@ -495,13 +491,30 @@ export class AdminAuditoriaComponent {
   protected readonly filtroModulo = signal<string | null>(null);
 
   // ── Options ─────────────────────────────────────────────────────────────────
+  // Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m).
   protected readonly actionOptions = ACTION_OPTIONS;
-  protected readonly moduloOptions = MODULE_OPTIONS.map((m) => ({ label: m, value: m }));
+  protected readonly moduloOptions = withAllOption(
+    MODULE_OPTIONS.map((m) => ({ label: m, value: m })),
+    'Todos los módulos',
+  );
   protected readonly secretariaOptions = computed(() =>
-    this.facade.secretarias().map((s) => ({
-      label: s.nombre,
-      value: s.id,
-    })),
+    withAllOption(
+      this.facade.secretarias().map((s) => ({
+        label: s.nombre,
+        value: s.id,
+      })),
+      'Todos los usuarios',
+    ),
+  );
+
+  /** Muestra "Limpiar filtros": alguna fecha o algún selector fuera de "todos". */
+  protected readonly hasActiveFilters = computed(
+    () =>
+      !!this.fechaDesde() ||
+      !!this.fechaHasta() ||
+      this.filtroSecretaria() !== null ||
+      this.filtroAccion() !== null ||
+      this.filtroModulo() !== null,
   );
 
   protected readonly skeletonRows = [1, 2, 3, 4, 5];

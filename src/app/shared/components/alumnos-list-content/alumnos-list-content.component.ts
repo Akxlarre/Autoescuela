@@ -15,6 +15,8 @@ import {
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { buildCourseFilterOptions } from '@core/utils/course-filter-options.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { buildAlumnosHeroActions } from '@core/utils/alumnos-hero-actions.utils';
 import {
   ALUMNO_SORT_OPTIONS,
@@ -109,6 +111,7 @@ export interface AlumnoExportRequest {
     CardHoverDirective,
     SectionHeroComponent,
     ExportMenuComponent,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -189,6 +192,11 @@ export interface AlumnoExportRequest {
             placeholder="Expediente: Todos"
             class="h-9"
             data-llm-description="Filter students by file completion status"
+          />
+          <app-clear-filters-button
+            llmSubject="students"
+            [active]="hasActiveFilters()"
+            (clear)="resetFilters()"
           />
 
           <!-- Ordenar por (spec 0020-m, AC11): solo en la vista de tarjetas, que no tiene
@@ -733,20 +741,40 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   );
 
   /** Cursos presentes en la lista cargada (hotfix-114-m: antes era una lista fija). */
-  readonly cursos = computed(() => buildCourseFilterOptions(this.alumnos()));
-  readonly estados = [
-    { label: 'Activo', value: 'Activo' },
-    { label: 'Retirado', value: 'Retirado' },
-    { label: 'Pre-inscrito', value: 'Pre-inscrito' },
-    { label: 'Pendiente Pago', value: 'Pendiente Pago' },
-    { label: 'Docs Pendientes', value: 'Docs Pendientes' },
-    { label: 'Inactivo', value: 'Inactivo' },
-  ];
-  readonly expedienteOpciones = [
-    { label: 'Completo', value: 'Completo' },
-    { label: 'Parcial', value: 'Parcial' },
-    { label: 'Pendiente', value: 'Pendiente' },
-  ];
+  /** Cada filtro abre con su opción "todos", con el mismo '' por defecto que sus signals (spec 0022-m). */
+  readonly cursos = computed(() =>
+    withAllOption(buildCourseFilterOptions(this.alumnos()), 'Todos los cursos', ''),
+  );
+  readonly estados = withAllOption(
+    [
+      { label: 'Activo', value: 'Activo' },
+      { label: 'Retirado', value: 'Retirado' },
+      { label: 'Pre-inscrito', value: 'Pre-inscrito' },
+      { label: 'Pendiente Pago', value: 'Pendiente Pago' },
+      { label: 'Docs Pendientes', value: 'Docs Pendientes' },
+      { label: 'Inactivo', value: 'Inactivo' },
+    ],
+    'Todos los estados',
+    '',
+  );
+  readonly expedienteOpciones = withAllOption(
+    [
+      { label: 'Completo', value: 'Completo' },
+      { label: 'Parcial', value: 'Parcial' },
+      { label: 'Pendiente', value: 'Pendiente' },
+    ],
+    'Expediente: Todos',
+    '',
+  );
+
+  /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
+  readonly hasActiveFilters = computed(
+    () =>
+      this.searchTerm() !== '' ||
+      this.selectedCurso() !== '' ||
+      this.selectedEstado() !== '' ||
+      this.selectedExpediente() !== '',
+  );
 
   /** Placeholder para satisfacer `alumno` (input.required) en las 6 cards skeleton. */
   protected readonly skeletonAlumno: AlumnoTableRow = {
@@ -902,6 +930,7 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
     this.selectedCurso.set('');
     this.selectedEstado.set('');
     this.selectedExpediente.set('');
+    this.tableFirst.set(0);
     this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
     this.emitFilters();
   }

@@ -9,6 +9,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
 import type { VentaServicio } from '@core/models/ui/servicios-especiales.model';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
   DEFAULT_PERIOD_WINDOW,
   applyPeriodWindow,
@@ -40,6 +42,7 @@ import {
     DrawerFormComponent,
     StableWidthDirective,
     PeriodSelectorComponent,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -80,7 +83,7 @@ import {
               }
             </div>
           </div>
-          <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <p-select
               [ngModel]="filtroServicio()"
               (ngModelChange)="onFiltroServicioChange($event)"
@@ -88,7 +91,6 @@ import {
               optionLabel="label"
               optionValue="value"
               placeholder="Todos los servicios"
-              [showClear]="true"
               styleClass="w-full"
               data-llm-description="filter ventas by service"
             />
@@ -96,6 +98,11 @@ import {
               [window]="periodWindow()"
               (windowChange)="onPeriodWindowChange($event)"
               ariaLabel="Período del historial de ventas"
+            />
+            <app-clear-filters-button
+              llmSubject="sales-history"
+              [active]="hasActiveFilters()"
+              (clear)="clearFilters()"
             />
           </div>
         </div>
@@ -219,9 +226,23 @@ export class HistorialVentasDrawerComponent {
   protected readonly exportMenuOpen = signal(false);
   protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
 
+  /** Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m). */
   protected readonly filtroOptions = computed(() =>
-    this.facade.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
+    withAllOption(
+      this.facade.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
+      'Todos los servicios',
+    ),
   );
+
+  /** Muestra "Limpiar filtros": un servicio elegido o un período distinto del inicial. */
+  protected readonly hasActiveFilters = computed(
+    () => this.filtroServicio() !== null || this.periodWindow() !== DEFAULT_PERIOD_WINDOW,
+  );
+
+  protected clearFilters(): void {
+    this.filtroServicio.set(null);
+    this.periodWindow.set(DEFAULT_PERIOD_WINDOW);
+  }
 
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();

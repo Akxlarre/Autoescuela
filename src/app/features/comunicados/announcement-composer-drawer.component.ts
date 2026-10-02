@@ -20,6 +20,7 @@ import {
   validateAnnouncementDraft,
 } from '@core/utils/announcement-recipients.utils';
 import { isScheduledForValid } from '@core/utils/announcement-template.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
 import {
   applyBulkAction,
   filterRecipients,
@@ -553,14 +554,22 @@ export class AnnouncementComposerDrawerComponent {
     { label: 'Operativo — aviso del curso', value: 'operativo' },
     { label: 'Promocional — promociones y novedades', value: 'promocional' },
   ];
-  protected readonly courseOptions = [
-    { label: 'Clase B', value: 'class_b' },
-    { label: 'Profesional', value: 'professional' },
-  ];
-  protected readonly statusOptions = [
-    { label: 'Activas', value: 'active' },
-    { label: 'Finalizadas', value: 'completed' },
-  ];
+  // Cada selector del segmento ofrece volver a "todos" = null (spec 0022-m). Sin botón
+  // "Limpiar filtros": es un formulario, no la barra de filtros de una lista.
+  protected readonly courseOptions = withAllOption(
+    [
+      { label: 'Clase B', value: 'class_b' },
+      { label: 'Profesional', value: 'professional' },
+    ],
+    'Todos',
+  );
+  protected readonly statusOptions = withAllOption(
+    [
+      { label: 'Activas', value: 'active' },
+      { label: 'Finalizadas', value: 'completed' },
+    ],
+    'Cualquiera',
+  );
 
   protected readonly kind = signal<AnnouncementKind | null>(null);
   protected readonly branchId = signal<number | null>(null);
@@ -644,7 +653,10 @@ export class AnnouncementComposerDrawerComponent {
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   protected readonly branchOptions = computed(() =>
-    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+    withAllOption(
+      this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+      'Todas las sedes',
+    ),
   );
 
   protected readonly exclusions = computed(() => countExclusions(this.facade.preview()));
