@@ -1,6 +1,6 @@
 # Asignación ASG-i-039 — Sacar las credenciales de prueba de la pantalla de login
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** hotfix
 > **priority:** P0

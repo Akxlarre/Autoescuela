@@ -1,6 +1,6 @@
 # Asignación ASG-i-042 — Edge functions con sesión pero sin validar rol ni sede
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P0
