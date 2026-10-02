@@ -152,23 +152,24 @@ describe('AdminAlumnoDetalleFacade', () => {
       claseNumero: 3,
       instructorId: 100,
       scheduledAt: '2026-07-10T14:00:00Z',
+      razon: 'medica',
     };
 
     const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+    /** Builder encadenable y awaitable: cualquier cadena de filtros resuelve `result`. */
+    function chainMock(result: { data?: unknown; error: unknown } = { data: null, error: null }) {
+      const b: any = {};
+      for (const method of ['select', 'eq', 'is', 'in', 'order', 'update', 'insert']) {
+        b[method] = vi.fn(() => b);
+      }
+      b.single = vi.fn().mockResolvedValue(result);
+      b.then = (resolve: (value: unknown) => void) => resolve(result);
+      return b;
+    }
+
     function mockFromByTable(handlers: Record<string, any>) {
-      return vi.fn().mockImplementation((table: string) => {
-        if (handlers[table]) return handlers[table];
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi
-              .fn()
-              .mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }),
-          }),
-          update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
-          insert: vi.fn().mockResolvedValue({ error: null }),
-        };
-      });
+      return vi.fn().mockImplementation((table: string) => handlers[table] ?? chainMock());
     }
 
     beforeEach(() => {
@@ -281,6 +282,83 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([42], expect.any(Object));
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([200], expect.any(Object));
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(2);
+    });
+
+    describe('asistencia e historial (fix-279-m)', () => {
+      /** Sesión existente: instructor 999 y fecha anterior, antes de reciclarla. */
+      function mockSesionExistente() {
+        const sessions = chainMock({
+          data: { instructor_id: 999, scheduled_at: '2026-07-01T13:00:00Z' },
+          error: null,
+        });
+        const attendance = chainMock({ error: null });
+        const history = chainMock({ data: [], error: null });
+        supabaseSpy.client.from = mockFromByTable({
+          class_b_sessions: sessions,
+          class_b_practice_attendance: attendance,
+          class_b_reschedule_history: history,
+        });
+        return { sessions, attendance, history };
+      }
+
+      it('archiva la asistencia vigente de la sesión reciclada, igual que el reagendamiento por lote', async () => {
+        const { attendance } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(attendance.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+        expect(attendance.eq).toHaveBeenCalledWith('class_b_session_id', 55);
+        expect(attendance.is).toHaveBeenCalledWith('archived_at', null);
+      });
+
+      it('deja la reprogramación en el historial con fecha e instructor anteriores y la razón', async () => {
+        const { history } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(history.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            class_session_id: 55,
+            enrollment_id: 7,
+            old_scheduled_at: '2026-07-01T13:00:00Z',
+            new_scheduled_at: '2026-07-10T14:00:00Z',
+            old_instructor_id: 999,
+            new_instructor_id: 100,
+            reason: 'medica',
+            reason_other: null,
+          }),
+        );
+      });
+
+      it('con razón "otro" guarda el detalle escrito', async () => {
+        const { history } = mockSesionExistente();
+
+        await facade.reprogramarClase({ ...basePayload, razon: 'otro', razonOtro: 'Mudanza' });
+
+        expect(history.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ reason: 'otro', reason_other: 'Mudanza' }),
+        );
+      });
+
+      it('sin razón no reprograma una sesión existente: no toca la sesión ni el historial', async () => {
+        const { sessions, history } = mockSesionExistente();
+
+        await expect(facade.reprogramarClase({ ...basePayload, razon: null })).rejects.toThrow(
+          'Selecciona la razón del reagendamiento.',
+        );
+
+        expect(sessions.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+      });
+
+      it('agendar una clase que no tenía sesión no archiva nada ni escribe historial', async () => {
+        const { attendance, history } = mockSesionExistente();
+
+        await facade.reprogramarClase({ ...basePayload, sessionId: null, razon: null });
+
+        expect(attendance.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+      });
     });
   });
 

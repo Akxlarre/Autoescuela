@@ -68,6 +68,123 @@ describe('AdminAlumnosFacade', () => {
     expect(facade.error()).toBeNull();
   });
 
+  describe('prepararArchivado — fix-277-m', () => {
+    /**
+     * Respuestas por tabla. `class_b_sessions` se consulta dos veces: el conteo de historial
+     * (sin filtro de estado) y el de clases futuras (con `.gte('scheduled_at', …)`).
+     */
+    function mockArchivado(opts: {
+      enrollmentIds: number[];
+      payments?: number;
+      sessions?: number;
+      futureSessions?: number;
+    }): { futureFilter: ReturnType<typeof vi.fn> } {
+      const futureFilter = vi.fn();
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        let isFutureQuery = false;
+        const builder: any = {
+          select: vi.fn(() => builder),
+          eq: vi.fn((...args: unknown[]) => {
+            futureFilter(...args);
+            return builder;
+          }),
+          neq: vi.fn(() => builder),
+          in: vi.fn(() => builder),
+          gte: vi.fn(() => {
+            isFutureQuery = true;
+            return builder;
+          }),
+          then: (resolve: (value: unknown) => void) => {
+            if (table === 'enrollments') {
+              return resolve({ data: opts.enrollmentIds.map((id) => ({ id })), error: null });
+            }
+            if (table === 'payments') return resolve({ count: opts.payments ?? 0, error: null });
+            return resolve({
+              count: isFutureQuery ? (opts.futureSessions ?? 0) : (opts.sessions ?? 0),
+              error: null,
+            });
+          },
+        };
+        return builder;
+      });
+      return { futureFilter };
+    }
+
+    function toastSpy(): { error: ReturnType<typeof vi.fn> } {
+      return TestBed.inject(ToastService) as unknown as { error: ReturnType<typeof vi.fn> };
+    }
+
+    it('con clases futuras no permite archivar y avisa cuántas son', async () => {
+      const { futureFilter } = mockArchivado({
+        enrollmentIds: [10],
+        sessions: 5,
+        futureSessions: 2,
+      });
+
+      const result = await facade.prepararArchivado(1);
+
+      expect(result).toEqual({ permitido: false, hasHistory: true });
+      expect(futureFilter).toHaveBeenCalledWith('status', 'scheduled');
+      expect(toastSpy().error).toHaveBeenCalledWith(
+        'No se puede archivar',
+        'Tiene 2 clases agendadas. Cancélalas o reagéndalas antes de archivar al alumno.',
+      );
+    });
+
+    it('sin clases futuras permite archivar e informa si hay historial', async () => {
+      mockArchivado({ enrollmentIds: [10], payments: 1, sessions: 3, futureSessions: 0 });
+
+      const result = await facade.prepararArchivado(1);
+
+      expect(result).toEqual({ permitido: true, hasHistory: true });
+      expect(toastSpy().error).not.toHaveBeenCalled();
+    });
+
+    it('un alumno sin matrículas se puede archivar, sin historial', async () => {
+      mockArchivado({ enrollmentIds: [] });
+
+      const result = await facade.prepararArchivado(1);
+
+      expect(result).toEqual({ permitido: true, hasHistory: false });
+    });
+  });
+
+  describe('filtros de la lista — fix-275-m', () => {
+    const SIN_FILTROS = { search: '', curso: '', estado: '', expediente: '', sort: null };
+
+    it('parten vacíos y sin orden elegido', () => {
+      expect(facade.listFilters()).toEqual(SIN_FILTROS);
+    });
+
+    it('guarda los filtros y el orden para que la lista los recupere al volver a la pantalla', () => {
+      const filters = {
+        search: 'reyes',
+        curso: 'Clase B',
+        estado: 'Activo',
+        expediente: '',
+        sort: { field: 'fechaIngreso', direction: 'desc' } as const,
+      };
+
+      facade.setListFilters(filters);
+
+      expect(facade.listFilters()).toEqual(filters);
+    });
+
+    it('resetListFilters los vacía (hotfix-126-m: entrada a la lista que no viene de una ficha)', () => {
+      facade.setListFilters({
+        search: 'reyes',
+        curso: '',
+        estado: 'Activo',
+        expediente: '',
+        sort: { field: 'rut', direction: 'asc' },
+      });
+
+      facade.resetListFilters();
+
+      expect(facade.listFilters()).toEqual(SIN_FILTROS);
+    });
+  });
+
   describe('leaveTrashView — hotfix-112-m', () => {
     it('apaga la vista Papelera sin consultar la BD, y la próxima entrada recarga la lista activa', async () => {
       await facade.setTrashView(true);
@@ -443,6 +560,25 @@ describe('AdminAlumnosFacade', () => {
       expect(ids).toContain('61');
     });
 
+    describe('Papelera — fix-276-m', () => {
+      it('muestra a un egresado archivado: en la lista activa los Finalizados siguen fuera', async () => {
+        const egresado = makeStudent({
+          id: 90,
+          status: 'archived',
+          enrollments: [makeEnrollment({ status: 'completed' })],
+        });
+        mockStudents([egresado]);
+
+        await facade.initialize();
+        expect(facade.alumnos()).toEqual([]);
+
+        await facade.setTrashView(true);
+
+        expect(facade.alumnos().map((a) => a.id)).toEqual(['90']);
+        expect(facade.alumnos()[0].status).toBe('Finalizado');
+      });
+    });
+
     describe('fecha de ingreso — hotfix-123-m', () => {
       it('es la fecha de la matrícula que representa la fila, en dd-mm-aaaa', async () => {
         mockStudents([
@@ -455,6 +591,19 @@ describe('AdminAlumnosFacade', () => {
         await facade.initialize();
 
         expect(facade.alumnos()[0].fechaIngreso).toBe('22-09-2026');
+      });
+
+      it('expone también la fecha sin formatear, para ordenar la lista (spec 0020-m)', async () => {
+        mockStudents([
+          makeStudent({
+            id: 82,
+            enrollments: [makeEnrollment({ created_at: '2026-09-22T15:00:00Z' })],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].fechaIngresoIso).toBe('2026-09-22T15:00:00Z');
       });
 
       it('usa el día en hora local, no el del ISO en UTC', async () => {

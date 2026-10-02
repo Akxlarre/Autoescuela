@@ -1,8 +1,8 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { canRegistrarPago } from '@core/utils/ficha-pagos.utils';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
@@ -10,7 +10,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
   selector: 'app-admin-historial-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, CommonModule, RouterLink, IconComponent, StatBoxComponent],
+  imports: [TooltipModule, CommonModule, IconComponent, StatBoxComponent],
   template: `
     <!-- fix bug real (2026-08-30, dispositivo físico — Galaxy S20 Ultra): h-full/flex-1/
          overflow-y-auto SIN scope solo tienen sentido dentro del layout de 3 columnas de
@@ -105,14 +105,29 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
           }
         </div>
 
-        <!-- Footer -->
-        <a
-          [routerLink]="historialPagosRoute()"
-          class="btn-secondary w-full mt-auto flex items-center justify-center gap-2 no-underline"
-        >
-          <app-icon name="external-link" [size]="14" />
-          Ver todo el historial
-        </a>
+        <!-- Footer (fix-278-m): ambos botones abren un panel lateral sin salir de la ficha -->
+        <div class="flex flex-col gap-2 mt-auto">
+          @if (puedeRegistrarPago()) {
+            <button
+              type="button"
+              class="btn-primary w-full flex items-center justify-center gap-2"
+              data-llm-action="registrar-pago-ficha"
+              (click)="registrarPago.emit()"
+            >
+              <app-icon name="plus" [size]="14" />
+              Registrar pago
+            </button>
+          }
+          <button
+            type="button"
+            class="btn-secondary w-full flex items-center justify-center gap-2"
+            data-llm-action="ver-historial-pagos"
+            (click)="verHistorial.emit()"
+          >
+            <app-icon name="file-text" [size]="14" />
+            Ver todo el historial
+          </button>
+        </div>
       </div>
     </div>
   `,
@@ -174,7 +189,11 @@ export class AdminHistorialPagosComponent {
   pagos = input.required<PagoUI[]>();
   totalPagado = input.required<number>();
   saldoPendiente = input.required<number>();
-  /** Ruta del listado de Pagos del portal activo — la ficha vive tanto en /app/admin
-   *  como en /app/secretaria, así que el "Ver todo el historial" no puede ser fijo. */
-  historialPagosRoute = input.required<string>();
+
+  /** Abre el estado de cuenta completo de la matrícula (fix-278-m). */
+  readonly verHistorial = output<void>();
+  /** Abre el formulario de pago con la matrícula ya elegida (fix-278-m). */
+  readonly registrarPago = output<void>();
+
+  protected readonly puedeRegistrarPago = computed(() => canRegistrarPago(this.saldoPendiente()));
 }

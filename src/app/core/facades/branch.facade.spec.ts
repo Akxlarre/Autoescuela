@@ -225,4 +225,53 @@ describe('BranchFacade', () => {
       expect(freshFacade.selectedBranchLabel()).toBe('Sede Norte');
     });
   });
+
+  describe('cambio temporal de sede — fix-274-m', () => {
+    it('restaura "Todas las escuelas" si era lo elegido antes del cambio temporal', () => {
+      facade.selectBranchTemporarily(2);
+      expect(facade.selectedBranchId()).toBe(2);
+
+      facade.restoreTemporaryBranch();
+
+      expect(facade.selectedBranchId()).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('restaura la sede concreta que había antes', () => {
+      facade.selectBranch(1);
+      facade.selectBranchTemporarily(2);
+
+      facade.restoreTemporaryBranch();
+
+      expect(facade.selectedBranchId()).toBe(1);
+    });
+
+    it('dos cambios temporales seguidos restauran la sede original, no la intermedia', () => {
+      facade.selectBranch(1);
+      facade.selectBranchTemporarily(2);
+      facade.selectBranchTemporarily(1);
+
+      facade.restoreTemporaryBranch();
+
+      expect(facade.selectedBranchId()).toBe(1);
+    });
+
+    it('sin un cambio temporal pendiente, restaurar no toca la sede elegida', () => {
+      facade.selectBranch(2);
+
+      facade.restoreTemporaryBranch();
+
+      expect(facade.selectedBranchId()).toBe(2);
+    });
+
+    it('restaura una sola vez: después no pisa la sede que el admin elija', () => {
+      facade.selectBranchTemporarily(2);
+      facade.restoreTemporaryBranch();
+      facade.selectBranch(1);
+
+      facade.restoreTemporaryBranch();
+
+      expect(facade.selectedBranchId()).toBe(1);
+    });
+  });
 });

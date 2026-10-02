@@ -16,6 +16,8 @@ import {
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { Router } from '@angular/router';
+import { isReturningFromFicha } from '@core/utils/alumnos-list-navigation.utils';
 import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 
 @Component({
@@ -31,6 +33,8 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [error]="facade.error()"
       [trashView]="facade.trashView()"
       [isExporting]="facade.isExporting()"
+      [initialFilters]="facade.listFilters()"
+      (filtersChanged)="facade.setListFilters($event)"
       [showSedeColumn]="branchFacade.selectedBranchId() === null"
       (refreshRequested)="facade.initialize()"
       (archivarRequested)="requestArchivar($event)"
@@ -67,6 +71,11 @@ export class AdminAlumnosComponent implements OnInit {
   });
 
   constructor() {
+    // hotfix-126-m: los filtros solo se conservan al devolverse desde la ficha de un alumno.
+    // Va en el constructor para limpiar antes de que la lista lea `initialFilters`.
+    const previousUrl = inject(Router).currentNavigation()?.previousNavigation?.finalUrl;
+    if (!isReturningFromFicha(previousUrl?.toString())) this.facade.resetListFilters();
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       // untracked (hotfix-117-m): initialize() lee otros signals (usuario, vista Papelera). Si
@@ -92,7 +101,9 @@ export class AdminAlumnosComponent implements OnInit {
     const alumno = this.facade.alumnos().find((a) => a.id === alumnoId);
     if (!alumno) return;
 
-    const { hasHistory } = await this.facade.checkHistorial(Number(alumnoId));
+    // fix-277-m: con clases futuras no se abre el modal; el facade ya avisó por qué.
+    const { permitido, hasHistory } = await this.facade.prepararArchivado(Number(alumnoId));
+    if (!permitido) return;
     this.hasHistory.set(hasHistory);
     this.deleteTarget.set(alumno);
   }

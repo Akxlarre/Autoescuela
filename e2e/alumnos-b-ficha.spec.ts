@@ -4,9 +4,11 @@
  *
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
+import { readFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
+import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
-import { createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
+import { addMissedClass, createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
 import { expect, test, watchErrors } from './support/fixtures';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
 
@@ -323,6 +325,198 @@ test.describe('ficha: la matrícula elegida se mantiene', () => {
 });
 
 test.describe('ficha: marcar como ex-alumno y archivar', () => {
+  test('I06 · I08 (fix-278-m): desde la ficha se registra un pago y se ve el historial del alumno', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'PagoFicha',
+        branchId: SEDE_A,
+        // Sin pagos: al registrar uno, la BD recalcula el saldo desde la suma de los pagos, así
+        // que la matrícula tiene que partir debiendo el precio completo.
+        enrollments: [{ paymentStatus: 'pending', totalPaid: 0 }],
+      },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    const { data: matricula } = await sb
+      .from('enrollments')
+      .select('base_price')
+      .eq('id', alumno.enrollmentIds[0])
+      .single();
+    const precio = matricula!.base_price as number;
+    await sb
+      .from('enrollments')
+      .update({ pending_balance: precio })
+      .eq('id', alumno.enrollmentIds[0]);
+    const clp = (n: number) => `$${n.toLocaleString('es-CL')}`;
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const financiero = page.locator('app-admin-historial-pagos');
+    await expect(financiero).toContainText('No hay pagos registrados');
+
+    try {
+      // I08: registrar un pago sin salir de la ficha, con la matrícula ya elegida.
+      await financiero.locator('[data-llm-action="registrar-pago-ficha"]').click();
+      const panel = page.locator('app-registrar-pago-drawer');
+      await expect(panel).toBeVisible();
+      await expect(panel.locator('#pago-enrollment')).toHaveCount(0);
+      await panel.locator('p-select').click();
+      await page.getByRole('option', { name: 'Abono', exact: true }).click();
+      await panel.locator('#pago-total').fill('30000');
+      await panel.locator('#pago-cash').fill('30000');
+      await page.getByRole('button', { name: 'Guardar Pago' }).click();
+      await expect(page.getByText('Pago registrado correctamente.')).toBeVisible();
+
+      // La ficha se refresca sola: aparece el pago y el saldo es el precio menos lo pagado.
+      await expect(financiero).toContainText(clp(precio - 30000), CARGA);
+      await expect(financiero).toContainText('$30.000');
+      await expect(financiero).not.toContainText('No hay pagos registrados');
+      await expect(page).toHaveURL(/\/alumnos\/\d+/);
+
+      // I06: "Ver todo el historial" abre el estado de cuenta de este alumno, sin navegar.
+      await financiero.locator('[data-llm-action="ver-historial-pagos"]').click();
+      const estadoCuenta = page.locator('app-admin-pago-detalle-drawer');
+      await expect(estadoCuenta).toContainText('Historial de Pagos');
+      await expect(estadoCuenta).toContainText(alumno.paternalLastName);
+      await expect(estadoCuenta).toContainText('$30.000');
+      // hotfix-127-m: el estado de pago va traducido, nunca el valor crudo de la base.
+      await expect(estadoCuenta.locator('app-badge').first()).toHaveText('Parcial');
+      await expect(estadoCuenta).not.toContainText(/paid_full|partial|pending/);
+      await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    } finally {
+      // El pago y el aviso al alumno los crea la app: se registran para borrarlos.
+      const { data: pagos } = await sb
+        .from('payments')
+        .select('id')
+        .eq('enrollment_id', alumno.enrollmentIds[0]);
+      for (const p of pagos ?? []) cleanup.track('payments', p.id);
+      const { data: avisos } = await sb
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', alumno.userId);
+      for (const n of avisos ?? []) cleanup.track('notifications', n.id);
+    }
+  });
+
+  test('F04 · F11 · F13 (fix-279-m): reprogramar una clase con inasistencia la archiva y queda en el historial', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Reprogramar', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sessionId = await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+
+    try {
+      await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+      const reprogramar = page.locator('[data-llm-action="reprogramar-clase"]').first();
+      await reprogramar.click();
+      const panel = page.locator('app-admin-reprogramar-clase-drawer');
+      const confirmar = panel.locator('[data-llm-action="confirmar-reprogramar-clase"]');
+
+      // F11: "Cancelar" vuelve a la Ficha Técnica, no cierra todo.
+      await panel.locator('[data-llm-action="cancelar-reprogramar-clase"]').click();
+      await expect(panel).toHaveCount(0);
+      await expect(reprogramar).toBeVisible();
+      await reprogramar.click();
+
+      // La razón es obligatoria: con instructor y horario elegidos, sin razón no se confirma.
+      await panel.locator('[data-llm-action="seleccionar-instructor-reprogramar"]').first().click();
+      await panel.locator('[data-llm-action="seleccionar-slot-reprogramar"]').first().click(CARGA);
+      await expect(confirmar).toBeDisabled();
+      await panel.locator('p-select').click();
+      await page.getByRole('option', { name: 'Médica', exact: true }).click();
+      await confirmar.click();
+      await expect(page.getByText('Clase reprogramada correctamente.')).toBeVisible();
+
+      // F04: la inasistencia anterior queda archivada y la clase vuelve a estar agendada.
+      const { data: asistencia } = await sb
+        .from('class_b_practice_attendance')
+        .select('archived_at')
+        .eq('class_b_session_id', sessionId);
+      expect(asistencia, 'asistencia de la sesión').toHaveLength(1);
+      expect(asistencia![0].archived_at, 'archived_at').not.toBeNull();
+      const { data: sesion } = await sb
+        .from('class_b_sessions')
+        .select('status, scheduled_at')
+        .eq('id', sessionId)
+        .single();
+      expect(sesion!.status).toBe('scheduled');
+      expect(new Date(sesion!.scheduled_at).getTime()).toBeGreaterThan(Date.now());
+
+      // F13: queda en el historial de reagendamientos, con su razón.
+      const { data: historial } = await sb
+        .from('class_b_reschedule_history')
+        .select('reason, new_scheduled_at')
+        .eq('class_session_id', sessionId);
+      expect(historial, 'historial de reagendamientos').toHaveLength(1);
+      expect(historial![0].reason).toBe('medica');
+      await page.locator('[data-llm-action="ver-reagendamientos"]').click();
+      await expect(page.getByText('Médica').first()).toBeVisible();
+
+      // H06 (hotfix-128-m): la inasistencia reagendada se ve como tal y ya no ofrece "Justificar".
+      await page.getByRole('button', { name: 'Cerrar panel' }).click();
+      await page.locator('[data-llm-action="ver-inasistencias"]').click();
+      const inasistencias = page.locator('app-admin-inasistencias-drawer');
+      await expect(inasistencias.getByText('Reagendada')).toBeVisible();
+      await expect(
+        inasistencias.locator('[data-llm-action="justificar-inasistencia-clase-b"]'),
+      ).toHaveCount(0);
+    } finally {
+      // Historial y avisos los crea la app: se registran para borrarlos antes que la sesión.
+      const { data: historial } = await sb
+        .from('class_b_reschedule_history')
+        .select('id')
+        .eq('class_session_id', sessionId);
+      for (const h of historial ?? []) cleanup.track('class_b_reschedule_history', h.id);
+      const { data: avisos } = await sb
+        .from('notifications')
+        .select('id')
+        .eq('reference_type', 'class_b')
+        .eq('reference_id', sessionId);
+      for (const n of avisos ?? []) cleanup.track('notifications', n.id);
+      const { data: avisosAlumno } = await sb
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', alumno.userId);
+      for (const n of avisosAlumno ?? []) {
+        if (!(avisos ?? []).some((a) => a.id === n.id)) cleanup.track('notifications', n.id);
+      }
+    }
+  });
+
+  test('O05 (hotfix-125-m): con saldo pendiente, la confirmación de egreso avisa el monto', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'EgresarDeuda',
+        branchId: SEDE_A,
+        enrollments: [{ paymentStatus: 'partial', pendingBalance: 90000 }],
+      },
+      cleanup,
+    );
+    await markCertificateSent(alumno, alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const confirmacion = page.locator('[role="dialog"][aria-labelledby="confirm-modal-title"]');
+
+    await hero(page).locator('[data-llm-action="marcar-ex-alumno"]').click();
+
+    await expect(confirmacion).toContainText('Tiene un saldo pendiente de $90.000.');
+    // Avisa, pero permite: el botón de confirmar sigue disponible.
+    await expect(confirmacion.getByRole('button', { name: 'Marcar como Ex-Alumno' })).toBeEnabled();
+    await confirmacion.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByText('ESTADO: Activo')).toBeVisible();
+  });
+
   test('O01 · O03 · O04 (S5 · S6): marcar ex-alumno → la ficha deja de ofrecerlo y aparece en Ex-Alumnos con el año de hoy', async ({
     pageAs,
     cleanup,
@@ -587,6 +781,118 @@ test.describe('ex-alumnos', () => {
     });
   }
 
+  test.describe('T14 (spec 0021-m): exportar la lista', () => {
+    const MENU = '[data-llm-action="open-export-menu"]';
+
+    /** Dos egresados con un apellido materno común, para aislarlos con el buscador. */
+    async function seedPar(cleanup: Parameters<typeof createE2eAlumno>[1]) {
+      const comun = `Export${String(Date.now()).slice(-6)}`;
+      const crear = (paterno: string, pendingBalance: number) =>
+        createE2eAlumno(
+          {
+            label: 'Exportar',
+            branchId: SEDE_A,
+            paternalLastName: `${paterno}${comun}`,
+            maternalLastName: comun,
+            enrollments: [{ status: 'completed', pendingBalance }],
+          },
+          cleanup,
+        );
+      return { comun, alDia: await crear('Aaa', 0), conDeuda: await crear('Zzz', 30000) };
+    }
+
+    test('el Excel trae las mismas filas que la pantalla, con sus columnas', async ({
+      pageAs,
+      cleanup,
+    }) => {
+      const { comun, alDia, conDeuda } = await seedPar(cleanup);
+      const page = await pageAs('secretariaA');
+      await openExAlumnos(page, 'secretaria');
+      await page.locator(SEARCH_EGRESADOS).fill(comun);
+      await expect(page.locator('p-table tbody tr')).toHaveCount(2);
+
+      await page.locator(MENU).click();
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.locator('[data-llm-action="export-graduates-excel"]').click(),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/^ex-alumnos-b_\d{4}-\d{2}-\d{2}\.xlsx$/);
+
+      const book = XLSX.read(readFileSync(await download.path()));
+      const [headers, ...rows] = XLSX.utils.sheet_to_json<(string | number)[]>(
+        book.Sheets[book.SheetNames[0]],
+        { header: 1 },
+      );
+      expect(headers).toEqual([
+        'Alumno',
+        'RUT',
+        'Correo',
+        'Nº Expediente',
+        'Licencia',
+        'Fecha de egreso',
+        'Sede',
+        'Estado de cuenta',
+        'Saldo pendiente',
+      ]);
+      expect(rows).toHaveLength(2);
+      const ruts = rows.map((r) => r[1]);
+      expect(ruts).toContain(alDia.rut);
+      expect(ruts).toContain(conDeuda.rut);
+      const filaDeuda = rows.find((r) => r[1] === conDeuda.rut)!;
+      expect(filaDeuda[7]).toBe('Debe');
+      expect(filaDeuda[8]).toBeGreaterThan(0);
+      expect(rows.find((r) => r[1] === alDia.rut)![7]).toBe('Al día');
+      expect(String(filaDeuda[5])).toMatch(/^\d{2}-\d{2}-\d{4}$/);
+    });
+
+    test('el PDF se pide con las filas de la pantalla y se descarga', async ({
+      pageAs,
+      cleanup,
+    }) => {
+      const { comun } = await seedPar(cleanup);
+      const page = await pageAs('secretariaA');
+      // La función se simula: este test cubre lo que la app envía y qué hace con la respuesta.
+      let body: { title: string; headers: string[]; rows: string[][]; footer: string } | null =
+        null;
+      await page.route('**/functions/v1/export-table-pdf', async (route) => {
+        if (route.request().method() === 'OPTIONS') return route.continue();
+        body = route.request().postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/pdf',
+          body: Buffer.from('%PDF-1.4 simulado'),
+        });
+      });
+      await openExAlumnos(page, 'secretaria');
+      await page.locator(SEARCH_EGRESADOS).fill(comun);
+      await expect(page.locator('p-table tbody tr')).toHaveCount(2);
+
+      await page.locator(MENU).click();
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.locator('[data-llm-action="export-graduates-pdf"]').click(),
+      ]);
+
+      expect(download.suggestedFilename()).toMatch(/^ex-alumnos-b_\d{4}-\d{2}-\d{2}\.pdf$/);
+      expect(body!.title).toBe('Ex-Alumnos Clase B');
+      expect(body!.headers).toHaveLength(7);
+      expect(body!.rows).toHaveLength(2);
+      expect(body!.footer).toBe('Total: 2 egresados');
+      // El botón vuelve a quedar disponible.
+      await expect(page.locator(MENU)).toBeEnabled();
+    });
+
+    test('sin egresados en pantalla, "Exportar" está deshabilitado', async ({ pageAs }) => {
+      const page = await pageAs('secretariaA');
+      await openExAlumnos(page, 'secretaria');
+
+      await page.locator(SEARCH_EGRESADOS).fill('zzzz-no-existe-nadie');
+      await expect(page.getByText('No se encontraron egresados').first()).toBeVisible();
+
+      await expect(page.locator(MENU)).toBeDisabled();
+    });
+  });
+
   test('C05 · T11: la ficha abre la matrícula de la fila que se cliqueó (fix-272-m)', async ({
     pageAs,
     cleanup,
@@ -723,5 +1029,83 @@ test.describe('ex-alumnos', () => {
     await page.getByRole('button', { name: 'Continuar' }).click();
     await expect(page).toHaveURL(/[?&]rut=/);
     await expect(page.getByText('Nueva Matrícula').first()).toBeVisible();
+  });
+
+  test('T04 · P04 · M08 (fix-276-m): un egresado archivado sale de Ex-Alumnos, se ve en la Papelera y al restaurarlo vuelve', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const egresado = await createE2eAlumno(
+      { label: 'ExArchivado', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+      cleanup,
+    );
+    const apellido = egresado.paternalLastName;
+    const page = await pageAs('secretariaA');
+    const buscarEgresado = async () => {
+      await openExAlumnos(page, 'secretaria');
+      await page.locator(SEARCH_EGRESADOS).fill(apellido);
+      return egresadoRow(page, apellido);
+    };
+    const filaAlumno = page.locator('p-table tbody tr').filter({ hasText: apellido });
+
+    // Archivar desde su ficha.
+    await (await buscarEgresado()).locator('[data-llm-action="view-student-detail"]').click();
+    await expect(matricula(page)).toBeVisible(CARGA);
+    await hero(page).locator('[data-llm-action="eliminar-alumno"]').click();
+    await page
+      .getByRole('dialog', { name: /Confirmar archivado de/ })
+      .locator('[data-llm-action="confirm-archive-student"]')
+      .click();
+    await expect(page.getByText('Alumno archivado correctamente.')).toBeVisible();
+
+    // T04 · P04: ya no está en Ex-Alumnos.
+    await expect(await buscarEgresado()).toHaveCount(0);
+
+    // Está en la Papelera de la Base, como Finalizado, y no en la lista activa.
+    await page.goto('/app/secretaria/alumnos');
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await page.locator(SEARCH_ALUMNOS).fill(apellido);
+    await expect(filaAlumno).toHaveCount(0);
+    await page.locator('[data-llm-action="papelera"]').click();
+    await expect(page.getByText('Papelera — Alumnos archivados')).toBeVisible(CARGA);
+    await expect(filaAlumno).toHaveCount(1);
+    await expect(filaAlumno).toContainText('Finalizado');
+
+    // M08: al restaurarlo vuelve a Ex-Alumnos, no a la Base.
+    await filaAlumno.locator('[data-llm-action="restore-student-row"]').click();
+    await expect(page.getByText('Alumno restaurado correctamente.')).toBeVisible();
+    await expect(filaAlumno).toHaveCount(0);
+    await page.locator('[data-llm-nav="back"]').first().click();
+    await expect(page.getByText('Listado de alumnos de la escuela')).toBeVisible();
+    await expect(filaAlumno).toHaveCount(0);
+    await expect(await buscarEgresado()).toHaveCount(1);
+  });
+
+  test('W05 (fix-274-m): tras re-matricular, el admin vuelve a "Todas las sedes"', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const egresado = await createE2eAlumno(
+      { label: 'RematSede', branchId: SEDE_B, enrollments: [{ status: 'completed' }] },
+      cleanup,
+    );
+    const page = await pageAs('admin');
+    await openExAlumnos(page, 'admin');
+    const sede = page.locator('[data-llm-action="toggle-branch-dropdown"]');
+    await expect(sede).toContainText('Todas las sedes');
+
+    await page.locator(SEARCH_EGRESADOS).fill(egresado.paternalLastName);
+    await egresadoRow(page, egresado.paternalLastName)
+      .locator('[data-llm-action="re-enroll-student"]')
+      .click();
+    await page.getByRole('button', { name: 'Continuar' }).click();
+
+    // Con el wizard abierto, la sede activa es la del egresado.
+    await expect(page.getByText('Nueva Matrícula').first()).toBeVisible();
+    await expect(sede).toContainText('Conductores Chillán');
+
+    // Al cerrarlo sin matricular, vuelve la sede que el admin tenía elegida.
+    await page.getByRole('button', { name: 'Cerrar panel' }).click();
+    await expect(sede).toContainText('Todas las sedes', CARGA);
   });
 });

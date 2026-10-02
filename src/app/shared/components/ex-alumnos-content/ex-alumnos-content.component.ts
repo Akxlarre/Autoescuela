@@ -29,6 +29,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado-card.component';
+import {
+  ExportMenuComponent,
+  type ExportFormat,
+} from '@shared/components/export-menu/export-menu.component';
+
+/** Pedido de exportación: el formato y las filas que la pantalla está mostrando. */
+export interface EgresadosExportRequest {
+  format: ExportFormat;
+  rows: EgresadoTableRow[];
+}
 
 /**
  * Tabla + buscador + selector de período + KPIs de Ex-Alumnos Clase B (spec 0007-i).
@@ -64,6 +74,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
     EmptyStateComponent,
     SectionHeroComponent,
     EgresadoCardComponent,
+    ExportMenuComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -116,6 +127,15 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
             [years]="availableYears()"
             [searchActive]="hasActiveSearch()"
             ariaLabel="Período de egreso"
+          />
+          <!-- spec 0021-m: exporta las filas que la tabla muestra con el período y la búsqueda
+               actuales (todas las páginas), no vuelve a consultar. -->
+          <app-export-menu
+            class="ml-auto"
+            llmSubject="graduates"
+            [exporting]="isExporting()"
+            [disabled]="filteredEgresados().length === 0"
+            (exportRequested)="requestExport($event)"
           />
         </div>
 
@@ -374,11 +394,15 @@ export class ExAlumnosContentComponent {
   readonly isLoading = input<boolean>(false);
   /** Precedente: alumnos-list-content, alumnos-profesional-list-content, flota-list-content. */
   readonly basePath = input<string>('/app/secretaria');
+  /** Hay una exportación en curso (signal isExporting del Facade). */
+  readonly isExporting = input<boolean>(false);
 
   /** El Smart Component confirma, navega y abre el wizard (y en admin, selecciona sede). */
   readonly reEnrollRequested = output<EgresadoTableRow>();
   readonly requestVerTasas = output<void>();
   readonly requestComentario = output<void>();
+  /** El Smart genera el archivo con las filas recibidas (spec 0021-m). */
+  readonly exportRequested = output<EgresadosExportRequest>();
 
   // ── Hero Config — acciones sin lógica propia, solo re-emiten (el Smart abre el drawer) ──
   protected readonly heroActions: SectionHeroAction[] = [
@@ -478,6 +502,11 @@ export class ExAlumnosContentComponent {
 
   protected requestReEnroll(egresado: EgresadoTableRow): void {
     this.reEnrollRequested.emit(egresado);
+  }
+
+  /** Exporta lo que se ve: la lista ya filtrada por período y búsqueda, completa y en su orden. */
+  protected requestExport(format: ExportFormat): void {
+    this.exportRequested.emit({ format, rows: this.filteredEgresados() });
   }
 
   protected clearFilters(): void {

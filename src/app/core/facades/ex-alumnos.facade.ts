@@ -7,6 +7,15 @@ import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
+import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
+import { downloadBlob } from '@core/utils/file-download.utils';
+import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
+import {
+  EGRESADOS_PDF_COLUMN_WEIGHTS,
+  buildEgresadosExcelTable,
+  buildEgresadosPdfTable,
+} from '@core/utils/egresados-export.utils';
 
 // ── Tipos internos (DTO de Supabase) ──────────────────────────────────────────
 
@@ -20,6 +29,8 @@ interface UserRow {
 
 interface StudentRow {
   id: number;
+  /** 'archived' = el alumno está en la Papelera y no se lista como egresado (fix-276-m). */
+  status?: string | null;
   users: UserRow | null;
 }
 
@@ -53,6 +64,7 @@ export class ExAlumnosFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly toast = inject(ToastService);
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -61,11 +73,13 @@ export class ExAlumnosFacade {
   private readonly _egresados = signal<EgresadoTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _isExporting = signal<boolean>(false);
 
   // ── Estado público ───────────────────────────────────────────────────────────
   readonly egresados = this._egresados.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
 
   // ── Estadísticas — Totales ──
   readonly totalEgresados = computed<number>(() => this._egresados().length);
@@ -151,6 +165,7 @@ export class ExAlumnosFacade {
         branches ( id, name ),
         students!inner (
           id,
+          status,
           users!inner (
             first_names,
             paternal_last_name,
@@ -171,7 +186,10 @@ export class ExAlumnosFacade {
       return;
     }
 
-    const rows = (data as unknown as EgresadoRow[]) ?? [];
+    // fix-276-m: un egresado archivado solo se ve en la Papelera de la Base de Alumnos.
+    const rows = ((data as unknown as EgresadoRow[]) ?? []).filter(
+      (r) => r.students?.status !== 'archived',
+    );
     const convalidationMap = await fetchConvalidationMap(
       this.supabase.client,
       rows.map((r) => r.id),
@@ -248,9 +266,11 @@ export class ExAlumnosFacade {
       const branchId = this.getActiveBranchId();
       let egresadosCountQuery: any = this.supabase.client
         .from('enrollments')
-        .select('*', { count: 'exact', head: true })
+        .select('id, students!inner(status)', { count: 'exact', head: true })
         .eq('status', 'completed')
         .eq('license_group', 'class_b')
+        // fix-276-m: mismo criterio que la lista — los archivados no cuentan.
+        .neq('students.status', 'archived')
         .gte('completed_at', startOfYear);
       if (branchId !== null) egresadosCountQuery = egresadosCountQuery.eq('branch_id', branchId);
       const { count: egresadosCount, error: countErr } = await egresadosCountQuery;
@@ -324,6 +344,42 @@ export class ExAlumnosFacade {
     if (exams.length === 0) return 0;
     const passed = exams.filter((e) => e.passed === true).length;
     return Math.round((passed / exams.length) * 100);
+  }
+
+  /**
+   * Exporta la lista de Ex-Alumnos B (spec 0021-m). Recibe las filas que la pantalla ya filtró:
+   * el archivo trae exactamente lo que se ve, sin volver a consultar ni a filtrar.
+   */
+  async exportEgresados(format: 'excel' | 'pdf', rows: EgresadoTableRow[]): Promise<void> {
+    if (this._isExporting()) return;
+    this._isExporting.set(true);
+    try {
+      const filename = `ex-alumnos-b_${todayIso()}`;
+      if (format === 'excel') {
+        const table = buildEgresadosExcelTable(rows);
+        downloadExcel('Ex-Alumnos B', table.headers, table.rows, filename);
+        return;
+      }
+
+      const table = buildEgresadosPdfTable(rows);
+      const { data, error } = await this.supabase.client.functions.invoke('export-table-pdf', {
+        body: {
+          title: 'Ex-Alumnos Clase B',
+          subtitle: `Generado: ${formatDayMonthYear(todayIso())}`,
+          headers: table.headers,
+          rows: table.rows,
+          columnWeights: EGRESADOS_PDF_COLUMN_WEIGHTS,
+          footer: `Total: ${rows.length} egresado${rows.length === 1 ? '' : 's'}`,
+        },
+      });
+      if (error) throw error;
+      const bytes = data instanceof Blob ? await data.arrayBuffer() : data;
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${filename}.pdf`);
+    } catch {
+      this.toast.error('No se pudo exportar la lista. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 
   private deriveLicencia(code: string, name: string): string {

@@ -29,10 +29,12 @@ import { AdminExAlumnosComentariosDrawerComponent } from '@features/admin/alumno
     <app-ex-alumnos-content
       [egresados]="facade.egresadosClaseBList()"
       [isLoading]="facade.isLoading()"
+      [isExporting]="facade.isExporting()"
       basePath="/app/secretaria"
       (reEnrollRequested)="reEnroll($event)"
       (requestVerTasas)="openTasasDrawer()"
       (requestComentario)="openComentariosDrawer()"
+      (exportRequested)="facade.exportEgresados($event.format, $event.rows)"
     />
   `,
 })

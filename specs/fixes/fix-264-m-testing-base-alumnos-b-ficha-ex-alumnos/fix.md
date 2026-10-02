@@ -232,7 +232,7 @@ W03–W08 · X, Y, Z completas.
 | 024b | S4 🟠 | **Mitad corregida, mitad vigente** | `fix-263-m` sacó el borrador del selector; la matrícula principal sigue siendo `sorted[0]` sin filtrar | B15 |
 | 024b | S5 🟠 | **Corregida** por `fix-263-m` | El botón desaparece y el estado pasa a "Egresado" | |
 | 024b | S6 🟠 | **Confirmada** | Ex-Alumnos usa `enrollments.updated_at`; marcar ex-alumno no lo actualiza | B16 |
-| 024b | S7 🟠 | Confirmada en código, **no ejecutada** | `reprogramarClase()` deja la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribe en el flujo masivo) | por crear, coordinar con `ASG-i-027` |
+| 024b | S7 🟠 | **Corregida** el 2026-10-02 | `reprogramarClase()` dejaba la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribía en el flujo masivo). Ahora archiva y escribe el historial; verificado en la base con un alumno de prueba | `fix-279-m` · re-ejecutar en `ASG-i-027` |
 | 024b | S8 🟠 | **Confirmada** | Mensaje genérico con email duplicado | B17 |
 | 024b | S9 🟠 | Confirmada en código | La ficha no tiene ninguna acción de Documentos. Requiere decisión (Q01) | ⏸ decisión |
 | 024b | S10 🟠 | **Parte corregida, parte vigente** (código) | `fix-262-m` quitó el requisito de nota. La ficha sigue llamando `generarCertificado()` sin `force`, y la función solo acepta el bypass de admin con `force: true` | por crear |
@@ -244,7 +244,7 @@ W03–W08 · X, Y, Z completas.
 | 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | ⏸ decisión (X02/X04) |
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
 | 024b | S18 🟡 | Confirmada en código | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | por crear |
-| 024b | S19 🟡 | Sin ejecutar | Requiere decisión (I08) | ⏸ decisión |
+| 024b | S19 🟡 | **Corregida** el 2026-10-02 | Decisión tomada (I06 / I08); la ficha registra pagos y muestra el historial del alumno | `fix-278-m` |
 | 024b | S20 🟡 | Sin ejecutar | Necesita clases sembradas | pendiente |
 
 Descartado: **P08** (RLS de `students`/`enrollments` por sede) funciona bien para lectura, y por
@@ -297,33 +297,33 @@ track; cada una va a su propio fix/hotfix.
 | `024a` D05 / N02 | **Quitar el KPI "Por Vencer"** y su drawer | ✅ hecho en `fix-271-m` (B9) |
 | `024a` D04 | **"Con deuda" y el saldo suman todas las matrículas B** del alumno | ✅ hecho en `fix-270-m` (B8) |
 | `024a` D03 | **"Activos" incluye "Pendiente Pago" y "Docs Pendientes"**: si están teniendo clases, están activos | ✅ hecho en `hotfix-118-m` |
-| `024a` L09 | **No se puede archivar a un alumno con clases futuras**; primero hay que cancelarlas o reagendarlas | cambio |
-| `024a` M08 | Un restaurado **vuelve a donde estaba**: a Ex-Alumnos si ya estaba marcado como ex-alumno, a la Base si no | a verificar (caso aún sin ejecutar) |
-| `024b` F04 / F13 | **Se permite reprogramar individualmente** una clase con inasistencia o cancelada; la inasistencia anterior se archiva y la reprogramación **queda en el historial de reagendamientos** | cambio → resuelve S7 |
-| `024b` H06 | Una inasistencia **ya reagendada no se puede justificar** (quedó archivada) | a verificar junto con S7 |
+| `024a` L09 | **No se puede archivar a un alumno con clases futuras**; primero hay que cancelarlas o reagendarlas | ✅ hecho en `fix-277-m` (aviso por toast; solo clases prácticas Clase B) |
+| `024a` M08 | Un restaurado **vuelve a donde estaba**: a Ex-Alumnos si ya estaba marcado como ex-alumno, a la Base si no | ✅ verificado en navegador con `fix-276-m` |
+| `024b` F04 / F13 | **Se permite reprogramar individualmente** una clase con inasistencia o cancelada; la inasistencia anterior se archiva y la reprogramación **queda en el historial de reagendamientos** | ✅ hecho en `fix-279-m` (S7): el formulario pide la razón; verificado en la base con un alumno de prueba |
+| `024b` H06 | Una inasistencia **ya reagendada no se puede justificar** (quedó archivada) | ✅ hecho en `hotfix-128-m` (el botón "Justificar" seguía apareciendo) |
 | `024b` Q01 | **No se repone el botón "Documentos"** en la ficha | S9 cerrada sin cambio |
-| `024b` I06 / I08 | "Ver todo el historial" abre Pagos **filtrado por el alumno**, y se agrega un botón **"Registrar pago"** en "Estado Financiero" | cambio → resuelve S19 |
+| `024b` I06 / I08 | "Ver todo el historial" abre Pagos **filtrado por el alumno**, y se agrega un botón **"Registrar pago"** en "Estado Financiero" | ✅ hecho en `fix-278-m` (S19): "Ver todo el historial" abre el panel "Estado de Cuenta" de la matrícula sobre la ficha — el módulo Pagos no tiene listado filtrable por alumno — y "Registrar pago" aparece solo con saldo pendiente. De paso, `hotfix-127-m`: el badge del panel mostraba `paid_full` crudo |
 | `024b` Q02 | Email y teléfono **quedan como texto** | sin cambio |
 | `024b` Q03 | El PDF de la ficha **solo se descarga desde la lista** | sin cambio |
 | `024b` X02 / X04 | **Tasas y opiniones se dejan como están.** No hay nada que las alimente: ninguna pantalla crea filas en `student_surveys` ni registra `class_b_exam_scores` (que además son ensayos, no el examen municipal). Filtrarlas por sede no aporta mientras no tengan datos | S16 cerrada sin cambio; X01–X05 no se ejecutan |
 | `024b` C05 / T11 | La ficha abre **la matrícula que se cliqueó**: desde Ex-Alumnos la terminada, desde la Base la vigente | ✅ hecho en `fix-272-m` |
-| `024b` O05 | Egresar con deuda: **la confirmación avisa el monto, pero permite** | cambio |
-| `024b` A08 / P04 / T04 | Un ex-alumno archivado **sale de Ex-Alumnos**; solo se ve en la Papelera | cambio |
+| `024b` O05 | Egresar con deuda: **la confirmación avisa el monto, pero permite** | ✅ hecho en `hotfix-125-m` |
+| `024b` A08 / P04 / T04 | Un ex-alumno archivado **sale de Ex-Alumnos**; solo se ve en la Papelera | ✅ hecho en `fix-276-m` (antes tampoco aparecía en la Papelera) |
 | `024b` T03 | Un egresado re-matriculado aparece **en ambas listas** | sin cambio |
 | `024b` C06 | Las matrículas **canceladas se muestran en el selector, marcadas** | ✅ hecho en `hotfix-120-m` (marca "Anulada"); falta verlo en navegador con una cancelada real |
 | `024b` P05 | El botón sigue diciendo **"Eliminar Alumno"** | sin cambio |
 | `024a` D07 · `024b` T07 | Los KPIs muestran **siempre el total de la sede**; no siguen filtros, búsqueda ni período | sin cambio |
 | `024a` E08 | El buscador **no busca por email** | sin cambio |
 | `024b` B09 | "Fecha de ingreso" es **la de la matrícula elegida** (cambia con el selector) | ✅ hecho en `fix-273-m`, junto con B14 |
-| `024a` F10 | Los filtros y la búsqueda **se conservan** al salir de la lista y volver | cambio — revisado en código el 2026-10-01: los filtros son signals locales de `alumnos-list-content` y se pierden al salir de la pantalla |
-| `024a` G03 | **Agregar ordenamiento por columna** en la tabla de alumnos | cambio (feature nueva) |
+| `024a` F10 | Los filtros y la búsqueda **se conservan** al salir de la lista y volver | ✅ hecho en `fix-275-m` + `hotfix-126-m`. El owner precisó la regla: **solo al devolverse desde la ficha de un alumno** ("Volver" o el botón atrás del navegador); por cualquier otro camino la lista aparece sin filtros |
+| `024a` G03 | **Agregar ordenamiento por columna** en la tabla de alumnos | ✅ implementado en la spec `0020-m` (2026-10-02): los 8 títulos ordenan la lista completa (clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto), y el orden se conserva solo al volver de la ficha. La vista de tarjetas tiene un control "Ordenar por". Con visto bueno visual del owner; spec cerrada |
 | `024a` O05 | **"Nueva Matrícula" se oculta dentro de la Papelera** | ✅ hecho en `hotfix-119-m` |
 | `024a` J04 | **No aplica**: en el uso real un alumno siempre nace del wizard con una matrícula; el caso "sin matrícula" solo existe con datos sembrados a mano | sin cambio; J04 no se ejecuta |
 | `024a` L04 | "borrarlo" debe escribirse **exactamente como lo pide el modal**; no se aceptan mayúsculas | ✅ hecho en `hotfix-124-m` (el modal aceptaba mayúsculas) |
-| `024b` F11 | "Cancelar" al reprogramar **vuelve al panel de Ficha Técnica**, no cierra todo | cambio — revisado en código el 2026-10-01: hoy `onCancel()` cierra el drawer completo |
+| `024b` F11 | "Cancelar" al reprogramar **vuelve al panel de Ficha Técnica**, no cierra todo | ✅ hecho en `fix-279-m` |
 | `024b` M08 | El teléfono de "Editar Perfil" usa **la misma regla que Nueva Matrícula**: obligatorio y con al menos 8 caracteres (`personal-data.component.ts:202`). No se agrega validación de formato | ✅ hecho en `hotfix-121-m` |
-| `024b` W05 | Al terminar o cancelar una re-matrícula, el selector de sede del admin **vuelve a la sede que tenía elegida** (p. ej. "Todas") | cambio — revisado en código el 2026-10-01: `admin-ex-alumnos.component.ts` llama `selectBranch(egresado.branchId)` y nunca restaura la sede anterior |
-| `024b` T14 | Ex-Alumnos debe **exportar la lista con las mismas opciones que la Base de Alumnos (Excel y PDF)**. No hace falta descargar el certificado desde la lista | cambio (feature nueva) |
+| `024b` W05 | Al terminar o cancelar una re-matrícula, el selector de sede del admin **vuelve a la sede que tenía elegida** (p. ej. "Todas") | ✅ hecho en `fix-274-m` (solo Ex-Alumnos B) |
+| `024b` T14 | Ex-Alumnos debe **exportar la lista con las mismas opciones que la Base de Alumnos (Excel y PDF)**. No hace falta descargar el certificado desde la lista | implementado en la spec `0021-m` (2026-10-02): botón "Exportar" con Excel y PDF que traen las filas de la pantalla. Función `export-table-pdf` desplegada, PDF probado de punta a punta y visto bueno visual del owner; spec cerrada |
 
 ### Aún pendientes
 
@@ -360,7 +360,9 @@ muestra el error real de cada uno.
   lista (B1 ×2, B8, B10) y 2 en la ficha (B14, B19). La suite completa tiene 58 tests. Tras
   `fix-270-m` (B8) quedan 5: 3 en la lista (B1 ×2, B10) y 2 en la ficha. Tras `fix-273-m` (B14)
   y con B19 en verde quedan 3, todos en la lista (B1 ×2, B10); la ficha no tiene ninguno. Los
-  dos archivos de Alumnos B suman 46 tests (se agregó C05 · T11).
+  dos archivos de Alumnos B suman 46 tests (se agregó C05 · T11). Con F10, L09, O05, T04 · P04 ·
+  M08 y W05 (tanda de la noche del 2026-10-01) suman 51; la siembra E2E ahora puede agendar una
+  clase futura (`addFutureClass()`).
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

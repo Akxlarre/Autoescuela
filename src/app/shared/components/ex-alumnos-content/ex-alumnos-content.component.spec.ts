@@ -120,6 +120,35 @@ describe('ExAlumnosContentComponent', () => {
     });
   });
 
+  describe('requestExport — exporta lo que se ve (spec 0021-m)', () => {
+    it('emite el formato y las filas filtradas por la búsqueda, completas y en su orden', () => {
+      setup([
+        makeEgresado({ id: 1, nombre: 'Reyes Camila' }),
+        makeEgresado({ id: 2, nombre: 'Soto Andy' }),
+        makeEgresado({ id: 3, nombre: 'Reyes Pedro' }),
+      ]);
+      const emitted: { format: string; rows: EgresadoTableRow[] }[] = [];
+      component.exportRequested.subscribe((req) => emitted.push(req));
+      (component as any).searchTerm.set('reyes');
+
+      (component as any).requestExport('excel');
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].format).toBe('excel');
+      expect(emitted[0].rows.map((r) => r.id)).toEqual([1, 3]);
+    });
+
+    it('no se limita a la página visible: van todas las filas del filtro', () => {
+      setup(Array.from({ length: 25 }, (_, i) => makeEgresado({ id: i })));
+      const emitted: { rows: EgresadoTableRow[] }[] = [];
+      component.exportRequested.subscribe((req) => emitted.push(req));
+
+      (component as any).requestExport('pdf');
+
+      expect(emitted[0].rows).toHaveLength(25);
+    });
+  });
+
   describe('clearFilters', () => {
     it('resetea búsqueda, período y paginación mobile a su estado inicial', () => {
       setup(Array.from({ length: 10 }, (_, i) => makeEgresado({ id: i })));

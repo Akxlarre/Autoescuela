@@ -6,6 +6,10 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
+import {
+  enrollmentPaymentStatusLabel,
+  enrollmentPaymentStatusVariant,
+} from '@core/utils/payment-status.utils';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
@@ -317,29 +321,10 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
     return this.facade.estadoCuentaHistorial().reduce((acc, p) => acc + p.monto, 0);
   }
 
-  protected paymentStatusLabel(status: string | null): string {
-    switch (status) {
-      case 'paid':
-        return 'Pagado';
-      case 'partial':
-        return 'Parcial';
-      case 'pending':
-        return 'Pendiente';
-      default:
-        return status ?? '—';
-    }
-  }
-
-  protected paymentStatusVariant(status: string | null): 'success' | 'warning' | 'neutral' {
-    switch (status) {
-      case 'paid':
-        return 'success';
-      case 'partial':
-        return 'warning';
-      default:
-        return 'neutral';
-    }
-  }
+  // hotfix-127-m: el estado de una matrícula pagada completa es paid_full, no paid; antes se
+  // mostraba el valor crudo.
+  protected readonly paymentStatusLabel = enrollmentPaymentStatusLabel;
+  protected readonly paymentStatusVariant = enrollmentPaymentStatusVariant;
 
   protected estadoBg(estado: string | null): string {
     switch (estado) {

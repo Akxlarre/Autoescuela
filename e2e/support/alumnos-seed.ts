@@ -164,6 +164,93 @@ export async function createE2eAlumno(spec: E2eAlumnoSpec, cleanup: Cleanup): Pr
 }
 
 /**
+ * Agenda una clase práctica a futuro para una matrícula de prueba (fix-277-m). Usa el instructor y
+ * el vehículo de cualquier clase existente, y una fecha a más de un año de hoy a las 03:15, para
+ * no chocar con la agenda real ni con otros tests.
+ */
+export async function addFutureClass(enrollmentId: number, cleanup: Cleanup): Promise<void> {
+  const sb = await getAdminClient();
+  const { data: sample, error: sampleErr } = await sb
+    .from('class_b_sessions')
+    .select('instructor_id, vehicle_id')
+    .limit(1)
+    .single();
+  if (sampleErr)
+    throw new Error(
+      `[e2e] No hay ninguna clase de la que copiar instructor y vehículo: ${sampleErr.message}`,
+    );
+
+  const when = new Date(Date.now() + (400 + Math.floor(Math.random() * 300)) * 24 * 60 * 60 * 1000);
+  when.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+  const { data: session, error: sessionErr } = await sb
+    .from('class_b_sessions')
+    .insert({
+      enrollment_id: enrollmentId,
+      instructor_id: sample.instructor_id,
+      vehicle_id: sample.vehicle_id,
+      class_number: 1,
+      scheduled_at: when.toISOString(),
+      status: 'scheduled',
+    })
+    .select('id')
+    .single();
+  if (sessionErr)
+    throw new Error(`[e2e] No se pudo agendar la clase de prueba: ${sessionErr.message}`);
+  cleanup.track('class_b_sessions', session.id);
+}
+
+/**
+ * Deja la clase #1 de una matrícula de prueba como inasistencia (fix-279-m): una sesión pasada en
+ * `no_show` con su fila de asistencia `absent` vigente. Devuelve el id de la sesión.
+ */
+export async function addMissedClass(
+  alumno: Pick<E2eAlumno, 'studentId'>,
+  enrollmentId: number,
+  cleanup: Cleanup,
+): Promise<number> {
+  const sb = await getAdminClient();
+  const { data: sample, error: sampleErr } = await sb
+    .from('class_b_sessions')
+    .select('instructor_id, vehicle_id')
+    .limit(1)
+    .single();
+  if (sampleErr)
+    throw new Error(
+      `[e2e] No hay ninguna clase de la que copiar instructor y vehículo: ${sampleErr.message}`,
+    );
+
+  // Hace 3 días a las 03:15 UTC: una hora en la que no hay clases reales.
+  const when = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  when.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+  const { data: session, error: sessionErr } = await sb
+    .from('class_b_sessions')
+    .insert({
+      enrollment_id: enrollmentId,
+      instructor_id: sample.instructor_id,
+      vehicle_id: sample.vehicle_id,
+      class_number: 1,
+      scheduled_at: when.toISOString(),
+      status: 'no_show',
+    })
+    .select('id')
+    .single();
+  if (sessionErr)
+    throw new Error(`[e2e] No se pudo crear la clase con inasistencia: ${sessionErr.message}`);
+  cleanup.track('class_b_sessions', session.id);
+
+  const { data: attendance, error: attendanceErr } = await sb
+    .from('class_b_practice_attendance')
+    .insert({ class_b_session_id: session.id, student_id: alumno.studentId, status: 'absent' })
+    .select('id')
+    .single();
+  if (attendanceErr)
+    throw new Error(`[e2e] No se pudo registrar la inasistencia: ${attendanceErr.message}`);
+  cleanup.track('class_b_practice_attendance', attendance.id);
+
+  return session.id;
+}
+
+/**
  * Deja una matrícula con "certificado Clase B ya enviado por email": la condición que habilita
  * "Marcar como Ex-Alumno" en la ficha (fix-012-i). Inserta el certificado y su registro de
  * envío; no genera ningún PDF ni manda correos.
