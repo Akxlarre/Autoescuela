@@ -20,6 +20,7 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
