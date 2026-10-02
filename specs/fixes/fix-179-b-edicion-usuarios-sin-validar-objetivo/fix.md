@@ -1,7 +1,8 @@
 # Fix: Una secretaria puede editar a cualquier usuario (incluido un admin)
 > id: fix-179-b-edicion-usuarios-sin-validar-objetivo
 > refs: ASG-i-043
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Root Cause
@@ -75,11 +76,11 @@ a un alumno a secretaria**, le dio `can_access_both_branches = true` a un alumno
 → 0 filas o `42501`; admin y service role siguen escribiendo columnas de acceso; matrícula
 (INSERT/UPDATE de alumno) y pre-inscritos (`role_id` NULL → alumno) siguen funcionando.
 
-**Pendiente:** aplicar la migración y desplegar `update-student-profile` y `update-instructor`.
+**Aplicado en producción el 2026-10-01** (ver Progreso).
 
 ## Progreso
 - [x] Reglas puras + 17 tests deno en verde
 - [x] Edge functions `update-student-profile` y `update-instructor` validan el objetivo
 - [x] Migración RLS + trigger, ensayada en remoto dentro de `BEGIN … ROLLBACK` (0/11 fallos)
-- [ ] Aplicar migración y desplegar las 2 edge functions en producción (**espera visto bueno del owner**)
-- [ ] Re-correr el test de RLS contra la BD real y `/fix-close`
+- [x] Aplicada la migración `20261001220000` (`supabase db push`) y desplegadas `update-student-profile` y `update-instructor` (visto bueno del owner, 2026-10-01). Smoke test: sin usuario → 401
+- [x] Test de RLS re-corrido contra la BD real fuera de transacción: 0 fallos, sin filas residuales. Cerrado
