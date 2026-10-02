@@ -363,6 +363,8 @@ export function resolveListadoLabel(
                       type="button"
                       class="btn-secondary w-full justify-center gap-1.5"
                       [disabled]="action.disabled ?? false"
+                      [pTooltip]="action.label"
+                      tooltipPosition="top"
                       [attr.data-llm-action]="action.id"
                       [attr.aria-haspopup]="action.menu ? 'menu' : null"
                       [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
@@ -396,6 +398,8 @@ export function resolveListadoLabel(
                     type="button"
                     class="btn-secondary w-full justify-center gap-1.5"
                     data-llm-action="ver-inasistencias"
+                    pTooltip="Inasistencias"
+                    tooltipPosition="top"
                     (click)="openInasistenciasPanel()"
                   >
                     <app-icon name="alert-triangle" [size]="14" />
@@ -405,6 +409,8 @@ export function resolveListadoLabel(
                     type="button"
                     class="btn-secondary w-full justify-center gap-1.5"
                     data-llm-action="ver-ficha-tecnica"
+                    pTooltip="Ficha Técnica"
+                    tooltipPosition="top"
                     (click)="openFichaTecnicaPanel()"
                   >
                     <app-icon name="file-text" [size]="14" />
@@ -417,6 +423,8 @@ export function resolveListadoLabel(
                   type="button"
                   class="btn-secondary w-full justify-center gap-1.5"
                   data-llm-action="ver-consentimientos"
+                  pTooltip="Consentimientos"
+                  tooltipPosition="top"
                   (click)="openConsentimientosPanel()"
                 >
                   <app-icon name="shield" [size]="14" />
@@ -428,6 +436,8 @@ export function resolveListadoLabel(
                   type="button"
                   class="btn-secondary w-full justify-center gap-1.5"
                   data-llm-action="ver-reagendamientos"
+                  pTooltip="Reagendamientos"
+                  tooltipPosition="top"
                   (click)="openReagendamientosPanel()"
                 >
                   <app-icon name="calendar-clock" [size]="14" />
