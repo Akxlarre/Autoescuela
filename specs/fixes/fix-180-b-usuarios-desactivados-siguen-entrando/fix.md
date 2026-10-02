@@ -1,7 +1,8 @@
 # Fix: Un usuario desactivado sigue entrando y operando
 > id: fix-180-b-usuarios-desactivados-siguen-entrando
 > refs: ASG-i-044 (parte 1 de 2: cuentas desactivadas. La parte 2 — recuperar contraseña y clave inicial — va en un track aparte)
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Root Cause
@@ -62,6 +63,6 @@ ban quedaría sin acceso).
 - [x] Migración `auth_user_role()` ensayada en remoto dentro de `BEGIN … ROLLBACK`
 - [x] Ban/unban en `update-secretary` y `update-instructor`
 - [x] `authGuard` + mensaje de cuenta desactivada, con tests
-- [ ] Aplicar migración y desplegar las 2 edge functions en producción (**espera visto bueno del owner**)
-- [ ] Re-correr el test contra la BD real y `/fix-close`
-- [ ] El front (guard + mensaje) llega a producción con el próximo release (tag `v*`)
+- [x] Aplicada `20261001230000` y desplegadas `update-secretary` y `update-instructor` (visto bueno del owner, 2026-10-01)
+- [x] Test re-corrido contra la BD real fuera de transacción: 0 fallos; 0 usuarios inactivos, la secretaria de prueba sigue activa. Cerrado
+- El front (guard + mensaje) llega a producción con el próximo release (tag `v*`) — no bloquea el cierre: el corte real lo hacen la RLS y el ban
