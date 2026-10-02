@@ -1,6 +1,6 @@
 # Spec 0009-i — Edge functions: exigir usuario real con rol de staff
 
-> **Status:** approved
+> **Status:** done
 > **Created:** 2026-10-01
 > **Owner:** Ignacio (i)
 > **Priority:** P0
@@ -171,3 +171,4 @@ Aplican a las **11 funciones**: `export-students`, `generate-enrollment-sheet`,
 ## Changelog
 
 - 2026-10-01 — draft inicial por Ignacio (i), contexto cargado desde `ASG-i-042`
+- 2026-10-01 — implementada, desplegada al proyecto de pruebas y verificada en vivo (8/8 AC). Cerrada.

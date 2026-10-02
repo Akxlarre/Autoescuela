@@ -292,7 +292,6 @@
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 | ASG-i-024 | Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos | `m` | [fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos](fixes/fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos/fix.md) | 2026-10-01 |
-| ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | `i` | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -434,6 +433,7 @@
 | ASG-i-039 | Sacar las credenciales de prueba de la pantalla de login | [hotfix-007-i-credenciales-prueba-login-solo-dev](hotfixes/hotfix-007-i-credenciales-prueba-login-solo-dev/hotfix.md) | 2026-09-30 |
 | ASG-i-038 | Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto? | [fix-262-m-certificacion-b-sin-requisito-nota](fixes/fix-262-m-certificacion-b-sin-requisito-nota/fix.md) | 2026-10-01 |
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
+| ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -15,6 +15,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Ficha con RUT, contacto y pagos: solo staff (spec 0009-i). Antes respondía hasta a la anon key.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     const { enrollment_id } = await req.json();
 
     if (!enrollment_id || typeof enrollment_id !== 'number') {
@@ -360,7 +365,9 @@ function buildPageContent(data: SheetData): string {
   text(M, 813, 'FICHA DE MATRÍCULA', 8);
 
   // Enrollment number + date (right side)
-  const nro = data.enrollment.number ? `Nro. ${data.enrollment.number}` : `ID ${data.enrollment.id}`;
+  const nro = data.enrollment.number
+    ? `Nro. ${data.enrollment.number}`
+    : `ID ${data.enrollment.id}`;
   const genDate = formatDateCL(data.generatedAt);
   text(400, 820, nro, 10, true);
   text(400, 813, `Generada: ${genDate}`, 7);
