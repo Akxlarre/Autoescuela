@@ -68,3 +68,36 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-046). ACs propios:
   prefijo contra la verdad sin RLS; escritura = INSERT/UPDATE dentro de un sub-bloque que siempre se
   deshace).
 - **Cómo correrlo:** como `postgres` (SQL editor / MCP). Ensayo: `BEGIN; <migración>; <test>; ROLLBACK;`.
+
+## Resultado (2026-10-01)
+
+**Rojo, BD remota actual — 9 fallos:** secretaria sede 1 lee 213 objetos fuera de su alcance y
+sede 2, 198; INSERT en `students/` y `contracts/` de la sede 2 aceptado; prefijo inventado
+aceptado; UPDATE de un objeto de la sede 2 → 1 fila; mover un objeto propio a la sede 2 aceptado;
+INSERT en `website-assets/branch-2/` aceptado; **INSERT anónimo en `website-public/seeds/`
+aceptado** (F4 confirmado en vivo).
+
+**Verde, migración + test en `BEGIN … ROLLBACK` — 0 fallos en 15 casos:** sede 1 ve 14 objetos,
+sede 2 ve 29, multi-sede y admin 227 (= total); todas las escrituras ajenas → `42501`; las propias
+→ 1 fila; el wizard público (`anon` → `public-uploads/carnet/`) sigue funcionando.
+
+**Por qué la secretaria ve tan pocos objetos:** 157 de los 183 archivos bajo prefijos de matrícula
+son **huérfanos** (su `enrollment_id` ya no existe: borradores limpiados por
+`cleanup_expired_drafts`, que no borra Storage). Quedan visibles solo para el admin. Se verificó
+que **todas** las rutas referenciadas desde la BD (`student_documents.storage_url`,
+`digital_contracts.file_url`/`signed_contract_url`, `enrollments.*_pdf_url`) apuntan a
+`<prefijo>/<su propia matrícula>/`, así que ningún archivo vigente queda inaccesible para la
+secretaria de su sede. Limpiar los huérfanos queda como follow-up (no es parte de este fix).
+
+## Rollback
+Policies anteriores (`pg_policies` remoto, 2026-10-01). La cláusula de rol era
+`EXISTS (SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supabase_uid = auth.uid() AND r.name = ANY (…))`:
+
+| Policy | Cmd | Antes |
+|---|---|---|
+| `documents_authenticated_read` | SELECT | `bucket_id = 'documents'` AND rol ∈ {admin, secretary} |
+| `documents_auth_insert` | INSERT | `bucket_id = 'documents'` AND (rol ∈ {secretary, admin} OR instructor dueño de `sessions/<id>`) |
+| `documents_auth_update` | UPDATE | ídem en USING y WITH CHECK |
+| `website_public_insert` | INSERT | `bucket_id = 'website-public'` AND rol ∈ {admin, secretary} |
+| `website_public_update` | UPDATE | ídem (USING) |
+| `website_public_seed_insert` | INSERT `TO public` | `bucket_id = 'website-public' AND position('seeds/' in name) = 1` |
