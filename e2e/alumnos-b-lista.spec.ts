@@ -89,6 +89,8 @@ test.describe('carga y totales', () => {
     const total = await reportTotal(page);
     await expect(page.locator('app-section-hero').getByText(`${total} alumnos`)).toBeVisible();
     expect(await kpiValue(page, 'Total Alumnos')).toBe(total);
+    // fix-271-m: "Por Vencer" valía 0 por construcción y se quitó.
+    await expect(page.locator('app-section-hero').getByText('Por Vencer')).toHaveCount(0);
     if (total > 10) await expect(rows(page)).toHaveCount(10);
 
     errors.expectClean();
@@ -184,7 +186,6 @@ test.describe('qué alumnos aparecen y con qué estado', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B8 (fix-264-m)');
     const haceUnAno = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
     // El alumno se crea archivado para medir el KPI dentro de la Papelera: ahí "Con deuda"
     // solo cuenta archivados, y ningún otro test ni dev crea archivados con deuda, así que el
@@ -386,6 +387,8 @@ test.describe('archivar, papelera y restaurar', () => {
     // M01 · M02: en la Papelera solo se puede restaurar.
     await page.locator('[data-llm-action="papelera"]').click();
     await expect(page.getByText('Papelera — Alumnos archivados')).toBeVisible(CARGA);
+    // O05 (hotfix-119-m): dentro de la Papelera no se ofrece "Nueva Matrícula".
+    await expect(page.locator('[data-llm-action="nueva-matricula"]')).toHaveCount(0);
     await page.locator(SEARCH).fill(alumno.paternalLastName);
     await expect(row).toHaveCount(1);
     await expect(row.locator('[data-llm-action="archive-student-row"]')).toHaveCount(0);
@@ -396,6 +399,7 @@ test.describe('archivar, papelera y restaurar', () => {
     // M03: volver a la lista activa: el alumno está de vuelta.
     await page.locator('[data-llm-nav="back"]').first().click();
     await expect(page.getByText('Listado de alumnos de la escuela')).toBeVisible();
+    await expect(page.locator('[data-llm-action="nueva-matricula"]')).toBeVisible();
     await page.locator(SEARCH).fill(alumno.paternalLastName);
     await expect(row).toHaveCount(1);
   });
@@ -421,6 +425,9 @@ test.describe('archivar, papelera y restaurar', () => {
     await expect(campo).toBeFocused(); // L08
 
     await campo.fill('borrar');
+    await expect(confirmar).toBeDisabled();
+    // L04 (hotfix-124-m): hay que escribirlo tal como lo pide el modal, en minúsculas.
+    await campo.fill('BORRARLO');
     await expect(confirmar).toBeDisabled();
     await campo.fill('borrarlo');
     await expect(confirmar).toBeEnabled();

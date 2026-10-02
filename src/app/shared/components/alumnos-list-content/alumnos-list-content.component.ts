@@ -14,9 +14,11 @@ import {
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { buildCourseFilterOptions } from '@core/utils/course-filter-options.utils';
+import { buildAlumnosHeroActions } from '@core/utils/alumnos-hero-actions.utils';
 import {
   getExpedienteStatus as computeExpedienteStatus,
   getAlumnoStatusSeverity,
+  isAlumnoCursando,
 } from '@core/utils/alumno-status.utils';
 import type { ExpedienteStatus } from '@core/utils/alumno-status.utils';
 import { CommonModule } from '@angular/common';
@@ -55,7 +57,6 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
 // Features
 import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
-import { AlumnosPorVencerDrawerComponent } from '../alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component';
 
 // Models
 import type {
@@ -117,7 +118,6 @@ export interface AlumnoExportRequest {
         backLabel="Alumnos"
         (backClicked)="trashViewToggled.emit()"
         (actionClick)="handleHeroAction($event)"
-        (kpiClick)="onHeroKpiClick($event)"
       />
 
       <!-- Filtros y Tabla (Dual-Viewport). El modo fill-screen desktop lo da
@@ -450,6 +450,8 @@ export interface AlumnoExportRequest {
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                            [queryParams]="{ enrollment: alumno.enrollmentId }"
+                            data-llm-action="view-student-detail"
                           >
                             <app-icon name="eye" [size]="16" />
                           </button>
@@ -612,7 +614,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly isGeneratingFicha = input<number | false>(false);
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/secretaria');
-  readonly alumnosPorVencer = input<number>(0);
   readonly showSedeColumn = input(false);
   /** Error de la última carga (signal `error` del facade), o null. */
   readonly error = input<string | null>(null);
@@ -643,24 +644,9 @@ export class AlumnosListContentComponent implements AfterViewInit {
     { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
   ]);
 
-  readonly heroActions = computed((): SectionHeroAction[] => {
-    const isTrash = this.trashView();
-    return [
-      {
-        id: 'papelera',
-        label: 'Papelera',
-        icon: 'trash-2',
-        primary: false,
-        danger: isTrash,
-      },
-      {
-        id: 'nueva-matricula',
-        label: 'Nueva Matrícula',
-        icon: 'plus',
-        primary: true,
-      },
-    ];
-  });
+  readonly heroActions = computed((): SectionHeroAction[] =>
+    buildAlumnosHeroActions(this.trashView()),
+  );
 
   readonly alumnosKpis = computed((): SectionHeroKpi[] => [
     {
@@ -683,14 +669,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
       value: this.conDeuda(),
       icon: 'circle-alert',
       color: 'warning',
-    },
-    {
-      id: 'por-vencer',
-      label: 'Por Vencer',
-      value: this.alumnosPorVencer(),
-      icon: 'alert-triangle',
-      color: 'error',
-      clickable: true,
     },
   ]);
 
@@ -744,7 +722,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
     exp_teorico: 'pendiente',
     exp_practico: 'pendiente',
     expediente: { ci: false, foto: false, medico: false, semep: false },
-    expiresAt: null,
     cursoCompletoPendienteEgreso: false,
   };
 
@@ -797,7 +774,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
   }
 
   activos(): number {
-    return this.alumnos().filter((a) => a.status === 'Activo').length;
+    return this.alumnos().filter((a) => isAlumnoCursando(a.status)).length;
   }
 
   conDeuda(): number {
@@ -826,16 +803,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
     this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
   }
 
-  openPorVencerDrawer(): void {
-    if (!this.isLoading()) {
-      this.layoutDrawer.open(
-        AlumnosPorVencerDrawerComponent,
-        'Alumnos con Cuotas por Vencer',
-        'alert-triangle',
-      );
-    }
-  }
-
   handleHeroAction(actionId: string): void {
     switch (actionId) {
       case 'papelera':
@@ -847,10 +814,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
       default:
         break;
     }
-  }
-
-  onHeroKpiClick(kpiId: string): void {
-    if (kpiId === 'por-vencer') this.openPorVencerDrawer();
   }
 
   openNuevaMatriculaDrawer(): void {

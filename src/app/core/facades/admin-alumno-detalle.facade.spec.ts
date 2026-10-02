@@ -1308,6 +1308,84 @@ describe('AdminAlumnoDetalleFacade', () => {
         });
       });
 
+      describe('fecha de ingreso — fix-273-m', () => {
+        it('es la fecha de la matrícula mostrada, en dd-mm-aaaa, no la del alta del alumno', async () => {
+          // initWithEnrollments() crea al alumno con students.created_at = 2026-01-01.
+          await initWithEnrollments([makeEnrollmentRow(303, 'active', '2026-03-15')]);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('15-03-2026');
+        });
+
+        it('cambia al elegir otra matrícula en el selector', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-15'),
+            makeEnrollmentRow(304, 'completed', '2025-11-02'),
+          ]);
+
+          await facade.selectEnrollment(304);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('02-11-2025');
+        });
+
+        it('sin ninguna matrícula mostrable queda en "—"', async () => {
+          await initWithEnrollments([makeEnrollmentRow(305, 'draft', '2026-04-01')]);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('—');
+        });
+      });
+
+      describe('matrícula pedida al entrar — fix-272-m', () => {
+        const dosMatriculas = () => [
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ];
+
+        it('abre la matrícula pedida por la lista aunque haya otra más reciente (Ex-Alumnos)', async () => {
+          await initWithEnrollments(dosMatriculas());
+          expect(facade.alumno()?.enrollmentId).toBe(303);
+
+          await facade.initialize(42, 304);
+
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(304));
+          expect(facade.alumno()?.estado).toBe('Egresado');
+          expect(facade.alumno()?.matricula).toBe('#000304');
+        });
+
+        it('volver a entrar sin pedir matrícula aplica la regla por defecto, no la elegida en la visita anterior', async () => {
+          await initWithEnrollments(dosMatriculas());
+          await facade.selectEnrollment(304);
+
+          await facade.initialize(42);
+
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(303));
+        });
+
+        it('un refresco posterior conserva la matrícula con la que se entró', async () => {
+          await initWithEnrollments(dosMatriculas());
+          await facade.initialize(42, 304);
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(304));
+
+          await facade.refresh();
+
+          expect(facade.alumno()?.enrollmentId).toBe(304);
+        });
+
+        it('si la matrícula pedida no es de ese alumno o es un borrador, aplica la regla por defecto', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(305, 'draft', '2026-04-01'),
+          ]);
+
+          await facade.initialize(42, 999);
+          await facade.refresh();
+          expect(facade.alumno()?.enrollmentId).toBe(303);
+
+          await facade.initialize(42, 305);
+          await facade.refresh();
+          expect(facade.alumno()?.enrollmentId).toBe(303);
+        });
+      });
+
       describe('errores de carga — hotfix-116-m', () => {
         /** PostgREST cuando `.single()` no encuentra filas (no existe, o la RLS lo oculta). */
         const NOT_FOUND = {

@@ -246,7 +246,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                           pTooltip="Ver ficha"
                           [routerLink]="[basePath() + '/alumnos', egresado.studentId]"
-                          [queryParams]="{ from: 'ex-alumnos' }"
+                          [queryParams]="{ from: 'ex-alumnos', enrollment: egresado.id }"
                           data-llm-action="view-student-detail"
                         >
                           <app-icon name="eye" [size]="16" />
@@ -290,7 +290,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                     <app-egresado-card
                       [egresado]="egresado"
                       [basePath]="basePath()"
-                      [viewQueryParams]="{ from: 'ex-alumnos' }"
+                      [viewQueryParams]="{ from: 'ex-alumnos', enrollment: egresado.id }"
                       (reEnrollRequested)="requestReEnroll($event)"
                     />
                   </div>

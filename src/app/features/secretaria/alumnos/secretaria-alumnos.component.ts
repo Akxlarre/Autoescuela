@@ -30,7 +30,6 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [isLoading]="facade.isLoading()"
       [error]="facade.error()"
       [trashView]="facade.trashView()"
-      [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
       [showSedeColumn]="facade.showSedeColumn()"
       (refreshRequested)="facade.initialize()"

@@ -15,6 +15,7 @@ import { IconComponent } from '../icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { isArchiveConfirmationText } from '@core/utils/archive-confirmation.utils';
 
 /**
  * Modal de confirmación para archivar un alumno (soft-delete).
@@ -99,7 +100,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               />
             </div>
             <div class="flex flex-col min-w-0">
-              <span class="font-bold text-base">
+              <!-- Sin la clase text-base: en este proyecto pinta el texto con el color de fondo de
+                   la página (token color-base), no fija el tamaño. Ver hotfix-122-m. -->
+              <span class="font-bold text-text-primary">
                 {{ hasHistory() ? 'Archivar con historial' : 'Archivar alumno' }}
               </span>
               <span class="text-xs truncate text-text-muted">
@@ -214,7 +217,7 @@ export class EliminarAlumnoModalComponent {
   protected readonly canConfirm = computed(
     () =>
       !this.isDeleting() &&
-      (!this.hasHistory() || this.confirmTextValue().toLowerCase().trim() === 'borrarlo'),
+      (!this.hasHistory() || isArchiveConfirmationText(this.confirmTextValue())),
   );
 
   constructor() {

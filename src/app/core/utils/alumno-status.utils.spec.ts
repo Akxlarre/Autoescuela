@@ -4,8 +4,25 @@ import {
   getAlumnoStatusSeverity,
   getAlumnoStatusBadgeVariant,
   tagSeverityToBadgeVariant,
+  isAlumnoCursando,
 } from './alumno-status.utils';
-import type { AlumnoExpediente } from '@core/models/ui/alumno-table-row.model';
+import type { AlumnoExpediente, AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
+
+describe('isAlumnoCursando() — hotfix-118-m', () => {
+  it.each<AlumnoStatus>(['Activo', 'Pendiente Pago', 'Docs Pendientes'])(
+    '%s cuenta como activo: tiene una matrícula vigente y está teniendo clases',
+    (status) => {
+      expect(isAlumnoCursando(status)).toBe(true);
+    },
+  );
+
+  it.each<AlumnoStatus>(['Retirado', 'Pre-inscrito', 'Inactivo', 'Finalizado'])(
+    '%s no cuenta como activo',
+    (status) => {
+      expect(isAlumnoCursando(status)).toBe(false);
+    },
+  );
+});
 
 const exp = (overrides: Partial<AlumnoExpediente>): AlumnoExpediente => ({
   ci: false,

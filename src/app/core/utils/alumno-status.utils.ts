@@ -29,6 +29,20 @@ export function getExpedienteStatus(exp: AlumnoExpediente): ExpedienteStatus {
   return { label: 'Parcial', severity: 'warn', count };
 }
 
+const ESTADOS_CURSANDO: ReadonlySet<AlumnoStatus> = new Set([
+  'Activo',
+  'Pendiente Pago',
+  'Docs Pendientes',
+]);
+
+/**
+ * true si el alumno tiene una matrícula vigente y está teniendo clases, aunque le falte un pago
+ * o un documento. Es lo que cuenta el KPI "Activos" de la Base de Alumnos (hotfix-118-m).
+ */
+export function isAlumnoCursando(status: AlumnoStatus): boolean {
+  return ESTADOS_CURSANDO.has(status);
+}
+
 /** Severidad p-tag para el estado de matrícula del alumno. */
 export function getAlumnoStatusSeverity(status: AlumnoStatus | string): TagSeverity {
   switch (status) {

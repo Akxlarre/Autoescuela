@@ -51,9 +51,9 @@ export interface AlumnoTableRow {
   status: AlumnoStatus;
   /** All courses across enrollments */
   cursos: EnrollmentCurso[];
-  /** enrollments.pending_balance */
+  /** Suma de enrollments.pending_balance de todas las matrículas Clase B válidas (fix-270-m) */
   pago_por_pagar: number;
-  /** enrollments.total_paid */
+  /** Suma de enrollments.total_paid de todas las matrículas Clase B válidas (fix-270-m) */
   pago_total: number;
   /** Derived from class_b_exam_scores (default 'pendiente') */
   exp_teorico: 'pendiente' | 'aprobado' | 'reprobado';
@@ -61,10 +61,6 @@ export interface AlumnoTableRow {
   exp_practico: 'pendiente' | 'aprobado' | 'reprobado';
   /** Derived from student_documents types */
   expediente: AlumnoExpediente;
-  /** Raw ISO string from enrollments.expires_at */
-  expiresAt: string | null;
-  /** Formatted label for "Por Vencer" drawer (e.g. 'Hoy', 'En 3 días') */
-  vencimiento?: string;
   /** enrollments.id for navigation */
   enrollmentId?: number;
   /**

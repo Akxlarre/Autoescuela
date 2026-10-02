@@ -289,7 +289,6 @@ describe('AdminAlumnosFacade', () => {
         total_paid: 100,
         docs_complete: true,
         created_at: '2026-01-01T00:00:00Z',
-        expires_at: null,
         license_group: 'class_b',
         courses: { id: 1, name: 'Clase B' },
         student_documents: [],
@@ -442,6 +441,108 @@ describe('AdminAlumnosFacade', () => {
       const ids = facade.alumnos().map((a) => a.id);
       expect(ids).not.toContain('60');
       expect(ids).toContain('61');
+    });
+
+    describe('fecha de ingreso — hotfix-123-m', () => {
+      it('es la fecha de la matrícula que representa la fila, en dd-mm-aaaa', async () => {
+        mockStudents([
+          makeStudent({
+            id: 80,
+            enrollments: [makeEnrollment({ created_at: '2026-09-22T15:00:00Z' })],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].fechaIngreso).toBe('22-09-2026');
+      });
+
+      it('usa el día en hora local, no el del ISO en UTC', async () => {
+        // 23:30 hora local: recortar el ISO daría el día siguiente en zonas al oeste de UTC.
+        const local = new Date(2026, 8, 22, 23, 30);
+        mockStudents([
+          makeStudent({
+            id: 81,
+            enrollments: [makeEnrollment({ created_at: local.toISOString() })],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].fechaIngreso).toBe('22-09-2026');
+      });
+    });
+
+    describe('saldo de todas las matrículas B — fix-270-m', () => {
+      it('suma la deuda de una matrícula B antigua aunque la más reciente esté al día', async () => {
+        mockStudents([
+          makeStudent({
+            id: 70,
+            enrollments: [
+              makeEnrollment({
+                id: 700,
+                created_at: '2025-01-01T00:00:00Z',
+                payment_status: 'partial',
+                pending_balance: 90000,
+                total_paid: 60000,
+              }),
+              makeEnrollment({
+                id: 701,
+                created_at: '2026-06-01T00:00:00Z',
+                pending_balance: 0,
+                total_paid: 80000,
+                courses: { id: 3, name: 'Refuerzo Clase B' },
+              }),
+            ],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        const row = facade.alumnos()[0];
+        expect(row.pago_por_pagar).toBe(90000);
+        expect(row.pago_total).toBe(140000);
+        expect(facade.conDeuda()).toBe(1);
+        // La fila la sigue representando la matrícula más reciente.
+        expect(row.enrollmentId).toBe(701);
+      });
+
+      it('no suma matrículas Profesional ni incompletas (borrador, cancelada, pago online abandonado)', async () => {
+        mockStudents([
+          makeStudent({
+            id: 71,
+            enrollments: [
+              makeEnrollment({ id: 710, pending_balance: 0, total_paid: 100 }),
+              makeEnrollment({ id: 711, license_group: 'professional', pending_balance: 500 }),
+              makeEnrollment({ id: 712, status: 'draft', pending_balance: 500 }),
+              makeEnrollment({ id: 713, status: 'cancelled', pending_balance: 500 }),
+              makeEnrollment({ id: 714, status: 'pending_payment', pending_balance: 500 }),
+            ],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].pago_por_pagar).toBe(0);
+        expect(facade.alumnos()[0].pago_total).toBe(100);
+        expect(facade.conDeuda()).toBe(0);
+      });
+
+      it('trata un saldo nulo como 0', async () => {
+        mockStudents([
+          makeStudent({
+            id: 72,
+            enrollments: [
+              makeEnrollment({ id: 720, pending_balance: null }),
+              makeEnrollment({ id: 721, created_at: '2025-01-01T00:00:00Z', pending_balance: 30 }),
+            ],
+          }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].pago_por_pagar).toBe(30);
+      });
     });
 
     describe('cursoCompletoPendienteEgreso — fix-012-i', () => {

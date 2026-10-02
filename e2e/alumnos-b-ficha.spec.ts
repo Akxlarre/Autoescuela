@@ -7,7 +7,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { ACCOUNTS } from './support/accounts';
 import { createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
-import { expect, knownBug, test, watchErrors } from './support/fixtures';
+import { expect, test, watchErrors } from './support/fixtures';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
 
 const SEDE_A = 1; // Autoescuela Chillán
@@ -85,7 +85,8 @@ test.describe('ficha: carga, acceso y URL manipulada', () => {
       const nombre = (await fila.locator('.item-title').textContent())?.trim() ?? '';
       await fila.getByRole('button', { name: 'Ver ficha' }).click();
 
-      await expect(page).toHaveURL(new RegExp(`/app/${portal}/alumnos/\\d+$`));
+      // fix-272-m: el enlace lleva la matrícula de la fila (?enrollment=<id>).
+      await expect(page).toHaveURL(new RegExp(`/app/${portal}/alumnos/\\d+\\?enrollment=\\d+$`));
       await expect(matricula(page)).toBeVisible(CARGA);
       // La lista muestra "Apellidos Nombres"; la ficha, "Nombres Apellidos".
       for (const parte of nombre.split(/\s+/)) await expect(hero(page)).toContainText(parte);
@@ -224,7 +225,6 @@ test.describe('ficha: cabecera y selector de matrículas', () => {
   });
 
   test('B08 (S17): la fecha de ingreso se muestra como dd-mm-aaaa', async ({ pageAs, cleanup }) => {
-    knownBug('B14 (fix-264-m)');
     const alumno = await createE2eAlumno(
       { label: 'Fecha', branchId: SEDE_A, enrollments: [{}] },
       cleanup,
@@ -528,7 +528,8 @@ test.describe('seguridad entre sedes (por API, con la sesión de la secretaria d
   });
 
   test('M04 (S1): no puede editar el perfil de un usuario de la sede B', async ({ cleanup }) => {
-    knownBug('B19 (fix-264-m) → ASG-i-043');
+    // B19 (fix-264-m) → ASG-i-043: el 2026-10-01 la función ya rechaza la edición; se quitó la
+    // marca knownBug. El cambio no salió de este track (ver fix-264-m).
     const ajeno = await createE2eAlumno(
       { label: 'EditarAjeno', branchId: SEDE_B, enrollments: [{}] },
       cleanup,
@@ -585,6 +586,49 @@ test.describe('ex-alumnos', () => {
       await expect(page).toHaveURL(new RegExp(`/app/${portal}/ex-alumnos$`));
     });
   }
+
+  test('C05 · T11: la ficha abre la matrícula de la fila que se cliqueó (fix-272-m)', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    // Egresado que se volvió a matricular: aparece en Ex-Alumnos por la matrícula terminada y en
+    // la Base por la vigente.
+    const haceUnAno = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+    const alumno = await createE2eAlumno(
+      {
+        label: 'Cliqueada',
+        branchId: SEDE_A,
+        enrollments: [
+          { status: 'completed', createdAt: haceUnAno },
+          { courseName: 'Refuerzo Clase B' },
+        ],
+      },
+      cleanup,
+    );
+    const [terminada, vigente] = alumno.enrollmentNumbers;
+    const page = await pageAs('secretariaA');
+
+    // Desde Ex-Alumnos: la terminada, aunque la vigente sea más reciente.
+    await openExAlumnos(page, 'secretaria');
+    await page.locator(SEARCH_EGRESADOS).fill(alumno.paternalLastName);
+    await egresadoRow(page, alumno.paternalLastName)
+      .locator('[data-llm-action="view-student-detail"]')
+      .click();
+    await expect(matricula(page)).toContainText(terminada, CARGA);
+    await expect(page.getByText('ESTADO: Egresado')).toBeVisible();
+
+    // Desde la Base de Alumnos: la vigente. La visita anterior no se arrastra.
+    await page.goto('/app/secretaria/alumnos');
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await page.locator(SEARCH_ALUMNOS).fill(alumno.paternalLastName);
+    await page
+      .locator('p-table tbody tr')
+      .filter({ hasText: alumno.paternalLastName })
+      .locator('[data-llm-action="view-student-detail"]')
+      .click();
+    await expect(matricula(page)).toContainText(vigente, CARGA);
+    await expect(page.getByText('ESTADO: Activo')).toBeVisible();
+  });
 
   test('U03 · U04: la búsqueda encuentra a un egresado antiguo por nombre, apellido sin tilde y Nº de expediente', async ({
     pageAs,

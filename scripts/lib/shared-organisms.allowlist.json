@@ -10,10 +10,6 @@
       "facade": "HistorialCuadraturasFacade",
       "why": "Modal de detalle de cuadratura, abierto dinámicamente desde los historiales de contabilidad de admin y secretaría. Sin padre en un template desde donde pasarle inputs."
     },
-    "src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts": {
-      "facade": "AdminAlumnosFacade",
-      "why": "Drawer de alumnos por vencer, abierto desde alumnos-list-content y desde los stats de ex-alumnos. Consume su propio dominio (alumnos)."
-    },
     "src/app/shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component.ts": {
       "facade": "ServiciosEspecialesFacade",
       "why": "Drawer de alta de servicio especial, abierto por el propio ServiciosEspecialesFacade. Rediseñado en fix-239/240-m."

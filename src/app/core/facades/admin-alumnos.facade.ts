@@ -6,6 +6,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { isAlumnoCursando } from '@core/utils/alumno-status.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
   AlumnoTableRow,
@@ -35,7 +37,6 @@ interface RawEnrollment {
   total_paid: number;
   docs_complete: boolean;
   created_at: string;
-  expires_at: string | null;
   license_group: string | null;
   courses: RawCourse | null;
   student_documents: RawDocument[];
@@ -63,8 +64,6 @@ interface RawStudent {
 }
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
-
-const VENCER_THRESHOLD_DAYS = 7;
 
 /**
  * Predicado de grupo de licencia para la Base B.
@@ -107,11 +106,10 @@ export class AdminAlumnosFacade {
   readonly trashView = this._trashView.asReadonly();
 
   readonly totalAlumnos = computed(() => this._alumnos().length);
-  readonly activos = computed(() => this._alumnos().filter((a) => a.status === 'Activo').length);
-  readonly conDeuda = computed(() => this._alumnos().filter((a) => a.pago_por_pagar > 0).length);
-  readonly alumnosPorVencer = computed(() =>
-    this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
+  readonly activos = computed(
+    () => this._alumnos().filter((a) => isAlumnoCursando(a.status)).length,
   );
+  readonly conDeuda = computed(() => this._alumnos().filter((a) => a.pago_por_pagar > 0).length);
   readonly drawerMode = this._drawerMode.asReadonly();
   /**
    * La columna Sede solo aporta cuando la lista mezcla sedes: admin, o secretaria con grant
@@ -375,7 +373,7 @@ export class AdminAlumnosFacade {
           `
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id, branches(name)),
-          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at, license_group,
+          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, license_group,
             courses(id, name),
             student_documents(type, status)
           ),
@@ -487,20 +485,19 @@ export class AdminAlumnosFacade {
       sucursal: u.branches?.name ?? '—',
       comuna: s.address ?? '',
       nroExpedientes: nroExpedientes.length > 0 ? nroExpedientes : ['—'],
-      fechaIngreso: enrollment ? enrollment.created_at.slice(0, 10) : '—',
+      // hotfix-123-m: mismo formato que la ficha (dd-mm-aaaa, día en hora local).
+      fechaIngreso: formatDayMonthYear(enrollment?.created_at),
       status: this.deriveStatus(enrollment, s.status),
       cursos: cursos.length > 0 ? cursos : [{ nombre: '—', licenseGroup: 'class_b' }],
-      pago_por_pagar: enrollment?.pending_balance ?? 0,
-      pago_total: enrollment?.total_paid ?? 0,
+      // fix-270-m: el saldo suma todas las matrículas B válidas, no solo la más reciente — una
+      // deuda de una matrícula anterior tiene que contar en "Con deuda".
+      pago_por_pagar: sorted.reduce((sum, e) => sum + (e.pending_balance ?? 0), 0),
+      pago_total: sorted.reduce((sum, e) => sum + (e.total_paid ?? 0), 0),
       exp_teorico: 'pendiente',
       exp_practico: 'pendiente',
       // Se completa en fetchAlumnosData() tras fetchCursoCompletoPendienteEgresoSet() (fix-012-i).
       cursoCompletoPendienteEgreso: false,
       expediente: this.deriveExpediente(docs),
-      expiresAt: enrollment?.expires_at ?? null,
-      vencimiento: enrollment?.expires_at
-        ? this.formatVencimiento(enrollment.expires_at)
-        : undefined,
       enrollmentId: enrollment?.id,
     };
   }
@@ -587,19 +584,5 @@ export class AdminAlumnosFacade {
       medico: types.has('certificado_medico'),
       semep: types.has('semep'),
     };
-  }
-
-  private isWithinThreshold(expiresAt: string): boolean {
-    const diff = new Date(expiresAt).getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= VENCER_THRESHOLD_DAYS;
-  }
-
-  private formatVencimiento(expiresAt: string): string {
-    const diff = new Date(expiresAt).getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return 'Hoy';
-    if (diffDays === 1) return 'Mañana';
-    return `En ${diffDays} días`;
   }
 }

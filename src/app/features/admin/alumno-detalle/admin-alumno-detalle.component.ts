@@ -40,6 +40,7 @@ import type {
   SectionHeroMenuItem,
 } from '@core/models/ui/section-hero.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
+import { buildEnrollmentTabLabel, parseEnrollmentParam } from '@core/utils/ficha-enrollment.utils';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
@@ -1284,7 +1285,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   readonly enrollmentTabs = computed(() => {
     return this.facade.enrollmentSummaries().map((enr) => ({
       id: String(enr.id),
-      label: enr.courseName + (enr.number ? ` · #${enr.number}` : ''),
+      label: buildEnrollmentTabLabel(enr),
       icon: 'car',
     }));
   });
@@ -1635,8 +1636,10 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     // hotfix-116-m: siempre se llama a initialize(). Un id inválido ("/alumnos/abc") lo resuelve
     // el facade con un error visible; antes se omitía la llamada y la ficha quedaba cargando.
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    // fix-272-m: la lista de origen dice sobre qué matrícula se hizo clic.
+    const enrollmentId = parseEnrollmentParam(this.route.snapshot.queryParamMap.get('enrollment'));
     this.facade
-      .initialize(id)
+      .initialize(id, enrollmentId)
       .then(() => {
         const enrollmentId = this.facade.alumno()?.enrollmentId;
         if (enrollmentId) void this.facade.loadHistorialReagendamientos(enrollmentId);

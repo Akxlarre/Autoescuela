@@ -174,8 +174,11 @@ export class EgresadoCardComponent {
   readonly basePath = input<string>('/app/admin');
   /** 'Nº Exp.' (Ex-Alumnos B) vs 'Nº Mat.' (Ex-Alumnos Profesional) — mismo campo, copy distinto. */
   readonly nroLabel = input<string>('Nº Exp.');
-  /** Ex-Alumnos Profesional pasa { from: 'ex-alumnos' } al navegar a la ficha; B no pasa nada. */
-  readonly viewQueryParams = input<Record<string, string>>({});
+  /**
+   * Parámetros del enlace "Ver ficha": `from` para que "Volver" regrese a Ex-Alumnos y, en
+   * Ex-Alumnos B, `enrollment` con la matrícula de la fila (fix-272-m).
+   */
+  readonly viewQueryParams = input<Record<string, string | number>>({});
 
   readonly reEnrollRequested = output<EgresadoTableRow>();
 

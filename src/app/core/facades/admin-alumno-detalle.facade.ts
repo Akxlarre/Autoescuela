@@ -18,7 +18,7 @@ import type {
   ProgresoUI,
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
-import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
+import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
@@ -300,10 +300,20 @@ export class AdminAlumnoDetalleFacade {
   }
 
   /**
+   * Matrícula pedida por la lista al entrar a la ficha (fix-272-m). `null` = se entró sin pedir
+   * ninguna (regla por defecto); `undefined` = no hay una entrada pendiente de aplicar, o sea
+   * que la próxima carga es un refresco y conserva la matrícula elegida en el selector.
+   */
+  private _entryEnrollmentId: number | null | undefined = undefined;
+
+  /**
    * SWR Initialization for Student detail:
    * If visiting the SAME student, refresh silently in background.
+   *
+   * `enrollmentId`: la matrícula sobre la que se hizo clic en la lista de origen. Cada entrada a
+   * la ficha decide de nuevo qué matrícula mostrar; no hereda la de la visita anterior.
    */
-  async initialize(studentId: number): Promise<void> {
+  async initialize(studentId: number, enrollmentId: number | null = null): Promise<void> {
     // hotfix-116-m: un id que no viene de la app (URL escrita a mano, "/alumnos/abc") no se
     // consulta: se muestra el error en vez de dejar la ficha en "Cargando…".
     if (!Number.isInteger(studentId) || studentId <= 0) {
@@ -316,6 +326,7 @@ export class AdminAlumnoDetalleFacade {
     }
 
     const isSameStudent = this._initialized && studentId === this._lastStudentId;
+    this._entryEnrollmentId = enrollmentId;
 
     this.setupRealtime(studentId);
 
@@ -404,6 +415,7 @@ export class AdminAlumnoDetalleFacade {
       branchId: summary.branchId,
       enrollments: alumno.enrollments,
       matricula: summary.number ? `#${summary.number}` : '—',
+      fechaIngreso: formatDayMonthYear(summary.createdAt),
       estado: this.formatEnrollmentStatus(summary.status),
       egresado: summary.status === ENROLLMENT_STATUS_EGRESADO,
       curso: summary.courseName,
@@ -453,8 +465,12 @@ export class AdminAlumnoDetalleFacade {
       );
       // fix-265-m: la matrícula mostrada no es "la más reciente a secas". Nunca un borrador, y
       // en un refresco de la misma ficha se conserva la que el usuario eligió en el selector.
+      // fix-272-m: al entrar a la ficha manda la matrícula pedida por la lista (o ninguna); la
+      // elegida en el selector solo se conserva en los refrescos de la ficha ya abierta.
       const current = this._alumno();
-      const selectedId = current?.id === studentId ? current.enrollmentId : null;
+      const entryId = this._entryEnrollmentId;
+      const selectedId =
+        entryId !== undefined ? entryId : current?.id === studentId ? current.enrollmentId : null;
       const shownEnrollment = pickFichaEnrollment(sorted, selectedId);
 
       const shownEnrollmentCourse = Array.isArray(shownEnrollment?.courses)
@@ -558,7 +574,8 @@ export class AdminAlumnoDetalleFacade {
         curso: courseName ?? '—',
         email: u.email,
         telefono: u.phone ?? '—',
-        fechaIngreso: s.created_at.slice(0, 10),
+        // fix-273-m: la de la matrícula mostrada (cambia con el selector), no la del alta.
+        fechaIngreso: formatDayMonthYear(shownEnrollment?.created_at),
         // fix-263-m: el estado es el de la matrícula, no students.status (ningún flujo lo escribe).
         estado: this.formatEnrollmentStatus(shownEnrollment?.status),
         egresado: shownEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
@@ -570,6 +587,8 @@ export class AdminAlumnoDetalleFacade {
         hasAuthAccount: !!u.supabase_uid,
         firstLogin: !!u.first_login,
       });
+      // La entrada ya se aplicó: de acá en adelante, las cargas son refrescos.
+      this._entryEnrollmentId = undefined;
 
       // ── Step 2: Queries según tipo de licencia ──
       if (licenseGroup === 'professional') {
