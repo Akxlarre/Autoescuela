@@ -43,3 +43,25 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
   dentro de un sub-bloque que siempre se deshace y verifica que con su sesión no lee ni escribe nada,
   y que activa sí.
 - `npm run test:ci -- auth-errors auth.guard` — F3, F4.
+
+## Resultado (2026-10-01)
+
+**Rojo — BD remota actual (confirmado en vivo):** con `secretaria@test.com` desactivada
+(`active = false`, dentro de un sub-bloque revertido), su sesión seguía con rol `secretary`, leía
+73 matrículas y 864 clases y actualizaba una matrícula.
+
+**Verde — migración + test en `BEGIN … ROLLBACK`:** activa → rol `secretary`, 73 / 864, update = 1
+(sin cambios); inactiva → rol NULL, 0 matrículas, 0 clases, 0 usuarios, update = 0.
+
+**Front:** `vitest` guards + auth-errors + auth.facade: 33 passed. `lint:arch` exit 0.
+
+**Salvaguarda agregada:** `update-secretary` rechaza que un admin se desactive a sí mismo (con el
+ban quedaría sin acceso).
+
+## Progreso
+- [x] Migración `auth_user_role()` ensayada en remoto dentro de `BEGIN … ROLLBACK`
+- [x] Ban/unban en `update-secretary` y `update-instructor`
+- [x] `authGuard` + mensaje de cuenta desactivada, con tests
+- [ ] Aplicar migración y desplegar las 2 edge functions en producción (**espera visto bueno del owner**)
+- [ ] Re-correr el test contra la BD real y `/fix-close`
+- [ ] El front (guard + mensaje) llega a producción con el próximo release (tag `v*`)
