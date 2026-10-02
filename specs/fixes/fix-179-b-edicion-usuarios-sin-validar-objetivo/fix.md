@@ -76,3 +76,10 @@ a un alumno a secretaria**, le dio `can_access_both_branches = true` a un alumno
 (INSERT/UPDATE de alumno) y pre-inscritos (`role_id` NULL → alumno) siguen funcionando.
 
 **Pendiente:** aplicar la migración y desplegar `update-student-profile` y `update-instructor`.
+
+## Progreso
+- [x] Reglas puras + 17 tests deno en verde
+- [x] Edge functions `update-student-profile` y `update-instructor` validan el objetivo
+- [x] Migración RLS + trigger, ensayada en remoto dentro de `BEGIN … ROLLBACK` (0/11 fallos)
+- [ ] Aplicar migración y desplegar las 2 edge functions en producción (**espera visto bueno del owner**)
+- [ ] Re-correr el test de RLS contra la BD real y `/fix-close`
