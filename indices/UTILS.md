@@ -60,6 +60,7 @@
 | `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
 | `src/app/core/utils/ficha-pagos.utils.ts` | `canRegistrarPago` |
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
+| `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |

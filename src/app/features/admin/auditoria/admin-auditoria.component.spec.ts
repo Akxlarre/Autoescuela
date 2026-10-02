@@ -67,4 +67,28 @@ describe('AdminAuditoriaComponent', () => {
       );
     });
   });
+
+  describe('opción "todos" y "Limpiar filtros" (spec 0022-m)', () => {
+    it('los selectores de acción y módulo abren con su opción "todos" = null', () => {
+      expect((component as any).actionOptions[0]).toEqual({
+        label: 'Todas las acciones',
+        value: null,
+      });
+      expect((component as any).moduloOptions[0]).toEqual({
+        label: 'Todos los módulos',
+        value: null,
+      });
+    });
+
+    it('una fecha o un selector activan el botón; limpiar los deja vacíos', () => {
+      expect((component as any).hasActiveFilters()).toBe(false);
+
+      (component as any).fechaDesde.set('2026-09-01');
+      (component as any).filtroAccion.set('Crear');
+      expect((component as any).hasActiveFilters()).toBe(true);
+
+      (component as any).clearFilters();
+      expect((component as any).hasActiveFilters()).toBe(false);
+    });
+  });
 });

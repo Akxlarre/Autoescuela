@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -77,6 +78,7 @@ export interface EgresadosExportRequest {
     ExportMenuComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
@@ -127,6 +129,11 @@ export interface EgresadosExportRequest {
             [years]="availableYears()"
             [searchActive]="hasActiveSearch()"
             ariaLabel="Período de egreso"
+          />
+          <app-clear-filters-button
+            llmSubject="graduates"
+            [active]="hasActiveFilters()"
+            (clear)="clearFilters()"
           />
           <!-- spec 0021-m: exporta las filas que la tabla muestra con el período y la búsqueda
                actuales (todas las páginas), no vuelve a consultar. -->
@@ -454,6 +461,11 @@ export class ExAlumnosContentComponent {
   protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
 
   protected readonly hasActiveSearch = computed(() => this.searchTerm().trim().length > 0);
+
+  /** Muestra "Limpiar filtros" (spec 0022-m): texto en el buscador o un período distinto del inicial. */
+  protected readonly hasActiveFilters = computed(
+    () => this.searchTerm() !== '' || this.periodWindow() !== DEFAULT_PERIOD_WINDOW,
+  );
 
   // ── Lista filtrada (cliente) ─────────────────────────────────────────────────
   protected readonly filteredEgresados = computed<EgresadoTableRow[]>(() => {

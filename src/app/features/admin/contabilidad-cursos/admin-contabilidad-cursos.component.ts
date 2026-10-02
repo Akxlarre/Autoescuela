@@ -22,6 +22,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { AdminCursoSingularDetalleDrawerComponent } from './admin-curso-singular-detalle-drawer.component';
 import { AdminCursoSingularCobroDrawerComponent } from './admin-curso-singular-cobro-drawer.component';
 import { FormsModule } from '@angular/forms';
@@ -74,6 +76,7 @@ const BILLING_LABEL: Record<string, string> = {
     BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -131,6 +134,11 @@ const BILLING_LABEL: Record<string, string> = {
                 (ngModelChange)="_filtroEstado.set($event)"
                 styleClass="flex-1 min-w-36"
                 data-llm-description="Filtro por estado del curso: Activo, Próximo, Finalizado, Cancelado"
+              />
+              <app-clear-filters-button
+                llmSubject="courses"
+                [active]="hasActiveFilters()"
+                (clear)="clearFilters()"
               />
             </div>
           </div>
@@ -483,19 +491,37 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   // ── Filtros ────────────────────────────────────────────────────────────────
   protected readonly _filtroTipo = signal<string>('');
 
-  readonly tipoOptions = [
-    { label: 'SENCE', value: 'sence' },
-    { label: 'Particular', value: 'particular' },
-  ];
+  // Cada filtro abre con su opción "todos", con el mismo '' por defecto (spec 0022-m).
+  readonly tipoOptions = withAllOption(
+    [
+      { label: 'SENCE', value: 'sence' },
+      { label: 'Particular', value: 'particular' },
+    ],
+    'Todos los tipos',
+    '',
+  );
 
-  readonly estadoOptions = [
-    { label: 'Activo', value: 'active' },
-    { label: 'Próximo', value: 'upcoming' },
-    { label: 'Finalizado', value: 'completed' },
-    { label: 'Cancelado', value: 'cancelled' },
-  ];
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Activo', value: 'active' },
+      { label: 'Próximo', value: 'upcoming' },
+      { label: 'Finalizado', value: 'completed' },
+      { label: 'Cancelado', value: 'cancelled' },
+    ],
+    'Todos los estados',
+    '',
+  );
 
   protected readonly _filtroEstado = signal<string>('');
+
+  protected readonly hasActiveFilters = computed(
+    () => this._filtroTipo() !== '' || this._filtroEstado() !== '',
+  );
+
+  protected clearFilters(): void {
+    this._filtroTipo.set('');
+    this._filtroEstado.set('');
+  }
 
   /** Cursos filtrados según los selects activos. */
   protected readonly cursosFiltrados = computed<CursoSingularRow[]>(() => {

@@ -23,6 +23,8 @@ import { AgendaSlotComponent } from './agenda-slot.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
 import { todayIso } from '@core/utils/date.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { isDateBeyondLimit, isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -79,6 +81,7 @@ interface CellSummary {
     ScrollContainerDirective,
     CardHoverDirective,
     AnimateInDirective,
+    ClearFiltersButtonComponent,
   ],
   host: { class: 'block' },
   template: `
@@ -215,6 +218,11 @@ interface CellSummary {
                 [attr.data-llm-description]="'Filtrar calendario por instructor'"
               />
             </div>
+            <app-clear-filters-button
+              llmSubject="agenda"
+              [active]="selectedInstructorId() !== null"
+              (clear)="instructorFilterChange.emit(null)"
+            />
           </div>
         </div>
 
@@ -251,9 +259,7 @@ interface CellSummary {
             }
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
-          <div
-            class="flex flex-1 items-center justify-center border-t border-(--color-border)"
-          >
+          <div class="flex flex-1 items-center justify-center border-t border-(--color-border)">
             <app-empty-state
               icon="calendar"
               message="No hay clases en esta semana"
@@ -1138,8 +1144,12 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── Opciones del dropdown de instructor ──────────────────────────────────────
 
+  /** Abre con "Todos los instructores" = null, la vista maestra (spec 0022-m). */
   readonly instructorOptions = computed<InstructorOption[]>(() =>
-    this.instructors().map((i) => ({ label: i.name, value: i.id })),
+    withAllOption(
+      this.instructors().map((i) => ({ label: i.name, value: i.id })),
+      'Todos los instructores',
+    ),
   );
 
   // ── CSS Grid template ────────────────────────────────────────────────────────

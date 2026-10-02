@@ -229,4 +229,24 @@ describe('PreInscritosContentComponent', () => {
       expect(paged().length).toBe(3);
     });
   });
+
+  describe('opción "todos" y "Limpiar filtros" (spec 0022-m)', () => {
+    it('cada selector abre con su opción "todos" en el valor por defecto', () => {
+      expect((component as any).statusOptions[0]).toEqual({ label: 'Todos los estados', value: '' });
+      expect((component as any).licenciaOptions[0]).toEqual({ label: 'Todas las clases', value: '' });
+    });
+
+    it('un filtro activa el botón; limpiar deja la lista completa', () => {
+      const total = filtered().length;
+      expect((component as any).hasActiveFilters()).toBe(false);
+
+      (component as any).onStatus('approved');
+      (component as any).onSearch('maria');
+      expect((component as any).hasActiveFilters()).toBe(true);
+
+      (component as any).resetFiltros();
+      expect((component as any).hasActiveFilters()).toBe(false);
+      expect(filtered().length).toBe(total);
+    });
+  });
 });

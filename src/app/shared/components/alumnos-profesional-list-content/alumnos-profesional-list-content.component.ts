@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
@@ -75,6 +77,7 @@ interface SemaforoInfo {
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -139,6 +142,11 @@ interface SemaforoInfo {
             placeholder="Todos los estados"
             class="h-9"
             data-llm-description="Filter professional students by enrollment status"
+          />
+          <app-clear-filters-button
+            llmSubject="professional-students"
+            [active]="hasActiveFilters()"
+            (clear)="resetFilters()"
           />
 
           <span class="ml-auto text-sm text-text-muted">
@@ -419,17 +427,31 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   selectedClase = '';
   selectedEstado = '';
 
-  readonly claseOptions = [
-    { label: 'A2', value: 'A2' },
-    { label: 'A3', value: 'A3' },
-    { label: 'A4', value: 'A4' },
-    { label: 'A5', value: 'A5' },
-  ];
-  readonly estadoOptions = [
-    { label: 'Activo', value: 'Activo' },
-    { label: 'Inactivo', value: 'Inactivo' },
-    { label: 'Retirado', value: 'Retirado' },
-  ];
+  /** Cada filtro abre con su opción "todos", con el mismo '' por defecto (spec 0022-m). */
+  readonly claseOptions = withAllOption(
+    [
+      { label: 'A2', value: 'A2' },
+      { label: 'A3', value: 'A3' },
+      { label: 'A4', value: 'A4' },
+      { label: 'A5', value: 'A5' },
+    ],
+    'Todas las clases',
+    '',
+  );
+  readonly estadoOptions = withAllOption(
+    [
+      { label: 'Activo', value: 'Activo' },
+      { label: 'Inactivo', value: 'Inactivo' },
+      { label: 'Retirado', value: 'Retirado' },
+    ],
+    'Todos los estados',
+    '',
+  );
+
+  /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
+  hasActiveFilters(): boolean {
+    return this.searchTerm !== '' || this.selectedClase !== '' || this.selectedEstado !== '';
+  }
 
   // ── Derivados ─────────────────────────────────────────────────────────────
   readonly heroSubtitle = computed(() =>

@@ -111,13 +111,54 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
     expect(c().ventasFiltradas().length).toBe(2);
   });
 
-  it('las opciones de filtro reflejan el catálogo', () => {
+  it('las opciones de filtro reflejan el catálogo, después de "Todos los servicios" (spec 0022-m)', () => {
     catalogoSig.set([makeServicio({ id: 1, nombre: 'Psicotécnico' })]);
     expect(
       (
-        component as unknown as { filtroOptions: () => { label: string; value: string }[] }
+        component as unknown as {
+          filtroOptions: () => { label: string; value: string | null }[];
+        }
       ).filtroOptions(),
-    ).toEqual([{ label: 'Psicotécnico', value: '1' }]);
+    ).toEqual([
+      { label: 'Todos los servicios', value: null },
+      { label: 'Psicotécnico', value: '1' },
+    ]);
+  });
+
+  describe('botón "Limpiar filtros" (spec 0022-m)', () => {
+    const f = () =>
+      component as unknown as {
+        hasActiveFilters: () => boolean;
+        clearFilters: () => void;
+        filtroServicio: () => string | null;
+        periodWindow: () => unknown;
+        onFiltroServicioChange: (v: string | null) => void;
+        onPeriodWindowChange: (v: unknown) => void;
+      };
+
+    it('sin servicio ni período cambiado no hay filtros activos', () => {
+      expect(f().hasActiveFilters()).toBe(false);
+    });
+
+    it('un servicio o un período distinto del inicial activan el botón', () => {
+      f().onFiltroServicioChange('1');
+      expect(f().hasActiveFilters()).toBe(true);
+
+      f().onFiltroServicioChange(null);
+      f().onPeriodWindowChange('all');
+      expect(f().hasActiveFilters()).toBe(true);
+    });
+
+    it('limpiar vuelve a todos los servicios y al período inicial', () => {
+      f().onFiltroServicioChange('1');
+      f().onPeriodWindowChange('all');
+
+      f().clearFilters();
+
+      expect(f().filtroServicio()).toBeNull();
+      expect(f().periodWindow()).toBe(DEFAULT_PERIOD_WINDOW);
+      expect(f().hasActiveFilters()).toBe(false);
+    });
   });
 
   it('cambiar la ventana de período no rompe el filtrado por servicio activo', () => {

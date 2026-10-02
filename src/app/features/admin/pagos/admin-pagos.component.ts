@@ -18,6 +18,7 @@ import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -50,6 +51,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClearFiltersButtonComponent,
     FormsModule,
     DatePipe,
     DatePickerModule,
@@ -131,17 +133,11 @@ function toCompact(amount: number): { value: number; suffix: string } {
             styleClass="w-full sm:w-48"
             data-llm-description="filter debtors by course type, class B or professional"
           />
-          @if (hayFiltrosActivos()) {
-            <button
-              type="button"
-              class="btn-ghost shrink-0"
-              (click)="limpiarFiltros()"
-              data-llm-action="clear-debtor-filters"
-            >
-              <app-icon name="x" [size]="14" />
-              Limpiar filtros
-            </button>
-          }
+          <app-clear-filters-button
+            llmSubject="debtor"
+            [active]="hayFiltrosActivos()"
+            (clear)="limpiarFiltros()"
+          />
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto">

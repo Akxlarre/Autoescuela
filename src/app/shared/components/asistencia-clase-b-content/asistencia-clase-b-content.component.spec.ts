@@ -279,4 +279,17 @@ describe('AsistenciaClaseBContentComponent — presupuesto de densidad (spec 003
     expect((component as any).countByStatus('pendiente')).toBe(10);
     expect((component as any).countByStatus('ausente')).toBe(5);
   });
+
+  it('"Limpiar filtros" vuelve al estado "Todos" y a todos los instructores (spec 0022-m)', () => {
+    expect((component as any).hasActiveFilters()).toBe(false);
+
+    (component as any).setStatusFilter('ausente');
+    (component as any).setInstructorFilter(7);
+    expect((component as any).hasActiveFilters()).toBe(true);
+
+    (component as any).clearFilters();
+    expect((component as any).activeStatusFilter()).toBe('todos');
+    expect((component as any).selectedInstructorId()).toBeNull();
+    expect((component as any).hasActiveFilters()).toBe(false);
+  });
 });

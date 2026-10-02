@@ -105,4 +105,21 @@ describe('PagosRecientesDrawerComponent — filtros', () => {
     (component as any).onSearch({ target: { value: 'nadie' } } as unknown as Event);
     expect((component as any).pagosFiltrados().length).toBe(0);
   });
+
+  it('los selectores abren con su opción "todos" = null (spec 0022-m)', () => {
+    expect((component as any).estadoOptions[0]).toEqual({ label: 'Todos los estados', value: null });
+    expect((component as any).metodoOptions[0]).toEqual({ label: 'Todos los métodos', value: null });
+  });
+
+  it('"Limpiar filtros" aparece con un filtro o búsqueda y deja la lista completa (spec 0022-m)', () => {
+    expect((component as any).hasActiveFilters()).toBe(false);
+
+    (component as any).filtroEstado.set('pendiente');
+    (component as any).onSearch({ target: { value: 'pablo' } } as unknown as Event);
+    expect((component as any).hasActiveFilters()).toBe(true);
+
+    (component as any).clearFilters();
+    expect((component as any).hasActiveFilters()).toBe(false);
+    expect((component as any).pagosFiltrados().length).toBe(3);
+  });
 });

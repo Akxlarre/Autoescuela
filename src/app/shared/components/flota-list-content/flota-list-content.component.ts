@@ -28,6 +28,8 @@ import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
+import { ClearFiltersButtonComponent } from '../clear-filters-button/clear-filters-button.component';
+import { withAllOption } from '@core/utils/filter-options.utils';
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -86,6 +88,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
     BentoGridLayoutDirective,
     AnimateInDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -136,7 +139,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
               <p-select
                 [options]="typeOptions"
                 [(ngModel)]="selectedType"
-                placeholder="Tipo"
+                placeholder="Todos los tipos"
                 styleClass="h-10 w-full"
                 (ngModelChange)="onTypeChange($event)"
                 data-llm-action="filtrar-flota-por-tipo"
@@ -144,12 +147,17 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
               <p-select
                 [options]="statusOptions"
                 [(ngModel)]="selectedStatus"
-                placeholder="Estado"
+                placeholder="Todos los estados"
                 styleClass="h-10 w-full toolbar-dropdown--full"
                 (ngModelChange)="onStatusChange($event)"
                 data-llm-action="filtrar-flota-por-estado"
               />
             </div>
+            <app-clear-filters-button
+              llmSubject="fleet"
+              [active]="hasActiveFilters()"
+              (clear)="resetFilters()"
+            />
           </div>
           <div class="toolbar-actions">
             <button
@@ -495,15 +503,27 @@ export class FlotaListContentComponent {
   selectedType: VehicleType | null = null;
   selectedStatus: VehicleStatus | null = null;
 
-  readonly typeOptions = [
-    { label: 'Clase B', value: 'class_b' as VehicleType },
-    { label: 'Profesional', value: 'professional' as VehicleType },
-  ];
-  readonly statusOptions = [
-    { label: 'Disponible', value: 'available' as VehicleStatus },
-    { label: 'Mantenimiento', value: 'maintenance' as VehicleStatus },
-    { label: 'Fuera de Servicio', value: 'out_of_service' as VehicleStatus },
-  ];
+  /** Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m). */
+  readonly typeOptions = withAllOption(
+    [
+      { label: 'Clase B', value: 'class_b' as VehicleType },
+      { label: 'Profesional', value: 'professional' as VehicleType },
+    ],
+    'Todos los tipos',
+  );
+  readonly statusOptions = withAllOption(
+    [
+      { label: 'Disponible', value: 'available' as VehicleStatus },
+      { label: 'Mantenimiento', value: 'maintenance' as VehicleStatus },
+      { label: 'Fuera de Servicio', value: 'out_of_service' as VehicleStatus },
+    ],
+    'Todos los estados',
+  );
+
+  /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
+  hasActiveFilters(): boolean {
+    return this.searchTerm !== '' || this.selectedType !== null || this.selectedStatus !== null;
+  }
 
   readonly heroChips = computed((): SectionHeroChip[] => [
     { label: `${this.kpis().total} vehículos`, icon: 'car', style: 'default' },

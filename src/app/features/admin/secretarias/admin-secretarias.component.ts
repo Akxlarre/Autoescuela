@@ -14,6 +14,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
+import { withAllOption } from '@core/utils/filter-options.utils';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -43,6 +45,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
@@ -150,9 +153,9 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     [(ngModel)]="filtroSedeModel"
                     optionLabel="label"
                     optionValue="value"
-                    placeholder="Sede"
+                    placeholder="Todas las sedes"
                     appendTo="body"
-                    [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
+                    [style]="{ flex: '1', 'min-width': '170px', height: '36px' }"
                     class="flex-1 sm:flex-none"
                     data-llm-action="filtrar-secretarias-por-sede"
                   />
@@ -161,11 +164,16 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     [(ngModel)]="filtroEstadoModel"
                     optionLabel="label"
                     optionValue="value"
-                    placeholder="Estado"
+                    placeholder="Todos los estados"
                     appendTo="body"
-                    [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
+                    [style]="{ flex: '1', 'min-width': '170px', height: '36px' }"
                     class="flex-1 sm:flex-none"
                     data-llm-action="filtrar-secretarias-por-estado"
+                  />
+                  <app-clear-filters-button
+                    llmSubject="secretaries"
+                    [active]="hasActiveFilters()"
+                    (clear)="clearFilters()"
                   />
                 </div>
               </div>
@@ -559,18 +567,37 @@ export class AdminSecretariasComponent {
     this.resetDensity();
   }
 
-  // ── Opciones para p-select ────────────────────────────────────────────────
-  protected readonly sedeOptions = computed(() =>
-    [...new Set(this.facade.secretarias().map((s) => s.sede))]
-      .filter((s) => s !== '—')
-      .sort()
-      .map((s) => ({ label: s, value: s })),
+  /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
+  protected readonly hasActiveFilters = computed(
+    () => this.searchTerm() !== '' || this.filtroSede() !== null || this.filtroEstado() !== null,
   );
 
-  protected readonly estadoOptions = [
-    { label: 'Activa', value: 'activa' },
-    { label: 'Inactiva', value: 'inactiva' },
-  ];
+  protected clearFilters(): void {
+    this.searchTerm.set('');
+    this.filtroSede.set(null);
+    this.filtroEstado.set(null);
+    this.resetDensity();
+  }
+
+  // ── Opciones para p-select ────────────────────────────────────────────────
+  // Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m).
+  protected readonly sedeOptions = computed(() =>
+    withAllOption(
+      [...new Set(this.facade.secretarias().map((s) => s.sede))]
+        .filter((s) => s !== '—')
+        .sort()
+        .map((s) => ({ label: s, value: s })),
+      'Todas las sedes',
+    ),
+  );
+
+  protected readonly estadoOptions = withAllOption(
+    [
+      { label: 'Activa', value: 'activa' },
+      { label: 'Inactiva', value: 'inactiva' },
+    ],
+    'Todos los estados',
+  );
 
   // Modelos two-way para p-select
   protected get filtroSedeModel(): string | null {

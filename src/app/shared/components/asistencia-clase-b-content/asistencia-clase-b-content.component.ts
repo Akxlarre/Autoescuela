@@ -16,6 +16,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { withAllOption } from '@core/utils/filter-options.utils';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -65,6 +67,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClearFiltersButtonComponent,
     FormsModule,
     SelectModule,
     TooltipModule,
@@ -370,7 +373,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               }
 
               <!-- Filtro instructor -->
-              <div class="ml-auto">
+              <div class="ml-auto flex items-center gap-2">
+                <app-clear-filters-button
+                  llmSubject="attendance"
+                  [active]="hasActiveFilters()"
+                  (clear)="clearFilters()"
+                />
                 <p-select
                   [options]="instructorSelectOptions()"
                   optionLabel="label"
@@ -874,9 +882,24 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
+  /** Abre con "Todos los instructores" = null, su valor por defecto (spec 0022-m). */
   readonly instructorSelectOptions = computed(() =>
-    this.instructores().map((i) => ({ label: i.name, value: i.id })),
+    withAllOption(
+      this.instructores().map((i) => ({ label: i.name, value: i.id })),
+      'Todos los instructores',
+    ),
   );
+
+  /** Muestra "Limpiar filtros": un estado distinto de "Todos" o un instructor elegido. */
+  protected readonly hasActiveFilters = computed(
+    () => this.activeStatusFilter() !== 'todos' || this.selectedInstructorId() !== null,
+  );
+
+  protected clearFilters(): void {
+    this.activeStatusFilter.set('todos');
+    this.selectedInstructorId.set(null);
+    this.resetLoadMore();
+  }
 
   // Justify modal
   protected readonly justifyModalOpen = signal(false);

@@ -22,6 +22,8 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { withAllOption } from '@core/utils/filter-options.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -74,6 +76,7 @@ const PAGE_SIZE_MOBILE = 6;
     SectionHeroComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ClearFiltersButtonComponent,
   ],
   template: `
     <div
@@ -143,17 +146,11 @@ const PAGE_SIZE_MOBILE = 6;
             data-llm-description="filter pre-inscribed students by license class"
           />
 
-          @if (searchQuery() || filterStatus() || filterLicencia()) {
-            <button
-              type="button"
-              class="text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1 cursor-pointer"
-              data-llm-action="clear-pre-inscritos-filters"
-              (click)="resetFiltros()"
-            >
-              <app-icon name="x" [size]="14" />
-              Limpiar
-            </button>
-          }
+          <app-clear-filters-button
+            llmSubject="pre-inscritos"
+            [active]="hasActiveFilters()"
+            (clear)="resetFiltros()"
+          />
 
           <span class="ml-auto text-sm text-text-secondary">
             {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
@@ -432,20 +429,33 @@ export class PreInscritosContentComponent implements AfterViewInit {
 
   protected readonly skeletonRows = Array(6).fill(0);
 
-  readonly statusOptions: FilterOption[] = [
-    { label: 'Sin evaluar', value: 'pending_review' },
-    { label: 'Aptos', value: 'approved' },
-    { label: 'Rechazados', value: 'rejected' },
-    { label: 'Matriculados', value: 'enrolled' },
-    { label: 'Vencidos', value: 'expired' },
-  ];
+  /** Cada filtro abre con su opción "todos", con el mismo '' por defecto (spec 0022-m). */
+  readonly statusOptions: FilterOption[] = withAllOption(
+    [
+      { label: 'Sin evaluar', value: 'pending_review' },
+      { label: 'Aptos', value: 'approved' },
+      { label: 'Rechazados', value: 'rejected' },
+      { label: 'Matriculados', value: 'enrolled' },
+      { label: 'Vencidos', value: 'expired' },
+    ],
+    'Todos los estados',
+    '',
+  );
 
-  readonly licenciaOptions: FilterOption[] = [
-    { label: 'A2', value: 'A2' },
-    { label: 'A3', value: 'A3' },
-    { label: 'A4', value: 'A4' },
-    { label: 'A5', value: 'A5' },
-  ];
+  readonly licenciaOptions: FilterOption[] = withAllOption(
+    [
+      { label: 'A2', value: 'A2' },
+      { label: 'A3', value: 'A3' },
+      { label: 'A4', value: 'A4' },
+      { label: 'A5', value: 'A5' },
+    ],
+    'Todas las clases',
+    '',
+  );
+
+  protected readonly hasActiveFilters = computed(
+    () => this.searchQuery() !== '' || this.filterStatus() !== '' || this.filterLicencia() !== '',
+  );
 
   // ── Derivados ─────────────────────────────────────────────────────────────
   /** El switch tabla/cards se decide por CONTENEDOR, no por viewport (specs 0030/0031). */

@@ -128,4 +128,27 @@ describe('AdminSecretariasComponent — densidad app-like', () => {
       expect((component as any).mobileShown()).toBe(10);
     });
   });
+
+  describe('opción "todos" y "Limpiar filtros" (spec 0022-m)', () => {
+    it('cada selector abre con su opción "todos" = null', () => {
+      expect((component as any).sedeOptions()[0]).toEqual({ label: 'Todas las sedes', value: null });
+      expect((component as any).estadoOptions[0]).toEqual({
+        label: 'Todos los estados',
+        value: null,
+      });
+    });
+
+    it('un selector o el buscador activan el botón; limpiar deja todo en "todos"', () => {
+      expect((component as any).hasActiveFilters()).toBe(false);
+
+      (component as any).filtroEstadoModel = 'activa';
+      (component as any).updateSearchTerm('ana');
+      expect((component as any).hasActiveFilters()).toBe(true);
+
+      (component as any).clearFilters();
+      expect((component as any).hasActiveFilters()).toBe(false);
+      expect((component as any).searchTerm()).toBe('');
+      expect((component as any).filtroEstado()).toBeNull();
+    });
+  });
 });
