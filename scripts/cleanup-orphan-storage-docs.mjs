@@ -15,13 +15,16 @@
  * Por defecto es un DRY-RUN: solo lista. Borra únicamente con --apply.
  * Borrado vía Storage API (Supabase bloquea DELETE directo sobre storage.objects).
  *
- * Uso:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/cleanup-orphan-storage-docs.mjs
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/cleanup-orphan-storage-docs.mjs --apply
+ * Uso (desde la raíz del repo, con la CLI de Supabase logueada — la misma de `db push`):
+ *   node scripts/cleanup-orphan-storage-docs.mjs            ← solo lista
+ *   node scripts/cleanup-orphan-storage-docs.mjs --apply    ← borra
  *
- * La service role key está en Supabase Dashboard → Project Settings → API. No la commitees.
+ * Las credenciales se obtienen solas del proyecto enlazado. Opcionalmente se pueden pasar por
+ * entorno (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). Nunca commitees la service role key.
  */
 import { createClient } from '@supabase/supabase-js';
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 
 const APPLY = process.argv.includes('--apply');
 const BUCKET = 'documents';
@@ -46,11 +49,39 @@ const REF_COLUMNS = [
   ['vehicle_documents', 'file_url'],
 ];
 
-const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Faltan SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY en el entorno.');
-  process.exit(1);
+/**
+ * Credenciales: si no vienen por entorno, se toman del proyecto enlazado con la CLI de Supabase
+ * (`supabase/.temp/project-ref` + `supabase projects api-keys`). La clave nunca se imprime.
+ */
+function resolveCredentials() {
+  let { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) return { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
+
+  const refPath = 'supabase/.temp/project-ref';
+  if (!existsSync(refPath)) {
+    console.error('No hay credenciales en el entorno ni proyecto enlazado. Corre el script desde la raíz del repo.');
+    process.exit(1);
+  }
+  const ref = readFileSync(refPath, 'utf8').trim();
+  SUPABASE_URL ||= `https://${ref}.supabase.co`;
+  try {
+    const out = execSync(`npx supabase projects api-keys --project-ref ${ref} -o json`, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    SUPABASE_SERVICE_ROLE_KEY ||= JSON.parse(out).find((k) => k.name === 'service_role')?.api_key;
+  } catch {
+    /* se reporta abajo */
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('No se pudo obtener la service role key con la CLI. Corre `npx supabase login` y reintenta.');
+    process.exit(1);
+  }
+  console.log(`Proyecto: ${ref} (credenciales obtenidas con la CLI de Supabase)`);
+  return { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
 }
+
+const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = resolveCredentials();
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
