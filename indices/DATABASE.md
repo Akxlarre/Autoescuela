@@ -2283,9 +2283,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | delete_users | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
-| update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 | select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
 | select_users_via_class_relationship | SELECT | `auth_user_role() = 'instructor' AND public.auth_instructor_can_view_student_u…` | — |
+| update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
 
 ### `vehicle_assignments` — 🔒 RLS
 
@@ -2469,6 +2469,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `update_class_book_to_in_review` | `()` |
 | `update_professional_attendance_flag` | `()` |
 | `user_complete_first_login` | `()` |
+| `users_guard_secretary_write` | `()` |
 | `validate_website_config_courses_fk` | `()` |
 | `verify_class_b_certificate_enablement` | `()` |
 | `verify_class_b_dropout_rule` | `()` |

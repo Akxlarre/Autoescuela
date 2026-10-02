@@ -15,7 +15,8 @@
 //   currentEmail     : string  — email actual, para detectar si cambió
 //
 // Flujo:
-//   1. Valida que el llamador sea admin o secretary
+//   1. Valida que el llamador sea admin o secretary, y que el objetivo sea un alumno de su
+//      alcance (fix-179-b: antes se aceptaba cualquier userId, incluido el de un admin)
 //   2. Si el email cambió → actualiza primero en auth.users via Admin API.
 //      Si Auth rechaza el cambio (ej. email ya registrado), se corta aquí y
 //      public.users NO se toca — evita la desincronización que originó este fix.
@@ -25,6 +26,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authorizeStudentProfileEdit } from '../_shared/user-edit-authz.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('id, roles ( name )')
+      .select('id, branch_id, can_access_both_branches, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -96,20 +98,32 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Faltan campos requeridos: userId, firstNames, paternalLastName, email');
     }
 
+    // ── Validar el OBJETIVO (fix-179-b) ──────────────────────────────────────
+    // Esta función usa la clave de servicio: sin esto, cualquier userId (un admin) era editable.
+    const { data: targetUser, error: findError } = await supabaseAdmin
+      .from('users')
+      .select('supabase_uid, branch_id, roles ( name )')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (findError) {
+      return errorResponse(`Error al buscar al alumno: ${findError.message}`, 500);
+    }
+
+    const authz = authorizeStudentProfileEdit(
+      {
+        role: callerRole,
+        branchId: callerRow.branch_id ?? null,
+        bothBranches: !!callerRow.can_access_both_branches,
+      },
+      targetUser ? { role: targetUser.roles?.name, branchId: targetUser.branch_id ?? null } : null,
+    );
+    if (!authz.ok) return errorResponse(authz.message, authz.status);
+
     // ── Si el email cambió → actualizar en Supabase Auth PRIMERO ─────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
     if (emailChanged) {
-      const { data: targetUser, error: findError } = await supabaseAdmin
-        .from('users')
-        .select('supabase_uid')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (findError || !targetUser) {
-        return errorResponse('No se encontró al alumno en la BD', 404);
-      }
-
       // El alumno nunca tuvo cuenta Auth creada (ej. la invitación falló al matricularlo,
       // fix-157-m) → no hay nada que sincronizar en Auth, se guarda el email directo en
       // public.users más abajo. Cuando se le envíe la invitación (botón "Enviar invitación"),

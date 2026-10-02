@@ -1,7 +1,8 @@
 # Fix: Una secretaria puede editar a cualquier usuario (incluido un admin)
 > id: fix-179-b-edicion-usuarios-sin-validar-objetivo
 > refs: ASG-i-043
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Root Cause
@@ -60,3 +61,26 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-043). ACs propios:
 - `deno test supabase/functions/_shared/user-edit-authz.test.ts` — F1, F2.
 - `supabase/tests/rls/fix-179-b-users-secretaria.sql` — F3, F4, F5 impersonando secretaria sede 1,
   admin y service role; escrituras en un sub-bloque que siempre se deshace.
+
+## Resultado (2026-10-01)
+
+**`deno test supabase/functions/_shared/user-edit-authz.test.ts`:** 17 passed (objetivo admin /
+secretaria / instructor rechazado, sede ajena rechazada, `userId` que no corresponde al
+`instructorId` → 400, secretaria no cambia la sede del instructor, admin y multi-sede sin límite).
+
+**RLS, rojo — BD remota actual, 6 fallos (confirmado en vivo):** con su sesión, la secretaria de la
+sede 1 actualizó la fila de **otra secretaria**, **cambió el email de un instructor**, **ascendió
+a un alumno a secretaria**, le dio `can_access_both_branches = true` a un alumno y lo insertó así.
+
+**RLS, verde — migración + test en `BEGIN … ROLLBACK`: 0 fallos en 11 casos.** Los 6 anteriores
+→ 0 filas o `42501`; admin y service role siguen escribiendo columnas de acceso; matrícula
+(INSERT/UPDATE de alumno) y pre-inscritos (`role_id` NULL → alumno) siguen funcionando.
+
+**Aplicado en producción el 2026-10-01** (ver Progreso).
+
+## Progreso
+- [x] Reglas puras + 17 tests deno en verde
+- [x] Edge functions `update-student-profile` y `update-instructor` validan el objetivo
+- [x] Migración RLS + trigger, ensayada en remoto dentro de `BEGIN … ROLLBACK` (0/11 fallos)
+- [x] Aplicada la migración `20261001220000` (`supabase db push`) y desplegadas `update-student-profile` y `update-instructor` (visto bueno del owner, 2026-10-01). Smoke test: sin usuario → 401
+- [x] Test de RLS re-corrido contra la BD real fuera de transacción: 0 fallos, sin filas residuales. Cerrado
