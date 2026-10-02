@@ -101,7 +101,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `EnrollmentPaymentFacade` | `ErrorSanitizerService`, `SupabaseService`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/enrollment-payment.facade.ts` |
 | `EnrollmentFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `ConsentsFacade`, `EnrollmentDocumentsFacade`, `EnrollmentPaymentFacade`, `ConfirmModalService`, `DmsViewerService`, `NotificationsFacade`, `ToastService`, `AgendaSettingsService` | — | `src/app/core/facades/enrollment.facade.ts` |
 | `EvaluacionesProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `NotificationsFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
-| `ExAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
+| `ExAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
 | `ExecutiveDashboardFacade` | `SupabaseService`, `BranchFacade` | `preset`, `range`, `isLoading`, `kpis`, `series`, `instructorHours`, `receivables`, `todayOps`, `errors`, `stages`, `hasData` | `src/app/core/facades/executive-dashboard.facade.ts` |
 | `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |
 | `FlotaFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |

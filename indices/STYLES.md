@@ -337,7 +337,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
-| `--duration-fast` | 53 | `200ms` |
+| `--duration-fast` | 54 | `200ms` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--text-xs` | 52 | `0.75rem` |
 | `--bg-subtle` | 50 | `rgba(255, 255, 255, 0.1)` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 50 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 873 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 874 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

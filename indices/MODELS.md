@@ -155,7 +155,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
 | `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `InasistenciaClaseBUI`, `ClasePendienteReagendarUI`, `ClasePracticaUI`, `ProgresoUI`, `ReagendamientoHistorialUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
-| `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoSortField`, `AlumnoSortDirection`, `AlumnoListSort`, `AlumnoListFilters`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
 | `AnnouncementCourseType`, `AnnouncementEnrollmentStatus`, `RecipientSegmentFilters`, `RecipientExclusionReason`, `RecipientPreview`, `AnnouncementDraft`, `SendProgress`, `AnnouncementRow` | `ui` | `src/app/core/models/ui/announcement.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
