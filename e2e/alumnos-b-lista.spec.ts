@@ -4,6 +4,8 @@
  *
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
+import { readFileSync } from 'node:fs';
+import * as XLSX from 'xlsx';
 import type { Locator, Page } from '@playwright/test';
 import { addFutureClass, createE2eAlumno } from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
@@ -723,19 +725,26 @@ test.describe('archivar, papelera y restaurar', () => {
 });
 
 test.describe('exportar', () => {
-  /** Exporta a Excel y devuelve las filas que la función le entregó a la app. */
+  /**
+   * Exporta a Excel y devuelve las filas del archivo descargado, sin la cabecera. Desde
+   * fix-281-m el Excel se arma en el navegador con las filas de la pantalla.
+   */
   async function exportarExcel(page: Page): Promise<(string | number)[][]> {
     await page.locator('[data-llm-action="open-export-menu"]').click();
-    const [response] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes('/functions/v1/export-students')),
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
       page.locator('[data-llm-action="export-students-excel"]').click(),
     ]);
-    expect(response.status()).toBe(200);
-    return ((await response.json()) as { rows: (string | number)[][] }).rows;
+    expect(download.suggestedFilename()).toMatch(/^alumnos_\d{4}-\d{2}-\d{2}\.xlsx$/);
+    const book = XLSX.read(readFileSync(await download.path()));
+    const [, ...rows] = XLSX.utils.sheet_to_json<(string | number)[]>(
+      book.Sheets[book.SheetNames[0]],
+      { header: 1 },
+    );
+    return rows;
   }
 
   test('K02 · K04 (S3): el Excel trae las mismas filas que la pantalla', async ({ pageAs }) => {
-    knownBug('B1 (fix-264-m)');
     const page = await pageAs('secretariaA');
     await openLista(page, 'secretaria');
     const enPantalla = await reportTotal(page);
@@ -745,7 +754,6 @@ test.describe('exportar', () => {
   });
 
   test('K09 (S3): exportar desde la Papelera trae solo archivados', async ({ pageAs, cleanup }) => {
-    knownBug('B1 (fix-264-m)');
     const archivado = await createE2eAlumno(
       { label: 'ExportPapelera', branchId: SEDE_A, studentStatus: 'archived' },
       cleanup,

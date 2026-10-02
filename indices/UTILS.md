@@ -18,6 +18,7 @@
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
 | `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `isAlumnoCursando`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
+| `src/app/core/utils/alumnos-export.utils.ts` | `buildAlumnosExcelTable`, `alumnosPdfColumnWeights`, `buildAlumnosPdfTable` |
 | `src/app/core/utils/alumnos-hero-actions.utils.ts` | `buildAlumnosHeroActions` |
 | `src/app/core/utils/alumnos-list-navigation.utils.ts` | `isReturningFromFicha` |
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |

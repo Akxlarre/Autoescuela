@@ -80,12 +80,14 @@ import type {
   AlumnoStatus,
 } from '@core/models/ui/alumno-table-row.model';
 
+/**
+ * Exportar la lista (fix-281-m): las filas que la pantalla muestra, ya filtradas y en su
+ * orden, y si la columna Sede está visible. El archivo trae exactamente lo que se ve.
+ */
 export interface AlumnoExportRequest {
-  format: 'pdf' | 'excel';
-  search: string;
-  curso: string;
-  estado: string;
-  expediente: string;
+  format: ExportFormat;
+  rows: AlumnoTableRow[];
+  showSede: boolean;
 }
 
 @Component({
@@ -955,10 +957,8 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   requestExport(format: ExportFormat): void {
     this.exportRequested.emit({
       format,
-      search: this.searchTerm(),
-      curso: this.selectedCurso(),
-      estado: this.selectedEstado(),
-      expediente: this.selectedExpediente(),
+      rows: this.sortedAlumnos(),
+      showSede: this.showSedeColumn(),
     });
   }
 
