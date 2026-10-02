@@ -1574,6 +1574,28 @@
   `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`,
   `supabase/migrations/20261001200000_storage_aislamiento_por_sede.sql` (test en `supabase/tests/rls/`).
 
+### DG-099 — `verify_jwt` no protege una edge function: la anon key pública pasa ese chequeo
+
+- **Trampa:** creer que una edge function con `verify_jwt = true` (el default) ya exige sesión, o
+  que `verify_jwt = false` es necesario porque "la llama un cron". La anon key está en el bundle
+  público de la app y es un JWT firmado válido (`role: anon`): con ella, cualquiera pasa el gateway.
+  Si la función usa la service key (salta RLS), devuelve datos de todas las sedes.
+- **Realidad:** la autorización la decide el handler, no el gateway:
+  - Función para usuarios del staff → `requireStaff(req, [...roles])` de
+    `supabase/functions/_shared/staff-auth.ts` (resuelve el usuario con `auth.getUser()` y su rol
+    desde `users`/`roles`).
+  - Función que solo invoca un proceso del servidor (pg_cron con la service key del Vault) →
+    `isServiceRoleRequest()` de `supabase/functions/_shared/service-role-auth.ts`. Ese chequeo lee
+    el claim `role` **sin verificar firma**, así que exige dejar `verify_jwt` en `true`: con `false`,
+    cualquiera fabrica un token con `role: service_role`.
+- **Regla de aplicabilidad:** al crear o revisar una edge function que use `SUPABASE_SERVICE_ROLE_KEY`,
+  probar en vivo los tres rechazos (sin header, con la anon key, con un usuario de rol no permitido),
+  no solo el caso feliz. Un `verify_jwt = false` en `supabase/config.toml` sin un chequeo propio en el
+  handler es un hueco. Para confirmar que un cron sigue autorizado, dispararlo desde el SQL Editor con
+  la misma llamada del job (`net.http_post` + service key del Vault) y leer `net._http_response`.
+- **Fuente:** `specs/specs/0009-i-edge-functions-exigir-usuario-staff`,
+  `specs/fixes/fix-043-i-edge-functions-sin-sesion`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

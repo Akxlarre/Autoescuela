@@ -354,14 +354,9 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
-[functions.generate-contract-pdf]
-verify_jwt = false
-
-[functions.generate-class-book-pdf]
-verify_jwt = false
-
-[functions.auto-create-next-promotions]
-verify_jwt = false
+# fix-043-i: generate-contract-pdf, generate-class-book-pdf y auto-create-next-promotions
+# tenían verify_jwt = false y respondían sin sesión. Vuelven al default (true); la
+# autorización real la hacen _shared/staff-auth.ts y _shared/service-role-auth.ts.
 
 [edge_runtime]
 enabled = true

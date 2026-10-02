@@ -36,6 +36,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { isServiceRoleRequest } from '../_shared/service-role-auth.ts';
 import { computePromotionEndDate, fetchHolidaysForYears } from '../_shared/holidays.ts';
 
 const corsHeaders = {
@@ -103,6 +104,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // fix-043-i: solo el cron (pg_cron con la service key del Vault). Antes respondía a
+    // cualquiera y creaba promociones; ahora exige rol de servicio. Requiere verify_jwt en su
+    // default true (ver _shared/service-role-auth.ts).
+    if (!isServiceRoleRequest(req.headers.get('Authorization'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))) {
+      return jsonResponse({ error: 'No autorizado' }, 401);
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,

@@ -22,6 +22,7 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 import {
   type EnrollmentData,
   buildStructuredPdf,
@@ -50,6 +51,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // fix-043-i: solo staff. La anon key pasa verify_jwt, así que se exige usuario real + rol.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
+
     // 1. Parse request body
     const body = await req.json();
     const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
