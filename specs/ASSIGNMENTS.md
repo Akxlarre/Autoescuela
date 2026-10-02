@@ -431,6 +431,7 @@
 | ASG-i-038 | Decisión de producto: ¿quién pone la nota de evaluación de las clases B durante el piloto? | [fix-262-m-certificacion-b-sin-requisito-nota](fixes/fix-262-m-certificacion-b-sin-requisito-nota/fix.md) | 2026-10-01 |
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 | ASG-i-043 | Una secretaria puede editar a cualquier usuario (incluido un admin) | [fix-179-b-edicion-usuarios-sin-validar-objetivo](fixes/fix-179-b-edicion-usuarios-sin-validar-objetivo/fix.md) | 2026-10-01 |
+| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | [fix-180-b-usuarios-desactivados-siguen-entrando](fixes/fix-180-b-usuarios-desactivados-siguen-entrando/fix.md) | 2026-10-01 |
 | ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
 | ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
