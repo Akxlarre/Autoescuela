@@ -1,7 +1,8 @@
 # Fix: Storage — documentos de otra sede y subida anónima a `website-public`
 > id: fix-178-b-storage-aislamiento-por-sede
 > refs: ASG-i-046 (complementa spec 0047-b, misma tanda de aislamiento por sede)
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Root Cause
@@ -76,6 +77,8 @@ sede 2, 198; INSERT en `students/` y `contracts/` de la sede 2 aceptado; prefijo
 aceptado; UPDATE de un objeto de la sede 2 → 1 fila; mover un objeto propio a la sede 2 aceptado;
 INSERT en `website-assets/branch-2/` aceptado; **INSERT anónimo en `website-public/seeds/`
 aceptado** (F4 confirmado en vivo).
+
+**Aplicada en remoto el 2026-10-01** (`supabase db push`, visto bueno del owner, versión `20261001200000`); test re-corrido contra la BD real fuera de transacción: 0 fallos, sin objetos residuales.
 
 **Verde, migración + test en `BEGIN … ROLLBACK` — 0 fallos en 15 casos:** sede 1 ve 14 objetos,
 sede 2 ve 29, multi-sede y admin 227 (= total); todas las escrituras ajenas → `42501`; las propias
