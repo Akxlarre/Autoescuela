@@ -324,17 +324,17 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 446 | `#38bdf8` |
-| `--text-muted` | 383 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 380 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--state-error` | 237 | `#f87171` |
-| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
+| `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 210 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 192 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
 | `--border-default` | 139 | `rgba(255, 255, 255, 0.28)` |
 | `--color-primary` | 133 | `#38bdf8` |
 | `--state-warning` | 125 | `#fbbf24` |
-| `--bg-elevated` | 78 | `#27272a` |
+| `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
 | `--duration-fast` | 53 | `200ms` |
@@ -353,9 +353,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 312 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 187 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 184 | `src/styles/tokens/_variables.scss` |
+| `.card` | 310 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 186 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 185 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |

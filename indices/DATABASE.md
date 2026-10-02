@@ -754,12 +754,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 | `sence_code` | TEXT | sí | — | — |
-| `horario` | TEXT | sí | — | — (no leída/escrita desde código — el Libro de Clases muestra un horario fijo, fix-258-m) |
+| `horario` | TEXT | sí | — | — |
 | `sence_code_updated_by` | INT | sí | — | → `users.id` |
 | `sence_code_updated_at` | TIMESTAMPTZ | sí | — | — |
-| `convalidation_license` | TEXT | sí | — | — (`NULL` = libro normal del curso; `'A3'`/`'A4'` = libro de convalidación Conv. A-3/A-4 colgado del curso madre A5/A2 — spec 0018-m) |
-
-**Unicidad:** `class_book_promotion_course_conv_key` = `UNIQUE NULLS NOT DISTINCT (promotion_course_id, convalidation_license)` (migración `20260924120000`, reemplaza a `class_book_promotion_course_id_key`). Una fila por libro: la normal del curso + opcionalmente una de convalidación. El upsert de `generate-class-book-pdf` usa `onConflict: 'promotion_course_id,convalidation_license'`; toda lectura por `promotion_course_id` con `.maybeSingle()` DEBE filtrar `convalidation_license` (`.is(…, null)` para el libro normal).
+| `convalidation_license` | TEXT | sí | — | — |
 
 **Policies:**
 
@@ -1035,7 +1033,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `license_initial_url` | TEXT | sí | — | — |
 | `license_full_url` | TEXT | sí | — | — |
 | `theory_cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
-| `completed_at` | TIMESTAMPTZ | sí | — | — (fecha de egreso: cuándo pasó a `status = 'completed'`. La escribe el trigger `trg_enrollments_completed_at`, nunca el cliente; `NULL` si no está completada. Ex-Alumnos la usa para el año y el período — **no usar `updated_at` como fecha de egreso**: cambia con cada pago. fix-266-m) |
+| `completed_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 

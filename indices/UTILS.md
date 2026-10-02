@@ -17,7 +17,8 @@
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
-| `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
+| `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `isAlumnoCursando`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
+| `src/app/core/utils/alumnos-hero-actions.utils.ts` | `buildAlumnosHeroActions` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
@@ -39,7 +40,7 @@
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
-| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
+| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
 | `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
@@ -50,8 +51,8 @@
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
-| `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange` (fix-176-b: valor de `p-datepicker` range → rango ISO), `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
-| `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `pickFichaEnrollment` |
+| `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
+| `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
@@ -71,7 +72,7 @@
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
-| `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
+| `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `hasMinimumPhoneLength`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
