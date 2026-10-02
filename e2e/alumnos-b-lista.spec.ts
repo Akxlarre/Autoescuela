@@ -5,7 +5,7 @@
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
 import type { Locator, Page } from '@playwright/test';
-import { createE2eAlumno } from './support/alumnos-seed';
+import { addFutureClass, createE2eAlumno } from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
 
 const SEDE_A = 1; // Autoescuela Chillán
@@ -89,6 +89,8 @@ test.describe('carga y totales', () => {
     const total = await reportTotal(page);
     await expect(page.locator('app-section-hero').getByText(`${total} alumnos`)).toBeVisible();
     expect(await kpiValue(page, 'Total Alumnos')).toBe(total);
+    // fix-271-m: "Por Vencer" valía 0 por construcción y se quitó.
+    await expect(page.locator('app-section-hero').getByText('Por Vencer')).toHaveCount(0);
     if (total > 10) await expect(rows(page)).toHaveCount(10);
 
     errors.expectClean();
@@ -184,7 +186,6 @@ test.describe('qué alumnos aparecen y con qué estado', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B8 (fix-264-m)');
     const haceUnAno = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
     // El alumno se crea archivado para medir el KPI dentro de la Papelera: ahí "Con deuda"
     // solo cuenta archivados, y ningún otro test ni dev crea archivados con deuda, así que el
@@ -310,6 +311,199 @@ test.describe('búsqueda y filtros', () => {
   });
 });
 
+test.describe('los filtros se conservan', () => {
+  test('F10 (fix-275-m): la búsqueda sigue puesta al abrir una ficha y volver', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Filtros', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    const volver = page.locator('app-section-hero [data-llm-nav="back"]').first();
+
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    await expect(rows(page)).toHaveCount(1);
+    await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
+    await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    await volver.click();
+
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(page.locator(SEARCH)).toHaveValue(alumno.paternalLastName);
+    await expect(rows(page)).toHaveCount(1);
+
+    // Con el botón "atrás" del navegador también se conserva.
+    await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
+    await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    await page.goBack();
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(page.locator(SEARCH)).toHaveValue(alumno.paternalLastName);
+
+    // hotfix-126-m: solo al devolverse desde una ficha. Entrando por el menú después de pasar
+    // por otra pantalla, la lista aparece sin filtros.
+    await page.locator('a[href="/app/secretaria/agenda"]').first().click();
+    await expect(page).toHaveURL(/\/agenda$/);
+    await page.locator('a[href="/app/secretaria/alumnos"]').first().click();
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(page.locator(SEARCH)).toHaveValue('');
+    expect(await reportTotal(page)).toBeGreaterThan(1);
+
+    // "Limpiar filtros" también se conserva: al volver, la lista sigue sin filtrar.
+    await page.locator(SEARCH).fill('zzzz-no-existe');
+    await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+    await expect(page.locator(SEARCH)).toHaveValue('');
+    await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
+    await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    await volver.click();
+
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(page.locator(SEARCH)).toHaveValue('');
+  });
+});
+
+test.describe('ordenar por columna (spec 0020-m)', () => {
+  const SORT_CARDS = '[data-llm-description="Sort the student list by a column"]';
+  const sortButton = (page: Page, field: string): Locator =>
+    page.locator(`[data-llm-action="sort-students-by-${field}"]`);
+  const sortHeader = (page: Page, field: string): Locator =>
+    page.locator('th', { has: sortButton(page, field) });
+
+  /**
+   * Tres alumnos con un apellido materno común (para aislarlos con el buscador) y fechas de
+   * ingreso cuyo orden real difiere del orden del texto dd-mm-aaaa.
+   * Se crean en el orden M, Z, A: por defecto (más reciente primero) salen A, Z, M.
+   */
+  async function seedTrio(cleanup: Parameters<typeof createE2eAlumno>[1]) {
+    const sufijo = String(Date.now()).slice(-6);
+    const comun = `Orden${sufijo}`;
+    const crear = (paterno: string, createdAt: string) =>
+      createE2eAlumno(
+        {
+          label: 'Orden',
+          branchId: SEDE_A,
+          paternalLastName: `${paterno}${sufijo}`,
+          maternalLastName: comun,
+          enrollments: [{ createdAt }],
+        },
+        cleanup,
+      );
+    const m = await crear('Mmm', '2026-01-05T15:00:00Z'); // 05-01-2026
+    const z = await crear('Zzz', '2025-12-20T15:00:00Z'); // 20-12-2025
+    const a = await crear('Aaa', '2026-03-10T15:00:00Z'); // 10-03-2026
+    const fila = (alumno: typeof m) => new RegExp(alumno.paternalLastName);
+    return { comun, a: fila(a), m: fila(m), z: fila(z) };
+  }
+
+  test('G03: un clic ordena ascendente, el segundo descendente y el tercero vuelve al orden por defecto', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const { comun, a, m, z } = await seedTrio(cleanup);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(comun);
+
+    // Sin orden elegido: el más reciente primero, y ningún título marcado.
+    await expect(rows(page)).toHaveText([a, z, m]);
+    await expect(sortHeader(page, 'alumno')).toHaveAttribute('aria-sort', 'none');
+
+    await sortButton(page, 'alumno').click();
+    await expect(rows(page)).toHaveText([a, m, z]);
+    await expect(sortHeader(page, 'alumno')).toHaveAttribute('aria-sort', 'ascending');
+    await expect(sortHeader(page, 'rut')).toHaveAttribute('aria-sort', 'none');
+
+    await sortButton(page, 'alumno').click();
+    await expect(rows(page)).toHaveText([z, m, a]);
+    await expect(sortHeader(page, 'alumno')).toHaveAttribute('aria-sort', 'descending');
+
+    await sortButton(page, 'alumno').click();
+    await expect(rows(page)).toHaveText([a, z, m]);
+    await expect(sortHeader(page, 'alumno')).toHaveAttribute('aria-sort', 'none');
+
+    // La secretaria de una sola sede no ve la columna Sede: tampoco se ofrece para ordenar.
+    await expect(sortButton(page, 'sede')).toHaveCount(0);
+  });
+
+  test('G03: "Fecha Ingreso" ordena por la fecha real y el orden se conserva al volver de la ficha', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const { comun, a, m, z } = await seedTrio(cleanup);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(comun);
+
+    // 20-12-2025 → 05-01-2026 → 10-03-2026 (por texto, el 05-01-2026 quedaría primero).
+    await sortButton(page, 'fechaIngreso').click();
+    await expect(rows(page)).toHaveText([z, m, a]);
+
+    await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
+    await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    await page.locator('app-section-hero [data-llm-nav="back"]').first().click();
+
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(sortHeader(page, 'fechaIngreso')).toHaveAttribute('aria-sort', 'ascending');
+    await expect(rows(page)).toHaveText([z, m, a]);
+
+    // Entrando por el menú desde otra pantalla, la lista vuelve al orden por defecto.
+    await page.locator('a[href="/app/secretaria/agenda"]').first().click();
+    await expect(page).toHaveURL(/\/agenda$/);
+    await page.locator('a[href="/app/secretaria/alumnos"]').first().click();
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await expect(sortHeader(page, 'fechaIngreso')).toHaveAttribute('aria-sort', 'none');
+  });
+
+  test('G03: el orden abarca todas las páginas y vuelve a la primera al cambiarlo', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    test.skip((await reportTotal(page)) <= 10, 'La sede tiene una sola página de alumnos');
+
+    await page.locator('.p-paginator-next').click();
+    await expect(page.getByText(/Mostrando 11 a/)).toBeVisible();
+    await sortButton(page, 'alumno').click();
+    await expect(page.getByText(/Mostrando 1 a 10/)).toBeVisible();
+
+    const apellidos = async (): Promise<string[]> =>
+      (await rows(page).locator('.item-title').allTextContents()).map((t) => t.trim());
+    const pagina1 = await apellidos();
+    await page.locator('.p-paginator-next').click();
+    await expect(page.getByText(/Mostrando 11 a/)).toBeVisible();
+    const pagina2 = await apellidos();
+
+    const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+    const todos = [...pagina1, ...pagina2];
+    expect(todos).toEqual([...todos].sort(collator.compare));
+  });
+
+  test('G03 · H: en la vista de tarjetas se ordena con el control "Ordenar por"', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const { comun, a, m, z } = await seedTrio(cleanup);
+    const page = await pageAs('secretariaA');
+
+    // Con la tabla visible el control no aparece: se ordena desde los títulos.
+    await openLista(page, 'secretaria');
+    await expect(page.locator(SORT_CARDS)).toBeHidden();
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    const cards = page.locator('[data-llm-description="Ficha resumen de un alumno"]');
+    await page.locator(SEARCH).fill(comun);
+    await expect(cards).toHaveText([a, z, m]);
+
+    await page.locator(SORT_CARDS).click();
+    await page.getByRole('option', { name: 'Alumno', exact: true }).click();
+    await expect(cards).toHaveText([a, m, z]);
+
+    await page.locator('[data-llm-action="toggle-students-sort-direction"]').click();
+    await expect(cards).toHaveText([z, m, a]);
+  });
+});
+
 test.describe('sedes', () => {
   test('P01 · P02 · P04: admin ve la columna Sede solo en "Todas" y el total es la suma de las sedes', async ({
     pageAs,
@@ -386,6 +580,8 @@ test.describe('archivar, papelera y restaurar', () => {
     // M01 · M02: en la Papelera solo se puede restaurar.
     await page.locator('[data-llm-action="papelera"]').click();
     await expect(page.getByText('Papelera — Alumnos archivados')).toBeVisible(CARGA);
+    // O05 (hotfix-119-m): dentro de la Papelera no se ofrece "Nueva Matrícula".
+    await expect(page.locator('[data-llm-action="nueva-matricula"]')).toHaveCount(0);
     await page.locator(SEARCH).fill(alumno.paternalLastName);
     await expect(row).toHaveCount(1);
     await expect(row.locator('[data-llm-action="archive-student-row"]')).toHaveCount(0);
@@ -396,8 +592,39 @@ test.describe('archivar, papelera y restaurar', () => {
     // M03: volver a la lista activa: el alumno está de vuelta.
     await page.locator('[data-llm-nav="back"]').first().click();
     await expect(page.getByText('Listado de alumnos de la escuela')).toBeVisible();
+    await expect(page.locator('[data-llm-action="nueva-matricula"]')).toBeVisible();
     await page.locator(SEARCH).fill(alumno.paternalLastName);
     await expect(row).toHaveCount(1);
+  });
+
+  test('L09 (fix-277-m): un alumno con una clase agendada a futuro no se puede archivar', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ClaseFutura', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addFutureClass(alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    const row = rowOf(page, alumno.paternalLastName);
+
+    await row.locator('[data-llm-action="archive-student-row"]').click();
+
+    await expect(page.getByText('No se puede archivar')).toBeVisible();
+    await expect(
+      page.getByText('Tiene 1 clase agendada. Cancélala o reagéndala antes de archivar al alumno.'),
+    ).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /Confirmar archivado de/ })).toHaveCount(0);
+    await expect(row).toHaveCount(1);
+
+    // Desde la ficha, igual.
+    await row.locator('[data-llm-action="view-student-detail"]').click();
+    await page.locator('app-section-hero [data-llm-action="eliminar-alumno"]').click(CARGA);
+    await expect(page.getByText('No se puede archivar').last()).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /Confirmar archivado de/ })).toHaveCount(0);
   });
 
   test('L02 · L03 · L05: con historial exige escribir "borrarlo"; cancelar no archiva', async ({
@@ -421,6 +648,9 @@ test.describe('archivar, papelera y restaurar', () => {
     await expect(campo).toBeFocused(); // L08
 
     await campo.fill('borrar');
+    await expect(confirmar).toBeDisabled();
+    // L04 (hotfix-124-m): hay que escribirlo tal como lo pide el modal, en minúsculas.
+    await campo.fill('BORRARLO');
     await expect(confirmar).toBeDisabled();
     await campo.fill('borrarlo');
     await expect(confirmar).toBeEnabled();

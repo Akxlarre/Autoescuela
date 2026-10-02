@@ -152,23 +152,24 @@ describe('AdminAlumnoDetalleFacade', () => {
       claseNumero: 3,
       instructorId: 100,
       scheduledAt: '2026-07-10T14:00:00Z',
+      razon: 'medica',
     };
 
     const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+    /** Builder encadenable y awaitable: cualquier cadena de filtros resuelve `result`. */
+    function chainMock(result: { data?: unknown; error: unknown } = { data: null, error: null }) {
+      const b: any = {};
+      for (const method of ['select', 'eq', 'is', 'in', 'order', 'update', 'insert']) {
+        b[method] = vi.fn(() => b);
+      }
+      b.single = vi.fn().mockResolvedValue(result);
+      b.then = (resolve: (value: unknown) => void) => resolve(result);
+      return b;
+    }
+
     function mockFromByTable(handlers: Record<string, any>) {
-      return vi.fn().mockImplementation((table: string) => {
-        if (handlers[table]) return handlers[table];
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi
-              .fn()
-              .mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }),
-          }),
-          update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
-          insert: vi.fn().mockResolvedValue({ error: null }),
-        };
-      });
+      return vi.fn().mockImplementation((table: string) => handlers[table] ?? chainMock());
     }
 
     beforeEach(() => {
@@ -281,6 +282,83 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([42], expect.any(Object));
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([200], expect.any(Object));
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(2);
+    });
+
+    describe('asistencia e historial (fix-279-m)', () => {
+      /** Sesión existente: instructor 999 y fecha anterior, antes de reciclarla. */
+      function mockSesionExistente() {
+        const sessions = chainMock({
+          data: { instructor_id: 999, scheduled_at: '2026-07-01T13:00:00Z' },
+          error: null,
+        });
+        const attendance = chainMock({ error: null });
+        const history = chainMock({ data: [], error: null });
+        supabaseSpy.client.from = mockFromByTable({
+          class_b_sessions: sessions,
+          class_b_practice_attendance: attendance,
+          class_b_reschedule_history: history,
+        });
+        return { sessions, attendance, history };
+      }
+
+      it('archiva la asistencia vigente de la sesión reciclada, igual que el reagendamiento por lote', async () => {
+        const { attendance } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(attendance.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+        expect(attendance.eq).toHaveBeenCalledWith('class_b_session_id', 55);
+        expect(attendance.is).toHaveBeenCalledWith('archived_at', null);
+      });
+
+      it('deja la reprogramación en el historial con fecha e instructor anteriores y la razón', async () => {
+        const { history } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(history.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            class_session_id: 55,
+            enrollment_id: 7,
+            old_scheduled_at: '2026-07-01T13:00:00Z',
+            new_scheduled_at: '2026-07-10T14:00:00Z',
+            old_instructor_id: 999,
+            new_instructor_id: 100,
+            reason: 'medica',
+            reason_other: null,
+          }),
+        );
+      });
+
+      it('con razón "otro" guarda el detalle escrito', async () => {
+        const { history } = mockSesionExistente();
+
+        await facade.reprogramarClase({ ...basePayload, razon: 'otro', razonOtro: 'Mudanza' });
+
+        expect(history.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ reason: 'otro', reason_other: 'Mudanza' }),
+        );
+      });
+
+      it('sin razón no reprograma una sesión existente: no toca la sesión ni el historial', async () => {
+        const { sessions, history } = mockSesionExistente();
+
+        await expect(facade.reprogramarClase({ ...basePayload, razon: null })).rejects.toThrow(
+          'Selecciona la razón del reagendamiento.',
+        );
+
+        expect(sessions.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+      });
+
+      it('agendar una clase que no tenía sesión no archiva nada ni escribe historial', async () => {
+        const { attendance, history } = mockSesionExistente();
+
+        await facade.reprogramarClase({ ...basePayload, sessionId: null, razon: null });
+
+        expect(attendance.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -1305,6 +1383,84 @@ describe('AdminAlumnoDetalleFacade', () => {
           await facade.initialize(43);
 
           expect(facade.alumno()?.enrollmentId).toBe(401);
+        });
+      });
+
+      describe('fecha de ingreso — fix-273-m', () => {
+        it('es la fecha de la matrícula mostrada, en dd-mm-aaaa, no la del alta del alumno', async () => {
+          // initWithEnrollments() crea al alumno con students.created_at = 2026-01-01.
+          await initWithEnrollments([makeEnrollmentRow(303, 'active', '2026-03-15')]);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('15-03-2026');
+        });
+
+        it('cambia al elegir otra matrícula en el selector', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-15'),
+            makeEnrollmentRow(304, 'completed', '2025-11-02'),
+          ]);
+
+          await facade.selectEnrollment(304);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('02-11-2025');
+        });
+
+        it('sin ninguna matrícula mostrable queda en "—"', async () => {
+          await initWithEnrollments([makeEnrollmentRow(305, 'draft', '2026-04-01')]);
+
+          expect(facade.alumno()?.fechaIngreso).toBe('—');
+        });
+      });
+
+      describe('matrícula pedida al entrar — fix-272-m', () => {
+        const dosMatriculas = () => [
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ];
+
+        it('abre la matrícula pedida por la lista aunque haya otra más reciente (Ex-Alumnos)', async () => {
+          await initWithEnrollments(dosMatriculas());
+          expect(facade.alumno()?.enrollmentId).toBe(303);
+
+          await facade.initialize(42, 304);
+
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(304));
+          expect(facade.alumno()?.estado).toBe('Egresado');
+          expect(facade.alumno()?.matricula).toBe('#000304');
+        });
+
+        it('volver a entrar sin pedir matrícula aplica la regla por defecto, no la elegida en la visita anterior', async () => {
+          await initWithEnrollments(dosMatriculas());
+          await facade.selectEnrollment(304);
+
+          await facade.initialize(42);
+
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(303));
+        });
+
+        it('un refresco posterior conserva la matrícula con la que se entró', async () => {
+          await initWithEnrollments(dosMatriculas());
+          await facade.initialize(42, 304);
+          await vi.waitFor(() => expect(facade.alumno()?.enrollmentId).toBe(304));
+
+          await facade.refresh();
+
+          expect(facade.alumno()?.enrollmentId).toBe(304);
+        });
+
+        it('si la matrícula pedida no es de ese alumno o es un borrador, aplica la regla por defecto', async () => {
+          await initWithEnrollments([
+            makeEnrollmentRow(303, 'active', '2026-03-01'),
+            makeEnrollmentRow(305, 'draft', '2026-04-01'),
+          ]);
+
+          await facade.initialize(42, 999);
+          await facade.refresh();
+          expect(facade.alumno()?.enrollmentId).toBe(303);
+
+          await facade.initialize(42, 305);
+          await facade.refresh();
+          expect(facade.alumno()?.enrollmentId).toBe(303);
         });
       });
 

@@ -9,14 +9,23 @@ import {
   viewChild,
   ElementRef,
   AfterViewInit,
+  OnInit,
   WritableSignal,
 } from '@angular/core';
 import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { buildCourseFilterOptions } from '@core/utils/course-filter-options.utils';
+import { buildAlumnosHeroActions } from '@core/utils/alumnos-hero-actions.utils';
+import {
+  ALUMNO_SORT_OPTIONS,
+  nextAlumnoSort,
+  sortAlumnos,
+  toggleAlumnoSortDirection,
+} from '@core/utils/alumnos-sort.utils';
 import {
   getExpedienteStatus as computeExpedienteStatus,
   getAlumnoStatusSeverity,
+  isAlumnoCursando,
 } from '@core/utils/alumno-status.utils';
 import type { ExpedienteStatus } from '@core/utils/alumno-status.utils';
 import { CommonModule } from '@angular/common';
@@ -41,7 +50,10 @@ import { AlumnoCardComponent } from '../alumno-card/alumno-card.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import {
+  ExportMenuComponent,
+  type ExportFormat,
+} from '@shared/components/export-menu/export-menu.component';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -55,10 +67,12 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
 // Features
 import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
-import { AlumnosPorVencerDrawerComponent } from '../alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component';
 
 // Models
 import type {
+  AlumnoListFilters,
+  AlumnoListSort,
+  AlumnoSortField,
   AlumnoTableRow,
   AlumnoExpediente,
   AlumnoStatus,
@@ -94,7 +108,7 @@ export interface AlumnoExportRequest {
     AnimateInDirective,
     CardHoverDirective,
     SectionHeroComponent,
-    StableWidthDirective,
+    ExportMenuComponent,
   ],
   template: `
     <div
@@ -117,7 +131,6 @@ export interface AlumnoExportRequest {
         backLabel="Alumnos"
         (backClicked)="trashViewToggled.emit()"
         (actionClick)="handleHeroAction($event)"
-        (kpiClick)="onHeroKpiClick($event)"
       />
 
       <!-- Filtros y Tabla (Dual-Viewport). El modo fill-screen desktop lo da
@@ -178,48 +191,52 @@ export interface AlumnoExportRequest {
             data-llm-description="Filter students by file completion status"
           />
 
-          <!-- Exportar (dropdown) -->
-          <div class="relative ml-auto">
-            <button
-              type="button"
-              class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-              [disabled]="isExporting()"
-              [appStableWidth]="isExporting()"
-              (click)="exportMenuOpen.set(!exportMenuOpen())"
-              data-llm-action="open-export-menu"
-            >
-              @if (isExporting()) {
-                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
-              } @else {
-                <app-icon name="download" [size]="16" />
-              }
-              Exportar
-              <app-icon name="chevron-down" [size]="14" />
-            </button>
-            @if (exportMenuOpen()) {
-              <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-              <div class="export-menu">
-                <button
-                  type="button"
-                  class="export-menu-item"
-                  (click)="requestExport('excel')"
-                  data-llm-action="export-students-excel"
-                >
-                  <app-icon name="table-2" [size]="16" />
-                  Exportar como Excel
-                </button>
-                <button
-                  type="button"
-                  class="export-menu-item"
-                  (click)="requestExport('pdf')"
-                  data-llm-action="export-students-pdf"
-                >
-                  <app-icon name="file-text" [size]="16" />
-                  Exportar como PDF
-                </button>
-              </div>
-            }
+          <!-- Ordenar por (spec 0020-m, AC11): solo en la vista de tarjetas, que no tiene
+               títulos de columna. Con la tabla visible se ordena desde los títulos. -->
+          <div class="show-on-squeeze">
+            <p-select
+              [options]="sortColumns()"
+              [ngModel]="sort()?.field ?? null"
+              (ngModelChange)="setSortField($event)"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Ordenar por"
+              [showClear]="true"
+              class="h-9"
+              data-llm-description="Sort the student list by a column"
+            />
           </div>
+          <!-- Elemento aparte de la barra, para que en pantallas angostas baje de línea en vez
+               de desbordar la tarjeta. -->
+          @if (sort(); as current) {
+            <div class="show-on-squeeze">
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2"
+                (click)="toggleSortDirection()"
+                [attr.aria-label]="
+                  current.direction === 'asc'
+                    ? 'Orden ascendente. Cambiar a descendente'
+                    : 'Orden descendente. Cambiar a ascendente'
+                "
+                data-llm-action="toggle-students-sort-direction"
+              >
+                <app-icon
+                  [name]="current.direction === 'asc' ? 'chevron-up' : 'chevron-down'"
+                  [size]="16"
+                />
+                {{ current.direction === 'asc' ? 'Ascendente' : 'Descendente' }}
+              </button>
+            </div>
+          }
+
+          <!-- Exportar: mismo menú que Ex-Alumnos (app-export-menu, spec 0021-m) -->
+          <app-export-menu
+            class="ml-auto"
+            llmSubject="students"
+            [exporting]="isExporting()"
+            (exportRequested)="requestExport($event)"
+          />
         </div>
 
         <!-- Tabla -->
@@ -315,9 +332,11 @@ export interface AlumnoExportRequest {
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
               <p-table
-                [value]="filteredAlumnos()"
+                [value]="sortedAlumnos()"
                 [rows]="10"
                 [paginator]="true"
+                [first]="tableFirst()"
+                (onPage)="tableFirst.set($event.first)"
                 [scrollable]="true"
                 scrollHeight="flex"
                 responsiveLayout="scroll"
@@ -327,16 +346,27 @@ export interface AlumnoExportRequest {
               >
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
-                    <th class="pl-6 py-4">Alumno</th>
-                    <th>RUT</th>
-                    <th>Nº Exp.</th>
-                    <th>Curso</th>
-                    @if (showSedeColumn()) {
-                      <th>Sede</th>
+                    <!-- spec 0020-m: cada título ordena la lista completa (no solo la página).
+                         Clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto. -->
+                    @for (col of sortColumns(); track col.value; let first = $first) {
+                      <th
+                        [class.pl-6]="first"
+                        [class.py-4]="first"
+                        [attr.aria-sort]="ariaSort(col.value)"
+                      >
+                        <button
+                          type="button"
+                          class="sort-header"
+                          [class.sort-header--active]="sort()?.field === col.value"
+                          (click)="toggleSort(col.value)"
+                          [attr.data-llm-action]="'sort-students-by-' + col.value"
+                          [attr.aria-label]="'Ordenar por ' + col.label"
+                        >
+                          {{ col.label }}
+                          <app-icon [name]="sortIcon(col.value)" [size]="12" />
+                        </button>
+                      </th>
                     }
-                    <th>Fecha Ingreso</th>
-                    <th>Estado</th>
-                    <th>Expediente</th>
                     <th class="pr-6 text-right">Acciones</th>
                   </tr>
                 </ng-template>
@@ -450,6 +480,8 @@ export interface AlumnoExportRequest {
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                            [queryParams]="{ enrollment: alumno.enrollmentId }"
+                            data-llm-action="view-student-detail"
                           >
                             <app-icon name="eye" [size]="16" />
                           </button>
@@ -570,41 +602,41 @@ export interface AlumnoExportRequest {
         }
       }
 
-      .export-menu {
-        position: absolute;
-        top: calc(100% + 6px);
-        right: 0;
-        z-index: 20;
-        min-width: 200px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-default);
-        border-radius: var(--radius-lg);
-        box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
-        overflow: hidden;
-      }
-
-      .export-menu-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: 100%;
-        padding: 10px 14px;
-        font-size: 13px;
-        color: var(--text-primary);
+      /* Título de columna ordenable: hereda la tipografía de micro-label del tr. */
+      .sort-header {
+        position: relative;
+        display: inline-block;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        text-align: left;
+        color: inherit;
         background: transparent;
         border: none;
+        padding: 0;
         cursor: pointer;
-        text-align: left;
-        transition: background var(--duration-fast);
       }
 
-      .export-menu-item:hover {
-        background: var(--bg-elevated);
+      /* El indicador va fuera del flujo, sobre el espacio entre columnas: no ensancha la
+         tabla (con el ícono en línea, a 1600 px aparecía scroll horizontal y se cortaba
+         la columna Acciones). */
+      .sort-header app-icon {
+        position: absolute;
+        left: calc(100% + 3px);
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.35;
+        transition: opacity var(--duration-fast);
+      }
+
+      .sort-header:hover app-icon,
+      .sort-header--active app-icon {
+        opacity: 1;
       }
     `,
   ],
 })
-export class AlumnosListContentComponent implements AfterViewInit {
+export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────
   readonly alumnos = input.required<AlumnoTableRow[]>();
   readonly isLoading = input(false);
@@ -612,10 +644,14 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly isGeneratingFicha = input<number | false>(false);
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/secretaria');
-  readonly alumnosPorVencer = input<number>(0);
   readonly showSedeColumn = input(false);
   /** Error de la última carga (signal `error` del facade), o null. */
   readonly error = input<string | null>(null);
+  /**
+   * Búsqueda y filtros con los que arranca la lista (fix-275-m). Se leen una sola vez, al crear
+   * el componente: después manda lo que el usuario escribe, que se avisa por `filtersChanged`.
+   */
+  readonly initialFilters = input<AlumnoListFilters | null>(null);
 
   /**
    * El estado de error reemplaza a la tabla solo si no hay alumnos que mostrar. Si un refresco en
@@ -630,6 +666,8 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly trashViewToggled = output<void>();
   readonly exportRequested = output<AlumnoExportRequest>();
   readonly fichaExportRequested = output<number>();
+  /** Se emite cada vez que cambia la búsqueda o un filtro, para que el Smart los conserve. */
+  readonly filtersChanged = output<AlumnoListFilters>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -643,24 +681,9 @@ export class AlumnosListContentComponent implements AfterViewInit {
     { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
   ]);
 
-  readonly heroActions = computed((): SectionHeroAction[] => {
-    const isTrash = this.trashView();
-    return [
-      {
-        id: 'papelera',
-        label: 'Papelera',
-        icon: 'trash-2',
-        primary: false,
-        danger: isTrash,
-      },
-      {
-        id: 'nueva-matricula',
-        label: 'Nueva Matrícula',
-        icon: 'plus',
-        primary: true,
-      },
-    ];
-  });
+  readonly heroActions = computed((): SectionHeroAction[] =>
+    buildAlumnosHeroActions(this.trashView()),
+  );
 
   readonly alumnosKpis = computed((): SectionHeroKpi[] => [
     {
@@ -684,27 +707,27 @@ export class AlumnosListContentComponent implements AfterViewInit {
       icon: 'circle-alert',
       color: 'warning',
     },
-    {
-      id: 'por-vencer',
-      label: 'Por Vencer',
-      value: this.alumnosPorVencer(),
-      icon: 'alert-triangle',
-      color: 'error',
-      clickable: true,
-    },
   ]);
 
   readonly searchTerm = signal('');
   readonly selectedCurso = signal('');
   readonly selectedEstado = signal('');
   readonly selectedExpediente = signal('');
+  /** Orden elegido por el usuario; null = orden por defecto, más recientes primero (spec 0020-m). */
+  readonly sort = signal<AlumnoListSort | null>(null);
+  /** Índice de la primera fila de la página visible de la tabla. */
+  readonly tableFirst = signal(0);
   isDrawerOpen = signal(false);
-  readonly exportMenuOpen = signal(false);
+
+  /** Columnas ordenables, en el orden de la tabla. "Sede" solo si la columna se muestra. */
+  readonly sortColumns = computed(() =>
+    ALUMNO_SORT_OPTIONS.filter((col) => col.value !== 'sede' || this.showSedeColumn()),
+  );
 
   /** Densidad incremental de la vista tarjetas (spec 0028, AC5). */
   private static readonly CARDS_STEP = 6;
   readonly mobileShown = signal(AlumnosListContentComponent.CARDS_STEP);
-  readonly visibleCards = computed(() => sliceByBudget(this.filteredAlumnos(), this.mobileShown()));
+  readonly visibleCards = computed(() => sliceByBudget(this.sortedAlumnos(), this.mobileShown()));
   readonly remainingCards = computed(() =>
     Math.max(0, this.filteredAlumnos().length - this.mobileShown()),
   );
@@ -744,11 +767,18 @@ export class AlumnosListContentComponent implements AfterViewInit {
     exp_teorico: 'pendiente',
     exp_practico: 'pendiente',
     expediente: { ci: false, foto: false, medico: false, semep: false },
-    expiresAt: null,
     cursoCompletoPendienteEgreso: false,
   };
 
-  constructor() {}
+  ngOnInit(): void {
+    const filters = this.initialFilters();
+    if (!filters) return;
+    this.searchTerm.set(filters.search);
+    this.selectedCurso.set(filters.curso);
+    this.selectedEstado.set(filters.estado);
+    this.selectedExpediente.set(filters.expediente);
+    this.sort.set(filters.sort);
+  }
 
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
@@ -779,6 +809,9 @@ export class AlumnosListContentComponent implements AfterViewInit {
     });
   });
 
+  /** La lista filtrada, en el orden elegido. Alimenta la tabla y las tarjetas por igual. */
+  readonly sortedAlumnos = computed(() => sortAlumnos(this.filteredAlumnos(), this.sort()));
+
   /**
    * Setea un filtro y resetea la densidad de tarjetas (AC6): el filtro opera
    * sobre el TOTAL y el contador de "Cargar más" se recalcula desde cero.
@@ -786,6 +819,52 @@ export class AlumnosListContentComponent implements AfterViewInit {
   updateFilter(filter: WritableSignal<string>, value: string): void {
     filter.set(value);
     this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
+    this.emitFilters();
+  }
+
+  /** Clic en el título de una columna: ascendente → descendente → orden por defecto. */
+  toggleSort(field: AlumnoSortField): void {
+    this.applySort(nextAlumnoSort(this.sort(), field));
+  }
+
+  /** Control "Ordenar por" de la vista de tarjetas. Limpiarlo vuelve al orden por defecto. */
+  setSortField(field: AlumnoSortField | null): void {
+    if (field === this.sort()?.field) return;
+    this.applySort(field ? { field, direction: 'asc' } : null);
+  }
+
+  toggleSortDirection(): void {
+    this.applySort(toggleAlumnoSortDirection(this.sort()));
+  }
+
+  /** Un orden nuevo se mira desde el principio: primera página y primeras tarjetas. */
+  private applySort(sort: AlumnoListSort | null): void {
+    this.sort.set(sort);
+    this.tableFirst.set(0);
+    this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
+    this.emitFilters();
+  }
+
+  sortIcon(field: AlumnoSortField): string {
+    const sort = this.sort();
+    if (sort?.field !== field) return 'arrow-up-down';
+    return sort.direction === 'asc' ? 'chevron-up' : 'chevron-down';
+  }
+
+  ariaSort(field: AlumnoSortField): 'ascending' | 'descending' | 'none' {
+    const sort = this.sort();
+    if (sort?.field !== field) return 'none';
+    return sort.direction === 'asc' ? 'ascending' : 'descending';
+  }
+
+  private emitFilters(): void {
+    this.filtersChanged.emit({
+      search: this.searchTerm(),
+      curso: this.selectedCurso(),
+      estado: this.selectedEstado(),
+      expediente: this.selectedExpediente(),
+      sort: this.sort(),
+    });
   }
 
   loadMoreCards(): void {
@@ -797,7 +876,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
   }
 
   activos(): number {
-    return this.alumnos().filter((a) => a.status === 'Activo').length;
+    return this.alumnos().filter((a) => isAlumnoCursando(a.status)).length;
   }
 
   conDeuda(): number {
@@ -824,16 +903,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
     this.selectedEstado.set('');
     this.selectedExpediente.set('');
     this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
-  }
-
-  openPorVencerDrawer(): void {
-    if (!this.isLoading()) {
-      this.layoutDrawer.open(
-        AlumnosPorVencerDrawerComponent,
-        'Alumnos con Cuotas por Vencer',
-        'alert-triangle',
-      );
-    }
+    this.emitFilters();
   }
 
   handleHeroAction(actionId: string): void {
@@ -849,16 +919,11 @@ export class AlumnosListContentComponent implements AfterViewInit {
     }
   }
 
-  onHeroKpiClick(kpiId: string): void {
-    if (kpiId === 'por-vencer') this.openPorVencerDrawer();
-  }
-
   openNuevaMatriculaDrawer(): void {
     this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
-  requestExport(format: 'pdf' | 'excel'): void {
-    this.exportMenuOpen.set(false);
+  requestExport(format: ExportFormat): void {
     this.exportRequested.emit({
       format,
       search: this.searchTerm(),

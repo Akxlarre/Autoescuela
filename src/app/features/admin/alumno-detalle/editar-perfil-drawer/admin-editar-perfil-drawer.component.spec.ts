@@ -98,4 +98,37 @@ describe('AdminEditarPerfilDrawerComponent — Enviar invitación (fix-157-m, fi
 
     expect(component['saveError']()).toBe('Error al enviar la invitación');
   });
+
+  describe('teléfono — hotfix-121-m', () => {
+    it('con el teléfono precargado del alumno el formulario es válido', () => {
+      const { component } = createComponent(true);
+
+      expect(component['form'].valid).toBe(true);
+    });
+
+    it.each(['', '   ', '1234567'])(
+      'con el teléfono "%s" no se puede guardar: misma regla que Nueva Matrícula',
+      async (phone) => {
+        const { component, facadeSpy } = createComponent(true);
+        component['form'].patchValue({ phone });
+
+        await component['onSubmit']();
+
+        expect(component['form'].get('phone')!.invalid).toBe(true);
+        expect(facadeSpy.actualizarPerfilAlumno).not.toHaveBeenCalled();
+      },
+    );
+
+    it('con 8 caracteres o más se guarda', async () => {
+      const { component, facadeSpy } = createComponent(true);
+      component['form'].patchValue({ phone: '22345678' });
+
+      await component['onSubmit']();
+
+      expect(facadeSpy.actualizarPerfilAlumno).toHaveBeenCalledWith(
+        55,
+        expect.objectContaining({ phone: '22345678' }),
+      );
+    });
+  });
 });

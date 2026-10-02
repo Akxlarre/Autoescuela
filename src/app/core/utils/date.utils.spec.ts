@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { isoToDate, monthsAgoIso, toISODate, todayIso } from './date.utils';
+import { formatDayMonthYear, isoToDate, monthsAgoIso, toISODate, todayIso } from './date.utils';
+
+describe('formatDayMonthYear — fix-273-m', () => {
+  it('formatea una fecha sin hora como dd-mm-aaaa', () => {
+    expect(formatDayMonthYear('2026-09-05')).toBe('05-09-2026');
+  });
+
+  it('formatea un timestamp con el día de la hora local', () => {
+    const local = new Date(2026, 0, 31, 9, 30);
+    expect(formatDayMonthYear(local.toISOString())).toBe('31-01-2026');
+  });
+
+  it.each([null, undefined, '', 'no-es-fecha'])('%s → "—"', (value) => {
+    expect(formatDayMonthYear(value)).toBe('—');
+  });
+});
 
 describe('monthsAgoIso', () => {
   it('returns a date exactly N months before today', () => {

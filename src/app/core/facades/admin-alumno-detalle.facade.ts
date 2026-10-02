@@ -18,7 +18,7 @@ import type {
   ProgresoUI,
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
-import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
+import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
@@ -43,6 +43,13 @@ export interface ReprogramarClasePayload {
   instructorId: number;
   /** Timestamptz del slot — usado como scheduled_at y como key del mapa vehicle */
   scheduledAt: string;
+  /**
+   * Razón del reagendamiento (valor de RAZON_REAGENDAMIENTO_OPTIONS). Obligatoria cuando se
+   * recicla una sesión existente (fix-279-m); agendar una clase sin sesión no la lleva.
+   */
+  razon: string | null;
+  /** Texto libre cuando razon === 'otro'. */
+  razonOtro?: string | null;
 }
 
 /**
@@ -300,10 +307,20 @@ export class AdminAlumnoDetalleFacade {
   }
 
   /**
+   * Matrícula pedida por la lista al entrar a la ficha (fix-272-m). `null` = se entró sin pedir
+   * ninguna (regla por defecto); `undefined` = no hay una entrada pendiente de aplicar, o sea
+   * que la próxima carga es un refresco y conserva la matrícula elegida en el selector.
+   */
+  private _entryEnrollmentId: number | null | undefined = undefined;
+
+  /**
    * SWR Initialization for Student detail:
    * If visiting the SAME student, refresh silently in background.
+   *
+   * `enrollmentId`: la matrícula sobre la que se hizo clic en la lista de origen. Cada entrada a
+   * la ficha decide de nuevo qué matrícula mostrar; no hereda la de la visita anterior.
    */
-  async initialize(studentId: number): Promise<void> {
+  async initialize(studentId: number, enrollmentId: number | null = null): Promise<void> {
     // hotfix-116-m: un id que no viene de la app (URL escrita a mano, "/alumnos/abc") no se
     // consulta: se muestra el error en vez de dejar la ficha en "Cargando…".
     if (!Number.isInteger(studentId) || studentId <= 0) {
@@ -316,6 +333,7 @@ export class AdminAlumnoDetalleFacade {
     }
 
     const isSameStudent = this._initialized && studentId === this._lastStudentId;
+    this._entryEnrollmentId = enrollmentId;
 
     this.setupRealtime(studentId);
 
@@ -404,6 +422,7 @@ export class AdminAlumnoDetalleFacade {
       branchId: summary.branchId,
       enrollments: alumno.enrollments,
       matricula: summary.number ? `#${summary.number}` : '—',
+      fechaIngreso: formatDayMonthYear(summary.createdAt),
       estado: this.formatEnrollmentStatus(summary.status),
       egresado: summary.status === ENROLLMENT_STATUS_EGRESADO,
       curso: summary.courseName,
@@ -453,8 +472,12 @@ export class AdminAlumnoDetalleFacade {
       );
       // fix-265-m: la matrícula mostrada no es "la más reciente a secas". Nunca un borrador, y
       // en un refresco de la misma ficha se conserva la que el usuario eligió en el selector.
+      // fix-272-m: al entrar a la ficha manda la matrícula pedida por la lista (o ninguna); la
+      // elegida en el selector solo se conserva en los refrescos de la ficha ya abierta.
       const current = this._alumno();
-      const selectedId = current?.id === studentId ? current.enrollmentId : null;
+      const entryId = this._entryEnrollmentId;
+      const selectedId =
+        entryId !== undefined ? entryId : current?.id === studentId ? current.enrollmentId : null;
       const shownEnrollment = pickFichaEnrollment(sorted, selectedId);
 
       const shownEnrollmentCourse = Array.isArray(shownEnrollment?.courses)
@@ -558,7 +581,8 @@ export class AdminAlumnoDetalleFacade {
         curso: courseName ?? '—',
         email: u.email,
         telefono: u.phone ?? '—',
-        fechaIngreso: s.created_at.slice(0, 10),
+        // fix-273-m: la de la matrícula mostrada (cambia con el selector), no la del alta.
+        fechaIngreso: formatDayMonthYear(shownEnrollment?.created_at),
         // fix-263-m: el estado es el de la matrícula, no students.status (ningún flujo lo escribe).
         estado: this.formatEnrollmentStatus(shownEnrollment?.status),
         egresado: shownEnrollment?.status === ENROLLMENT_STATUS_EGRESADO,
@@ -570,6 +594,8 @@ export class AdminAlumnoDetalleFacade {
         hasAuthAccount: !!u.supabase_uid,
         firstLogin: !!u.first_login,
       });
+      // La entrada ya se aplicó: de acá en adelante, las cargas son refrescos.
+      this._entryEnrollmentId = undefined;
 
       // ── Step 2: Queries según tipo de licencia ──
       if (licenseGroup === 'professional') {
@@ -1437,26 +1463,7 @@ export class AdminAlumnoDetalleFacade {
     let previousInstructorId: number | null = null;
 
     if (payload.sessionId) {
-      // Capturar instructor anterior ANTES del update — se le notifica el bloque liberado (AC5).
-      const { data: previous } = await this.supabase.client
-        .from('class_b_sessions')
-        .select('instructor_id')
-        .eq('id', payload.sessionId)
-        .single();
-      previousInstructorId = (previous as { instructor_id: number } | null)?.instructor_id ?? null;
-
-      const { error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update({
-          instructor_id: payload.instructorId,
-          vehicle_id: vehicleId,
-          scheduled_at: payload.scheduledAt,
-          start_time: null,
-          end_time: null,
-          status: 'scheduled',
-        })
-        .eq('id', payload.sessionId);
-      if (error) throw error;
+      previousInstructorId = await this.reciclarSesion(payload.sessionId, payload, vehicleId);
     } else {
       const { error } = await this.supabase.client.from('class_b_sessions').insert({
         enrollment_id: payload.enrollmentId,
@@ -1472,6 +1479,79 @@ export class AdminAlumnoDetalleFacade {
     this.toast.success('Clase reprogramada correctamente.');
     this.notifyClaseReprogramada(payload, previousInstructorId);
     await this.refreshSilently();
+  }
+
+  /**
+   * Mueve una sesión existente a otro horario (fix-279-m). Reciclar la fila es un
+   * reagendamiento: archiva su asistencia vigente y deja la fila en el historial con la razón,
+   * igual que `reagendarClasesPenalizadas()`. Devuelve el instructor que tenía antes.
+   */
+  private async reciclarSesion(
+    sessionId: number,
+    payload: ReprogramarClasePayload,
+    vehicleId: number,
+  ): Promise<number | null> {
+    if (!payload.razon) throw new Error('Selecciona la razón del reagendamiento.');
+    // Instructor y fecha anteriores se capturan ANTES del update, que los pisa: al instructor
+    // se le notifica el bloque liberado (AC5) y ambos van al historial.
+    const { data: previous } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('instructor_id, scheduled_at')
+      .eq('id', sessionId)
+      .single();
+    const prev = previous as { instructor_id: number; scheduled_at: string | null } | null;
+    const previousInstructorId = prev?.instructor_id ?? null;
+
+    const { error } = await this.supabase.client
+      .from('class_b_sessions')
+      .update({
+        instructor_id: payload.instructorId,
+        vehicle_id: vehicleId,
+        scheduled_at: payload.scheduledAt,
+        start_time: null,
+        end_time: null,
+        status: 'scheduled',
+      })
+      .eq('id', sessionId);
+    if (error) throw error;
+
+    await this.archivarAsistenciaDeSesion(sessionId);
+
+    const { error: historyError } = await this.supabase.client
+      .from('class_b_reschedule_history')
+      .insert({
+        class_session_id: sessionId,
+        enrollment_id: payload.enrollmentId,
+        old_scheduled_at: prev?.scheduled_at ?? null,
+        new_scheduled_at: payload.scheduledAt,
+        old_instructor_id: previousInstructorId,
+        new_instructor_id: payload.instructorId,
+        reason: payload.razon,
+        reason_other: payload.razon === 'otro' ? (payload.razonOtro ?? null) : null,
+        registered_by: this.auth.currentUser()?.dbId ?? null,
+      });
+    if (historyError) throw historyError;
+    await this.loadHistorialReagendamientos(payload.enrollmentId);
+
+    return previousInstructorId;
+  }
+
+  /**
+   * Soft archive (RF-053) de la asistencia vigente de una sesión que se acaba de reciclar: NO se
+   * borra `class_b_practice_attendance` — el historial de la inasistencia original se conserva
+   * para auditoría — pero SÍ se marca como archivada (fix-191-m), porque dejó de describir el
+   * estado actual. Mientras no se marcaba, todo consumidor que deriva estado desde la asistencia
+   * — Asistencia B, vistas del alumno — seguía viendo "Ausente" sobre una clase agendada, y
+   * `apply_class_b_absence_penalty()` volvía a detectar el par de faltas consecutivas y
+   * cancelaba las clases recién reagendadas.
+   */
+  private async archivarAsistenciaDeSesion(sessionId: number): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('class_b_practice_attendance')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('class_b_session_id', sessionId)
+      .is('archived_at', null);
+    if (error) throw error;
   }
 
   /**
@@ -1630,19 +1710,7 @@ export class AdminAlumnoDetalleFacade {
         })
         .eq('id', session.sessionId);
       if (updateError) throw updateError;
-      // Soft archive (RF-053): NO se borra class_b_practice_attendance — el historial de
-      // la inasistencia original se conserva para auditoría. Pero SÍ se marca como
-      // archivada (fix-191-m): la fila de sesión se recicló, así que esa asistencia dejó
-      // de describir el estado actual. Mientras no se marcaba, todo consumidor que deriva
-      // estado desde la asistencia — Asistencia B, vistas del alumno — seguía viendo
-      // "Ausente" sobre una clase agendada, y apply_class_b_absence_penalty() volvía a
-      // detectar el par de faltas consecutivas y cancelaba las clases recién reagendadas.
-      const { error: archiveError } = await this.supabase.client
-        .from('class_b_practice_attendance')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('class_b_session_id', session.sessionId)
-        .is('archived_at', null);
-      if (archiveError) throw archiveError;
+      await this.archivarAsistenciaDeSesion(session.sessionId);
 
       const prev = prevMap.get(session.sessionId);
       historyRows.push({

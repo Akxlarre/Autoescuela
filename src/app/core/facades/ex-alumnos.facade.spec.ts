@@ -4,10 +4,17 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
+import { downloadBlob } from '@core/utils/file-download.utils';
+
+vi.mock('@core/utils/excel.utils', () => ({ downloadExcel: vi.fn() }));
+vi.mock('@core/utils/file-download.utils', () => ({ downloadBlob: vi.fn() }));
 
 describe('ExAlumnosFacade', () => {
   let facade: ExAlumnosFacade;
   let supabaseSpy: any;
+  const toastSpy = { error: vi.fn(), success: vi.fn() };
 
   beforeEach(() => {
     supabaseSpy = { client: vi.fn() };
@@ -33,10 +40,110 @@ describe('ExAlumnosFacade', () => {
           provide: ErrorSanitizerService,
           useValue: { sanitize: (e: Error) => ({ message: e.message }) },
         },
+        { provide: ToastService, useValue: toastSpy },
       ],
     });
 
     facade = TestBed.inject(ExAlumnosFacade);
+  });
+
+  describe('exportEgresados — spec 0021-m', () => {
+    const egresado = {
+      id: 1,
+      studentId: '10',
+      nombre: 'Reyes Muñoz Camila',
+      rut: '19.876.543-0',
+      correo: 'camila@ejemplo.cl',
+      nroExpediente: '0080',
+      licencia: 'Clase B',
+      licenseGroup: 'class_b' as const,
+      anio: 2026,
+      fechaEgreso: '2026-09-22',
+      sede: 'Autoescuela Chillán',
+      branchId: 1,
+      nroCertificado: null,
+      saldoPendiente: 45000,
+    };
+    let invoke: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      invoke = vi.fn().mockResolvedValue({ data: new Blob(['%PDF-']), error: null });
+      supabaseSpy.client.functions = { invoke };
+      vi.mocked(downloadExcel).mockClear();
+      vi.mocked(downloadBlob).mockClear();
+      toastSpy.error.mockClear();
+    });
+
+    it('Excel: descarga las filas recibidas sin llamar a ninguna Edge Function', async () => {
+      await facade.exportEgresados('excel', [egresado]);
+
+      expect(invoke).not.toHaveBeenCalled();
+      expect(downloadExcel).toHaveBeenCalledTimes(1);
+      const [sheet, headers, rows, filename] = vi.mocked(downloadExcel).mock.calls[0];
+      expect(sheet).toBe('Ex-Alumnos B');
+      expect(headers).toContain('Fecha de egreso');
+      expect(rows).toHaveLength(1);
+      expect(rows[0][0]).toBe('Reyes Muñoz Camila');
+      expect(filename).toMatch(/^ex-alumnos-b_\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it('PDF: envía a export-table-pdf la tabla ya armada y descarga el resultado', async () => {
+      await facade.exportEgresados('pdf', [egresado, { ...egresado, id: 2 }]);
+
+      expect(invoke).toHaveBeenCalledTimes(1);
+      const [fn, options] = invoke.mock.calls[0];
+      expect(fn).toBe('export-table-pdf');
+      expect(options.body.title).toBe('Ex-Alumnos Clase B');
+      expect(options.body.headers).toHaveLength(7);
+      expect(options.body.columnWeights).toHaveLength(7);
+      expect(options.body.rows).toHaveLength(2);
+      expect(options.body.footer).toBe('Total: 2 egresados');
+      const [blob, filename] = vi.mocked(downloadBlob).mock.calls[0];
+      expect(blob.type).toBe('application/pdf');
+      expect(filename).toMatch(/^ex-alumnos-b_\d{4}-\d{2}-\d{2}\.pdf$/);
+    });
+
+    it('PDF con un solo egresado: el pie va en singular', async () => {
+      await facade.exportEgresados('pdf', [egresado]);
+
+      expect(invoke.mock.calls[0][1].body.footer).toBe('Total: 1 egresado');
+    });
+
+    it('isExporting es true mientras se genera y vuelve a false al terminar', async () => {
+      let resolve!: (v: unknown) => void;
+      invoke.mockReturnValue(new Promise((r) => (resolve = r)));
+
+      const pending = facade.exportEgresados('pdf', [egresado]);
+      expect(facade.isExporting()).toBe(true);
+
+      resolve({ data: new Blob(['%PDF-']), error: null });
+      await pending;
+      expect(facade.isExporting()).toBe(false);
+    });
+
+    it('una segunda exportación mientras hay una en curso se ignora', async () => {
+      let resolve!: (v: unknown) => void;
+      invoke.mockReturnValue(new Promise((r) => (resolve = r)));
+
+      const first = facade.exportEgresados('pdf', [egresado]);
+      await facade.exportEgresados('pdf', [egresado]);
+      resolve({ data: new Blob(['%PDF-']), error: null });
+      await first;
+
+      expect(invoke).toHaveBeenCalledTimes(1);
+    });
+
+    it('si la función falla avisa el error, no descarga nada y deja el botón disponible', async () => {
+      invoke.mockResolvedValue({ data: null, error: new Error('boom') });
+
+      await facade.exportEgresados('pdf', [egresado]);
+
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'No se pudo exportar la lista. Inténtalo de nuevo.',
+      );
+      expect(downloadBlob).not.toHaveBeenCalled();
+      expect(facade.isExporting()).toBe(false);
+    });
   });
 
   it('should be created', () => {
@@ -243,6 +350,56 @@ describe('ExAlumnosFacade', () => {
     });
   });
 
+  describe('alumnos archivados — fix-276-m', () => {
+    function mockEgresados(rows: unknown[]) {
+      const order = vi.fn().mockResolvedValue({ data: rows, error: null });
+      const select = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order }),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      (supabaseSpy as any).client = { from: vi.fn().mockReturnValue({ select }) };
+      return { select };
+    }
+
+    const egresado = (id: number, studentStatus: string | null) => ({
+      id,
+      number: `EXP-${id}`,
+      pending_balance: 0,
+      completed_at: '2026-09-30T15:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 1, name: 'Sede Centro' },
+      students: {
+        id: id + 1000,
+        status: studentStatus,
+        users: {
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: null,
+          rut: '44.444.444-4',
+          email: 'eva@correo.cl',
+        },
+      },
+    });
+
+    it('un egresado archivado no aparece en Ex-Alumnos: solo se ve en la Papelera', async () => {
+      mockEgresados([egresado(1, 'active'), egresado(2, 'archived'), egresado(3, null)]);
+
+      await facade.loadEgresados();
+
+      expect(facade.egresadosClaseBList().map((e) => e.id)).toEqual([1, 3]);
+      expect(facade.egresadosClaseB()).toBe(2);
+    });
+
+    it('la consulta pide students.status, sin el cual no se puede distinguir a los archivados', async () => {
+      const { select } = mockEgresados([]);
+
+      await facade.loadEgresados();
+
+      expect(select.mock.calls[0][0]).toMatch(/students!inner \(\s*id,\s*status,/);
+    });
+  });
+
   it('mapea convalidatedLicense desde license_validations para egresados profesionales (fix-195)', async () => {
     const row = {
       id: 300,
@@ -289,6 +446,7 @@ describe('ExAlumnosFacade', () => {
       const b: any = {
         select: vi.fn(() => b),
         eq: vi.fn(() => b),
+        neq: vi.fn(() => b),
         gte: vi.fn(() => b),
         then: (resolve: any) => resolve(result),
       };
@@ -320,6 +478,7 @@ describe('ExAlumnosFacade', () => {
             provide: ErrorSanitizerService,
             useValue: { sanitize: (e: Error) => ({ message: e.message }) },
           },
+          { provide: ToastService, useValue: toastSpy },
         ],
       });
       const scopedFacade = TestBed.inject(ExAlumnosFacade);
@@ -331,6 +490,8 @@ describe('ExAlumnosFacade', () => {
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('branch_id', 7);
       // fix-266-m: "egresados del año" se cuenta por fecha de egreso, no por última modificación.
       expect(enrollmentsChain.gte).toHaveBeenCalledWith('completed_at', expect.any(String));
+      // fix-276-m: los egresados archivados tampoco cuentan en el total del año.
+      expect(enrollmentsChain.neq).toHaveBeenCalledWith('students.status', 'archived');
       expect(scopedFacade.annualEgresadosTotal()).toBe(2);
     });
   });

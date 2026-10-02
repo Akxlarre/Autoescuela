@@ -66,6 +66,18 @@ export function validatePhone(digits: string, dialCode: string): boolean {
   return stripped.length >= 7 && stripped.length <= 15;
 }
 
+/** Mínimo de caracteres de un teléfono de alumno escrito como texto libre. */
+const MIN_PHONE_LENGTH = 8;
+
+/**
+ * Regla mínima del teléfono de un alumno cuando se escribe como texto libre, sin selector de
+ * país: al menos 8 caracteres sin contar espacios al inicio y al final. Es la misma que aplica
+ * el wizard de Nueva Matrícula; "Editar Perfil" la copia (hotfix-121-m).
+ */
+export function hasMinimumPhoneLength(phone: string | null | undefined): boolean {
+  return (phone ?? '').trim().length >= MIN_PHONE_LENGTH;
+}
+
 /**
  * Returns the E.164 representation: dialCode + subscriber digits (spaces stripped).
  * Example: normalizePhone('9 1234 5678', '+56') → '+56912345678'

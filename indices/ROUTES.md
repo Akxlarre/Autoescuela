@@ -27,7 +27,7 @@
 | `/force-password-change` | `ForcePasswordChangeComponent` | `firstLoginGuard` | `src/app/app.routes.ts` |
 | `/recuperar-contrasena` | `RecuperarContrasenaComponent` | `guestGuard` | `src/app/app.routes.ts` |
 | `/acceso-denegado` | `AccesoDenegadoComponent` | — | `src/app/app.routes.ts` |
-| `/modulo-no-disponible` | `ModuloNoDisponibleComponent` — botón según rol vía `resolveModuloNoDisponibleAction()` (fix-261-m): admin/secretaria → `/app` sin logout; instructor/alumno → `logout()`; sin sesión → `/login` | — | `src/app/app.routes.ts` |
+| `/modulo-no-disponible` | `ModuloNoDisponibleComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion` | `PublicEnrollmentComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
 | `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
 | `/politica-privacidad/:branchSlug` | `PoliticaPrivacidadComponent` | — | `src/app/app.routes.ts` |
@@ -36,7 +36,7 @@
 | `/app/admin` | — | `hasRoleGuard(['admin'])` | `src/app/app.routes.ts` |
 | `/app/admin/dashboard` | `DashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/alumnos` | `AdminAlumnosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | — (visible en piloto, fix-260-m) | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/pre-inscritos` | `AdminPreInscritosComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/alumnos/:id` | `AdminAlumnoDetalleComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/ex-alumnos` | `AdminExAlumnosComponent` | — | `src/app/app.routes.ts` |
@@ -59,7 +59,7 @@
 | `/app/admin/usuarios` | `AdminUsuariosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/secretarias` | `AdminSecretariasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | — (visible en piloto, fix-260-m) | `src/app/app.routes.ts` |
+| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/servicios-especiales` | `AdminServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/notificaciones` | `AdminNotificacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/relatores` | `AdminProfesionalRelatoresComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |

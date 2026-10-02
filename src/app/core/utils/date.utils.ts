@@ -30,6 +30,17 @@ export function toISODate(date: Date | string): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/**
+ * Fecha para mostrar como dd-mm-aaaa (hora local). "—" si no hay fecha o no es válida.
+ */
+export function formatDayMonthYear(date: string | null | undefined): string {
+  if (!date) return '—';
+  const iso = toISODate(date);
+  if (!iso) return '—';
+  const [yyyy, mm, dd] = iso.split('-');
+  return `${dd}-${mm}-${yyyy}`;
+}
+
 /** Converts an ISO date string ('YYYY-MM-DD') to a local Date. Returns null if empty or invalid. */
 export function isoToDate(iso: string): Date | null {
   if (!iso) return null;

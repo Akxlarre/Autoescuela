@@ -9,7 +9,13 @@ import {
 import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
+import {
+  AdminAlumnoDetalleFacade,
+  RAZON_REAGENDAMIENTO_OPTIONS,
+} from '@core/facades/admin-alumno-detalle.facade';
+import { isRazonReagendamientoCompleta } from '@core/utils/reagendamiento.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { TimeSlot, WeekDay } from '@core/models/ui/enrollment-assignment.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -19,7 +25,7 @@ import { vehicleDocWarningLabelGeneric } from '@core/utils/vehicle-document-stat
   selector: 'app-admin-reprogramar-clase-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, TooltipModule],
+  imports: [IconComponent, SkeletonBlockComponent, TooltipModule, FormsModule, SelectModule],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
@@ -41,6 +47,39 @@ import { vehicleDocWarningLabelGeneric } from '@core/utils/vehicle-document-stat
             <span class="text-xs text-text-muted"> Selecciona instructor y nuevo horario </span>
           </div>
         </div>
+
+        <!-- ── Razón (fix-279-m): mover una clase que ya tenía sesión queda en el historial ── -->
+        @if (requiereRazon()) {
+          <div class="space-y-3">
+            <label
+              for="razon-reprogramacion"
+              class="block text-xs font-bold uppercase tracking-widest text-brand"
+            >
+              Razón del reagendamiento <span class="text-error">*</span>
+            </label>
+            <p-select
+              inputId="razon-reprogramacion"
+              [options]="razonOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar razón..."
+              styleClass="w-full"
+              [ngModel]="razon()"
+              (ngModelChange)="razon.set($event)"
+              data-llm-description="Razón por la que se reprograma esta clase"
+            />
+            @if (razon() === 'otro') {
+              <input
+                type="text"
+                class="w-full h-9 px-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none"
+                placeholder="Especifica el motivo..."
+                [ngModel]="razonOtro()"
+                (ngModelChange)="razonOtro.set($event)"
+                data-llm-description="Detalle del motivo cuando la razón es Otro"
+              />
+            }
+          </div>
+        }
 
         <!-- ── 1. Instructor ── -->
         <div class="space-y-3">
@@ -336,8 +375,22 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
     return grid.slots.filter((s) => s.date === day.date);
   });
 
+  // ── Razón del reagendamiento (fix-279-m) ─────────────────────────────────────
+  protected readonly razonOptions = RAZON_REAGENDAMIENTO_OPTIONS;
+  protected readonly razon = signal<string | null>(null);
+  protected readonly razonOtro = signal('');
+
+  /** Solo se pide al mover una clase que ya tenía sesión: agendar una nueva no es reagendar. */
+  protected readonly requiereRazon = computed(
+    () => this.facade.reprogramarTarget()?.sessionId != null,
+  );
+
   protected readonly canConfirm = computed(
-    () => !!this.selectedInstructorId() && !!this.selectedSlotId() && !this.isSaving(),
+    () =>
+      !!this.selectedInstructorId() &&
+      !!this.selectedSlotId() &&
+      !this.isSaving() &&
+      isRazonReagendamientoCompleta(this.requiereRazon(), this.razon(), this.razonOtro()),
   );
 
   ngOnInit(): void {
@@ -386,6 +439,8 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
         claseNumero: target.claseNumero,
         instructorId,
         scheduledAt: slotId,
+        razon: this.requiereRazon() ? this.razon() : null,
+        razonOtro: this.razon() === 'otro' ? this.razonOtro().trim() : null,
       });
       this.layoutDrawer.close();
     } catch (err) {
@@ -398,7 +453,8 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
   }
 
   protected onCancel(): void {
-    this.layoutDrawer.close();
+    // fix-279-m: vuelve a la Ficha Técnica desde donde se abrió (o cierra si no hay panel previo).
+    this.layoutDrawer.back();
   }
 
   private getMondayKey(dateStr: string): string {

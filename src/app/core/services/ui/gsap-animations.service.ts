@@ -1580,7 +1580,10 @@ export class GsapAnimationsService {
     // maneja contenedores con scroll interno anidados sin necesitar configurar un scroller.
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries[0]?.isIntersecting) return;
+        // fix-280-m: un mismo lote puede traer varios avisos del elemento (p. ej. "no visible"
+        // mientras el panel lateral medía 0 px, seguido de "visible"). Mirar solo el primero
+        // dejaba el elemento oculto para siempre: ya no vuelve a cruzar el umbral.
+        if (!entries.some((entry) => entry.isIntersecting)) return;
         observer.disconnect();
         gsap.to(el, {
           opacity: 1,

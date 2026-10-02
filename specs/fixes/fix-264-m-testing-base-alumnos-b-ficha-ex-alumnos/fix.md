@@ -108,8 +108,9 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | C09 | ✅ | Auto. Estado correcto en los 4 casos sembrados | |
 | D01 | ✅ | Auto. Chip "N alumnos" = total del paginador | |
 | D02 | ✅ | Auto. KPI Total = total del paginador | |
-| D04 | ❌ | Auto. La deuda de la matrícula B más antigua no cuenta en "Con deuda" | B8 |
-| D05 | ❌ | El KPI es 0 por construcción: ninguna matrícula válida puede tener `expires_at` | B9 |
+| D03 | ✅ | Decidido el 2026-10-01: "Activos" incluye Pendiente Pago y Docs Pendientes. **Aplicado el 2026-10-01** | `hotfix-118-m` |
+| D04 | ❌ → ✅ | Auto. La deuda de la matrícula B más antigua no contaba en "Con deuda". **Corregido el 2026-10-01** | B8 → `fix-270-m` |
+| D05 | ❌ → ✅ | El KPI era 0 por construcción: ninguna matrícula válida puede tener `expires_at`. **Se quitó el KPI el 2026-10-01** (decisión del owner) | B9 → `fix-271-m` |
 | E01–E05 | ✅ | Auto. Nombre, apellidos, ambos órdenes, sin tilde/ñ, mayúsculas | |
 | E06 | ❌ → ✅ | Auto. Solo encontraba el RUT escrito igual que está guardado (con puntos); fallaban `99123456-7`, `991234567` y `99123456`. **Corregido el 2026-10-01** | B2 → `fix-267-m` |
 | E07 | ✅ | Auto. Nº de expediente | |
@@ -220,7 +221,7 @@ W03–W08 · X, Y, Z completas.
 | 024a | S6 🟡 | **Confirmada** | La pantalla de secretaria no tiene el `effect()` de sede ni pasa `showSedeColumn` | B7 |
 | 024a | S7 🟡 | **Confirmada** | `_trashView` vive en el facade singleton y no se resetea al salir | B4 |
 | 024a | S8 🟡 | **Confirmada** | El `error` del facade no se muestra; se ve el estado vacío | B5 |
-| 024a | S9 🟡 | Confirmada en código | `created_at.slice(0, 10)` (UTC), en pantalla y en la exportación | `ASG-i-054` |
+| 024a | S9 🟡 | Confirmada en código | `created_at.slice(0, 10)` (UTC), en pantalla y en la exportación. **En pantalla corregido el 2026-10-01** (`hotfix-123-m`: `dd-mm-aaaa`, día en hora local) | `hotfix-123-m` (pantalla) · `ASG-i-054` (exportación y resto) |
 | 024a | S10 🟡 | **Confirmada** (mitad) | Escape cierra el modal mientras archiva. La otra mitad se descarta: un alumno con matrícula pero sin pagos ni clases cae en el modal simple | B6 |
 | 024a | S11 🟡 | **Confirmada** | "Con deuda" usa solo la matrícula B más reciente | B8 |
 | 024a | S12 🟡 | **Confirmada** | Opciones fijas; falta "Refuerzo Clase B" | B3 |
@@ -231,7 +232,7 @@ W03–W08 · X, Y, Z completas.
 | 024b | S4 🟠 | **Mitad corregida, mitad vigente** | `fix-263-m` sacó el borrador del selector; la matrícula principal sigue siendo `sorted[0]` sin filtrar | B15 |
 | 024b | S5 🟠 | **Corregida** por `fix-263-m` | El botón desaparece y el estado pasa a "Egresado" | |
 | 024b | S6 🟠 | **Confirmada** | Ex-Alumnos usa `enrollments.updated_at`; marcar ex-alumno no lo actualiza | B16 |
-| 024b | S7 🟠 | Confirmada en código, **no ejecutada** | `reprogramarClase()` deja la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribe en el flujo masivo) | por crear, coordinar con `ASG-i-027` |
+| 024b | S7 🟠 | **Corregida** el 2026-10-02 | `reprogramarClase()` dejaba la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribía en el flujo masivo). Ahora archiva y escribe el historial; verificado en la base con un alumno de prueba | `fix-279-m` · re-ejecutar en `ASG-i-027` |
 | 024b | S8 🟠 | **Confirmada** | Mensaje genérico con email duplicado | B17 |
 | 024b | S9 🟠 | Confirmada en código | La ficha no tiene ninguna acción de Documentos. Requiere decisión (Q01) | ⏸ decisión |
 | 024b | S10 🟠 | **Parte corregida, parte vigente** (código) | `fix-262-m` quitó el requisito de nota. La ficha sigue llamando `generarCertificado()` sin `force`, y la función solo acepta el bypass de admin con `force: true` | por crear |
@@ -243,7 +244,7 @@ W03–W08 · X, Y, Z completas.
 | 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | ⏸ decisión (X02/X04) |
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
 | 024b | S18 🟡 | Confirmada en código | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | por crear |
-| 024b | S19 🟡 | Sin ejecutar | Requiere decisión (I08) | ⏸ decisión |
+| 024b | S19 🟡 | **Corregida** el 2026-10-02 | Decisión tomada (I06 / I08); la ficha registra pagos y muestra el historial del alumno | `fix-278-m` |
 | 024b | S20 🟡 | Sin ejecutar | Necesita clases sembradas | pendiente |
 
 Descartado: **P08** (RLS de `students`/`enrollments` por sede) funciona bien para lectura, y por
@@ -263,17 +264,17 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B5 | **Un error de carga se ve como lista vacía** ("No se encontraron alumnos"), con KPIs en 0 | 🟡 Baja | ✅ `hotfix-113-m` |
 | B6 | **El modal de archivar se cierra con Escape/clic afuera mientras archiva**; la operación termina igual y el usuario no ve el resultado en el modal | 🟡 Baja | ✅ `hotfix-111-m` |
 | B7 | **Secretaria con grant multi-sede**: la lista no recarga al cambiar de sede y nunca muestra la columna Sede | 🟡 Baja-Media | ✅ `fix-269-m` |
-| B8 | **"Con deuda" y el saldo ignoran matrículas B anteriores** con deuda | 🟡 Baja | por crear |
-| B9 | **KPI "Por Vencer" siempre 0 y drawer siempre vacío**; el drawer habla de "cuotas" y "Contactar" no hace nada. Requiere decisión: qué debe medir (D05/N02) | 🟠 Media | por crear, tras decisión |
+| B8 | **"Con deuda" y el saldo ignoran matrículas B anteriores** con deuda | 🟡 Baja | ✅ `fix-270-m` |
+| B9 | **KPI "Por Vencer" siempre 0 y drawer siempre vacío**; el drawer habla de "cuotas" y "Contactar" no hace nada. Decisión: se quita | 🟠 Media | ✅ `fix-271-m` |
 | B10 | Tiempo real de la lista muerto | 🟠 Media | `ASG-i-056` |
 | B11 | El error de la ficha no dice qué pasó: "Error al cargar la ficha del alumno" tanto si el id no existe como si es de otra sede | 🟡 Baja | ✅ `hotfix-116-m` |
 | B12 | **El error de la ficha queda "pegado"**: tras una ficha con error, la del alumno anterior se sigue viendo con error hasta recargar | 🟡 Baja | ✅ `hotfix-116-m` |
 | B13 | **Id no numérico en la URL** deja la ficha en "Cargando…" para siempre | 🟡 Baja | ✅ `hotfix-116-m` |
-| B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | por crear (junto con `ASG-i-054`) |
+| B14 | Fecha de ingreso en formato `aaaa-mm-dd` | 🟡 Baja | ✅ `fix-273-m` (ficha) y `hotfix-123-m` (columna de la lista). El Excel/PDF exportado sigue en `aaaa-mm-dd` (va con B1) |
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | ✅ `fix-268-m` |
-| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043` |
+| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043`. **El 2026-10-01 (noche) el test M04 pasó a verde**: la función ya rechaza a la secretaria de la sede A editando a un alumno de la sede B. No salió de este track; coincide con el merge de `0047-b` (RLS por sede). Se quitó la marca `knownBug`. Sigue sin probarse contra un admin o instructor reales |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 | B22 | **La lista de Alumnos del admin consulta dos veces al abrir y muestra "0 alumnos" un instante.** No estaba en el checklist: apareció al corregir B7 | 🟡 Baja | ✅ `hotfix-117-m` |
@@ -284,19 +285,49 @@ Sin número todavía, confirmados solo en código (ver tabla de sospechas): S7 (
 con inasistencia no archiva la asistencia), S10 (bypass de admin sin `force`), S11 (carnet con la
 marca de una sola sede), S18 (cierre diferido de Editar Perfil).
 
-## Decisiones de negocio pendientes
+## Decisiones de negocio
 
-Siguen abiertas todas las de §5 de ambos checklists, salvo **B05/O01 de `024b`** (resuelta en
-`fix-263-m`: el estado de la ficha es el de la matrícula elegida). Las que bloquean un bug ya
-confirmado:
+### Tomadas por el owner (Matías, 2026-10-01)
 
-| Caso | Pregunta | Bloquea |
+"Hoy" = lo que hace el código al momento de decidir. Las que dicen "cambio" todavía no tienen
+track; cada una va a su propio fix/hotfix.
+
+| Caso | Decisión | Efecto |
 |---|---|---|
-| `024a` D05 / N02 | ¿Qué debe medir "Por Vencer"? | B9 |
-| `024b` Q01 | ¿La ficha debe abrir los documentos del alumno? (el botón existía en `0006-i` AC3) | S9 |
-| `024b` F04 / F13 | ¿Se permite reprogramar individualmente una clase con inasistencia, y queda en el historial? | S7 |
-| `024b` X02 / X04 | ¿Qué miden las tasas y opiniones, y por sede? | S16 |
-| `024b` C05 / T11 | ¿Qué matrícula abre por defecto la ficha de un alumno con varias? | — (`fix-265-m` dejó "la más reciente que no sea borrador, cancelada ni pago pendiente", igual que la Base; revisar si se quiere otra regla) |
+| `024a` D05 / N02 | **Quitar el KPI "Por Vencer"** y su drawer | ✅ hecho en `fix-271-m` (B9) |
+| `024a` D04 | **"Con deuda" y el saldo suman todas las matrículas B** del alumno | ✅ hecho en `fix-270-m` (B8) |
+| `024a` D03 | **"Activos" incluye "Pendiente Pago" y "Docs Pendientes"**: si están teniendo clases, están activos | ✅ hecho en `hotfix-118-m` |
+| `024a` L09 | **No se puede archivar a un alumno con clases futuras**; primero hay que cancelarlas o reagendarlas | ✅ hecho en `fix-277-m` (aviso por toast; solo clases prácticas Clase B) |
+| `024a` M08 | Un restaurado **vuelve a donde estaba**: a Ex-Alumnos si ya estaba marcado como ex-alumno, a la Base si no | ✅ verificado en navegador con `fix-276-m` |
+| `024b` F04 / F13 | **Se permite reprogramar individualmente** una clase con inasistencia o cancelada; la inasistencia anterior se archiva y la reprogramación **queda en el historial de reagendamientos** | ✅ hecho en `fix-279-m` (S7): el formulario pide la razón; verificado en la base con un alumno de prueba |
+| `024b` H06 | Una inasistencia **ya reagendada no se puede justificar** (quedó archivada) | ✅ hecho en `hotfix-128-m` (el botón "Justificar" seguía apareciendo) |
+| `024b` Q01 | **No se repone el botón "Documentos"** en la ficha | S9 cerrada sin cambio |
+| `024b` I06 / I08 | "Ver todo el historial" abre Pagos **filtrado por el alumno**, y se agrega un botón **"Registrar pago"** en "Estado Financiero" | ✅ hecho en `fix-278-m` (S19): "Ver todo el historial" abre el panel "Estado de Cuenta" de la matrícula sobre la ficha — el módulo Pagos no tiene listado filtrable por alumno — y "Registrar pago" aparece solo con saldo pendiente. De paso, `hotfix-127-m`: el badge del panel mostraba `paid_full` crudo |
+| `024b` Q02 | Email y teléfono **quedan como texto** | sin cambio |
+| `024b` Q03 | El PDF de la ficha **solo se descarga desde la lista** | sin cambio |
+| `024b` X02 / X04 | **Tasas y opiniones se dejan como están.** No hay nada que las alimente: ninguna pantalla crea filas en `student_surveys` ni registra `class_b_exam_scores` (que además son ensayos, no el examen municipal). Filtrarlas por sede no aporta mientras no tengan datos | S16 cerrada sin cambio; X01–X05 no se ejecutan |
+| `024b` C05 / T11 | La ficha abre **la matrícula que se cliqueó**: desde Ex-Alumnos la terminada, desde la Base la vigente | ✅ hecho en `fix-272-m` |
+| `024b` O05 | Egresar con deuda: **la confirmación avisa el monto, pero permite** | ✅ hecho en `hotfix-125-m` |
+| `024b` A08 / P04 / T04 | Un ex-alumno archivado **sale de Ex-Alumnos**; solo se ve en la Papelera | ✅ hecho en `fix-276-m` (antes tampoco aparecía en la Papelera) |
+| `024b` T03 | Un egresado re-matriculado aparece **en ambas listas** | sin cambio |
+| `024b` C06 | Las matrículas **canceladas se muestran en el selector, marcadas** | ✅ hecho en `hotfix-120-m` (marca "Anulada"); falta verlo en navegador con una cancelada real |
+| `024b` P05 | El botón sigue diciendo **"Eliminar Alumno"** | sin cambio |
+| `024a` D07 · `024b` T07 | Los KPIs muestran **siempre el total de la sede**; no siguen filtros, búsqueda ni período | sin cambio |
+| `024a` E08 | El buscador **no busca por email** | sin cambio |
+| `024b` B09 | "Fecha de ingreso" es **la de la matrícula elegida** (cambia con el selector) | ✅ hecho en `fix-273-m`, junto con B14 |
+| `024a` F10 | Los filtros y la búsqueda **se conservan** al salir de la lista y volver | ✅ hecho en `fix-275-m` + `hotfix-126-m`. El owner precisó la regla: **solo al devolverse desde la ficha de un alumno** ("Volver" o el botón atrás del navegador); por cualquier otro camino la lista aparece sin filtros |
+| `024a` G03 | **Agregar ordenamiento por columna** en la tabla de alumnos | ✅ implementado en la spec `0020-m` (2026-10-02): los 8 títulos ordenan la lista completa (clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto), y el orden se conserva solo al volver de la ficha. La vista de tarjetas tiene un control "Ordenar por". Con visto bueno visual del owner; spec cerrada |
+| `024a` O05 | **"Nueva Matrícula" se oculta dentro de la Papelera** | ✅ hecho en `hotfix-119-m` |
+| `024a` J04 | **No aplica**: en el uso real un alumno siempre nace del wizard con una matrícula; el caso "sin matrícula" solo existe con datos sembrados a mano | sin cambio; J04 no se ejecuta |
+| `024a` L04 | "borrarlo" debe escribirse **exactamente como lo pide el modal**; no se aceptan mayúsculas | ✅ hecho en `hotfix-124-m` (el modal aceptaba mayúsculas) |
+| `024b` F11 | "Cancelar" al reprogramar **vuelve al panel de Ficha Técnica**, no cierra todo | ✅ hecho en `fix-279-m` |
+| `024b` M08 | El teléfono de "Editar Perfil" usa **la misma regla que Nueva Matrícula**: obligatorio y con al menos 8 caracteres (`personal-data.component.ts:202`). No se agrega validación de formato | ✅ hecho en `hotfix-121-m` |
+| `024b` W05 | Al terminar o cancelar una re-matrícula, el selector de sede del admin **vuelve a la sede que tenía elegida** (p. ej. "Todas") | ✅ hecho en `fix-274-m` (solo Ex-Alumnos B) |
+| `024b` T14 | Ex-Alumnos debe **exportar la lista con las mismas opciones que la Base de Alumnos (Excel y PDF)**. No hace falta descargar el certificado desde la lista | implementado en la spec `0021-m` (2026-10-02): botón "Exportar" con Excel y PDF que traen las filas de la pantalla. Función `export-table-pdf` desplegada, PDF probado de punta a punta y visto bueno visual del owner; spec cerrada |
+
+### Aún pendientes
+
+Ninguna: todas las de §5 de ambos checklists quedaron decididas el 2026-10-01.
 
 ## Cambio
 
@@ -326,7 +357,12 @@ muestra el error real de cada uno.
   por bug conocido (10 en cada archivo). Tras `fix-265-m`, `fix-266-m` y
   `fix-267-m` quedaban 16 marcados, y la ficha suma un test del trigger de `completed_at`. Tras
   los hotfixes `111-m` … `116-m` quedaban 8, y tras `fix-268-m` y `fix-269-m` quedan 6: 4 en la
-  lista (B1 ×2, B8, B10) y 2 en la ficha (B14, B19). La suite completa tiene 58 tests.
+  lista (B1 ×2, B8, B10) y 2 en la ficha (B14, B19). La suite completa tiene 58 tests. Tras
+  `fix-270-m` (B8) quedan 5: 3 en la lista (B1 ×2, B10) y 2 en la ficha. Tras `fix-273-m` (B14)
+  y con B19 en verde quedan 3, todos en la lista (B1 ×2, B10); la ficha no tiene ninguno. Los
+  dos archivos de Alumnos B suman 46 tests (se agregó C05 · T11). Con F10, L09, O05, T04 · P04 ·
+  M08 y W05 (tanda de la noche del 2026-10-01) suman 51; la siembra E2E ahora puede agendar una
+  clase futura (`addFutureClass()`).
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

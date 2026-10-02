@@ -10,6 +10,7 @@ import {
   OnInit,
   signal,
   ElementRef,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -17,6 +18,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { PagosFacade } from '@core/facades/pagos.facade';
+import { AdminPagoDetalleDrawerComponent } from '@features/admin/pagos/admin-pago-detalle-drawer.component';
+import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
@@ -40,6 +44,8 @@ import type {
   SectionHeroMenuItem,
 } from '@core/models/ui/section-hero.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
+import { buildMarcarExAlumnoMessage } from '@core/utils/egreso-confirmation.utils';
+import { buildEnrollmentTabLabel, parseEnrollmentParam } from '@core/utils/ficha-enrollment.utils';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
@@ -68,15 +74,6 @@ export function resolveListadoRoute(
     return esProfesional ? '/app/admin/clase-profesional/alumnos' : '/app/admin/alumnos';
   }
   return esProfesional ? '/app/secretaria/profesional/alumnos' : '/app/secretaria/alumnos';
-}
-
-/**
- * Ruta del listado de Pagos del portal activo. Esta ficha se rutea tanto bajo
- * `/app/admin/alumnos/:id` como bajo `/app/secretaria/alumnos/:id`, así que el
- * "Ver todo el historial" de la card de pagos no puede ser un literal (fix-235-m).
- */
-export function resolvePagosRoute(isAdmin: boolean): string {
-  return isAdmin ? '/app/admin/pagos' : '/app/secretaria/pagos';
 }
 
 /** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
@@ -871,7 +868,8 @@ export function resolveListadoLabel(
             [pagos]="facade.historialPagos()"
             [totalPagado]="alumno.totalPagado"
             [saldoPendiente]="alumno.saldoPendiente"
-            [historialPagosRoute]="pagosRoute()"
+            (verHistorial)="openEstadoCuenta()"
+            (registrarPago)="openRegistrarPago()"
           />
         </div>
 
@@ -1217,6 +1215,7 @@ export function resolveListadoLabel(
 export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   protected readonly alumnosFacade = inject(AdminAlumnosFacade);
+  private readonly pagosFacade = inject(PagosFacade);
   private readonly certFacade = inject(CertificacionClaseBFacade);
   private readonly certProfFacade = inject(CertificacionProfesionalFacade);
   private readonly confirmModal = inject(ConfirmModalService);
@@ -1242,10 +1241,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     resolveListadoRoute(this.isAdmin(), this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),
   );
 
-  // "Ver todo el historial" de la card de pagos → listado de Pagos del portal
-  // activo, no uno fijo. Ver resolvePagosRoute arriba (fix-235-m).
-  protected readonly pagosRoute = computed<string>(() => resolvePagosRoute(this.isAdmin()));
-
   protected readonly listadoLabel = computed<string>(() =>
     resolveListadoLabel(this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),
   );
@@ -1267,6 +1262,37 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         Promise.resolve().then(() => this.gsap.animateBentoGrid(grid));
       }
     });
+
+    // fix-278-m: al cerrarse un panel de pagos abierto desde la ficha, se refresca para que
+    // total pagado, saldo y lista de pagos reflejen lo que se registró ahí.
+    effect(() => {
+      if (this.layoutDrawer.isOpen() || !this.refrescarAlCerrarPanelDePagos) return;
+      this.refrescarAlCerrarPanelDePagos = false;
+      untracked(() => void this.facade.refresh());
+    });
+  }
+
+  // ── Pagos desde la ficha (fix-278-m) ─────────────────────────────────────────
+  // Reutiliza los dos paneles del módulo Pagos, que trabajan sobre la matrícula elegida en
+  // PagosFacade y no sobre la lista de deudores.
+  private refrescarAlCerrarPanelDePagos = false;
+
+  /** "Ver todo el historial": estado de cuenta completo de la matrícula que se está viendo. */
+  protected openEstadoCuenta(): void {
+    const enrollmentId = this.facade.alumno()?.enrollmentId;
+    if (!enrollmentId) return;
+    this.pagosFacade.seleccionarEnrollment(enrollmentId);
+    this.refrescarAlCerrarPanelDePagos = true;
+    this.layoutDrawer.open(AdminPagoDetalleDrawerComponent, 'Estado de Cuenta', 'file-text');
+  }
+
+  /** "Registrar pago": el formulario de pago con la matrícula ya elegida. */
+  protected openRegistrarPago(): void {
+    const enrollmentId = this.facade.alumno()?.enrollmentId;
+    if (!enrollmentId) return;
+    this.pagosFacade.seleccionarParaPago(enrollmentId);
+    this.refrescarAlCerrarPanelDePagos = true;
+    this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
   }
 
   // ── Estado del modal de borrado ──────────────────────────────────────────────
@@ -1284,7 +1310,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   readonly enrollmentTabs = computed(() => {
     return this.facade.enrollmentSummaries().map((enr) => ({
       id: String(enr.id),
-      label: enr.courseName + (enr.number ? ` · #${enr.number}` : ''),
+      label: buildEnrollmentTabLabel(enr),
       icon: 'car',
     }));
   });
@@ -1620,7 +1646,8 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
     const confirmed = await this.confirmModal.confirm({
       title: 'Marcar como Ex-Alumno',
-      message: `${alumno.nombre} pasará a la lista de Ex-Alumnos y dejará de aparecer en Alumnos. Esta acción no se puede deshacer desde la interfaz.`,
+      // hotfix-125-m: si tiene deuda, la confirmación lo advierte con el monto.
+      message: buildMarcarExAlumnoMessage(alumno.nombre, alumno.saldoPendiente),
       severity: 'danger',
       confirmLabel: 'Marcar como Ex-Alumno',
       cancelLabel: 'Cancelar',
@@ -1635,8 +1662,10 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     // hotfix-116-m: siempre se llama a initialize(). Un id inválido ("/alumnos/abc") lo resuelve
     // el facade con un error visible; antes se omitía la llamada y la ficha quedaba cargando.
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    // fix-272-m: la lista de origen dice sobre qué matrícula se hizo clic.
+    const enrollmentId = parseEnrollmentParam(this.route.snapshot.queryParamMap.get('enrollment'));
     this.facade
-      .initialize(id)
+      .initialize(id, enrollmentId)
       .then(() => {
         const enrollmentId = this.facade.alumno()?.enrollmentId;
         if (enrollmentId) void this.facade.loadHistorialReagendamientos(enrollmentId);
@@ -1816,7 +1845,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   protected async requestArchivar(): Promise<void> {
     const id = this.studentId;
     if (id === null) return;
-    const { hasHistory } = await this.alumnosFacade.checkHistorial(id);
+    // fix-277-m: con clases futuras no se abre el modal; el facade ya avisó por qué.
+    const { permitido, hasHistory } = await this.alumnosFacade.prepararArchivado(id);
+    if (!permitido) return;
     this.deleteHasHistory.set(hasHistory);
     this.deleteModalVisible.set(true);
   }

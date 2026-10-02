@@ -1,5 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { pickFichaEnrollment } from './ficha-enrollment.utils';
+import {
+  buildEnrollmentTabLabel,
+  parseEnrollmentParam,
+  pickFichaEnrollment,
+} from './ficha-enrollment.utils';
+
+describe('buildEnrollmentTabLabel — hotfix-120-m', () => {
+  it('curso y número', () => {
+    expect(
+      buildEnrollmentTabLabel({ courseName: 'Clase B', number: '0080', status: 'active' }),
+    ).toBe('Clase B · #0080');
+  });
+
+  it('sin número muestra solo el curso', () => {
+    expect(buildEnrollmentTabLabel({ courseName: 'Clase B', number: null, status: 'active' })).toBe(
+      'Clase B',
+    );
+  });
+
+  it('una matrícula cancelada queda marcada como Anulada', () => {
+    expect(
+      buildEnrollmentTabLabel({ courseName: 'Clase B', number: '0071', status: 'cancelled' }),
+    ).toBe('Clase B · #0071 · Anulada');
+  });
+
+  it('una terminada no lleva marca: su estado se ve al elegirla', () => {
+    expect(
+      buildEnrollmentTabLabel({ courseName: 'Clase B', number: '0050', status: 'completed' }),
+    ).toBe('Clase B · #0050');
+  });
+});
+
+describe('parseEnrollmentParam — fix-272-m', () => {
+  it('un entero positivo es el id de la matrícula pedida', () => {
+    expect(parseEnrollmentParam('2674')).toBe(2674);
+  });
+
+  it.each([null, '', 'abc', '0', '-3', '12.5', '12abc'])('%s no pide ninguna matrícula', (raw) => {
+    expect(parseEnrollmentParam(raw)).toBeNull();
+  });
+});
 
 const row = (id: number, status: string | null, created_at: string) => ({ id, status, created_at });
 

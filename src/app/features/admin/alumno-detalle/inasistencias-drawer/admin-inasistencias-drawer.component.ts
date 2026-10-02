@@ -5,6 +5,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-inasistencia-drawer.component';
+import { canJustificarInasistencia } from '@core/utils/inasistencia.utils';
 
 /**
  * AdminInasistenciasDrawerComponent — Smart / Drawer (Fase 2 app-like).
@@ -115,7 +116,8 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
                           Ver motivo
                         </button>
                       }
-                    } @else {
+                    } @else if (canJustificar(item)) {
+                      <!-- hotfix-128-m: una inasistencia ya reagendada no se justifica -->
                       <button
                         type="button"
                         class="text-xs font-semibold text-brand hover:underline shrink-0 cursor-pointer"
@@ -291,6 +293,8 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
 export class AdminInasistenciasDrawerComponent {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  protected readonly canJustificar = canJustificarInasistencia;
 
   protected readonly justificarClaseBOpen = signal(false);
   protected readonly justificarClaseBId = signal<number | null>(null);

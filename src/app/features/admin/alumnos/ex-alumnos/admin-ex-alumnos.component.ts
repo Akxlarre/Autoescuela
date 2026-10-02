@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -27,10 +34,12 @@ import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/
     <app-ex-alumnos-content
       [egresados]="facade.egresadosClaseBList()"
       [isLoading]="facade.isLoading()"
+      [isExporting]="facade.isExporting()"
       basePath="/app/admin"
       (reEnrollRequested)="reEnroll($event)"
       (requestVerTasas)="openTasasDrawer()"
       (requestComentario)="openComentariosDrawer()"
+      (exportRequested)="facade.exportEgresados($event.format, $event.rows)"
     />
   `,
 })
@@ -47,6 +56,14 @@ export class AdminExAlumnosComponent {
       this.branchFacade.selectedBranchId();
       void this.facade.loadEgresados();
     });
+
+    // fix-274-m: re-matricular cambia la sede activa a la del egresado solo mientras el wizard
+    // está abierto. Al cerrarse (terminado o cancelado) vuelve la que el admin tenía elegida.
+    effect(() => {
+      if (this.layoutDrawer.isOpen()) return;
+      untracked(() => this.branchFacade.restoreTemporaryBranch());
+    });
+    inject(DestroyRef).onDestroy(() => this.branchFacade.restoreTemporaryBranch());
   }
 
   protected openTasasDrawer(): void {
@@ -76,7 +93,7 @@ export class AdminExAlumnosComponent {
     });
     if (!confirmed) return;
     if (egresado.branchId !== null) {
-      this.branchFacade.selectBranch(egresado.branchId);
+      this.branchFacade.selectBranchTemporarily(egresado.branchId);
     }
     await this.router.navigate([], {
       relativeTo: this.route,

@@ -26,6 +26,44 @@ export interface AlumnoExpediente {
   semep: boolean;
 }
 
+/** Columnas por las que se puede ordenar la Base de Alumnos (spec 0020-m). */
+export type AlumnoSortField =
+  | 'alumno'
+  | 'rut'
+  | 'nroExpediente'
+  | 'curso'
+  | 'sede'
+  | 'fechaIngreso'
+  | 'estado'
+  | 'expediente';
+
+export type AlumnoSortDirection = 'asc' | 'desc';
+
+export interface AlumnoListSort {
+  field: AlumnoSortField;
+  direction: AlumnoSortDirection;
+}
+
+/**
+ * Búsqueda, filtros y orden de la Base de Alumnos. Cadena vacía = sin filtrar;
+ * `sort: null` = orden por defecto (alumno más reciente primero).
+ */
+export interface AlumnoListFilters {
+  search: string;
+  curso: string;
+  estado: string;
+  expediente: string;
+  sort: AlumnoListSort | null;
+}
+
+export const EMPTY_ALUMNO_LIST_FILTERS: AlumnoListFilters = {
+  search: '',
+  curso: '',
+  estado: '',
+  expediente: '',
+  sort: null,
+};
+
 export interface AlumnoTableRow {
   /** students.id */
   id: string;
@@ -47,13 +85,18 @@ export interface AlumnoTableRow {
   nroExpedientes: string[];
   /** enrollments.created_at (formatted date) — from most recent enrollment */
   fechaIngreso: string;
+  /**
+   * enrollments.created_at sin formatear, para ordenar por fecha real (spec 0020-m):
+   * `fechaIngreso` es texto dd-mm-aaaa y no se puede comparar.
+   */
+  fechaIngresoIso?: string | null;
   /** Derived from enrollment.status + payment_status + docs_complete — most recent */
   status: AlumnoStatus;
   /** All courses across enrollments */
   cursos: EnrollmentCurso[];
-  /** enrollments.pending_balance */
+  /** Suma de enrollments.pending_balance de todas las matrículas Clase B válidas (fix-270-m) */
   pago_por_pagar: number;
-  /** enrollments.total_paid */
+  /** Suma de enrollments.total_paid de todas las matrículas Clase B válidas (fix-270-m) */
   pago_total: number;
   /** Derived from class_b_exam_scores (default 'pendiente') */
   exp_teorico: 'pendiente' | 'aprobado' | 'reprobado';
@@ -61,10 +104,6 @@ export interface AlumnoTableRow {
   exp_practico: 'pendiente' | 'aprobado' | 'reprobado';
   /** Derived from student_documents types */
   expediente: AlumnoExpediente;
-  /** Raw ISO string from enrollments.expires_at */
-  expiresAt: string | null;
-  /** Formatted label for "Por Vencer" drawer (e.g. 'Hoy', 'En 3 días') */
-  vencimiento?: string;
   /** enrollments.id for navigation */
   enrollmentId?: number;
   /**

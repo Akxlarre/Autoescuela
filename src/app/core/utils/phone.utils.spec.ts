@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { validatePhone, normalizePhone, DIAL_CODES } from './phone.utils';
+import { validatePhone, normalizePhone, DIAL_CODES, hasMinimumPhoneLength } from './phone.utils';
+
+describe('hasMinimumPhoneLength() — hotfix-121-m', () => {
+  it.each(['+56912345678', '912345678', '22345678', '  22345678  '])('acepta "%s"', (phone) => {
+    expect(hasMinimumPhoneLength(phone)).toBe(true);
+  });
+
+  it.each(['', '   ', '1234567', '  1234567  ', null, undefined])('rechaza %s', (phone) => {
+    expect(hasMinimumPhoneLength(phone)).toBe(false);
+  });
+});
 
 describe('validatePhone()', () => {
   describe('+56 (Chile)', () => {

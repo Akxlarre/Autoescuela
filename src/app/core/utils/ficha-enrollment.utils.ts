@@ -17,6 +17,31 @@ export interface FichaEnrollmentCandidate {
 const INCOMPLETE_STATUSES: ReadonlySet<string> = new Set(['draft', 'cancelled', 'pending_payment']);
 
 /**
+ * Texto de cada matrícula en el selector de la ficha. Las canceladas se marcan (hotfix-120-m)
+ * con la misma palabra que usa la ficha para ese estado.
+ */
+export function buildEnrollmentTabLabel(enrollment: {
+  courseName: string;
+  number: string | null;
+  status: string;
+}): string {
+  const parts = [enrollment.courseName];
+  if (enrollment.number) parts.push(`#${enrollment.number}`);
+  if (enrollment.status === 'cancelled') parts.push('Anulada');
+  return parts.join(' · ');
+}
+
+/**
+ * Matrícula pedida por la lista al abrir la ficha (`?enrollment=<id>`, fix-272-m). Cualquier
+ * valor que no sea un entero positivo se ignora: la URL la puede escribir el usuario.
+ */
+export function parseEnrollmentParam(raw: string | null | undefined): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const id = Number(raw);
+  return id > 0 ? id : null;
+}
+
+/**
  * Elige la matrícula que muestra la ficha:
  *
  * 1. La que el usuario ya tenía elegida (`preferredId`), si sigue existiendo y no es un borrador

@@ -8,8 +8,8 @@ import { AdminStatsPanelComponent } from './admin-ex-alumnos-stats.component';
  * Drawer de solo lectura para "Tasas de Aprobación". Reutiliza
  * `AdminStatsPanelComponent` tal cual (ya es un panel autocontenido con su
  * propio `.bento-card`) — sin envoltorio extra, para no duplicar el borde.
- * Lee directo de `ExAlumnosFacade` (self-sufficient, mismo patrón que
- * `AlumnosPorVencerDrawerComponent`): no requiere inputs del componente que lo abre.
+ * Lee directo de `ExAlumnosFacade` (self-sufficient): no requiere inputs del componente
+ * que lo abre.
  */
 @Component({
   selector: 'app-admin-ex-alumnos-tasas-drawer',

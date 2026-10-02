@@ -1,5 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, output, signal } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  Validators,
+  type AbstractControl,
+  type ValidationErrors,
+} from '@angular/forms';
+import { hasMinimumPhoneLength } from '@core/utils/phone.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
@@ -8,6 +15,11 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+
+/** Teléfono obligatorio con la regla mínima de Nueva Matrícula (hotfix-121-m). */
+function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
+  return hasMinimumPhoneLength(control.value) ? null : { phone: true };
+}
 
 @Component({
   selector: 'app-admin-editar-perfil-drawer',
@@ -132,15 +144,22 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
             <!-- Teléfono -->
             <div class="flex flex-col gap-1.5">
-              <label for="edit-phone" class="field-label">TELÉFONO</label>
+              <label for="edit-phone" class="field-label">
+                TELÉFONO <span class="text-error">*</span>
+              </label>
               <input
                 id="edit-phone"
                 type="tel"
                 formControlName="phone"
                 class="field-input"
                 placeholder="+56 9 1234 5678"
+                aria-required="true"
                 data-llm-description="Número de teléfono del alumno"
+                [class.field-input--error]="isInvalid('phone')"
               />
+              @if (isInvalid('phone')) {
+                <span class="field-error">Ingresa un teléfono de al menos 8 caracteres.</span>
+              }
             </div>
 
             <!-- Alumno sin cuenta activada: nunca tuvo cuenta Auth (invitación nunca se
@@ -271,7 +290,8 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
     paternal_last_name: ['', Validators.required],
     maternal_last_name: [''],
     email: ['', [Validators.required, Validators.email]],
-    phone: [''],
+    // hotfix-121-m: misma regla que Nueva Matrícula (obligatorio, al menos 8 caracteres).
+    phone: ['', minimumPhoneLength],
   });
 
   ngOnInit(): void {

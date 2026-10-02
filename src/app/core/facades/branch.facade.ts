@@ -55,6 +55,8 @@ export class BranchFacade {
   private readonly _requiresSpecificBranch = signal(false);
   /** Cuando es true, solo las sedes con has_professional=true son seleccionables. */
   private readonly _professionalOnly = signal(false);
+  /** Sede elegida antes de un cambio temporal; `undefined` = no hay ninguno pendiente. */
+  private _branchBeforeTemporary: number | null | undefined = undefined;
 
   // ── 2. ESTADO EXPUESTO (Público, solo lectura) ────────────────────────────
   readonly branches = this._branches.asReadonly();
@@ -174,6 +176,26 @@ export class BranchFacade {
   selectBranch(id: number | null): void {
     this._selectedBranchId.set(id);
     this.persistSelectedBranch(id);
+  }
+
+  /**
+   * Cambia la sede activa solo mientras dure una tarea (fix-274-m: re-matricular a un egresado
+   * de otra sede) y recuerda la que había, para volver a ella con `restoreTemporaryBranch()`.
+   * Si ya hay un cambio temporal en curso, se conserva la sede original.
+   */
+  selectBranchTemporarily(id: number): void {
+    if (this._branchBeforeTemporary === undefined) {
+      this._branchBeforeTemporary = this._selectedBranchId();
+    }
+    this.selectBranch(id);
+  }
+
+  /** Vuelve a la sede previa a `selectBranchTemporarily()`. Sin cambio pendiente no hace nada. */
+  restoreTemporaryBranch(): void {
+    if (this._branchBeforeTemporary === undefined) return;
+    const previous = this._branchBeforeTemporary;
+    this._branchBeforeTemporary = undefined;
+    this.selectBranch(previous);
   }
 
   /** Vuelve a "Todas las escuelas" (quita el filtro de sede). */

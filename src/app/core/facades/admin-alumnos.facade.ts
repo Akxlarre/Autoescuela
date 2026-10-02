@@ -6,8 +6,13 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { isAlumnoCursando } from '@core/utils/alumno-status.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
+import { buildFutureClassesBlockMessage } from '@core/utils/archive-confirmation.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { EMPTY_ALUMNO_LIST_FILTERS } from '@core/models/ui/alumno-table-row.model';
 import type {
+  AlumnoListFilters,
   AlumnoTableRow,
   AlumnoExpediente,
   AlumnoStatus,
@@ -35,7 +40,6 @@ interface RawEnrollment {
   total_paid: number;
   docs_complete: boolean;
   created_at: string;
-  expires_at: string | null;
   license_group: string | null;
   courses: RawCourse | null;
   student_documents: RawDocument[];
@@ -63,8 +67,6 @@ interface RawStudent {
 }
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
-
-const VENCER_THRESHOLD_DAYS = 7;
 
 /**
  * Predicado de grupo de licencia para la Base B.
@@ -94,6 +96,7 @@ export class AdminAlumnosFacade {
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
   private readonly _drawerMode = signal<'zoom' | 'asistencia'>('zoom');
+  private readonly _listFilters = signal<AlumnoListFilters>(EMPTY_ALUMNO_LIST_FILTERS);
   /** Descarta respuestas de fetchAlumnosData() fuera de orden (spec 0005-m). */
   private readonly alumnosGuard = createRequestGuard();
 
@@ -107,12 +110,17 @@ export class AdminAlumnosFacade {
   readonly trashView = this._trashView.asReadonly();
 
   readonly totalAlumnos = computed(() => this._alumnos().length);
-  readonly activos = computed(() => this._alumnos().filter((a) => a.status === 'Activo').length);
-  readonly conDeuda = computed(() => this._alumnos().filter((a) => a.pago_por_pagar > 0).length);
-  readonly alumnosPorVencer = computed(() =>
-    this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
+  readonly activos = computed(
+    () => this._alumnos().filter((a) => isAlumnoCursando(a.status)).length,
   );
+  readonly conDeuda = computed(() => this._alumnos().filter((a) => a.pago_por_pagar > 0).length);
   readonly drawerMode = this._drawerMode.asReadonly();
+  /**
+   * Búsqueda y filtros de la lista (fix-275-m). Viven acá y no en la pantalla porque el facade
+   * es un singleton: así siguen puestos al abrir una ficha y volver. Solo en ese caso: la
+   * pantalla los limpia al entrar por cualquier otro camino (hotfix-126-m).
+   */
+  readonly listFilters = this._listFilters.asReadonly();
   /**
    * La columna Sede solo aporta cuando la lista mezcla sedes: admin, o secretaria con grant
    * multi-sede, con "Todas las sedes" elegido (fix-269-m).
@@ -200,6 +208,15 @@ export class AdminAlumnosFacade {
 
   setDrawerMode(mode: 'zoom' | 'asistencia'): void {
     this._drawerMode.set(mode);
+  }
+
+  setListFilters(filters: AlumnoListFilters): void {
+    this._listFilters.set(filters);
+  }
+
+  /** La lista arranca sin filtros salvo que se vuelva desde una ficha (hotfix-126-m). */
+  resetListFilters(): void {
+    this._listFilters.set(EMPTY_ALUMNO_LIST_FILTERS);
   }
 
   async setTrashView(value: boolean): Promise<void> {
@@ -316,7 +333,7 @@ export class AdminAlumnosFacade {
    * Verifica si un alumno tiene historial de pagos o clases prácticas.
    * Se usa para decidir qué modal de confirmación mostrar antes de archivar.
    */
-  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean }> {
+  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean; clasesFuturas: number }> {
     const { data: enrollmentRows } = await this.supabase.client
       .from('enrollments')
       .select('id')
@@ -325,9 +342,9 @@ export class AdminAlumnosFacade {
 
     const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
 
-    if (enrollmentIds.length === 0) return { hasHistory: false };
+    if (enrollmentIds.length === 0) return { hasHistory: false, clasesFuturas: 0 };
 
-    const [paymentsResult, classesResult] = await Promise.all([
+    const [paymentsResult, classesResult, futureClassesResult] = await Promise.all([
       this.supabase.client
         .from('payments')
         .select('id', { count: 'exact', head: true })
@@ -336,11 +353,33 @@ export class AdminAlumnosFacade {
         .from('class_b_sessions')
         .select('id', { count: 'exact', head: true })
         .in('enrollment_id', enrollmentIds),
+      // fix-277-m: clases prácticas todavía por dictarse.
+      this.supabase.client
+        .from('class_b_sessions')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString()),
     ]);
 
     return {
       hasHistory: (paymentsResult.count ?? 0) > 0 || (classesResult.count ?? 0) > 0,
+      clasesFuturas: futureClassesResult.count ?? 0,
     };
+  }
+
+  /**
+   * Paso previo a archivar (fix-277-m). Un alumno con clases agendadas a futuro no se puede
+   * archivar: se avisa por toast y `permitido` vuelve en false. Si se puede, `hasHistory` dice
+   * qué modal de confirmación mostrar.
+   */
+  async prepararArchivado(studentId: number): Promise<{ permitido: boolean; hasHistory: boolean }> {
+    const { hasHistory, clasesFuturas } = await this.checkHistorial(studentId);
+    if (clasesFuturas > 0) {
+      this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
+      return { permitido: false, hasHistory };
+    }
+    return { permitido: true, hasHistory };
   }
 
   /**
@@ -375,7 +414,7 @@ export class AdminAlumnosFacade {
           `
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id, branches(name)),
-          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at, license_group,
+          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, license_group,
             courses(id, name),
             student_documents(type, status)
           ),
@@ -424,10 +463,12 @@ export class AdminAlumnosFacade {
       });
 
       // Los alumnos Finalizados (enrollment completed) ya no se listan en la Base:
-      // viven exclusivamente en Ex-Alumnos.
+      // viven exclusivamente en Ex-Alumnos. La Papelera es la excepción (fix-276-m): un egresado
+      // archivado sale de Ex-Alumnos, así que este es el único lugar donde verlo y restaurarlo.
+      const isTrashView = this._trashView();
       const rows = validStudents
         .map((s) => this.mapToAlumnoTableRow(s))
-        .filter((r) => r.status !== 'Finalizado');
+        .filter((r) => isTrashView || r.status !== 'Finalizado');
 
       // fix-012-i: marca los alumnos con curso completo (12/12 prácticas + certificado
       // ya enviado) pero aún activos — todavía no se marcaron como ex-alumno.
@@ -487,20 +528,21 @@ export class AdminAlumnosFacade {
       sucursal: u.branches?.name ?? '—',
       comuna: s.address ?? '',
       nroExpedientes: nroExpedientes.length > 0 ? nroExpedientes : ['—'],
-      fechaIngreso: enrollment ? enrollment.created_at.slice(0, 10) : '—',
+      // hotfix-123-m: mismo formato que la ficha (dd-mm-aaaa, día en hora local).
+      fechaIngreso: formatDayMonthYear(enrollment?.created_at),
+      // spec 0020-m: la fecha sin formatear, para poder ordenar la lista por fecha real.
+      fechaIngresoIso: enrollment?.created_at ?? null,
       status: this.deriveStatus(enrollment, s.status),
       cursos: cursos.length > 0 ? cursos : [{ nombre: '—', licenseGroup: 'class_b' }],
-      pago_por_pagar: enrollment?.pending_balance ?? 0,
-      pago_total: enrollment?.total_paid ?? 0,
+      // fix-270-m: el saldo suma todas las matrículas B válidas, no solo la más reciente — una
+      // deuda de una matrícula anterior tiene que contar en "Con deuda".
+      pago_por_pagar: sorted.reduce((sum, e) => sum + (e.pending_balance ?? 0), 0),
+      pago_total: sorted.reduce((sum, e) => sum + (e.total_paid ?? 0), 0),
       exp_teorico: 'pendiente',
       exp_practico: 'pendiente',
       // Se completa en fetchAlumnosData() tras fetchCursoCompletoPendienteEgresoSet() (fix-012-i).
       cursoCompletoPendienteEgreso: false,
       expediente: this.deriveExpediente(docs),
-      expiresAt: enrollment?.expires_at ?? null,
-      vencimiento: enrollment?.expires_at
-        ? this.formatVencimiento(enrollment.expires_at)
-        : undefined,
       enrollmentId: enrollment?.id,
     };
   }
@@ -587,19 +629,5 @@ export class AdminAlumnosFacade {
       medico: types.has('certificado_medico'),
       semep: types.has('semep'),
     };
-  }
-
-  private isWithinThreshold(expiresAt: string): boolean {
-    const diff = new Date(expiresAt).getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= VENCER_THRESHOLD_DAYS;
-  }
-
-  private formatVencimiento(expiresAt: string): string {
-    const diff = new Date(expiresAt).getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return 'Hoy';
-    if (diffDays === 1) return 'Mañana';
-    return `En ${diffDays} días`;
   }
 }

@@ -195,6 +195,26 @@ describe('GsapAnimationsService.animateScrollReveal (browser context, fix-171-m)
     expect(toSpy).toHaveBeenCalledWith(el, expect.objectContaining({ opacity: 1, y: 0 }));
   });
 
+  it('reveals the element when a batch carries a stale non-intersecting entry before the intersecting one (fix-280-m)', () => {
+    // El navegador puede entregar dos avisos del mismo elemento en una sola llamada: "no
+    // visible" (el panel aún medía 0 px) seguido de "visible". Mirar solo el primero dejaba el
+    // elemento en opacity:0 para siempre, porque no vuelve a cruzar el umbral.
+    const el = document.createElement('div');
+    const toSpy = vi.spyOn(gsap, 'to');
+    service.animateScrollReveal(el);
+
+    observerCallback(
+      [
+        { isIntersecting: false } as IntersectionObserverEntry,
+        { isIntersecting: true } as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    expect(disconnectSpy).toHaveBeenCalled();
+    expect(toSpy).toHaveBeenCalledWith(el, expect.objectContaining({ opacity: 1, y: 0 }));
+  });
+
   it('does nothing while the element has not intersected yet', () => {
     const el = document.createElement('div');
     const toSpy = vi.spyOn(gsap, 'to');
