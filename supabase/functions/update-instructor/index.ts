@@ -256,6 +256,21 @@ Deno.serve(async (req: Request) => {
       return errorResponse(`Error al actualizar instructor: ${updateInstructorError.message}`, 500);
     }
 
+    // ── Desactivar = banear en Auth (fix-180-b) ──────────────────────────────
+    // users.active por sí solo no impedía el login ni la renovación del token. Con ban, la
+    // cuenta desactivada no puede entrar; reactivar lo quita. Idempotente ('none' = sin ban).
+    if (targetInstructor.users?.supabase_uid) {
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(targetInstructor.users?.supabase_uid, {
+        ban_duration: active ? 'none' : '876000h',
+      });
+      if (banError) {
+        return errorResponse(
+          `El instructor se guardó, pero no se pudo ${active ? 'reactivar' : 'bloquear'} su acceso: ${banError.message}`,
+          500,
+        );
+      }
+    }
+
     // ── Gestionar cambio de vehículo ────────────────────────────────────────
     const vehicleChanged = vehicleId !== currentVehicleId;
 

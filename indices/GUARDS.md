@@ -7,7 +7,7 @@
 
 | Guard | Tipo | Propósito | Rutas protegidas |
 |-------|------|-----------|-----------------|
-| `authGuard` | `CanActivateFn` | Redirige a `/login` si no hay sesión activa | Todas las rutas bajo `/app` |
+| `authGuard` | `CanActivateFn` | Redirige a `/login` si no hay sesión activa, o si el perfil está desactivado (`isActive === false`: cierra la sesión — fix-180-b) | Todas las rutas bajo `/app` |
 | `guestGuard` | `CanActivateFn` | Redirige a `/app` si ya hay sesión (evita volver al login) | `/login`, `/recuperar-contrasena` |
 | `roleRedirectGuard` | `CanActivateFn` | Redirige al portal correcto según el rol del usuario autenticado | `/app` (raíz) |
 | `roleGuard` | `CanActivateFn` | Bloquea acceso a portales de rol incorrecto | `/app/admin`, `/app/secretaria`, `/app/instructor`, `/app/alumno` |

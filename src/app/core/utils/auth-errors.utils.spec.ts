@@ -20,6 +20,11 @@ describe('mapAuthError', () => {
     expect(mapAuthError(error)).toBe('Correo o contraseña incorrectos.');
   });
 
+  it('cuenta baneada (desactivada por el admin) → mensaje de cuenta desactivada (fix-180-b)', () => {
+    const error = { message: 'User is banned' };
+    expect(mapAuthError(error)).toBe('Tu cuenta está desactivada. Contacta al administrador.');
+  });
+
   it('devuelve el fallback genérico para errores no reconocidos', () => {
     const error = { message: 'Something totally unexpected' };
     expect(mapAuthError(error)).toBe(
