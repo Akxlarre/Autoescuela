@@ -28,6 +28,11 @@ export function mapAuthError(error: any): string {
     return 'Por favor, ingresa tu correo electrónico.';
   }
 
+  // Cuenta baneada en Auth: el admin la desactivó (fix-180-b).
+  if (message.includes('User is banned')) {
+    return 'Tu cuenta está desactivada. Contacta al administrador.';
+  }
+
   if (message.includes('Email not confirmed')) {
     return 'Debes confirmar tu correo electrónico antes de iniciar sesión.';
   }
