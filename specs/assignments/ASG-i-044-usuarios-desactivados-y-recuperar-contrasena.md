@@ -1,14 +1,14 @@
 # Asignación ASG-i-044 — Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-01
+> **resulting_track:** fix-180-b-usuarios-desactivados-siguen-entrando (parte 1; parte 2 pendiente)
 
 ---
 

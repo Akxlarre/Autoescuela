@@ -133,7 +133,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-041 | Edge functions que responden sin sesión (5) | `i` | fix | P0 | i | 🟡 1/5 confirmada en vivo, 4 ⏳. Coordinar con 042 |
-| ASG-i-044 | Usuarios desactivados siguen entrando + recuperar contraseña | `b` | fix | P0 | i | ⏳ Puede partirse en 2 |
 | ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `m` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `i` | fix | P0 | i | ⏳ |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `i` | fix | P0 | i | ⏳ |
