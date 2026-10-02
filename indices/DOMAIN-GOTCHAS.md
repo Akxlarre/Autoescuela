@@ -1564,8 +1564,15 @@
   (se evalúa una vez por query como `hashed SubPlan`), no una función `SECURITY DEFINER` que reciba
   la fila (se ejecuta una vez por fila, DG-016). Ver test reutilizable en
   `supabase/tests/rls/0047-b-aislamiento-por-sede.sql`.
+- **Regla de aplicabilidad (Storage):** en `storage.objects` la sede no es una columna, está
+  **codificada en la ruta** (`students/<enrollment_id>/…`, `instructor-docs/<instructor_id>/…`,
+  `website-assets/branch-<id>/…`). Cuando una policy de un bucket privado solo mira `bucket_id` +
+  rol, deja leer y sobrescribir todo: hay que cruzar el segmento de la ruta con la sede del usuario.
+  Cuando se agregue un prefijo nuevo al bucket `documents`, sumarlo a la lista blanca de sus
+  policies, o la secretaria no podrá leerlo (prefijo desconocido = denegado).
 - **Fuente:** `specs/specs/0047-b-rls-aislamiento-por-sede`,
-  `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`.
+  `supabase/migrations/20261001150000_rls_aislamiento_por_sede.sql`,
+  `supabase/migrations/20261001200000_storage_aislamiento_por_sede.sql` (test en `supabase/tests/rls/`).
 
 ## Convención para agregar una entrada nueva
 
