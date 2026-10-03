@@ -194,6 +194,30 @@ describe('ExAlumnosContentComponent', () => {
     });
   });
 
+  describe('buscar o cambiar el período vuelve a la página 1 y a 6 tarjetas (fix-283-m)', () => {
+    it('la búsqueda reinicia tabla y tarjetas', () => {
+      setup(Array.from({ length: 30 }, (_, i) => makeEgresado({ id: i })));
+      (component as any).tableFirst.set(20);
+      (component as any).loadMoreCards();
+
+      (component as any).onSearch('Juan');
+
+      expect((component as any).searchTerm()).toBe('Juan');
+      expect((component as any).tableFirst()).toBe(0);
+      expect((component as any).visibleCards().length).toBe(6);
+    });
+
+    it('cambiar el período también', () => {
+      setup(Array.from({ length: 30 }, (_, i) => makeEgresado({ id: i })));
+      (component as any).tableFirst.set(10);
+
+      (component as any).onPeriodChange('all');
+
+      expect((component as any).periodWindow()).toBe('all');
+      expect((component as any).tableFirst()).toBe(0);
+    });
+  });
+
   describe('clearFilters', () => {
     it('resetea búsqueda, período y paginación mobile a su estado inicial', () => {
       setup(Array.from({ length: 10 }, (_, i) => makeEgresado({ id: i })));

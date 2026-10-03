@@ -54,6 +54,10 @@ export interface AlumnoListFilters {
   estado: string;
   expediente: string;
   sort: AlumnoListSort | null;
+  /** fix-282-m: índice de la primera fila de la página de la tabla (0 = página 1). */
+  first: number;
+  /** fix-282-m: tarjetas cargadas en la vista angosta ("Cargar más"). */
+  cardsShown: number;
 }
 
 export const EMPTY_ALUMNO_LIST_FILTERS: AlumnoListFilters = {
@@ -62,6 +66,8 @@ export const EMPTY_ALUMNO_LIST_FILTERS: AlumnoListFilters = {
   estado: '',
   expediente: '',
   sort: null,
+  first: 0,
+  cardsShown: 6,
 };
 
 export interface AlumnoTableRow {

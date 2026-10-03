@@ -321,8 +321,8 @@ export interface AlumnoExportRequest {
                 [value]="sortedAlumnos()"
                 [rows]="10"
                 [paginator]="true"
-                [first]="tableFirst()"
-                (onPage)="tableFirst.set($event.first)"
+                [first]="tableFirstVisible()"
+                (onPage)="onTablePage($event.first)"
                 [scrollable]="true"
                 scrollHeight="flex"
                 responsiveLayout="scroll"
@@ -521,6 +521,7 @@ export interface AlumnoExportRequest {
                     <app-alumno-card
                       [alumno]="alumno"
                       [trashView]="trashView()"
+                      [showSede]="showSedeColumn()"
                       [basePath]="basePath()"
                       [isGeneratingFicha]="isGeneratingFicha()"
                       (restaurarRequested)="restaurarRequested.emit($event)"
@@ -676,6 +677,7 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
 
   /** Densidad incremental de la vista tarjetas (spec 0028, AC5). */
   private static readonly CARDS_STEP = 6;
+  private static readonly TABLE_ROWS = 10;
   readonly mobileShown = signal(AlumnosListContentComponent.CARDS_STEP);
   readonly visibleCards = computed(() => sliceByBudget(this.sortedAlumnos(), this.mobileShown()));
   readonly remainingCards = computed(() =>
@@ -748,6 +750,9 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
     this.selectedEstado.set(filters.estado);
     this.selectedExpediente.set(filters.expediente);
     this.sort.set(filters.sort);
+    // fix-282-m: también la página de la tabla y las tarjetas cargadas.
+    this.tableFirst.set(filters.first);
+    this.mobileShown.set(filters.cardsShown);
   }
 
   ngAfterViewInit(): void {
@@ -788,6 +793,8 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
    */
   updateFilter(filter: WritableSignal<string>, value: string): void {
     filter.set(value);
+    // fix-283-m: un resultado nuevo se mira desde la página 1 (con [first] la tabla no vuelve sola).
+    this.tableFirst.set(0);
     this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
     this.emitFilters();
   }
@@ -834,12 +841,35 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
       estado: this.selectedEstado(),
       expediente: this.selectedExpediente(),
       sort: this.sort(),
+      first: this.tableFirst(),
+      cardsShown: this.mobileShown(),
     });
   }
 
   loadMoreCards(): void {
     this.mobileShown.update((n) => n + AlumnosListContentComponent.CARDS_STEP);
+    this.emitFilters();
   }
+
+  /** Cambio de página de la tabla: se avisa para conservarla al volver de la ficha (fix-282-m). */
+  onTablePage(first: number): void {
+    this.tableFirst.set(first);
+    this.emitFilters();
+  }
+
+  /**
+   * Página que muestra la tabla. Si la guardada ya no existe (al volver de la ficha, alguien se
+   * archivó), cae en la última que sí existe. Sin filas (cargando) deja la guardada.
+   */
+  readonly tableFirstVisible = computed(() => {
+    const first = this.tableFirst();
+    const total = this.sortedAlumnos().length;
+    if (total === 0 || first < total) return first;
+    return (
+      Math.floor((total - 1) / AlumnosListContentComponent.TABLE_ROWS) *
+      AlumnosListContentComponent.TABLE_ROWS
+    );
+  });
 
   totalAlumnos(): number {
     return this.alumnos().length;

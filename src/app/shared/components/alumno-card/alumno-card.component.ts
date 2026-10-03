@@ -55,7 +55,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
           <app-skeleton-block variant="rect" width="72px" height="20px" />
         </div>
         <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4">
-          @for (i of [1, 2, 3, 4]; track i) {
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
             <div class="flex flex-col gap-1.5">
               <app-skeleton-block variant="text" width="45%" height="10px" />
               <app-skeleton-block variant="text" width="75%" height="12px" />
@@ -114,6 +114,11 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 
         <!-- Body -->
         <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm">
+          <!-- hotfix-132-m: el Nº de matrícula es el dato con que se identifica al alumno. -->
+          <div class="flex flex-col gap-1" data-llm-info="numero-matricula">
+            <span class="micro-label">Nº Matrícula</span>
+            <span class="item-title font-mono">{{ alumno().nroExpedientes.join(' · ') }}</span>
+          </div>
           <div class="flex flex-col gap-1">
             <span class="micro-label">RUT</span>
             <span class="font-medium text-text-secondary font-mono text-xs">{{
@@ -146,6 +151,12 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
             <span class="micro-label">Ingreso</span>
             <span class="font-medium text-text-secondary text-xs">{{ alumno().fechaIngreso }}</span>
           </div>
+          @if (showSede()) {
+            <div class="flex flex-col gap-1">
+              <span class="micro-label">Sede</span>
+              <span class="font-medium text-text-secondary text-xs">{{ alumno().sucursal }}</span>
+            </div>
+          }
         </div>
 
         <!-- Footer Actions -->
@@ -217,6 +228,8 @@ export class AlumnoCardComponent {
   readonly alumno = input.required<AlumnoTableRow>();
   readonly loading = input(false);
   readonly trashView = input(false);
+  /** Muestra la sede: la lista lo pide con la misma regla que su columna "Sede" (hotfix-132-m). */
+  readonly showSede = input(false);
   readonly basePath = input<string>('/app/secretaria');
   readonly isGeneratingFicha = input<number | false>(false);
 

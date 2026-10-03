@@ -127,7 +127,7 @@ export interface EgresadosExportRequest {
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search graduates by name, RUT or file number"
               [ngModel]="searchTerm()"
-              (ngModelChange)="searchTerm.set($event)"
+              (ngModelChange)="onSearch($event)"
             />
           </div>
           <!-- fix-147-b: este selector REEMPLAZA al filtro de año suelto que había acá.
@@ -136,7 +136,7 @@ export interface EgresadosExportRequest {
              elegir una ventana, así que no pueden contradecirse. -->
           <app-period-selector
             [window]="periodWindow()"
-            (windowChange)="periodWindow.set($event)"
+            (windowChange)="onPeriodChange($event)"
             [years]="availableYears()"
             [searchActive]="hasActiveSearch()"
             ariaLabel="Período de egreso"
@@ -565,6 +565,25 @@ export class ExAlumnosContentComponent {
 
   protected loadMoreCards(): void {
     this.mobileShown.update((n) => n + ExAlumnosContentComponent.CARDS_STEP);
+  }
+
+  protected onSearch(term: string): void {
+    this.searchTerm.set(term);
+    this.resetPagination();
+  }
+
+  protected onPeriodChange(window: PeriodWindow): void {
+    this.periodWindow.set(window);
+    this.resetPagination();
+  }
+
+  /**
+   * fix-283-m: un resultado nuevo se mira desde el principio. Con [first] la tabla no vuelve
+   * sola a la página 1, y las tarjetas cargadas con "Cargar más" vuelven a 6.
+   */
+  private resetPagination(): void {
+    this.tableFirst.set(0);
+    this.mobileShown.set(ExAlumnosContentComponent.CARDS_STEP);
   }
 
   protected initials(nombre: string): string {

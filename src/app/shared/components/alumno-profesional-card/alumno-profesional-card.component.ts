@@ -102,6 +102,11 @@ import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesion
 
         <!-- Body -->
         <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm">
+          <!-- hotfix-132-m: el Nº de matrícula es el dato con que se identifica al alumno. -->
+          <div class="flex flex-col gap-1 col-span-2" data-llm-info="numero-matricula">
+            <span class="micro-label">Nº Matrícula</span>
+            <span class="item-title font-mono">{{ alumno().nroMatricula }}</span>
+          </div>
           <div class="flex flex-col gap-1">
             <span class="micro-label">Promoción</span>
             <div class="flex items-center gap-1.5 flex-wrap">
