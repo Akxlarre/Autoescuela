@@ -144,12 +144,14 @@ interface SemaforoInfo {
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search professional students by name, RUT or enrollment number"
               [(ngModel)]="searchTerm"
+              (ngModelChange)="resetPagination()"
             />
           </div>
 
           <p-select
             [options]="claseOptions"
             [(ngModel)]="selectedClase"
+            (ngModelChange)="resetPagination()"
             optionLabel="label"
             optionValue="value"
             placeholder="Todas las clases"
@@ -159,6 +161,7 @@ interface SemaforoInfo {
           <p-select
             [options]="estadoOptions"
             [(ngModel)]="selectedEstado"
+            (ngModelChange)="resetPagination()"
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
@@ -650,6 +653,14 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       default:
         return 'warn';
     }
+  }
+
+  /**
+   * fix-283-m: al cambiar búsqueda o un selector el resultado se mira desde la página 1 (con
+   * [first] la tabla no vuelve sola).
+   */
+  resetPagination(): void {
+    this.tableFirst.set(0);
   }
 
   /** Vuelve filtros y buscador a su valor inicial. El orden elegido se conserva (spec 0023-m). */

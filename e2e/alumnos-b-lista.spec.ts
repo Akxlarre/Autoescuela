@@ -7,7 +7,14 @@
 import { readFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import type { Locator, Page } from '@playwright/test';
-import { addFutureClass, createE2eAlumno } from './support/alumnos-seed';
+import {
+  addCompletedPractices,
+  addFutureClass,
+  addStudentDocuments,
+  createE2eAlumno,
+  markCertificateSent,
+} from './support/alumnos-seed';
+import { getAdminClient } from './support/supabase-admin';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
 
 const SEDE_A = 1; // Autoescuela Chillán
@@ -354,7 +361,8 @@ test.describe('los filtros se conservan', () => {
 
     // "Limpiar filtros" también se conserva: al volver, la lista sigue sin filtrar.
     await page.locator(SEARCH).fill('zzzz-no-existe');
-    await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+    // spec 0022-m: hay dos "Limpiar filtros" (barra de filtros y estado vacío); se usa el de la barra.
+    await page.locator('[data-llm-action="clear-students-filters"]').click();
     await expect(page.locator(SEARCH)).toHaveValue('');
     await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
     await expect(page).toHaveURL(/\/alumnos\/\d+/);
@@ -366,7 +374,8 @@ test.describe('los filtros se conservan', () => {
 });
 
 test.describe('ordenar por columna (spec 0020-m)', () => {
-  const SORT_CARDS = '[data-llm-description="Sort the student list by a column"]';
+  // Control compartido app-sort-control (spec 0023-m): "Sort the <llmSubject> list by a column".
+  const SORT_CARDS = '[data-llm-description="Sort the students list by a column"]';
   const sortButton = (page: Page, field: string): Locator =>
     page.locator(`[data-llm-action="sort-students-by-${field}"]`);
   const sortHeader = (page: Page, field: string): Locator =>
@@ -767,6 +776,289 @@ test.describe('exportar', () => {
     const filas = await exportarExcel(page);
     expect(filas.length, 'filas del Excel vs archivados en pantalla').toBe(enPapelera);
     expect(filas.some((fila) => fila.includes(archivado.rut))).toBe(true);
+  });
+});
+
+/** Elige una opción de uno de los 3 selectores de filtro, buscado por su data-llm-description. */
+async function filtrar(page: Page, descripcion: string, opcion: string): Promise<void> {
+  await page.locator(`p-select[data-llm-description="${descripcion}"]`).click();
+  await page.getByRole('option', { name: opcion, exact: true }).click();
+}
+const FILTRO_ESTADO = 'Filter students by enrollment status';
+const FILTRO_EXPEDIENTE = 'Filter students by file completion status';
+
+test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
+  test('I03 (fix-282-m): al volver desde la ficha se conserva la página; por el menú vuelve a la 1', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('admin');
+    await openLista(page, 'admin');
+    await page.getByRole('button', { name: 'Página 3' }).click();
+    await expect(page.getByText(/Mostrando 21 a/)).toBeVisible();
+
+    await rows(page).first().locator('[data-llm-action="view-student-detail"]').click();
+    await expect(page).toHaveURL(/\/alumnos\/\d+/);
+    await page.locator('app-section-hero [data-llm-nav="back"]').first().click();
+    await expect(page.getByText(/Mostrando 21 a/)).toBeVisible(CARGA);
+
+    // hotfix-126-m: entrando por el menú desde otra pantalla, la lista aparece desde el principio.
+    await page.locator('[data-llm-nav]', { hasText: 'Agenda' }).first().click();
+    await expect(page).toHaveURL(/\/agenda$/);
+    await page.locator('[data-llm-nav]', { hasText: 'Base Alumnos B' }).first().click();
+    await expect(page.getByText(/Mostrando 1 a/)).toBeVisible(CARGA);
+  });
+
+  test('F04 · F05: cada estado del filtro muestra solo a los alumnos de ese estado', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [docs, retirado, pre, inactivo] = await Promise.all([
+      createE2eAlumno(
+        { label: 'FiltroDocs', branchId: SEDE_A, enrollments: [{ docsComplete: false }] },
+        cleanup,
+      ),
+      createE2eAlumno(
+        { label: 'FiltroRetirado', branchId: SEDE_A, enrollments: [{ status: 'withdrawn' }] },
+        cleanup,
+      ),
+      createE2eAlumno({ label: 'FiltroPre', branchId: SEDE_A }, cleanup),
+      createE2eAlumno(
+        { label: 'FiltroInactivo', branchId: SEDE_A, studentStatus: 'inactive' },
+        cleanup,
+      ),
+    ]);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+
+    for (const [estado, alumno] of [
+      ['Docs Pendientes', docs],
+      ['Retirado', retirado],
+      ['Pre-inscrito', pre],
+      ['Inactivo', inactivo],
+    ] as const) {
+      await filtrar(page, FILTRO_ESTADO, estado);
+      await page.locator(SEARCH).fill('');
+      // Sin búsqueda: todas las filas de la página tienen ese estado.
+      for (const fila of await rows(page).all()) await expect(fila).toContainText(estado);
+      await page.locator(SEARCH).fill(alumno.paternalLastName);
+      await expect(rowOf(page, alumno.paternalLastName)).toHaveCount(1);
+    }
+  });
+
+  test('C11 · C12 · F06: el expediente cuenta la CI y la foto, también la foto legacy', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [completo, legacy, parcial, pendiente] = await Promise.all(
+      ['ExpCompleto', 'ExpLegacy', 'ExpParcial', 'ExpPendiente'].map((label) =>
+        createE2eAlumno({ label, branchId: SEDE_A, enrollments: [{}] }, cleanup),
+      ),
+    );
+    await addStudentDocuments(completo.enrollmentIds[0], ['cedula_identidad', 'id_photo'], cleanup);
+    // fix-035-i: matrículas antiguas guardaron la foto como 'foto_carnet'.
+    await addStudentDocuments(
+      legacy.enrollmentIds[0],
+      ['cedula_identidad', 'foto_carnet'],
+      cleanup,
+    );
+    await addStudentDocuments(parcial.enrollmentIds[0], ['cedula_identidad'], cleanup);
+
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    const expedienteDe = async (apellido: string) => {
+      await page.locator(SEARCH).fill(apellido);
+      return rowOf(page, apellido);
+    };
+
+    await expect(await expedienteDe(completo.paternalLastName)).toContainText('Completo · 2/2');
+    await expect(await expedienteDe(legacy.paternalLastName)).toContainText('Completo · 2/2');
+    await expect(await expedienteDe(parcial.paternalLastName)).toContainText('Parcial · 1/2');
+    await expect(await expedienteDe(pendiente.paternalLastName)).toContainText('Pendiente · 0/2');
+
+    // C12: el tooltip detalla qué documentos tiene.
+    await (await expedienteDe(parcial.paternalLastName)).getByText('Parcial · 1/2').hover();
+    await expect(page.getByText('CI: Sí | Foto: No | Médico: No | SEMEP: No')).toBeVisible();
+
+    // F06: el filtro Completo deja a los dos completos y saca al parcial.
+    await filtrar(page, FILTRO_EXPEDIENTE, 'Completo');
+    await expect(await expedienteDe(legacy.paternalLastName)).toHaveCount(1);
+    await expect(await expedienteDe(parcial.paternalLastName)).toHaveCount(0);
+  });
+
+  test('C10: con 12/12 prácticas y el certificado enviado aparece "Curso completo"', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CursoCompleto', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addCompletedPractices(alumno.enrollmentIds[0], 12, cleanup);
+    await markCertificateSent(alumno, alumno.enrollmentIds[0], cleanup);
+
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    const row = rowOf(page, alumno.paternalLastName);
+    await expect(row).toContainText('Activo');
+    await row.getByText('Curso completo').hover();
+    await expect(page.getByText('falta marcar como Ex-Alumno en su ficha')).toBeVisible();
+  });
+
+  test('C13: un nombre muy largo no se sale de su columna', async ({ pageAs, cleanup }) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'NombreLarguísimoDePruebaParaVerSiRompeLaFila',
+        branchId: SEDE_A,
+        paternalLastName: `Fernández-Valdivieso${Date.now()}`,
+        maternalLastName: 'De La Santísima Trinidad Echeverría',
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    const celdas = rowOf(page, alumno.paternalLastName).locator('td');
+    const [nombre, rut] = [await celdas.nth(0).boundingBox(), await celdas.nth(1).boundingBox()];
+    const titulo = celdas.nth(0).locator('.item-title');
+    expect(
+      await titulo.evaluate((el) => el.getBoundingClientRect().right),
+      'el nombre no debe invadir la columna RUT',
+    ).toBeLessThanOrEqual(rut!.x);
+    expect(nombre!.height, 'la fila crece en alto, no en ancho').toBeGreaterThan(0);
+  });
+
+  test('M05 · M09: en la Papelera se busca y filtra; si restaurar falla se avisa', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [retirado, activo] = await Promise.all([
+      createE2eAlumno(
+        {
+          label: 'PapeleraRetirado',
+          branchId: SEDE_A,
+          studentStatus: 'archived',
+          enrollments: [{ status: 'withdrawn' }],
+        },
+        cleanup,
+      ),
+      createE2eAlumno(
+        { label: 'PapeleraActivo', branchId: SEDE_A, studentStatus: 'archived', enrollments: [{}] },
+        cleanup,
+      ),
+    ]);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator('[data-llm-action="papelera"]').click();
+    await expect(page.getByText('Papelera — Alumnos archivados')).toBeVisible(CARGA);
+
+    // M05: buscar y filtrar dentro de la Papelera.
+    await page.locator(SEARCH).fill(retirado.paternalLastName);
+    await expect(rowOf(page, retirado.paternalLastName)).toHaveCount(1);
+    await page.locator(SEARCH).fill('');
+    await filtrar(page, FILTRO_ESTADO, 'Retirado');
+    await page.locator(SEARCH).fill(activo.paternalLastName);
+    await expect(rowOf(page, activo.paternalLastName)).toHaveCount(0);
+    await filtrar(page, FILTRO_ESTADO, 'Todos los estados');
+
+    // M09: el restaurar falla → aviso y el alumno sigue en la Papelera.
+    await page.route('**/rest/v1/students?id=eq.*', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        : route.continue(),
+    );
+    const row = rowOf(page, activo.paternalLastName);
+    await row.locator('[data-llm-action="restore-student-row"]').click();
+    await expect(page.locator('.p-toast-message').filter({ hasText: /No se pudo/ })).toBeVisible();
+    await expect(row).toHaveCount(1);
+  });
+
+  test('L10: archivar deja registro en la auditoría con quién lo hizo', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno({ label: 'Auditoria', branchId: SEDE_A }, cleanup);
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    await rowOf(page, alumno.paternalLastName)
+      .locator('[data-llm-action="archive-student-row"]')
+      .click();
+    await page
+      .getByRole('dialog', { name: /Confirmar archivado de/ })
+      .locator('[data-llm-action="confirm-archive-student"]')
+      .click();
+    await expect(page.getByText('Alumno archivado correctamente.')).toBeVisible();
+
+    const sb = await getAdminClient();
+    const { data, error } = await sb
+      .from('audit_log')
+      .select('action, entity, entity_id, user_id, detail')
+      .eq('entity', 'students')
+      .eq('entity_id', alumno.studentId);
+    expect(error).toBeNull();
+    const update = (data ?? []).find((r) => /update/i.test(r.action));
+    expect(update, 'debe quedar un UPDATE de students en audit_log').toBeTruthy();
+    expect(update!.user_id, 'con el usuario que archivó').not.toBeNull();
+  });
+
+  test('E11 · F07 (fix-283-m): buscar o filtrar desde la página 3 vuelve a la página 1', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('admin');
+    await openLista(page, 'admin');
+    await page.locator('.p-paginator-next').click();
+    await page.locator('.p-paginator-next').click();
+    await expect(page.getByText(/Mostrando 21 a/)).toBeVisible();
+
+    await page.locator(SEARCH).fill('Apellido19');
+    await expect(page.getByText(/Mostrando 1 a/)).toBeVisible();
+    await expect(rows(page).first()).toContainText('Apellido19');
+  });
+
+  test('K01 (B26): el menú Exportar se cierra con Escape y con un clic en el encabezado', async ({
+    pageAs,
+  }) => {
+    knownBug('B26 (fix-264-m)');
+    const page = await pageAs('admin');
+    await openLista(page, 'admin');
+    const excel = page.locator('[data-llm-action="export-students-excel"]');
+
+    await page.locator('[data-llm-action="open-export-menu"]').click();
+    await expect(excel).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(excel, 'Escape cierra el menú').toHaveCount(0);
+
+    await page.locator('[data-llm-action="open-export-menu"]').click();
+    await page.getByText('Listado de alumnos de la escuela').click();
+    await expect(excel, 'un clic fuera del panel cierra el menú').toHaveCount(0);
+  });
+
+  test('B24: "Exportar" se deshabilita cuando la lista está vacía', async ({ pageAs }) => {
+    knownBug('B24 (fix-264-m)');
+    const page = await pageAs('admin');
+    await openLista(page, 'admin');
+    await page.locator(SEARCH).fill('zzz-no-existe-nadie-asi');
+    // El estado vacío existe dos veces en el DOM (vista de tabla y de tarjetas).
+    await expect(page.getByText('No se encontraron alumnos').first()).toBeVisible();
+    await expect(page.locator('[data-llm-action="open-export-menu"]')).toBeDisabled();
+  });
+
+  test('B23: a 1366 px la columna Acciones se ve completa, sin scroll horizontal', async ({
+    pageAs,
+  }) => {
+    knownBug('B23 (fix-264-m)');
+    const page = await pageAs('admin');
+    await page.setViewportSize({ width: 1366, height: 800 });
+    await page.goto('/app/admin/alumnos');
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+
+    const tabla = page.locator('p-table .p-datatable-table-container').first();
+    const { scroll, client } = await tabla.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }));
+    expect(scroll, 'la tabla no debe necesitar scroll horizontal').toBeLessThanOrEqual(client + 1);
   });
 });
 

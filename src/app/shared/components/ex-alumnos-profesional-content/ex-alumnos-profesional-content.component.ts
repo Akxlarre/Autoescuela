@@ -125,11 +125,13 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search professional graduates by name, RUT or enrollment number"
               [(ngModel)]="searchTerm"
+              (ngModelChange)="resetPagination()"
             />
           </div>
           <p-select
             [options]="claseOptions()"
             [(ngModel)]="selectedClase"
+            (ngModelChange)="resetPagination()"
             optionLabel="label"
             optionValue="value"
             placeholder="Todas las clases"
@@ -140,7 +142,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                el filtro de clase es una faceta independiente, así que el selector se suma. -->
           <app-period-selector
             [window]="periodWindow"
-            (windowChange)="periodWindow = $event"
+            (windowChange)="periodWindow = $event; resetPagination()"
             [years]="availableYears()"
             [searchActive]="searchTerm.trim().length > 0"
             ariaLabel="Período de egreso"
@@ -557,6 +559,15 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
 
   loadMoreCards(): void {
     this.mobileShown += ExAlumnosProfesionalContentComponent.CARDS_STEP;
+  }
+
+  /**
+   * fix-283-m: al cambiar búsqueda, clase o período el resultado se mira desde el principio
+   * (con [first] la tabla no vuelve sola a la página 1) y las tarjetas vuelven a 6.
+   */
+  resetPagination(): void {
+    this.tableFirst.set(0);
+    this.mobileShown = ExAlumnosProfesionalContentComponent.CARDS_STEP;
   }
 
   initials(nombre: string): string {

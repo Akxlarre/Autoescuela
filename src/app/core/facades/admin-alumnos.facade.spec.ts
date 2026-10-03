@@ -150,7 +150,16 @@ describe('AdminAlumnosFacade', () => {
   });
 
   describe('filtros de la lista — fix-275-m', () => {
-    const SIN_FILTROS = { search: '', curso: '', estado: '', expediente: '', sort: null };
+    // fix-282-m: la página de la tabla y las tarjetas cargadas también se guardan.
+    const SIN_FILTROS = {
+      search: '',
+      curso: '',
+      estado: '',
+      expediente: '',
+      sort: null,
+      first: 0,
+      cardsShown: 6,
+    };
 
     it('parten vacíos y sin orden elegido', () => {
       expect(facade.listFilters()).toEqual(SIN_FILTROS);
@@ -163,6 +172,8 @@ describe('AdminAlumnosFacade', () => {
         estado: 'Activo',
         expediente: '',
         sort: { field: 'fechaIngreso', direction: 'desc' } as const,
+        first: 20,
+        cardsShown: 12,
       };
 
       facade.setListFilters(filters);
@@ -177,6 +188,8 @@ describe('AdminAlumnosFacade', () => {
         estado: 'Activo',
         expediente: '',
         sort: { field: 'rut', direction: 'asc' },
+        first: 20,
+        cardsShown: 12,
       });
 
       facade.resetListFilters();

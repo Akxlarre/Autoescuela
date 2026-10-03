@@ -3,7 +3,11 @@ import { signal, type WritableSignal } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import type { AlumnoListFilters, AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
+import {
+  EMPTY_ALUMNO_LIST_FILTERS,
+  type AlumnoListFilters,
+  type AlumnoTableRow,
+} from '@core/models/ui/alumno-table-row.model';
 import { AlumnosListContentComponent } from './alumnos-list-content.component';
 
 function row(id: string, overrides: Partial<AlumnoTableRow> = {}): AlumnoTableRow {
@@ -56,9 +60,12 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     return s;
   };
 
-  function create(initialFilters: AlumnoListFilters | null = null): void {
+  function create(
+    initialFilters: AlumnoListFilters | null = null,
+    alumnos: AlumnoTableRow[] = ALUMNOS,
+  ): void {
     component = TestBed.createComponent(AlumnosListContentComponent).componentInstance;
-    stubInput('alumnos', ALUMNOS);
+    stubInput('alumnos', alumnos);
     stubInput('initialFilters', initialFilters);
     showSedeColumn = stubInput('showSedeColumn', false);
     emitted = [];
@@ -137,13 +144,7 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
   });
 
   it('arranca con el orden que le entrega el Smart (al volver de la ficha)', () => {
-    create({
-      search: '',
-      curso: '',
-      estado: '',
-      expediente: '',
-      sort: { field: 'alumno', direction: 'desc' },
-    });
+    create({ ...EMPTY_ALUMNO_LIST_FILTERS, sort: { field: 'alumno', direction: 'desc' } });
 
     expect(ids()).toEqual(['2', '3', '1']);
   });
@@ -154,10 +155,7 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     component.toggleSort('fechaIngreso');
 
     expect(emitted.at(-1)).toEqual({
-      search: '',
-      curso: '',
-      estado: '',
-      expediente: '',
+      ...EMPTY_ALUMNO_LIST_FILTERS,
       sort: { field: 'fechaIngreso', direction: 'asc' },
     });
   });
@@ -234,13 +232,68 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
 
       expect(component.hasActiveFilters()).toBe(false);
       expect(component.tableFirst()).toBe(0);
-      expect(emitted.at(-1)).toEqual({
-        search: '',
-        curso: '',
-        estado: '',
-        expediente: '',
-        sort: null,
-      });
+      expect(emitted.at(-1)).toEqual(EMPTY_ALUMNO_LIST_FILTERS);
+    });
+  });
+
+  describe('buscar o filtrar vuelve a la primera página (fix-283-m)', () => {
+    it('buscar desde la página 3 muestra la página 1 del resultado', () => {
+      create();
+      component.onTablePage(20);
+
+      component.updateFilter(component.searchTerm, 'ara');
+
+      expect(component.tableFirst()).toBe(0);
+      expect(emitted.at(-1)?.first).toBe(0);
+    });
+
+    it('cambiar un selector también', () => {
+      create();
+      component.onTablePage(10);
+
+      component.updateFilter(component.selectedEstado, 'Activo');
+
+      expect(component.tableFirst()).toBe(0);
+    });
+  });
+
+  describe('conservar la página al volver de la ficha (fix-282-m)', () => {
+    const MUCHOS = Array.from({ length: 25 }, (_, i) => row(String(25 - i)));
+
+    it('arranca en la página y con las tarjetas que le entrega el Smart', () => {
+      create({ ...EMPTY_ALUMNO_LIST_FILTERS, first: 20, cardsShown: 12 }, MUCHOS);
+
+      expect(component.tableFirstVisible()).toBe(20);
+      expect(component.mobileShown()).toBe(12);
+    });
+
+    it('cambiar de página avisa la posición para que el Smart la conserve', () => {
+      create(null, MUCHOS);
+
+      component.onTablePage(10);
+
+      expect(component.tableFirst()).toBe(10);
+      expect(emitted.at(-1)).toEqual({ ...EMPTY_ALUMNO_LIST_FILTERS, first: 10 });
+    });
+
+    it('cargar más tarjetas avisa cuántas hay', () => {
+      create(null, MUCHOS);
+
+      component.loadMoreCards();
+
+      expect(emitted.at(-1)).toEqual({ ...EMPTY_ALUMNO_LIST_FILTERS, cardsShown: 12 });
+    });
+
+    it('si la página guardada ya no existe (se archivó a alguien), muestra la última', () => {
+      create({ ...EMPTY_ALUMNO_LIST_FILTERS, first: 30 }, MUCHOS);
+
+      expect(component.tableFirstVisible()).toBe(20);
+    });
+
+    it('mientras la lista no tiene datos, no toca la página guardada', () => {
+      create({ ...EMPTY_ALUMNO_LIST_FILTERS, first: 20 }, []);
+
+      expect(component.tableFirstVisible()).toBe(20);
     });
   });
 

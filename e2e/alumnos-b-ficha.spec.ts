@@ -9,7 +9,7 @@ import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
 import { addMissedClass, createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
-import { expect, test, watchErrors } from './support/fixtures';
+import { expect, knownBug, test, watchErrors } from './support/fixtures';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
 
 const SEDE_A = 1; // Autoescuela Chillán
@@ -1107,5 +1107,312 @@ test.describe('ex-alumnos', () => {
     // Al cerrarlo sin matricular, vuelve la sede que el admin tenía elegida.
     await page.getByRole('button', { name: 'Cerrar panel' }).click();
     await expect(sede).toContainText('Todas las sedes', CARGA);
+  });
+});
+
+test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
+  /** `id` de la fila de asistencia que `addMissedClass()` dejó para esa sesión. */
+  async function attendanceIdOf(sessionId: number): Promise<number> {
+    const sb = await getAdminClient();
+    const { data, error } = await sb
+      .from('class_b_practice_attendance')
+      .select('id')
+      .eq('class_b_session_id', sessionId)
+      .single();
+    if (error) throw new Error(`[e2e] No se encontró la asistencia: ${error.message}`);
+    return data.id;
+  }
+
+  async function abrirJustificar(page: Page): Promise<Locator> {
+    await page.locator('[data-llm-action="ver-inasistencias"]').click();
+    await page.locator('[data-llm-action="justificar-inasistencia-clase-b"]').first().click();
+    return page.getByRole('dialog', { name: 'Justificar inasistencia' });
+  }
+
+  test('H02 · H03 · H04 · H09: justificar exige motivo, persiste al recargar y guarda una sola vez', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Justificar', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+
+    // H04: cerrar con la X y con Cancelar no guarda.
+    let modal = await abrirJustificar(page);
+    await modal.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(modal).toHaveCount(0);
+    await page.locator('[data-llm-action="justificar-inasistencia-clase-b"]').first().click();
+    await modal.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(modal).toHaveCount(0);
+
+    // H03: vacío o solo espacios → Guardar deshabilitado.
+    await page.locator('[data-llm-action="justificar-inasistencia-clase-b"]').first().click();
+    modal = page.getByRole('dialog', { name: 'Justificar inasistencia' });
+    const guardar = modal.locator('[data-llm-action="submit-justificacion-clase-b"]');
+    const motivo = modal.locator(
+      '[data-llm-description="textarea for absence justification reason"]',
+    );
+    await expect(guardar).toBeDisabled();
+    await motivo.fill('   ');
+    await expect(guardar).toBeDisabled();
+
+    // H09: doble clic en Guardar → una sola actualización.
+    const updates: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('/rest/v1/class_b_practice_attendance') && r.method() === 'PATCH')
+        updates.push(r.url());
+    });
+    await motivo.fill('Certificado médico E2E');
+    await guardar.dblclick();
+    const drawer = page.locator('app-admin-inasistencias-drawer');
+    await expect(drawer.getByText('Justificado')).toBeVisible();
+    expect(updates.length, 'PATCH a class_b_practice_attendance').toBe(1);
+
+    // H02: "Ver motivo" muestra el texto, y todo sigue igual tras recargar.
+    await drawer.locator('[data-llm-action="ver-motivo-justificacion"]').click();
+    await expect(page.getByText('Certificado médico E2E')).toBeVisible();
+    await page.reload();
+    await expect(matricula(page)).toBeVisible(CARGA);
+    await expect(page.getByText('Inasistencia — Justificada')).toBeVisible();
+  });
+
+  test('H07: si justificar falla, se avisa y la inasistencia sigue sin justificar', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'JustificarFalla', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const modal = await abrirJustificar(page);
+
+    await page.route('**/rest/v1/class_b_practice_attendance*', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        : route.continue(),
+    );
+    await modal
+      .locator('[data-llm-description="textarea for absence justification reason"]')
+      .fill('x');
+    await modal.locator('[data-llm-action="submit-justificacion-clase-b"]').click();
+
+    await expect(
+      page.locator('.p-toast-message').filter({ hasText: /No se pudo|Error/i }),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        'app-admin-inasistencias-drawer [data-llm-action="justificar-inasistencia-clase-b"]',
+      ),
+    ).toBeVisible();
+  });
+
+  test('S03: la secretaria de la sede A no puede justificar una inasistencia de la sede B (por API)', async ({
+    cleanup,
+  }) => {
+    const ajeno = await createE2eAlumno(
+      { label: 'JustificarAjeno', branchId: SEDE_B, enrollments: [{}] },
+      cleanup,
+    );
+    const sessionId = await addMissedClass(ajeno, ajeno.enrollmentIds[0], cleanup);
+    const attendanceId = await attendanceIdOf(sessionId);
+    const secretaria = await getClientFor(
+      ACCOUNTS.secretariaA.email,
+      ACCOUNTS.secretariaA.password,
+    );
+
+    const { data } = await secretaria
+      .from('class_b_practice_attendance')
+      .update({ justification: 'intento E2E desde otra sede' })
+      .eq('id', attendanceId)
+      .select('id');
+    expect(data ?? [], 'filas actualizadas por la secretaria de otra sede').toHaveLength(0);
+
+    const sb = await getAdminClient();
+    const { data: fila } = await sb
+      .from('class_b_practice_attendance')
+      .select('justification')
+      .eq('id', attendanceId)
+      .single();
+    expect(fila!.justification).toBeNull();
+  });
+
+  test('M09 · M15: el email se guarda en minúsculas y cancelar descarta lo escrito', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'EmailMayus', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const NOMBRES = '[data-llm-description="Nombres del alumno"]';
+    const EMAIL = '[data-llm-description="Correo electrónico del alumno"]';
+
+    // M15: escribir, cancelar y reabrir → datos originales.
+    await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+    await page.locator(NOMBRES).fill('Cualquier Cosa');
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+    await expect(page.locator(NOMBRES)).toHaveValue(alumno.firstNames);
+
+    // M09: el email en mayúsculas queda en minúsculas.
+    const nuevo = alumno.email.replace('@', '-nuevo@').toUpperCase();
+    await page.locator(EMAIL).fill(nuevo);
+    await page.locator('[data-llm-action="guardar-perfil-alumno"]').click();
+    await expect(page.locator('[data-llm-info="email"]')).toContainText(nuevo.toLowerCase(), CARGA);
+  });
+
+  test('O06 · O07: doble clic al confirmar el egreso cambia una sola vez; si falla, sigue activo', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [doble, falla] = await Promise.all(
+      ['EgresoDoble', 'EgresoFalla'].map((label) =>
+        createE2eAlumno({ label, branchId: SEDE_A, enrollments: [{}] }, cleanup),
+      ),
+    );
+    await markCertificateSent(doble, doble.enrollmentIds[0], cleanup);
+    await markCertificateSent(falla, falla.enrollmentIds[0], cleanup);
+    const page = await pageAs('secretariaA');
+    const confirmacion = page.locator('[role="dialog"][aria-labelledby="confirm-modal-title"]');
+
+    // O07: el PATCH de la matrícula falla.
+    await openFicha(page, 'secretaria', falla.studentId);
+    await page.route('**/rest/v1/enrollments?id=eq.*', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        : route.continue(),
+    );
+    await hero(page).locator('[data-llm-action="marcar-ex-alumno"]').click();
+    await confirmacion.getByRole('button', { name: 'Marcar como Ex-Alumno' }).click();
+    await expect(
+      page.locator('.p-toast-message').filter({ hasText: /No se pudo|Error/i }),
+    ).toBeVisible();
+    await expect(page.getByText('ESTADO: Activo')).toBeVisible();
+    await page.unroute('**/rest/v1/enrollments?id=eq.*');
+
+    // O06: doble clic → un solo PATCH y un solo toast.
+    await openFicha(page, 'secretaria', doble.studentId);
+    const patches: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('/rest/v1/enrollments') && r.method() === 'PATCH') patches.push(r.url());
+    });
+    await hero(page).locator('[data-llm-action="marcar-ex-alumno"]').click();
+    await confirmacion.getByRole('button', { name: 'Marcar como Ex-Alumno' }).dblclick();
+    // El toast dura unos segundos: se cuenta apenas aparece.
+    const exito = page.getByText('Alumno marcado como ex-alumno correctamente.');
+    await expect(exito.first()).toBeVisible();
+    await expect(exito).toHaveCount(1);
+    await expect(page.getByText('ESTADO: Egresado')).toBeVisible();
+    expect(patches.length, 'PATCH a enrollments').toBe(1);
+  });
+
+  test('P03: si archivar desde la ficha falla, se avisa y sigue en la ficha', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno({ label: 'ArchivarFalla', branchId: SEDE_A }, cleanup);
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.route('**/rest/v1/students?id=eq.*', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        : route.continue(),
+    );
+
+    await hero(page).locator('[data-llm-action="eliminar-alumno"]').click();
+    await page
+      .getByRole('dialog', { name: /Confirmar archivado de/ })
+      .locator('[data-llm-action="confirm-archive-student"]')
+      .click();
+
+    await expect(
+      page.getByText('No se pudo archivar al alumno. Inténtalo de nuevo.'),
+    ).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/alumnos/${alumno.studentId}`));
+    await expect(matricula(page)).toBeVisible();
+  });
+
+  test('T13 (B32): si la carga de Ex-Alumnos falla se muestra un error, no "No se encontraron egresados"', async ({
+    pageAs,
+  }) => {
+    knownBug('B32 (fix-264-m)');
+    const page = await pageAs('admin');
+    await page.setViewportSize(DESKTOP);
+    await page.route('**/rest/v1/enrollments*', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+        : route.continue(),
+    );
+    await page.goto('/app/admin/ex-alumnos');
+    await expect(page.getByText(/No se pudo|Error al cargar/).first()).toBeVisible(CARGA);
+    await expect(page.getByText('No se encontraron egresados')).toHaveCount(0);
+  });
+
+  test('Z06 (B35): un nombre con "<" o "&" se muestra tal cual en la confirmación de re-matricular', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    knownBug('B35 (fix-264-m)');
+    const sufijo = String(Date.now()).slice(-6);
+    const egresado = await createE2eAlumno(
+      {
+        label: 'Html',
+        branchId: SEDE_A,
+        paternalLastName: `Ruiz${sufijo} <i>cursiva</i> & Cía`,
+        enrollments: [{ status: 'completed' }],
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openExAlumnos(page, 'secretaria');
+    await page.locator(SEARCH_EGRESADOS).fill(`Ruiz${sufijo}`);
+    await egresadoRow(page, `Ruiz${sufijo}`)
+      .locator('[data-llm-action="re-enroll-student"]')
+      .click();
+
+    const confirmacion = page.locator('[role="dialog"][aria-labelledby="confirm-modal-title"]');
+    await expect(confirmacion).toBeVisible();
+    // El texto literal debe verse: si el nombre se interpretara como HTML, "<i>" desaparecería.
+    await expect(confirmacion).toContainText(`Ruiz${sufijo} <i>cursiva</i> & Cía`);
+    await expect(confirmacion.locator('i', { hasText: 'cursiva' })).toHaveCount(0);
+    await confirmacion.getByRole('button', { name: 'Cancelar' }).click();
+  });
+
+  test('Y04 (B33): la secretaria multi-sede cambia de sede en Ex-Alumnos y la lista se recarga', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    knownBug('B33 (fix-264-m)');
+    const [egresadoA, egresadoB] = await Promise.all([
+      createE2eAlumno(
+        { label: 'EgresadoSedeA', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      ),
+      createE2eAlumno(
+        { label: 'EgresadoSedeB', branchId: SEDE_B, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      ),
+    ]);
+    const page = await pageAs('secretariaMultisede');
+    await openExAlumnos(page, 'secretaria');
+
+    await page.locator('[data-llm-action="toggle-branch-dropdown"]').click();
+    await page
+      .getByRole('listbox', { name: 'Seleccionar sede' })
+      .getByRole('option', { name: 'Conductores Chillán' })
+      .click();
+    await page.locator(SEARCH_EGRESADOS).fill(egresadoB.paternalLastName);
+    await expect(egresadoRow(page, egresadoB.paternalLastName)).toHaveCount(1, CARGA);
+    await page.locator(SEARCH_EGRESADOS).fill(egresadoA.paternalLastName);
+    await expect(egresadoRow(page, egresadoA.paternalLastName)).toHaveCount(0);
   });
 });

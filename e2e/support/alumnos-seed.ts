@@ -219,8 +219,10 @@ export async function addMissedClass(
       `[e2e] No hay ninguna clase de la que copiar instructor y vehículo: ${sampleErr.message}`,
     );
 
-  // Hace 3 días a las 03:15 UTC: una hora en la que no hay clases reales.
-  const when = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  // Entre 3 y 200 días atrás, a las 03:15 (hora de Chile): una hora sin clases reales. El día
+  // varía para que dos tests en paralelo no le dejen al mismo instructor clases solapadas, que
+  // la BD rechaza.
+  const when = new Date(Date.now() - (3 + Math.floor(Math.random() * 197)) * 24 * 60 * 60 * 1000);
   when.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
   const { data: session, error: sessionErr } = await sb
     .from('class_b_sessions')
@@ -248,6 +250,72 @@ export async function addMissedClass(
   cleanup.track('class_b_practice_attendance', attendance.id);
 
   return session.id;
+}
+
+/**
+ * Sube documentos "de mentira" al expediente de una matrícula (fix-264-m, 2ª pasada): solo las
+ * filas de `student_documents`, sin archivo en Storage. La lista solo mira el `type`.
+ */
+export async function addStudentDocuments(
+  enrollmentId: number,
+  types: string[],
+  cleanup: Cleanup,
+): Promise<void> {
+  const sb = await getAdminClient();
+  for (const type of types) {
+    const { data, error } = await sb
+      .from('student_documents')
+      .insert({
+        enrollment_id: enrollmentId,
+        type,
+        file_name: `${E2E_PREFIX}${type}.jpg`,
+        storage_url: `e2e/${enrollmentId}/${type}.jpg`,
+        status: 'approved',
+      })
+      .select('id')
+      .single();
+    if (error) throw new Error(`[e2e] No se pudo crear el documento ${type}: ${error.message}`);
+    cleanup.track('student_documents', data.id);
+  }
+}
+
+/**
+ * Deja `count` clases prácticas cerradas (`completed`) en el pasado para una matrícula de
+ * prueba (fix-264-m, 2ª pasada). Con 12 + `markCertificateSent()` el alumno queda con el curso
+ * completo y pendiente de pasar a ex-alumno.
+ */
+export async function addCompletedPractices(
+  enrollmentId: number,
+  count: number,
+  cleanup: Cleanup,
+): Promise<void> {
+  const sb = await getAdminClient();
+  const { data: sample, error: sampleErr } = await sb
+    .from('class_b_sessions')
+    .select('instructor_id, vehicle_id')
+    .limit(1)
+    .single();
+  if (sampleErr)
+    throw new Error(
+      `[e2e] No hay ninguna clase de la que copiar instructor y vehículo: ${sampleErr.message}`,
+    );
+
+  // Una clase por día hacia atrás desde hace 30 días, a las 03:15 UTC: horas sin clases reales.
+  const rowsToInsert = Array.from({ length: count }, (_, i) => {
+    const when = new Date(Date.now() - (30 + i) * 24 * 60 * 60 * 1000);
+    when.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+    return {
+      enrollment_id: enrollmentId,
+      instructor_id: sample.instructor_id,
+      vehicle_id: sample.vehicle_id,
+      class_number: i + 1,
+      scheduled_at: when.toISOString(),
+      status: 'completed',
+    };
+  });
+  const { data, error } = await sb.from('class_b_sessions').insert(rowsToInsert).select('id');
+  if (error) throw new Error(`[e2e] No se pudieron crear las clases cerradas: ${error.message}`);
+  for (const row of data) cleanup.track('class_b_sessions', row.id);
 }
 
 /**

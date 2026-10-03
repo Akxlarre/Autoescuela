@@ -354,8 +354,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
 | `.card` | 309 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 186 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 185 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 188 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 188 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |
