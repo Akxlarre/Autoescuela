@@ -7,7 +7,13 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { isAlumnoCursando } from '@core/utils/alumno-status.utils';
-import { formatDayMonthYear } from '@core/utils/date.utils';
+import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
+import { downloadBlob } from '@core/utils/file-download.utils';
+import {
+  alumnosPdfColumnWeights,
+  buildAlumnosExcelTable,
+  buildAlumnosPdfTable,
+} from '@core/utils/alumnos-export.utils';
 import { buildFutureClassesBlockMessage } from '@core/utils/archive-confirmation.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { EMPTY_ALUMNO_LIST_FILTERS } from '@core/models/ui/alumno-table-row.model';
@@ -258,42 +264,40 @@ export class AdminAlumnosFacade {
     }
   }
 
-  async exportAlumnos(req: {
-    format: 'pdf' | 'excel';
-    search: string;
-    curso: string;
-    estado: string;
-    expediente: string;
-  }): Promise<void> {
+  /**
+   * Exporta la lista de la Base de Alumnos B (fix-281-m). Recibe las filas que la pantalla ya
+   * filtró y ordenó (lista normal o Papelera): el archivo trae exactamente lo que se ve, sin
+   * volver a consultar ni a filtrar. Mismo esquema que `ExAlumnosFacade.exportEgresados`.
+   */
+  async exportAlumnos(
+    format: 'pdf' | 'excel',
+    rows: AlumnoTableRow[],
+    showSede: boolean,
+  ): Promise<void> {
+    if (this._isExporting()) return;
     this._isExporting.set(true);
     try {
-      const { data, error } = await this.supabase.client.functions.invoke('export-students', {
+      const filename = `alumnos_${todayIso()}`;
+      if (format === 'excel') {
+        const table = buildAlumnosExcelTable(rows);
+        downloadExcel('Alumnos', table.headers, table.rows, filename);
+        return;
+      }
+
+      const table = buildAlumnosPdfTable(rows, showSede);
+      const { data, error } = await this.supabase.client.functions.invoke('export-table-pdf', {
         body: {
-          format: req.format,
-          branch_id: this.getActiveBranchId(),
-          search: req.search,
-          curso: req.curso,
-          estado: req.estado,
-          expediente: req.expediente,
+          title: 'Base de Alumnos Clase B',
+          subtitle: `Generado: ${formatDayMonthYear(todayIso())}`,
+          headers: table.headers,
+          rows: table.rows,
+          columnWeights: alumnosPdfColumnWeights(showSede),
+          footer: `Total: ${rows.length} alumno${rows.length === 1 ? '' : 's'}`,
         },
       });
       if (error) throw error;
-
-      const fecha = new Date().toISOString().slice(0, 10);
-
-      if (req.format === 'excel') {
-        const { headers, rows } = data as { headers: string[]; rows: (string | number)[][] };
-        downloadExcel('Alumnos', headers, rows, `alumnos_${fecha}`);
-      } else {
-        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
-        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `alumnos_${fecha}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      const bytes = data instanceof Blob ? await data.arrayBuffer() : data;
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${filename}.pdf`);
     } catch {
       this.toast.error('No se pudo exportar la lista. Inténtalo de nuevo.');
     } finally {

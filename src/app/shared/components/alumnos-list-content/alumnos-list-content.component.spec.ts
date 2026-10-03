@@ -171,6 +171,34 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     expect(component.sort()).toEqual({ field: 'alumno', direction: 'asc' });
   });
 
+  describe('exportar (fix-281-m)', () => {
+    it('exportar emite las filas visibles en su orden, ya filtradas', () => {
+      create();
+      const requests: { format: string; rows: AlumnoTableRow[]; showSede: boolean }[] = [];
+      component.exportRequested.subscribe((r) => requests.push(r));
+      component.toggleSort('alumno');
+      component.updateFilter(component.selectedEstado, 'Activo');
+
+      component.requestExport('excel');
+
+      expect(requests).toHaveLength(1);
+      expect(requests[0].format).toBe('excel');
+      expect(requests[0].rows.map((a) => a.id)).toEqual(['1', '3']);
+      expect(requests[0].showSede).toBe(false);
+    });
+
+    it('avisa si la columna Sede está visible, para incluirla en el PDF', () => {
+      create();
+      showSedeColumn.set(true);
+      const requests: { showSede: boolean }[] = [];
+      component.exportRequested.subscribe((r) => requests.push(r));
+
+      component.requestExport('pdf');
+
+      expect(requests[0].showSede).toBe(true);
+    });
+  });
+
   describe('opción "todos" y botón "Limpiar filtros" (spec 0022-m)', () => {
     it('cada selector de filtro abre con su opción "todos" en el valor por defecto', () => {
       create();

@@ -13,13 +13,17 @@ const SIN_DATO = '—';
  * Lista de Ex-Alumnos para Excel (spec 0021-m). Recibe las filas que la pantalla ya filtró, en
  * su orden: el archivo trae lo que se ve. El saldo va como número para poder sumarlo.
  */
-export function buildEgresadosExcelTable(rows: EgresadoTableRow[]): ExportTable<string | number> {
+export function buildEgresadosExcelTable(
+  rows: EgresadoTableRow[],
+  /** Título de la columna del número: "Nº Expediente" (Clase B) o "Nº Matrícula" (Profesional, spec 0023-m). */
+  nroLabel = 'Nº Expediente',
+): ExportTable<string | number> {
   return {
     headers: [
       'Alumno',
       'RUT',
       'Correo',
-      'Nº Expediente',
+      nroLabel,
       'Licencia',
       'Fecha de egreso',
       'Sede',
@@ -44,9 +48,13 @@ export function buildEgresadosExcelTable(rows: EgresadoTableRow[]): ExportTable<
 export const EGRESADOS_PDF_COLUMN_WEIGHTS = [3.2, 1.5, 1.2, 1.2, 1.3, 2.4, 1.8];
 
 /** Lista de Ex-Alumnos para PDF: las columnas de la tabla en pantalla, todo como texto. */
-export function buildEgresadosPdfTable(rows: EgresadoTableRow[]): ExportTable<string> {
+export function buildEgresadosPdfTable(
+  rows: EgresadoTableRow[],
+  /** "Nº Exp." (Clase B) o "Nº Mat." (Profesional, spec 0023-m). */
+  nroLabel = 'Nº Exp.',
+): ExportTable<string> {
   return {
-    headers: ['Alumno', 'RUT', 'Nº Exp.', 'Licencia', 'Egreso', 'Sede', 'Estado de cuenta'],
+    headers: ['Alumno', 'RUT', nroLabel, 'Licencia', 'Egreso', 'Sede', 'Estado de cuenta'],
     rows: rows.map((e) => [
       e.nombre,
       e.rut,

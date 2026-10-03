@@ -43,6 +43,8 @@ import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesion
         (archivarRequested)="requestArchivar($event)"
         (trashViewToggled)="onTrashViewToggled()"
         (restaurarRequested)="onRestaurar($event)"
+        [isExporting]="facade.isExporting()"
+        (exportRequested)="facade.exportAlumnos($event.format, $event.rows)"
       />
     }
 

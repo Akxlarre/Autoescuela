@@ -17,6 +17,8 @@ import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { buildCourseFilterOptions } from '@core/utils/course-filter-options.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { SortHeaderComponent } from '@shared/components/sort-header/sort-header.component';
+import { SortControlComponent } from '@shared/components/sort-control/sort-control.component';
 import { buildAlumnosHeroActions } from '@core/utils/alumnos-hero-actions.utils';
 import {
   ALUMNO_SORT_OPTIONS,
@@ -80,12 +82,14 @@ import type {
   AlumnoStatus,
 } from '@core/models/ui/alumno-table-row.model';
 
+/**
+ * Exportar la lista (fix-281-m): las filas que la pantalla muestra, ya filtradas y en su
+ * orden, y si la columna Sede está visible. El archivo trae exactamente lo que se ve.
+ */
 export interface AlumnoExportRequest {
-  format: 'pdf' | 'excel';
-  search: string;
-  curso: string;
-  estado: string;
-  expediente: string;
+  format: ExportFormat;
+  rows: AlumnoTableRow[];
+  showSede: boolean;
 }
 
 @Component({
@@ -112,6 +116,8 @@ export interface AlumnoExportRequest {
     SectionHeroComponent,
     ExportMenuComponent,
     ClearFiltersButtonComponent,
+    SortHeaderComponent,
+    SortControlComponent,
   ],
   template: `
     <div
@@ -201,42 +207,14 @@ export interface AlumnoExportRequest {
 
           <!-- Ordenar por (spec 0020-m, AC11): solo en la vista de tarjetas, que no tiene
                títulos de columna. Con la tabla visible se ordena desde los títulos. -->
-          <div class="show-on-squeeze">
-            <p-select
-              [options]="sortColumns()"
-              [ngModel]="sort()?.field ?? null"
-              (ngModelChange)="setSortField($event)"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Ordenar por"
-              [showClear]="true"
-              class="h-9"
-              data-llm-description="Sort the student list by a column"
-            />
-          </div>
-          <!-- Elemento aparte de la barra, para que en pantallas angostas baje de línea en vez
-               de desbordar la tarjeta. -->
-          @if (sort(); as current) {
-            <div class="show-on-squeeze">
-              <button
-                type="button"
-                class="btn-secondary flex items-center gap-2"
-                (click)="toggleSortDirection()"
-                [attr.aria-label]="
-                  current.direction === 'asc'
-                    ? 'Orden ascendente. Cambiar a descendente'
-                    : 'Orden descendente. Cambiar a ascendente'
-                "
-                data-llm-action="toggle-students-sort-direction"
-              >
-                <app-icon
-                  [name]="current.direction === 'asc' ? 'chevron-up' : 'chevron-down'"
-                  [size]="16"
-                />
-                {{ current.direction === 'asc' ? 'Ascendente' : 'Descendente' }}
-              </button>
-            </div>
-          }
+          <app-sort-control
+            class="show-on-squeeze"
+            llmSubject="students"
+            [options]="sortColumns()"
+            [sort]="sort()"
+            (fieldChange)="setSortField($any($event))"
+            (directionToggle)="toggleSortDirection()"
+          />
 
           <!-- Exportar: mismo menú que Ex-Alumnos (app-export-menu, spec 0021-m) -->
           <app-export-menu
@@ -362,17 +340,13 @@ export interface AlumnoExportRequest {
                         [class.py-4]="first"
                         [attr.aria-sort]="ariaSort(col.value)"
                       >
-                        <button
-                          type="button"
-                          class="sort-header"
-                          [class.sort-header--active]="sort()?.field === col.value"
-                          (click)="toggleSort(col.value)"
-                          [attr.data-llm-action]="'sort-students-by-' + col.value"
-                          [attr.aria-label]="'Ordenar por ' + col.label"
-                        >
-                          {{ col.label }}
-                          <app-icon [name]="sortIcon(col.value)" [size]="12" />
-                        </button>
+                        <app-sort-header
+                          llmSubject="students"
+                          [label]="col.label"
+                          [field]="col.value"
+                          [sort]="sort()"
+                          (sortClick)="toggleSort(col.value)"
+                        />
                       </th>
                     }
                     <th class="pr-6 text-right">Acciones</th>
@@ -608,38 +582,6 @@ export interface AlumnoExportRequest {
         .show-on-squeeze {
           display: block !important;
         }
-      }
-
-      /* Título de columna ordenable: hereda la tipografía de micro-label del tr. */
-      .sort-header {
-        position: relative;
-        display: inline-block;
-        font: inherit;
-        letter-spacing: inherit;
-        text-transform: inherit;
-        text-align: left;
-        color: inherit;
-        background: transparent;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-      }
-
-      /* El indicador va fuera del flujo, sobre el espacio entre columnas: no ensancha la
-         tabla (con el ícono en línea, a 1600 px aparecía scroll horizontal y se cortaba
-         la columna Acciones). */
-      .sort-header app-icon {
-        position: absolute;
-        left: calc(100% + 3px);
-        top: 50%;
-        transform: translateY(-50%);
-        opacity: 0.35;
-        transition: opacity var(--duration-fast);
-      }
-
-      .sort-header:hover app-icon,
-      .sort-header--active app-icon {
-        opacity: 1;
       }
     `,
   ],
@@ -955,10 +897,8 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   requestExport(format: ExportFormat): void {
     this.exportRequested.emit({
       format,
-      search: this.searchTerm(),
-      curso: this.selectedCurso(),
-      estado: this.selectedEstado(),
-      expediente: this.selectedExpediente(),
+      rows: this.sortedAlumnos(),
+      showSede: this.showSedeColumn(),
     });
   }
 

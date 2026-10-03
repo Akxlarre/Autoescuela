@@ -347,24 +347,35 @@ export class ExAlumnosFacade {
   }
 
   /**
-   * Exporta la lista de Ex-Alumnos B (spec 0021-m). Recibe las filas que la pantalla ya filtró:
-   * el archivo trae exactamente lo que se ve, sin volver a consultar ni a filtrar.
+   * Exporta la lista de Ex-Alumnos (spec 0021-m; Profesional desde la spec 0023-m). Recibe las
+   * filas que la pantalla ya filtró y ordenó: el archivo trae exactamente lo que se ve, sin
+   * volver a consultar ni a filtrar.
    */
-  async exportEgresados(format: 'excel' | 'pdf', rows: EgresadoTableRow[]): Promise<void> {
+  async exportEgresados(
+    format: 'excel' | 'pdf',
+    rows: EgresadoTableRow[],
+    group: 'class_b' | 'professional' = 'class_b',
+  ): Promise<void> {
     if (this._isExporting()) return;
     this._isExporting.set(true);
+    const isPro = group === 'professional';
     try {
-      const filename = `ex-alumnos-b_${todayIso()}`;
+      const filename = `${isPro ? 'ex-alumnos-profesional' : 'ex-alumnos-b'}_${todayIso()}`;
       if (format === 'excel') {
-        const table = buildEgresadosExcelTable(rows);
-        downloadExcel('Ex-Alumnos B', table.headers, table.rows, filename);
+        const table = buildEgresadosExcelTable(rows, isPro ? 'Nº Matrícula' : 'Nº Expediente');
+        downloadExcel(
+          isPro ? 'Ex-Alumnos Profesional' : 'Ex-Alumnos B',
+          table.headers,
+          table.rows,
+          filename,
+        );
         return;
       }
 
-      const table = buildEgresadosPdfTable(rows);
+      const table = buildEgresadosPdfTable(rows, isPro ? 'Nº Mat.' : 'Nº Exp.');
       const { data, error } = await this.supabase.client.functions.invoke('export-table-pdf', {
         body: {
-          title: 'Ex-Alumnos Clase B',
+          title: isPro ? 'Ex-Alumnos Clase Profesional' : 'Ex-Alumnos Clase B',
           subtitle: `Generado: ${formatDayMonthYear(todayIso())}`,
           headers: table.headers,
           rows: table.rows,

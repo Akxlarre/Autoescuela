@@ -14,6 +14,19 @@ import { CurrencyPipe } from '@angular/common';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { SortHeaderComponent } from '@shared/components/sort-header/sort-header.component';
+import { SortControlComponent } from '@shared/components/sort-control/sort-control.component';
+import {
+  ExportMenuComponent,
+  type ExportFormat,
+} from '@shared/components/export-menu/export-menu.component';
+import {
+  ALUMNO_PROFESIONAL_SORT_OPTIONS,
+  sortAlumnosProfesional,
+  type AlumnoProfesionalListSort,
+  type AlumnoProfesionalSortField,
+} from '@core/utils/alumnos-profesional-sort.utils';
+import { ariaSortOf, nextSort, toggleSortDirection } from '@core/utils/table-sort.utils';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
@@ -51,6 +64,12 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 
+/** Pedido de exportación: el formato y las filas que la pantalla está mostrando (spec 0023-m). */
+export interface AlumnosProfesionalExportRequest {
+  format: ExportFormat;
+  rows: AlumnoProfesionalTableRow[];
+}
+
 interface SemaforoInfo {
   label: string;
   severity: 'success' | 'warn' | 'danger' | 'secondary';
@@ -78,6 +97,9 @@ interface SemaforoInfo {
     AnimateInDirective,
     CardHoverDirective,
     ClearFiltersButtonComponent,
+    SortHeaderComponent,
+    SortControlComponent,
+    ExportMenuComponent,
   ],
   template: `
     <div
@@ -149,9 +171,26 @@ interface SemaforoInfo {
             (clear)="resetFilters()"
           />
 
+          <!-- spec 0023-m: "Ordenar por" solo en la vista de tarjetas, que no tiene títulos. -->
+          <app-sort-control
+            class="show-on-squeeze"
+            llmSubject="professional-students"
+            [options]="sortColumns"
+            [sort]="sort()"
+            (fieldChange)="setSortField($any($event))"
+            (directionToggle)="toggleSortDir()"
+          />
+
           <span class="ml-auto text-sm text-text-muted">
             {{ filteredAlumnos().length }} resultado{{ filteredAlumnos().length !== 1 ? 's' : '' }}
           </span>
+          <!-- spec 0023-m: mismo menú que la Base de Alumnos B; exporta las filas que se ven. -->
+          <app-export-menu
+            llmSubject="professional-students"
+            [exporting]="isExporting()"
+            [disabled]="filteredAlumnos().length === 0"
+            (exportRequested)="requestExport($event)"
+          />
         </div>
 
         @if (isLoading()) {
@@ -161,7 +200,7 @@ interface SemaforoInfo {
           >
             <!-- VISTA 1: TABLA SKELETON (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze p-4 space-y-3 flex-1 min-h-0 h-full w-full">
-              @for (i of skeletonRows; track i) {
+              @for (i of skeletonRows; track $index) {
                 <app-skeleton-block variant="rect" width="100%" height="44px" />
               }
             </div>
@@ -169,7 +208,7 @@ interface SemaforoInfo {
             <!-- VISTA 2: TARJETAS SKELETON (Visible cuando se comprime o móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
-                @for (card of skeletonRows; track card) {
+                @for (card of skeletonRows; track $index) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card [loading]="true" [alumno]="skeletonAlumno" />
                   </div>
@@ -186,9 +225,11 @@ interface SemaforoInfo {
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
               <p-table
-                [value]="filteredAlumnos()"
+                [value]="sortedAlumnos()"
                 [rows]="10"
                 [paginator]="filteredAlumnos().length > 10"
+                [first]="tableFirst()"
+                (onPage)="tableFirst.set($event.first)"
                 [scrollable]="true"
                 scrollHeight="flex"
                 styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
@@ -197,13 +238,22 @@ interface SemaforoInfo {
               >
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
-                    <th class="pl-6 py-4">Alumno</th>
-                    <th>Nº Mat.</th>
-                    <th>Promoción</th>
-                    <th>Módulos</th>
-                    <th>Asistencia</th>
-                    <th>Estado</th>
-                    <th>Saldo</th>
+                    <!-- spec 0023-m: cada título ordena la lista completa (no solo la página). -->
+                    @for (col of sortColumns; track col.value; let first = $first) {
+                      <th
+                        [class.pl-6]="first"
+                        [class.py-4]="first"
+                        [attr.aria-sort]="ariaSort(col.value)"
+                      >
+                        <app-sort-header
+                          llmSubject="professional-students"
+                          [label]="col.label"
+                          [field]="col.value"
+                          [sort]="sort()"
+                          (sortClick)="toggleSort(col.value)"
+                        />
+                      </th>
+                    }
                     <th class="pr-6 text-right">Acciones</th>
                   </tr>
                 </ng-template>
@@ -331,7 +381,7 @@ interface SemaforoInfo {
             <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
-                @for (alumno of filteredAlumnos(); track alumno.id) {
+                @for (alumno of sortedAlumnos(); track alumno.id) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card
                       [alumno]="alumno"
@@ -391,6 +441,8 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly isLoading = input(false);
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/admin');
+  /** Hay una exportación en curso (signal isExporting del Facade). */
+  readonly isExporting = input(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
@@ -398,6 +450,50 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly archivarRequested = output<string>();
   readonly restaurarRequested = output<string>();
   readonly trashViewToggled = output<void>();
+  /** El Smart genera el archivo con las filas recibidas (spec 0023-m). */
+  readonly exportRequested = output<AlumnosProfesionalExportRequest>();
+
+  // ── Orden por columna (spec 0023-m) ─────────────────────────────────────
+  /** Orden elegido; null = orden por defecto (como llega del Facade). */
+  readonly sort = signal<AlumnoProfesionalListSort | null>(null);
+  protected readonly sortColumns = ALUMNO_PROFESIONAL_SORT_OPTIONS;
+  /** Índice de la primera fila de la página visible de la tabla. */
+  protected readonly tableFirst = signal(0);
+
+  /** La lista filtrada, en el orden elegido. Alimenta la tabla, las tarjetas y la exportación. */
+  sortedAlumnos(): AlumnoProfesionalTableRow[] {
+    return sortAlumnosProfesional(this.filteredAlumnos(), this.sort());
+  }
+
+  /** Clic en el título de una columna: ascendente → descendente → orden por defecto. */
+  toggleSort(field: AlumnoProfesionalSortField): void {
+    this.applySort(nextSort(this.sort(), field));
+  }
+
+  /** Control "Ordenar por" de la vista de tarjetas. Limpiarlo vuelve al orden por defecto. */
+  setSortField(field: AlumnoProfesionalSortField | null): void {
+    if (field === this.sort()?.field) return;
+    this.applySort(field ? { field, direction: 'asc' } : null);
+  }
+
+  toggleSortDir(): void {
+    this.applySort(toggleSortDirection(this.sort()));
+  }
+
+  protected ariaSort(field: AlumnoProfesionalSortField): 'ascending' | 'descending' | 'none' {
+    return ariaSortOf(this.sort(), field);
+  }
+
+  /** Un orden nuevo se mira desde la primera página. */
+  private applySort(sort: AlumnoProfesionalListSort | null): void {
+    this.sort.set(sort);
+    this.tableFirst.set(0);
+  }
+
+  /** Exporta lo que se ve: la lista filtrada (o la Papelera), completa y en el orden elegido. */
+  requestExport(format: ExportFormat): void {
+    this.exportRequested.emit({ format, rows: this.sortedAlumnos() });
+  }
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -556,7 +652,9 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     }
   }
 
+  /** Vuelve filtros y buscador a su valor inicial. El orden elegido se conserva (spec 0023-m). */
   resetFilters(): void {
+    this.tableFirst.set(0);
     this.searchTerm = '';
     this.selectedClase = '';
     this.selectedEstado = '';

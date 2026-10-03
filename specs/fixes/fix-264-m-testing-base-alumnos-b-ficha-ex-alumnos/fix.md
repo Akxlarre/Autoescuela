@@ -123,10 +123,10 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | H04 | ✅ | Auto. "Cargar más" suma de a 6; al filtrar vuelve a 6 | |
 | J07 | ❌ | Por API: la secretaria de la sede 1 recibe HTTP 200 + PDF de la matrícula 2674 (sede 2) | → `ASG-i-042` |
 | K02 | ✅ | Auto. La exportación a Excel responde 200 | |
-| K04 | ❌ | Auto. Pantalla 64 filas, Excel 72 (los 8 de más son "Finalizado") | B1 |
-| K06 | ⏸ | Sin alumnos "Docs Pendientes" en el seed; la función no conoce ese estado (código) | B1 |
-| K07 | ❌ | La columna Expediente del Excel dice "Pendiente" en las 72 filas; la pantalla muestra 63 "Parcial 1/2" | B1 |
-| K09 | ❌ | Auto. Desde la Papelera (1 archivado) el Excel trae 72 activos | B1 |
+| K04 | ❌ → ✅ | Auto. Pantalla 64 filas, Excel 72 (los 8 de más son "Finalizado"). **Corregido el 2026-10-02**: el Excel trae las filas de la pantalla | B1 → `fix-281-m` |
+| K06 | ✅ | La exportación ya no calcula el estado: copia el de la pantalla, incluido "Docs Pendientes" (test unitario) | B1 → `fix-281-m` |
+| K07 | ❌ → ✅ | La columna Expediente del Excel decía "Pendiente" en las 72 filas. **Corregido el 2026-10-02**: sale igual que la pantalla ("Parcial · 1/2") | B1 → `fix-281-m` |
+| K09 | ❌ → ✅ | Auto. Desde la Papelera el Excel traía los activos. **Corregido el 2026-10-02** | B1 → `fix-281-m` |
 | K11 | ❌ | Por API: la secretaria de la sede 1 obtiene 133 filas pidiendo la sede 2 y 205 con `branch_id: null` | → `ASG-i-042` |
 | L01 | ✅ | Auto. Modal simple para alumno sin historial | |
 | L02 | ✅ | Auto. Modal "con historial" sobre un alumno del seed | |
@@ -257,7 +257,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 
 | # | Descripción | Gravedad | Track |
 |---|---|---|---|
-| B1 | **La exportación de la lista no coincide con la pantalla** (`export-students`): incluye "Finalizado" y solo-Profesional, no conoce "Docs Pendientes", calcula el expediente con 4 documentos y el nombre viejo `foto_carnet` (siempre "Pendiente"), busca sin ignorar tildes ni tokenizar, y desde la Papelera exporta los activos. Toca el mismo archivo que `0009-i` (Ignacio): coordinar | 🟠 Media | por crear |
+| B1 | **La exportación de la lista no coincide con la pantalla** (`export-students`): incluye "Finalizado" y solo-Profesional, no conoce "Docs Pendientes", calcula el expediente con 4 documentos y el nombre viejo `foto_carnet` (siempre "Pendiente"), busca sin ignorar tildes ni tokenizar, y desde la Papelera exporta los activos. Toca el mismo archivo que `0009-i` (Ignacio), que ya está cerrada (2026-10-01, `d8116bcb`): se puede tomar sin coordinar | 🟠 Media | ✅ `fix-281-m` (2026-10-02): el archivo se arma con las filas de la pantalla; Excel en el navegador y PDF con `export-table-pdf`. También resuelve la fecha `aaaa-mm-dd` del Excel/PDF que quedaba de B14 |
 | B2 | **Buscar por RUT solo funciona con el formato guardado.** Sin puntos, sin guion o parcial no encuentra. Agravante: los 200 alumnos del seed están guardados sin puntos y los reales con puntos | 🟠 Media | ✅ `fix-267-m` |
 | B3 | **Filtro Curso con opciones fijas**: no se puede filtrar "Refuerzo Clase B" | 🟡 Baja | ✅ `hotfix-114-m` |
 | B4 | **La Papelera queda "pegada"** al salir de la pantalla y volver | 🟡 Baja | ✅ `hotfix-112-m` |

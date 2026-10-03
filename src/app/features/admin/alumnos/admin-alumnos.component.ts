@@ -135,7 +135,7 @@ export class AdminAlumnosComponent implements OnInit {
   }
 
   protected onExport(req: AlumnoExportRequest): void {
-    void this.facade.exportAlumnos(req);
+    void this.facade.exportAlumnos(req.format, req.rows, req.showSede);
   }
 
   protected onExportarFicha(enrollmentId: number): void {

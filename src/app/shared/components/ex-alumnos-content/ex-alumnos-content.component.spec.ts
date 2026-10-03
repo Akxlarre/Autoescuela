@@ -149,6 +149,51 @@ describe('ExAlumnosContentComponent', () => {
     });
   });
 
+  describe('orden por columna (spec 0023-m)', () => {
+    const rows = () => [
+      makeEgresado({ id: 1, nombre: 'Soto Andy' }),
+      makeEgresado({ id: 2, nombre: 'Ávila Camila' }),
+      makeEgresado({ id: 3, nombre: 'Reyes Pedro' }),
+    ];
+    const ids = () => (component as any).sortedEgresados().map((e: EgresadoTableRow) => e.id);
+
+    it('clic en el título cicla ascendente → descendente → orden por defecto', () => {
+      setup(rows());
+      (component as any).toggleSort('alumno');
+      expect(ids()).toEqual([2, 3, 1]);
+      (component as any).toggleSort('alumno');
+      expect(ids()).toEqual([1, 3, 2]);
+      (component as any).toggleSort('alumno');
+      expect(ids()).toEqual([1, 2, 3]);
+      expect((component as any).sort()).toBeNull();
+    });
+
+    it('cambiar el orden vuelve la tabla a la primera página', () => {
+      setup(rows());
+      (component as any).tableFirst.set(10);
+      (component as any).toggleSort('rut');
+      expect((component as any).tableFirst()).toBe(0);
+    });
+
+    it('la exportación sale en el orden de la pantalla', () => {
+      setup(rows());
+      const emitted: { rows: EgresadoTableRow[] }[] = [];
+      component.exportRequested.subscribe((req) => emitted.push(req));
+      (component as any).toggleSort('alumno');
+
+      (component as any).requestExport('excel');
+
+      expect(emitted[0].rows.map((r) => r.id)).toEqual([2, 3, 1]);
+    });
+
+    it('limpiar filtros conserva el orden elegido', () => {
+      setup(rows());
+      (component as any).toggleSort('alumno');
+      (component as any).clearFilters();
+      expect((component as any).sort()).toEqual({ field: 'alumno', direction: 'asc' });
+    });
+  });
+
   describe('clearFilters', () => {
     it('resetea búsqueda, período y paginación mobile a su estado inicial', () => {
       setup(Array.from({ length: 10 }, (_, i) => makeEgresado({ id: i })));

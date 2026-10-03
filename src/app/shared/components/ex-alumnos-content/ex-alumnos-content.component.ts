@@ -3,6 +3,15 @@ import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { SortHeaderComponent } from '@shared/components/sort-header/sort-header.component';
+import { SortControlComponent } from '@shared/components/sort-control/sort-control.component';
+import {
+  egresadoSortOptions,
+  sortEgresados,
+  type EgresadoListSort,
+  type EgresadoSortField,
+} from '@core/utils/egresados-sort.utils';
+import { ariaSortOf, nextSort, toggleSortDirection } from '@core/utils/table-sort.utils';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -79,6 +88,8 @@ export interface EgresadosExportRequest {
     BentoGridLayoutDirective,
     CardHoverDirective,
     ClearFiltersButtonComponent,
+    SortHeaderComponent,
+    SortControlComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
@@ -135,8 +146,17 @@ export interface EgresadosExportRequest {
             [active]="hasActiveFilters()"
             (clear)="clearFilters()"
           />
-          <!-- spec 0021-m: exporta las filas que la tabla muestra con el período y la búsqueda
-               actuales (todas las páginas), no vuelve a consultar. -->
+          <!-- spec 0023-m: "Ordenar por" solo en la vista de tarjetas, que no tiene títulos. -->
+          <app-sort-control
+            class="show-on-squeeze"
+            llmSubject="graduates"
+            [options]="sortColumns"
+            [sort]="sort()"
+            (fieldChange)="setSortField($any($event))"
+            (directionToggle)="toggleSortDir()"
+          />
+          <!-- spec 0021-m: exporta las filas que la tabla muestra con el período, la búsqueda
+               y el orden actuales (todas las páginas), no vuelve a consultar. -->
           <app-export-menu
             class="ml-auto"
             llmSubject="graduates"
@@ -192,9 +212,11 @@ export interface EgresadosExportRequest {
             <!-- VISTA 1: TABLA (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
               <p-table
-                [value]="filteredEgresados()"
+                [value]="sortedEgresados()"
                 [rows]="10"
                 [paginator]="true"
+                [first]="tableFirst()"
+                (onPage)="tableFirst.set($event.first)"
                 [scrollable]="true"
                 scrollHeight="flex"
                 responsiveLayout="scroll"
@@ -204,12 +226,22 @@ export interface EgresadosExportRequest {
               >
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
-                    <th class="pl-6 py-4">Alumno</th>
-                    <th>RUT</th>
-                    <th>Nº Exp.</th>
-                    <th>Licencia</th>
-                    <th>Año / Sede</th>
-                    <th>Estado cuenta</th>
+                    <!-- spec 0023-m: cada título ordena la lista completa (no solo la página). -->
+                    @for (col of sortColumns; track col.value; let first = $first) {
+                      <th
+                        [class.pl-6]="first"
+                        [class.py-4]="first"
+                        [attr.aria-sort]="ariaSort(col.value)"
+                      >
+                        <app-sort-header
+                          llmSubject="graduates"
+                          [label]="col.label"
+                          [field]="col.value"
+                          [sort]="sort()"
+                          (sortClick)="toggleSort(col.value)"
+                        />
+                      </th>
+                    }
                     <th class="pr-6 text-right">Acciones</th>
                   </tr>
                 </ng-template>
@@ -485,14 +517,50 @@ export class ExAlumnosContentComponent {
     );
   });
 
+  // ── Orden por columna (spec 0023-m) ──────────────────────────────────────────
+  /** Orden elegido; null = orden por defecto (como llega del Facade). */
+  readonly sort = signal<EgresadoListSort | null>(null);
+  protected readonly sortColumns = egresadoSortOptions('Nº Exp.');
+  /** Índice de la primera fila de la página visible de la tabla. */
+  protected readonly tableFirst = signal(0);
+
+  /** La lista filtrada, en el orden elegido. Alimenta la tabla, las tarjetas y la exportación. */
+  readonly sortedEgresados = computed(() => sortEgresados(this.filteredEgresados(), this.sort()));
+
+  /** Clic en el título de una columna: ascendente → descendente → orden por defecto. */
+  toggleSort(field: EgresadoSortField): void {
+    this.applySort(nextSort(this.sort(), field));
+  }
+
+  /** Control "Ordenar por" de la vista de tarjetas. Limpiarlo vuelve al orden por defecto. */
+  setSortField(field: EgresadoSortField | null): void {
+    if (field === this.sort()?.field) return;
+    this.applySort(field ? { field, direction: 'asc' } : null);
+  }
+
+  toggleSortDir(): void {
+    this.applySort(toggleSortDirection(this.sort()));
+  }
+
+  protected ariaSort(field: EgresadoSortField): 'ascending' | 'descending' | 'none' {
+    return ariaSortOf(this.sort(), field);
+  }
+
+  /** Un orden nuevo se mira desde el principio: primera página y primeras tarjetas. */
+  private applySort(sort: EgresadoListSort | null): void {
+    this.sort.set(sort);
+    this.tableFirst.set(0);
+    this.mobileShown.set(ExAlumnosContentComponent.CARDS_STEP);
+  }
+
   // ── Densidad incremental de la vista tarjetas (mismo patrón que app-alumnos-list-content) ──
   private static readonly CARDS_STEP = 6;
   protected readonly mobileShown = signal(ExAlumnosContentComponent.CARDS_STEP);
   protected readonly visibleCards = computed(() =>
-    sliceByBudget(this.filteredEgresados(), this.mobileShown()),
+    sliceByBudget(this.sortedEgresados(), this.mobileShown()),
   );
   protected readonly remainingCards = computed(() =>
-    Math.max(0, this.filteredEgresados().length - this.mobileShown()),
+    Math.max(0, this.sortedEgresados().length - this.mobileShown()),
   );
 
   protected loadMoreCards(): void {
@@ -516,12 +584,14 @@ export class ExAlumnosContentComponent {
     this.reEnrollRequested.emit(egresado);
   }
 
-  /** Exporta lo que se ve: la lista ya filtrada por período y búsqueda, completa y en su orden. */
+  /** Exporta lo que se ve: la lista filtrada por período y búsqueda, completa y en el orden elegido. */
   protected requestExport(format: ExportFormat): void {
-    this.exportRequested.emit({ format, rows: this.filteredEgresados() });
+    this.exportRequested.emit({ format, rows: this.sortedEgresados() });
   }
 
+  /** Vuelve búsqueda y período a su valor inicial. El orden elegido se conserva (spec 0023-m). */
   protected clearFilters(): void {
+    this.tableFirst.set(0);
     this.searchTerm.set('');
     // Vuelve al DEFAULT, no a "todo el historial": limpiar filtros devuelve la vista a su
     // estado inicial acotado, no la deja sin techo (fix-147-b).

@@ -7,6 +7,14 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 import { MODULE_COUNT } from '@core/utils/professional-modules';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
+import { downloadExcel } from '@core/utils/excel.utils';
+import { downloadBlob } from '@core/utils/file-download.utils';
+import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
+import {
+  ALUMNOS_PROFESIONAL_PDF_COLUMN_WEIGHTS,
+  buildAlumnosProfesionalExcelTable,
+  buildAlumnosProfesionalPdfTable,
+} from '@core/utils/alumnos-profesional-export.utils';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
 import type {
   AlumnoProfesionalTableRow,
@@ -58,6 +66,7 @@ export class AdminAlumnosProfesionalFacade {
   private readonly _error = signal<string | null>(null);
   private readonly _trashView = signal(false);
   private readonly _isArchiving = signal(false);
+  private readonly _isExporting = signal(false);
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
@@ -69,6 +78,7 @@ export class AdminAlumnosProfesionalFacade {
   readonly error = this._error.asReadonly();
   readonly trashView = this._trashView.asReadonly();
   readonly isArchiving = this._isArchiving.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
 
   readonly totalAlumnos = computed(() => this._alumnos().length);
   readonly activos = computed(() => this._alumnos().filter((a) => a.estado === 'Activo').length);
@@ -232,6 +242,43 @@ export class AdminAlumnosProfesionalFacade {
       throw new Error('restaurar_failed');
     } finally {
       this._isArchiving.set(false);
+    }
+  }
+
+  /**
+   * Exporta la Base de Alumnos Profesional (spec 0023-m). Recibe las filas que la pantalla ya
+   * filtró y ordenó (lista normal o Papelera): el archivo trae exactamente lo que se ve, sin
+   * volver a consultar. Mismo esquema que `AdminAlumnosFacade.exportAlumnos` (Clase B).
+   */
+  async exportAlumnos(format: 'excel' | 'pdf', rows: AlumnoProfesionalTableRow[]): Promise<void> {
+    if (this._isExporting()) return;
+    this._isExporting.set(true);
+    try {
+      const filename = `alumnos-profesional_${todayIso()}`;
+      if (format === 'excel') {
+        const table = buildAlumnosProfesionalExcelTable(rows);
+        downloadExcel('Alumnos Profesional', table.headers, table.rows, filename);
+        return;
+      }
+
+      const table = buildAlumnosProfesionalPdfTable(rows);
+      const { data, error } = await this.supabase.client.functions.invoke('export-table-pdf', {
+        body: {
+          title: 'Base de Alumnos Profesional',
+          subtitle: `Generado: ${formatDayMonthYear(todayIso())}`,
+          headers: table.headers,
+          rows: table.rows,
+          columnWeights: ALUMNOS_PROFESIONAL_PDF_COLUMN_WEIGHTS,
+          footer: `Total: ${rows.length} alumno${rows.length === 1 ? '' : 's'}`,
+        },
+      });
+      if (error) throw error;
+      const bytes = data instanceof Blob ? await data.arrayBuffer() : data;
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${filename}.pdf`);
+    } catch {
+      this.toast.error('No se pudo exportar la lista. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
     }
   }
 
