@@ -1,7 +1,8 @@
 # Hotfix: Eliminar la Edge Function export-students, que quedó sin uso
 > id: hotfix-130-m-eliminar-edge-function-export-students
 > refs: ASG-i-024
-> status: in_progress
+> status: done
+> closed: 2026-10-02
 > created: 2026-10-02
 
 ## Problema

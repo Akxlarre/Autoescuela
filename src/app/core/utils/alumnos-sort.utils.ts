@@ -4,6 +4,15 @@ import type {
   AlumnoTableRow,
 } from '@core/models/ui/alumno-table-row.model';
 import { getExpedienteStatus } from './alumno-status.utils';
+import {
+  dateSortKey,
+  nextSort,
+  rutSortKey,
+  sortRows,
+  textSortKey,
+  toggleSortDirection,
+  type SortKey,
+} from './table-sort.utils';
 
 /** Columnas ordenables de la Base de Alumnos, con la etiqueta que muestra la tabla. */
 export const ALUMNO_SORT_OPTIONS: readonly { label: string; value: AlumnoSortField }[] = [
@@ -17,56 +26,27 @@ export const ALUMNO_SORT_OPTIONS: readonly { label: string; value: AlumnoSortFie
   { label: 'Expediente', value: 'expediente' },
 ];
 
-/** Valor comparable de una fila para una columna. `null` = la fila no tiene ese dato. */
-type SortKey = string | number | null;
-
 const EXPEDIENTE_RANK = { Pendiente: 0, Parcial: 1, Completo: 2 } as const;
-
-/** Texto de la celda, o `null` si está vacío o es el guion que la lista usa como "sin dato". */
-function textKey(value: string | undefined | null): string | null {
-  const text = value?.trim() ?? '';
-  return text === '' || text === '—' ? null : text;
-}
-
-/** Cuerpo numérico del RUT (lo que va antes del guion), sin puntos. */
-function rutKey(rut: string): number | null {
-  const digits = rut.split('-')[0].replace(/\D/g, '');
-  return digits === '' ? null : Number(digits);
-}
-
-function dateKey(iso: string | undefined | null): number | null {
-  if (!iso) return null;
-  const time = Date.parse(iso);
-  return Number.isNaN(time) ? null : time;
-}
 
 function sortKey(row: AlumnoTableRow, field: AlumnoSortField): SortKey {
   switch (field) {
     case 'alumno':
-      return textKey(`${row.apellido} ${row.nombre}`);
+      return textSortKey(`${row.apellido} ${row.nombre}`);
     case 'rut':
-      return rutKey(row.rut);
+      return rutSortKey(row.rut);
     case 'nroExpediente':
-      return textKey(row.nroExpedientes[0]);
+      return textSortKey(row.nroExpedientes[0]);
     case 'curso':
-      return textKey(row.cursos[0]?.nombre);
+      return textSortKey(row.cursos[0]?.nombre);
     case 'sede':
-      return textKey(row.sucursal);
+      return textSortKey(row.sucursal);
     case 'fechaIngreso':
-      return dateKey(row.fechaIngresoIso);
+      return dateSortKey(row.fechaIngresoIso);
     case 'estado':
-      return textKey(row.status);
+      return textSortKey(row.status);
     case 'expediente':
       return EXPEDIENTE_RANK[getExpedienteStatus(row.expediente).label];
   }
-}
-
-/** Sin tildes ni mayúsculas, y con los números comparados como números ("20" antes que "100"). */
-const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
-
-function compareKeys(a: SortKey, b: SortKey): number {
-  if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return collator.compare(String(a), String(b));
 }
 
 /**
@@ -75,21 +55,11 @@ function compareKeys(a: SortKey, b: SortKey): number {
  * - `sort === null` → la misma lista, sin tocar (orden por defecto: más recientes primero).
  * - Las filas sin dato en la columna van al final en ambos sentidos.
  * - Los empates conservan el orden de llegada.
+ *
+ * La mecánica de orden es la compartida de `table-sort.utils` (spec 0023-m).
  */
 export function sortAlumnos(rows: AlumnoTableRow[], sort: AlumnoListSort | null): AlumnoTableRow[] {
-  if (!sort) return rows;
-  const factor = sort.direction === 'asc' ? 1 : -1;
-
-  return rows
-    .map((row) => ({ row, key: sortKey(row, sort.field) }))
-    .sort((a, b) => {
-      if (a.key === null || b.key === null) {
-        if (a.key === b.key) return 0;
-        return a.key === null ? 1 : -1;
-      }
-      return factor * compareKeys(a.key, b.key);
-    })
-    .map((entry) => entry.row);
+  return sortRows(rows, sort, sortKey);
 }
 
 /**
@@ -100,12 +70,10 @@ export function nextAlumnoSort(
   current: AlumnoListSort | null,
   field: AlumnoSortField,
 ): AlumnoListSort | null {
-  if (current?.field !== field) return { field, direction: 'asc' };
-  return current.direction === 'asc' ? { field, direction: 'desc' } : null;
+  return nextSort(current, field);
 }
 
 /** Invierte el sentido del orden vigente. Sin orden elegido no hay nada que invertir. */
 export function toggleAlumnoSortDirection(current: AlumnoListSort | null): AlumnoListSort | null {
-  if (!current) return null;
-  return { field: current.field, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+  return toggleSortDirection(current);
 }

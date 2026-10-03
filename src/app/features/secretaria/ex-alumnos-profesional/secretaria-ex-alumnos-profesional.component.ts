@@ -20,6 +20,8 @@ import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
       backRoute="/app/secretaria/profesional/alumnos"
       basePath="/app/secretaria"
       (reEnroll)="reEnroll($event)"
+      [isExporting]="facade.isExporting()"
+      (exportRequested)="facade.exportEgresados($event.format, $event.rows, 'professional')"
     />
   `,
 })

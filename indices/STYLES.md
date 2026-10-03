@@ -353,7 +353,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 310 | `src/styles/tokens/_variables.scss` |
+| `.card` | 309 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 186 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 185 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
