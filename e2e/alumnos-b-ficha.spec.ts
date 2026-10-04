@@ -4,6 +4,7 @@
  *
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
+import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
@@ -2868,5 +2869,50 @@ test.describe('cuarta pasada: PDF reales (fix-264-m, 2026-10-04)', () => {
     await page.locator('[data-llm-action="generar-certificado"]').click();
     await expect(page.getByText(motivo)).toBeVisible();
     await expect(visor(page)).toHaveCount(0);
+  });
+});
+
+test.describe('cierre de la asignación (fix-264-m, 2026-10-04)', () => {
+  test('M13: un alumno con la cuenta ya activada no ve el aviso de invitación', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CuentaActiva', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    const page = await pageAs('admin');
+    const invitar = page.locator('[data-llm-action="enviar-invitacion-alumno"]');
+    const abrirEditar = async (): Promise<void> => {
+      await openFicha(page, 'admin', alumno.studentId);
+      await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+      await expect(page.locator('#edit-phone')).toBeVisible();
+    };
+    /** Deja al alumno como si tuviera cuenta: con identificador de Auth y, o no, primer ingreso. */
+    const dejarCuenta = async (firstLogin: boolean): Promise<void> => {
+      const { data, error } = await sb
+        .from('users')
+        .update({ supabase_uid: randomUUID(), first_login: firstLogin })
+        .eq('id', alumno.userId)
+        .select('id');
+      expect(error, 'marcar la cuenta').toBeNull();
+      expect(data, 'fila actualizada').toHaveLength(1);
+    };
+
+    // Sin cuenta (como nace un alumno): el aviso de invitación está.
+    await abrirEditar();
+    await expect(invitar).toBeVisible();
+
+    // Con cuenta creada pero sin haber entrado nunca: sigue estando.
+    await dejarCuenta(true);
+    await abrirEditar();
+    await expect(invitar).toBeVisible();
+
+    // M13: con la cuenta ya activada (entró y cambió su clave), el aviso no aparece.
+    await dejarCuenta(false);
+    await abrirEditar();
+    await expect(invitar).toHaveCount(0);
+    await expect(page.getByText(/invitaci[oó]n/i)).toHaveCount(0);
   });
 });

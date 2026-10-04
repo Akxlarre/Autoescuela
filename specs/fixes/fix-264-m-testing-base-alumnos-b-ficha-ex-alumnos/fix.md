@@ -447,8 +447,9 @@ registro de emisión y los avisos. El carnet y el certificado generados se revis
 | L05 | ✅ | Auto. "Generar Certificado" abre el visor y deja la ruta en la matrícula. Revisado el PDF: nombre, RUT, fechas del curso y datos de la sede | |
 | L06 | ❌ → ✅ | Auto. Ante un rechazo de la función se veía "No se pudo generar el certificado" en vez del motivo. **Corregido el 2026-10-04** | B44 → `fix-305-m` |
 | L07 | ❌ → ✅ | Auto. Generar el certificado desde la ficha no avisaba al alumno (desde Certificaciones B sí). **Corregido el 2026-10-04** | B45 → `fix-306-m` |
+| M13 | ✅ | Auto (bloque "cierre de la asignación"). El aviso de invitación de "Editar Perfil" se ve mientras el alumno no tiene cuenta o no ha entrado nunca, y desaparece cuando la cuenta ya está activada. La cuenta se simuló en la base (identificador de Auth y primer ingreso), sin crear un usuario real | |
 
-**Aún sin ejecutar de `024b`:** M10–M13 (invitación y cuentas Auth reales) ·
+**Aún sin ejecutar de `024b`:** M10–M12 (invitación y cuentas Auth reales) ·
 N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
 
 **Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
