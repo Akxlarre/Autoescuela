@@ -348,6 +348,8 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
   }
 
   protected async onSubmit(): Promise<void> {
+    // hotfix-137-m: un segundo clic llega antes de que la vista deshabilite el botón.
+    if (this.isSaving()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
