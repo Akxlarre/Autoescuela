@@ -8,7 +8,12 @@ import { readFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
-import { addMissedClass, createE2eAlumno, markCertificateSent } from './support/alumnos-seed';
+import {
+  addCompletedPractices,
+  addMissedClass,
+  createE2eAlumno,
+  markCertificateSent,
+} from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
 
@@ -1578,5 +1583,130 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(egresadoRow(page, egresadoB.paternalLastName)).toHaveCount(1, CARGA);
     await page.locator(SEARCH_EGRESADOS).fill(egresadoA.paternalLastName);
     await expect(egresadoRow(page, egresadoA.paternalLastName)).toHaveCount(0);
+  });
+});
+
+test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
+  test('B06 · B07 · G02 · I03 · K02: ficha de un alumno sin teléfono, sin clases, sin pagos y sin contrato', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'FichaVacia', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    const { error } = await sb.from('users').update({ phone: null }).eq('id', alumno.userId);
+    expect(error, 'dejar al alumno sin teléfono').toBeNull();
+
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+
+    // B07: teléfono vacío → "—".
+    await expect(page.locator('[data-llm-info="phone"]')).toContainText('—');
+
+    // B06: un correo largo no ensancha su tarjeta (los de prueba miden unos 45 caracteres).
+    const email = page.locator('[data-llm-info="email"]');
+    await expect(email).toContainText(alumno.email);
+    const { correo, tarjeta } = await email.evaluate((el) => {
+      const card = el.closest('.bento-card, .card') as HTMLElement;
+      return {
+        correo: el.getBoundingClientRect().right,
+        tarjeta: card.getBoundingClientRect().right,
+      };
+    });
+    expect(correo, 'el correo no se sale de su tarjeta').toBeLessThanOrEqual(tarjeta + 1);
+
+    // G02: sin clases pendientes de reagendar no hay botón "Reagendar Clases".
+    await expect(page.getByRole('button', { name: /Reagendar Clases/ })).toHaveCount(0);
+    // I03: sin pagos.
+    await expect(page.getByText('No hay pagos registrados')).toBeVisible();
+    // K02: matrícula presencial sin contrato → no hay botón de contrato.
+    await expect(page.getByRole('button', { name: /Contrato/ })).toHaveCount(0);
+  });
+
+  test('D03 · E02 · E03: una clase completada muestra avance, kilometraje, observaciones y firmas', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'UnaClase', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addCompletedPractices(alumno.enrollmentIds[0], 1, cleanup);
+    const sb = await getAdminClient();
+    const { error } = await sb
+      .from('class_b_sessions')
+      .update({
+        km_start: 125430,
+        km_end: 125462,
+        performance_notes: 'Buen dominio del embrague',
+        student_signature: true,
+        instructor_signature: false,
+      })
+      .eq('enrollment_id', alumno.enrollmentIds[0]);
+    expect(error, 'registrar kilometraje, observación y firma').toBeNull();
+
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+
+    // D03: con 1 de 12 (8 %) la barra no lleva texto dentro y no se desborda.
+    const barra = page.locator('.progress-track').first();
+    await expect(barra).toHaveAttribute('aria-valuenow', '8');
+    await expect(barra.locator('.progress-label-inline')).toHaveCount(0);
+    expect(
+      await barra.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+      'la barra no se desborda',
+    ).toBe(true);
+
+    await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+    const clase = page
+      .locator('app-admin-ficha-tecnica .ficha-tarjetas > div')
+      .filter({ has: page.getByText('SESIÓN #1', { exact: true }) });
+    // E02: lo que registró el instructor.
+    await expect(clase).toContainText('125.430 km');
+    await expect(clase).toContainText('125.462 km');
+    await expect(clase).toContainText('Buen dominio del embrague');
+    // E03: punto de color solo donde hay firma, con su texto al pasar el mouse.
+    await expect(clase.locator('.firma-alumno')).toHaveAttribute('title', 'Alumno firmó');
+    await expect(clase.locator('.firma-instructor')).toHaveCount(0);
+    await expect(clase.locator('.firma-pendiente')).toHaveAttribute(
+      'title',
+      'Firma instructor pendiente',
+    );
+  });
+
+  test('U07: un egresado del 31 de diciembre de noche queda en el año correcto', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const egresado = await createE2eAlumno(
+      { label: 'FinDeAno', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    // 31-12-2025 a las 23:30 en Chile (UTC-3 en verano) = 01-01-2026 02:30 UTC.
+    const { error } = await sb
+      .from('enrollments')
+      .update({ completed_at: '2026-01-01T02:30:00Z' })
+      .eq('id', egresado.enrollmentIds[0]);
+    expect(error, 'fijar la fecha de egreso').toBeNull();
+
+    const page = await pageAs('secretariaA');
+    await openExAlumnos(page, 'secretaria');
+    await page.locator(SEARCH_EGRESADOS).fill(egresado.paternalLastName);
+    const fila = egresadoRow(page, egresado.paternalLastName);
+    await expect(fila).toHaveCount(1, CARGA);
+    await expect(fila.locator('td').nth(4)).toContainText('2025');
+
+    // Sin búsqueda, el período "2025" lo incluye y "2026" no.
+    await page.locator(SEARCH_EGRESADOS).fill('');
+    await page.getByRole('combobox', { name: 'Período de egreso' }).click();
+    await page.getByRole('option', { name: '2025', exact: true }).click();
+    await page.locator(SEARCH_EGRESADOS).fill('');
+    await expect(
+      page.locator('p-table tbody').getByText(egresado.paternalLastName),
+      'aparece al elegir el año 2025',
+    ).toHaveCount(1);
   });
 });
