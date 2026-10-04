@@ -41,6 +41,8 @@ Ajustes sobre el texto de la ASG:
     con rol de staff. `0009-i` dejó fuera, por decisión, validar la sede en el servidor.
   - Secretaria edita a cualquier usuario (`024b` S1) → `ASG-i-043`.
   - RLS por rol sin sede (`024a` P08; `024b` S03, S04) → `ASG-i-045`.
+    Estado al 2026-10-04: `ASG-i-043` (`fix-179-b`) y `ASG-i-045` (`0047-b`) están completadas.
+    Siguen pendientes `ASG-i-054` (fechas en UTC) y `ASG-i-056` (tiempo real).
   - Canales Realtime mudos (`024a` S5; `024b` S3) → `ASG-i-056`.
   - Fechas en UTC (`024a` S9; `024b` S17) → `ASG-i-054`.
 - **Sospechas ya corregidas, se ejecutan como regresión:** `024b` S4 y S5 (`fix-263-m`) y la parte
@@ -279,7 +281,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | M01 | ✅ | Auto. Formulario precargado | |
 | M02 | ❌ → ✅ | Auto. Email de otro usuario: "Ha ocurrido un error inesperado. Por favor, intenta de nuevo." El email no cambia. **Corregido el 2026-10-01** | B17 → `fix-268-m` |
 | M03 | ✅ | Auto. Nombre y teléfono se guardan y la ficha los refleja | |
-| M04 | ❌ | Por API: la secretaria de la sede 1 cambió el nombre de un alumno `E2E-` de la sede 2. **No se probó contra un admin real** | → `ASG-i-043` |
+| M04 | ❌ → ✅ | Auto. El 2026-10-01 la secretaria de la sede 1 cambió por API el nombre de un alumno `E2E-` de la sede 2. **Corregido el mismo día en `fix-179-b`** (`ASG-i-043`, completada): la función valida a quién se edita. El test M04 pasa desde entonces. No se probó acá contra un admin o instructor reales; `fix-179-b` lo cubre en su propio alcance | `ASG-i-043` → `fix-179-b` |
 | M06 | ✅ | Auto. Nombre vacío deshabilita "Guardar Cambios" | |
 | M07 | ✅ | Auto. "Ingresa un email válido" | |
 | O01 | ✅ | Auto. Tras marcar, la ficha dice "Egresado", el botón desaparece, sale de la Base y entra a Ex-Alumnos (regresión de `fix-263-m`) | |
@@ -490,7 +492,7 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
 | 024a | S11 🟡 | **Confirmada** | "Con deuda" usa solo la matrícula B más reciente | B8 |
 | 024a | S12 🟡 | **Confirmada** | Opciones fijas; falta "Refuerzo Clase B" | B3 |
 
-| 024b | S1 🔴 | **Confirmada** (parcial) | Secretaria sede 1 edita por `update-student-profile` a un alumno `E2E-` de la sede 2. No se probó contra admin/instructor reales | `ASG-i-043` |
+| 024b | S1 🔴 | **Corregida** el 2026-10-01 | Confirmada ese día: la secretaria de la sede 1 editaba por `update-student-profile` a un alumno `E2E-` de la sede 2. La cerró `fix-179-b`; el test M04 pasa | `ASG-i-043` (completada) → `fix-179-b` |
 | 024b | S2 🔴 | **Corregida** en `0009-i` (rol); la sede queda **aceptada por decisión** | La sospecha decía que la función no tenía ningún control de acceso. Desde `0009-i` exige un usuario real con rol de admin o secretaria (401 sin sesión, comprobado el 2026-10-04; 403 para alumno e instructor, comprobado en `0009-i`). El 2026-10-04, por API, la secretaria de la sede A generó el carnet de una matrícula `E2E-` de la sede B (archivo borrado): la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada) |
 | 024b | S3 🟠 | Confirmada en código | 5 de las 7 tablas del canal no están en `supabase_realtime` | `ASG-i-056` |
 | 024b | S4 🟠 | **Mitad corregida, mitad vigente** | `fix-263-m` sacó el borrador del selector; la matrícula principal sigue siendo `sorted[0]` sin filtrar | B15 |
@@ -538,7 +540,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | ✅ `fix-268-m` |
-| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043`. **El 2026-10-01 (noche) el test M04 pasó a verde**: la función ya rechaza a la secretaria de la sede A editando a un alumno de la sede B. No salió de este track; coincide con el merge de `0047-b` (RLS por sede). Se quitó la marca `knownBug`. Sigue sin probarse contra un admin o instructor reales |
+| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | ✅ `fix-179-b` (`ASG-i-043`, completada el 2026-10-01). El test M04 pasó a verde esa noche y se le quitó la marca `knownBug`. En su momento se anotó acá que "coincidía con el merge de `0047-b`"; el arreglo fue `fix-179-b` |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 | B22 | **La lista de Alumnos del admin consulta dos veces al abrir y muestra "0 alumnos" un instante.** No estaba en el checklist: apareció al corregir B7 | 🟡 Baja | ✅ `hotfix-117-m` |
