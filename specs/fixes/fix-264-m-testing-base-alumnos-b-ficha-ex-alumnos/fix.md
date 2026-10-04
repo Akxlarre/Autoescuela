@@ -388,12 +388,22 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | M16 | ✅ | Auto. El cambio de perfil deja un `UPDATE` de `users` en `audit_log`, con el usuario | |
 | S01 | ✅ | Auto. El admin abre fichas de alumnos de las dos sedes | |
 | S02 | ✅ | Auto. La secretaria con las dos sedes abre una ficha de la otra sede | |
+| C07 | ✅ | Auto. Con un panel abierto, el selector de matrículas sigue a la vista y no queda debajo del panel | |
+| D09 | ✅ | Auto. Una clase cerrada mientras se está en otra pantalla aparece completada al volver a la ficha (sin recargar la app) | |
+| H05 | ✅ | Auto. Un motivo de 40 líneas se lee con scroll dentro del modal; "Cerrar" queda a la vista | |
+| I04 | ✅ | Auto. Un pago pendiente dice "Pendiente" y uno anulado "Cancelado"; ninguno sale como "Pagado" | |
+| I05 | ✅ | Auto. Con 14 pagos la lista scrollea por dentro y la página no crece | |
+| I07 | ✅ | Auto. Un pago registrado mientras se está en otra pantalla aparece al volver a la ficha | |
+| N01 | ✅ | Auto, solo lectura sobre un alumno real con consentimientos: tipo, estado, fecha, origen, versión e IP | |
+| N05 | ✅ | Auto. La secretaria no ve "Registrar revocación"; el admin sí, en cada consentimiento otorgado | |
+| N07 | ❌ → ✅ | Auto. Con dos matrículas, el panel de reagendamientos seguía mostrando el de la matrícula con la que se abrió la ficha. **Corregido el 2026-10-04** | B41 → `fix-298-m` |
+| N08 | ✅ | Auto. Tras ver un alumno con reagendamientos, la ficha de otro sin ninguno muestra el panel vacío | |
 
-**Aún sin ejecutar de `024b`:** C07 · D09 · E09 · F01–F03, F05–F10, F12, F14 (agenda de
+**Aún sin ejecutar de `024b`:** E09 · F01–F03, F05–F10, F12, F14 (agenda de
 reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
-H05, H08 · I04, I05, I07 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
+H08 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
 online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
-N01, N04, N05, N07, N08 · S05 · W03, W04, W06–W08 · Z05.
+N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W03, W04, W06–W08 · Z05.
 
 ## Sospechas: confirmadas / descartadas
 
@@ -425,7 +435,7 @@ N01, N04, N05, N07, N08 · S05 · W03, W04, W06–W08 · Z05.
 | 024b | S11 🟡 | Confirmada en código, **cerrada sin cambio** | Nombre, dirección, email y logo de "Conductores Chillán" fijos en la función | Decisión de Matías (2026-10-04): el carnet se deja como está |
 | 024b | S12 🟡 | **Confirmada** | Solo con navegación interna de la SPA | B12 |
 | 024b | S13 🟡 | **Confirmada** | "Cargando…" para siempre | B13 |
-| 024b | S14 🟡 | **Confirmada** | Cualquier refresco vuelve a la matrícula más reciente | B21 |
+| 024b | S14 🟡 | **Confirmada** | Cualquier refresco vuelve a la matrícula más reciente. La otra mitad (el historial de reagendamientos no se recarga al cambiar de matrícula) se confirmó el 2026-10-04 | B21 · B41 → `fix-298-m` |
 | 024b | S15 🟡 | **Confirmada** | La tarjeta no pasa `?from=ex-alumnos` | B20 |
 | 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | ⏸ decisión (X02/X04) |
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
@@ -482,6 +492,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
 | B39 | **Doble clic en "Guardar Cambios" de Editar Perfil guarda dos veces** (dos llamadas a `update-student-profile`) | 🟡 Baja | ✅ `hotfix-137-m` (2026-10-04) |
 | B40 | **El menú de Carnet de la ficha no se cierra con Escape** (con un clic fuera sí) | 🟡 Baja | ✅ `hotfix-138-m` (2026-10-04) |
+| B41 | **El historial de reagendamientos no sigue a la matrícula elegida**: se carga una vez al entrar a la ficha; al cambiar de matrícula en el selector el panel sigue mostrando el de la primera. Es la mitad de S14 que quedaba | 🟡 Baja | ✅ `fix-298-m` (2026-10-04) |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 
@@ -588,6 +599,11 @@ muestra el error real de cada uno.
   código sin el arreglo (falla) y con él (pasa). Corrida final de los dos archivos: 88 de 88
   esperados, con un solo `knownBug` (B10, `ASG-i-056`). `smoke` e `infra`: 13 de 13.
   `npm run test:ci`: 3.114 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
+- **Tercera pasada, tercer lote (2026-10-04):** 5 tests nuevos en `alumnos-b-ficha` (C07, D09, H05,
+  I04, I05, I07, N01, N05, N06 · N07, N08) y `fix-298-m` (B41), con 2 unitarios nuevos. N07 falló
+  antes del arreglo y pasa después. Corrida completa de los dos archivos: 100 de 100 esperados, con
+  un solo `knownBug` (B10). `npm run test:ci`: 3.121 pasan, 5 omitidos. `npm run lint:arch`: 0
+  errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

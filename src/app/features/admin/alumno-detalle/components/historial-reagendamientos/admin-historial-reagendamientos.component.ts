@@ -14,12 +14,12 @@ import type { ReagendamientoHistorialUI } from '@core/models/ui/alumno-detalle.m
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `
-    <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
+    <div class="bento-card p-0! flex flex-col h-full w-full overflow-hidden">
       <div
         class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
       >
         <div class="flex flex-col">
-          <h2 class="text-base font-bold text-text-primary m-0">Reagendamientos</h2>
+          <h2 class="font-bold text-text-primary m-0">Reagendamientos</h2>
           <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5">
             Historial de razones
           </span>

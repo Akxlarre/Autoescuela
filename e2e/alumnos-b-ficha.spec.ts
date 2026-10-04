@@ -421,7 +421,10 @@ test.describe('ficha: marcar como ex-alumno y archivar', () => {
     try {
       await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
       // El lápiz existe en la tabla y en las tarjetas; en el drawer se ven las tarjetas (fix-290-m).
-      const reprogramar = page.locator('[data-llm-action="reprogramar-clase"]:visible').first();
+      const reprogramar = page
+        .locator('[data-llm-action="reprogramar-clase"]')
+        .locator('visible=true')
+        .first();
       await reprogramar.click();
       const panel = page.locator('app-admin-reprogramar-clase-drawer');
       const confirmar = panel.locator('[data-llm-action="confirmar-reprogramar-clase"]');
@@ -1467,7 +1470,10 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
       await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
       const ficha = page.locator('app-admin-ficha-tecnica');
       // Hay un lápiz por cada clase sin completar; basta el de la primera.
-      const lapiz = ficha.locator('[data-llm-action="reprogramar-clase"]:visible').first();
+      const lapiz = ficha
+        .locator('[data-llm-action="reprogramar-clase"]')
+        .locator('visible=true')
+        .first();
 
       await expect(lapiz, 'el lápiz se ve entero, sin desplazar nada').toBeInViewport({ ratio: 1 });
       // Ningún bloque visible de la ficha necesita scroll horizontal. Se reintenta: el drawer
@@ -1788,5 +1794,324 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
       page.locator('p-table tbody').getByText(egresado.paternalLastName),
       'aparece al elegir el año 2025',
     ).toHaveCount(1);
+  });
+
+  /**
+   * Deja un reagendamiento ya registrado en una matrícula de prueba: una clase a futuro y su fila
+   * en el historial, con razón "Médica".
+   */
+  async function addReschedule(
+    enrollmentId: number,
+    cleanup: { track(table: string, id: string | number): void },
+  ): Promise<void> {
+    const sb = await getAdminClient();
+    const { data: sample } = await sb
+      .from('class_b_sessions')
+      .select('instructor_id, vehicle_id')
+      .limit(1)
+      .single();
+    const antes = new Date(Date.now() + (400 + Math.floor(Math.random() * 300)) * 86_400_000);
+    antes.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+    const despues = new Date(antes.getTime() + 86_400_000);
+    const { data: sesion, error: sesionErr } = await sb
+      .from('class_b_sessions')
+      .insert({
+        enrollment_id: enrollmentId,
+        instructor_id: sample!.instructor_id,
+        vehicle_id: sample!.vehicle_id,
+        class_number: 1,
+        scheduled_at: despues.toISOString(),
+        status: 'scheduled',
+      })
+      .select('id')
+      .single();
+    if (sesionErr) throw new Error(`[e2e] No se pudo agendar la clase: ${sesionErr.message}`);
+    cleanup.track('class_b_sessions', sesion.id);
+    const { data: fila, error: filaErr } = await sb
+      .from('class_b_reschedule_history')
+      .insert({
+        class_session_id: sesion.id,
+        enrollment_id: enrollmentId,
+        old_scheduled_at: antes.toISOString(),
+        new_scheduled_at: despues.toISOString(),
+        old_instructor_id: sample!.instructor_id,
+        new_instructor_id: sample!.instructor_id,
+        reason: 'medica',
+      })
+      .select('id')
+      .single();
+    if (filaErr)
+      throw new Error(`[e2e] No se pudo registrar el reagendamiento: ${filaErr.message}`);
+    cleanup.track('class_b_reschedule_history', fila.id);
+  }
+
+  const cerrarPanel = (page: Page) => page.getByRole('button', { name: 'Cerrar panel' }).click();
+
+  test('N06 · N07 · C07 (S14): el historial de reagendamientos es el de la matrícula elegida', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const haceUnAno = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+    const alumno = await createE2eAlumno(
+      {
+        label: 'HistorialDos',
+        branchId: SEDE_A,
+        enrollments: [
+          { status: 'completed', createdAt: haceUnAno },
+          { courseName: 'Refuerzo Clase B' },
+        ],
+      },
+      cleanup,
+    );
+    const [antigua, refuerzo] = alumno.enrollmentNumbers;
+    // El reagendamiento es de la matrícula antigua; la de refuerzo no tiene ninguno.
+    await addReschedule(alumno.enrollmentIds[0], cleanup);
+
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const panel = page.locator('app-admin-historial-reagendamientos');
+
+    await expect(matricula(page)).toContainText(refuerzo);
+    await page.locator('[data-llm-action="ver-reagendamientos"]').click();
+    await expect(panel, 'la de refuerzo no tiene').toContainText('Sin reagendamientos registrados');
+
+    // C07: con el panel abierto, el selector de matrículas sigue a la vista y no queda debajo.
+    const tabs = page.locator('app-tabs');
+    await expect(tabs).toBeVisible();
+    const [cajaTabs, cajaPanel] = await Promise.all([
+      tabs.boundingBox(),
+      page.locator('app-layout-drawer').boundingBox(),
+    ]);
+    expect(cajaTabs!.x + cajaTabs!.width, 'el selector no queda bajo el panel').toBeLessThanOrEqual(
+      cajaPanel!.x + 1,
+    );
+
+    // N07: al elegir la matrícula antigua, el panel muestra su reagendamiento.
+    await tabs.getByText(antigua).click();
+    await expect(matricula(page)).toContainText(antigua);
+    await expect(panel, 'historial de la matrícula antigua').toContainText('Médica');
+
+    // …y al volver a la de refuerzo, queda vacío otra vez.
+    await tabs.getByText(refuerzo).click();
+    await expect(matricula(page)).toContainText(refuerzo);
+    await expect(panel).toContainText('Sin reagendamientos registrados');
+  });
+
+  test('N08 (S14): la ficha de un alumno sin reagendamientos no muestra los del alumno anterior', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [conHistorial, sinHistorial] = await Promise.all([
+      createE2eAlumno({ label: 'ConReagenda', branchId: SEDE_A, enrollments: [{}] }, cleanup),
+      createE2eAlumno({ label: 'SinReagenda', branchId: SEDE_A, enrollments: [{}] }, cleanup),
+    ]);
+    await addReschedule(conHistorial.enrollmentIds[0], cleanup);
+
+    const page = await pageAs('secretariaA');
+    await page.setViewportSize(DESKTOP);
+    await page.goto('/app/secretaria/alumnos');
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    const panel = page.locator('app-admin-historial-reagendamientos');
+    const abrirFicha = async (apellido: string) => {
+      await page.locator(SEARCH_ALUMNOS).fill(apellido);
+      await page
+        .locator('p-table tbody tr')
+        .filter({ hasText: apellido })
+        .getByRole('button', { name: 'Ver ficha' })
+        .click();
+      await expect(matricula(page)).toBeVisible(CARGA);
+      await page.locator('[data-llm-action="ver-reagendamientos"]').click();
+    };
+
+    await abrirFicha(conHistorial.paternalLastName);
+    await expect(panel).toContainText('Médica');
+    await cerrarPanel(page);
+
+    // Navegación interna (sin recargar la app): la ficha siguiente no hereda el historial.
+    await page.goBack();
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await abrirFicha(sinHistorial.paternalLastName);
+    await expect(panel).toContainText('Sin reagendamientos registrados');
+    await expect(panel).not.toContainText('Médica');
+  });
+
+  test('I04 · I05 · I07 · D09: estados de pago, lista larga con scroll propio, y pago y clase nuevos al volver a la ficha', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      // Parte debiendo: la base no acepta pagos por más que el saldo de la matrícula.
+      {
+        label: 'MuchosPagos',
+        branchId: SEDE_A,
+        enrollments: [{ paymentStatus: 'pending', totalPaid: 0, pendingBalance: 100_000 }],
+      },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    const pago = (monto: number, status: string, dia: number) => ({
+      enrollment_id: alumno.enrollmentIds[0],
+      type: 'enrollment',
+      total_amount: monto,
+      cash_amount: monto,
+      transfer_amount: 0,
+      card_amount: 0,
+      voucher_amount: 0,
+      status,
+      payment_date: `2026-09-${String(dia).padStart(2, '0')}`,
+      requires_receipt: false,
+    });
+    const insertarPagos = async (filas: ReturnType<typeof pago>[]) => {
+      const { data, error } = await sb.from('payments').insert(filas).select('id');
+      expect(error, 'sembrar pagos').toBeNull();
+      for (const p of data ?? []) cleanup.track('payments', p.id);
+    };
+    await insertarPagos([
+      ...Array.from({ length: 12 }, (_, i) => pago(1000 + i, 'paid', i + 1)),
+      pago(2222, 'pending', 20),
+      pago(3333, 'cancelled', 21),
+    ]);
+
+    const page = await pageAs('secretariaA');
+    await page.setViewportSize(DESKTOP);
+    await page.goto('/app/secretaria/alumnos');
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await page.locator(SEARCH_ALUMNOS).fill(alumno.paternalLastName);
+    await page
+      .locator('p-table tbody tr')
+      .filter({ hasText: alumno.paternalLastName })
+      .getByRole('button', { name: 'Ver ficha' })
+      .click();
+    await expect(matricula(page)).toBeVisible(CARGA);
+    const financiero = page.locator('app-admin-historial-pagos');
+    const filaDe = (monto: string) =>
+      financiero.locator('.ficha-pagos-scroll > div').filter({ hasText: monto });
+
+    // I04: cada pago con su estado; uno pendiente o anulado no se muestra como "Pagado".
+    await expect(filaDe('$1.000')).toContainText('Pagado');
+    await expect(filaDe('$2.222')).toContainText('Pendiente');
+    await expect(filaDe('$3.333')).toContainText('Cancelado');
+    await expect(filaDe('$3.333')).not.toContainText('Pagado');
+
+    // I05: con 14 pagos la lista tiene scroll propio y la página no crece.
+    const lista = financiero.locator('.ficha-pagos-scroll');
+    expect(
+      await lista.evaluate((el) => el.scrollHeight > el.clientHeight + 1),
+      'la lista de pagos scrollea por dentro',
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1),
+      'el documento no scrollea',
+    ).toBe(true);
+    await lista.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect(filaDe('$3.333')).toBeInViewport();
+
+    // I07 · D09: un pago y una clase cerrada registrados mientras se está en otra pantalla
+    // aparecen al volver a la ficha, sin recargar la app.
+    const barra = page.locator('.progress-track').first();
+    await expect(barra).toHaveAttribute('aria-valuenow', '0');
+    await page.goBack();
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await insertarPagos([pago(4444, 'paid', 22)]);
+    await addCompletedPractices(alumno.enrollmentIds[0], 1, cleanup);
+    await page.goForward();
+    await expect(filaDe('$4.444')).toHaveCount(1, CARGA);
+    await expect(barra).toHaveAttribute('aria-valuenow', '8');
+  });
+
+  test('H05: un motivo de justificación largo se lee con scroll dentro del modal', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'MotivoLargo', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sessionId = await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const motivo = Array.from(
+      { length: 40 },
+      (_, i) => `Línea ${i + 1} del certificado médico presentado por el alumno.`,
+    ).join('\n');
+    const sb = await getAdminClient();
+    const { error } = await sb
+      .from('class_b_practice_attendance')
+      .update({ status: 'excused', justification: motivo })
+      .eq('class_b_session_id', sessionId);
+    expect(error, 'dejar la inasistencia justificada').toBeNull();
+
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.locator('[data-llm-action="ver-inasistencias"]').click();
+    await page.locator('[data-llm-action="ver-motivo-justificacion"]').click();
+
+    const modal = page.getByRole('dialog', { name: 'Motivo de justificación' });
+    const texto = modal.getByText('Línea 1 del certificado');
+    await expect(texto).toBeVisible();
+    expect(
+      await texto.evaluate((el) => el.scrollHeight > el.clientHeight + 1),
+      'el texto scrollea dentro del modal',
+    ).toBe(true);
+    // El modal cabe en la pantalla: el botón "Cerrar" se alcanza sin mover la página.
+    const cerrar = modal.getByRole('button', { name: 'Cerrar', exact: true }).last();
+    await expect(cerrar).toBeInViewport();
+    await texto.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect(modal.getByText('Línea 40 del certificado')).toBeInViewport();
+    await cerrar.click();
+    await expect(modal).toHaveCount(0);
+  });
+
+  test('N01 · N05: los consentimientos de un alumno se ven completos; solo el admin puede revocar', async ({
+    pageAs,
+  }) => {
+    // Solo lectura sobre datos existentes: `consents` no se puede borrar (es prueba legal), así
+    // que un test no puede sembrar los suyos.
+    const sb = await getAdminClient();
+    const { data: otorgados } = await sb
+      .from('consents')
+      .select('user_id')
+      .eq('granted', true)
+      .is('revoked_at', null)
+      .not('user_id', 'is', null)
+      .limit(200);
+    const userIds = [...new Set((otorgados ?? []).map((c) => c.user_id as number))];
+    const { data: candidatos } = await sb
+      .from('students')
+      .select('id, enrollments!inner(license_group, status)')
+      .in('user_id', userIds.length ? userIds : [-1])
+      .eq('status', 'active')
+      .eq('enrollments.license_group', 'class_b')
+      .eq('enrollments.status', 'active')
+      .limit(1);
+    test.skip(!candidatos?.length, 'Ningún alumno Clase B activo tiene consentimientos vigentes');
+    const studentId = candidatos![0].id as number;
+
+    for (const [cuenta, portal] of [
+      ['admin', 'admin'],
+      ['secretariaMultisede', 'secretaria'],
+    ] as const) {
+      const page = await pageAs(cuenta);
+      await openFicha(page, portal, studentId);
+      await page.locator('[data-llm-action="ver-consentimientos"]').click();
+      const panel = page.locator('app-admin-consentimientos-drawer');
+      const otorgado = panel.locator('article').filter({ hasText: 'Otorgado' }).first();
+
+      // N01: tipo, estado, fecha, origen, versión e IP.
+      await expect(otorgado).toBeVisible(CARGA);
+      await expect(otorgado.locator('.item-title')).not.toBeEmpty();
+      for (const campo of ['Fecha', 'Origen', 'Versión de política', 'Dirección IP']) {
+        await expect(otorgado.locator('dt', { hasText: campo })).toBeVisible();
+      }
+      await expect(otorgado.locator('dd').first()).toHaveText(/\d{2}-\d{2}-\d{4}/);
+
+      // N05: "Registrar revocación" solo para el admin.
+      await expect(
+        panel.locator('[data-llm-action="revocar-consentimiento"]'),
+        `${cuenta}: botón de revocar`,
+      ).toHaveCount(
+        cuenta === 'admin'
+          ? await panel.locator('article').filter({ hasText: 'Otorgado' }).count()
+          : 0,
+      );
+    }
   });
 });

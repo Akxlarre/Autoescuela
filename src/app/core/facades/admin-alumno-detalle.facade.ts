@@ -349,6 +349,8 @@ export class AdminAlumnoDetalleFacade {
     this._clasesPracticas.set([]);
     this._clasesPendientesReagendar.set([]);
     this._historialPagos.set([]);
+    // fix-298-m: sin esto, el panel de reagendamientos podía mostrar el del alumno anterior.
+    this._historialReagendamientos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
     this._certPdfPath.set(null);
     this._licenseInitialPath.set(null);
@@ -433,11 +435,18 @@ export class AdminAlumnoDetalleFacade {
       isReinforcement: summary.isReinforcement,
     });
 
+    // fix-298-m: el historial de reagendamientos es de la matrícula elegida, no de la que
+    // estaba abierta al entrar a la ficha.
+    this._historialReagendamientos.set([]);
+
     // Re-cargar progreso para el enrollment seleccionado
     if (summary.licenseGroup === 'professional') {
       await this.fetchProfessionalProgress(id, summary.promotionCourseId);
     } else {
-      await this.fetchClassBProgress(id, alumno.id, summary.practicalHours);
+      await Promise.all([
+        this.fetchClassBProgress(id, alumno.id, summary.practicalHours),
+        this.loadHistorialReagendamientos(id),
+      ]);
     }
   }
 
@@ -1343,6 +1352,10 @@ export class AdminAlumnoDetalleFacade {
       )
       .eq('enrollment_id', enrollmentId)
       .order('created_at', { ascending: false });
+
+    // fix-298-m: si mientras tanto se eligió otra matrícula, esta respuesta ya no corresponde.
+    const elegida = this._alumno()?.enrollmentId;
+    if (elegida != null && elegida !== enrollmentId) return;
 
     if (error) {
       this._historialReagendamientos.set([]);
