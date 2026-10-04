@@ -1311,6 +1311,57 @@ describe('AdminAlumnoDetalleFacade', () => {
         expect(facade.alumno()?.egresado).toBe(true);
       });
 
+      it('selectEnrollment carga el historial de reagendamientos de la matrícula elegida (fix-298-m)', async () => {
+        const mock = await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+        expect(facade.historialReagendamientos()).toEqual([]);
+        mock.setResult('class_b_reschedule_history', [
+          {
+            id: 1,
+            old_scheduled_at: '2026-01-10T09:00:00',
+            new_scheduled_at: '2026-01-12T09:00:00',
+            reason: 'medica',
+            reason_other: null,
+            created_at: '2026-01-10T12:00:00',
+          },
+        ]);
+
+        await facade.selectEnrollment(304);
+
+        expect(facade.historialReagendamientos()).toHaveLength(1);
+        const historyBuilder = mock.client.from('class_b_reschedule_history');
+        expect(historyBuilder.eq).toHaveBeenCalledWith('enrollment_id', 304);
+
+        // Al volver a la otra matrícula (sin reagendamientos) el historial queda vacío.
+        mock.setResult('class_b_reschedule_history', []);
+        await facade.selectEnrollment(303);
+        expect(facade.historialReagendamientos()).toEqual([]);
+      });
+
+      it('descarta el historial de una matrícula que ya no es la elegida (fix-298-m)', async () => {
+        const mock = await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+        mock.setResult('class_b_reschedule_history', [
+          {
+            id: 9,
+            old_scheduled_at: null,
+            new_scheduled_at: null,
+            reason: 'medica',
+            reason_other: null,
+            created_at: '2026-01-10T12:00:00',
+          },
+        ]);
+
+        // La ficha está en la 303; llega tarde la respuesta pedida para la 304.
+        await facade.loadHistorialReagendamientos(304);
+
+        expect(facade.historialReagendamientos()).toEqual([]);
+      });
+
       it('la consulta de la ficha pide enrollments.status (sin eso, el estado no se puede derivar)', async () => {
         const mock = await initWithEnrollments([makeEnrollmentRow(307, 'active', '2026-01-01')]);
 
