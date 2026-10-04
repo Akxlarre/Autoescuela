@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
@@ -15,6 +23,13 @@ export type ExportFormat = 'excel' | 'pdf';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, StableWidthDirective],
+  // fix-286-m: el cierre se escucha en el documento. Un telón dentro del componente queda
+  // atrapado en el contexto de apilamiento del panel que lo contiene y no recibe los clics
+  // sobre el encabezado, la barra superior ni el menú lateral.
+  host: {
+    '(document:click)': 'closeIfOutside($event)',
+    '(document:keydown.escape)': 'open.set(false)',
+  },
   template: `
     <div class="relative">
       <button
@@ -36,7 +51,6 @@ export type ExportFormat = 'excel' | 'pdf';
         <app-icon name="chevron-down" [size]="14" />
       </button>
       @if (open()) {
-        <div class="fixed inset-0 z-10" (click)="open.set(false)"></div>
         <div class="export-menu" role="menu">
           <button
             type="button"
@@ -107,6 +121,15 @@ export class ExportMenuComponent {
   readonly exportRequested = output<ExportFormat>();
 
   protected readonly open = signal(false);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Un clic dentro del componente (el botón o una opción) lo resuelve su propio handler. */
+  protected closeIfOutside(event: Event): void {
+    if (!this.open()) return;
+    if (this.host.nativeElement.contains(event.target as Node)) return;
+    this.open.set(false);
+  }
 
   protected choose(format: ExportFormat): void {
     this.open.set(false);

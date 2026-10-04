@@ -238,3 +238,59 @@ describe('GsapAnimationsService.animateScrollReveal (browser context, fix-171-m)
     expect(disconnectSpy).toHaveBeenCalled();
   });
 });
+
+describe('GsapAnimationsService.cancelLayoutDrawerLeave (browser context, fix-295-m)', () => {
+  let service: GsapAnimationsService;
+  let kill: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    // Escritorio: la salida es un único tween sobre el ancho del host.
+    vi.stubGlobal('innerWidth', 1366);
+    kill = vi.fn();
+    vi.spyOn(gsap, 'to').mockReturnValue({ kill } as unknown as gsap.core.Tween);
+    vi.spyOn(gsap, 'set').mockReturnValue({} as gsap.core.Tween);
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+    });
+    service = TestBed.inject(GsapAnimationsService);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('detiene la animación de salida en curso', () => {
+    service.animateLayoutDrawerLeave(document.createElement('div'), null, vi.fn());
+
+    service.cancelLayoutDrawerLeave();
+
+    expect(kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin una salida en curso no hace nada', () => {
+    expect(() => service.cancelLayoutDrawerLeave()).not.toThrow();
+    expect(kill).not.toHaveBeenCalled();
+  });
+
+  it('una salida que ya terminó no se vuelve a detener', () => {
+    const onComplete = vi.fn();
+    service.animateLayoutDrawerLeave(document.createElement('div'), null, onComplete);
+    const vars = vi.mocked(gsap.to).mock.calls[0][1] as gsap.TweenVars;
+    (vars.onComplete as () => void)();
+
+    service.cancelLayoutDrawerLeave();
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(kill).not.toHaveBeenCalled();
+  });
+});

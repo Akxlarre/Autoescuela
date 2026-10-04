@@ -354,7 +354,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
 | `.card` | 309 | `src/styles/tokens/_variables.scss` |
-| `.micro-label` | 188 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 189 | `src/styles/tokens/_variables.scss` |
 | `.item-title` | 188 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
@@ -459,7 +459,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 50 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 874 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 875 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -470,9 +470,9 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 15 | `font-bold text-lg text-text-primary` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 13 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
+| 12 | `text-xs font-semibold text-text-primary` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
-| 11 | `text-xs font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-warning` |
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |

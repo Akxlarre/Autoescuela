@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  output,
+  signal,
+} from '@angular/core';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -7,6 +15,7 @@ import {
   type ValidationErrors,
 } from '@angular/forms';
 import { hasMinimumPhoneLength } from '@core/utils/phone.utils';
+import { isSameEmail } from '@core/utils/email.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
@@ -179,7 +188,7 @@ function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
                 <button
                   type="button"
                   class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || form.get('email')!.invalid"
+                  [disabled]="isSendingInvite() || form.get('email')!.invalid || emailSinGuardar()"
                   (click)="onEnviarInvitacion()"
                   data-llm-action="enviar-invitacion-alumno"
                 >
@@ -190,6 +199,11 @@ function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
                     Enviar invitación
                   }
                 </button>
+                @if (emailSinGuardar()) {
+                  <span class="text-xs" data-llm-info="invitacion-requiere-guardar">
+                    Guarda los cambios antes de enviar la invitación.
+                  </span>
+                }
               </div>
             }
 
@@ -278,6 +292,15 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 
+  /** Cierre diferido tras guardar (deja ver "guardado" 1,2 s). */
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      if (this.closeTimer !== null) clearTimeout(this.closeTimer);
+    });
+  }
+
   readonly saved = output<void>();
 
   protected readonly isSaving = signal(false);
@@ -304,6 +327,7 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
         email: alumno.email,
         phone: alumno.telefono === '—' ? '' : alumno.telefono,
       });
+      this.savedEmail = alumno.email;
       this.saveError.set(null);
       this.saveSuccess.set(false);
     }
@@ -315,7 +339,9 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
   }
 
   protected onCancel(): void {
-    this.form.reset();
+    // hotfix-135-m: no se vacía el formulario. El panel se destruye al terminar de cerrarse y
+    // reabrirlo crea uno nuevo; vaciarlo acá hacía parpadear el aviso de la invitación (y
+    // dejaba los campos en blanco) durante la animación de cierre.
     this.saveError.set(null);
     this.saveSuccess.set(false);
     this.layoutDrawer.close();
@@ -348,12 +374,15 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
         phone: phone ?? '',
       });
 
+      this.savedEmail = email!;
       this.saveSuccess.set(true);
       this.saved.emit();
 
-      setTimeout(() => {
+      // hotfix-134-m: si este panel se cierra antes (y quizás ya hay otro abierto), el cierre
+      // diferido se cancela en onDestroy; si no, cerraba el panel que estuviera abierto.
+      this.closeTimer = setTimeout(() => {
+        this.closeTimer = null;
         this.saveSuccess.set(false);
-        this.form.reset();
         this.layoutDrawer.close();
       }, 1200);
     } catch (err) {
@@ -365,10 +394,27 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
     }
   }
 
+  /**
+   * fix-296-m: el correo del formulario todavía no es el guardado. La invitación solo sale al
+   * correo guardado (la Edge Function rechaza cualquier otro), así que antes hay que guardar.
+   * Es un método y no un computed: el valor del formulario reactivo no es un signal; la vista se
+   * vuelve a evaluar con cada tecla.
+   */
+  protected emailSinGuardar(): boolean {
+    return !isSameEmail(this.form.get('email')!.value, this.savedEmail);
+  }
+
+  /**
+   * Correo guardado según este panel: el del alumno al abrir y el recién enviado tras guardar.
+   * No se lee del Facade en cada evaluación (hotfix-135-m): después de guardar, la ficha tarda
+   * un momento en refrescarse y en ese lapso el aviso aparecía junto al de "datos actualizados".
+   */
+  private savedEmail: string | null = null;
+
   protected async onEnviarInvitacion(): Promise<void> {
     const userId = this.facade.alumno()?.userId;
     const email = this.form.get('email')!.value;
-    if (!userId || !email || this.form.get('email')!.invalid) return;
+    if (!userId || !email || this.form.get('email')!.invalid || this.emailSinGuardar()) return;
 
     this.isSendingInvite.set(true);
     this.saveError.set(null);

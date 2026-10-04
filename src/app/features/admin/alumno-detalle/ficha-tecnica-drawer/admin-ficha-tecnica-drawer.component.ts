@@ -42,6 +42,8 @@ export class AdminFichaTecnicaDrawerComponent {
   protected readonly printing = this._printing.asReadonly();
 
   protected async imprimirFicha(): Promise<void> {
+    // fix-292-m: un segundo clic llega antes de que la vista deshabilite el botón.
+    if (this._printing()) return;
     const enrollmentId = this.facade.alumno()?.enrollmentId;
     if (enrollmentId == null) return;
 

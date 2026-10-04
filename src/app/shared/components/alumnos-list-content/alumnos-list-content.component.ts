@@ -92,6 +92,14 @@ export interface AlumnoExportRequest {
   showSede: boolean;
 }
 
+/** Qué muestra app-empty-state cuando la lista no tiene filas. Sin actionLabel no hay botón. */
+interface AlumnosEmptyState {
+  icon: string;
+  message: string;
+  subtitle: string;
+  actionLabel?: string;
+}
+
 @Component({
   selector: 'app-alumnos-list-content',
   standalone: true,
@@ -221,6 +229,7 @@ export interface AlumnoExportRequest {
             class="ml-auto"
             llmSubject="students"
             [exporting]="isExporting()"
+            [disabled]="sortedAlumnos().length === 0"
             (exportRequested)="requestExport($event)"
           />
         </div>
@@ -336,6 +345,7 @@ export interface AlumnoExportRequest {
                          Clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto. -->
                     @for (col of sortColumns(); track col.value; let first = $first) {
                       <th
+                        [class.alumno-head]="first"
                         [class.pl-6]="first"
                         [class.py-4]="first"
                         [attr.aria-sort]="ariaSort(col.value)"
@@ -355,21 +365,29 @@ export interface AlumnoExportRequest {
                 <ng-template pTemplate="body" let-alumno>
                   <tr class="list-item-hover transition-colors border-b border-border-subtle">
                     <!-- Alumno -->
-                    <td class="pl-6 py-4">
+                    <td class="alumno-cell pl-6 py-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                          class="alumno-avatar w-9 h-9 shrink-0 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
                         >
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
-                        <div class="flex flex-col">
-                          <span class="item-title">{{ alumno.apellido }} {{ alumno.nombre }}</span>
-                          <span class="text-xs text-text-muted">{{ alumno.email }}</span>
+                        <!-- fix-294-m: el nombre y el correo que no caben se recortan y se leen
+                             completos al pasar el mouse. -->
+                        <div class="flex flex-col min-w-0">
+                          <span
+                            class="item-title truncate"
+                            [title]="alumno.apellido + ' ' + alumno.nombre"
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
+                          >
+                          <span class="text-xs text-text-muted truncate" [title]="alumno.email">{{
+                            alumno.email
+                          }}</span>
                         </div>
                       </div>
                     </td>
                     <!-- RUT -->
-                    <td class="text-xs font-medium text-text-secondary font-mono">
+                    <td class="text-xs font-medium text-text-secondary font-mono whitespace-nowrap">
                       {{ alumno.rut }}
                     </td>
                     <!-- Nº Expediente -->
@@ -385,6 +403,7 @@ export interface AlumnoExportRequest {
                       <div class="flex flex-wrap gap-1">
                         @for (curso of alumno.cursos; track curso.nombre) {
                           <app-badge
+                            class="whitespace-nowrap"
                             [variant]="curso.licenseGroup === 'professional' ? 'brand' : 'neutral'"
                           >
                             {{ curso.nombre }}
@@ -397,14 +416,16 @@ export interface AlumnoExportRequest {
                       <td class="text-xs text-text-secondary">{{ alumno.sucursal }}</td>
                     }
                     <!-- Fecha Ingreso -->
-                    <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
+                    <td class="text-xs text-text-secondary whitespace-nowrap">
+                      {{ alumno.fechaIngreso }}
+                    </td>
                     <!-- Estado -->
                     <td>
                       <div class="flex flex-col gap-1 items-start">
                         <p-tag
                           [value]="alumno.status"
                           [severity]="getStatusSeverity(alumno.status)"
-                          styleClass="text-xs font-bold px-2 py-0.5"
+                          styleClass="text-xs font-bold px-1.5 py-0.5 whitespace-nowrap"
                         ></p-tag>
                         @if (alumno.cursoCompletoPendienteEgreso) {
                           <!-- fix-012-i: curso completo (12/12 + certificado enviado), falta pasar a ex-alumno -->
@@ -424,7 +445,7 @@ export interface AlumnoExportRequest {
                       <p-tag
                         [value]="exp.label + ' · ' + exp.count"
                         [severity]="exp.severity"
-                        styleClass="text-xs font-bold px-2 py-0.5 bg-transparent border border-current"
+                        styleClass="text-xs font-bold px-1.5 py-0.5 bg-transparent border border-current whitespace-nowrap"
                         [pTooltip]="
                           'CI: ' +
                           (alumno.expediente.ci ? 'Sí' : 'No') +
@@ -447,7 +468,7 @@ export interface AlumnoExportRequest {
                           <button
                             aria-label="Restaurar alumno"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
+                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
                             pTooltip="Restaurar alumno"
                             (click)="restaurarRequested.emit(alumno.id)"
                             data-llm-action="restore-student-row"
@@ -459,7 +480,7 @@ export interface AlumnoExportRequest {
                           <button
                             aria-label="Ver ficha"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
                             [queryParams]="{ enrollment: alumno.enrollmentId }"
@@ -469,7 +490,7 @@ export interface AlumnoExportRequest {
                           </button>
                           <button
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Exportar Ficha PDF"
                             aria-label="Exportar Ficha PDF"
                             [disabled]="isGeneratingFicha() === alumno.enrollmentId"
@@ -484,7 +505,7 @@ export interface AlumnoExportRequest {
                           <button
                             aria-label="Archivar alumno"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
+                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
                             pTooltip="Archivar alumno"
                             (click)="archivarRequested.emit(alumno.id)"
                             data-llm-action="archive-student-row"
@@ -500,10 +521,10 @@ export interface AlumnoExportRequest {
                   <tr>
                     <td [attr.colspan]="showSedeColumn() ? 9 : 8" class="p-0">
                       <app-empty-state
-                        icon="search"
-                        message="No se encontraron alumnos"
-                        subtitle="Intenta ajustar los criterios de búsqueda o filtros."
-                        actionLabel="Limpiar filtros"
+                        [icon]="emptyState().icon"
+                        [message]="emptyState().message"
+                        [subtitle]="emptyState().subtitle"
+                        [actionLabel]="emptyState().actionLabel"
                         actionIcon="refresh-cw"
                         (action)="resetFilters()"
                       />
@@ -532,10 +553,10 @@ export interface AlumnoExportRequest {
                 } @empty {
                   <div class="col-span-full py-8">
                     <app-empty-state
-                      icon="search"
-                      message="No se encontraron alumnos"
-                      subtitle="Intenta ajustar los criterios de búsqueda o filtros."
-                      actionLabel="Limpiar filtros"
+                      [icon]="emptyState().icon"
+                      [message]="emptyState().message"
+                      [subtitle]="emptyState().subtitle"
+                      [actionLabel]="emptyState().actionLabel"
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
@@ -582,6 +603,54 @@ export interface AlumnoExportRequest {
         }
         .show-on-squeeze {
           display: block !important;
+        }
+      }
+
+      /* fix-294-m: tabla compacta para que quepa en un notebook (1366 px, panel de 940).
+         El relleno global de las tablas (16 px por lado) suma 288 px en 9 columnas; aca baja
+         a 6. Los selectores encadenados son a proposito: tienen que pesar mas que la regla
+         global, que tambien usa important. */
+      .dual-viewport-container .desktop-view th,
+      .dual-viewport-container .desktop-view td {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+      }
+      /* El titulo deja 16 px a su derecha: ahi va la flecha de ordenar, que app-sort-header
+         dibuja fuera del texto. Con menos, se monta sobre el titulo siguiente. */
+      .dual-viewport-container .desktop-view th {
+        padding-right: 16px !important;
+      }
+      .dual-viewport-container .desktop-view th:first-child,
+      .dual-viewport-container .desktop-view td:first-child {
+        padding-left: 12px !important;
+      }
+      .dual-viewport-container .desktop-view th:last-child,
+      .dual-viewport-container .desktop-view td:last-child {
+        padding-right: 12px !important;
+      }
+
+      /* Botones de accion de 32 px: el tema de PrimeNG los dejaba en 48 de ancho. */
+      .row-action {
+        width: 2rem !important;
+        min-width: 2rem !important;
+        padding: 0 !important;
+      }
+
+      /* La columna Alumno se queda con el ancho que sobra: las demas miden lo que mide su
+         contenido y aca el nombre y el correo se recortan. width 100 + max-width 0 es lo que
+         hace que la celda absorba el resto sin ensanchar la tabla; el piso lo pone el titulo. */
+      .dual-viewport-container .desktop-view td.alumno-cell {
+        width: 100%;
+        max-width: 0;
+      }
+      .dual-viewport-container .desktop-view th.alumno-head {
+        min-width: 8.5rem;
+      }
+
+      /* Panel angosto (notebook): sin el circulo de iniciales, que es decorativo. */
+      @container listContainer (max-width: 1149px) {
+        .alumno-avatar {
+          display: none;
         }
       }
     `,
@@ -719,6 +788,33 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
       this.selectedEstado() !== '' ||
       this.selectedExpediente() !== '',
   );
+
+  /**
+   * Texto del estado vacío (fix-285-m). "Limpiar filtros" solo tiene sentido si hay filtros: una
+   * Papelera o una lista vacías de verdad lo dicen sin ofrecer limpiar nada.
+   */
+  readonly emptyState = computed((): AlumnosEmptyState => {
+    if (this.hasActiveFilters()) {
+      return {
+        icon: 'search',
+        message: 'No se encontraron alumnos',
+        subtitle: 'Intenta ajustar los criterios de búsqueda o filtros.',
+        actionLabel: 'Limpiar filtros',
+      };
+    }
+    if (this.trashView()) {
+      return {
+        icon: 'trash-2',
+        message: 'No hay alumnos archivados',
+        subtitle: 'Los alumnos que archives aparecerán aquí y podrás restaurarlos.',
+      };
+    }
+    return {
+      icon: 'users',
+      message: 'Aún no hay alumnos',
+      subtitle: 'Los alumnos aparecerán aquí cuando se matriculen.',
+    };
+  });
 
   /** Placeholder para satisfacer `alumno` (input.required) en las 6 cards skeleton. */
   protected readonly skeletonAlumno: AlumnoTableRow = {

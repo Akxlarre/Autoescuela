@@ -169,7 +169,7 @@ pantalla.
 | C01 | ✅ | Iniciales de nombre + apellido (CR, IS, SM) | |
 | C02 | ✅ | "Apellidos Nombres" + email debajo | |
 | C03 | ✅ | Por código: `users.maternal_last_name` es NOT NULL y "" se recorta con `trim()` | |
-| C04 | ✅ | Con formato chileno en los alumnos reales; los del seed están guardados sin puntos y se muestran así. Ver B23 (el RUT se parte en dos líneas) | B23 |
+| C04 | ✅ | Con formato chileno en los alumnos reales; los del seed están guardados sin puntos y se muestran así. El RUT se partía en dos líneas a 1366 px (B23): corregido | B23 → `fix-294-m` |
 | C06 | ✅ | Por código: sin número muestra "—" (`admin-alumnos.facade.ts:534`) | |
 | C07 | ✅ | Badge "Clase B" / "Clase B SENCE" | |
 | E11 | ❌ → ✅ | En la página 3, buscar deja la tabla en "Mostrando 21 a 10 de 10", vacía. Igual con filtros | B25 |
@@ -180,7 +180,7 @@ pantalla.
 | F07 | ❌ → ✅ | La intersección es correcta (5 filas), pero la tabla queda en la página 3 y se ve vacía | B25 |
 | F08 | ✅ | Cada selector tiene su opción "Todos…" (`0022-m`) | |
 | G02 | ✅ | Última página "121 a 129 de 129" | |
-| K01 | ❌ | El menú "Exportar" no se cierra con Escape ni con un clic en el encabezado, la barra superior o el menú lateral; solo con un clic dentro del panel de la lista | B26 |
+| K01 | ❌ → ✅ | El menú "Exportar" no se cierra con Escape ni con un clic en el encabezado, la barra superior o el menú lateral; solo con un clic dentro del panel de la lista. **Corregido el 2026-10-04** | B26 → `fix-286-m` |
 | K03 | ✅ | PDF de 6 páginas, "Total: 129 alumnos" | |
 | K05 | ✅ | Cada Excel filtrado trae solo las filas del filtro (F01–F06) | |
 | K08 | ✅ | "munoz camila" → la misma fila en pantalla y en el Excel | |
@@ -188,7 +188,7 @@ pantalla.
 | K14 | ✅ | Deshabilitado con spinner, mismo ancho (138 px) | |
 | K15 | ✅ | `export-table-pdf` con 500 → "No se pudo exportar la lista. Inténtalo de nuevo." | |
 | J01 | ✅ | Spinner solo en esa fila → `Ficha_Matricula_2877_2026-10-03.pdf` (la fecha del nombre es UTC: a las 23:24 de Chile dice el día siguiente → `ASG-i-054`) | |
-| J02 | ❌ | El PDF de la ficha no tiene tildes ni ñ ("Reyes Munoz", "Telefono", "practicas"), el concepto del pago sale "enrollment" y la hora del pie "11:24 p.?m." | B27 |
+| J02 | ❌ → ✅ | El PDF de la ficha no tiene tildes ni ñ ("Reyes Munoz", "Telefono", "practicas"), el concepto del pago sale "enrollment" y la hora del pie "11:24 p.?m.". **Corregido el 2026-10-04** (función desplegada y PDF verificado desde la app) | B27 → `fix-293-m` |
 | J05 | ✅ | Se descargan ambas; el spinner solo se ve en la última fila apretada | |
 | J06 | ✅ | `generate-enrollment-sheet` con 500 → "No se pudo generar la ficha. Inténtalo de nuevo."; el spinner se apaga | |
 | J03 | ✅ | #84 (B + Profesional) → `Ficha_Matricula_90`, su matrícula B | |
@@ -218,7 +218,7 @@ pantalla.
 | L12 | ✅ | PATCH con 500 → "No se pudo archivar al alumno. Inténtalo de nuevo."; el alumno sigue en la lista | |
 | L13 | ✅ (parcial) | Doble clic: un solo modal, pero la consulta previa se hace 2 veces (observación) | |
 | M05 | ✅ | Auto. Búsqueda y filtro de estado dentro de la Papelera | |
-| M06 | ❌ | La Papelera vacía y sin filtros dice "No se encontraron alumnos · Intenta ajustar los criterios de búsqueda o filtros · Limpiar filtros" | B28 |
+| M06 | ❌ → ✅ | La Papelera vacía y sin filtros dice "No se encontraron alumnos · Intenta ajustar los criterios de búsqueda o filtros · Limpiar filtros". **Corregido el 2026-10-04**: dice "No hay alumnos archivados", sin botón | B28 → `fix-285-m` |
 | M09 | ✅ | Auto. Si restaurar falla: toast "No se pudo…" y el alumno sigue en la Papelera | |
 | O01 | ✅ | Wizard en drawer; la tabla pasa a tarjetas | |
 | P03 | ✅ | A → B → A con la red demorada: termina en A, 64 filas, todas de A | |
@@ -317,10 +317,10 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | D08 | ✅ | `dd-mm` sin año; el curso de ejemplo no cruza de año (observación para cursos de diciembre a enero) | |
 | E01 | ✅ | Drawer con 12 filas: tema, fecha y hora, instructor, km, observaciones, validación, acción | |
 | E04 | ✅ | Lápiz solo en las 7 clases no completadas | |
-| E05 | ❌ | Abre el PDF en otra pestaña con los mismos datos, pero las 5 clases completadas dicen "Pendiente de sesión" en Observaciones y la columna "Val." queda cortada en el borde | B30 |
-| E06 | ❌ | Dos clics rápidos → 2 llamadas a `generate-ficha-tecnica-pdf` y 2 pestañas (el botón se deshabilita recién después del primero) | B30 |
+| E05 | ❌ → ✅ | Abre el PDF en otra pestaña con los mismos datos, pero las 5 clases completadas dicen "Pendiente de sesión" en Observaciones y la columna "Val." queda cortada en el borde. **Corregido el 2026-10-04** (función desplegada y PDF verificado desde la app). La columna "Val." no estaba cortada en el PDF: era el visor | B30 → `fix-292-m` |
+| E06 | ❌ → ✅ | Dos clics rápidos → 2 llamadas a `generate-ficha-tecnica-pdf` y 2 pestañas (el botón se deshabilita recién después del primero). **Corregido el 2026-10-04** | B30 → `fix-292-m` |
 | E07 | ✅ | Con 500 → "No se pudo generar la Ficha Técnica. Inténtalo de nuevo." y el botón vuelve | |
-| E08 | ❌ | A 1600 px el drawer mide 720 px y la tabla 904: Validación y Acción (el lápiz de reprogramar) solo se ven con scroll horizontal | B29 |
+| E08 | ❌ → ✅ | A 1600 px el drawer mide 720 px y la tabla 904: Validación y Acción (el lápiz de reprogramar) solo se ven con scroll horizontal. **Corregido el 2026-10-04**: en el drawer se ven las tarjetas | B29 → `fix-290-m` |
 | F04 · F11 · F13 | ✅ | Auto, ya cubiertos por `fix-279-m` | |
 | G01 | ✅ | "Reagendar Clases (7)" = 2 inasistencias + 5 canceladas | |
 | H01 | ✅ | El drawer lista las 2 inasistencias con "Justificar" | |
@@ -331,7 +331,7 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | I06 · I08 | ✅ | Auto, `fix-278-m` | |
 | J01 | ✅ | Menú Carnet: "Generar" 6/12 habilitados, "Ver" deshabilitados | |
 | L01 | ✅ | Por código: la secretaria con < 12 clases tiene el botón deshabilitado | |
-| L03 | ❌ | Por código: el admin confirma "generar de todas formas" pero se llama a `generarCertificado(enrollmentId)` sin `force` (`admin-alumno-detalle.component.ts:1815`) y la función lo rechaza (S10) | B34 |
+| L03 | ❌ → ✅ | Por código: el admin confirma "generar de todas formas" pero se llama a `generarCertificado(enrollmentId)` sin `force` (`admin-alumno-detalle.component.ts:1815`) y la función lo rechaza (S10). **Corregido el 2026-10-04** | B34 → `fix-289-m` |
 | M09 · M15 | ✅ | Auto. El email en mayúsculas queda en minúsculas; cancelar y reabrir muestra los datos originales | |
 | N02 | ✅ | "Sin consentimientos registrados" con explicación | |
 | N03 | ✅ | Con la consulta en 500: "No se pudieron cargar los consentimientos… Reintenta" | |
@@ -350,7 +350,7 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | T08 | ✅ | Del egreso más reciente al más antiguo (todos de 2026 en los datos) | |
 | T09 | ✅ | "Mostrando 1 a 10 de 16" | |
 | T12 | ✅ | Al volver: sin skeleton | |
-| T13 | ❌ | Con la carga en 500: "0 Egresados", KPIs en 0 y "No se encontraron egresados · Intenta ajustar los criterios…" | B32 |
+| T13 | ❌ → ✅ | Con la carga en 500: "0 Egresados", KPIs en 0 y "No se encontraron egresados · Intenta ajustar los criterios…". **Corregido el 2026-10-04** | B32 → `fix-287-m` |
 | U01 · U02 · U05 | ✅ | "Últimos 12 meses" por defecto; opciones "Todo el historial" y los años de los datos; "Limpiar filtros" vuelve a ese estado | |
 | U06 | ✅ | Auto, O04 (`fix-266-m`) | |
 | V03 | ✅ | "Cargar más (10 restantes)": 6 → 12 | |
@@ -359,12 +359,12 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | W05 | ✅ | Auto, `fix-274-m` | |
 | X01–X05 | ✅ | Decidido no ejecutarlos (sin datos que los alimenten) | |
 | Y01 · Y02 | ✅ | A → B → A con la red demorada: 8 egresados, todos de la sede A | |
-| Y04 | ❌ | Auto. La secretaria multi-sede elige la sede B y la lista no se recarga (sigue el egresado de A). La pantalla de secretaria no tiene el `effect()` de sede (el mismo B7 de la Base) | B33 |
+| Y04 | ❌ → ✅ | Auto. La secretaria multi-sede elige la sede B y la lista no se recarga (sigue el egresado de A). La pantalla de secretaria no tiene el `effect()` de sede (el mismo B7 de la Base). **Corregido el 2026-10-04** | B33 → `fix-288-m` |
 | Z01 | ✅ | Modo oscuro (botón de la app): tarjetas, badges y drawers legibles | |
 | Z02 | ✅ | 3 columnas a 1600 px | |
 | Z03 | ✅ | Con un drawer abierto las columnas se apilan sin solaparse | |
-| Z04 | ✅ | 375 y 768 px: scroll nativo, sin scroll horizontal. A 768 px el nombre de la cabecera queda "Alum Ap…" (observación) | |
-| Z06 | ❌ | Auto. El modal de re-matricular interpreta el nombre como HTML: `<i>cursiva</i>` se ve en cursiva y sin las etiquetas. Angular quita scripts, así que es inyección de HTML, no de código. Mismo patrón en los 4 componentes de re-matricular (B y Profesional, admin y secretaria) | B35 |
+| Z04 | ✅ | 375 y 768 px: scroll nativo, sin scroll horizontal. A 768 px el nombre de la cabecera quedaba "Alum Ap…". **Corregido el 2026-10-04**: las acciones bajan de línea y el nombre se lee entero | B31 → `fix-291-m` |
+| Z06 | ❌ → ✅ | Auto. El modal de re-matricular interpreta el nombre como HTML: `<i>cursiva</i>` se ve en cursiva y sin las etiquetas. Angular quita scripts, así que es inyección de HTML, no de código. Mismo patrón en los 4 componentes de re-matricular (B y Profesional, admin y secretaria). **Corregido el 2026-10-04** | B35 → `fix-284-m` |
 
 **Aún sin ejecutar de `024b`:** B06, B07 · C07 · D03, D05, D09 · E02, E03, E09 · F01–F03,
 F05–F10, F12, F14 (agenda de reprogramar, se cruza con `ASG-i-026`) · G02–G12 (reagendar masivo,
@@ -398,15 +398,15 @@ y cuentas Auth reales) · N01, N04, N05, N07, N08 · S01, S02, S05 · U07 · W03
 | 024b | S7 🟠 | **Corregida** el 2026-10-02 | `reprogramarClase()` dejaba la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribía en el flujo masivo). Ahora archiva y escribe el historial; verificado en la base con un alumno de prueba | `fix-279-m` · re-ejecutar en `ASG-i-027` |
 | 024b | S8 🟠 | **Confirmada** | Mensaje genérico con email duplicado | B17 |
 | 024b | S9 🟠 | Confirmada en código | La ficha no tiene ninguna acción de Documentos. Requiere decisión (Q01) | ⏸ decisión |
-| 024b | S10 🟠 | **Parte corregida, parte vigente** (código) | `fix-262-m` quitó el requisito de nota. La ficha sigue llamando `generarCertificado()` sin `force`, y la función solo acepta el bypass de admin con `force: true` | por crear |
-| 024b | S11 🟡 | Confirmada en código | Nombre, dirección, email y logo de "Conductores Chillán" fijos en la función | por crear |
+| 024b | S10 🟠 | **Corregida** el 2026-10-04 | `fix-262-m` quitó el requisito de nota. La ficha llamaba `generarCertificado()` sin `force`, y la función solo acepta el bypass de admin con `force: true`; ahora lo manda cuando el admin confirma | B34 → `fix-289-m` |
+| 024b | S11 🟡 | Confirmada en código, **cerrada sin cambio** | Nombre, dirección, email y logo de "Conductores Chillán" fijos en la función | Decisión de Matías (2026-10-04): el carnet se deja como está |
 | 024b | S12 🟡 | **Confirmada** | Solo con navegación interna de la SPA | B12 |
 | 024b | S13 🟡 | **Confirmada** | "Cargando…" para siempre | B13 |
 | 024b | S14 🟡 | **Confirmada** | Cualquier refresco vuelve a la matrícula más reciente | B21 |
 | 024b | S15 🟡 | **Confirmada** | La tarjeta no pasa `?from=ex-alumnos` | B20 |
 | 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | ⏸ decisión (X02/X04) |
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
-| 024b | S18 🟡 | Confirmada en código | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | por crear |
+| 024b | S18 🟡 | **Corregida** el 2026-10-04 (el cierre diferido) | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | `hotfix-134-m`. La otra mitad (la invitación usa el correo del formulario): `fix-296-m`, el botón se deshabilita con el correo sin guardar (y `hotfix-135-m`: el aviso no parpadea al cancelar ni al guardar) |
 | 024b | S19 🟡 | **Corregida** el 2026-10-02 | Decisión tomada (I06 / I08); la ficha registra pagos y muestra el historial del alumno | `fix-278-m` |
 | 024b | S20 🟡 | Sin ejecutar | Necesita clases sembradas | pendiente |
 
@@ -441,25 +441,26 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 | B22 | **La lista de Alumnos del admin consulta dos veces al abrir y muestra "0 alumnos" un instante.** No estaba en el checklist: apareció al corregir B7 | 🟡 Baja | ✅ `hotfix-117-m` |
-| B23 | **A 1366 px la tabla de la Base B no cabe**: RUT, badge de curso, fecha y expediente se parten en dos líneas y la columna Acciones queda cortada (el botón de archivar solo se alcanza con scroll horizontal dentro de la tabla). A 1600 px el RUT y la fecha se siguen partiendo; a 1920 no. Pasa con y sin la columna Sede | 🟠 Media | por crear |
-| B24 | **"Exportar" de la Base B no se deshabilita con la lista vacía** (descarga un Excel sin filas). Ex-Alumnos B y las listas profesionales sí lo deshabilitan | 🟡 Baja | por crear |
+| B23 | **A 1366 px la tabla de la Base B no cabe**: RUT, badge de curso, fecha y expediente se parten en dos líneas y la columna Acciones queda cortada (el botón de archivar solo se alcanza con scroll horizontal dentro de la tabla). A 1600 px el RUT y la fecha se siguen partiendo; a 1920 no. Pasa con y sin la columna Sede | 🟠 Media | ✅ `fix-294-m` (2026-10-04). Decisión de Matías: apretar la tabla para que quepa. Menos relleno entre columnas, botones de 32 px, datos cortos en una línea y el nombre recortado cuando no cabe; a 1366 px cabe con y sin la columna Sede |
+| B24 | **"Exportar" de la Base B no se deshabilita con la lista vacía** (descarga un Excel sin filas). Ex-Alumnos B y las listas profesionales sí lo deshabilitan | 🟡 Baja | ✅ `hotfix-133-m` (2026-10-04) |
 | B25 | **Buscar o filtrar no vuelve la tabla a la página 1**: desde la página 3 queda "Mostrando 21 a 10 de 10" y la tabla vacía. Lo introdujo el `[first]` agregado para el orden por columna (`0020-m`); `0023-m` lo replicó en Ex-Alumnos B y las dos listas profesionales. `updateFilter()` no resetea `tableFirst`. En Ex-Alumnos B, además, buscar no vuelve las tarjetas a 6 (V04) | 🟠 Media | ✅ `fix-283-m` (2026-10-03): buscar, filtrar o cambiar el período vuelve a la página 1 (y a 6 tarjetas) en las 4 listas |
-| B26 | **El menú "Exportar" no se cierra con Escape ni con un clic fuera del panel de la lista** (encabezado, barra superior, menú lateral). El telón de cierre queda dentro del contexto de apilamiento del panel. Afecta a las 5 listas que usan `app-export-menu` | 🟡 Baja | por crear |
-| B27 | **El PDF de la ficha de matrícula pierde tildes y ñ** ("Reyes Munoz", "Telefono", "practicas"), muestra el concepto del pago en crudo ("enrollment") y la hora del pie rota ("11:24 p.?m.") — `generate-enrollment-sheet` | 🟠 Media | por crear |
-| B28 | **La Papelera vacía dice "No se encontraron alumnos · Intenta ajustar los criterios…"** aunque no haya ningún filtro: debería decir que no hay alumnos archivados | 🟡 Baja | por crear |
-| B29 | **La tabla de la Ficha Técnica no cabe en su drawer**: a 1600 px el drawer mide 720 px y la tabla 904; "Validación" y "Acción" (el lápiz de reprogramar) solo se ven con scroll horizontal | 🟠 Media | por crear |
-| B30 | **El PDF de la Ficha Técnica** dice "Pendiente de sesión" en las clases completadas sin observaciones y corta la columna "Val."; además dos clics rápidos generan y abren dos PDF — `generate-ficha-tecnica-pdf` y su botón | 🟡 Baja | por crear |
-| B31 | A 768 px la cabecera de la ficha deja el nombre del alumno en "Alum Ap…" porque los botones ocupan la misma fila | 🟡 Baja | por crear |
-| B32 | **Un error de carga en Ex-Alumnos B se ve como lista vacía** ("0 Egresados", "No se encontraron egresados · Intenta ajustar…"). Es el mismo problema que B5 tenía en la Base | 🟡 Baja | por crear |
-| B33 | **Secretaria con grant multi-sede en Ex-Alumnos B**: al cambiar de sede la lista no se recarga. Es el mismo problema que B7 tenía en la Base | 🟡 Baja-Media | por crear |
-| B34 | **El admin no puede generar el certificado sin las 12 clases**: la ficha pregunta "¿generar de todas formas?" pero llama sin `force` y la función lo rechaza (S10, vigente) | 🟠 Media | por crear |
-| B35 | **Inyección de HTML en la confirmación de re-matricular**: el nombre del egresado se interpola en un mensaje HTML (`<strong>${nombre}</strong>`). Angular quita scripts y eventos, pero las etiquetas se aplican. 4 componentes (Ex-Alumnos B y Profesional, admin y secretaria) | 🟠 Media | por crear |
+| B26 | **El menú "Exportar" no se cierra con Escape ni con un clic fuera del panel de la lista** (encabezado, barra superior, menú lateral). El telón de cierre queda dentro del contexto de apilamiento del panel. Afecta a las 5 listas que usan `app-export-menu` | 🟡 Baja | ✅ `fix-286-m` (2026-10-04): el menú escucha el clic y Escape en el documento |
+| B27 | **El PDF de la ficha de matrícula pierde tildes y ñ** ("Reyes Munoz", "Telefono", "practicas"), muestra el concepto del pago en crudo ("enrollment") y la hora del pie rota ("11:24 p.?m.") — `generate-enrollment-sheet` | 🟠 Media | ✅ `fix-293-m` (2026-10-04): además separa la cabecera, que salía montada, y corrige la fecha de los pagos, que salía un día antes. Función desplegada por Matías y PDF verificado desde la app el 2026-10-04 |
+| B28 | **La Papelera vacía dice "No se encontraron alumnos · Intenta ajustar los criterios…"** aunque no haya ningún filtro: debería decir que no hay alumnos archivados | 🟡 Baja | ✅ `fix-285-m` (2026-10-04) |
+| B29 | **La tabla de la Ficha Técnica no cabe en su drawer**: a 1600 px el drawer mide 720 px y la tabla 904; "Validación" y "Acción" (el lápiz de reprogramar) solo se ven con scroll horizontal | 🟠 Media | ✅ `fix-290-m` (2026-10-04): tabla o tarjetas según el ancho del contenedor; en el drawer se ven las tarjetas, con el kilometraje |
+| B30 | **El PDF de la Ficha Técnica** dice "Pendiente de sesión" en las clases completadas sin observaciones y corta la columna "Val."; además dos clics rápidos generan y abren dos PDF — `generate-ficha-tecnica-pdf` y su botón | 🟡 Baja | ✅ `fix-292-m` (2026-10-04): clases completadas en blanco, fecha `dd-mm` y hora de 24 h, un solo PDF con doble clic. La columna "Val." no estaba cortada (era el visor). Función desplegada por Matías y PDF verificado desde la app el 2026-10-04 |
+| B31 | A 768 px la cabecera de la ficha deja el nombre del alumno en "Alum Ap…" porque los botones ocupan la misma fila | 🟡 Baja | ✅ `fix-291-m` (2026-10-04): cambio en `app-section-hero`, afecta a todas las cabeceras slim angostas |
+| B32 | **Un error de carga en Ex-Alumnos B se ve como lista vacía** ("0 Egresados", "No se encontraron egresados · Intenta ajustar…"). Es el mismo problema que B5 tenía en la Base | 🟡 Baja | ✅ `fix-287-m` (2026-10-04) |
+| B33 | **Secretaria con grant multi-sede en Ex-Alumnos B**: al cambiar de sede la lista no se recarga. Es el mismo problema que B7 tenía en la Base | 🟡 Baja-Media | ✅ `fix-288-m` (2026-10-04) |
+| B34 | **El admin no puede generar el certificado sin las 12 clases**: la ficha pregunta "¿generar de todas formas?" pero llama sin `force` y la función lo rechaza (S10, vigente) | 🟠 Media | ✅ `fix-289-m` (2026-10-04) |
+| B35 | **Inyección de HTML en la confirmación de re-matricular**: el nombre del egresado se interpola en un mensaje HTML (`<strong>${nombre}</strong>`). Angular quita scripts y eventos, pero las etiquetas se aplican. 4 componentes (Ex-Alumnos B y Profesional, admin y secretaria) | 🟠 Media | ✅ `fix-284-m` (2026-10-04): `escapeHtml()` en los 4 componentes |
+| B36 | **Reabrir un drawer mientras se está cerrando lo deja vacío y luego lo cierra.** Al cancelar "Editar Perfil" y volver a abrirlo dentro de los ~300 ms que dura la animación de salida, se reutiliza el mismo formulario ya vaciado y, al terminar la animación, el host de drawers limpia el panel recién abierto. Es del host global (`layout-drawer`), no de la ficha: afecta a cualquier drawer que se reabra con el mismo componente. Apareció el 2026-10-04 porque el test M09 · M15 reabría sin esperar (ahora espera el cierre) | 🟡 Baja | ✅ `fix-295-m` (2026-10-04): al reabrir durante el cierre, el host cancela la animación de salida y vuelve a crear el contenido. El test M09 · M15 volvió a reabrir sin esperar |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 
-Sin número todavía, confirmados solo en código (ver tabla de sospechas): S7 (reprogramar una clase
-con inasistencia no archiva la asistencia), S10 (bypass de admin sin `force`), S11 (carnet con la
-marca de una sola sede), S18 (cierre diferido de Editar Perfil).
+Las sospechas que quedaban sin número ya están resueltas: S7 en `fix-279-m`, S10 es B34
+(`fix-289-m`), S18 en `hotfix-134-m` y `fix-296-m`, y S11 se cerró sin cambio por decisión de Matías (el carnet
+sale siempre a nombre de Conductores Chillán).
 
 ## Decisiones de negocio
 
@@ -547,6 +548,19 @@ muestra el error real de cada uno.
   De paso se arreglaron dos tests rotos por cambios recientes: F10 (desde `0022-m` hay dos botones
   "Limpiar filtros") y G03 · H (`0023-m` cambió el `data-llm-description` del control "Ordenar
   por"). Corrida completa de los dos archivos: 83/83 esperados, sin datos `E2E-` sobrantes.
+- **Tanda de correcciones del 2026-10-04** (B24, B26–B35): los 5 tests que llevaban `knownBug` por
+  estos bugs (B24, B26, B32, B33, B35) pasan sin la marca, y B23 también tras `fix-294-m`. Queda 1
+  marcado: B10 (`ASG-i-056`). Tests E2E nuevos: E08 a 1600 y 1366 px (`fix-290-m`) y Z04
+  (`fix-291-m`). M09 · M15 ahora espera a que el drawer termine de cerrarse antes de reabrirlo
+  (ver B36). Unitarios nuevos: `html.utils`, `export-menu`, estado vacío de la lista,
+  `showLoadError` y error de carga de Ex-Alumnos, `resolveCertificadoBAction`. Tests de Deno
+  nuevos para los dos PDF (17 tests). `npm run test:ci`: 3.111 pasan, 5 omitidos, 0 fallan.
+  `npm run lint:arch`: 0 errores.
+- **B36 y S18 (2026-10-04):** `fix-295-m`, `hotfix-134-m` y `fix-296-m` (invitación, con su test E2E). M09 · M15 pasa a llamarse
+  M09 · M15 · B36 y reabre el panel de inmediato; se suma el test S18, comprobado contra el
+  código sin el arreglo (falla) y con él (pasa). Corrida final de los dos archivos: 88 de 88
+  esperados, con un solo `knownBug` (B10, `ASG-i-056`). `smoke` e `infra`: 13 de 13.
+  `npm run test:ci`: 3.114 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

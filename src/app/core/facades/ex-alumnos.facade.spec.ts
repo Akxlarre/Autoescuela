@@ -350,6 +350,58 @@ describe('ExAlumnosFacade', () => {
     });
   });
 
+  describe('error de carga — fix-287-m', () => {
+    function mockEgresados(result: { data: unknown[] | null; error: Error | null }) {
+      const select = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue(result) }),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      (supabaseSpy as any).client = { from: vi.fn().mockReturnValue({ select }) };
+    }
+
+    const row = {
+      id: 7,
+      number: 'EXP-7',
+      pending_balance: 0,
+      completed_at: '2026-09-30T15:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 1, name: 'Sede Centro' },
+      students: {
+        id: 70,
+        status: 'active',
+        users: {
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: null,
+          rut: '44.444.444-4',
+          email: 'eva@correo.cl',
+        },
+      },
+    };
+
+    it('si la consulta falla expone el error y deja de cargar', async () => {
+      mockEgresados({ data: null, error: new Error('sin conexión') });
+
+      await facade.loadEgresados();
+
+      expect(facade.error()).toBe('sin conexión');
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.egresadosClaseBList()).toEqual([]);
+    });
+
+    it('reintentar tras un fallo vuelve a cargar completo y limpia el error', async () => {
+      mockEgresados({ data: null, error: new Error('sin conexión') });
+      await facade.loadEgresados();
+
+      mockEgresados({ data: [row], error: null });
+      await facade.loadEgresados();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.egresadosClaseBList().map((e) => e.id)).toEqual([7]);
+    });
+  });
+
   describe('alumnos archivados — fix-276-m', () => {
     function mockEgresados(rows: unknown[]) {
       const order = vi.fn().mockResolvedValue({ data: rows, error: null });

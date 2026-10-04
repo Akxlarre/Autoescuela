@@ -7,7 +7,9 @@ import {
   computed,
   effect,
   inject,
+  signal,
 } from '@angular/core';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -147,7 +149,12 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
         class="flex-1 overflow-y-auto mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pr-2 py-2 box-border flex flex-col"
       >
         @if (component()) {
-          <ng-container *ngComponentOutlet="component()!" />
+          <!-- fix-295-m: renderKey cambia cuando el drawer se reabre a mitad del cierre; al
+               cambiar, el contenido se destruye y se crea de nuevo aunque sea el mismo
+               componente (si no, se reutilizaba la instancia que se estaba cerrando). -->
+          @for (key of [renderKey()]; track key) {
+            <ng-container *ngComponentOutlet="component()!" />
+          }
         }
       </div>
     </div>
@@ -170,12 +177,28 @@ export class LayoutDrawerComponent implements OnDestroy {
 
   private isCurrentlyVisible = false;
 
+  /** Hay una animación de salida corriendo: el contenido todavía no se destruyó. */
+  private leaving = false;
+  /** Invalida el final de una salida que quedó obsoleta porque el drawer se reabrió. */
+  private readonly leaveGuard = createRequestGuard();
+  protected readonly renderKey = signal(0);
+
   constructor() {
     effect(() => {
       const open = this.isOpen();
 
       if (open && !this.isCurrentlyVisible) {
         this.isCurrentlyVisible = true;
+
+        // fix-295-m: se reabrió antes de terminar de cerrarse. Sin esto, la salida seguía y al
+        // terminar ocultaba el host y limpiaba el contenido recién abierto.
+        if (this.leaving) {
+          this.leaving = false;
+          this.leaveGuard.next();
+          this.gsapService.cancelLayoutDrawerLeave();
+          this.renderKey.update((key) => key + 1);
+        }
+
         this.cdr.markForCheck();
 
         // Un tick para que Angular procese el NgComponentOutlet antes de animar
@@ -191,10 +214,15 @@ export class LayoutDrawerComponent implements OnDestroy {
         }, 0);
       } else if (!open && this.isCurrentlyVisible) {
         this.isCurrentlyVisible = false;
+        this.leaving = true;
+        const leaveToken = this.leaveGuard.next();
         const backdropEl = this.el.nativeElement.querySelector(
           '[data-drawer-backdrop]',
         ) as HTMLElement;
         this.gsapService.animateLayoutDrawerLeave(this.el.nativeElement, backdropEl ?? null, () => {
+          // Una salida que quedó obsoleta (el drawer se reabrió) no destruye nada.
+          if (!this.leaveGuard.isCurrent(leaveToken)) return;
+          this.leaving = false;
           this.layoutDrawer.clear();
           this.cdr.markForCheck();
         });

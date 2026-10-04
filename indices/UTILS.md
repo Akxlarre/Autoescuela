@@ -56,7 +56,7 @@
 | `src/app/core/utils/egresados-export.utils.ts` | `ExportTable`, `buildEgresadosExcelTable`, `EGRESADOS_PDF_COLUMN_WEIGHTS`, `buildEgresadosPdfTable` |
 | `src/app/core/utils/egresados-sort.utils.ts` | `EgresadoSortField`, `EgresadoListSort`, `egresadoSortOptions`, `sortEgresados` |
 | `src/app/core/utils/egreso-confirmation.utils.ts` | `buildMarcarExAlumnoMessage` |
-| `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail` |
+| `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail`, `isSameEmail` |
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
@@ -66,6 +66,7 @@
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
+| `src/app/core/utils/html.utils.ts` | `escapeHtml` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/inasistencia.utils.ts` | `canJustificarInasistencia` |

@@ -336,6 +336,47 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     });
   });
 
+  describe('estado vacío (fix-285-m)', () => {
+    it('con búsqueda o filtros activos invita a limpiarlos', () => {
+      create();
+      component.updateFilter(component.searchTerm, 'nadie');
+
+      expect(component.emptyState()).toEqual({
+        icon: 'search',
+        message: 'No se encontraron alumnos',
+        subtitle: 'Intenta ajustar los criterios de búsqueda o filtros.',
+        actionLabel: 'Limpiar filtros',
+      });
+    });
+
+    it('la Papelera vacía y sin filtros dice que no hay archivados, sin botón', () => {
+      create(null, []);
+      stubInput('trashView', true);
+
+      const state = component.emptyState();
+
+      expect(state.message).toBe('No hay alumnos archivados');
+      expect(state.actionLabel).toBeUndefined();
+    });
+
+    it('la Papelera con un filtro activo sigue ofreciendo "Limpiar filtros"', () => {
+      create(null, []);
+      stubInput('trashView', true);
+      component.updateFilter(component.selectedEstado, 'Retirado');
+
+      expect(component.emptyState().actionLabel).toBe('Limpiar filtros');
+    });
+
+    it('la lista vacía y sin filtros dice que aún no hay alumnos, sin botón', () => {
+      create(null, []);
+
+      const state = component.emptyState();
+
+      expect(state.message).toBe('Aún no hay alumnos');
+      expect(state.actionLabel).toBeUndefined();
+    });
+  });
+
   describe('columnas ordenables', () => {
     it('"Sede" solo se ofrece cuando la columna se muestra', () => {
       create();

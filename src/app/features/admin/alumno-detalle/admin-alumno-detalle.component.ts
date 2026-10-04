@@ -89,6 +89,23 @@ export function resolveListadoLabel(
     : 'Listado de Alumnos';
 }
 
+/** Qué hace "Certificado" para una matrícula Clase B que aún no tiene el PDF generado. */
+export type CertificadoBAction = 'generate' | 'confirm-forced' | 'blocked';
+
+/**
+ * Con las prácticas completas se genera directo. Si faltan, solo el admin puede seguir: confirma
+ * y el pedido va con force (la Edge Function rechaza el bypass sin él — fix-289-m). La secretaria
+ * queda bloqueada.
+ */
+export function resolveCertificadoBAction(
+  completadas: number,
+  requeridas: number,
+  isAdmin: boolean,
+): CertificadoBAction {
+  if (completadas >= requeridas) return 'generate';
+  return isAdmin ? 'confirm-forced' : 'blocked';
+}
+
 @Component({
   selector: 'app-admin-alumno-detalle',
   standalone: true,
@@ -1798,10 +1815,15 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       }
 
       const progreso = this.facade.progresoPractico();
-      if (progreso.completadas < progreso.requeridas) {
-        // Solo el admin ve el botón habilitado en este caso — la secretaria
-        // nunca llega aquí (acción deshabilitada en heroActions).
-        if (!this.isAdmin()) return;
+      const action = resolveCertificadoBAction(
+        progreso.completadas,
+        progreso.requeridas,
+        this.isAdmin(),
+      );
+      // Solo el admin ve el botón habilitado con prácticas incompletas — la secretaria
+      // nunca llega aquí (acción deshabilitada en heroActions).
+      if (action === 'blocked') return;
+      if (action === 'confirm-forced') {
         const confirmed = await this.confirmModal.confirm({
           title: 'Prácticas incompletas',
           message: `${alumno.nombre} lleva ${progreso.completadas}/${progreso.requeridas} clases prácticas completadas. ¿Deseas generar el certificado de todas formas?`,
@@ -1812,7 +1834,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         if (!confirmed) return;
       }
 
-      await this.certFacade.generarCertificado(alumno.enrollmentId);
+      await this.certFacade.generarCertificado(alumno.enrollmentId, action === 'confirm-forced');
       await this.facade.refresh();
     }
   }

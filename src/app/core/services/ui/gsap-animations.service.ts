@@ -989,12 +989,14 @@ export class GsapAnimationsService {
 
       const tl = gsap.timeline({
         onComplete: () => {
+          this.layoutDrawerLeave = null;
           gsap.set(drawerEl, { display: 'none', clearProps: 'position,inset,zIndex,x' });
           if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0 });
           if (panelEl) gsap.set(panelEl, { clearProps: 'x' });
           onComplete();
         },
       });
+      this.layoutDrawerLeave = tl;
 
       if (panelEl) {
         tl.to(panelEl, { x: '100%', duration: 0.25, ease: 'power3.in' }, 0);
@@ -1010,17 +1012,33 @@ export class GsapAnimationsService {
         return;
       }
 
-      gsap.to(drawerEl, {
+      this.layoutDrawerLeave = gsap.to(drawerEl, {
         width: 0,
         opacity: 0,
         duration: 0.25,
         ease: 'power3.in',
         onComplete: () => {
+          this.layoutDrawerLeave = null;
           gsap.set(drawerEl, { display: 'none', clearProps: 'opacity' });
           onComplete();
         },
       });
     }
+  }
+
+  /** Salida del layout drawer en curso; null si no hay ninguna. */
+  private layoutDrawerLeave: gsap.core.Animation | null = null;
+
+  /**
+   * Layout Drawer — detiene la salida en curso sin ejecutar su final (fix-295-m).
+   *
+   * Lo llama el host cuando el drawer se reabre antes de que termine de cerrarse: si la salida
+   * siguiera, al terminar ocultaría el host y destruiría el contenido recién abierto. La entrada
+   * que viene después deja el host en su estado correcto, así que acá no se restaura nada.
+   */
+  cancelLayoutDrawerLeave(): void {
+    this.layoutDrawerLeave?.kill();
+    this.layoutDrawerLeave = null;
   }
 
   /**
