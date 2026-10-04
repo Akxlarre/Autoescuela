@@ -15,7 +15,7 @@ import {
   markCertificateSent,
 } from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
-import { getAdminClient, getClientFor } from './support/supabase-admin';
+import { getAdminClient, getAnonClient, getClientFor } from './support/supabase-admin';
 
 const SEDE_A = 1; // Autoescuela Chillán
 const SEDE_B = 2; // Conductores Chillán
@@ -2640,25 +2640,32 @@ test.describe('cuarta pasada: PDF reales (fix-264-m, 2026-10-04)', () => {
     await expect(page.locator('[data-llm-action="ver-carnet-12"]')).toHaveCount(0);
   });
 
-  test('J08 (S2): la secretaria de la sede A no puede generar el carnet de una matrícula de la sede B (por API)', async ({
+  test('J08 (S2 · spec 0009-i): sin una sesión real no se puede generar el carnet de una matrícula (por API)', async ({
     cleanup,
   }) => {
-    knownBug('024b S2 (ASG-i-042): generate-student-license-pdf no revisa quién llama');
-    const ajeno = await createE2eAlumno(
-      { label: 'CarnetAjeno', branchId: SEDE_B, enrollments: [{}] },
+    // La función exige un usuario real con rol de admin o secretaria (spec 0009-i). Con la anon
+    // key sola, como un visitante del sitio, responde 401 y no genera nada.
+    //
+    // La sede NO se valida en el servidor, por decisión tomada en esa misma spec (Ignacio,
+    // 2026-10-01): una secretaria puede generar por API el carnet de una matrícula de otra sede.
+    // No es un bug de este módulo; este test no lo afirma ni lo niega.
+    const alumno = await createE2eAlumno(
+      { label: 'CarnetSinSesion', branchId: SEDE_B, enrollments: [{}] },
       cleanup,
     );
-    const enrollmentId = ajeno.enrollmentIds[0];
-    const secretaria = await getClientFor(
-      ACCOUNTS.secretariaA.email,
-      ACCOUNTS.secretariaA.password,
-    );
+    const enrollmentId = alumno.enrollmentIds[0];
     try {
-      const { data, error } = await secretaria.functions.invoke('generate-student-license-pdf', {
-        body: { enrollment_id: enrollmentId, variant: 'initial' },
-      });
-      expect(data?.pdfUrl, 'no debe devolver el carnet').toBeUndefined();
-      expect(error, 'debe rechazar el pedido').not.toBeNull();
+      const { data, error } = await getAnonClient().functions.invoke(
+        'generate-student-license-pdf',
+        { body: { enrollment_id: enrollmentId, variant: 'initial' } },
+      );
+      expect(data?.pdfUrl, 'no devuelve el carnet').toBeUndefined();
+      expect((error as { context?: Response } | null)?.context?.status, 'HTTP 401').toBe(401);
+      const sb = await getAdminClient();
+      const { data: archivos } = await sb.storage
+        .from('documents')
+        .list(`student-licenses/${enrollmentId}`);
+      expect(archivos ?? [], 'no se generó ningún archivo').toHaveLength(0);
     } finally {
       await limpiarStorage([`student-licenses/${enrollmentId}`]);
     }

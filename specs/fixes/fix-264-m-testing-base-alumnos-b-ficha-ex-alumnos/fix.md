@@ -37,6 +37,8 @@ Ajustes sobre el texto de la ASG:
 - **Sospechas que ya tienen asignación propia:** acá solo se confirman o descartan y se
   referencian; no se abre un fix duplicado.
   - Edge functions sin control de rol/sede (`024a` S1, S2; `024b` S2) → `ASG-i-041`, `ASG-i-042`.
+    Ambas están completadas (`fix-043-i` y la spec `0009-i`): las funciones exigen un usuario real
+    con rol de staff. `0009-i` dejó fuera, por decisión, validar la sede en el servidor.
   - Secretaria edita a cualquier usuario (`024b` S1) → `ASG-i-043`.
   - RLS por rol sin sede (`024a` P08; `024b` S03, S04) → `ASG-i-045`.
   - Canales Realtime mudos (`024a` S5; `024b` S3) → `ASG-i-056`.
@@ -121,13 +123,13 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | G01 | ✅ | Auto. 10 filas por página, reporte "Mostrando 1 a 10 de N" | |
 | H01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
 | H04 | ✅ | Auto. "Cargar más" suma de a 6; al filtrar vuelve a 6 | |
-| J07 | ❌ | Por API: la secretaria de la sede 1 recibe HTTP 200 + PDF de la matrícula 2674 (sede 2) | → `ASG-i-042` |
+| J07 | ⚠ | Por API (2026-10-01): la secretaria de la sede 1 recibe HTTP 200 + PDF de la matrícula 2674 (sede 2). **No es un bug abierto:** la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01). El rol sí se valida | `ASG-i-042` (completada) |
 | K02 | ✅ | Auto. La exportación a Excel responde 200 | |
 | K04 | ❌ → ✅ | Auto. Pantalla 64 filas, Excel 72 (los 8 de más son "Finalizado"). **Corregido el 2026-10-02**: el Excel trae las filas de la pantalla | B1 → `fix-281-m` |
 | K06 | ✅ | La exportación ya no calcula el estado: copia el de la pantalla, incluido "Docs Pendientes" (test unitario) | B1 → `fix-281-m` |
 | K07 | ❌ → ✅ | La columna Expediente del Excel decía "Pendiente" en las 72 filas. **Corregido el 2026-10-02**: sale igual que la pantalla ("Parcial · 1/2") | B1 → `fix-281-m` |
 | K09 | ❌ → ✅ | Auto. Desde la Papelera el Excel traía los activos. **Corregido el 2026-10-02** | B1 → `fix-281-m` |
-| K11 | ❌ | Por API: la secretaria de la sede 1 obtiene 133 filas pidiendo la sede 2 y 205 con `branch_id: null` | → `ASG-i-042` |
+| K11 | ⚠ | Por API (2026-10-01): la secretaria de la sede 1 obtenía 133 filas pidiendo la sede 2. La función `export-students` se eliminó (`hotfix-130-m`): la exportación ahora se arma con las filas de la pantalla. En las demás funciones, la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada) |
 | L01 | ✅ | Auto. Modal simple para alumno sin historial | |
 | L02 | ✅ | Auto. Modal "con historial" sobre un alumno del seed | |
 | L03 | ✅ | Auto. "borrar" no habilita; "borrarlo" sí | |
@@ -433,7 +435,7 @@ registro de emisión y los avisos. El carnet y el certificado generados se revis
 | J05 | ✅ | No aplica: el carnet sale a nombre de Conductores Chillán por decisión de Matías (S11, cerrada sin cambio) | |
 | J06 | ✅ | Auto. Sin foto, el carnet se genera con el recuadro vacío y sin error | |
 | J07 | ✅ | Auto. "Volver a generar" reemplaza el archivo: queda uno solo en Storage | |
-| J08 | ❌ | Auto, por API. La secretaria de la sede A genera el carnet de una matrícula de la sede B: la función no revisa quién llama (S2, ahora confirmada en la práctica). No se probó con una sesión de alumno | → `ASG-i-042` (test con `knownBug`) |
+| J08 | ✅ | Auto, por API. Sin una sesión real (solo la anon key) la función del carnet responde 401 y no genera nada: exige admin o secretaria (spec `0009-i`, que verificó además 403 para alumno e instructor). Una secretaria sí puede generar por API el carnet de una matrícula de otra sede: la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01). El 2026-10-04 se anotó acá por error como "la función no revisa quién llama" | `ASG-i-042` (completada) |
 | K01 | ✅ | Auto. Matrícula presencial con contrato: "Ver Contrato" abre el PDF | |
 | K03 | ✅ | Auto. Matrícula online con contrato sin firmar: menú con "Descargar Contrato" (baja `Contrato.pdf`) y "Subir Firmado" | |
 | K04 | ❌ → ✅ | Auto. Un `.txt` elegido en "Subir Firmado" se guardaba como contrato firmado. **Corregido el 2026-10-04**: se rechaza con "El contrato firmado debe ser un archivo PDF." | B43 → `fix-304-m` |
@@ -475,8 +477,8 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
 
 | Checklist | # | Resultado | Evidencia | Track |
 |---|---|---|---|---|
-| 024a | S1 🔴 | **Confirmada** | Secretaria sede 1 exporta 133 alumnos de la sede 2 y 205 con `branch_id: null` (RUT, email, teléfono) | `ASG-i-042` → `0009-i` (en curso) |
-| 024a | S2 🔴 | **Confirmada** | Secretaria sede 1 baja la ficha PDF de una matrícula de la sede 2 (HTTP 200) | `ASG-i-042` → `0009-i` (en curso) |
+| 024a | S1 🔴 | **Cerrada** | El 2026-10-01 la secretaria de la sede 1 exportaba 133 alumnos de la sede 2. `export-students` ya no existe (`hotfix-130-m`) | `ASG-i-042` (completada, `0009-i`) |
+| 024a | S2 🔴 | **Cerrada por decisión** | La ficha PDF exige rol de admin o secretaria; la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada, `0009-i`) |
 | 024a | S3 🟠 | **Confirmada** | Excel 72 filas vs 64 en pantalla; expediente siempre "Pendiente"; la Papelera exporta activos | B1 |
 | 024a | S4 🟠 | **Confirmada** | `chk_expires_at_draft_only` + la lista excluye borradores → KPI siempre 0; "Contactar" no tiene `(click)` | B9 |
 | 024a | S5 🟠 | **Confirmada** | `enrollments` no está en `supabase_realtime`; un alumno nuevo no aparece sin recargar | `ASG-i-056` |
@@ -489,7 +491,7 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
 | 024a | S12 🟡 | **Confirmada** | Opciones fijas; falta "Refuerzo Clase B" | B3 |
 
 | 024b | S1 🔴 | **Confirmada** (parcial) | Secretaria sede 1 edita por `update-student-profile` a un alumno `E2E-` de la sede 2. No se probó contra admin/instructor reales | `ASG-i-043` |
-| 024b | S2 🔴 | **Confirmada** el 2026-10-04 | La función no lee `Authorization` ni llama `getUser()`. Por API, la secretaria de la sede A generó el carnet de una matrícula `E2E-` de la sede B (archivo borrado después). No se probó con una sesión de alumno | `ASG-i-042` |
+| 024b | S2 🔴 | **Corregida** en `0009-i` (rol); la sede queda **aceptada por decisión** | La sospecha decía que la función no tenía ningún control de acceso. Desde `0009-i` exige un usuario real con rol de admin o secretaria (401 sin sesión, comprobado el 2026-10-04; 403 para alumno e instructor, comprobado en `0009-i`). El 2026-10-04, por API, la secretaria de la sede A generó el carnet de una matrícula `E2E-` de la sede B (archivo borrado): la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada) |
 | 024b | S3 🟠 | Confirmada en código | 5 de las 7 tablas del canal no están en `supabase_realtime` | `ASG-i-056` |
 | 024b | S4 🟠 | **Mitad corregida, mitad vigente** | `fix-263-m` sacó el borrador del selector; la matrícula principal sigue siendo `sorted[0]` sin filtrar | B15 |
 | 024b | S5 🟠 | **Corregida** por `fix-263-m` | El botón desaparece y el estado pasa a "Egresado" | |
@@ -685,7 +687,7 @@ muestra el error real de cada uno.
 - **Cuarta pasada, PDF reales (2026-10-04):** 7 tests nuevos (J02–J08, K01, K03–K05, L02, L04–L07) y
   `fix-304-m`, `fix-305-m`, `fix-306-m` con 8 unitarios nuevos. `addCompletedPractices()` ahora
   parte de un día al azar: dos tests en paralelo chocaban con el instructor de muestra. Un
-  `knownBug` nuevo: J08 (`ASG-i-042`). `npm run test:ci`: 3.137 pasan, 5 omitidos.
+  J08 se corrigió después: ver su fila (no es un `knownBug`). `npm run test:ci`: 3.137 pasan, 5 omitidos.
   `npm run lint:arch`: 0 errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
