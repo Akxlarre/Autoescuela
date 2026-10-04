@@ -79,6 +79,28 @@ describe('ExAlumnosContentComponent', () => {
     });
   });
 
+  describe('showLoadError (fix-287-m)', () => {
+    it('con error y sin egresados muestra el error en vez de la lista vacía', () => {
+      setup([]);
+      stubInput('error', 'Error al cargar');
+
+      expect(component.showLoadError()).toBe(true);
+    });
+
+    it('con error pero con egresados ya cargados los sigue mostrando (SWR)', () => {
+      setup([makeEgresado()]);
+      stubInput('error', 'Error al cargar');
+
+      expect(component.showLoadError()).toBe(false);
+    });
+
+    it('sin error una lista vacía es una lista vacía', () => {
+      setup([]);
+
+      expect(component.showLoadError()).toBe(false);
+    });
+  });
+
   describe('paginación mobile (mismo patrón que alumnos-list-content)', () => {
     it('visibleCards respeta el presupuesto inicial (CARDS_STEP)', () => {
       setup(Array.from({ length: 10 }, (_, i) => makeEgresado({ id: i })));

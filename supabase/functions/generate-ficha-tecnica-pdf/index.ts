@@ -16,7 +16,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { escapePdfWinAnsi as esc, assemblePdf, wrapLines } from '../_shared/pdf-utils.ts';
+import { buildFichaTecnicaPdf, fechaHoraClase } from '../_shared/ficha-tecnica-pdf.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 
@@ -125,6 +125,7 @@ Deno.serve(async (req: Request) => {
           kmInicio: null,
           kmFin: null,
           observaciones: null,
+          completada: false,
           ausente: false,
           cancelada: false,
           justificada: false,
@@ -144,28 +145,19 @@ Deno.serve(async (req: Request) => {
       const instructor = instUser
         ? `${instUser.first_names} ${instUser.paternal_last_name}`.trim()
         : null;
-      const scheduledAt = ses.scheduled_at ? new Date(ses.scheduled_at) : null;
+      const cuando = ses.scheduled_at ? fechaHoraClase(new Date(ses.scheduled_at)) : null;
 
       return {
         numero: num,
-        fecha: scheduledAt
-          ? scheduledAt.toLocaleDateString('es-CL', {
-              day: '2-digit',
-              month: '2-digit',
-              timeZone: 'America/Santiago',
-            })
-          : null,
-        hora: scheduledAt
-          ? scheduledAt.toLocaleTimeString('es-CL', {
-              hour: '2-digit',
-              minute: '2-digit',
-              timeZone: 'America/Santiago',
-            })
-          : null,
+        fecha: cuando?.fecha ?? null,
+        hora: cuando?.hora ?? null,
         instructor,
         kmInicio: ses.km_start,
         kmFin: ses.km_end,
         observaciones: ses.performance_notes ?? ses.notes ?? null,
+        // Mismo criterio que AdminAlumnoDetalleFacade (fix-292-m): sin esto, toda clase hecha
+        // y sin observaciones salía como "Pendiente de sesión".
+        completada: ses.status === 'completed',
         ausente: ses.status === 'no_show',
         cancelada: ses.status === 'cancelled',
         justificada: attendance?.status === 'excused',
@@ -191,155 +183,6 @@ Deno.serve(async (req: Request) => {
     return jsonErr(err instanceof Error ? err.message : 'Internal server error', 500);
   }
 });
-
-// ══════════════════════════════════════════════════════════════════════════════
-// PDF Builder
-// ══════════════════════════════════════════════════════════════════════════════
-
-interface ClasePractica {
-  numero: number;
-  fecha: string | null;
-  hora: string | null;
-  instructor: string | null;
-  kmInicio: number | null;
-  kmFin: number | null;
-  observaciones: string | null;
-  ausente: boolean;
-  cancelada: boolean;
-  justificada: boolean;
-  justificacion: string | null;
-  alumnoFirmo: boolean;
-  instructorFirmo: boolean;
-}
-
-const W = 595;
-const H = 842;
-const M = 40;
-const TOP = H - 50;
-const BOTTOM = 60;
-
-function estadoTexto(c: ClasePractica): string {
-  if (c.ausente) return c.justificada ? 'Inasist. justificada' : 'Inasistencia';
-  if (c.cancelada) return 'Cancelada — pend. reagendar';
-  return '';
-}
-
-function observacionesTexto(c: ClasePractica): string {
-  return (
-    c.observaciones || c.justificacion || (c.ausente || c.cancelada ? '' : 'Pendiente de sesión')
-  );
-}
-
-function kilometrajeTexto(c: ClasePractica): string {
-  if (c.kmInicio === null) return '-';
-  const fin = c.kmFin !== null ? c.kmFin.toLocaleString('es-CL') : '?';
-  return `${c.kmInicio.toLocaleString('es-CL')} -> ${fin} km`;
-}
-
-function buildFichaTecnicaPdf(
-  clases: ClasePractica[],
-  opts: { studentName: string; matricula: string },
-): Uint8Array {
-  const pages: string[] = [];
-  let ops: string[] = [];
-  let y = TOP;
-
-  const text = (x: number, yPos: number, str: string, size: number, bold = false) => {
-    const font = bold ? 'F2' : 'F1';
-    ops.push(`BT /${font} ${size} Tf ${x} ${yPos} Td (${esc(str)}) Tj ET`);
-  };
-  const line = (x1: number, y1: number, x2: number, y2: number) =>
-    ops.push(`${x1} ${y1} m ${x2} ${y2} l S`);
-  const rect = (x: number, yPos: number, w: number, h: number, fill = false) =>
-    ops.push(`${x} ${yPos} ${w} ${h} re ${fill ? 'f' : 'S'}`);
-  const setGray = (g: number) => ops.push(`${g} g ${g} G`);
-  const resetColor = () => ops.push('0 g 0 G');
-
-  const cols = [30, 70, 105, 90, 165, 45]; // N°, Fecha/Hora, Instructor, Km, Observ., Valid.
-  const headers = ['N°', 'Fecha/Hora', 'Instructor', 'Kilometraje', 'Observaciones', 'Val.'];
-  const contentW = cols.reduce((a, b) => a + b, 0);
-
-  const drawTableHeader = () => {
-    setGray(0.88);
-    rect(M, y - 14, contentW, 14, true);
-    resetColor();
-    let xCur = M;
-    headers.forEach((h, i) => {
-      text(xCur + 2, y - 10, h, 8, true);
-      xCur += cols[i];
-    });
-    y -= 14;
-    line(M, y, M + contentW, y);
-  };
-
-  const flushPage = () => {
-    pages.push(ops.join('\n'));
-    ops = [];
-  };
-  const startNewPage = () => {
-    y = TOP;
-    drawTableHeader();
-  };
-
-  // ── Header ───────────────────────────────────────────────────────────────
-  text(M, y, 'Ficha Técnica — Clases Prácticas', 15, true);
-  y -= 14;
-  text(M, y, 'Desempeño en clases prácticas', 9);
-  y -= 18;
-  text(M, y, `Alumno: ${opts.studentName || '_____________________________'}`, 9);
-  y -= 12;
-  text(M, y, `Matrícula: ${opts.matricula}`, 9);
-  y -= 16;
-
-  drawTableHeader();
-
-  // ── Filas ────────────────────────────────────────────────────────────────
-  for (const c of clases) {
-    const obsLines = wrapLines(observacionesTexto(c), 42);
-    const estado = estadoTexto(c);
-    const rowLines = Math.max(1, obsLines.length + (estado ? 1 : 0));
-    const rowH = Math.max(22, rowLines * 10 + 6);
-
-    if (y - rowH < BOTTOM) {
-      flushPage();
-      startNewPage();
-    }
-
-    let xCur = M;
-    text(xCur + 2, y - 10, `#${c.numero}`, 8, true);
-    xCur += cols[0];
-
-    text(xCur + 2, y - 9, c.fecha ?? '-', 8);
-    text(xCur + 2, y - 18, c.hora ?? '-', 7);
-    xCur += cols[1];
-
-    text(xCur + 2, y - 10, c.instructor ?? 'Sin asignar', 8);
-    xCur += cols[2];
-
-    text(xCur + 2, y - 10, kilometrajeTexto(c), 8);
-    xCur += cols[3];
-
-    let obsY = y - 9;
-    if (estado) {
-      text(xCur + 2, obsY, estado, 7, true);
-      obsY -= 10;
-    }
-    obsLines.forEach((l) => {
-      text(xCur + 2, obsY, l, 7);
-      obsY -= 9;
-    });
-    xCur += cols[4];
-
-    const validacion = `${c.alumnoFirmo ? '[X]' : '[ ]'}A ${c.instructorFirmo ? '[X]' : '[ ]'}I`;
-    text(xCur + 2, y - 10, validacion, 7);
-
-    y -= rowH;
-    line(M, y, M + contentW, y);
-  }
-
-  flushPage();
-  return assemblePdf(pages, W, H);
-}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

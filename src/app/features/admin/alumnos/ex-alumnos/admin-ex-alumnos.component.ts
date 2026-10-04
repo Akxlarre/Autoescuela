@@ -13,6 +13,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
+import { escapeHtml } from '@core/utils/html.utils';
 import { ExAlumnosContentComponent } from '@shared/components/ex-alumnos-content/ex-alumnos-content.component';
 import { AdminExAlumnosTasasDrawerComponent } from './components/stats/admin-ex-alumnos-tasas-drawer.component';
 import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/admin-ex-alumnos-comentarios-drawer.component';
@@ -35,6 +36,8 @@ import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/
       [egresados]="facade.egresadosClaseBList()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
+      [error]="facade.error()"
+      (refreshRequested)="facade.loadEgresados()"
       basePath="/app/admin"
       (reEnrollRequested)="reEnroll($event)"
       (requestVerTasas)="openTasasDrawer()"
@@ -86,7 +89,7 @@ export class AdminExAlumnosComponent {
   protected async reEnroll(egresado: EgresadoTableRow): Promise<void> {
     const confirmed = await this.confirmModal.confirm({
       title: 'Re-matricular alumno',
-      message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${egresado.nombre}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
+      message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${escapeHtml(egresado.nombre)}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
       severity: 'info',
       confirmLabel: 'Continuar',
       cancelLabel: 'Cancelar',

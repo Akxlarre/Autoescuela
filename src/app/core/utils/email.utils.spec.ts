@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateEmail, normalizeEmail } from './email.utils';
+import { isSameEmail, validateEmail, normalizeEmail } from './email.utils';
 
 describe('validateEmail()', () => {
   it('acepta email estándar', () => {
@@ -42,5 +42,25 @@ describe('normalizeEmail()', () => {
 
   it('normaliza dominio con mayúsculas mixtas', () => {
     expect(normalizeEmail('User@Domain.Com')).toBe('user@domain.com');
+  });
+});
+
+describe('isSameEmail() (fix-296-m)', () => {
+  it('el mismo correo es igual', () => {
+    expect(isSameEmail('ana@correo.cl', 'ana@correo.cl')).toBe(true);
+  });
+
+  it('mayúsculas y espacios al borde no cuentan como diferencia', () => {
+    expect(isSameEmail('  Ana@Correo.CL ', 'ana@correo.cl')).toBe(true);
+  });
+
+  it('un correo distinto no es igual', () => {
+    expect(isSameEmail('ana.nueva@correo.cl', 'ana@correo.cl')).toBe(false);
+  });
+
+  it('vacío, null o undefined se tratan como sin correo', () => {
+    expect(isSameEmail(null, undefined)).toBe(true);
+    expect(isSameEmail('', null)).toBe(true);
+    expect(isSameEmail('ana@correo.cl', null)).toBe(false);
   });
 });

@@ -14,3 +14,8 @@ export function validateEmail(email: string): boolean {
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/** True si dos correos son el mismo una vez normalizados. Sin valor cuenta como vacío. */
+export function isSameEmail(a: string | null | undefined, b: string | null | undefined): boolean {
+  return normalizeEmail(a ?? '') === normalizeEmail(b ?? '');
+}

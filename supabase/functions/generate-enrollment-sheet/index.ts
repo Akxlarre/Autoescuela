@@ -16,6 +16,14 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+// fix-293-m: el escape propio de este archivo quitaba tildes y ñ. La fuente está declarada con
+// WinAnsiEncoding, que sí las tiene; se usa el mismo escape que el resto de los PDF.
+import { escapePdfWinAnsi as pdfStr } from '../_shared/pdf-utils.ts';
+import {
+  conceptoPago,
+  fechaHoraGeneracion,
+  fechaPago,
+} from '../_shared/enrollment-sheet-format.ts';
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 
@@ -179,7 +187,7 @@ Deno.serve(async (req: Request) => {
       branch: { name: enrollment.branches.name },
       payments: (payments ?? []).map((p: any) => ({
         date: p.payment_date,
-        concept: p.type?.trim() || 'Pago',
+        concept: conceptoPago(p.type),
         amount: p.total_amount ?? 0,
         method: deriveMethod(p),
       })),
@@ -249,7 +257,8 @@ interface SheetData {
   generatedAt: string;
 }
 
-function buildEnrollmentSheetPdf(data: SheetData): Uint8Array {
+// Exportado solo para poder generar un PDF de muestra sin levantar la función.
+export function buildEnrollmentSheetPdf(data: SheetData): Uint8Array {
   const lines: string[] = [];
   const objOffsets: number[] = [];
   let byteOffset = 0;
@@ -358,19 +367,21 @@ function buildPageContent(data: SheetData): string {
   }
 
   // ── Header ───────────────────────────────────────────────────────────────
+  // fix-293-m: las dos líneas de cada lado iban a 7 pt de distancia y se montaban (título de
+  // 12 pt). Ahora van a 12 pt, en una franja un poco más alta.
   setGray(0.15);
-  rect(0, 810, 595, 32, true);
+  rect(0, 804, 595, 38, true);
   ops.push('1 g'); // white text
-  text(M, 820, data.branch.name.toUpperCase(), 12, true);
-  text(M, 813, 'FICHA DE MATRÍCULA', 8);
+  text(M, 824, data.branch.name.toUpperCase(), 12, true);
+  text(M, 812, 'FICHA DE MATRÍCULA', 8);
 
   // Enrollment number + date (right side)
   const nro = data.enrollment.number
     ? `Nro. ${data.enrollment.number}`
     : `ID ${data.enrollment.id}`;
   const genDate = formatDateCL(data.generatedAt);
-  text(400, 820, nro, 10, true);
-  text(400, 813, `Generada: ${genDate}`, 7);
+  text(400, 824, nro, 10, true);
+  text(400, 812, `Generada: ${genDate}`, 7);
   resetColor();
 
   y = 790;
@@ -449,7 +460,7 @@ function buildPageContent(data: SheetData): string {
       }
       xCur = M;
       const row = [
-        p.date ? formatDateCL(p.date) : '-',
+        fechaPago(p.date),
         p.concept.substring(0, 24),
         formatCLP(p.amount),
         p.method ?? '-',
@@ -556,7 +567,7 @@ function buildPageContent(data: SheetData): string {
   text(
     M,
     26,
-    `Documento generado el ${formatDateTimeCL(data.generatedAt)} - ${data.branch.name}`,
+    `Documento generado el ${fechaHoraGeneracion(data.generatedAt)} - ${data.branch.name}`,
     6,
   );
   resetColor();
@@ -602,14 +613,6 @@ function twoColTable(
 
 // ── String helpers ────────────────────────────────────────────────────────────
 
-function pdfStr(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip diacritics
-    .replace(/[()\\]/g, (c) => '\\' + c)
-    .replace(/[^\x20-\x7E]/g, '?'); // fallback non-ASCII
-}
-
 function formatDateCL(iso: string | null): string {
   if (!iso) return '-';
   const d = new Date(iso);
@@ -617,18 +620,6 @@ function formatDateCL(iso: string | null): string {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    timeZone: 'America/Santiago',
-  });
-}
-
-function formatDateTimeCL(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
     timeZone: 'America/Santiago',
   });
 }

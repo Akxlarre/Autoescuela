@@ -415,7 +415,8 @@ test.describe('ficha: marcar como ex-alumno y archivar', () => {
 
     try {
       await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
-      const reprogramar = page.locator('[data-llm-action="reprogramar-clase"]').first();
+      // El lápiz existe en la tabla y en las tarjetas; en el drawer se ven las tarjetas (fix-290-m).
+      const reprogramar = page.locator('[data-llm-action="reprogramar-clase"]:visible').first();
       await reprogramar.click();
       const panel = page.locator('app-admin-reprogramar-clase-drawer');
       const confirmar = panel.locator('[data-llm-action="confirmar-reprogramar-clase"]');
@@ -1243,7 +1244,7 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     expect(fila!.justification).toBeNull();
   });
 
-  test('M09 · M15: el email se guarda en minúsculas y cancelar descarta lo escrito', async ({
+  test('M09 · M15 · B36: el email se guarda en minúsculas; cancelar descarta lo escrito y se puede reabrir de inmediato', async ({
     pageAs,
     cleanup,
   }) => {
@@ -1260,14 +1261,117 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await hero(page).locator('[data-llm-action="editar-alumno"]').click();
     await page.locator(NOMBRES).fill('Cualquier Cosa');
     await page.getByRole('button', { name: 'Cancelar' }).click();
+    // B36 (fix-295-m): se reabre de inmediato, con el panel todavía cerrándose. Antes aparecía
+    // con el formulario vacío y, al terminar la animación de salida, se cerraba solo.
     await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+    await expect(page.locator(NOMBRES)).toHaveValue(alumno.firstNames);
+    // Pasado el tiempo de la animación de salida (250 ms) el panel sigue abierto y con datos.
+    await page.waitForTimeout(700);
     await expect(page.locator(NOMBRES)).toHaveValue(alumno.firstNames);
 
     // M09: el email en mayúsculas queda en minúsculas.
     const nuevo = alumno.email.replace('@', '-nuevo@').toUpperCase();
     await page.locator(EMAIL).fill(nuevo);
     await page.locator('[data-llm-action="guardar-perfil-alumno"]').click();
+    // hotfix-135-m: una vez guardado, el aviso "Guarda los cambios antes de enviar la invitación"
+    // no se ve en ningún cuadro hasta que el panel se cierra (antes aparecía mientras la ficha
+    // se refrescaba, y otra vez durante la animación de cierre).
+    await expect(page.getByText('Datos actualizados correctamente.')).toBeVisible(CARGA);
+    await page.evaluate(() => {
+      const w = window as unknown as { avisoVisto: boolean };
+      w.avisoVisto = false;
+      const revisar = (): void => {
+        if (document.body.innerText.includes('Guarda los cambios antes de enviar')) {
+          w.avisoVisto = true;
+        }
+        requestAnimationFrame(revisar);
+      };
+      revisar();
+    });
     await expect(page.locator('[data-llm-info="email"]')).toContainText(nuevo.toLowerCase(), CARGA);
+    await expect(page.locator(EMAIL)).toHaveCount(0);
+    expect(
+      await page.evaluate(() => (window as unknown as { avisoVisto: boolean }).avisoVisto),
+      'el aviso no debe verse después de guardar',
+    ).toBe(false);
+  });
+
+  test('S18 (hotfix-134-m): guardar el perfil y abrir otro panel enseguida no cierra ese panel', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CierreDiferido', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+
+    await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+    await page.locator('#edit-phone').fill('987654321');
+    await page.locator('[data-llm-action="guardar-perfil-alumno"]').click();
+    // El aviso de éxito marca el inicio del plazo de 1,2 s del cierre automático.
+    await expect(page.getByText('Datos actualizados correctamente.')).toBeVisible(CARGA);
+
+    // Dentro de ese plazo: cerrar "Editar Perfil" y abrir la Ficha Técnica.
+    await page.getByRole('button', { name: 'Cerrar panel' }).click();
+    await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+    const ficha = page.locator('app-admin-ficha-tecnica');
+    await expect(ficha).toBeVisible();
+
+    // Pasado el plazo del cierre diferido, la Ficha Técnica sigue abierta.
+    await page.waitForTimeout(1_800);
+    await expect(ficha).toBeVisible();
+  });
+
+  test('S18 · invitación (fix-296-m): con el correo sin guardar no se puede enviar la invitación', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    // Los alumnos E2E- no han activado su cuenta: el bloque de la invitación está visible.
+    const alumno = await createE2eAlumno(
+      { label: 'Invitacion', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+
+    const EMAIL = '[data-llm-description="Correo electrónico del alumno"]';
+    const invitar = page.locator('[data-llm-action="enviar-invitacion-alumno"]');
+    const aviso = page.getByText('Guarda los cambios antes de enviar la invitación.');
+
+    await expect(invitar).toBeEnabled();
+    await expect(aviso).toHaveCount(0);
+
+    await page.locator(EMAIL).fill(alumno.email.replace('@', '-otro@'));
+    await expect(invitar).toBeDisabled();
+    await expect(aviso).toBeVisible();
+
+    // El mismo correo en mayúsculas no es un cambio: se guarda en minúsculas.
+    await page.locator(EMAIL).fill(alumno.email.toUpperCase());
+    await expect(invitar).toBeEnabled();
+    await expect(aviso).toHaveCount(0);
+
+    // hotfix-135-m: al cancelar, el aviso no aparece mientras el panel se cierra. Se mira en
+    // cada cuadro de la animación de salida, no solo al final.
+    await page.evaluate(() => {
+      const w = window as unknown as { avisoVisto: boolean };
+      w.avisoVisto = false;
+      const revisar = (): void => {
+        if (document.body.innerText.includes('Guarda los cambios antes de enviar')) {
+          w.avisoVisto = true;
+        }
+        requestAnimationFrame(revisar);
+      };
+      requestAnimationFrame(revisar);
+    });
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.locator(EMAIL)).toHaveCount(0);
+    expect(
+      await page.evaluate(() => (window as unknown as { avisoVisto: boolean }).avisoVisto),
+      'el aviso no debe verse durante el cierre',
+    ).toBe(false);
   });
 
   test('O06 · O07: doble clic al confirmar el egreso cambia una sola vez; si falla, sigue activo', async ({
@@ -1341,10 +1445,72 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(matricula(page)).toBeVisible();
   });
 
-  test('T13 (B32): si la carga de Ex-Alumnos falla se muestra un error, no "No se encontraron egresados"', async ({
+  for (const width of [1600, 1366]) {
+    test(`E08 (fix-290-m): a ${width} px la Ficha Técnica muestra el lápiz de reprogramar sin scroll horizontal`, async ({
+      pageAs,
+      cleanup,
+    }) => {
+      const alumno = await createE2eAlumno(
+        { label: `FichaTecnica${width}`, branchId: SEDE_A, enrollments: [{}] },
+        cleanup,
+      );
+      await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+      const page = await pageAs('secretariaA');
+      await openFicha(page, 'secretaria', alumno.studentId);
+      await page.setViewportSize({ width, height: 900 });
+
+      await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+      const ficha = page.locator('app-admin-ficha-tecnica');
+      // Hay un lápiz por cada clase sin completar; basta el de la primera.
+      const lapiz = ficha.locator('[data-llm-action="reprogramar-clase"]:visible').first();
+
+      await expect(lapiz, 'el lápiz se ve entero, sin desplazar nada').toBeInViewport({ ratio: 1 });
+      // Ningún bloque visible de la ficha necesita scroll horizontal. Se reintenta: el drawer
+      // entra animando su ancho y a mitad de camino el contenido todavía no cabe.
+      await expect
+        .poll(
+          () =>
+            ficha.evaluate(
+              (el) =>
+                [...el.querySelectorAll<HTMLElement>('*')].filter(
+                  (n) =>
+                    n.offsetParent !== null &&
+                    n.scrollWidth > n.clientWidth + 1 &&
+                    n.clientWidth > 200,
+                ).length,
+            ),
+          { message: 'bloques con scroll horizontal' },
+        )
+        .toBe(0);
+    });
+  }
+
+  test('Z04 (fix-291-m): a 768 px el nombre del alumno se lee en la cabecera de la ficha', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Cabecera', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.setViewportSize({ width: 768, height: 900 });
+
+    const nombre = page.locator('app-section-hero h1');
+    await expect(nombre).toContainText(alumno.paternalLastName);
+    // Antes quedaba en 34 px ("Alum Ap…"): las acciones no bajaban de línea.
+    await expect
+      .poll(async () => (await nombre.boundingBox())?.width ?? 0, {
+        message: 'ancho del nombre en la cabecera',
+      })
+      .toBeGreaterThan(200);
+    await expect(page.getByRole('button', { name: 'Editar Perfil' })).toBeInViewport({ ratio: 1 });
+  });
+
+  test('T13 (fix-287-m): si la carga de Ex-Alumnos falla se muestra un error, no "No se encontraron egresados"', async ({
     pageAs,
   }) => {
-    knownBug('B32 (fix-264-m)');
     const page = await pageAs('admin');
     await page.setViewportSize(DESKTOP);
     await page.route('**/rest/v1/enrollments*', (route) =>
@@ -1357,11 +1523,10 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(page.getByText('No se encontraron egresados')).toHaveCount(0);
   });
 
-  test('Z06 (B35): un nombre con "<" o "&" se muestra tal cual en la confirmación de re-matricular', async ({
+  test('Z06 (fix-284-m): un nombre con "<" o "&" se muestra tal cual en la confirmación de re-matricular', async ({
     pageAs,
     cleanup,
   }) => {
-    knownBug('B35 (fix-264-m)');
     const sufijo = String(Date.now()).slice(-6);
     const egresado = await createE2eAlumno(
       {
@@ -1387,11 +1552,10 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await confirmacion.getByRole('button', { name: 'Cancelar' }).click();
   });
 
-  test('Y04 (B33): la secretaria multi-sede cambia de sede en Ex-Alumnos y la lista se recarga', async ({
+  test('Y04 (fix-288-m): la secretaria multi-sede cambia de sede en Ex-Alumnos y la lista se recarga', async ({
     pageAs,
     cleanup,
   }) => {
-    knownBug('B33 (fix-264-m)');
     const [egresadoA, egresadoB] = await Promise.all([
       createE2eAlumno(
         { label: 'EgresadoSedeA', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },

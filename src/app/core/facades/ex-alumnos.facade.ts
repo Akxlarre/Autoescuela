@@ -135,6 +135,8 @@ export class ExAlumnosFacade {
     this._error.set(null);
     try {
       await Promise.all([this.loadEgresadosList(), this.loadStatistics(), this.loadSurveys()]);
+      // fix-287-m: una carga fallida no cuenta como hecha; reintentar vuelve a cargar completo.
+      if (this._error()) return;
       this._initialized = true;
       this._lastBranchId = branchId;
     } finally {
@@ -185,6 +187,7 @@ export class ExAlumnosFacade {
       this._error.set(this.sanitizer.sanitize(error).message);
       return;
     }
+    this._error.set(null);
 
     // fix-276-m: un egresado archivado solo se ve en la Papelera de la Base de Alumnos.
     const rows = ((data as unknown as EgresadoRow[]) ?? []).filter(

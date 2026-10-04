@@ -11,7 +11,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
   template: `
     <div
       id="ficha-tecnica-container"
-      class="bento-card overflow-hidden p-0! flex flex-col h-full w-full"
+      class="ficha-contenedor bento-card overflow-hidden p-0! flex flex-col h-full w-full"
     >
       <!-- Header -->
       <div
@@ -44,8 +44,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         </button>
       </div>
 
-      <!-- Desktop Table View (Hidden on mobile) -->
-      <div class="hidden md:block overflow-x-auto min-h-0 flex-1">
+      <!-- Tabla: solo cuando el contenedor es lo bastante ancho para mostrarla entera -->
+      <div class="ficha-tabla overflow-x-auto min-h-0 flex-1">
         <table class="tabla-ficha w-full">
           <thead>
             <tr>
@@ -71,7 +71,11 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   <div class="flex flex-col gap-0.5">
                     <span class="font-bold text-text-primary">#{{ clase.numero }}</span>
                     @if (clase.topic) {
-                      <span class="text-xs text-text-muted truncate max-w-32" [title]="clase.topic">{{ clase.topic }}</span>
+                      <span
+                        class="text-xs text-text-muted truncate max-w-32"
+                        [title]="clase.topic"
+                        >{{ clase.topic }}</span
+                      >
                     }
                   </div>
                 </td>
@@ -171,19 +175,22 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         </table>
       </div>
 
-      <!-- Mobile Card View (Visible on mobile only) -->
-      <div class="md:hidden flex-1 overflow-y-auto p-4 space-y-3 bg-surface/50">
+      <!-- Tarjetas: contenedor angosto (móvil y el drawer de la ficha del alumno) -->
+      <div class="ficha-tarjetas flex-1 overflow-y-auto p-4 space-y-3 bg-surface/50">
         @for (clase of clases(); track clase.numero) {
           <div
             class="p-4 rounded-xl border border-border-subtle bg-surface shadow-sm flex flex-col gap-3"
           >
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1">
-                <span class="text-2xs px-2 py-0.5 rounded bg-elevated font-bold text-text-primary w-fit"
+                <span
+                  class="text-2xs px-2 py-0.5 rounded bg-elevated font-bold text-text-primary w-fit"
                   >SESIÓN #{{ clase.numero }}</span
                 >
                 @if (clase.topic) {
-                  <span class="text-xs font-medium text-text-secondary line-clamp-1">{{ clase.topic }}</span>
+                  <span class="text-xs font-medium text-text-secondary line-clamp-1">{{
+                    clase.topic
+                  }}</span>
                 }
               </div>
               <div class="flex items-center gap-2">
@@ -233,6 +240,15 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   clase.instructor || 'Sin asignar'
                 }}</span>
               </div>
+              @if (clase.kmInicio !== null) {
+                <div class="flex flex-col gap-0.5 col-span-2">
+                  <span class="micro-label">Kilometraje</span>
+                  <span class="text-xs font-semibold text-text-primary"
+                    >{{ clase.kmInicio.toLocaleString('es-CL') }} km · Fin:
+                    {{ clase.kmFin?.toLocaleString('es-CL') || '?' }} km</span
+                  >
+                </div>
+              }
             </div>
 
             @if (clase.ausente) {
@@ -263,15 +279,22 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     </div>
   `,
   styles: `
-    /* Force Compact (drawer abierto): "md:" es un breakpoint de viewport,
-       no reacciona al layout-shift del drawer. Forzamos la vista mobile
-       (tarjetas) cuando el ancestro .bento-grid tiene .force-compact. */
-    :host-context(.force-compact) {
-      .hidden.md\\:block {
-        display: none !important;
+    /* fix-290-m: tabla o tarjetas segun el ancho del CONTENEDOR, no de la ventana. La ficha
+       vive en un drawer de 615 a 720 px y la tabla necesita unos 904: con un breakpoint de
+       ventana se mostraba la tabla y sus ultimas columnas quedaban fuera de la vista. */
+    .ficha-contenedor {
+      container-type: inline-size;
+      container-name: fichaTecnica;
+    }
+    .ficha-tabla {
+      display: none;
+    }
+    @container fichaTecnica (min-width: 920px) {
+      .ficha-tabla {
+        display: block;
       }
-      .md\\:hidden {
-        display: block !important;
+      .ficha-tarjetas {
+        display: none;
       }
     }
 

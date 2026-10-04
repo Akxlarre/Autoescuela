@@ -207,6 +207,19 @@ export interface EgresadosExportRequest {
               }
             </div>
           </div>
+        } @else if (showLoadError()) {
+          <!-- fix-287-m: la carga falló y no hay nada que mostrar; no es una lista vacía.
+               Centrado en el alto disponible de la celda bento-fill. -->
+          <div class="flex-1 flex items-center justify-center bg-surface" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="error() ?? ''"
+              subtitle="No se pudo obtener la lista. Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="refreshRequested.emit()"
+            />
+          </div>
         } @else {
           <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
             <!-- VISTA 1: TABLA (Oculta cuando se comprime) -->
@@ -435,6 +448,17 @@ export class ExAlumnosContentComponent {
   readonly basePath = input<string>('/app/secretaria');
   /** Hay una exportación en curso (signal isExporting del Facade). */
   readonly isExporting = input<boolean>(false);
+  /** Error de la última carga (signal error del Facade), o null. */
+  readonly error = input<string | null>(null);
+
+  /**
+   * El estado de error reemplaza a la tabla solo si no hay egresados que mostrar. Si un refresco
+   * en segundo plano falla con datos ya en pantalla, se siguen mostrando (SWR).
+   */
+  readonly showLoadError = computed(() => !!this.error() && this.egresados().length === 0);
+
+  /** "Reintentar" del estado de error: el Smart vuelve a pedir la lista. */
+  readonly refreshRequested = output<void>();
 
   /** El Smart Component confirma, navega y abre el wizard (y en admin, selecciona sede). */
   readonly reEnrollRequested = output<EgresadoTableRow>();

@@ -1,4 +1,28 @@
-import { resolveListadoRoute, resolveListadoLabel } from './admin-alumno-detalle.component';
+import {
+  resolveCertificadoBAction,
+  resolveListadoRoute,
+  resolveListadoLabel,
+} from './admin-alumno-detalle.component';
+
+describe('resolveCertificadoBAction (fix-289-m)', () => {
+  it('con las prácticas completas genera sin confirmación, sea admin o secretaria', () => {
+    expect(resolveCertificadoBAction(12, 12, true)).toBe('generate');
+    expect(resolveCertificadoBAction(12, 12, false)).toBe('generate');
+  });
+
+  it('con prácticas incompletas el admin debe confirmar y el pedido va forzado', () => {
+    expect(resolveCertificadoBAction(5, 12, true)).toBe('confirm-forced');
+  });
+
+  it('con prácticas incompletas la secretaria no puede generar', () => {
+    expect(resolveCertificadoBAction(5, 12, false)).toBe('blocked');
+  });
+
+  it('un curso de refuerzo usa su propio total de clases', () => {
+    expect(resolveCertificadoBAction(6, 6, false)).toBe('generate');
+    expect(resolveCertificadoBAction(5, 6, true)).toBe('confirm-forced');
+  });
+});
 
 // fix-278-m: "Ver todo el historial" ya no navega al listado de Pagos (resolvePagosRoute,
 // fix-235-m): abre el estado de cuenta de la matrícula sin salir de la ficha.

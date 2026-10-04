@@ -411,8 +411,11 @@ import type {
           <div
             class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-15"
           >
-            <!-- LEFT: back | icon | title -->
-            <div class="flex items-center gap-3 min-w-0 flex-1">
+            <!-- LEFT: back | icon | title.
+                 sm:basis-80 (fix-291-m): con flex-1 solo, la base es 0 y para el navegador la
+                 fila siempre cabe, así que el flex-wrap de arriba nunca saltaba y el título se
+                 aplastaba. Con una base de 20rem, si LEFT + RIGHT no caben, RIGHT baja de línea. -->
+            <div class="flex items-center gap-3 min-w-0 flex-1 sm:basis-80">
               @if (backRoute()) {
                 <a
                   [routerLink]="backRoute()"

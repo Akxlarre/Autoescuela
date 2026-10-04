@@ -398,7 +398,7 @@
 | `app-evaluaciones-profesional-content` | `landing`, `landingLoaded`, `grilla`, `selectedCursoId`, `isLoading`, `isSaving`, `hayDirty`, `isDesktopLayout`, `start` | `cursoSelected`, `volverAterrizaje`, `gradeChanged`, `gradeBlurred`, `guardarBorradorRequested`, `confirmarNotasRequested` | `src/app/shared/components/evaluaciones-profesional-content/evaluaciones-profesional-content.component.ts` |
 | `app-evaluation-checklist` | `items`, `readonly` | `itemsChange` | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
 | `app-evolucion-mensual-chart` | `datos` | — | `src/app/shared/components/evolucion-mensual-chart/evolucion-mensual-chart.component.ts` |
-| `app-ex-alumnos-content` | `egresados`, `isLoading`, `basePath`, `isExporting` | `reEnrollRequested`, `requestVerTasas`, `requestComentario`, `exportRequested` | `src/app/shared/components/ex-alumnos-content/ex-alumnos-content.component.ts` |
+| `app-ex-alumnos-content` | `egresados`, `isLoading`, `basePath`, `isExporting`, `error` | `refreshRequested`, `reEnrollRequested`, `requestVerTasas`, `requestComentario`, `exportRequested` | `src/app/shared/components/ex-alumnos-content/ex-alumnos-content.component.ts` |
 | `app-ex-alumnos-profesional-content` | `egresados`, `isLoading`, `backRoute`, `basePath`, `isExporting` | `reEnroll`, `exportRequested` | `src/app/shared/components/ex-alumnos-profesional-content/ex-alumnos-profesional-content.component.ts` |
 | `app-exec-period-filter` | `preset`, `range`, `today` | `rangeChange` | `src/app/shared/components/exec-period-filter/exec-period-filter.component.ts` |
 | `app-export-menu` | `exporting`, `disabled`, `llmSubject` | `exportRequested` | `src/app/shared/components/export-menu/export-menu.component.ts` |

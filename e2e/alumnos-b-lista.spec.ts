@@ -780,9 +780,19 @@ test.describe('exportar', () => {
 });
 
 /** Elige una opción de uno de los 3 selectores de filtro, buscado por su data-llm-description. */
+/**
+ * Elige una opción de un selector de filtro. Reintenta abrirlo: con la suite completa corriendo
+ * (4 workers contra ng serve y la BD compartida), a veces la lista de opciones se cierra sola
+ * justo después de abrirse y el test quedaba esperando una opción que ya no estaba. Pasa con y
+ * sin los cambios de fix-294-m (prueba A/B del 2026-10-04); no se encontró qué la cierra.
+ */
 async function filtrar(page: Page, descripcion: string, opcion: string): Promise<void> {
-  await page.locator(`p-select[data-llm-description="${descripcion}"]`).click();
-  await page.getByRole('option', { name: opcion, exact: true }).click();
+  const select = page.locator(`p-select[data-llm-description="${descripcion}"]`);
+  const option = page.getByRole('option', { name: opcion, exact: true });
+  await expect(async () => {
+    if (!(await option.isVisible())) await select.click();
+    await option.click({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 }
 const FILTRO_ESTADO = 'Filter students by enrollment status';
 const FILTRO_EXPEDIENTE = 'Filter students by file completion status';
@@ -1016,10 +1026,9 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(rows(page).first()).toContainText('Apellido19');
   });
 
-  test('K01 (B26): el menú Exportar se cierra con Escape y con un clic en el encabezado', async ({
+  test('K01 (fix-286-m): el menú Exportar se cierra con Escape y con un clic en el encabezado', async ({
     pageAs,
   }) => {
-    knownBug('B26 (fix-264-m)');
     const page = await pageAs('admin');
     await openLista(page, 'admin');
     const excel = page.locator('[data-llm-action="export-students-excel"]');
@@ -1034,8 +1043,9 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(excel, 'un clic fuera del panel cierra el menú').toHaveCount(0);
   });
 
-  test('B24: "Exportar" se deshabilita cuando la lista está vacía', async ({ pageAs }) => {
-    knownBug('B24 (fix-264-m)');
+  test('B24 (hotfix-133-m): "Exportar" se deshabilita cuando la lista está vacía', async ({
+    pageAs,
+  }) => {
     const page = await pageAs('admin');
     await openLista(page, 'admin');
     await page.locator(SEARCH).fill('zzz-no-existe-nadie-asi');
@@ -1044,21 +1054,46 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(page.locator('[data-llm-action="open-export-menu"]')).toBeDisabled();
   });
 
-  test('B23: a 1366 px la columna Acciones se ve completa, sin scroll horizontal', async ({
+  test('B23 (fix-294-m): a 1366 px la tabla cabe entera, con y sin la columna Sede', async ({
     pageAs,
   }) => {
-    knownBug('B23 (fix-264-m)');
     const page = await pageAs('admin');
     await page.setViewportSize({ width: 1366, height: 800 });
     await page.goto('/app/admin/alumnos');
     await expect(page.getByText(REPORT)).toBeVisible(CARGA);
 
     const tabla = page.locator('p-table .p-datatable-table-container').first();
-    const { scroll, client } = await tabla.evaluate((el) => ({
-      scroll: el.scrollWidth,
-      client: el.clientWidth,
-    }));
-    expect(scroll, 'la tabla no debe necesitar scroll horizontal').toBeLessThanOrEqual(client + 1);
+    const revisar = async (vista: string): Promise<void> => {
+      const { scroll, client, altos } = await tabla.evaluate((el) => ({
+        scroll: el.scrollWidth,
+        client: el.clientWidth,
+        // Alto del texto del RUT de cada fila: una sola línea mide menos de 24 px.
+        altos: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map((td) => {
+          const range = document.createRange();
+          range.selectNodeContents(td);
+          return Math.round(range.getBoundingClientRect().height);
+        }),
+      }));
+      expect(scroll, `${vista}: sin scroll horizontal`).toBeLessThanOrEqual(client + 1);
+      expect(Math.max(...altos), `${vista}: el RUT va en una sola línea`).toBeLessThan(24);
+      await expect(
+        rows(page).first().locator('[data-llm-action="archive-student-row"]'),
+        `${vista}: el botón de archivar se ve entero`,
+      ).toBeInViewport({ ratio: 1 });
+    };
+
+    // "Todas las sedes": 9 columnas, el caso más ancho.
+    await expect(page.getByRole('columnheader', { name: /Sede/ })).toBeVisible();
+    await revisar('todas las sedes');
+
+    await page.locator('[data-llm-action="toggle-branch-dropdown"]').click();
+    await page
+      .getByRole('listbox', { name: 'Seleccionar sede' })
+      .getByRole('option', { name: 'Autoescuela Chillán' })
+      .click();
+    await expect(page.getByRole('columnheader', { name: /Sede/ })).toHaveCount(0);
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+    await revisar('una sede');
   });
 });
 

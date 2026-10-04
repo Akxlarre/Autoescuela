@@ -14,6 +14,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
+import { escapeHtml } from '@core/utils/html.utils';
 
 @Component({
   selector: 'app-admin-ex-alumnos-profesional',
@@ -44,7 +45,7 @@ export class AdminExAlumnosProfesionalComponent implements OnInit, OnDestroy {
   protected async reEnroll(egresado: EgresadoTableRow): Promise<void> {
     const confirmed = await this.confirmModal.confirm({
       title: 'Re-matricular alumno',
-      message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${egresado.nombre}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
+      message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${escapeHtml(egresado.nombre)}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
       severity: 'info',
       confirmLabel: 'Continuar',
       cancelLabel: 'Cancelar',
