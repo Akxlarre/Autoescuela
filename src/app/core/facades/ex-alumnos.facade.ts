@@ -10,7 +10,7 @@ import { buildStudentDisplayName } from '@core/utils/student-name.util';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { downloadBlob } from '@core/utils/file-download.utils';
-import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
+import { formatDayMonthYear, toISODate, todayIso } from '@core/utils/date.utils';
 import {
   EGRESADOS_PDF_COLUMN_WEIGHTS,
   buildEgresadosExcelTable,
@@ -219,7 +219,9 @@ export class ExAlumnosFacade {
     // actualiza al marcar al ex-alumno y sí cambia con cada pago posterior.
     const anio: number | null = r.completed_at ? new Date(r.completed_at).getFullYear() : null;
     // fix-147-b: la ventana de período necesita precisión de día, no solo el año.
-    const fechaEgreso: string | null = r.completed_at ? r.completed_at.slice(0, 10) : null;
+    // fix-297-m: el día en hora local, como el año. Cortar el texto (UTC) dejaba a un egresado
+    // del 31-dic de noche con año 2025 en la columna y fuera del período 2025 en el filtro.
+    const fechaEgreso: string | null = r.completed_at ? toISODate(r.completed_at) : null;
     const sede: string = r.branches?.name ?? '—';
     const branchId: number | null = r.branches?.id ?? null;
 

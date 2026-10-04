@@ -366,11 +366,29 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | Z04 | ✅ | 375 y 768 px: scroll nativo, sin scroll horizontal. A 768 px el nombre de la cabecera quedaba "Alum Ap…". **Corregido el 2026-10-04**: las acciones bajan de línea y el nombre se lee entero | B31 → `fix-291-m` |
 | Z06 | ❌ → ✅ | Auto. El modal de re-matricular interpreta el nombre como HTML: `<i>cursiva</i>` se ve en cursiva y sin las etiquetas. Angular quita scripts, así que es inyección de HTML, no de código. Mismo patrón en los 4 componentes de re-matricular (B y Profesional, admin y secretaria). **Corregido el 2026-10-04** | B35 → `fix-284-m` |
 
-**Aún sin ejecutar de `024b`:** B06, B07 · C07 · D03, D05, D09 · E02, E03, E09 · F01–F03,
-F05–F10, F12, F14 (agenda de reprogramar, se cruza con `ASG-i-026`) · G02–G12 (reagendar masivo,
-se cruza con `ASG-i-027`) · H05, H08 · I03–I05, I07 · J02–J09 (generan PDFs en Storage) · K01–K05
-(no hay matrículas online sin firmar en los datos) · L02, L04–L07 · M05, M10–M14, M16 (invitación
-y cuentas Auth reales) · N01, N04, N05, N07, N08 · S01, S02, S05 · U07 · W03, W04, W06–W08 · Z05.
+Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
+`e2e/alumnos-b-ficha.spec.ts`, con alumnos `E2E-`.
+
+| ID | Res. | Evidencia / observación | Track generado |
+|---|---|---|---|
+| B06 | ✅ | Auto. Un correo de unos 45 caracteres no se sale de su tarjeta | |
+| B07 | ✅ | Auto. Sin teléfono se muestra "—" | |
+| D03 | ✅ | Auto. Con 1 de 12 clases (8 %) la barra no lleva texto dentro ni se desborda | |
+| D05 | ✅ | Cubierto por H09 de la 2ª pasada ("Inasistencia — Justificada" tras recargar) | |
+| E02 | ✅ | Auto. La tarjeta de la clase muestra "125.430 km · Fin: 125.462 km" y la observación registrada | |
+| E03 | ❌ → ✅ | Auto. Punto de color solo donde hay firma, pero en las tarjetas no tenía texto al pasar el mouse (la tabla sí). **Corregido el 2026-10-04** | B38 → `hotfix-136-m` |
+| G02 | ✅ | Auto. Sin clases pendientes de reagendar no hay botón "Reagendar Clases" | |
+| I03 | ✅ | Auto. Sin pagos: "No hay pagos registrados" | |
+| K02 | ✅ | Auto. Matrícula presencial sin contrato: no hay botón de contrato | |
+| L03 | ✅ | Por test unitario (`fix-289-m`): el admin confirma y el pedido va con `force`. No se generó un certificado real | |
+| M05 | ✅ | Auto (`fix-296-m`): con el correo sin guardar el botón de invitación queda deshabilitado, con aviso | |
+| U07 | ❌ → ✅ | Auto. Un egreso del 31-12-2025 a las 23:30 mostraba el año 2025 pero el filtro de período lo trataba como 2026. **Corregido el 2026-10-04** | B37 → `fix-297-m` |
+
+**Aún sin ejecutar de `024b`:** C07 · D09 · E09 · F01–F03, F05–F10, F12, F14 (agenda de
+reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
+H05, H08 · I04, I05, I07 · J02–J09 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
+online sin firmar en los datos) · L02, L04–L07 · M10–M14, M16 (invitación y cuentas Auth reales) ·
+N01, N04, N05, N07, N08 · S01, S02, S05 · W03, W04, W06–W08 · Z05.
 
 ## Sospechas: confirmadas / descartadas
 
@@ -455,6 +473,8 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B34 | **El admin no puede generar el certificado sin las 12 clases**: la ficha pregunta "¿generar de todas formas?" pero llama sin `force` y la función lo rechaza (S10, vigente) | 🟠 Media | ✅ `fix-289-m` (2026-10-04) |
 | B35 | **Inyección de HTML en la confirmación de re-matricular**: el nombre del egresado se interpola en un mensaje HTML (`<strong>${nombre}</strong>`). Angular quita scripts y eventos, pero las etiquetas se aplican. 4 componentes (Ex-Alumnos B y Profesional, admin y secretaria) | 🟠 Media | ✅ `fix-284-m` (2026-10-04): `escapeHtml()` en los 4 componentes |
 | B36 | **Reabrir un drawer mientras se está cerrando lo deja vacío y luego lo cierra.** Al cancelar "Editar Perfil" y volver a abrirlo dentro de los ~300 ms que dura la animación de salida, se reutiliza el mismo formulario ya vaciado y, al terminar la animación, el host de drawers limpia el panel recién abierto. Es del host global (`layout-drawer`), no de la ficha: afecta a cualquier drawer que se reabra con el mismo componente. Apareció el 2026-10-04 porque el test M09 · M15 reabría sin esperar (ahora espera el cierre) | 🟡 Baja | ✅ `fix-295-m` (2026-10-04): al reabrir durante el cierre, el host cancela la animación de salida y vuelve a crear el contenido. El test M09 · M15 volvió a reabrir sin esperar |
+| B37 | **Un egresado de noche queda con un año en la columna y otro en el filtro.** El año salía en hora local y el día de egreso en UTC: quien egresó el 31-12 a las 23:30 mostraba 2025 y desaparecía al elegir el período 2025 | 🟡 Baja | ✅ `fix-297-m` (2026-10-04) |
+| B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 

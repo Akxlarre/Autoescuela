@@ -210,6 +210,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   class="firma-dot firma-dot--sm shadow-sm"
                   [class.firma-alumno]="clase.alumnoFirmo"
                   [class.firma-pendiente]="!clase.alumnoFirmo"
+                  [title]="clase.alumnoFirmo ? 'Alumno firmó' : 'Firma alumno pendiente'"
                 >
                   <app-icon name="user" [size]="8" color="#fff" />
                 </div>
@@ -217,6 +218,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   class="firma-dot firma-dot--sm shadow-sm"
                   [class.firma-instructor]="clase.instructorFirmo"
                   [class.firma-pendiente]="!clase.instructorFirmo"
+                  [title]="
+                    clase.instructorFirmo ? 'Instructor firmó' : 'Firma instructor pendiente'
+                  "
                 >
                   <app-icon name="shield" [size]="8" color="#fff" />
                 </div>

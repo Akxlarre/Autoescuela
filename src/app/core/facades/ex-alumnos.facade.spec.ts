@@ -340,6 +340,20 @@ describe('ExAlumnosFacade', () => {
       expect(egresado.anio).toBe(2026);
     });
 
+    it('el día y el año salen del mismo reloj (fix-297-m)', async () => {
+      // Egreso de noche: en UTC ya es el día (y el año) siguiente al de Chile. Antes el año
+      // salía en hora local y el día en UTC, y el filtro de período lo dejaba fuera de su año.
+      mockEgresados([{ ...row, completed_at: '2026-01-01T02:30:00Z' }]);
+
+      await facade.loadEgresados();
+
+      const egresado = facade.egresadosClaseBList()[0];
+      const local = new Date('2026-01-01T02:30:00Z');
+      expect(egresado.anio).toBe(local.getFullYear());
+      expect(egresado.fechaEgreso?.slice(0, 4)).toBe(String(local.getFullYear()));
+      expect(Number(egresado.fechaEgreso?.slice(8, 10))).toBe(local.getDate());
+    });
+
     it('pide completed_at y ordena por ella, del egreso más reciente al más antiguo', async () => {
       const { order, select } = mockEgresados([row]);
 
