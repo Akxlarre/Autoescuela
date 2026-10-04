@@ -1096,6 +1096,16 @@ export class AdminAlumnoDetalleFacade {
 
   /** Sube el contrato firmado escaneado al storage y actualiza digital_contracts. */
   async subirContratoFirmado(enrollmentId: number, file: File): Promise<void> {
+    // fix-304-m: el diálogo de archivos solo sugiere PDF; acá se exige. Sin tipo informado
+    // (algunos navegadores), se mira la extensión.
+    const esPdf = file.type
+      ? file.type === 'application/pdf'
+      : file.name.toLowerCase().endsWith('.pdf');
+    if (!esPdf) {
+      this.toast.error('El contrato firmado debe ser un archivo PDF.');
+      return;
+    }
+
     this._isUploadingContract.set(true);
     try {
       const path = `contracts/${enrollmentId}/signed_contract.pdf`;
@@ -1814,12 +1824,17 @@ export class AdminAlumnoDetalleFacade {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(ts));
   }
 
-  /** Returns dates where the student already has 2+ classes, excluding the one being rescheduled. */
+  /**
+   * Returns dates where the student already has 2+ classes, excluding the one being rescheduled.
+   * fix-300-m: una clase cancelada no ocupa cupo del día; una inasistencia sí (la clase debía
+   * ocurrir y el alumno no asistió).
+   */
   private computeBlockedDates(): Set<string> {
     const excludeSessionId = this._reprogramarTarget()?.sessionId ?? null;
     const counts = new Map<string, number>();
     for (const clase of this._clasesPracticas()) {
       if (!clase.scheduledDate) continue;
+      if (clase.cancelada) continue;
       if (clase.sessionId === excludeSessionId) continue;
       counts.set(clase.scheduledDate, (counts.get(clase.scheduledDate) ?? 0) + 1);
     }

@@ -65,6 +65,39 @@
 
 ---
 
+## 0. Traspasado desde ASG-i-024 (Matías, 2026-10-04)
+
+El testing de la ficha del alumno (`ASG-i-024`, track `fix-264-m`) dejó sin ejecutar los casos de
+la agenda de reprogramar y del reagendamiento masivo, porque son de esta asignación. Se ejecutan
+acá. Equivalencias con `024b-ficha-ex-alumnos.md`:
+
+| Caso de `024b` | Se ejecuta acá como |
+|---|---|
+| F01 (lápiz en una clase agendada: pantalla e instructores de la sede) | I01, I02 |
+| F02 (reprogramar a otro instructor y horario; libera y ocupa en la Agenda) | I03 |
+| F03 (qué se ve mientras cargan los instructores) | I18 (nuevo) |
+| F05 (instructor sin disponibilidad) | I19 (nuevo) |
+| F06 (navegar semanas y días dentro del panel) | I20 (nuevo) |
+| F09 (vehículo con documento vencido) | I12 |
+| F10 (dos usuarios toman el mismo horario) | I15 |
+| F12 (notificaciones al reprogramar) | I17 |
+| F14 (doble clic en "Confirmar Reprogramación") | I16 |
+| G03, G06, G08 (reagendar masivo: paso 1, razón, volver) | J02, J03, J04, J09 |
+| G05, G10, G11 (ciclo completo, falla a mitad, penalización después) | J06, J05, J10 |
+
+**Ya resuelto en `ASG-i-024`: ejecutar como regresión, no como sospecha.**
+
+| Acá | Qué pasó | Track |
+|---|---|---|
+| S5 · I04 · L (alumno con 2 clases a la misma hora) | Confirmada y corregida. La grilla de la ficha (reprogramar y reagendar) ya no ofrece un horario que choca con otra clase agendada del alumno, y la base lo rechaza con un trigger (`trg_prevent_student_double_booking`), también desde la matrícula | `fix-299-m`, `fix-301-m` |
+| S9 · I07 · I11 (reprogramar un `no_show` o una cancelada) | Corregida. Reprogramar archiva la asistencia anterior y deja el registro en el historial, con razón obligatoria. Decisión de Matías: se permite reprogramar individualmente | `fix-279-m` |
+| I14 ("Cancelar") | Decidido y hecho: vuelve a la Ficha Técnica | `fix-279-m` |
+| I05 · J07 (tope por día) | El tope es de 2 clases por día (`fix-062-m`). Desde `fix-300-m` cuentan agendadas, completadas e inasistencias; las canceladas no | `fix-300-m` |
+| I08 (reprogramar una clase `in_progress`) | Sigue sin decidir | — |
+
+Tests E2E que ya cubren parte de esto: `e2e/alumnos-b-ficha.spec.ts`, casos F04 · F11 · F13 · E09
+y F07 (S20), más el de `fix-301-m` por API.
+
 ## 1. Sospechas de bug encontradas en el código
 
 ### Respuesta a la pregunta crítica: ¿quién inicia y cierra las clases en el piloto?
@@ -309,6 +342,9 @@ concurrencia (2 pestañas del mismo navegador comparten sesión).
 | I15 | Error al guardar (choque detectado por la BD) | Mensaje legible en el drawer, sin cerrar | — | |
 | I16 | Doble clic en "Confirmar Reprogramación" | Una sola actualización | — | |
 | I17 | Notificaciones | Se crean para el alumno y el instructor (aunque sus portales estén bloqueados) — confirmar si molesta | — | |
+| I18 | Mientras cargan los instructores (traspasado de `024b` F03) | Se ve un estado de carga, no "No hay instructores disponibles" por un instante | — | |
+| I19 | Instructor sin horarios (traspasado de `024b` F05) | "Sin disponibilidad", con explicación | — | |
+| I20 | Navegar semanas y días dentro del panel (traspasado de `024b` F06) | Las flechas se deshabilitan en la primera y la última semana; al cambiar de semana se elige el primer día | — | |
 
 ### J. Flujo 3 — Reagendamiento masivo (ficha → "Reagendar Clases")
 

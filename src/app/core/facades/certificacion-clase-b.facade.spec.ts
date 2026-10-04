@@ -321,6 +321,34 @@ describe('CertificacionClaseBFacade', () => {
       );
     });
 
+    /** Lo que devuelve functions.invoke() ante una respuesta no-2xx de la función real. */
+    const rechazo = (status: number, body: unknown) => ({
+      data: null,
+      error: Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+        context: new Response(JSON.stringify(body), { status }),
+      }),
+    });
+
+    it('fix-305-m: un rechazo de negocio (400) muestra el motivo que respondió la función', async () => {
+      const motivo = 'El alumno no cumple el mínimo de clases prácticas completadas (11/12).';
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(rechazo(400, { error: motivo }));
+
+      await facade.generarCertificado(42);
+
+      expect(toastSpy.error).toHaveBeenCalledWith(motivo);
+      expect(dmsViewerSpy.openByUrl).not.toHaveBeenCalled();
+    });
+
+    it('fix-305-m: un error interno (500) no muestra texto técnico', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(
+        rechazo(500, { error: 'Upload failed: new row violates row-level security policy' }),
+      );
+
+      await facade.generarCertificado(42);
+
+      expect(toastSpy.error).toHaveBeenCalledWith('No se pudo generar el certificado');
+    });
+
     it('limpia generatingId tras la llamada (éxito o error)', async () => {
       await facade.generarCertificado(42);
       expect(facade.generatingId()).toBeNull();
@@ -372,6 +400,51 @@ describe('CertificacionClaseBFacade', () => {
         [900],
         expect.objectContaining({ referenceType: 'certificate', referenceId: 42 }),
       );
+    });
+
+    it('fix-306-m: sin la lista cargada (generado desde la ficha) igual avisa al alumno', async () => {
+      const single = (data: unknown) => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data, error: null }) }),
+        }),
+      });
+      const enrollmentsHandler = single({ student_id: 5, courses: { name: 'Clase B' } });
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: enrollmentsHandler,
+        students: single({ user_id: 900 }),
+      });
+      expect(facade.alumnos()).toEqual([]);
+
+      await facade.generarCertificado(42);
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [900],
+        expect.objectContaining({
+          referenceType: 'certificate',
+          referenceId: 42,
+          message: expect.stringContaining('Clase B'),
+        }),
+      );
+    });
+
+    it('fix-306-m: si no se puede resolver al alumno, la generación termina igual', async () => {
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: null, error: new Error('rls') }),
+            }),
+          }),
+        },
+      });
+
+      await expect(facade.generarCertificado(42)).resolves.toBeUndefined();
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith('https://pdf', 'Certificado Clase B');
     });
 
     it('no rompe la generación si falla la notificación (AC-E1)', async () => {

@@ -37,8 +37,12 @@ Ajustes sobre el texto de la ASG:
 - **Sospechas que ya tienen asignación propia:** acá solo se confirman o descartan y se
   referencian; no se abre un fix duplicado.
   - Edge functions sin control de rol/sede (`024a` S1, S2; `024b` S2) → `ASG-i-041`, `ASG-i-042`.
+    Ambas están completadas (`fix-043-i` y la spec `0009-i`): las funciones exigen un usuario real
+    con rol de staff. `0009-i` dejó fuera, por decisión, validar la sede en el servidor.
   - Secretaria edita a cualquier usuario (`024b` S1) → `ASG-i-043`.
   - RLS por rol sin sede (`024a` P08; `024b` S03, S04) → `ASG-i-045`.
+    Estado al 2026-10-04: `ASG-i-043` (`fix-179-b`) y `ASG-i-045` (`0047-b`) están completadas.
+    Siguen pendientes `ASG-i-054` (fechas en UTC) y `ASG-i-056` (tiempo real).
   - Canales Realtime mudos (`024a` S5; `024b` S3) → `ASG-i-056`.
   - Fechas en UTC (`024a` S9; `024b` S17) → `ASG-i-054`.
 - **Sospechas ya corregidas, se ejecutan como regresión:** `024b` S4 y S5 (`fix-263-m`) y la parte
@@ -121,13 +125,13 @@ Primera pasada (2026-10-01): sospechas + casos automatizables.
 | G01 | ✅ | Auto. 10 filas por página, reporte "Mostrando 1 a 10 de N" | |
 | H01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
 | H04 | ✅ | Auto. "Cargar más" suma de a 6; al filtrar vuelve a 6 | |
-| J07 | ❌ | Por API: la secretaria de la sede 1 recibe HTTP 200 + PDF de la matrícula 2674 (sede 2) | → `ASG-i-042` |
+| J07 | ⚠ | Por API (2026-10-01): la secretaria de la sede 1 recibe HTTP 200 + PDF de la matrícula 2674 (sede 2). **No es un bug abierto:** la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01). El rol sí se valida | `ASG-i-042` (completada) |
 | K02 | ✅ | Auto. La exportación a Excel responde 200 | |
 | K04 | ❌ → ✅ | Auto. Pantalla 64 filas, Excel 72 (los 8 de más son "Finalizado"). **Corregido el 2026-10-02**: el Excel trae las filas de la pantalla | B1 → `fix-281-m` |
 | K06 | ✅ | La exportación ya no calcula el estado: copia el de la pantalla, incluido "Docs Pendientes" (test unitario) | B1 → `fix-281-m` |
 | K07 | ❌ → ✅ | La columna Expediente del Excel decía "Pendiente" en las 72 filas. **Corregido el 2026-10-02**: sale igual que la pantalla ("Parcial · 1/2") | B1 → `fix-281-m` |
 | K09 | ❌ → ✅ | Auto. Desde la Papelera el Excel traía los activos. **Corregido el 2026-10-02** | B1 → `fix-281-m` |
-| K11 | ❌ | Por API: la secretaria de la sede 1 obtiene 133 filas pidiendo la sede 2 y 205 con `branch_id: null` | → `ASG-i-042` |
+| K11 | ⚠ | Por API (2026-10-01): la secretaria de la sede 1 obtenía 133 filas pidiendo la sede 2. La función `export-students` se eliminó (`hotfix-130-m`): la exportación ahora se arma con las filas de la pantalla. En las demás funciones, la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada) |
 | L01 | ✅ | Auto. Modal simple para alumno sin historial | |
 | L02 | ✅ | Auto. Modal "con historial" sobre un alumno del seed | |
 | L03 | ✅ | Auto. "borrar" no habilita; "borrarlo" sí | |
@@ -222,7 +226,7 @@ pantalla.
 | M09 | ✅ | Auto. Si restaurar falla: toast "No se pudo…" y el alumno sigue en la Papelera | |
 | O01 | ✅ | Wizard en drawer; la tabla pasa a tarjetas | |
 | P03 | ✅ | A → B → A con la red demorada: termina en A, 64 filas, todas de A | |
-| Q02–Q04 · Q06 | ⏸ | Mismo canal que Q01, que no llega: se ejecutan cuando se cierre `ASG-i-056` | → `ASG-i-056` |
+| Q02–Q04 · Q06 | → | Mismo canal que Q01, que no llega. **Traspasados a `ASG-i-056`** (2026-10-04): se ejecutan allá | → `ASG-i-056` |
 | Q05 | ✅ | Al salir se manda `phx_leave` de `alumnos-listado-realtime` | |
 | R01 | ✅ | Modo oscuro con el botón de la app: todo legible (con el atributo `data-mode` puesto a mano, sin `ThemeService`, el selector de curso y la cabecera se ven mal; no es un caso real) | |
 | R02 | ✅ | Sin scroll horizontal del documento a 375, 768 y 1440 px (la tabla sí, ver B23) | |
@@ -230,7 +234,9 @@ pantalla.
 | R04 | ✅ | Todos los botones de solo ícono tienen tooltip, salvo el paginador, que además está en inglés ("First Page", "Next Page") (observación) | |
 | R05 | ✅ | Entrada sin parpadeos | |
 
-**Aún sin ejecutar de `024a`:** K13 (nombres largos en el PDF) · O02–O04 (necesitan completar el
+**K13 (2026-10-04):** ✅ Auto + revisión del archivo. El PDF de la lista se genera con un nombre de unos 90 caracteres: se recorta con "…" dentro de su columna y no invade el RUT.
+
+**Aún sin ejecutar de `024a`:** O02–O04 (necesitan completar el
 wizard de matrícula) · P07 (no hay una cuenta de secretaria sin sede).
 
 **Observaciones de la 2ª pasada (no son bugs, para que el owner decida):**
@@ -275,7 +281,7 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | M01 | ✅ | Auto. Formulario precargado | |
 | M02 | ❌ → ✅ | Auto. Email de otro usuario: "Ha ocurrido un error inesperado. Por favor, intenta de nuevo." El email no cambia. **Corregido el 2026-10-01** | B17 → `fix-268-m` |
 | M03 | ✅ | Auto. Nombre y teléfono se guardan y la ficha los refleja | |
-| M04 | ❌ | Por API: la secretaria de la sede 1 cambió el nombre de un alumno `E2E-` de la sede 2. **No se probó contra un admin real** | → `ASG-i-043` |
+| M04 | ❌ → ✅ | Auto. El 2026-10-01 la secretaria de la sede 1 cambió por API el nombre de un alumno `E2E-` de la sede 2. **Corregido el mismo día en `fix-179-b`** (`ASG-i-043`, completada): la función valida a quién se edita. El test M04 pasa desde entonces. No se probó acá contra un admin o instructor reales; `fix-179-b` lo cubre en su propio alcance | `ASG-i-043` → `fix-179-b` |
 | M06 | ✅ | Auto. Nombre vacío deshabilita "Guardar Cambios" | |
 | M07 | ✅ | Auto. "Ingresa un email válido" | |
 | O01 | ✅ | Auto. Tras marcar, la ficha dice "Egresado", el botón desaparece, sale de la Base y entra a Ex-Alumnos (regresión de `fix-263-m`) | |
@@ -341,7 +347,7 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | P03 | ✅ | Auto. Si archivar falla: "No se pudo archivar al alumno…" y sigue en la ficha | |
 | P04 · P05 | ✅ | Decididos (`fix-276-m` / sin cambio) | |
 | Q01–Q03 | ✅ | Decididos: no se agregan | |
-| R01–R03 | ⏸ | Mismo problema de canal que `024b` S3 | → `ASG-i-056` |
+| R01–R03 | → | Mismo problema de canal que `024b` S3. **Traspasados a `ASG-i-056`** (2026-10-04): se ejecutan allá | → `ASG-i-056` |
 | R04 | ✅ | Al salir se manda `phx_leave` de `alumno-detalle-<id>` | |
 | S03 | ✅ | Auto. Por API, la secretaria A actualiza 0 filas de una inasistencia de la sede B | |
 | T02 | ✅ | Solo matrículas B `completed` (16); el egresado Profesional #84 no aparece | |
@@ -400,16 +406,53 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | N08 | ✅ | Auto. Tras ver un alumno con reagendamientos, la ficha de otro sin ninguno muestra el panel vacío | |
 | E09 | ✅ | Auto. Tras reprogramar una clase con inasistencia, la Ficha Técnica ya no la muestra como inasistencia y se puede volver a mover | |
 | F07 | ❌ → ✅ | Auto. Con la clase #2 del alumno a las 08:30 con un instructor, las 08:30 de otro instructor se ofrecían para la clase #1 (S20). **Corregido el 2026-10-04** | B42 → `fix-299-m` |
+| F08 | ✅ | Por test unitario (`fix-300-m`): un día con 2 clases agendadas, o una agendada y una inasistencia, queda bloqueado; una cancelada no ocupa cupo | `fix-300-m` |
 | W03 | ✅ | Auto. Con un borrador vigente en la sede aparece la lista de borradores; "Nueva matrícula" llega con el egresado precargado | |
 | W04 | ✅ | Auto. Con el RUT guardado sin puntos el paso 1 se precarga igual | |
 | W06 | ✅ | Auto. Re-matricular a A, cerrar y re-matricular a B precarga a B | |
 | W07 | ✅ | Auto. "Reiniciar" borra lo escrito y vuelve a precargar al mismo egresado | |
+| Z05 | ✅ | Auto. Con Tab se llega a todas las acciones de la ficha y el foco se ve en cada una; Enter abre el menú de Carnet y el modal de archivar, y Escape los cierra. Los paneles laterales se cierran con su botón, no con Escape (observación) | |
 
-**Aún sin ejecutar de `024b`:** F01–F03, F05, F06, F08–F10, F12, F14 (agenda de
-reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
-H08 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
-online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
-N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08 · Z05.
+**Traspasados a otras asignaciones (decisión de Matías, 2026-10-04):** no se ejecutan en este
+track. Las equivalencias caso a caso y lo que ya quedó corregido acá están en la sección 0 de cada
+checklist de destino.
+
+| Casos de `024b` | Asignación de destino |
+|---|---|
+| F01–F03, F05, F06, F09, F10, F12, F14 (agenda de reprogramar) | `ASG-i-026` → `026-agenda-triple-match.md`, casos I01–I03, I12, I15–I20 |
+| G03, G05, G06, G08, G10, G11 (reagendamiento masivo, parte de agenda) | `ASG-i-026` → casos J02–J06, J09, J10 |
+| `024a` Q01–Q04 y Q06 · `024b` R01–R03 (tiempo real de la lista y de la ficha) · bug B10 | `ASG-i-056` → sección "Traspasado desde ASG-i-024" de la asignación. El test `Q01 (S5)` sigue en la suite con su marca `knownBug` |
+| G03–G12 y H08 (reagendamiento masivo y penalización) | `ASG-i-027` → `027-asistencia-clase-b.md`, casos J04–J08, J11, J12, F04, G05 |
+
+Cuarta pasada (2026-10-04): PDF reales. "Auto" = bloque "cuarta pasada: PDF reales" de
+`e2e/alumnos-b-ficha.spec.ts`. Las funciones se llamaron de verdad contra la base de desarrollo,
+con alumnos `E2E-`; al terminar cada test se borran el archivo de Storage, el certificado, su
+registro de emisión y los avisos. El carnet y el certificado generados se revisaron a ojo.
+
+| ID | Res. | Evidencia / observación | Track generado |
+|---|---|---|---|
+| J02 | ✅ | Auto. "Generar Carnet 6 clases" abre el visor con el PDF; tras recargar, "Ver" queda habilitado y "Generar" pasa a "Volver a generar" | |
+| J03 | ✅ | Revisado el PDF: nombres, apellidos, RUT, Nº de matrícula, instructor y 6 filas con día y hora (en hora de Chile). Con el Nº de prueba, de 12 caracteres, el texto se sale de su recuadro; los reales tienen 4 dígitos | |
+| J04 | ✅ | Auto. En "Refuerzo Clase B" el menú no ofrece el carnet de 12 clases | |
+| J05 | ✅ | No aplica: el carnet sale a nombre de Conductores Chillán por decisión de Matías (S11, cerrada sin cambio) | |
+| J06 | ✅ | Auto. Sin foto, el carnet se genera con el recuadro vacío y sin error | |
+| J07 | ✅ | Auto. "Volver a generar" reemplaza el archivo: queda uno solo en Storage | |
+| J08 | ✅ | Auto, por API. Sin una sesión real (solo la anon key) la función del carnet responde 401 y no genera nada: exige admin o secretaria (spec `0009-i`, que verificó además 403 para alumno e instructor). Una secretaria sí puede generar por API el carnet de una matrícula de otra sede: la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01). El 2026-10-04 se anotó acá por error como "la función no revisa quién llama" | `ASG-i-042` (completada) |
+| K01 | ✅ | Auto. Matrícula presencial con contrato: "Ver Contrato" abre el PDF | |
+| K03 | ✅ | Auto. Matrícula online con contrato sin firmar: menú con "Descargar Contrato" (baja `Contrato.pdf`) y "Subir Firmado" | |
+| K04 | ❌ → ✅ | Auto. Un `.txt` elegido en "Subir Firmado" se guardaba como contrato firmado. **Corregido el 2026-10-04**: se rechaza con "El contrato firmado debe ser un archivo PDF." | B43 → `fix-304-m` |
+| K05 | ✅ | Auto. Al subir el PDF firmado aparece el aviso de éxito y el botón pasa a "Ver Contrato", que lo abre | |
+| L02 | ✅ | Auto. Con el certificado ya generado el botón dice "Ver Certificado" y abre el PDF | |
+| L04 | ✅ | Auto. Con las 12 clases cerradas sin nota, el botón está habilitado y la función lo genera (`fix-262-m`) | |
+| L05 | ✅ | Auto. "Generar Certificado" abre el visor y deja la ruta en la matrícula. Revisado el PDF: nombre, RUT, fechas del curso y datos de la sede | |
+| L06 | ❌ → ✅ | Auto. Ante un rechazo de la función se veía "No se pudo generar el certificado" en vez del motivo. **Corregido el 2026-10-04** | B44 → `fix-305-m` |
+| L07 | ❌ → ✅ | Auto. Generar el certificado desde la ficha no avisaba al alumno (desde Certificaciones B sí). **Corregido el 2026-10-04** | B45 → `fix-306-m` |
+| M10 | ✅ | A mano (2026-10-04). Matías activó la cuenta del alumno de prueba desde el enlace del correo y le puso contraseña. Como secretaria se le cambió el correo desde "Editar Perfil": la función responde 200, la ficha y la base muestran el correo nuevo y sigue vinculado a la misma cuenta de Auth. Matías comprobó en `/login` que con el correo nuevo entra y con el viejo dice "Correo o contraseña incorrectos."; no llegó correo de confirmación al nuevo. Tras entrar, el portal del alumno muestra "Módulo no habilitado todavía" (bloqueado en esta fase del piloto). Con la cuenta real activada, "Editar Perfil" no ofrece la invitación (M13) | |
+| M11 | ✅ | A mano, con un correo real de temp-mail (2026-10-04, secretaria de la sede A). A un alumno sin cuenta se le cambió el correo desde "Editar Perfil" y se guardó; la invitación enviada después llegó al correo nuevo | |
+| M12 | ✅ | Mismo recorrido. Con el correo sin guardar el botón está deshabilitado; ya guardado, "Enviar invitación" muestra "Invitación enviada correctamente." (la función responde 201, `invited`) y el alumno queda vinculado a una cuenta de Auth con el primer ingreso pendiente. Matías confirmó con captura que el correo llegó: "Activa tu cuenta - AutoEscuela Chillán", de `no-reply@autoescuelachillan.cl`, con el botón "Activar mi cuenta" y enlace válido por 1 día. No quedó como test de la suite porque envía un correo real en cada corrida | |
+| M13 | ✅ | Auto (bloque "cierre de la asignación"). El aviso de invitación de "Editar Perfil" se ve mientras el alumno no tiene cuenta o no ha entrado nunca, y desaparece cuando la cuenta ya está activada. La cuenta se simuló en la base (identificador de Auth y primer ingreso), sin crear un usuario real | |
+
+**Aún sin ejecutar de `024b`:** N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
 
 **Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
 
@@ -419,14 +462,28 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
   clases a la misma hora. Cerrarlo del todo pide un trigger; se cruza con `ASG-i-026`.
 - **Tope de 2 clases por día:** `computeBlockedDates()` cuenta también las clases canceladas y las
   inasistencias de ese día, así que un día con una clase cancelada y una agendada ya aparece
-  bloqueado para reprogramar.
+  bloqueado para reprogramar. → Decidido (Matías, 2026-10-04): máximo 2 clases por día contando
+  solo las que debían ocurrir; las canceladas no cuentan, las inasistencias sí. ✅ `fix-300-m`.
+
+- **Los paneles laterales no se cierran con Escape** (Z05). Es del host global de paneles y vale
+  para todos los de la app; los menús y los modales sí se cierran. Queda para decidir.
+- **Choque de horario en la base:** → Decidido (Matías, 2026-10-04): se agrega el trigger.
+  ✅ `fix-301-m`, migración `20261004120000`, aplicada por Matías el 2026-10-04; el test por API
+  pasa.
+- **Otras listas a 1366 px:** medidas el 2026-10-04. Sin scroll horizontal, pero Ex-Alumnos B
+  partía el RUT y el nombre (filas de 80 px) y Alumnos Profesional dejaba el nombre en 3 líneas
+  (98 px). ✅ `fix-302-m`: la tabla compacta de `fix-294-m` pasa a ser un estilo compartido y la
+  usan las cuatro listas (filas de 60 a 63 px). Ex-Alumnos Profesional no tiene datos para medir.
+- **`text-base` (color, no tamaño):** revisados los 27 usos el 2026-10-04. 22 se leen bien; 5
+  quedaban con el color del fondo. ✅ `fix-303-m`.
+- **Tailwind escaneaba `e2e/`** y generaba CSS inválido con un selector de test. ✅ `hotfix-139-m`.
 
 ## Sospechas: confirmadas / descartadas
 
 | Checklist | # | Resultado | Evidencia | Track |
 |---|---|---|---|---|
-| 024a | S1 🔴 | **Confirmada** | Secretaria sede 1 exporta 133 alumnos de la sede 2 y 205 con `branch_id: null` (RUT, email, teléfono) | `ASG-i-042` → `0009-i` (en curso) |
-| 024a | S2 🔴 | **Confirmada** | Secretaria sede 1 baja la ficha PDF de una matrícula de la sede 2 (HTTP 200) | `ASG-i-042` → `0009-i` (en curso) |
+| 024a | S1 🔴 | **Cerrada** | El 2026-10-01 la secretaria de la sede 1 exportaba 133 alumnos de la sede 2. `export-students` ya no existe (`hotfix-130-m`) | `ASG-i-042` (completada, `0009-i`) |
+| 024a | S2 🔴 | **Cerrada por decisión** | La ficha PDF exige rol de admin o secretaria; la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada, `0009-i`) |
 | 024a | S3 🟠 | **Confirmada** | Excel 72 filas vs 64 en pantalla; expediente siempre "Pendiente"; la Papelera exporta activos | B1 |
 | 024a | S4 🟠 | **Confirmada** | `chk_expires_at_draft_only` + la lista excluye borradores → KPI siempre 0; "Contactar" no tiene `(click)` | B9 |
 | 024a | S5 🟠 | **Confirmada** | `enrollments` no está en `supabase_realtime`; un alumno nuevo no aparece sin recargar | `ASG-i-056` |
@@ -438,8 +495,8 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
 | 024a | S11 🟡 | **Confirmada** | "Con deuda" usa solo la matrícula B más reciente | B8 |
 | 024a | S12 🟡 | **Confirmada** | Opciones fijas; falta "Refuerzo Clase B" | B3 |
 
-| 024b | S1 🔴 | **Confirmada** (parcial) | Secretaria sede 1 edita por `update-student-profile` a un alumno `E2E-` de la sede 2. No se probó contra admin/instructor reales | `ASG-i-043` |
-| 024b | S2 🔴 | Confirmada en código, **no ejecutada** | La función no lee `Authorization` ni llama `getUser()`. No se llamó porque escribe en Storage | `ASG-i-042` |
+| 024b | S1 🔴 | **Corregida** el 2026-10-01 | Confirmada ese día: la secretaria de la sede 1 editaba por `update-student-profile` a un alumno `E2E-` de la sede 2. La cerró `fix-179-b`; el test M04 pasa | `ASG-i-043` (completada) → `fix-179-b` |
+| 024b | S2 🔴 | **Corregida** en `0009-i` (rol); la sede queda **aceptada por decisión** | La sospecha decía que la función no tenía ningún control de acceso. Desde `0009-i` exige un usuario real con rol de admin o secretaria (401 sin sesión, comprobado el 2026-10-04; 403 para alumno e instructor, comprobado en `0009-i`). El 2026-10-04, por API, la secretaria de la sede A generó el carnet de una matrícula `E2E-` de la sede B (archivo borrado): la sede no se valida en el servidor por decisión de la spec `0009-i` (Ignacio, 2026-10-01) | `ASG-i-042` (completada) |
 | 024b | S3 🟠 | Confirmada en código | 5 de las 7 tablas del canal no están en `supabase_realtime` | `ASG-i-056` |
 | 024b | S4 🟠 | **Mitad corregida, mitad vigente** | `fix-263-m` sacó el borrador del selector; la matrícula principal sigue siendo `sorted[0]` sin filtrar | B15 |
 | 024b | S5 🟠 | **Corregida** por `fix-263-m` | El botón desaparece y el estado pasa a "Egresado" | |
@@ -486,7 +543,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B15 | **Un borrador más reciente se muestra como matrícula principal de la ficha** (número, curso, 0 clases), aunque exista una matrícula activa. Resto de S4 que `fix-263-m` no cubrió | 🟠 Media | ✅ `fix-265-m` |
 | B16 | **La "fecha de egreso" de Ex-Alumnos es `updated_at`**: un alumno marcado hoy aparece con el año del último cambio de su matrícula y puede quedar fuera de "Últimos 12 meses" | 🟠 Media | ✅ `fix-266-m` |
 | B17 | **Email duplicado en "Editar Perfil" muestra un error genérico** | 🟠 Media | ✅ `fix-268-m` |
-| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | `ASG-i-043`. **El 2026-10-01 (noche) el test M04 pasó a verde**: la función ya rechaza a la secretaria de la sede A editando a un alumno de la sede B. No salió de este track; coincide con el merge de `0047-b` (RLS por sede). Se quitó la marca `knownBug`. Sigue sin probarse contra un admin o instructor reales |
+| B19 | Secretaria edita usuarios de otra sede | 🔴 Alta | ✅ `fix-179-b` (`ASG-i-043`, completada el 2026-10-01). El test M04 pasó a verde esa noche y se le quitó la marca `knownBug`. En su momento se anotó acá que "coincidía con el merge de `0047-b`"; el arreglo fue `fix-179-b` |
 | B20 | "Ver ficha" desde una **tarjeta** de Ex-Alumnos: "Volver" lleva a la Base de Alumnos | 🟡 Baja | ✅ `hotfix-115-m` |
 | B21 | **El selector de matrícula "salta"** a la más reciente después de cualquier refresco | 🟡 Baja | ✅ `fix-265-m` |
 | B22 | **La lista de Alumnos del admin consulta dos veces al abrir y muestra "0 alumnos" un instante.** No estaba en el checklist: apareció al corregir B7 | 🟡 Baja | ✅ `hotfix-117-m` |
@@ -508,6 +565,9 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
 | B39 | **Doble clic en "Guardar Cambios" de Editar Perfil guarda dos veces** (dos llamadas a `update-student-profile`) | 🟡 Baja | ✅ `hotfix-137-m` (2026-10-04) |
 | B40 | **El menú de Carnet de la ficha no se cierra con Escape** (con un clic fuera sí) | 🟡 Baja | ✅ `hotfix-138-m` (2026-10-04) |
+| B45 | **Generar el certificado desde la ficha no avisa al alumno.** El aviso buscaba al alumno en la lista de la pantalla de Certificaciones B, que desde la ficha no está cargada (último punto de S10) | 🟡 Baja | ✅ `fix-306-m` (2026-10-04) |
+| B44 | **El rechazo del certificado muestra un mensaje genérico**: el motivo real viene en el cuerpo de la respuesta y se buscaba en otro lado. El test de `fix-011-i` simulaba una respuesta que la función real no produce | 🟡 Baja | ✅ `fix-305-m` (2026-10-04) |
+| B43 | **"Subir Firmado" acepta cualquier archivo** y lo guarda como contrato firmado en PDF | 🟠 Media | ✅ `fix-304-m` (2026-10-04) |
 | B42 | **Al reprogramar se podía elegir un horario que choca con otra clase del alumno** (misma hora, otro instructor): el alumno quedaba con dos clases a la vez. La misma grilla se usa en el reagendamiento masivo | 🟠 Media | ✅ `fix-299-m` (2026-10-04): la grilla marca ocupado lo que choca con una clase vigente del alumno. La base sigue sin impedirlo (ver observaciones de la 3ª pasada) |
 | B41 | **El historial de reagendamientos no sigue a la matrícula elegida**: se carga una vez al entrar a la ficha; al cambiar de matrícula en el selector el panel sigue mostrando el de la primera. Es la mitad de S14 que quedaba | 🟡 Baja | ✅ `fix-298-m` (2026-10-04) |
 
@@ -625,6 +685,15 @@ muestra el error real de cada uno.
   sumado al test de reprogramar; `fix-299-m` (B42) con 7 unitarios nuevos. F07 falló antes del
   arreglo y pasa después. Corrida completa de los dos archivos: 103 de 103 esperados, con un solo
   `knownBug` (B10). `npm run test:ci`: 3.128 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
+- **Tanda del 2026-10-04 (tarde):** `hotfix-139-m`, `fix-300-m`, `fix-301-m`, `fix-302-m`, `fix-303-m`; tests nuevos Z05, K13, `fix-302-m` y el de `fix-301-m` por
+  API. Corrida completa de los dos archivos más `smoke`: 108 de 108 esperados, con un `knownBug`
+  (B10; el de `fix-301-m` se quitó al aplicarse la migración). `npm run test:ci`: 3.129 pasan, 5 omitidos. `npm run lint:arch`: 0
+  errores.
+- **Cuarta pasada, PDF reales (2026-10-04):** 7 tests nuevos (J02–J08, K01, K03–K05, L02, L04–L07) y
+  `fix-304-m`, `fix-305-m`, `fix-306-m` con 8 unitarios nuevos. `addCompletedPractices()` ahora
+  parte de un día al azar: dos tests en paralelo chocaban con el instructor de muestra. Un
+  J08 se corrigió después: ver su fila (no es un `knownBug`). `npm run test:ci`: 3.137 pasan, 5 omitidos.
+  `npm run lint:arch`: 0 errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

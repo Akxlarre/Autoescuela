@@ -200,7 +200,10 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
         } @else {
           <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
             <!-- VISTA 1: TABLA (Oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- table-compact (fix-302-m): misma tabla compacta que la Base de Alumnos B. -->
+            <div
+              class="desktop-view table-compact hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full"
+            >
               <p-table
                 [value]="sortedEgresados()"
                 [rows]="10"
@@ -219,6 +222,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                     <!-- spec 0023-m: cada título ordena la lista completa (no solo la página). -->
                     @for (col of sortColumns; track col.value; let first = $first) {
                       <th
+                        [class.table-compact-main]="first"
                         [class.pl-6]="first"
                         [class.py-4]="first"
                         [attr.aria-sort]="ariaSort(col.value)"
@@ -237,29 +241,37 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                 </ng-template>
                 <ng-template pTemplate="body" let-egresado>
                   <tr class="list-item-hover transition-colors border-b border-border-subtle">
-                    <td class="pl-6 py-4">
+                    <td class="table-compact-main pl-6 py-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                          class="table-compact-avatar w-9 h-9 shrink-0 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
                         >
                           {{ initials(egresado.nombre) }}
                         </div>
-                        <div class="flex flex-col">
-                          <span class="item-title">{{ egresado.nombre }}</span>
-                          <span class="text-xs text-text-muted">{{ egresado.correo }}</span>
+                        <!-- fix-302-m: el nombre y el correo que no caben se recortan y se leen
+                             completos al pasar el mouse. -->
+                        <div class="flex flex-col min-w-0">
+                          <span class="item-title truncate" [title]="egresado.nombre">{{
+                            egresado.nombre
+                          }}</span>
+                          <span
+                            class="text-xs text-text-muted truncate"
+                            [title]="egresado.correo"
+                            >{{ egresado.correo }}</span
+                          >
                         </div>
                       </div>
                     </td>
-                    <td class="text-xs font-medium text-text-secondary font-mono">
+                    <td class="text-xs font-medium text-text-secondary font-mono whitespace-nowrap">
                       {{ egresado.rut }}
                     </td>
-                    <td class="text-xs text-text-muted font-mono">
+                    <td class="text-xs text-text-muted font-mono whitespace-nowrap">
                       {{ egresado.nroExpediente ?? '—' }}
                     </td>
                     <td>
                       <div class="flex items-center gap-1.5 flex-wrap">
                         <span
-                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted whitespace-nowrap"
                           >{{ egresado.licencia }}</span
                         >
                         @if (egresado.convalidatedLicense) {
@@ -271,7 +283,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                         }
                       </div>
                     </td>
-                    <td class="text-xs text-text-secondary">
+                    <td class="text-xs text-text-secondary whitespace-nowrap">
                       <div class="flex flex-col">
                         <span class="font-bold text-text-primary">{{ egresado.anio ?? '—' }}</span>
                         <span class="text-text-muted italic">{{ egresado.sede }}</span>
@@ -285,13 +297,13 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                             (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
                           "
                           severity="warn"
-                          styleClass="text-xs font-bold px-2 py-0.5"
+                          styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
                         ></p-tag>
                       } @else {
                         <p-tag
                           value="Al día"
                           severity="success"
-                          styleClass="text-xs font-bold px-2 py-0.5"
+                          styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
                         ></p-tag>
                       }
                     </td>
@@ -302,7 +314,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                         <button
                           aria-label="Ver ficha"
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                          class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                           pTooltip="Ver ficha"
                           [routerLink]="[basePath() + '/alumnos', egresado.studentId]"
                           [queryParams]="{ from: 'ex-alumnos' }"
@@ -313,7 +325,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                         <button
                           aria-label="Re-matricular"
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-brand"
+                          class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-brand"
                           pTooltip="Re-matricular"
                           (click)="reEnroll.emit(egresado)"
                           data-llm-action="re-enroll-student"

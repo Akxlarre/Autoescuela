@@ -145,6 +145,56 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  describe('subirContratoFirmado — fix-304-m', () => {
+    let uploadSpy: any;
+
+    beforeEach(() => {
+      uploadSpy = vi.fn().mockResolvedValue({ error: null });
+      supabaseSpy.client.storage.from = vi.fn().mockReturnValue({ upload: uploadSpy });
+    });
+
+    it('rechaza un archivo que no es PDF, sin subirlo ni registrarlo', async () => {
+      const txt = new File(['no soy un contrato'], 'notas.txt', { type: 'text/plain' });
+
+      await facade.subirContratoFirmado(7, txt);
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+      expect(supabaseSpy.client.from).not.toHaveBeenCalledWith('digital_contracts');
+      expect(toastSpy.error).toHaveBeenCalledWith('El contrato firmado debe ser un archivo PDF.');
+      expect(facade.contractSignedPath()).toBeNull();
+    });
+
+    it('rechaza una imagen aunque se llame .pdf', async () => {
+      const foto = new File(['x'], 'contrato.pdf', { type: 'image/jpeg' });
+
+      await facade.subirContratoFirmado(7, foto);
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+
+    it('sube un PDF y lo registra como contrato firmado', async () => {
+      const pdf = new File(['%PDF-1.4'], 'contrato firmado.pdf', { type: 'application/pdf' });
+
+      await facade.subirContratoFirmado(7, pdf);
+
+      expect(uploadSpy).toHaveBeenCalledWith(
+        'contracts/7/signed_contract.pdf',
+        pdf,
+        expect.objectContaining({ contentType: 'application/pdf' }),
+      );
+      expect(toastSpy.success).toHaveBeenCalledWith('Contrato firmado subido correctamente.');
+      expect(facade.contractSignedPath()).toBe('contracts/7/signed_contract.pdf');
+    });
+
+    it('acepta un .pdf cuando el navegador no informa el tipo', async () => {
+      const pdf = new File(['%PDF-1.4'], 'CONTRATO.PDF', { type: '' });
+
+      await facade.subirContratoFirmado(7, pdf);
+
+      expect(uploadSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('reprogramarClase — notificaciones (Spec 0024, AC5)', () => {
     const basePayload = {
       sessionId: 55,
@@ -1409,6 +1459,50 @@ describe('AdminAlumnoDetalleFacade', () => {
         facade.setReprogramarTarget(12, 2, 303);
         await facade.loadScheduleGrid(9);
         expect(facade.scheduleGrid()?.slots[1].status).toBe('available');
+      });
+
+      it('el tope de 2 clases por día no cuenta las canceladas, sí las inasistencias (fix-300-m)', async () => {
+        const sesion = (id: number, dia: string, hora: string, status: string) => ({
+          id,
+          class_number: id - 10,
+          scheduled_at: `${dia}T${hora}:00+00:00`,
+          status,
+        });
+        const slotLibre = (dia: string) => ({
+          slot_start: `${dia}T18:00:00+00:00`,
+          slot_end: `${dia}T18:45:00+00:00`,
+          slot_status: 'available',
+          instructor_id: 9,
+          vehicle_id: 10,
+        });
+        const mock = await initWithEnrollments([makeEnrollmentRow(303, 'active', '2026-03-01')]);
+        mock.setResult('class_b_sessions', [
+          sesion(11, '2026-10-01', '11:30', 'no_show'), // la que se mueve
+          // Día 12: una agendada + una cancelada → queda cupo.
+          sesion(12, '2026-10-12', '11:30', 'scheduled'),
+          sesion(13, '2026-10-12', '13:00', 'cancelled'),
+          // Día 13: una agendada + una inasistencia → completo.
+          sesion(14, '2026-10-13', '11:30', 'scheduled'),
+          sesion(15, '2026-10-13', '13:00', 'no_show'),
+          // Día 14: dos agendadas → completo.
+          sesion(16, '2026-10-14', '11:30', 'scheduled'),
+          sesion(17, '2026-10-14', '13:00', 'scheduled'),
+        ]);
+        await facade.refresh();
+        mock.setResult('v_class_b_schedule_availability', [
+          slotLibre('2026-10-12'),
+          slotLibre('2026-10-13'),
+          slotLibre('2026-10-14'),
+        ]);
+
+        facade.setReprogramarTarget(11, 1, 303);
+        await facade.loadScheduleGrid(9);
+
+        expect(facade.scheduleGrid()?.slots.map((s) => s.status)).toEqual([
+          'available',
+          'occupied',
+          'occupied',
+        ]);
       });
 
       it('la consulta de la ficha pide enrollments.status (sin eso, el estado no se puede derivar)', async () => {

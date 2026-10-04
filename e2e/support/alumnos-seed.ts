@@ -300,9 +300,12 @@ export async function addCompletedPractices(
       `[e2e] No hay ninguna clase de la que copiar instructor y vehículo: ${sampleErr.message}`,
     );
 
-  // Una clase por día hacia atrás desde hace 30 días, a las 03:15 UTC: horas sin clases reales.
+  // Una clase por día hacia atrás, a las 03:15 (hora de Chile): horas sin clases reales. El
+  // primer día varía (entre 30 y 3.000 días atrás): dos tests en paralelo usan el mismo
+  // instructor y, con el mismo día, la BD rechaza la clase por solaparse.
+  const desde = 30 + Math.floor(Math.random() * 2970);
   const rowsToInsert = Array.from({ length: count }, (_, i) => {
-    const when = new Date(Date.now() - (30 + i) * 24 * 60 * 60 * 1000);
+    const when = new Date(Date.now() - (desde + i) * 24 * 60 * 60 * 1000);
     when.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
     return {
       enrollment_id: enrollmentId,

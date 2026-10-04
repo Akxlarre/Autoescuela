@@ -40,6 +40,16 @@ export async function getClientFor(email: string, password: string): Promise<Sup
   return sb;
 }
 
+/**
+ * Cliente Supabase en Node sin sesión: solo la anon key, como cualquier visitante del sitio.
+ * Para comprobar que algo NO se puede hacer sin iniciar sesión.
+ */
+export function getAnonClient(): SupabaseClient {
+  return createClient(environment.supabase.url, environment.supabase.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 /** `users.id` (PK numérica) de una cuenta de prueba, buscada por email. */
 export async function getUserDbId(email: string): Promise<{ id: number; branchId: number | null }> {
   const sb = await getAdminClient();

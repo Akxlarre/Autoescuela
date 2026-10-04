@@ -88,7 +88,8 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               <app-icon name="triangle-alert" [size]="20" color="var(--state-error)" />
             </div>
             <div class="flex flex-col min-w-0">
-              <span class="font-bold text-base">Eliminar definitivamente</span>
+              <!-- Sin text-base: acá pinta con el color de fondo de la página (fix-303-m). -->
+              <span class="font-bold text-text-primary">Eliminar definitivamente</span>
               <span class="text-xs truncate text-text-muted">
                 {{ servicioNombre() }}
               </span>

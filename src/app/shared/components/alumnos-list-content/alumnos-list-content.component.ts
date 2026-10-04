@@ -324,8 +324,12 @@ interface AlumnosEmptyState {
             class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full"
             appAnimateIn
           >
-            <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime).
+                 table-compact (fix-294-m, compartida desde fix-302-m): relleno angosto, botones
+                 de 32 px y la columna del alumno absorbe el ancho que sobra. -->
+            <div
+              class="desktop-view table-compact hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full"
+            >
               <p-table
                 [value]="sortedAlumnos()"
                 [rows]="10"
@@ -345,7 +349,7 @@ interface AlumnosEmptyState {
                          Clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto. -->
                     @for (col of sortColumns(); track col.value; let first = $first) {
                       <th
-                        [class.alumno-head]="first"
+                        [class.table-compact-main]="first"
                         [class.pl-6]="first"
                         [class.py-4]="first"
                         [attr.aria-sort]="ariaSort(col.value)"
@@ -365,10 +369,10 @@ interface AlumnosEmptyState {
                 <ng-template pTemplate="body" let-alumno>
                   <tr class="list-item-hover transition-colors border-b border-border-subtle">
                     <!-- Alumno -->
-                    <td class="alumno-cell pl-6 py-4">
+                    <td class="table-compact-main pl-6 py-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="alumno-avatar w-9 h-9 shrink-0 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                          class="table-compact-avatar w-9 h-9 shrink-0 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
                         >
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
@@ -468,7 +472,7 @@ interface AlumnosEmptyState {
                           <button
                             aria-label="Restaurar alumno"
                             pButton
-                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
                             pTooltip="Restaurar alumno"
                             (click)="restaurarRequested.emit(alumno.id)"
                             data-llm-action="restore-student-row"
@@ -480,7 +484,7 @@ interface AlumnosEmptyState {
                           <button
                             aria-label="Ver ficha"
                             pButton
-                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
                             [queryParams]="{ enrollment: alumno.enrollmentId }"
@@ -490,7 +494,7 @@ interface AlumnosEmptyState {
                           </button>
                           <button
                             pButton
-                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Exportar Ficha PDF"
                             aria-label="Exportar Ficha PDF"
                             [disabled]="isGeneratingFicha() === alumno.enrollmentId"
@@ -505,7 +509,7 @@ interface AlumnosEmptyState {
                           <button
                             aria-label="Archivar alumno"
                             pButton
-                            class="row-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
                             pTooltip="Archivar alumno"
                             (click)="archivarRequested.emit(alumno.id)"
                             data-llm-action="archive-student-row"
@@ -606,53 +610,8 @@ interface AlumnosEmptyState {
         }
       }
 
-      /* fix-294-m: tabla compacta para que quepa en un notebook (1366 px, panel de 940).
-         El relleno global de las tablas (16 px por lado) suma 288 px en 9 columnas; aca baja
-         a 6. Los selectores encadenados son a proposito: tienen que pesar mas que la regla
-         global, que tambien usa important. */
-      .dual-viewport-container .desktop-view th,
-      .dual-viewport-container .desktop-view td {
-        padding-left: 6px !important;
-        padding-right: 6px !important;
-      }
-      /* El titulo deja 16 px a su derecha: ahi va la flecha de ordenar, que app-sort-header
-         dibuja fuera del texto. Con menos, se monta sobre el titulo siguiente. */
-      .dual-viewport-container .desktop-view th {
-        padding-right: 16px !important;
-      }
-      .dual-viewport-container .desktop-view th:first-child,
-      .dual-viewport-container .desktop-view td:first-child {
-        padding-left: 12px !important;
-      }
-      .dual-viewport-container .desktop-view th:last-child,
-      .dual-viewport-container .desktop-view td:last-child {
-        padding-right: 12px !important;
-      }
-
-      /* Botones de accion de 32 px: el tema de PrimeNG los dejaba en 48 de ancho. */
-      .row-action {
-        width: 2rem !important;
-        min-width: 2rem !important;
-        padding: 0 !important;
-      }
-
-      /* La columna Alumno se queda con el ancho que sobra: las demas miden lo que mide su
-         contenido y aca el nombre y el correo se recortan. width 100 + max-width 0 es lo que
-         hace que la celda absorba el resto sin ensanchar la tabla; el piso lo pone el titulo. */
-      .dual-viewport-container .desktop-view td.alumno-cell {
-        width: 100%;
-        max-width: 0;
-      }
-      .dual-viewport-container .desktop-view th.alumno-head {
-        min-width: 8.5rem;
-      }
-
-      /* Panel angosto (notebook): sin el circulo de iniciales, que es decorativo. */
-      @container listContainer (max-width: 1149px) {
-        .alumno-avatar {
-          display: none;
-        }
-      }
+      /* La tabla compacta (fix-294-m) vive en la clase compartida table-compact, en
+         src/styles/vendors/_primeng-overrides.scss. */
     `,
   ],
 })

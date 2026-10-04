@@ -963,6 +963,61 @@ app-main-layout p-toast.p-toast-top-center,
   }
 }
 
+/* Tabla compacta (fix-294-m; compartida desde fix-302-m). Para las listas de alumnos, que
+   tienen que caber en un notebook (1366 px, panel de 940). Se activa con .table-compact en el
+   contenedor de la tabla. El relleno de arriba (16 px por lado) suma 288 px en 9 columnas; acá
+   baja a 6. */
+.table-compact .p-datatable.p-datatable-sm {
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  /* El título deja 16 px a su derecha: ahí va la flecha de ordenar, que app-sort-header
+     dibuja fuera del texto. Con menos, se monta sobre el título siguiente. */
+  .p-datatable-thead > tr > th {
+    padding-right: 16px !important;
+  }
+
+  .p-datatable-thead > tr > th:first-child,
+  .p-datatable-tbody > tr > td:first-child {
+    padding-left: 12px !important;
+  }
+
+  .p-datatable-thead > tr > th:last-child,
+  .p-datatable-tbody > tr > td:last-child {
+    padding-right: 12px !important;
+  }
+
+  /* La columna principal (el alumno) se queda con el ancho que sobra: las demás miden lo que
+     mide su contenido y acá el texto se recorta. width 100 + max-width 0 es lo que hace que la
+     celda absorba el resto sin ensanchar la tabla; el piso lo pone el título. */
+  .p-datatable-tbody > tr > td.table-compact-main {
+    width: 100%;
+    max-width: 0;
+  }
+
+  .p-datatable-thead > tr > th.table-compact-main {
+    min-width: 8.5rem;
+  }
+
+  /* Botones de acción de 32 px: el tema de PrimeNG los dejaba en 48 de ancho. */
+  .table-compact-action {
+    width: 2rem !important;
+    min-width: 2rem !important;
+    padding: 0 !important;
+  }
+}
+
+/* Panel angosto (notebook): sin el círculo de iniciales, que es decorativo. El contenedor
+   listContainer lo declara cada lista. */
+@container listContainer (max-width: 1149px) {
+  .table-compact .table-compact-avatar {
+    display: none;
+  }
+}
+
 /* ============================================
    Stepper — Design System Premium 2026
    ============================================ */

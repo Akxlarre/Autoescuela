@@ -4,7 +4,8 @@
  *
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
-import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
@@ -15,7 +16,7 @@ import {
   markCertificateSent,
 } from './support/alumnos-seed';
 import { expect, knownBug, test, watchErrors } from './support/fixtures';
-import { getAdminClient, getClientFor } from './support/supabase-admin';
+import { getAdminClient, getAnonClient, getClientFor } from './support/supabase-admin';
 
 const SEDE_A = 1; // Autoescuela Chillán
 const SEDE_B = 2; // Conductores Chillán
@@ -53,6 +54,11 @@ function errorDeCarga(page: Page): Locator {
 
 function hero(page: Page): Locator {
   return page.locator('app-section-hero');
+}
+
+/** Igual que matricula(): para los tests que ya tienen una variable con ese nombre. */
+function fichaCargada(page: Page): Locator {
+  return matricula(page);
 }
 
 function matricula(page: Page): Locator {
@@ -2222,6 +2228,179 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
     ).toHaveCount(0);
   });
 
+  test('F07 (fix-301-m): la base rechaza una segunda clase del alumno a la misma hora', async ({
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ChoqueBase', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    // Dos instructores distintos: el choque del instructor ya lo impide otro trigger.
+    const { data: muestras } = await sb
+      .from('class_b_sessions')
+      .select('instructor_id, vehicle_id')
+      .limit(500);
+    const primero = muestras![0];
+    const segundo = muestras!.find((m) => m.instructor_id !== primero.instructor_id);
+    test.skip(!segundo, 'No hay clases de dos instructores distintos de las que copiar');
+
+    const cuando = new Date(Date.now() + (400 + Math.floor(Math.random() * 300)) * 86_400_000);
+    cuando.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+    const clase = (numero: number, de: { instructor_id: number; vehicle_id: number }) => ({
+      enrollment_id: alumno.enrollmentIds[0],
+      instructor_id: de.instructor_id,
+      vehicle_id: de.vehicle_id,
+      class_number: numero,
+      scheduled_at: cuando.toISOString(),
+      status: 'scheduled',
+    });
+
+    const una = await sb.from('class_b_sessions').insert(clase(1, primero)).select('id').single();
+    expect(una.error, 'primera clase').toBeNull();
+    cleanup.track('class_b_sessions', una.data!.id);
+
+    const otra = await sb.from('class_b_sessions').insert(clase(2, segundo!)).select('id').single();
+    if (otra.data) cleanup.track('class_b_sessions', otra.data.id);
+    expect(otra.error?.message, 'segunda clase a la misma hora').toMatch(
+      /alumno ya tiene otra clase/i,
+    );
+
+    // Una clase cancelada a esa hora sí se acepta: no ocupa al alumno.
+    const cancelada = await sb
+      .from('class_b_sessions')
+      .insert({ ...clase(3, segundo!), status: 'cancelled' })
+      .select('id')
+      .single();
+    if (cancelada.data) cleanup.track('class_b_sessions', cancelada.data.id);
+    expect(cancelada.error, 'clase cancelada a la misma hora').toBeNull();
+  });
+
+  test('fix-302-m: a 1366 px Ex-Alumnos B muestra cada fila en una línea', async ({ pageAs }) => {
+    const page = await pageAs('admin');
+    await page.setViewportSize({ width: 1366, height: 800 });
+    await page.goto('/app/admin/ex-alumnos');
+    await expect(page.getByText(REPORT_EGRESADOS)).toBeVisible(CARGA);
+
+    const tabla = page.locator('p-table .p-datatable-table-container').first();
+    const { scroll, client, altoRut, altoNombre } = await tabla.evaluate((el) => {
+      // Alto del texto de una celda: una sola línea mide menos de 24 px.
+      const alto = (nodo: Element): number => {
+        const range = document.createRange();
+        range.selectNodeContents(nodo);
+        return Math.round(range.getBoundingClientRect().height);
+      };
+      return {
+        scroll: el.scrollWidth,
+        client: el.clientWidth,
+        altoRut: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(alto),
+        altoNombre: [...el.querySelectorAll('tbody tr td:first-child .item-title')].map(alto),
+      };
+    });
+    expect(scroll, 'sin scroll horizontal').toBeLessThanOrEqual(client + 1);
+    expect(altoRut.length, 'hay filas').toBeGreaterThan(0);
+    expect(Math.max(...altoRut), 'el RUT va en una sola línea').toBeLessThan(24);
+    expect(Math.max(...altoNombre), 'el nombre va en una sola línea').toBeLessThan(24);
+    await expect(
+      page.locator('p-table tbody tr').first().locator('[data-llm-action="re-enroll-student"]'),
+      'el botón de re-matricular se ve entero',
+    ).toBeInViewport({ ratio: 1 });
+  });
+
+  test('Z05: la ficha se recorre solo con teclado, con el foco a la vista, y Escape cierra menús y modales', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Teclado', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('admin');
+    await openFicha(page, 'admin', alumno.studentId);
+
+    // Todo lo que se puede accionar en la ficha (no el menú lateral ni la barra superior).
+    const total = await page.evaluate(() => {
+      const main = document.querySelector('main')!;
+      const candidatos = [
+        ...main.querySelectorAll<HTMLElement>('button, a[href], [role="tab"], [tabindex="0"]'),
+      ].filter(
+        (el) =>
+          !(el as HTMLButtonElement).disabled &&
+          el.getAttribute('aria-hidden') !== 'true' &&
+          el.offsetParent !== null,
+      );
+      candidatos.forEach((el, i) => el.setAttribute('data-z05', String(i)));
+      return candidatos.length;
+    });
+    expect(total, 'acciones en la ficha').toBeGreaterThan(5);
+
+    // Tab hasta dar la vuelta completa: qué acciones recibieron el foco y si el foco se ve.
+    const alcanzados = new Map<string, boolean>();
+    for (let i = 0; i < 200; i++) {
+      await page.keyboard.press('Tab');
+      const foco = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        const id = el?.getAttribute('data-z05');
+        if (!el || id == null) return null;
+        const cs = getComputedStyle(el);
+        const contorno = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0;
+        return { id, visible: contorno || cs.boxShadow !== 'none' };
+      });
+      if (foco) alcanzados.set(foco.id, foco.visible);
+      if (alcanzados.size === total) break;
+    }
+
+    const descripcion = (id: string) =>
+      page
+        .locator(`[data-z05="${id}"]`)
+        .evaluate(
+          (el) =>
+            el.getAttribute('data-llm-action') ??
+            el.getAttribute('aria-label') ??
+            el.textContent?.trim().slice(0, 40) ??
+            el.tagName,
+        );
+    const sinAlcanzar: string[] = [];
+    for (let i = 0; i < total; i++) {
+      if (!alcanzados.has(String(i))) sinAlcanzar.push(await descripcion(String(i)));
+    }
+    expect(sinAlcanzar, 'acciones a las que no se llega con Tab').toEqual([]);
+    const sinFocoVisible: string[] = [];
+    for (const [id, visible] of alcanzados) {
+      if (!visible) sinFocoVisible.push(await descripcion(id));
+    }
+    expect(sinFocoVisible, 'acciones sin foco visible').toEqual([]);
+
+    // Menú de Carnet: se abre con Enter y se cierra con Escape.
+    const menu = page.locator('.card-action-menu[role="menu"]');
+    await page.locator('[data-llm-action="carnet-menu"]').focus();
+    await page.keyboard.press('Enter');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+
+    // Modal de archivar: se abre con Enter desde la cabecera y se cierra con Escape.
+    await hero(page)
+      .getByRole('button', { name: /Eliminar Alumno/ })
+      .focus();
+    await page.keyboard.press('Enter');
+    const modal = page.getByRole('dialog').filter({ hasText: /Archivar/ });
+    await expect(modal).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+
+    // Panel lateral (Inasistencias): se abre con Enter y se cierra desde su botón, con el
+    // teclado. Los paneles no son modales y no se cierran con Escape (ninguno de la app).
+    await page.locator('[data-llm-action="ver-inasistencias"]').focus();
+    await page.keyboard.press('Enter');
+    const panel = page.locator('app-admin-inasistencias-drawer');
+    await expect(panel).toBeVisible();
+    await page.getByRole('button', { name: 'Cerrar panel' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toHaveCount(0);
+  });
+
   /**
    * Desde Ex-Alumnos, re-matricula al egresado y llega al paso 1 del wizard. Si la sede tiene
    * borradores pendientes, pasa por la lista de borradores y elige "Nueva matrícula".
@@ -2315,5 +2494,425 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
     await expect(nombres).toHaveValue(segundo.firstNames);
     await expect(apellido).toHaveValue(segundo.paternalLastName);
     await expect(page.locator('#rut')).toHaveValue(new RegExp(segundo.rut.slice(-5)));
+  });
+});
+
+test.describe('cuarta pasada: PDF reales (fix-264-m, 2026-10-04)', () => {
+  // Las funciones generan el PDF de verdad y lo guardan en Storage: más lentas que el resto.
+  test.describe.configure({ timeout: 150_000 });
+  const GENERAR = { timeout: 60_000 };
+
+  /** PDF válido mínimo, para sembrar un contrato sin pasar por el wizard. */
+  const PDF_MINIMO = Buffer.from(
+    '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n' +
+      'trailer<</Root 1 0 R>>\n%%EOF',
+  );
+
+  function visor(page: Page): Locator {
+    return page.locator('app-dms-viewer-modal iframe[title="Visor PDF"]');
+  }
+
+  /** Borra de Storage todo lo que haya en las carpetas dadas (los archivos los crea la app). */
+  async function limpiarStorage(carpetas: string[]): Promise<void> {
+    const sb = await getAdminClient();
+    for (const carpeta of carpetas) {
+      const { data } = await sb.storage.from('documents').list(carpeta);
+      const rutas = (data ?? []).map((o) => `${carpeta}/${o.name}`);
+      if (!rutas.length) continue;
+      const { error } = await sb.storage.from('documents').remove(rutas);
+      expect(error, `borrar de Storage ${carpeta}`).toBeNull();
+    }
+  }
+
+  /** Deja un contrato (archivo en Storage + fila) para una matrícula de prueba. */
+  async function addContrato(
+    enrollmentId: number,
+    cleanup: { track(table: string, id: string | number): void },
+  ): Promise<string> {
+    const sb = await getAdminClient();
+    const ruta = `contracts/${enrollmentId}/contract.pdf`;
+    const subida = await sb.storage
+      .from('documents')
+      .upload(ruta, PDF_MINIMO, { contentType: 'application/pdf', upsert: true });
+    expect(subida.error, 'subir el contrato de prueba').toBeNull();
+    const { data, error } = await sb
+      .from('digital_contracts')
+      .insert({
+        enrollment_id: enrollmentId,
+        file_name: 'E2E-contrato.pdf',
+        file_url: ruta,
+        accepted_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    expect(error, 'registrar el contrato de prueba').toBeNull();
+    cleanup.track('digital_contracts', data!.id);
+    return ruta;
+  }
+
+  test('J02 · J03 · J06 · J07: el carnet de 6 clases se genera sin foto, se ve y se vuelve a generar', async ({
+    pageAs,
+    cleanup,
+  }, testInfo) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Carnet', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    await addCompletedPractices(enrollmentId, 2, cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    const errores = watchErrors(page);
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const menu = page.locator('[data-llm-action="carnet-menu"]');
+
+    try {
+      // J02 · J06: generar (el alumno de prueba no tiene foto) abre el visor con el PDF.
+      await menu.click();
+      await expect(page.locator('[data-llm-action="ver-carnet-6"]')).toBeDisabled();
+      await page.locator('[data-llm-action="generar-carnet-6"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: matricula } = await sb
+        .from('enrollments')
+        .select('license_initial_url, license_full_url')
+        .eq('id', enrollmentId)
+        .single();
+      expect(matricula!.license_initial_url, 'ruta del carnet de 6').toContain(
+        `student-licenses/${enrollmentId}/`,
+      );
+      expect(matricula!.license_full_url, 'el de 12 no se generó').toBeNull();
+
+      // J03: el archivo queda adjunto al reporte para revisarlo a ojo.
+      const descarga = await sb.storage
+        .from('documents')
+        .download(matricula!.license_initial_url as string);
+      expect(descarga.error, 'descargar el carnet').toBeNull();
+      const destino = testInfo.outputPath('carnet-6.pdf');
+      writeFileSync(destino, Buffer.from(await descarga.data!.arrayBuffer()));
+      await testInfo.attach('carnet-6.pdf', { path: destino });
+
+      // Tras recargar, "Ver" está habilitado y "Generar" pasó a "Volver a generar".
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await menu.click();
+      const ver = page.locator('[data-llm-action="ver-carnet-6"]');
+      await expect(ver).toBeEnabled();
+      await expect(page.locator('[data-llm-action="generar-carnet-6"]')).toContainText(
+        'Volver a generar',
+      );
+      await ver.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+
+      // J07: volver a generar reemplaza el archivo (misma ruta, un solo archivo).
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await menu.click();
+      await page.locator('[data-llm-action="generar-carnet-6"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: archivos } = await sb.storage
+        .from('documents')
+        .list(`student-licenses/${enrollmentId}`);
+      expect(archivos ?? [], 'un solo carnet en Storage').toHaveLength(1);
+      errores.expectClean();
+    } finally {
+      await limpiarStorage([`student-licenses/${enrollmentId}`]);
+    }
+  });
+
+  test('J04: en un curso de refuerzo el menú solo ofrece el carnet de 6 clases', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'CarnetRefuerzo',
+        branchId: SEDE_A,
+        enrollments: [{ courseName: 'Refuerzo Clase B' }],
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.locator('[data-llm-action="carnet-menu"]').click();
+    await expect(page.locator('[data-llm-action="generar-carnet-6"]')).toBeVisible();
+    await expect(page.locator('[data-llm-action="generar-carnet-12"]')).toHaveCount(0);
+    await expect(page.locator('[data-llm-action="ver-carnet-12"]')).toHaveCount(0);
+  });
+
+  test('J08 (S2 · spec 0009-i): sin una sesión real no se puede generar el carnet de una matrícula (por API)', async ({
+    cleanup,
+  }) => {
+    // La función exige un usuario real con rol de admin o secretaria (spec 0009-i). Con la anon
+    // key sola, como un visitante del sitio, responde 401 y no genera nada.
+    //
+    // La sede NO se valida en el servidor, por decisión tomada en esa misma spec (Ignacio,
+    // 2026-10-01): una secretaria puede generar por API el carnet de una matrícula de otra sede.
+    // No es un bug de este módulo; este test no lo afirma ni lo niega.
+    const alumno = await createE2eAlumno(
+      { label: 'CarnetSinSesion', branchId: SEDE_B, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    try {
+      const { data, error } = await getAnonClient().functions.invoke(
+        'generate-student-license-pdf',
+        { body: { enrollment_id: enrollmentId, variant: 'initial' } },
+      );
+      expect(data?.pdfUrl, 'no devuelve el carnet').toBeUndefined();
+      expect((error as { context?: Response } | null)?.context?.status, 'HTTP 401').toBe(401);
+      const sb = await getAdminClient();
+      const { data: archivos } = await sb.storage
+        .from('documents')
+        .list(`student-licenses/${enrollmentId}`);
+      expect(archivos ?? [], 'no se generó ningún archivo').toHaveLength(0);
+    } finally {
+      await limpiarStorage([`student-licenses/${enrollmentId}`]);
+    }
+  });
+
+  test('K01: una matrícula presencial con contrato ofrece "Ver Contrato" y abre el PDF', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ContratoPresencial', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    try {
+      await addContrato(enrollmentId, cleanup);
+      const page = await pageAs('secretariaA');
+      await openFicha(page, 'secretaria', alumno.studentId);
+      await page.locator('[data-llm-action="ver-contrato"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      await limpiarStorage([`contracts/${enrollmentId}`]);
+    }
+  });
+
+  test('K03 · K04 · K05: contrato online sin firmar → descargar, rechazar un archivo que no es PDF y subir el firmado', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ContratoOnline', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    const sb = await getAdminClient();
+    const { error } = await sb
+      .from('enrollments')
+      .update({ registration_channel: 'online' })
+      .eq('id', enrollmentId);
+    expect(error, 'dejar la matrícula como online').toBeNull();
+
+    try {
+      await addContrato(enrollmentId, cleanup);
+      const page = await pageAs('secretariaA');
+      await openFicha(page, 'secretaria', alumno.studentId);
+      const menu = page.locator('[data-llm-action="contrato-menu"]');
+      const archivo = page.locator('input[type="file"][accept="application/pdf"]');
+      const firmado = async () =>
+        (
+          await sb
+            .from('digital_contracts')
+            .select('signed_contract_url')
+            .eq('enrollment_id', enrollmentId)
+            .single()
+        ).data?.signed_contract_url ?? null;
+
+      // K03: sin firmar, el botón es un menú con "Descargar" y "Subir Firmado".
+      await expect(page.locator('[data-llm-action="ver-contrato"]')).toHaveCount(0);
+      await menu.click();
+      await expect(page.locator('[data-llm-action="subir-contrato-firmado"]')).toBeVisible();
+      const [descarga] = await Promise.all([
+        page.waitForEvent('download', GENERAR),
+        page.locator('[data-llm-action="descargar-contrato"]').click(),
+      ]);
+      expect(descarga.suggestedFilename()).toBe('Contrato.pdf');
+
+      // K04: un archivo que no es PDF se rechaza con un aviso y no queda como contrato firmado.
+      await archivo.setInputFiles({
+        name: 'no-es-un-contrato.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('esto no es un PDF'),
+      });
+      await expect(
+        page.getByText('El contrato firmado debe ser un archivo PDF.'),
+        'aviso de formato',
+      ).toBeVisible();
+      await expect(page.getByText('Contrato firmado subido correctamente.')).toHaveCount(0);
+      expect(await firmado(), 'no se registró el archivo').toBeNull();
+
+      // K05: el PDF firmado se sube y el botón pasa a "Ver Contrato".
+      await archivo.setInputFiles({
+        name: 'contrato-firmado.pdf',
+        mimeType: 'application/pdf',
+        buffer: PDF_MINIMO,
+      });
+      await expect(page.getByText('Contrato firmado subido correctamente.')).toBeVisible(GENERAR);
+      expect(await firmado()).toBe(`contracts/${enrollmentId}/signed_contract.pdf`);
+      const ver = page.locator('[data-llm-action="ver-contrato"]');
+      await expect(ver).toBeVisible();
+      await expect(menu).toHaveCount(0);
+      await ver.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      await limpiarStorage([`contracts/${enrollmentId}`]);
+    }
+  });
+
+  test('L02 · L04 · L05 · L07: con 12 clases cerradas (sin nota) el certificado se genera, se vuelve a ver y avisa al alumno', async ({
+    pageAs,
+    cleanup,
+  }, testInfo) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Certificado', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    // L04: las 12 clases están cerradas sin nota de evaluación.
+    await addCompletedPractices(enrollmentId, 12, cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const boton = page.locator('[data-llm-action="generar-certificado"]');
+
+    try {
+      // L05: generar abre el visor y el botón pasa a "Ver Certificado".
+      await expect(boton).toContainText('Generar Certificado');
+      await expect(boton).toBeEnabled();
+      await boton.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: matricula } = await sb
+        .from('enrollments')
+        .select('certificate_b_pdf_url')
+        .eq('id', enrollmentId)
+        .single();
+      expect(matricula!.certificate_b_pdf_url, 'ruta del certificado').toContain(
+        `certificates/${enrollmentId}/`,
+      );
+      const descarga = await sb.storage
+        .from('documents')
+        .download(matricula!.certificate_b_pdf_url as string);
+      const destino = testInfo.outputPath('certificado.pdf');
+      writeFileSync(destino, Buffer.from(await descarga.data!.arrayBuffer()));
+      await testInfo.attach('certificado.pdf', { path: destino });
+
+      // L07: el alumno recibe el aviso de que su certificado está listo.
+      await expect
+        .poll(
+          async () => {
+            const { data } = await sb
+              .from('notifications')
+              .select('id')
+              .eq('recipient_id', alumno.userId)
+              .eq('reference_type', 'certificate');
+            return (data ?? []).length;
+          },
+          { message: 'aviso al alumno', timeout: 15_000 },
+        )
+        .toBe(1);
+
+      // L02: ya generado, el botón dice "Ver Certificado" y abre el mismo PDF.
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await expect(boton).toContainText('Ver Certificado');
+      await boton.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      // Certificado, registro de emisión, avisos y archivo los crea la función: se borran.
+      const { data: certs } = await sb
+        .from('certificates')
+        .select('id')
+        .eq('enrollment_id', enrollmentId);
+      for (const c of certs ?? []) {
+        cleanup.track('certificates', c.id);
+        const { data: logs } = await sb
+          .from('certificate_issuance_log')
+          .select('id')
+          .eq('certificate_id', c.id);
+        for (const l of logs ?? []) cleanup.track('certificate_issuance_log', l.id);
+      }
+      const { data: avisos } = await sb
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', alumno.userId);
+      for (const n of avisos ?? []) cleanup.track('notifications', n.id);
+      await limpiarStorage([`certificates/${enrollmentId}`]);
+    }
+  });
+
+  test('L06: si la función rechaza el certificado, se muestra el motivo real', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CertRechazo', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addCompletedPractices(alumno.enrollmentIds[0], 12, cleanup);
+    const motivo = 'El alumno no cumple el mínimo de clases prácticas completadas (11/12).';
+    const page = await pageAs('secretariaA');
+    // El rechazo se simula con la misma forma que usa la función real (HTTP 400 + error).
+    await page.route('**/functions/v1/generate-certificate-b-pdf', async (route) => {
+      if (route.request().method() === 'OPTIONS') return route.continue();
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: motivo }),
+      });
+    });
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.locator('[data-llm-action="generar-certificado"]').click();
+    await expect(page.getByText(motivo)).toBeVisible();
+    await expect(visor(page)).toHaveCount(0);
+  });
+});
+
+test.describe('cierre de la asignación (fix-264-m, 2026-10-04)', () => {
+  test('M13: un alumno con la cuenta ya activada no ve el aviso de invitación', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CuentaActiva', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    const page = await pageAs('admin');
+    const invitar = page.locator('[data-llm-action="enviar-invitacion-alumno"]');
+    const abrirEditar = async (): Promise<void> => {
+      await openFicha(page, 'admin', alumno.studentId);
+      await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+      await expect(page.locator('#edit-phone')).toBeVisible();
+    };
+    /** Deja al alumno como si tuviera cuenta: con identificador de Auth y, o no, primer ingreso. */
+    const dejarCuenta = async (firstLogin: boolean): Promise<void> => {
+      const { data, error } = await sb
+        .from('users')
+        .update({ supabase_uid: randomUUID(), first_login: firstLogin })
+        .eq('id', alumno.userId)
+        .select('id');
+      expect(error, 'marcar la cuenta').toBeNull();
+      expect(data, 'fila actualizada').toHaveLength(1);
+    };
+
+    // Sin cuenta (como nace un alumno): el aviso de invitación está.
+    await abrirEditar();
+    await expect(invitar).toBeVisible();
+
+    // Con cuenta creada pero sin haber entrado nunca: sigue estando.
+    await dejarCuenta(true);
+    await abrirEditar();
+    await expect(invitar).toBeVisible();
+
+    // M13: con la cuenta ya activada (entró y cambió su clave), el aviso no aparece.
+    await dejarCuenta(false);
+    await abrirEditar();
+    await expect(invitar).toHaveCount(0);
+    await expect(page.getByText(/invitaci[oó]n/i)).toHaveCount(0);
   });
 });

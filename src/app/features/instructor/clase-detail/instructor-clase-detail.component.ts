@@ -280,7 +280,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
               <div class="pt-2 flex justify-center">
                 <button
-                  class="btn-primary w-full sm:w-80 h-14 text-base sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
+                  class="btn-primary w-full sm:w-80 h-14 sm:text-lg rounded-2xl shadow-md flex items-center justify-center hover:-translate-y-0.5 transition-all"
                   [disabled]="!canFinalize() || isSubmitting()"
                   (click)="onFinalize(cls)"
                   data-llm-action="cerrar-clase-definitivamente"

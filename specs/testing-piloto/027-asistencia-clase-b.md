@@ -50,6 +50,37 @@
 
 ---
 
+## 0. Traspasado desde ASG-i-024 (Matías, 2026-10-04)
+
+El testing de la ficha del alumno (`ASG-i-024`, track `fix-264-m`) dejó sin ejecutar los casos del
+reagendamiento masivo y de la penalización, porque son de esta asignación. Se ejecutan acá.
+Equivalencias con `024b-ficha-ex-alumnos.md`:
+
+| Caso de `024b` | Se ejecuta acá como |
+|---|---|
+| G03 (paso 1: todas preseleccionadas, con su badge) | J04 |
+| G04 (desmarcar todas deshabilita "Seleccionar Horarios") | J11 (nuevo) |
+| G05 (ciclo completo del reagendamiento masivo) | J06 |
+| G06, G07 (razón obligatoria, "Otro" con detalle, menos horarios que clases) | J05 |
+| G08 ("Volver" desde el paso 2 conserva la selección) | J12 (nuevo) |
+| G09 (reagendar solo algunas: las demás siguen en rojo o ámbar) | J07 |
+| G10 (falla a mitad del guardado) | J08 |
+| G11 (una inasistencia nueva tras reagendar no vuelve a penalizar por las viejas) | J07, F04 |
+| G12 (un solo aviso agrupado al alumno y al instructor) | J06 |
+| H08 (efecto de justificar sobre la penalización) | F04, G05 |
+
+**Ya resuelto en `ASG-i-024`: ejecutar como regresión, no como sospecha.**
+
+| Acá | Qué pasó | Track |
+|---|---|---|
+| J03 (¿una falta ya reagendada ofrece "Justificar"?) | Decidido y hecho: una inasistencia reagendada no se justifica; se ve "Reagendada" sin el botón | `hotfix-128-m` |
+| J09 (tras reagendar no queda "Ausente") | La reprogramación individual también archiva la asistencia anterior y queda en el historial | `fix-279-m` |
+| J06 (respeta Triple Match) | La grilla no ofrece horarios que chocan con otra clase del alumno y la base los rechaza. Tope de 2 clases por día sin contar las canceladas | `fix-299-m`, `fix-300-m`, `fix-301-m` |
+| Historial de reagendamientos con 2 matrículas | El panel muestra el de la matrícula elegida | `fix-298-m` |
+
+Tests E2E que ya cubren parte de esto: `e2e/alumnos-b-ficha.spec.ts`, casos H02 · H03 · H04 · H09,
+H07, S03, F04 · F11 · F13 · E09 y N06 · N07.
+
 ## 1. Sospechas de bug encontradas en el código
 
 | # | Gravedad | Sospecha | Evidencia |
@@ -268,6 +299,8 @@ secretaria sin sede; una cuenta alumno o instructor (solo para S2, en entorno de
 | J08 | Choque a mitad del reagendamiento | Todo o nada (S16) | — | |
 | J09 | Tras reagendar, Asistencia del nuevo día | Clase "Pendiente", no "Ausente" (DG-075) | ✓ | |
 | J10 | Ficha abierta en otra sesión mientras se justifica | ¿Se actualiza sola? (S17) | — | |
+| J11 | Paso 1: desmarcar todas las clases (traspasado de `024b` G04) | "Seleccionar Horarios (0)" deshabilitado | ✓ | |
+| J12 | "Volver" desde el paso 2 (traspasado de `024b` G08) | Vuelve al paso 1 con la selección intacta | — | |
 
 ### K. Dashboard y otros módulos
 
