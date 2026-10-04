@@ -1676,6 +1676,86 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
     );
   });
 
+  test('M14 · M16: doble clic en "Guardar Cambios" guarda una vez y queda en la auditoría', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Auditoria', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    let guardados = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('update-student-profile') && r.method() === 'POST') guardados++;
+    });
+
+    await hero(page).locator('[data-llm-action="editar-alumno"]').click();
+    await page.locator('#edit-phone').fill('912345678');
+    // M14: dos clics seguidos.
+    await page.locator('[data-llm-action="guardar-perfil-alumno"]').dblclick();
+    await expect(page.locator('[data-llm-info="phone"]')).toContainText('912345678', CARGA);
+    expect(guardados, 'pedidos de guardado').toBe(1);
+
+    // M16: el cambio queda en audit_log con el usuario que lo hizo.
+    const sb = await getAdminClient();
+    await expect
+      .poll(
+        async () => {
+          const { data } = await sb
+            .from('audit_log')
+            .select('action, user_id')
+            .eq('entity', 'users')
+            .eq('entity_id', alumno.userId);
+          return (data ?? []).filter((r) => /update/i.test(r.action) && r.user_id !== null).length;
+        },
+        { message: 'UPDATE de users en audit_log, con usuario' },
+      )
+      .toBeGreaterThan(0);
+  });
+
+  test('S01 · S02: admin y secretaria con las dos sedes abren fichas de ambas sedes', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [deA, deB] = await Promise.all([
+      createE2eAlumno({ label: 'FichaSedeA', branchId: SEDE_A, enrollments: [{}] }, cleanup),
+      createE2eAlumno({ label: 'FichaSedeB', branchId: SEDE_B, enrollments: [{}] }, cleanup),
+    ]);
+    for (const [cuenta, portal] of [
+      ['admin', 'admin'],
+      ['secretariaMultisede', 'secretaria'],
+    ] as const) {
+      const page = await pageAs(cuenta);
+      for (const alumno of [deA, deB]) {
+        await openFicha(page, portal, alumno.studentId);
+        await expect(matricula(page), `${cuenta} ve la ficha`).toBeVisible();
+        await expect(hero(page).locator('h1')).toContainText(alumno.paternalLastName);
+      }
+    }
+  });
+
+  test('J09: el menú de Carnet se cierra con un clic fuera', async ({ pageAs, cleanup }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'MenuCarnet', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const menu = page.locator('.card-action-menu[role="menu"]');
+
+    await page.locator('[data-llm-action="carnet-menu"]').click();
+    await expect(menu).toBeVisible();
+    await page.locator('[data-llm-info="email"]').click();
+    await expect(menu, 'un clic fuera lo cierra').toHaveCount(0);
+
+    await page.locator('[data-llm-action="carnet-menu"]').click();
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu, 'Escape lo cierra').toHaveCount(0);
+  });
+
   test('U07: un egresado del 31 de diciembre de noche queda en el año correcto', async ({
     pageAs,
     cleanup,

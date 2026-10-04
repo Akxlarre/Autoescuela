@@ -383,12 +383,17 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | L03 | ✅ | Por test unitario (`fix-289-m`): el admin confirma y el pedido va con `force`. No se generó un certificado real | |
 | M05 | ✅ | Auto (`fix-296-m`): con el correo sin guardar el botón de invitación queda deshabilitado, con aviso | |
 | U07 | ❌ → ✅ | Auto. Un egreso del 31-12-2025 a las 23:30 mostraba el año 2025 pero el filtro de período lo trataba como 2026. **Corregido el 2026-10-04** | B37 → `fix-297-m` |
+| J09 | ❌ → ✅ | Auto. El menú de Carnet se cerraba con un clic fuera, pero no con Escape. **Corregido el 2026-10-04** | B40 → `hotfix-138-m` |
+| M14 | ❌ → ✅ | Auto. Doble clic en "Guardar Cambios" enviaba dos guardados. **Corregido el 2026-10-04** | B39 → `hotfix-137-m` |
+| M16 | ✅ | Auto. El cambio de perfil deja un `UPDATE` de `users` en `audit_log`, con el usuario | |
+| S01 | ✅ | Auto. El admin abre fichas de alumnos de las dos sedes | |
+| S02 | ✅ | Auto. La secretaria con las dos sedes abre una ficha de la otra sede | |
 
 **Aún sin ejecutar de `024b`:** C07 · D09 · E09 · F01–F03, F05–F10, F12, F14 (agenda de
 reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
-H05, H08 · I04, I05, I07 · J02–J09 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
-online sin firmar en los datos) · L02, L04–L07 · M10–M14, M16 (invitación y cuentas Auth reales) ·
-N01, N04, N05, N07, N08 · S01, S02, S05 · W03, W04, W06–W08 · Z05.
+H05, H08 · I04, I05, I07 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
+online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
+N01, N04, N05, N07, N08 · S05 · W03, W04, W06–W08 · Z05.
 
 ## Sospechas: confirmadas / descartadas
 
@@ -475,6 +480,8 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B36 | **Reabrir un drawer mientras se está cerrando lo deja vacío y luego lo cierra.** Al cancelar "Editar Perfil" y volver a abrirlo dentro de los ~300 ms que dura la animación de salida, se reutiliza el mismo formulario ya vaciado y, al terminar la animación, el host de drawers limpia el panel recién abierto. Es del host global (`layout-drawer`), no de la ficha: afecta a cualquier drawer que se reabra con el mismo componente. Apareció el 2026-10-04 porque el test M09 · M15 reabría sin esperar (ahora espera el cierre) | 🟡 Baja | ✅ `fix-295-m` (2026-10-04): al reabrir durante el cierre, el host cancela la animación de salida y vuelve a crear el contenido. El test M09 · M15 volvió a reabrir sin esperar |
 | B37 | **Un egresado de noche queda con un año en la columna y otro en el filtro.** El año salía en hora local y el día de egreso en UTC: quien egresó el 31-12 a las 23:30 mostraba 2025 y desaparecía al elegir el período 2025 | 🟡 Baja | ✅ `fix-297-m` (2026-10-04) |
 | B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
+| B39 | **Doble clic en "Guardar Cambios" de Editar Perfil guarda dos veces** (dos llamadas a `update-student-profile`) | 🟡 Baja | ✅ `hotfix-137-m` (2026-10-04) |
+| B40 | **El menú de Carnet de la ficha no se cierra con Escape** (con un clic fuera sí) | 🟡 Baja | ✅ `hotfix-138-m` (2026-10-04) |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
 

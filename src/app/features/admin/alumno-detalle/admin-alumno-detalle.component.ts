@@ -1620,6 +1620,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
   /** Cierra cualquier dropdown abierto al hacer click fuera (mismo patrón que SectionHeroComponent). */
   @HostListener('document:click')
+  @HostListener('document:keydown.escape') // hotfix-138-m: antes solo cerraba el clic fuera.
   protected closeCardMenu(): void {
     this.openCardMenuId.set(null);
     this.cardMenuPos.set(null);
