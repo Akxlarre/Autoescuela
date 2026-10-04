@@ -1096,6 +1096,16 @@ export class AdminAlumnoDetalleFacade {
 
   /** Sube el contrato firmado escaneado al storage y actualiza digital_contracts. */
   async subirContratoFirmado(enrollmentId: number, file: File): Promise<void> {
+    // fix-304-m: el diálogo de archivos solo sugiere PDF; acá se exige. Sin tipo informado
+    // (algunos navegadores), se mira la extensión.
+    const esPdf = file.type
+      ? file.type === 'application/pdf'
+      : file.name.toLowerCase().endsWith('.pdf');
+    if (!esPdf) {
+      this.toast.error('El contrato firmado debe ser un archivo PDF.');
+      return;
+    }
+
     this._isUploadingContract.set(true);
     try {
       const path = `contracts/${enrollmentId}/signed_contract.pdf`;

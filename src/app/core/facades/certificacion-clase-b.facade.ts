@@ -8,6 +8,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
+import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -119,9 +120,38 @@ export class CertificacionClaseBFacade {
     if (!result) return;
     this.toast.success('Certificado generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
-    if (alumno) this.notifyCertificateReady(alumno);
+    if (alumno) {
+      this.notifyCertificateReady(alumno);
+    } else {
+      // fix-306-m: desde la ficha del alumno la lista de esta pantalla no está cargada. Se
+      // resuelve la matrícula solo para el aviso, sin esperar ni romper la generación.
+      void this.resolveAlumnoParaAviso(enrollmentId)
+        .then((resuelto) => {
+          if (resuelto) this.notifyCertificateReady(resuelto);
+        })
+        .catch(() => undefined);
+    }
     void this.refreshSilently();
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase B');
+  }
+
+  /** Alumno y curso de una matrícula que no está en la lista cargada (fix-306-m). */
+  private async resolveAlumnoParaAviso(
+    enrollmentId: number,
+  ): Promise<Pick<CertificacionAlumnoRow, 'enrollmentId' | 'studentId' | 'curso'> | null> {
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select('student_id, courses(name)')
+      .eq('id', enrollmentId)
+      .single();
+    if (error || !data) return null;
+
+    const row = data as {
+      student_id: number;
+      courses: { name: string } | { name: string }[] | null;
+    };
+    const course = Array.isArray(row.courses) ? row.courses[0] : row.courses;
+    return { enrollmentId, studentId: row.student_id, curso: course?.name ?? 'Clase B' };
   }
 
   /**
@@ -197,7 +227,17 @@ export class CertificacionClaseBFacade {
         // fix-011-i (H-025): el gate server-side devuelve un mensaje específico
         // (ej. "no cumple el mínimo de clases prácticas") — mostrarlo si existe,
         // en vez de un genérico que oculta la razón real del rechazo.
-        this.toast.error(data?.error ?? 'No se pudo generar el certificado');
+        // fix-305-m (DG-085): en un rechazo real `data` viene nulo; el motivo está en el cuerpo
+        // de la respuesta. Solo se muestra si es un rechazo de negocio (4xx): un 5xx puede traer
+        // texto técnico.
+        const respuesta = error ? await readEdgeFunctionError(error) : null;
+        const esRechazo =
+          respuesta?.status != null && respuesta.status >= 400 && respuesta.status < 500;
+        this.toast.error(
+          data?.error ??
+            (esRechazo ? respuesta?.message : null) ??
+            'No se pudo generar el certificado',
+        );
         return null;
       }
       return { url: data.pdfUrl as string, path: data.pdfPath as string };

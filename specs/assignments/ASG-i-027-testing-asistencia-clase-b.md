@@ -14,6 +14,10 @@
 
 > **Checklist detallado:** `specs/testing-piloto/027-asistencia-clase-b.md` — casos, datos de prueba, sospechas de bug y pasos. Este archivo es el resumen; el checklist es lo que se ejecuta.
 
+> **Traspaso desde ASG-i-024 (Matías, 2026-10-04):** los casos de la ficha que eran de esta
+> asignación se ejecutan acá, y varias sospechas ya quedaron corregidas. Ver la sección 0 del
+> checklist antes de empezar.
+
 ## Contexto / Objetivo
 
 La asistencia tiene reglas de negocio con consecuencias fuertes: 2 inasistencias consecutivas

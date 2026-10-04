@@ -145,6 +145,56 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  describe('subirContratoFirmado — fix-304-m', () => {
+    let uploadSpy: any;
+
+    beforeEach(() => {
+      uploadSpy = vi.fn().mockResolvedValue({ error: null });
+      supabaseSpy.client.storage.from = vi.fn().mockReturnValue({ upload: uploadSpy });
+    });
+
+    it('rechaza un archivo que no es PDF, sin subirlo ni registrarlo', async () => {
+      const txt = new File(['no soy un contrato'], 'notas.txt', { type: 'text/plain' });
+
+      await facade.subirContratoFirmado(7, txt);
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+      expect(supabaseSpy.client.from).not.toHaveBeenCalledWith('digital_contracts');
+      expect(toastSpy.error).toHaveBeenCalledWith('El contrato firmado debe ser un archivo PDF.');
+      expect(facade.contractSignedPath()).toBeNull();
+    });
+
+    it('rechaza una imagen aunque se llame .pdf', async () => {
+      const foto = new File(['x'], 'contrato.pdf', { type: 'image/jpeg' });
+
+      await facade.subirContratoFirmado(7, foto);
+
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+
+    it('sube un PDF y lo registra como contrato firmado', async () => {
+      const pdf = new File(['%PDF-1.4'], 'contrato firmado.pdf', { type: 'application/pdf' });
+
+      await facade.subirContratoFirmado(7, pdf);
+
+      expect(uploadSpy).toHaveBeenCalledWith(
+        'contracts/7/signed_contract.pdf',
+        pdf,
+        expect.objectContaining({ contentType: 'application/pdf' }),
+      );
+      expect(toastSpy.success).toHaveBeenCalledWith('Contrato firmado subido correctamente.');
+      expect(facade.contractSignedPath()).toBe('contracts/7/signed_contract.pdf');
+    });
+
+    it('acepta un .pdf cuando el navegador no informa el tipo', async () => {
+      const pdf = new File(['%PDF-1.4'], 'CONTRATO.PDF', { type: '' });
+
+      await facade.subirContratoFirmado(7, pdf);
+
+      expect(uploadSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('reprogramarClase — notificaciones (Spec 0024, AC5)', () => {
     const basePayload = {
       sessionId: 55,

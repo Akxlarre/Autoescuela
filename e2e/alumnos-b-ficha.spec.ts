@@ -4,7 +4,7 @@
  *
  * Los tests que cambian estado siembran su propio alumno E2E- (e2e/support/alumnos-seed.ts).
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
@@ -53,6 +53,11 @@ function errorDeCarga(page: Page): Locator {
 
 function hero(page: Page): Locator {
   return page.locator('app-section-hero');
+}
+
+/** Igual que matricula(): para los tests que ya tienen una variable con ese nombre. */
+function fichaCargada(page: Page): Locator {
+  return matricula(page);
 }
 
 function matricula(page: Page): Locator {
@@ -2488,5 +2493,373 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
     await expect(nombres).toHaveValue(segundo.firstNames);
     await expect(apellido).toHaveValue(segundo.paternalLastName);
     await expect(page.locator('#rut')).toHaveValue(new RegExp(segundo.rut.slice(-5)));
+  });
+});
+
+test.describe('cuarta pasada: PDF reales (fix-264-m, 2026-10-04)', () => {
+  // Las funciones generan el PDF de verdad y lo guardan en Storage: más lentas que el resto.
+  test.describe.configure({ timeout: 150_000 });
+  const GENERAR = { timeout: 60_000 };
+
+  /** PDF válido mínimo, para sembrar un contrato sin pasar por el wizard. */
+  const PDF_MINIMO = Buffer.from(
+    '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n' +
+      'trailer<</Root 1 0 R>>\n%%EOF',
+  );
+
+  function visor(page: Page): Locator {
+    return page.locator('app-dms-viewer-modal iframe[title="Visor PDF"]');
+  }
+
+  /** Borra de Storage todo lo que haya en las carpetas dadas (los archivos los crea la app). */
+  async function limpiarStorage(carpetas: string[]): Promise<void> {
+    const sb = await getAdminClient();
+    for (const carpeta of carpetas) {
+      const { data } = await sb.storage.from('documents').list(carpeta);
+      const rutas = (data ?? []).map((o) => `${carpeta}/${o.name}`);
+      if (!rutas.length) continue;
+      const { error } = await sb.storage.from('documents').remove(rutas);
+      expect(error, `borrar de Storage ${carpeta}`).toBeNull();
+    }
+  }
+
+  /** Deja un contrato (archivo en Storage + fila) para una matrícula de prueba. */
+  async function addContrato(
+    enrollmentId: number,
+    cleanup: { track(table: string, id: string | number): void },
+  ): Promise<string> {
+    const sb = await getAdminClient();
+    const ruta = `contracts/${enrollmentId}/contract.pdf`;
+    const subida = await sb.storage
+      .from('documents')
+      .upload(ruta, PDF_MINIMO, { contentType: 'application/pdf', upsert: true });
+    expect(subida.error, 'subir el contrato de prueba').toBeNull();
+    const { data, error } = await sb
+      .from('digital_contracts')
+      .insert({
+        enrollment_id: enrollmentId,
+        file_name: 'E2E-contrato.pdf',
+        file_url: ruta,
+        accepted_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    expect(error, 'registrar el contrato de prueba').toBeNull();
+    cleanup.track('digital_contracts', data!.id);
+    return ruta;
+  }
+
+  test('J02 · J03 · J06 · J07: el carnet de 6 clases se genera sin foto, se ve y se vuelve a generar', async ({
+    pageAs,
+    cleanup,
+  }, testInfo) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Carnet', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    await addCompletedPractices(enrollmentId, 2, cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    const errores = watchErrors(page);
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const menu = page.locator('[data-llm-action="carnet-menu"]');
+
+    try {
+      // J02 · J06: generar (el alumno de prueba no tiene foto) abre el visor con el PDF.
+      await menu.click();
+      await expect(page.locator('[data-llm-action="ver-carnet-6"]')).toBeDisabled();
+      await page.locator('[data-llm-action="generar-carnet-6"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: matricula } = await sb
+        .from('enrollments')
+        .select('license_initial_url, license_full_url')
+        .eq('id', enrollmentId)
+        .single();
+      expect(matricula!.license_initial_url, 'ruta del carnet de 6').toContain(
+        `student-licenses/${enrollmentId}/`,
+      );
+      expect(matricula!.license_full_url, 'el de 12 no se generó').toBeNull();
+
+      // J03: el archivo queda adjunto al reporte para revisarlo a ojo.
+      const descarga = await sb.storage
+        .from('documents')
+        .download(matricula!.license_initial_url as string);
+      expect(descarga.error, 'descargar el carnet').toBeNull();
+      const destino = testInfo.outputPath('carnet-6.pdf');
+      writeFileSync(destino, Buffer.from(await descarga.data!.arrayBuffer()));
+      await testInfo.attach('carnet-6.pdf', { path: destino });
+
+      // Tras recargar, "Ver" está habilitado y "Generar" pasó a "Volver a generar".
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await menu.click();
+      const ver = page.locator('[data-llm-action="ver-carnet-6"]');
+      await expect(ver).toBeEnabled();
+      await expect(page.locator('[data-llm-action="generar-carnet-6"]')).toContainText(
+        'Volver a generar',
+      );
+      await ver.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+
+      // J07: volver a generar reemplaza el archivo (misma ruta, un solo archivo).
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await menu.click();
+      await page.locator('[data-llm-action="generar-carnet-6"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: archivos } = await sb.storage
+        .from('documents')
+        .list(`student-licenses/${enrollmentId}`);
+      expect(archivos ?? [], 'un solo carnet en Storage').toHaveLength(1);
+      errores.expectClean();
+    } finally {
+      await limpiarStorage([`student-licenses/${enrollmentId}`]);
+    }
+  });
+
+  test('J04: en un curso de refuerzo el menú solo ofrece el carnet de 6 clases', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'CarnetRefuerzo',
+        branchId: SEDE_A,
+        enrollments: [{ courseName: 'Refuerzo Clase B' }],
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.locator('[data-llm-action="carnet-menu"]').click();
+    await expect(page.locator('[data-llm-action="generar-carnet-6"]')).toBeVisible();
+    await expect(page.locator('[data-llm-action="generar-carnet-12"]')).toHaveCount(0);
+    await expect(page.locator('[data-llm-action="ver-carnet-12"]')).toHaveCount(0);
+  });
+
+  test('J08 (S2): la secretaria de la sede A no puede generar el carnet de una matrícula de la sede B (por API)', async ({
+    cleanup,
+  }) => {
+    knownBug('024b S2 (ASG-i-042): generate-student-license-pdf no revisa quién llama');
+    const ajeno = await createE2eAlumno(
+      { label: 'CarnetAjeno', branchId: SEDE_B, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = ajeno.enrollmentIds[0];
+    const secretaria = await getClientFor(
+      ACCOUNTS.secretariaA.email,
+      ACCOUNTS.secretariaA.password,
+    );
+    try {
+      const { data, error } = await secretaria.functions.invoke('generate-student-license-pdf', {
+        body: { enrollment_id: enrollmentId, variant: 'initial' },
+      });
+      expect(data?.pdfUrl, 'no debe devolver el carnet').toBeUndefined();
+      expect(error, 'debe rechazar el pedido').not.toBeNull();
+    } finally {
+      await limpiarStorage([`student-licenses/${enrollmentId}`]);
+    }
+  });
+
+  test('K01: una matrícula presencial con contrato ofrece "Ver Contrato" y abre el PDF', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ContratoPresencial', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    try {
+      await addContrato(enrollmentId, cleanup);
+      const page = await pageAs('secretariaA');
+      await openFicha(page, 'secretaria', alumno.studentId);
+      await page.locator('[data-llm-action="ver-contrato"]').click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      await limpiarStorage([`contracts/${enrollmentId}`]);
+    }
+  });
+
+  test('K03 · K04 · K05: contrato online sin firmar → descargar, rechazar un archivo que no es PDF y subir el firmado', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ContratoOnline', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    const sb = await getAdminClient();
+    const { error } = await sb
+      .from('enrollments')
+      .update({ registration_channel: 'online' })
+      .eq('id', enrollmentId);
+    expect(error, 'dejar la matrícula como online').toBeNull();
+
+    try {
+      await addContrato(enrollmentId, cleanup);
+      const page = await pageAs('secretariaA');
+      await openFicha(page, 'secretaria', alumno.studentId);
+      const menu = page.locator('[data-llm-action="contrato-menu"]');
+      const archivo = page.locator('input[type="file"][accept="application/pdf"]');
+      const firmado = async () =>
+        (
+          await sb
+            .from('digital_contracts')
+            .select('signed_contract_url')
+            .eq('enrollment_id', enrollmentId)
+            .single()
+        ).data?.signed_contract_url ?? null;
+
+      // K03: sin firmar, el botón es un menú con "Descargar" y "Subir Firmado".
+      await expect(page.locator('[data-llm-action="ver-contrato"]')).toHaveCount(0);
+      await menu.click();
+      await expect(page.locator('[data-llm-action="subir-contrato-firmado"]')).toBeVisible();
+      const [descarga] = await Promise.all([
+        page.waitForEvent('download', GENERAR),
+        page.locator('[data-llm-action="descargar-contrato"]').click(),
+      ]);
+      expect(descarga.suggestedFilename()).toBe('Contrato.pdf');
+
+      // K04: un archivo que no es PDF se rechaza con un aviso y no queda como contrato firmado.
+      await archivo.setInputFiles({
+        name: 'no-es-un-contrato.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('esto no es un PDF'),
+      });
+      await expect(
+        page.getByText('El contrato firmado debe ser un archivo PDF.'),
+        'aviso de formato',
+      ).toBeVisible();
+      await expect(page.getByText('Contrato firmado subido correctamente.')).toHaveCount(0);
+      expect(await firmado(), 'no se registró el archivo').toBeNull();
+
+      // K05: el PDF firmado se sube y el botón pasa a "Ver Contrato".
+      await archivo.setInputFiles({
+        name: 'contrato-firmado.pdf',
+        mimeType: 'application/pdf',
+        buffer: PDF_MINIMO,
+      });
+      await expect(page.getByText('Contrato firmado subido correctamente.')).toBeVisible(GENERAR);
+      expect(await firmado()).toBe(`contracts/${enrollmentId}/signed_contract.pdf`);
+      const ver = page.locator('[data-llm-action="ver-contrato"]');
+      await expect(ver).toBeVisible();
+      await expect(menu).toHaveCount(0);
+      await ver.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      await limpiarStorage([`contracts/${enrollmentId}`]);
+    }
+  });
+
+  test('L02 · L04 · L05 · L07: con 12 clases cerradas (sin nota) el certificado se genera, se vuelve a ver y avisa al alumno', async ({
+    pageAs,
+    cleanup,
+  }, testInfo) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Certificado', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const enrollmentId = alumno.enrollmentIds[0];
+    // L04: las 12 clases están cerradas sin nota de evaluación.
+    await addCompletedPractices(enrollmentId, 12, cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    await openFicha(page, 'secretaria', alumno.studentId);
+    const boton = page.locator('[data-llm-action="generar-certificado"]');
+
+    try {
+      // L05: generar abre el visor y el botón pasa a "Ver Certificado".
+      await expect(boton).toContainText('Generar Certificado');
+      await expect(boton).toBeEnabled();
+      await boton.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+      const { data: matricula } = await sb
+        .from('enrollments')
+        .select('certificate_b_pdf_url')
+        .eq('id', enrollmentId)
+        .single();
+      expect(matricula!.certificate_b_pdf_url, 'ruta del certificado').toContain(
+        `certificates/${enrollmentId}/`,
+      );
+      const descarga = await sb.storage
+        .from('documents')
+        .download(matricula!.certificate_b_pdf_url as string);
+      const destino = testInfo.outputPath('certificado.pdf');
+      writeFileSync(destino, Buffer.from(await descarga.data!.arrayBuffer()));
+      await testInfo.attach('certificado.pdf', { path: destino });
+
+      // L07: el alumno recibe el aviso de que su certificado está listo.
+      await expect
+        .poll(
+          async () => {
+            const { data } = await sb
+              .from('notifications')
+              .select('id')
+              .eq('recipient_id', alumno.userId)
+              .eq('reference_type', 'certificate');
+            return (data ?? []).length;
+          },
+          { message: 'aviso al alumno', timeout: 15_000 },
+        )
+        .toBe(1);
+
+      // L02: ya generado, el botón dice "Ver Certificado" y abre el mismo PDF.
+      await page.reload();
+      await expect(fichaCargada(page)).toBeVisible(CARGA);
+      await expect(boton).toContainText('Ver Certificado');
+      await boton.click();
+      await expect(visor(page)).toBeVisible(GENERAR);
+    } finally {
+      // Certificado, registro de emisión, avisos y archivo los crea la función: se borran.
+      const { data: certs } = await sb
+        .from('certificates')
+        .select('id')
+        .eq('enrollment_id', enrollmentId);
+      for (const c of certs ?? []) {
+        cleanup.track('certificates', c.id);
+        const { data: logs } = await sb
+          .from('certificate_issuance_log')
+          .select('id')
+          .eq('certificate_id', c.id);
+        for (const l of logs ?? []) cleanup.track('certificate_issuance_log', l.id);
+      }
+      const { data: avisos } = await sb
+        .from('notifications')
+        .select('id')
+        .eq('recipient_id', alumno.userId);
+      for (const n of avisos ?? []) cleanup.track('notifications', n.id);
+      await limpiarStorage([`certificates/${enrollmentId}`]);
+    }
+  });
+
+  test('L06: si la función rechaza el certificado, se muestra el motivo real', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'CertRechazo', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addCompletedPractices(alumno.enrollmentIds[0], 12, cleanup);
+    const motivo = 'El alumno no cumple el mínimo de clases prácticas completadas (11/12).';
+    const page = await pageAs('secretariaA');
+    // El rechazo se simula con la misma forma que usa la función real (HTTP 400 + error).
+    await page.route('**/functions/v1/generate-certificate-b-pdf', async (route) => {
+      if (route.request().method() === 'OPTIONS') return route.continue();
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: motivo }),
+      });
+    });
+    await openFicha(page, 'secretaria', alumno.studentId);
+    await page.locator('[data-llm-action="generar-certificado"]').click();
+    await expect(page.getByText(motivo)).toBeVisible();
+    await expect(visor(page)).toHaveCount(0);
   });
 });
