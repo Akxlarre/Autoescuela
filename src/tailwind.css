@@ -26,6 +26,12 @@
 @source ".";
 @source "./app/**/*.ts";
 @source "./app/**/*.html";
+/* Los tests E2E y la documentación no aportan clases: un selector de Playwright con forma de
+   clase (en un test, o citado en un .md) generaba CSS inválido (hotfix-139-m). */
+@source not "../e2e";
+@source not "../specs";
+@source not "../docs";
+@source not "../indices";
 
 /* ── @theme: Mapeo de Design System → Tailwind ────────────── */
 /* Extiende las utilidades de Tailwind con los tokens del

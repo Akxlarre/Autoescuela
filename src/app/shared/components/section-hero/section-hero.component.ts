@@ -888,7 +888,8 @@ import type {
               {{ title() }}
             </h1>
             @if (subtitle()) {
-              <p class="text-sm md:text-base leading-relaxed m-0 max-w-2xl opacity-85">
+              <!-- Sin md:text-base: acá pinta con el color de fondo de la página (fix-303-m). -->
+              <p class="text-sm leading-relaxed m-0 max-w-2xl opacity-85">
                 {{ subtitle() }}
               </p>
             }

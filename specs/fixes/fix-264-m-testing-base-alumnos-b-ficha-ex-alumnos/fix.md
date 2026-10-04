@@ -230,7 +230,9 @@ pantalla.
 | R04 | ✅ | Todos los botones de solo ícono tienen tooltip, salvo el paginador, que además está en inglés ("First Page", "Next Page") (observación) | |
 | R05 | ✅ | Entrada sin parpadeos | |
 
-**Aún sin ejecutar de `024a`:** K13 (nombres largos en el PDF) · O02–O04 (necesitan completar el
+**K13 (2026-10-04):** ✅ Auto + revisión del archivo. El PDF de la lista se genera con un nombre de unos 90 caracteres: se recorta con "…" dentro de su columna y no invade el RUT.
+
+**Aún sin ejecutar de `024a`:** O02–O04 (necesitan completar el
 wizard de matrícula) · P07 (no hay una cuenta de secretaria sin sede).
 
 **Observaciones de la 2ª pasada (no son bugs, para que el owner decida):**
@@ -405,12 +407,13 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | W04 | ✅ | Auto. Con el RUT guardado sin puntos el paso 1 se precarga igual | |
 | W06 | ✅ | Auto. Re-matricular a A, cerrar y re-matricular a B precarga a B | |
 | W07 | ✅ | Auto. "Reiniciar" borra lo escrito y vuelve a precargar al mismo egresado | |
+| Z05 | ✅ | Auto. Con Tab se llega a todas las acciones de la ficha y el foco se ve en cada una; Enter abre el menú de Carnet y el modal de archivar, y Escape los cierra. Los paneles laterales se cierran con su botón, no con Escape (observación) | |
 
 **Aún sin ejecutar de `024b`:** F01–F03, F05, F06, F09, F10, F12, F14 (agenda de
 reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
 H08 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
 online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
-N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08 · Z05.
+N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
 
 **Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
 
@@ -422,6 +425,19 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
   inasistencias de ese día, así que un día con una clase cancelada y una agendada ya aparece
   bloqueado para reprogramar. → Decidido (Matías, 2026-10-04): máximo 2 clases por día contando
   solo las que debían ocurrir; las canceladas no cuentan, las inasistencias sí. ✅ `fix-300-m`.
+
+- **Los paneles laterales no se cierran con Escape** (Z05). Es del host global de paneles y vale
+  para todos los de la app; los menús y los modales sí se cierran. Queda para decidir.
+- **Choque de horario en la base:** → Decidido (Matías, 2026-10-04): se agrega el trigger.
+  ✅ `fix-301-m`, migración `20261004120000`, aplicada por Matías el 2026-10-04; el test por API
+  pasa.
+- **Otras listas a 1366 px:** medidas el 2026-10-04. Sin scroll horizontal, pero Ex-Alumnos B
+  partía el RUT y el nombre (filas de 80 px) y Alumnos Profesional dejaba el nombre en 3 líneas
+  (98 px). ✅ `fix-302-m`: la tabla compacta de `fix-294-m` pasa a ser un estilo compartido y la
+  usan las cuatro listas (filas de 60 a 63 px). Ex-Alumnos Profesional no tiene datos para medir.
+- **`text-base` (color, no tamaño):** revisados los 27 usos el 2026-10-04. 22 se leen bien; 5
+  quedaban con el color del fondo. ✅ `fix-303-m`.
+- **Tailwind escaneaba `e2e/`** y generaba CSS inválido con un selector de test. ✅ `hotfix-139-m`.
 
 ## Sospechas: confirmadas / descartadas
 
@@ -627,6 +643,10 @@ muestra el error real de cada uno.
   sumado al test de reprogramar; `fix-299-m` (B42) con 7 unitarios nuevos. F07 falló antes del
   arreglo y pasa después. Corrida completa de los dos archivos: 103 de 103 esperados, con un solo
   `knownBug` (B10). `npm run test:ci`: 3.128 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
+- **Tanda del 2026-10-04 (tarde):** `hotfix-139-m`, `fix-300-m`, `fix-301-m`, `fix-302-m`, `fix-303-m`; tests nuevos Z05, K13, `fix-302-m` y el de `fix-301-m` por
+  API. Corrida completa de los dos archivos más `smoke`: 108 de 108 esperados, con un `knownBug`
+  (B10; el de `fix-301-m` se quitó al aplicarse la migración). `npm run test:ci`: 3.129 pasan, 5 omitidos. `npm run lint:arch`: 0
+  errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

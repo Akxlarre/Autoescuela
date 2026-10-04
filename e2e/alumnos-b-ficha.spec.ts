@@ -2222,6 +2222,179 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
     ).toHaveCount(0);
   });
 
+  test('F07 (fix-301-m): la base rechaza una segunda clase del alumno a la misma hora', async ({
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'ChoqueBase', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const sb = await getAdminClient();
+    // Dos instructores distintos: el choque del instructor ya lo impide otro trigger.
+    const { data: muestras } = await sb
+      .from('class_b_sessions')
+      .select('instructor_id, vehicle_id')
+      .limit(500);
+    const primero = muestras![0];
+    const segundo = muestras!.find((m) => m.instructor_id !== primero.instructor_id);
+    test.skip(!segundo, 'No hay clases de dos instructores distintos de las que copiar');
+
+    const cuando = new Date(Date.now() + (400 + Math.floor(Math.random() * 300)) * 86_400_000);
+    cuando.setUTCHours(6, 15, Math.floor(Math.random() * 60), 0);
+    const clase = (numero: number, de: { instructor_id: number; vehicle_id: number }) => ({
+      enrollment_id: alumno.enrollmentIds[0],
+      instructor_id: de.instructor_id,
+      vehicle_id: de.vehicle_id,
+      class_number: numero,
+      scheduled_at: cuando.toISOString(),
+      status: 'scheduled',
+    });
+
+    const una = await sb.from('class_b_sessions').insert(clase(1, primero)).select('id').single();
+    expect(una.error, 'primera clase').toBeNull();
+    cleanup.track('class_b_sessions', una.data!.id);
+
+    const otra = await sb.from('class_b_sessions').insert(clase(2, segundo!)).select('id').single();
+    if (otra.data) cleanup.track('class_b_sessions', otra.data.id);
+    expect(otra.error?.message, 'segunda clase a la misma hora').toMatch(
+      /alumno ya tiene otra clase/i,
+    );
+
+    // Una clase cancelada a esa hora sí se acepta: no ocupa al alumno.
+    const cancelada = await sb
+      .from('class_b_sessions')
+      .insert({ ...clase(3, segundo!), status: 'cancelled' })
+      .select('id')
+      .single();
+    if (cancelada.data) cleanup.track('class_b_sessions', cancelada.data.id);
+    expect(cancelada.error, 'clase cancelada a la misma hora').toBeNull();
+  });
+
+  test('fix-302-m: a 1366 px Ex-Alumnos B muestra cada fila en una línea', async ({ pageAs }) => {
+    const page = await pageAs('admin');
+    await page.setViewportSize({ width: 1366, height: 800 });
+    await page.goto('/app/admin/ex-alumnos');
+    await expect(page.getByText(REPORT_EGRESADOS)).toBeVisible(CARGA);
+
+    const tabla = page.locator('p-table .p-datatable-table-container').first();
+    const { scroll, client, altoRut, altoNombre } = await tabla.evaluate((el) => {
+      // Alto del texto de una celda: una sola línea mide menos de 24 px.
+      const alto = (nodo: Element): number => {
+        const range = document.createRange();
+        range.selectNodeContents(nodo);
+        return Math.round(range.getBoundingClientRect().height);
+      };
+      return {
+        scroll: el.scrollWidth,
+        client: el.clientWidth,
+        altoRut: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(alto),
+        altoNombre: [...el.querySelectorAll('tbody tr td:first-child .item-title')].map(alto),
+      };
+    });
+    expect(scroll, 'sin scroll horizontal').toBeLessThanOrEqual(client + 1);
+    expect(altoRut.length, 'hay filas').toBeGreaterThan(0);
+    expect(Math.max(...altoRut), 'el RUT va en una sola línea').toBeLessThan(24);
+    expect(Math.max(...altoNombre), 'el nombre va en una sola línea').toBeLessThan(24);
+    await expect(
+      page.locator('p-table tbody tr').first().locator('[data-llm-action="re-enroll-student"]'),
+      'el botón de re-matricular se ve entero',
+    ).toBeInViewport({ ratio: 1 });
+  });
+
+  test('Z05: la ficha se recorre solo con teclado, con el foco a la vista, y Escape cierra menús y modales', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const alumno = await createE2eAlumno(
+      { label: 'Teclado', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const page = await pageAs('admin');
+    await openFicha(page, 'admin', alumno.studentId);
+
+    // Todo lo que se puede accionar en la ficha (no el menú lateral ni la barra superior).
+    const total = await page.evaluate(() => {
+      const main = document.querySelector('main')!;
+      const candidatos = [
+        ...main.querySelectorAll<HTMLElement>('button, a[href], [role="tab"], [tabindex="0"]'),
+      ].filter(
+        (el) =>
+          !(el as HTMLButtonElement).disabled &&
+          el.getAttribute('aria-hidden') !== 'true' &&
+          el.offsetParent !== null,
+      );
+      candidatos.forEach((el, i) => el.setAttribute('data-z05', String(i)));
+      return candidatos.length;
+    });
+    expect(total, 'acciones en la ficha').toBeGreaterThan(5);
+
+    // Tab hasta dar la vuelta completa: qué acciones recibieron el foco y si el foco se ve.
+    const alcanzados = new Map<string, boolean>();
+    for (let i = 0; i < 200; i++) {
+      await page.keyboard.press('Tab');
+      const foco = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        const id = el?.getAttribute('data-z05');
+        if (!el || id == null) return null;
+        const cs = getComputedStyle(el);
+        const contorno = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0;
+        return { id, visible: contorno || cs.boxShadow !== 'none' };
+      });
+      if (foco) alcanzados.set(foco.id, foco.visible);
+      if (alcanzados.size === total) break;
+    }
+
+    const descripcion = (id: string) =>
+      page
+        .locator(`[data-z05="${id}"]`)
+        .evaluate(
+          (el) =>
+            el.getAttribute('data-llm-action') ??
+            el.getAttribute('aria-label') ??
+            el.textContent?.trim().slice(0, 40) ??
+            el.tagName,
+        );
+    const sinAlcanzar: string[] = [];
+    for (let i = 0; i < total; i++) {
+      if (!alcanzados.has(String(i))) sinAlcanzar.push(await descripcion(String(i)));
+    }
+    expect(sinAlcanzar, 'acciones a las que no se llega con Tab').toEqual([]);
+    const sinFocoVisible: string[] = [];
+    for (const [id, visible] of alcanzados) {
+      if (!visible) sinFocoVisible.push(await descripcion(id));
+    }
+    expect(sinFocoVisible, 'acciones sin foco visible').toEqual([]);
+
+    // Menú de Carnet: se abre con Enter y se cierra con Escape.
+    const menu = page.locator('.card-action-menu[role="menu"]');
+    await page.locator('[data-llm-action="carnet-menu"]').focus();
+    await page.keyboard.press('Enter');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+
+    // Modal de archivar: se abre con Enter desde la cabecera y se cierra con Escape.
+    await hero(page)
+      .getByRole('button', { name: /Eliminar Alumno/ })
+      .focus();
+    await page.keyboard.press('Enter');
+    const modal = page.getByRole('dialog').filter({ hasText: /Archivar/ });
+    await expect(modal).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+
+    // Panel lateral (Inasistencias): se abre con Enter y se cierra desde su botón, con el
+    // teclado. Los paneles no son modales y no se cierran con Escape (ninguno de la app).
+    await page.locator('[data-llm-action="ver-inasistencias"]').focus();
+    await page.keyboard.press('Enter');
+    const panel = page.locator('app-admin-inasistencias-drawer');
+    await expect(panel).toBeVisible();
+    await page.getByRole('button', { name: 'Cerrar panel' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toHaveCount(0);
+  });
+
   /**
    * Desde Ex-Alumnos, re-matricula al egresado y llega al paso 1 del wizard. Si la sede tiene
    * borradores pendientes, pasa por la lista de borradores y elige "Nueva matrícula".

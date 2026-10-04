@@ -762,6 +762,40 @@ test.describe('exportar', () => {
     expect(filas.length, 'filas del Excel vs "de N alumnos" de la pantalla').toBe(enPantalla);
   });
 
+  test('K13: el PDF de la lista se genera con un nombre muy largo', async ({
+    pageAs,
+    cleanup,
+  }, testInfo) => {
+    const alumno = await createE2eAlumno(
+      {
+        label: 'NombreLarguísimoDePruebaParaVerSiRompeLaFila',
+        branchId: SEDE_A,
+        paternalLastName: `Fernández-Valdivieso${Date.now()}`,
+        maternalLastName: 'De La Santísima Trinidad Echeverría',
+        enrollments: [{}],
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(SEARCH).fill(alumno.paternalLastName);
+    await expect(rowOf(page, alumno.paternalLastName)).toHaveCount(1);
+
+    // La función real (export-table-pdf): el diseño del PDF se revisa a ojo en el archivo que
+    // queda adjunto al reporte; acá se comprueba que se genera con ese nombre adentro.
+    await page.locator('[data-llm-action="open-export-menu"]').click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download', CARGA),
+      page.locator('[data-llm-action="export-students-pdf"]').click(),
+    ]);
+    const destino = testInfo.outputPath('lista-nombre-largo.pdf');
+    await download.saveAs(destino);
+    await testInfo.attach('lista-nombre-largo.pdf', { path: destino });
+    const pdf = readFileSync(destino);
+    expect(pdf.subarray(0, 4).toString(), 'es un PDF').toBe('%PDF');
+    expect(pdf.length, 'no viene vacío').toBeGreaterThan(1_000);
+  });
+
   test('K09 (S3): exportar desde la Papelera trae solo archivados', async ({ pageAs, cleanup }) => {
     const archivado = await createE2eAlumno(
       { label: 'ExportPapelera', branchId: SEDE_A, studentStatus: 'archived' },

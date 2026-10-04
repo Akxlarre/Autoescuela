@@ -458,7 +458,8 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
               <div class="min-w-0">
-                <span class="font-bold text-base block truncate">Elegir destinatarios</span>
+                <!-- Sin text-base: acá pinta con el color de fondo de la página (fix-303-m). -->
+                <span class="font-bold text-text-primary block truncate">Elegir destinatarios</span>
                 <span class="text-xs text-text-muted truncate block">{{ clase.label }}</span>
               </div>
               <button
@@ -568,7 +569,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             <div
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
-              <span class="font-bold text-base">Incorporar alumno de otro ciclo</span>
+              <span class="font-bold text-text-primary">Incorporar alumno de otro ciclo</span>
               <button
                 aria-label="Cerrar"
                 type="button"

@@ -226,7 +226,10 @@ interface SemaforoInfo {
             appAnimateIn
           >
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- table-compact (fix-302-m): misma tabla compacta que la Base de Alumnos B. -->
+            <div
+              class="desktop-view table-compact hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full"
+            >
               <p-table
                 [value]="sortedAlumnos()"
                 [rows]="10"
@@ -244,6 +247,7 @@ interface SemaforoInfo {
                     <!-- spec 0023-m: cada título ordena la lista completa (no solo la página). -->
                     @for (col of sortColumns; track col.value; let first = $first) {
                       <th
+                        [class.table-compact-main]="first"
                         [class.pl-6]="first"
                         [class.py-4]="first"
                         [attr.aria-sort]="ariaSort(col.value)"
@@ -262,24 +266,32 @@ interface SemaforoInfo {
                 </ng-template>
                 <ng-template pTemplate="body" let-alumno>
                   <tr class="list-item-hover transition-colors border-b border-border-subtle">
-                    <td class="pl-6 py-4">
+                    <td class="table-compact-main pl-6 py-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                          class="table-compact-avatar w-9 h-9 shrink-0 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
                         >
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
-                        <div class="flex flex-col">
-                          <span class="item-title">{{ alumno.apellido }} {{ alumno.nombre }}</span>
-                          <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
+                        <!-- fix-302-m: el nombre que no cabe se recorta y se lee completo al pasar
+                             el mouse. -->
+                        <div class="flex flex-col min-w-0">
+                          <span
+                            class="item-title truncate"
+                            [title]="alumno.apellido + ' ' + alumno.nombre"
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
+                          >
+                          <span class="text-xs text-text-muted truncate">{{ alumno.rut }}</span>
                         </div>
                       </div>
                     </td>
-                    <td class="text-xs text-text-muted font-mono">{{ alumno.nroMatricula }}</td>
+                    <td class="text-xs text-text-muted font-mono whitespace-nowrap">
+                      {{ alumno.nroMatricula }}
+                    </td>
                     <td>
                       <div class="flex items-center gap-1.5 flex-wrap">
                         <span
-                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                          class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted whitespace-nowrap"
                         >
                           {{ alumno.promocion }}
                         </span>
@@ -313,17 +325,17 @@ interface SemaforoInfo {
                       <p-tag
                         [value]="sem.label"
                         [severity]="sem.severity"
-                        styleClass="text-xs font-bold px-2 py-0.5"
+                        styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
                       ></p-tag>
                     </td>
                     <td>
                       <p-tag
                         [value]="alumno.estado"
                         [severity]="getStatusSeverity(alumno.estado)"
-                        styleClass="text-xs font-bold px-2 py-0.5"
+                        styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
                       ></p-tag>
                     </td>
-                    <td class="text-xs font-medium text-text-secondary">
+                    <td class="text-xs font-medium text-text-secondary whitespace-nowrap">
                       {{ alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0' }}
                     </td>
                     <td class="pr-6 text-right">
@@ -332,7 +344,7 @@ interface SemaforoInfo {
                           <button
                             aria-label="Restaurar alumno"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
                             pTooltip="Restaurar alumno"
                             (click)="restaurarRequested.emit(alumno.id)"
                             data-llm-action="restore-professional-student"
@@ -343,7 +355,7 @@ interface SemaforoInfo {
                           <button
                             aria-label="Ver ficha"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
                           >
@@ -352,7 +364,7 @@ interface SemaforoInfo {
                           <button
                             aria-label="Archivar alumno"
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
+                            class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
                             pTooltip="Archivar alumno"
                             (click)="archivarRequested.emit(alumno.id)"
                             data-llm-action="archive-professional-student"
