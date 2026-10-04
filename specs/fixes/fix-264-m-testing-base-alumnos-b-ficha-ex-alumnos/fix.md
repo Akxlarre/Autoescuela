@@ -447,12 +447,12 @@ registro de emisión y los avisos. El carnet y el certificado generados se revis
 | L05 | ✅ | Auto. "Generar Certificado" abre el visor y deja la ruta en la matrícula. Revisado el PDF: nombre, RUT, fechas del curso y datos de la sede | |
 | L06 | ❌ → ✅ | Auto. Ante un rechazo de la función se veía "No se pudo generar el certificado" en vez del motivo. **Corregido el 2026-10-04** | B44 → `fix-305-m` |
 | L07 | ❌ → ✅ | Auto. Generar el certificado desde la ficha no avisaba al alumno (desde Certificaciones B sí). **Corregido el 2026-10-04** | B45 → `fix-306-m` |
+| M10 | ✅ | A mano (2026-10-04). Matías activó la cuenta del alumno de prueba desde el enlace del correo y le puso contraseña. Como secretaria se le cambió el correo desde "Editar Perfil": la función responde 200, la ficha y la base muestran el correo nuevo y sigue vinculado a la misma cuenta de Auth. Matías comprobó en `/login` que con el correo nuevo entra y con el viejo dice "Correo o contraseña incorrectos."; no llegó correo de confirmación al nuevo. Tras entrar, el portal del alumno muestra "Módulo no habilitado todavía" (bloqueado en esta fase del piloto). Con la cuenta real activada, "Editar Perfil" no ofrece la invitación (M13) | |
 | M11 | ✅ | A mano, con un correo real de temp-mail (2026-10-04, secretaria de la sede A). A un alumno sin cuenta se le cambió el correo desde "Editar Perfil" y se guardó; la invitación enviada después llegó al correo nuevo | |
 | M12 | ✅ | Mismo recorrido. Con el correo sin guardar el botón está deshabilitado; ya guardado, "Enviar invitación" muestra "Invitación enviada correctamente." (la función responde 201, `invited`) y el alumno queda vinculado a una cuenta de Auth con el primer ingreso pendiente. Matías confirmó con captura que el correo llegó: "Activa tu cuenta - AutoEscuela Chillán", de `no-reply@autoescuelachillan.cl`, con el botón "Activar mi cuenta" y enlace válido por 1 día. No quedó como test de la suite porque envía un correo real en cada corrida | |
 | M13 | ✅ | Auto (bloque "cierre de la asignación"). El aviso de invitación de "Editar Perfil" se ve mientras el alumno no tiene cuenta o no ha entrado nunca, y desaparece cuando la cuenta ya está activada. La cuenta se simuló en la base (identificador de Auth y primer ingreso), sin crear un usuario real | |
 
-**Aún sin ejecutar de `024b`:** M10 (cambiar el correo de una cuenta ya activada; el alumno de prueba "Invitación Prueba Temp Mail", usuario 6854, quedó creado a propósito y sirve para esto si se activa su cuenta) ·
-N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
+**Aún sin ejecutar de `024b`:** N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
 
 **Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
 
