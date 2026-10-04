@@ -405,7 +405,7 @@ test.describe('ficha: marcar como ex-alumno y archivar', () => {
     }
   });
 
-  test('F04 · F11 · F13 (fix-279-m): reprogramar una clase con inasistencia la archiva y queda en el historial', async ({
+  test('F04 · F11 · F13 · E09 (fix-279-m): reprogramar una clase con inasistencia la archiva y queda en el historial', async ({
     pageAs,
     cleanup,
   }) => {
@@ -477,6 +477,16 @@ test.describe('ficha: marcar como ex-alumno y archivar', () => {
       await expect(
         inasistencias.locator('[data-llm-action="justificar-inasistencia-clase-b"]'),
       ).toHaveCount(0);
+
+      // E09: en la Ficha Técnica la clase ya no figura como inasistencia; vuelve a poder moverse.
+      await page.getByRole('button', { name: 'Cerrar panel' }).click();
+      await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+      const clase = page
+        .locator('app-admin-ficha-tecnica .ficha-tarjetas > div')
+        .filter({ has: page.getByText('SESIÓN #1', { exact: true }) });
+      await expect(clase).toBeVisible();
+      await expect(clase).not.toContainText('Inasistencia');
+      await expect(clase.locator('[data-llm-action="reprogramar-clase"]')).toBeVisible();
     } finally {
       // Historial y avisos los crea la app: se registran para borrarlos antes que la sesión.
       const { data: historial } = await sb
@@ -2113,5 +2123,197 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
           : 0,
       );
     }
+  });
+
+  test('F07 (S20): al reprogramar, un horario que choca con otra clase del alumno no se puede elegir', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    interface Slot {
+      instructor_id: number;
+      vehicle_id: number;
+      slot_start: string;
+      slot_status: string;
+    }
+    const alumno = await createE2eAlumno(
+      { label: 'ChoqueHora', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    await addMissedClass(alumno, alumno.enrollmentIds[0], cleanup);
+    const sb = await getAdminClient();
+    const page = await pageAs('secretariaA');
+    const panel = page.locator('app-admin-reprogramar-clase-drawer');
+    const horarios = panel.locator('[data-llm-action="seleccionar-slot-reprogramar"]');
+    const hora = (iso: string) =>
+      new Date(iso).toLocaleTimeString('es-CL', {
+        timeZone: 'America/Santiago',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    const dia = (iso: string) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(iso));
+
+    /** Abre "reprogramar" para la clase #1 y elige al primer instructor; devuelve su grilla. */
+    const abrirGrilla = async (): Promise<Slot[]> => {
+      await openFicha(page, 'secretaria', alumno.studentId);
+      await page.locator('[data-llm-action="ver-ficha-tecnica"]').click();
+      await page
+        .locator('[data-llm-action="reprogramar-clase"]')
+        .locator('visible=true')
+        .first()
+        .click();
+      const respuesta = page.waitForResponse((r) =>
+        r.url().includes('/rest/v1/v_class_b_schedule_availability'),
+      );
+      await panel.locator('[data-llm-action="seleccionar-instructor-reprogramar"]').first().click();
+      const filas = (await (await respuesta).json()) as Slot[];
+      await expect(horarios.first()).toBeVisible(CARGA);
+      return filas;
+    };
+
+    // 1. Un horario libre del primer día de la grilla, que otro instructor también tenga libre.
+    const grilla = await abrirGrilla();
+    const primerDia = dia(grilla[0].slot_start);
+    let elegido: Slot | null = null;
+    let otro: Slot | null = null;
+    for (const slot of grilla) {
+      if (dia(slot.slot_start) !== primerDia || slot.slot_status !== 'available') continue;
+      const { data } = await sb
+        .from('v_class_b_schedule_availability')
+        .select('instructor_id, vehicle_id, slot_start, slot_status')
+        .eq('slot_start', slot.slot_start)
+        .eq('slot_status', 'available')
+        .neq('instructor_id', slot.instructor_id)
+        .limit(1);
+      if (data?.length) {
+        elegido = slot;
+        otro = data[0] as Slot;
+        break;
+      }
+    }
+    test.skip(!elegido || !otro, 'Ningún horario del primer día está libre para dos instructores');
+    const texto = hora(elegido!.slot_start);
+    await expect(horarios.filter({ hasText: `${texto} –` }), 'antes: se puede elegir').toHaveCount(
+      1,
+    );
+
+    // 2. El alumno ya tiene la clase #2 a esa misma hora, con el otro instructor.
+    const { data: clase2, error } = await sb
+      .from('class_b_sessions')
+      .insert({
+        enrollment_id: alumno.enrollmentIds[0],
+        instructor_id: otro!.instructor_id,
+        vehicle_id: otro!.vehicle_id,
+        class_number: 2,
+        scheduled_at: elegido!.slot_start,
+        status: 'scheduled',
+      })
+      .select('id')
+      .single();
+    expect(error, 'agendar la clase #2').toBeNull();
+    cleanup.track('class_b_sessions', clase2!.id);
+
+    // 3. Ese horario ya no se ofrece para la clase #1.
+    await abrirGrilla();
+    await expect(
+      horarios.filter({ hasText: `${texto} –` }),
+      'el horario que choca no se puede elegir',
+    ).toHaveCount(0);
+  });
+
+  /**
+   * Desde Ex-Alumnos, re-matricula al egresado y llega al paso 1 del wizard. Si la sede tiene
+   * borradores pendientes, pasa por la lista de borradores y elige "Nueva matrícula".
+   * Devuelve si esa lista apareció.
+   */
+  async function reMatricular(page: Page, apellido: string): Promise<boolean> {
+    await page.locator(SEARCH_EGRESADOS).fill(apellido);
+    await egresadoRow(page, apellido).locator('[data-llm-action="re-enroll-student"]').click();
+    await page.getByRole('button', { name: 'Continuar' }).click();
+    const borradores = page.locator('app-draft-list');
+    const nombres = page.locator('#firstNames');
+    await expect(borradores.or(nombres).first()).toBeVisible(CARGA);
+    const huboLista = await borradores.isVisible();
+    if (huboLista) await borradores.locator('[data-llm-action="start-new-enrollment"]').click();
+    await expect(nombres).toBeVisible(CARGA);
+    return huboLista;
+  }
+
+  test('W03 · W04: con borradores pendientes y el RUT guardado sin puntos, el paso 1 llega precargado', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [egresado, conBorrador] = await Promise.all([
+      createE2eAlumno(
+        { label: 'RematSinPuntos', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      ),
+      createE2eAlumno(
+        { label: 'BorradorSede', branchId: SEDE_A, enrollments: [{ status: 'draft' }] },
+        cleanup,
+      ),
+    ]);
+    const sb = await getAdminClient();
+    // W04: el RUT como lo deja el seed, sin puntos.
+    const rutSinPuntos = egresado.rut.replace(/\./g, '');
+    const { error: rutErr } = await sb
+      .from('users')
+      .update({ rut: rutSinPuntos })
+      .eq('id', egresado.userId);
+    expect(rutErr, 'guardar el RUT sin puntos').toBeNull();
+    // W03: un borrador vigente en la sede hace aparecer la lista de borradores.
+    const { error: draftErr } = await sb
+      .from('enrollments')
+      .update({ expires_at: new Date(Date.now() + 86_400_000).toISOString() })
+      .eq('id', conBorrador.enrollmentIds[0]);
+    expect(draftErr, 'dejar el borrador vigente').toBeNull();
+
+    const page = await pageAs('secretariaA');
+    await openExAlumnos(page, 'secretaria');
+    const huboLista = await reMatricular(page, egresado.paternalLastName);
+
+    expect(huboLista, 'apareció la lista de borradores').toBe(true);
+    await expect(page.locator('#firstNames')).toHaveValue(egresado.firstNames);
+    await expect(page.locator('#paternalLastName')).toHaveValue(egresado.paternalLastName);
+    await expect(page.locator('#maternalLastName')).toHaveValue(egresado.maternalLastName);
+    await expect(page.locator('#phone')).toHaveValue(/900000000/);
+  });
+
+  test('W06 · W07: "Reiniciar" vuelve a precargar al egresado; re-matricular a otro precarga al otro', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const [primero, segundo] = await Promise.all([
+      createE2eAlumno(
+        { label: 'RematPrimero', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      ),
+      createE2eAlumno(
+        { label: 'RematSegundo', branchId: SEDE_A, enrollments: [{ status: 'completed' }] },
+        cleanup,
+      ),
+    ]);
+    const page = await pageAs('secretariaA');
+    await openExAlumnos(page, 'secretaria');
+    const nombres = page.locator('#firstNames');
+    const apellido = page.locator('#paternalLastName');
+
+    await reMatricular(page, primero.paternalLastName);
+    await expect(apellido).toHaveValue(primero.paternalLastName);
+
+    // W07: "Reiniciar" borra lo escrito y vuelve a precargar al mismo egresado.
+    await nombres.fill('Otro nombre');
+    await page.getByRole('button', { name: 'Reiniciar' }).click();
+    await expect(nombres).toHaveValue(primero.firstNames, CARGA);
+    await expect(apellido).toHaveValue(primero.paternalLastName);
+
+    // W06: cerrar sin matricular y re-matricular a otro egresado precarga al otro.
+    await cerrarPanel(page);
+    await expect(nombres).toHaveCount(0);
+    await reMatricular(page, segundo.paternalLastName);
+    await expect(nombres).toHaveValue(segundo.firstNames);
+    await expect(apellido).toHaveValue(segundo.paternalLastName);
+    await expect(page.locator('#rut')).toHaveValue(new RegExp(segundo.rut.slice(-5)));
   });
 });

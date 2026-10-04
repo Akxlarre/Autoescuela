@@ -398,12 +398,28 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | N05 | ✅ | Auto. La secretaria no ve "Registrar revocación"; el admin sí, en cada consentimiento otorgado | |
 | N07 | ❌ → ✅ | Auto. Con dos matrículas, el panel de reagendamientos seguía mostrando el de la matrícula con la que se abrió la ficha. **Corregido el 2026-10-04** | B41 → `fix-298-m` |
 | N08 | ✅ | Auto. Tras ver un alumno con reagendamientos, la ficha de otro sin ninguno muestra el panel vacío | |
+| E09 | ✅ | Auto. Tras reprogramar una clase con inasistencia, la Ficha Técnica ya no la muestra como inasistencia y se puede volver a mover | |
+| F07 | ❌ → ✅ | Auto. Con la clase #2 del alumno a las 08:30 con un instructor, las 08:30 de otro instructor se ofrecían para la clase #1 (S20). **Corregido el 2026-10-04** | B42 → `fix-299-m` |
+| W03 | ✅ | Auto. Con un borrador vigente en la sede aparece la lista de borradores; "Nueva matrícula" llega con el egresado precargado | |
+| W04 | ✅ | Auto. Con el RUT guardado sin puntos el paso 1 se precarga igual | |
+| W06 | ✅ | Auto. Re-matricular a A, cerrar y re-matricular a B precarga a B | |
+| W07 | ✅ | Auto. "Reiniciar" borra lo escrito y vuelve a precargar al mismo egresado | |
 
-**Aún sin ejecutar de `024b`:** E09 · F01–F03, F05–F10, F12, F14 (agenda de
+**Aún sin ejecutar de `024b`:** F01–F03, F05, F06, F08–F10, F12, F14 (agenda de
 reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
 H08 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
 online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
-N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W03, W04, W06–W08 · Z05.
+N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08 · Z05.
+
+**Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
+
+- **Choque de horario del alumno, en la base:** `fix-299-m` lo impide en la grilla de la ficha,
+  pero la base solo valida el choque del instructor. Dos personas agendando a la vez, o la
+  matrícula (que usa otra grilla, `EnrollmentFacade`), todavía pueden dejar a un alumno con dos
+  clases a la misma hora. Cerrarlo del todo pide un trigger; se cruza con `ASG-i-026`.
+- **Tope de 2 clases por día:** `computeBlockedDates()` cuenta también las clases canceladas y las
+  inasistencias de ese día, así que un día con una clase cancelada y una agendada ya aparece
+  bloqueado para reprogramar.
 
 ## Sospechas: confirmadas / descartadas
 
@@ -441,7 +457,7 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
 | 024b | S18 🟡 | **Corregida** el 2026-10-04 (el cierre diferido) | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | `hotfix-134-m`. La otra mitad (la invitación usa el correo del formulario): `fix-296-m`, el botón se deshabilita con el correo sin guardar (y `hotfix-135-m`: el aviso no parpadea al cancelar ni al guardar) |
 | 024b | S19 🟡 | **Corregida** el 2026-10-02 | Decisión tomada (I06 / I08); la ficha registra pagos y muestra el historial del alumno | `fix-278-m` |
-| 024b | S20 🟡 | Sin ejecutar | Necesita clases sembradas | pendiente |
+| 024b | S20 🟡 | **Confirmada y corregida** el 2026-10-04 | La grilla solo bloqueaba los días con 2 clases del alumno; la base solo impide el choque del instructor (`trg_prevent_double_booking`) | B42 → `fix-299-m` |
 
 Descartado: **P08** (RLS de `students`/`enrollments` por sede) funciona bien para lectura, y por
 escritura la secretaria tampoco puede archivar alumnos ni cambiar matrículas de otra sede.
@@ -492,6 +508,7 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
 | B39 | **Doble clic en "Guardar Cambios" de Editar Perfil guarda dos veces** (dos llamadas a `update-student-profile`) | 🟡 Baja | ✅ `hotfix-137-m` (2026-10-04) |
 | B40 | **El menú de Carnet de la ficha no se cierra con Escape** (con un clic fuera sí) | 🟡 Baja | ✅ `hotfix-138-m` (2026-10-04) |
+| B42 | **Al reprogramar se podía elegir un horario que choca con otra clase del alumno** (misma hora, otro instructor): el alumno quedaba con dos clases a la vez. La misma grilla se usa en el reagendamiento masivo | 🟠 Media | ✅ `fix-299-m` (2026-10-04): la grilla marca ocupado lo que choca con una clase vigente del alumno. La base sigue sin impedirlo (ver observaciones de la 3ª pasada) |
 | B41 | **El historial de reagendamientos no sigue a la matrícula elegida**: se carga una vez al entrar a la ficha; al cambiar de matrícula en el selector el panel sigue mostrando el de la primera. Es la mitad de S14 que quedaba | 🟡 Baja | ✅ `fix-298-m` (2026-10-04) |
 
 B18 no se usa: la sospecha (una secretaria archiva alumnos de otra sede) se descartó al probarla.
@@ -604,6 +621,10 @@ muestra el error real de cada uno.
   antes del arreglo y pasa después. Corrida completa de los dos archivos: 100 de 100 esperados, con
   un solo `knownBug` (B10). `npm run test:ci`: 3.121 pasan, 5 omitidos. `npm run lint:arch`: 0
   errores.
+- **Tercera pasada, cuarto lote (2026-10-04):** 3 tests nuevos (F07 · S20, W03 · W04, W06 · W07) y E09
+  sumado al test de reprogramar; `fix-299-m` (B42) con 7 unitarios nuevos. F07 falló antes del
+  arreglo y pasa después. Corrida completa de los dos archivos: 103 de 103 esperados, con un solo
+  `knownBug` (B10). `npm run test:ci`: 3.128 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

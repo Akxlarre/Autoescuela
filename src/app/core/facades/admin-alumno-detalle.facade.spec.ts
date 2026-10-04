@@ -549,6 +549,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           eq: vi.fn(() => b),
           in: vi.fn(() => b),
           order: vi.fn(() => b),
+          lte: vi.fn(() => b),
           limit: vi.fn(() => b),
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
@@ -1360,6 +1361,54 @@ describe('AdminAlumnoDetalleFacade', () => {
         await facade.loadHistorialReagendamientos(304);
 
         expect(facade.historialReagendamientos()).toEqual([]);
+      });
+
+      it('la grilla de reprogramar marca ocupado el horario que choca con otra clase vigente del alumno (fix-299-m)', async () => {
+        const slot = (hora: string, fin: string, dia = '2026-10-12') => ({
+          slot_start: `${dia}T${hora}:00+00:00`,
+          slot_end: `${dia}T${fin}:00+00:00`,
+          slot_status: 'available',
+          instructor_id: 9,
+          vehicle_id: 10,
+        });
+        const mock = await initWithEnrollments([makeEnrollmentRow(303, 'active', '2026-03-01')]);
+        mock.setResult('class_b_sessions', [
+          // La clase que se está moviendo (inasistencia) y otra agendada a las 11:30 UTC.
+          { id: 11, class_number: 1, scheduled_at: '2026-10-01T11:30:00+00:00', status: 'no_show' },
+          {
+            id: 12,
+            class_number: 2,
+            scheduled_at: '2026-10-12T11:30:00+00:00',
+            status: 'scheduled',
+          },
+          // Una cancelada (otro día, para no topar el máximo de 2 clases por día) no bloquea su horario.
+          {
+            id: 13,
+            class_number: 3,
+            scheduled_at: '2026-10-13T13:00:00+00:00',
+            status: 'cancelled',
+          },
+        ]);
+        await facade.refresh();
+        mock.setResult('v_class_b_schedule_availability', [
+          slot('10:45', '11:30'),
+          slot('11:30', '12:15'),
+          slot('13:00', '13:45', '2026-10-13'),
+        ]);
+
+        facade.setReprogramarTarget(11, 1, 303);
+        await facade.loadScheduleGrid(9);
+
+        expect(facade.scheduleGrid()?.slots.map((s) => s.status)).toEqual([
+          'available',
+          'occupied',
+          'available',
+        ]);
+
+        // Al mover la propia clase #2, su horario actual no se bloquea a sí mismo.
+        facade.setReprogramarTarget(12, 2, 303);
+        await facade.loadScheduleGrid(9);
+        expect(facade.scheduleGrid()?.slots[1].status).toBe('available');
       });
 
       it('la consulta de la ficha pide enrollments.status (sin eso, el estado no se puede derivar)', async () => {
