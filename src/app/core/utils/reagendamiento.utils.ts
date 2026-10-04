@@ -12,3 +12,23 @@ export function isRazonReagendamientoCompleta(
   if (!razon) return false;
   return razon !== 'otro' || razonOtro.trim().length > 0;
 }
+
+/**
+ * true si el horario [slotStart, slotEnd) se cruza con alguna de las clases que empiezan en
+ * `clasesInicio` (fix-299-m). A cada clase se le supone la misma duración que el horario: la
+ * grilla y las clases prácticas usan el mismo bloque.
+ */
+export function slotChocaConClases(
+  slotStart: string,
+  slotEnd: string,
+  clasesInicio: readonly string[],
+): boolean {
+  const inicio = new Date(slotStart).getTime();
+  const fin = new Date(slotEnd).getTime();
+  if (isNaN(inicio) || isNaN(fin)) return false;
+  const duracion = fin - inicio;
+  return clasesInicio.some((c) => {
+    const clase = new Date(c).getTime();
+    return !isNaN(clase) && clase < fin && inicio < clase + duracion;
+  });
+}

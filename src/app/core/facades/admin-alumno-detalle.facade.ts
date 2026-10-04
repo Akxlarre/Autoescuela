@@ -22,6 +22,7 @@ import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/da
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
@@ -1461,7 +1462,9 @@ export class AdminAlumnoDetalleFacade {
           this._slotVehicleMap.set(String(s.slot_start), s.vehicle_id);
         }
         const blockedDates = this.computeBlockedDates();
-        this._scheduleGrid.set(this.buildScheduleGrid(data, blockedDates));
+        this._scheduleGrid.set(
+          this.buildScheduleGrid(data, blockedDates, this.otrasClasesVigentes()),
+        );
       }
     } finally {
       this._isLoadingSchedule.set(false);
@@ -1827,7 +1830,29 @@ export class AdminAlumnoDetalleFacade {
     return blocked;
   }
 
-  private buildScheduleGrid(rawSlots: any[], blockedDates: Set<string> = new Set()): ScheduleGrid {
+  /**
+   * Inicio de las clases que el alumno tiene agendadas, sin la que se está moviendo (fix-299-m).
+   * Las canceladas y las inasistencias no cuentan: son justamente las que se reagendan.
+   */
+  private otrasClasesVigentes(): string[] {
+    const excludeSessionId = this._reprogramarTarget()?.sessionId ?? null;
+    return this._clasesPracticas()
+      .filter(
+        (c) =>
+          c.scheduledAt &&
+          c.sessionId !== excludeSessionId &&
+          !c.cancelada &&
+          !c.ausente &&
+          !c.completada,
+      )
+      .map((c) => c.scheduledAt as string);
+  }
+
+  private buildScheduleGrid(
+    rawSlots: any[],
+    blockedDates: Set<string> = new Set(),
+    otrasClases: readonly string[] = [],
+  ): ScheduleGrid {
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
     const days: WeekDay[] = dates.map((d) => {
@@ -1848,7 +1873,9 @@ export class AdminAlumnoDetalleFacade {
 
     const slots: TimeSlot[] = rawSlots.map((s) => {
       const date = this.slotDateFromStart(s.slot_start);
-      const isBlocked = blockedDates.has(date);
+      // fix-299-m: tampoco se ofrece un horario que choca con otra clase del alumno.
+      const isBlocked =
+        blockedDates.has(date) || slotChocaConClases(s.slot_start, s.slot_end, otrasClases);
       return {
         id: String(s.slot_start),
         date,
