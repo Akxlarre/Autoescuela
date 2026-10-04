@@ -400,12 +400,13 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | N08 | ✅ | Auto. Tras ver un alumno con reagendamientos, la ficha de otro sin ninguno muestra el panel vacío | |
 | E09 | ✅ | Auto. Tras reprogramar una clase con inasistencia, la Ficha Técnica ya no la muestra como inasistencia y se puede volver a mover | |
 | F07 | ❌ → ✅ | Auto. Con la clase #2 del alumno a las 08:30 con un instructor, las 08:30 de otro instructor se ofrecían para la clase #1 (S20). **Corregido el 2026-10-04** | B42 → `fix-299-m` |
+| F08 | ✅ | Por test unitario (`fix-300-m`): un día con 2 clases agendadas, o una agendada y una inasistencia, queda bloqueado; una cancelada no ocupa cupo | `fix-300-m` |
 | W03 | ✅ | Auto. Con un borrador vigente en la sede aparece la lista de borradores; "Nueva matrícula" llega con el egresado precargado | |
 | W04 | ✅ | Auto. Con el RUT guardado sin puntos el paso 1 se precarga igual | |
 | W06 | ✅ | Auto. Re-matricular a A, cerrar y re-matricular a B precarga a B | |
 | W07 | ✅ | Auto. "Reiniciar" borra lo escrito y vuelve a precargar al mismo egresado | |
 
-**Aún sin ejecutar de `024b`:** F01–F03, F05, F06, F08–F10, F12, F14 (agenda de
+**Aún sin ejecutar de `024b`:** F01–F03, F05, F06, F09, F10, F12, F14 (agenda de
 reprogramar, se cruza con `ASG-i-026`) · G03–G12 (reagendar masivo, se cruza con `ASG-i-027`) ·
 H08 · J02–J08 (generan PDF en Storage) · K01, K03–K05 (no hay matrículas
 online sin firmar en los datos) · L02, L04–L07 · M10–M13 (invitación y cuentas Auth reales) ·
@@ -419,7 +420,8 @@ N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no ad
   clases a la misma hora. Cerrarlo del todo pide un trigger; se cruza con `ASG-i-026`.
 - **Tope de 2 clases por día:** `computeBlockedDates()` cuenta también las clases canceladas y las
   inasistencias de ese día, así que un día con una clase cancelada y una agendada ya aparece
-  bloqueado para reprogramar.
+  bloqueado para reprogramar. → Decidido (Matías, 2026-10-04): máximo 2 clases por día contando
+  solo las que debían ocurrir; las canceladas no cuentan, las inasistencias sí. ✅ `fix-300-m`.
 
 ## Sospechas: confirmadas / descartadas
 
