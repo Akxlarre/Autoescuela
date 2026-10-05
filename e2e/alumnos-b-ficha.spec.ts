@@ -1130,8 +1130,11 @@ test.describe('ex-alumnos', () => {
     await expect(sede).toContainText('Conductores Chillán');
 
     // Al cerrarlo sin matricular, vuelve la sede que el admin tenía elegida.
+    await expect(page).toHaveURL(/[?&]rut=/);
     await page.getByRole('button', { name: 'Cerrar panel' }).click();
     await expect(sede).toContainText('Todas las sedes', CARGA);
+    // hotfix-141-m: el RUT del egresado no queda en la dirección de Ex-Alumnos.
+    await expect(page).toHaveURL(/\/app\/admin\/ex-alumnos$/, CARGA);
   });
 });
 
@@ -2119,15 +2122,27 @@ test.describe('tercera pasada (fix-264-m, 2026-10-04)', () => {
       }
       await expect(otorgado.locator('dd').first()).toHaveText(/\d{2}-\d{2}-\d{4}/);
 
-      // N05: "Registrar revocación" solo para el admin.
+      // N05: "Registrar revocación" solo para el admin, y solo en lo que el alumno puede revocar
+      // (fix-311-m: las comunicaciones operativas son informativas).
       await expect(
         panel.locator('[data-llm-action="revocar-consentimiento"]'),
         `${cuenta}: botón de revocar`,
       ).toHaveCount(
         cuenta === 'admin'
-          ? await panel.locator('article').filter({ hasText: 'Otorgado' }).count()
+          ? await panel
+              .locator('article')
+              .filter({ hasText: 'Otorgado' })
+              .filter({ hasNotText: 'no revocable' })
+              .count()
           : 0,
       );
+      await expect(
+        panel
+          .locator('article')
+          .filter({ hasText: 'no revocable' })
+          .locator('[data-llm-action="revocar-consentimiento"]'),
+        `${cuenta}: lo informativo no se revoca`,
+      ).toHaveCount(0);
     }
   });
 
@@ -2914,5 +2929,146 @@ test.describe('cierre de la asignación (fix-264-m, 2026-10-04)', () => {
     await abrirEditar();
     await expect(invitar).toHaveCount(0);
     await expect(page.getByText(/invitaci[oó]n/i)).toHaveCount(0);
+  });
+});
+
+test.describe('cierre del checklist (fix-264-m, 2026-10-05)', () => {
+  test('Y03 · T06: la secretaria sin permiso multi-sede ve solo los egresados de su sede; uno con deuda dice cuánto debe', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const deSuSede = await createE2eAlumno(
+      {
+        label: 'EgresadoA',
+        branchId: SEDE_A,
+        enrollments: [{ status: 'completed', paymentStatus: 'partial', pendingBalance: 50_000 }],
+      },
+      cleanup,
+    );
+    const deOtraSede = await createE2eAlumno(
+      { label: 'EgresadoB', branchId: SEDE_B, enrollments: [{ status: 'completed' }] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await openExAlumnos(page, 'secretaria');
+
+    // Y03: no tiene selector de sede y el egresado de la otra sede no existe para ella.
+    await expect(page.locator('[data-llm-action="toggle-branch-dropdown"]')).toHaveCount(0);
+    await page.locator(SEARCH_EGRESADOS).fill(deOtraSede.paternalLastName);
+    await expect(egresadoRow(page, deOtraSede.paternalLastName)).toHaveCount(0);
+
+    await page.locator(SEARCH_EGRESADOS).fill(deSuSede.paternalLastName);
+    const fila = egresadoRow(page, deSuSede.paternalLastName);
+    await expect(fila).toHaveCount(1);
+    // T06: con saldo pendiente, el estado de cuenta dice el monto.
+    await expect(fila).toContainText(/Debe\s+50\.000/);
+  });
+});
+
+test.describe('skeleton de la ficha (fix-313-m)', () => {
+  test('fix-314-m: el skeleton de un alumno con dos matrículas no se vacía a mitad de la carga', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const conDos = await createE2eAlumno(
+      {
+        label: 'CargaDosMatriculas',
+        branchId: SEDE_A,
+        enrollments: [{ status: 'completed' }, { status: 'active' }],
+      },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await page.setViewportSize(DESKTOP);
+    // La consulta del alumno (que trae sus matrículas) responde normal; todo lo que la ficha
+    // pide después se demora, para alargar el tramo en que las matrículas ya llegaron pero la
+    // carga no ha terminado.
+    await page.route('**/rest/v1/**', async (route) => {
+      if (!route.request().url().includes('/rest/v1/students?')) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      await route.continue().catch(() => undefined);
+    });
+
+    await page.goto(`/app/secretaria/alumnos/${conDos.studentId}`);
+    const skeleton = page
+      .locator('.ficha-3col-row')
+      .filter({ has: page.locator('app-skeleton-block') });
+    await expect(skeleton).toBeVisible(CARGA);
+
+    // Se mide varias veces mientras dura el skeleton: nunca debe quedar sin alto.
+    const altos: number[] = [];
+    for (let i = 0; i < 12 && (await skeleton.count()) > 0; i++) {
+      const alto = await skeleton
+        .evaluate((el) => Math.round(el.getBoundingClientRect().height))
+        .catch(() => null);
+      if (alto !== null) altos.push(alto);
+      await page.waitForTimeout(250);
+    }
+    expect(altos.length, 'se alcanzó a medir el skeleton').toBeGreaterThan(2);
+    // El bug era: skeleton completo → skeleton vacío hasta que termina la carga. Se exige que,
+    // una vez que el cuerpo se dibujó completo, no vuelva a quedar sin alto. (Con la suite
+    // completa corriendo, la primera medición puede caer antes del primer layout de la página
+    // y dar 0: eso no es el bug.)
+    const primeroCompleto = altos.findIndex((alto) => alto > 300);
+    expect(primeroCompleto, `el cuerpo del skeleton llega a dibujarse (${altos})`).toBeGreaterThan(
+      -1,
+    );
+    expect(
+      Math.min(...altos.slice(primeroCompleto)),
+      `el cuerpo del skeleton no se vacía después (${altos})`,
+    ).toBeGreaterThan(300);
+
+    // Con la ficha cargada, el selector aparece con sus dos matrículas.
+    await expect(page.locator('app-tabs [role="tab"]')).toHaveCount(2, { timeout: 40_000 });
+  });
+
+  test('tras ver a un alumno con dos matrículas, el skeleton del siguiente se ve completo', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const conDos = await createE2eAlumno(
+      {
+        label: 'DosMatriculas',
+        branchId: SEDE_A,
+        enrollments: [{ status: 'completed' }, { status: 'active' }],
+      },
+      cleanup,
+    );
+    const otro = await createE2eAlumno(
+      { label: 'Siguiente', branchId: SEDE_A, enrollments: [{}] },
+      cleanup,
+    );
+    const page = await pageAs('secretariaA');
+    await page.setViewportSize(DESKTOP);
+
+    // Ficha del alumno con dos matrículas: aparece el selector.
+    await openFicha(page, 'secretaria', conDos.studentId);
+    await expect(page.locator('app-tabs [role="tab"]')).toHaveCount(2, CARGA);
+
+    // Sin recargar la app, se abre otro alumno desde la lista, con su carga demorada para
+    // alcanzar a medir el skeleton.
+    await hero(page).locator('[data-llm-nav="back"]').first().click();
+    await expect(page.getByText(REPORT_ALUMNOS)).toBeVisible(CARGA);
+    await page.locator(SEARCH_ALUMNOS).fill(otro.paternalLastName);
+    const fila = page.locator('p-table tbody tr').filter({ hasText: otro.paternalLastName });
+    await expect(fila).toHaveCount(1, CARGA);
+    await page.route('**/rest/v1/students?*', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await route.continue().catch(() => undefined);
+    });
+    await fila.locator('[data-llm-action="view-student-detail"]').click();
+
+    const skeleton = page
+      .locator('.ficha-3col-row')
+      .filter({ has: page.locator('app-skeleton-block') });
+    await expect(skeleton).toBeVisible();
+    // Antes del arreglo la pantalla reservaba la fila del selector del alumno anterior y el
+    // cuerpo del skeleton quedaba sin alto.
+    const alto = (await skeleton.boundingBox())?.height ?? 0;
+    expect(alto, 'el cuerpo del skeleton ocupa la pantalla').toBeGreaterThan(300);
+    await expect(page.locator('app-tabs [role="tab"]')).toHaveCount(0);
+
+    await expect(matricula(page)).toBeVisible(CARGA);
   });
 });

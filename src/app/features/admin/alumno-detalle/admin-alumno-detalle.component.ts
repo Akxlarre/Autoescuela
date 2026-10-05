@@ -76,6 +76,21 @@ export function resolveListadoRoute(
   return esProfesional ? '/app/secretaria/profesional/alumnos' : '/app/secretaria/alumnos';
 }
 
+/**
+ * ¿Se dibuja el selector de matrícula? (fix-314-m). Es la misma rama de la plantilla que muestra
+ * la ficha cargada: sin carga en curso, sin error y con alumno. La grilla reserva la fila del
+ * selector con esta misma respuesta; si mirara solo cuántas matrículas hay, la reservaría también
+ * mientras se muestra el skeleton, que caería en esa fila y desaparecería.
+ */
+export function shouldShowEnrollmentSelector(state: {
+  isLoading: boolean;
+  hasError: boolean;
+  hasAlumno: boolean;
+  enrollmentCount: number;
+}): boolean {
+  return !state.isLoading && !state.hasError && state.hasAlumno && state.enrollmentCount > 1;
+}
+
 /** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
 export function resolveListadoLabel(
   licenseGroup: 'class_b' | 'professional' | undefined,
@@ -127,7 +142,7 @@ export function resolveCertificadoBAction(
       appBentoReveal
       appBentoGridLayout
       [class.force-compact]="layoutDrawer.isOpen()"
-      [class.has-enrollment-selector]="facade.enrollmentSummaries().length > 1"
+      [class.has-enrollment-selector]="showEnrollmentSelector()"
     >
       <!-- ── Header (restaurado): navegación + contexto a la izquierda,
            solo Editar Perfil / Eliminar Alumno a la derecha — el resto de
@@ -298,7 +313,7 @@ export function resolveCertificadoBAction(
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
-        @if (facade.enrollmentSummaries().length > 1) {
+        @if (showEnrollmentSelector()) {
           <div class="col-span-full flex w-full">
             <div class="w-full md:w-auto">
               <app-tabs
@@ -1343,6 +1358,16 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   });
 
   readonly activeEnrollmentStr = computed(() => String(this.facade.alumno()?.enrollmentId));
+
+  /** Una sola condición para dibujar el selector y para reservarle su fila (fix-314-m). */
+  readonly showEnrollmentSelector = computed(() =>
+    shouldShowEnrollmentSelector({
+      isLoading: this.facade.isLoading(),
+      hasError: !!this.facade.error(),
+      hasAlumno: !!this.facade.alumno(),
+      enrollmentCount: this.facade.enrollmentSummaries().length,
+    }),
+  );
 
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {

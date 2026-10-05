@@ -114,6 +114,23 @@ describe('AdminAlumnosFacade', () => {
       return TestBed.inject(ToastService) as unknown as { error: ReturnType<typeof vi.fn> };
     }
 
+    it('doble clic: dos pedidos seguidos para el mismo alumno hacen una sola consulta y un solo aviso (hotfix-144-m)', async () => {
+      mockArchivado({ enrollmentIds: [10], futureSessions: 2 });
+
+      const [a, b] = await Promise.all([facade.prepararArchivado(5), facade.prepararArchivado(5)]);
+
+      expect(a).toEqual(b);
+      expect(toastSpy().error).toHaveBeenCalledTimes(1);
+      const consultasDeMatriculas = (supabaseSpy.client.from as any).mock.calls.filter(
+        ([table]: [string]) => table === 'enrollments',
+      );
+      expect(consultasDeMatriculas).toHaveLength(1);
+
+      // Terminada la consulta, un pedido posterior vuelve a consultar: no queda nada en caché.
+      await facade.prepararArchivado(5);
+      expect(toastSpy().error).toHaveBeenCalledTimes(2);
+    });
+
     it('con clases futuras no permite archivar y avisa cuántas son', async () => {
       const { futureFilter } = mockArchivado({
         enrollmentIds: [10],
@@ -146,6 +163,31 @@ describe('AdminAlumnosFacade', () => {
       const result = await facade.prepararArchivado(1);
 
       expect(result).toEqual({ permitido: true, hasHistory: false });
+    });
+  });
+
+  describe('fichas PDF en paralelo — fix-316-m', () => {
+    it('cada ficha pedida mantiene su indicador hasta que ESA ficha termina', async () => {
+      const pendientes = new Map<number, (value: unknown) => void>();
+      supabaseSpy.client.functions = {
+        invoke: vi.fn(
+          (_name: string, opts: { body: { enrollment_id: number } }) =>
+            new Promise((resolve) => pendientes.set(opts.body.enrollment_id, resolve)),
+        ),
+      };
+
+      const primera = facade.exportarFicha(10);
+      const segunda = facade.exportarFicha(20);
+      expect([...facade.generatingFichaIds()].sort()).toEqual([10, 20]);
+
+      // Termina la segunda (con error, para no depender de la descarga): la primera sigue.
+      pendientes.get(20)!({ data: null, error: new Error('falló') });
+      await segunda;
+      expect([...facade.generatingFichaIds()]).toEqual([10]);
+
+      pendientes.get(10)!({ data: null, error: new Error('falló') });
+      await primera;
+      expect(facade.generatingFichaIds().size).toBe(0);
     });
   });
 
@@ -589,6 +631,76 @@ describe('AdminAlumnosFacade', () => {
 
         expect(facade.alumnos().map((a) => a.id)).toEqual(['90']);
         expect(facade.alumnos()[0].status).toBe('Finalizado');
+      });
+    });
+
+    // 024a B06 (fix-264-m): no hay datos reales de cursos singulares para probarlo en navegador.
+    describe('alumnos de curso singular — 024a B06', () => {
+      it('un alumno que solo tiene un curso singular no aparece en la Base B', async () => {
+        mockStudents([
+          makeStudent({ id: 97, enrollments: [], standalone_course_enrollments: [{ id: 1 }] }),
+          makeStudent({ id: 98 }),
+        ]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos().map((a) => a.id)).toEqual(['98']);
+      });
+
+      it('si además tiene una matrícula Clase B, sí aparece', async () => {
+        mockStudents([makeStudent({ id: 99, standalone_course_enrollments: [{ id: 1 }] })]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos().map((a) => a.id)).toEqual(['99']);
+      });
+    });
+
+    describe('alumno re-matriculado — fix-312-m', () => {
+      const egresada = () =>
+        makeEnrollment({
+          id: 1,
+          number: '0082',
+          status: 'completed',
+          pending_balance: 180_000,
+          created_at: '2026-01-01T00:00:00Z',
+        });
+      const vigente = () =>
+        makeEnrollment({
+          id: 2,
+          number: '0083',
+          status: 'active',
+          pending_balance: 50_000,
+          created_at: '2026-06-01T00:00:00Z',
+        });
+
+      it('muestra solo el número y el curso de la matrícula vigente, no los de la egresada', async () => {
+        mockStudents([makeStudent({ id: 95, enrollments: [egresada(), vigente()] })]);
+
+        await facade.initialize();
+
+        const [row] = facade.alumnos();
+        expect(row.nroExpedientes).toEqual(['0083']);
+        expect(row.cursos).toEqual([{ nombre: 'Clase B', licenseGroup: 'class_b' }]);
+        expect(row.status).toBe('Activo');
+      });
+
+      it('el saldo sigue sumando la deuda de la matrícula egresada (fix-270-m)', async () => {
+        mockStudents([makeStudent({ id: 95, enrollments: [egresada(), vigente()] })]);
+
+        await facade.initialize();
+
+        expect(facade.alumnos()[0].pago_por_pagar).toBe(230_000);
+      });
+
+      it('en la Papelera, un egresado archivado conserva su número y su curso (fix-276-m)', async () => {
+        mockStudents([makeStudent({ id: 96, status: 'archived', enrollments: [egresada()] })]);
+
+        await facade.setTrashView(true);
+
+        const [row] = facade.alumnos();
+        expect(row.nroExpedientes).toEqual(['0082']);
+        expect(row.cursos).toEqual([{ nombre: 'Clase B', licenseGroup: 'class_b' }]);
       });
     });
 

@@ -93,7 +93,8 @@ export class AdminAlumnosFacade {
   private readonly _alumnos = signal<AlumnoTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
-  private readonly _isGeneratingFicha = signal<number | false>(false);
+  /** Matrículas cuya ficha PDF se está generando: pueden ser varias a la vez (fix-316-m). */
+  private readonly _generatingFichaIds = signal<ReadonlySet<number>>(new Set());
   private readonly _error = signal<string | null>(null);
   private readonly _isArchiving = signal(false);
   private readonly _trashView = signal(false);
@@ -110,7 +111,7 @@ export class AdminAlumnosFacade {
   readonly alumnos = this._alumnos.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isExporting = this._isExporting.asReadonly();
-  readonly isGeneratingFicha = this._isGeneratingFicha.asReadonly();
+  readonly generatingFichaIds = this._generatingFichaIds.asReadonly();
   readonly error = this._error.asReadonly();
   readonly isArchiving = this._isArchiving.asReadonly();
   readonly trashView = this._trashView.asReadonly();
@@ -306,7 +307,7 @@ export class AdminAlumnosFacade {
   }
 
   async exportarFicha(enrollmentId: number): Promise<void> {
-    this._isGeneratingFicha.set(enrollmentId);
+    this._generatingFichaIds.update((ids) => new Set(ids).add(enrollmentId));
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-enrollment-sheet',
@@ -325,7 +326,11 @@ export class AdminAlumnosFacade {
     } catch {
       this.toast.error('No se pudo generar la ficha. Inténtalo de nuevo.');
     } finally {
-      this._isGeneratingFicha.set(false);
+      this._generatingFichaIds.update((ids) => {
+        const rest = new Set(ids);
+        rest.delete(enrollmentId);
+        return rest;
+      });
     }
   }
 
@@ -378,6 +383,26 @@ export class AdminAlumnosFacade {
    * qué modal de confirmación mostrar.
    */
   async prepararArchivado(studentId: number): Promise<{ permitido: boolean; hasHistory: boolean }> {
+    // hotfix-144-m: un doble clic en el tacho no repite la consulta ni duplica el aviso.
+    const enCurso = this.archivadosEnPreparacion.get(studentId);
+    if (enCurso) return enCurso;
+
+    const consulta = this.resolverArchivado(studentId).finally(() =>
+      this.archivadosEnPreparacion.delete(studentId),
+    );
+    this.archivadosEnPreparacion.set(studentId, consulta);
+    return consulta;
+  }
+
+  /** Consultas previas de archivado en curso, por alumno (hotfix-144-m). */
+  private readonly archivadosEnPreparacion = new Map<
+    number,
+    Promise<{ permitido: boolean; hasHistory: boolean }>
+  >();
+
+  private async resolverArchivado(
+    studentId: number,
+  ): Promise<{ permitido: boolean; hasHistory: boolean }> {
     const { hasHistory, clasesFuturas } = await this.checkHistorial(studentId);
     if (clasesFuturas > 0) {
       this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
@@ -511,11 +536,17 @@ export class AdminAlumnosFacade {
     const enrollment = sorted[0] ?? null;
     const docs = enrollment?.student_documents ?? [];
 
-    const nroExpedientes = sorted
+    // fix-312-m: si la fila la representa una matrícula vigente, las egresadas del mismo alumno
+    // (egresó y se volvió a matricular) no se muestran: viven solo en Ex-Alumnos. Si la que la
+    // representa es la egresada (un egresado archivado, en la Papelera), se muestra tal cual.
+    const shown =
+      enrollment?.status === 'completed' ? sorted : sorted.filter((e) => e.status !== 'completed');
+
+    const nroExpedientes = shown
       .filter((e) => e.number && e.status !== 'draft')
       .map((e) => e.number as string);
 
-    const cursos: EnrollmentCurso[] = sorted
+    const cursos: EnrollmentCurso[] = shown
       .filter((e) => e.courses?.name)
       .map((e) => ({
         nombre: e.courses!.name,

@@ -2,7 +2,30 @@ import {
   resolveCertificadoBAction,
   resolveListadoRoute,
   resolveListadoLabel,
+  shouldShowEnrollmentSelector,
 } from './admin-alumno-detalle.component';
+
+describe('shouldShowEnrollmentSelector (fix-314-m)', () => {
+  const cargada = { isLoading: false, hasError: false, hasAlumno: true, enrollmentCount: 2 };
+
+  it('ficha cargada con dos o más matrículas: hay selector', () => {
+    expect(shouldShowEnrollmentSelector(cargada)).toBe(true);
+    expect(shouldShowEnrollmentSelector({ ...cargada, enrollmentCount: 3 })).toBe(true);
+  });
+
+  it('con una sola matrícula no hay selector', () => {
+    expect(shouldShowEnrollmentSelector({ ...cargada, enrollmentCount: 1 })).toBe(false);
+  });
+
+  it('mientras carga no hay selector aunque las matrículas ya hayan llegado', () => {
+    expect(shouldShowEnrollmentSelector({ ...cargada, isLoading: true })).toBe(false);
+  });
+
+  it('con error de carga o sin alumno no hay selector', () => {
+    expect(shouldShowEnrollmentSelector({ ...cargada, hasError: true })).toBe(false);
+    expect(shouldShowEnrollmentSelector({ ...cargada, hasAlumno: false })).toBe(false);
+  });
+});
 
 describe('resolveCertificadoBAction (fix-289-m)', () => {
   it('con las prácticas completas genera sin confirmación, sea admin o secretaria', () => {

@@ -1,7 +1,8 @@
 ﻿# Fix: Testing — Base de Alumnos Clase B, ficha del alumno y ex-alumnos
 > id: fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos
 > refs: ASG-i-024
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-01
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -87,7 +88,7 @@ terminar. Verificado después de cada corrida: 0 usuarios y 0 matrículas `E2E-`
 | 024a | D6 | seed (60 alumnos solo Profesional, todos en sede 2) | |
 | 024a | D7 | seed: alumno #84 (sede 2) | único con B + Profesional |
 | 024a | D15 | `E2E-SedeA` / `E2E-SedeB` | |
-| 024a | D11, D13, D16 | — | sin datos: casos B06, C10, C11 pendientes |
+| 024a | D11, D13, D16 | — | sin datos reales. B06 se cubrió con un test unitario; C10 y C11, con alumnos sembrados |
 
 ## Resultados
 
@@ -167,7 +168,7 @@ pantalla.
 | A07 | ✅ | Con las consultas de la lista demoradas 3–5 s: skeleton con la forma de la tabla (KPIs, filtros, 8 columnas, acciones). Si toda la red está lenta, antes de eso la app entera queda gris mientras resuelve la sesión: es el arranque, no esta lista | |
 | B03 | ✅ | Alumno solo-Profesional (RUT 25000001-4) no aparece | |
 | B04 | ✅ | #84 (B + Profesional) aparece solo con su matrícula B 0008 | |
-| B06 | ⏸ | Sin datos: `standalone_course_enrollments` vacía. El código los excluye (`admin-alumnos.facade.ts:451-457`) | |
+| B06 | ✅ | Por test unitario (2026-10-05), porque no hay datos reales de cursos singulares: un alumno que solo tiene un curso singular no aparece en la Base B; si además tiene una matrícula Clase B, sí | |
 | B08 | ✅ | Ordena por `students.id` descendente: el más nuevo primero | |
 | B09 | ✅ | Cubierto por el E2E de `024b` O01 | |
 | C01 | ✅ | Iniciales de nombre + apellido (CR, IS, SM) | |
@@ -179,8 +180,8 @@ pantalla.
 | E11 | ❌ → ✅ | En la página 3, buscar deja la tabla en "Mostrando 21 a 10 de 10", vacía. Igual con filtros | B25 |
 | F01 | ✅ | Clase B: 59 filas, todas "Clase B" | |
 | F02 | ✅ | Clase B SENCE: 70 filas, todas SENCE | |
-| F04 | ✅ (parcial) | Activo 111 y Pendiente Pago 18, todas con su estado; Retirado, Docs Pendientes, Pre-inscrito e Inactivo hoy sin datos (0 filas) | |
-| F06 | ✅ (parcial) | Parcial 128, Pendiente 1; Completo sin datos | |
+| F04 | ✅ | Activo 111 y Pendiente Pago 18, todas con su estado; Retirado, Docs Pendientes, Pre-inscrito e Inactivo sin datos reales ese día; cubiertos después con alumnos sembrados (F05) | |
+| F06 | ✅ | Parcial 128, Pendiente 1; "Completo" sin datos reales ese día; cubierto después con alumnos sembrados (test de C11) | |
 | F07 | ❌ → ✅ | La intersección es correcta (5 filas), pero la tabla queda en la página 3 y se ve vacía | B25 |
 | F08 | ✅ | Cada selector tiene su opción "Todos…" (`0022-m`) | |
 | G02 | ✅ | Última página "121 a 129 de 129" | |
@@ -193,7 +194,7 @@ pantalla.
 | K15 | ✅ | `export-table-pdf` con 500 → "No se pudo exportar la lista. Inténtalo de nuevo." | |
 | J01 | ✅ | Spinner solo en esa fila → `Ficha_Matricula_2877_2026-10-03.pdf` (la fecha del nombre es UTC: a las 23:24 de Chile dice el día siguiente → `ASG-i-054`) | |
 | J02 | ❌ → ✅ | El PDF de la ficha no tiene tildes ni ñ ("Reyes Munoz", "Telefono", "practicas"), el concepto del pago sale "enrollment" y la hora del pie "11:24 p.?m.". **Corregido el 2026-10-04** (función desplegada y PDF verificado desde la app) | B27 → `fix-293-m` |
-| J05 | ✅ | Se descargan ambas; el spinner solo se ve en la última fila apretada | |
+| J05 | ✅ | Se descargan ambas. El spinner solo se veía en la última fila apretada; **corregido el 2026-10-05** | `fix-316-m` |
 | J06 | ✅ | `generate-enrollment-sheet` con 500 → "No se pudo generar la ficha. Inténtalo de nuevo."; el spinner se apaga | |
 | J03 | ✅ | #84 (B + Profesional) → `Ficha_Matricula_90`, su matrícula B | |
 | B10 | ✅ | Por código: la lista ordena por `students.id` descendente, así que un alumno nuevo queda primero al recargar. Sin recargar depende del tiempo real (Q01) | |
@@ -214,17 +215,21 @@ pantalla.
 | H05 | ✅ | Ver ficha, ficha PDF y archivar, cada uno con su `data-llm-action` | |
 | H06 | ✅ | Nombre y email truncados con tooltip | |
 | H07 | ✅ | Botones de 48 × 32 px: usables, aunque menos de los 44 px de alto recomendados (observación) | |
-| I03 | ✅ (parcial) | Al volver desde la ficha (enlace o botón atrás) se conservan filtros y orden; la página vuelve a la 1 → decisión pendiente | |
+| I01 · I02 | ✅ | Auto (el caso no se había registrado; lo cubre el test "A01 · A02 · A13 · I01 · I02" de la suite de la ficha, para admin y secretaria): el ojo abre la ficha del alumno correcto y "Volver" regresa a la lista | |
+| I03 | ✅ | Al volver desde la ficha (enlace o botón atrás) se conservan filtros y orden; la página volvía a la 1. Decidido el 2026-10-03: conservarla también; hecho en `fix-282-m` | |
 | K10 | ✅ | Admin sede A: 64 filas, todas de esa sede; "Todas": 129 con columna Sede | |
 | L07 | ✅ | Al reabrir el modal el campo está vacío | |
 | L10 | ✅ | Auto. Archivar deja un `UPDATE` de `students` en `audit_log` con el usuario | |
 | L11 | ✅ | Por código: ni los facades contables ni las vistas SQL excluyen alumnos archivados | |
 | L12 | ✅ | PATCH con 500 → "No se pudo archivar al alumno. Inténtalo de nuevo."; el alumno sigue en la lista | |
-| L13 | ✅ (parcial) | Doble clic: un solo modal, pero la consulta previa se hace 2 veces (observación) | |
+| L13 | ✅ | Doble clic: un solo modal. La consulta previa se hacía 2 veces; **corregido el 2026-10-05** | `hotfix-144-m` |
 | M05 | ✅ | Auto. Búsqueda y filtro de estado dentro de la Papelera | |
 | M06 | ❌ → ✅ | La Papelera vacía y sin filtros dice "No se encontraron alumnos · Intenta ajustar los criterios de búsqueda o filtros · Limpiar filtros". **Corregido el 2026-10-04**: dice "No hay alumnos archivados", sin botón | B28 → `fix-285-m` |
 | M09 | ✅ | Auto. Si restaurar falla: toast "No se pudo…" y el alumno sigue en la Papelera | |
 | O01 | ✅ | Wizard en drawer; la tabla pasa a tarjetas | |
+| O02 | ❌ → ✅ | Auto. Cerrar el drawer no avisaba nunca: antes de "Guardar y Continuar" del Paso 1 se perdía lo escrito. **Corregido el 2026-10-05**: con texto escrito y sin guardar, la X y "Cancelar" preguntan "¿Cerrar sin guardar?". Con el Paso 1 guardado no pregunta: la matrícula queda como borrador, no aparece en la Base y "Nueva Matrícula" ofrece retomarla donde quedó | `fix-310-m` |
+| O03 | ❌ → ✅ | "Cancelar" del Paso 1 y "Finalizar" del Paso 6 mandaban al Inicio. **Corregido el 2026-10-04** (Auto para "Cancelar"). El 2026-10-05 se completó una matrícula de punta a punta a mano, como secretaria de la sede 1: tras el Paso 6 el panel se cierra, la URL sigue en la Base de Alumnos, el total pasa de 65 a 66 y el alumno nuevo (matrícula 0082, "Pendiente Pago") queda primero en la lista, sin recargar la página | B46 → `fix-307-m` |
+| O04 | ✅ | Auto. Con "Todas las sedes" no hay formulario: aparece la pantalla "Selecciona una sede" con las dos sedes y no se puede avanzar sin elegir. La matrícula y el usuario nuevo quedan en la sede elegida (`enrollments.branch_id` y `users.branch_id` = 2 al elegir Conductores Chillán). Al cerrar el wizard el selector quedaba en la sede elegida; **corregido el 2026-10-04**: vuelve a "Todas las sedes" | `fix-309-m` |
 | P03 | ✅ | A → B → A con la red demorada: termina en A, 64 filas, todas de A | |
 | Q02–Q04 · Q06 | → | Mismo canal que Q01, que no llega. **Traspasados a `ASG-i-056`** (2026-10-04): se ejecutan allá | → `ASG-i-056` |
 | Q05 | ✅ | Al salir se manda `phx_leave` de `alumnos-listado-realtime` | |
@@ -236,8 +241,11 @@ pantalla.
 
 **K13 (2026-10-04):** ✅ Auto + revisión del archivo. El PDF de la lista se genera con un nombre de unos 90 caracteres: se recorta con "…" dentro de su columna y no invade el RUT.
 
-**Aún sin ejecutar de `024a`:** O02–O04 (necesitan completar el
-wizard de matrícula) · P07 (no hay una cuenta de secretaria sin sede).
+**Aún sin ejecutar de `024a`:** ninguno. P07 no aplica (ver "Decisiones de negocio").
+
+**Dato de prueba que se DEJA en la base (O03, 2026-10-05):** alumno "Prueba Wizard Matricula Completa", RUT 99.123.457-8, `users#6876`, `students#6597`, matrícula `enrollments#6248` Nº 0082 (sede 1, Clase B, correlativo real asignado por la app), pago pendiente de $180.000, sin cuenta Auth (la invitación por correo se interceptó: la dirección no existe). No se puede borrar: tiene 3 consentimientos. Sus 12 clases quedaron **agendadas de verdad** con Instructor1 entre el 5 y el 12 de octubre de 2026 a las 15:00 y 15:50.
+
+**Observaciones de O03, corregidas el 2026-10-05 por pedido de Matías:** el botón final del Paso 6 ahora dice "Finalizar" y se quitó "Comprobante de Pago", que no hacía nada (`hotfix-142-m`); el contrato firmado ahora se envía por correo al confirmar la matrícula (`fix-318-m`, función desplegada y envío real comprobado por Matías con una casilla temporal el 2026-10-05). Sigue sin tocar: al llenar el Paso 1 por automatización muy rápido, los campos se registran al salir de cada uno; no se reprodujo escribiendo a ritmo normal.
 
 **Observaciones de la 2ª pasada (no son bugs, para que el owner decida):**
 
@@ -245,14 +253,14 @@ wizard de matrícula) · P07 (no hay una cuenta de secretaria sin sede).
   (Matías, 2026-10-03): conservarla también. ✅ `fix-282-m`.
 - **H03:** la tarjeta no muestra Nº de expediente ni sede. → Decidido: debe mostrarlos, en especial
   el Nº de matrícula. ✅ `hotfix-132-m` (también en la tarjeta de Alumnos Profesional).
-- **L13:** doble clic en el tacho hace dos veces la consulta previa (un solo modal).
-- **J05:** con dos fichas PDF pedidas seguidas, el spinner solo se ve en la última.
+- **L13:** doble clic en el tacho hace dos veces la consulta previa (un solo modal). ✅ `hotfix-144-m` (2026-10-05).
+- **J05:** con dos fichas PDF pedidas seguidas, el spinner solo se ve en la última. ✅ `fix-316-m` (2026-10-05).
 - **R04:** el paginador de PrimeNG está en inglés (las etiquetas para lectores de pantalla:
   "First Page", "Next Page"…). → Decidido: todo en español. ✅ `hotfix-131-m` (todos los textos
   `aria` de PrimeNG, en todas las tablas).
-- **Tabla:** el botón de ficha PDF no tiene `data-llm-action` (sí lo tiene en la tarjeta).
+- **Tabla:** el botón de ficha PDF no tiene `data-llm-action` (sí lo tiene en la tarjeta). ✅ `hotfix-143-m` (2026-10-05).
 - **Drawer de Nueva Matrícula:** si se achica la ventana con el drawer abierto se queda en 720 px
-  y la X queda fuera de la pantalla; abierto ya en 375 px se ve bien.
+  y la X queda fuera de la pantalla; abierto ya en 375 px se ve bien. ✅ `fix-317-m` (2026-10-05): el panel se readapta al cambiar el tamaño de la ventana.
 
 ### 024b — Ficha del alumno y Ex-Alumnos B
 
@@ -292,13 +300,13 @@ Primera pasada (2026-10-01). "Auto" = `e2e/alumnos-b-ficha.spec.ts`.
 | P02 | ✅ | Auto. Archiva, muestra el toast y vuelve a la lista, sin errores en consola | |
 | S04 | ✅ | Por API: la secretaria de la sede 1 no puede cambiar el estado de una matrícula de la sede 2, ni archivar a un alumno de la sede 2 (0 filas) | |
 | T01 | ✅ | Auto. Admin y secretaria cargan Ex-Alumnos sin errores | |
-| T06 | ✅ | Auto (parcial). Egresado con saldo 0 → "Al día". Falta el caso "Debe $X" | |
+| T06 | ✅ | Auto. Egresado con saldo 0 → "Al día"; egresado con saldo pendiente → "Debe 50.000" (agregado el 2026-10-05) | |
 | T10 | ✅ | Auto. "Ver ficha" desde la tabla y "Volver" regresan a Ex-Alumnos B | |
 | U03 | ✅ | Auto. La búsqueda encuentra a un egresado fuera del período | |
 | U04 | ✅ | Auto. Nombre + apellido, sin tilde, Nº de expediente y RUT con y sin puntos (este último desde `fix-267-m`) | |
 | V01 | ✅ | Auto. A 375 px, tarjetas sin scroll horizontal | |
 | V02 | ❌ → ✅ | Auto. "Ver ficha" desde una tarjeta y "Volver" lleva a la Base de Alumnos. **Corregido el 2026-10-01** | B20 → `hotfix-115-m` |
-| W01 | ✅ | Auto (parcial). Continuar abre "Nueva Matrícula" con `?rut=`. Falta verificar los campos precargados | |
+| W01 | ✅ | Auto. Continuar abre "Nueva Matrícula" con `?rut=`. Los campos precargados se comprobaron a mano en W08 (2026-10-05): llegan todos | |
 | W02 | ✅ | Auto. Cancelar no abre nada ni cambia la URL | |
 
 Segunda pasada (2026-10-02). Ficha de referencia: alumno 2815 del seed (matrícula 0018: 5 clases
@@ -333,7 +341,7 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | H02 · H03 · H04 · H09 | ✅ | Auto. Motivo vacío o solo espacios deshabilita Guardar; X y Cancelar no guardan; doble clic → un solo PATCH; "Ver motivo" y "Inasistencia — Justificada" siguen tras F5 | |
 | H06 | ✅ | Auto, `hotfix-128-m` | |
 | H07 | ✅ | Auto. Si el PATCH falla: toast y sigue con "Justificar" | |
-| I01 · I02 | ✅ | $90.000 pagado y $90.000 de saldo; pago con fecha, método, monto y estado. Muestra "Pago #1" en vez del concepto (observación) | |
+| I01 · I02 | ✅ | $90.000 pagado y $90.000 de saldo; pago con fecha, método, monto y estado. Mostraba "Pago #1" en vez del concepto; **corregido el 2026-10-05** | `fix-315-m` |
 | I06 · I08 | ✅ | Auto, `fix-278-m` | |
 | J01 | ✅ | Menú Carnet: "Generar" 6/12 habilitados, "Ver" deshabilitados | |
 | L01 | ✅ | Por código: la secretaria con < 12 clases tiene el botón deshabilitado | |
@@ -365,6 +373,7 @@ alumnos `E2E-` ("Auto" = `e2e/alumnos-b-ficha.spec.ts`, bloque "segunda pasada")
 | W05 | ✅ | Auto, `fix-274-m` | |
 | X01–X05 | ✅ | Decidido no ejecutarlos (sin datos que los alimenten) | |
 | Y01 · Y02 | ✅ | A → B → A con la red demorada: 8 egresados, todos de la sede A | |
+| Y03 | ✅ | Auto (2026-10-05; el caso no se había registrado). La secretaria sin permiso multi-sede no tiene selector de sede y no encuentra a un egresado de la otra sede; al de la suya sí | |
 | Y04 | ❌ → ✅ | Auto. La secretaria multi-sede elige la sede B y la lista no se recarga (sigue el egresado de A). La pantalla de secretaria no tiene el `effect()` de sede (el mismo B7 de la Base). **Corregido el 2026-10-04** | B33 → `fix-288-m` |
 | Z01 | ✅ | Modo oscuro (botón de la app): tarjetas, badges y drawers legibles | |
 | Z02 | ✅ | 3 columnas a 1600 px | |
@@ -401,6 +410,7 @@ Tercera pasada (2026-10-04), primer lote. "Auto" = bloque "tercera pasada" de
 | I05 | ✅ | Auto. Con 14 pagos la lista scrollea por dentro y la página no crece | |
 | I07 | ✅ | Auto. Un pago registrado mientras se está en otra pantalla aparece al volver a la ficha | |
 | N01 | ✅ | Auto, solo lectura sobre un alumno real con consentimientos: tipo, estado, fecha, origen, versión e IP | |
+| N04 | ✅ | A mano (2026-10-05), admin, sobre el alumno de prueba de la matrícula 0082. "Cancelar" en la confirmación no cambia nada; al confirmar, "Tratamiento de datos de matrícula" pasa a "Revocado" con "Revocado el" y la fecha de hoy, conserva su fecha original de otorgamiento, y el botón desaparece. De paso: "Comunicaciones operativas (informativo, no revocable)" también ofrecía "Registrar revocación"; **corregido el 2026-10-05** | B48 → `fix-311-m` |
 | N05 | ✅ | Auto. La secretaria no ve "Registrar revocación"; el admin sí, en cada consentimiento otorgado | |
 | N07 | ❌ → ✅ | Auto. Con dos matrículas, el panel de reagendamientos seguía mostrando el de la matrícula con la que se abrió la ficha. **Corregido el 2026-10-04** | B41 → `fix-298-m` |
 | N08 | ✅ | Auto. Tras ver un alumno con reagendamientos, la ficha de otro sin ninguno muestra el panel vacío | |
@@ -452,7 +462,15 @@ registro de emisión y los avisos. El carnet y el certificado generados se revis
 | M12 | ✅ | Mismo recorrido. Con el correo sin guardar el botón está deshabilitado; ya guardado, "Enviar invitación" muestra "Invitación enviada correctamente." (la función responde 201, `invited`) y el alumno queda vinculado a una cuenta de Auth con el primer ingreso pendiente. Matías confirmó con captura que el correo llegó: "Activa tu cuenta - AutoEscuela Chillán", de `no-reply@autoescuelachillan.cl`, con el botón "Activar mi cuenta" y enlace válido por 1 día. No quedó como test de la suite porque envía un correo real en cada corrida | |
 | M13 | ✅ | Auto (bloque "cierre de la asignación"). El aviso de invitación de "Editar Perfil" se ve mientras el alumno no tiene cuenta o no ha entrado nunca, y desaparece cuando la cuenta ya está activada. La cuenta se simuló en la base (identificador de Auth y primer ingreso), sin crear un usuario real | |
 
-**Aún sin ejecutar de `024b`:** N04 (revocar un consentimiento no se puede deshacer ni sembrar: `consents` no admite borrado) · S05 · W08.
+**Aún sin ejecutar de `024b`:** ninguno. S05 no aplica (ver "Decisiones de negocio").
+
+**W08 (2026-10-05, a mano):** ✅. Matías dejó como egresada la matrícula 0082 del alumno de prueba y liberó sus 12 clases (el sistema de permisos de la herramienta no dejó hacerlo desde la sesión). Como secretaria de la sede 1, desde Ex-Alumnos B: "Re-matricular" → "Continuar" abre el wizard con el RUT en la URL y **todos los datos precargados** (nombres, apellidos, correo, teléfono, fecha de nacimiento, dirección, sexo y curso; completa lo que faltaba de W01); el Paso 1 avisa "Re-matrícula en el mismo curso"; el Paso 3 ofrece reutilizar la foto de la matrícula anterior. Al terminar (matrícula 0083) el panel se cierra y el usuario sigue en Ex-Alumnos (`fix-307-m`). La 0082 sigue en Ex-Alumnos B y el alumno aparece en la Base de Alumnos B con la 0083, "Pendiente Pago".
+
+**Encontrado en W08 y corregido (B49, `fix-312-m`, 2026-10-05):** en la Base, la fila del alumno re-matriculado mostraba los dos números ("0083 0082") y el curso dos veces, contando la matrícula egresada. Ahora muestra solo la vigente.
+
+**Observación de W08, corregida en `hotfix-141-m` (2026-10-05):** al terminar la re-matrícula la URL de Ex-Alumnos conserva `?rut=`.
+
+**Estado del dato de prueba tras W08:** `enrollments#6248` Nº 0082 egresada, sin clases, con el consentimiento de datos revocado (N04); `enrollments#6363` Nº 0083 activa, pago pendiente, con 12 clases agendadas con Instructor1 del 26 de octubre al 2 de noviembre de 2026 (15:00 y 15:50).
 
 **Observaciones de la 3ª pasada (no son bugs de este track, para decidir):**
 
@@ -503,14 +521,14 @@ registro de emisión y los avisos. El carnet y el certificado generados se revis
 | 024b | S6 🟠 | **Confirmada** | Ex-Alumnos usa `enrollments.updated_at`; marcar ex-alumno no lo actualiza | B16 |
 | 024b | S7 🟠 | **Corregida** el 2026-10-02 | `reprogramarClase()` dejaba la sesión en `scheduled` sin archivar la asistencia (`archived_at` solo se escribía en el flujo masivo). Ahora archiva y escribe el historial; verificado en la base con un alumno de prueba | `fix-279-m` · re-ejecutar en `ASG-i-027` |
 | 024b | S8 🟠 | **Confirmada** | Mensaje genérico con email duplicado | B17 |
-| 024b | S9 🟠 | Confirmada en código | La ficha no tiene ninguna acción de Documentos. Requiere decisión (Q01) | ⏸ decisión |
+| 024b | S9 🟠 | Confirmada en código | La ficha no tiene ninguna acción de Documentos. Decidido (Q01): no se repone el botón "Documentos" | cerrada sin cambio |
 | 024b | S10 🟠 | **Corregida** el 2026-10-04 | `fix-262-m` quitó el requisito de nota. La ficha llamaba `generarCertificado()` sin `force`, y la función solo acepta el bypass de admin con `force: true`; ahora lo manda cuando el admin confirma | B34 → `fix-289-m` |
 | 024b | S11 🟡 | Confirmada en código, **cerrada sin cambio** | Nombre, dirección, email y logo de "Conductores Chillán" fijos en la función | Decisión de Matías (2026-10-04): el carnet se deja como está |
 | 024b | S12 🟡 | **Confirmada** | Solo con navegación interna de la SPA | B12 |
 | 024b | S13 🟡 | **Confirmada** | "Cargando…" para siempre | B13 |
 | 024b | S14 🟡 | **Confirmada** | Cualquier refresco vuelve a la matrícula más reciente. La otra mitad (el historial de reagendamientos no se recarga al cambiar de matrícula) se confirmó el 2026-10-04 | B21 · B41 → `fix-298-m` |
 | 024b | S15 🟡 | **Confirmada** | La tarjeta no pasa `?from=ex-alumnos` | B20 |
-| 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | ⏸ decisión (X02/X04) |
+| 024b | S16 🟡 | Confirmada en código | Tasas y opiniones sin filtro de sede; municipal y psicotécnico son el mismo número | cerrada sin cambio: decidido (X02/X04) dejarlas como están |
 | 024b | S17 🟡 | **Confirmada** | `students.created_at.slice(0, 10)` | B14 (formato) · `ASG-i-054` (UTC) |
 | 024b | S18 🟡 | **Corregida** el 2026-10-04 (el cierre diferido) | El `setTimeout` de 1,2 s cierra el drawer que esté abierto; la invitación usa el email del formulario | `hotfix-134-m`. La otra mitad (la invitación usa el correo del formulario): `fix-296-m`, el botón se deshabilita con el correo sin guardar (y `hotfix-135-m`: el aviso no parpadea al cancelar ni al guardar) |
 | 024b | S19 🟡 | **Corregida** el 2026-10-02 | Decisión tomada (I06 / I08); la ficha registra pagos y muestra el historial del alumno | `fix-278-m` |
@@ -565,6 +583,12 @@ Cada uno va a su propio fix/hotfix; acá solo se listan. Los tests de `e2e/` mar
 | B38 | **Los puntos de firma de las tarjetas de la Ficha Técnica no decían qué significan** (sin texto al pasar el mouse). Visible desde que el panel muestra tarjetas (`fix-290-m`) | 🟡 Baja | ✅ `hotfix-136-m` (2026-10-04) |
 | B39 | **Doble clic en "Guardar Cambios" de Editar Perfil guarda dos veces** (dos llamadas a `update-student-profile`) | 🟡 Baja | ✅ `hotfix-137-m` (2026-10-04) |
 | B40 | **El menú de Carnet de la ficha no se cierra con Escape** (con un clic fuera sí) | 🟡 Baja | ✅ `hotfix-138-m` (2026-10-04) |
+| B51 | **El skeleton de un alumno con dos o más matrículas se vacía a mitad de la carga**: la grilla reservaba la fila del selector apenas llegaban las matrículas, antes de que el selector se dibujara. Misma causa de fondo que B50. Reportado por Matías | 🟡 Baja | ✅ `fix-314-m` (2026-10-05) |
+| B50 | **Tras ver a un alumno con dos o más matrículas, el skeleton de la ficha siguiente sale sin cuerpo**: la lista de matrículas del alumno anterior no se limpiaba y la pantalla reservaba la fila del selector durante la carga. Reportado por Matías | 🟡 Baja | ✅ `fix-313-m` (2026-10-05) |
+| B49 | **La Base muestra el número y el curso de la matrícula egresada de un alumno re-matriculado**: la fila listaba todas sus matrículas Clase B, y la egresada quedaba a la vez en la Base y en Ex-Alumnos | 🟡 Baja | ✅ `fix-312-m` (2026-10-05) |
+| B48 | **El consentimiento "Comunicaciones operativas (informativo, no revocable)" ofrece "Registrar revocación"** y la registra: el panel mostraba el botón en toda fila otorgada, sin mirar el tipo | 🟡 Baja | ✅ `fix-311-m` (2026-10-05) |
+| B47 | **En pantallas anchas la columna del alumno se queda con todo el ancho que sobra** y las demás quedan apretadas a la derecha (a 1920 px el alumno ocupaba el 48 % de la tabla). Lo introdujo `fix-294-m` y `fix-302-m` lo llevó a las otras listas. Reportado por Matías | 🟡 Baja | ✅ `fix-308-m` (2026-10-04) |
+| B46 | **"Cancelar" y "Finalizar" del wizard de matrícula mandan al Inicio aunque el wizard se haya abierto como panel** sobre otra pantalla: `finishWizard()` cerraba el panel y navegaba siempre al dashboard. El wizard se abre como panel desde 6 pantallas | 🟡 Baja | ✅ `fix-307-m` (2026-10-04) |
 | B45 | **Generar el certificado desde la ficha no avisa al alumno.** El aviso buscaba al alumno en la lista de la pantalla de Certificaciones B, que desde la ficha no está cargada (último punto de S10) | 🟡 Baja | ✅ `fix-306-m` (2026-10-04) |
 | B44 | **El rechazo del certificado muestra un mensaje genérico**: el motivo real viene en el cuerpo de la respuesta y se buscaba en otro lado. El test de `fix-011-i` simulaba una respuesta que la función real no produce | 🟡 Baja | ✅ `fix-305-m` (2026-10-04) |
 | B43 | **"Subir Firmado" acepta cualquier archivo** y lo guarda como contrato firmado en PDF | 🟠 Media | ✅ `fix-304-m` (2026-10-04) |
@@ -611,6 +635,7 @@ track; cada una va a su propio fix/hotfix.
 | `024a` G03 | **Agregar ordenamiento por columna** en la tabla de alumnos | ✅ implementado en la spec `0020-m` (2026-10-02): los 8 títulos ordenan la lista completa (clic 1 ascendente, clic 2 descendente, clic 3 vuelve al orden por defecto), y el orden se conserva solo al volver de la ficha. La vista de tarjetas tiene un control "Ordenar por". Con visto bueno visual del owner; spec cerrada |
 | `024a` O05 | **"Nueva Matrícula" se oculta dentro de la Papelera** | ✅ hecho en `hotfix-119-m` |
 | `024a` J04 | **No aplica**: en el uso real un alumno siempre nace del wizard con una matrícula; el caso "sin matrícula" solo existe con datos sembrados a mano | sin cambio; J04 no se ejecuta |
+| `024a` P07 · `024b` S05 | **No aplican** (Matías, 2026-10-05): una secretaria no se puede crear sin sede desde la app y "secretaria sin sede" va contra la lógica del negocio; el caso solo existiría con un dato alterado a mano | sin cambio; no se ejecutan. La protección ya existe: en la lista, `resolveBranchScope()` filtra por una sede inexistente y lo cubre el test unitario "secretaria sin sede (misconfig): … ninguna fila, NUNCA todas" (`fix-027`); en la ficha no hay filtro en el cliente, la oculta la regla de acceso de la base, que compara la sede del alumno con la de la secretaria (`auth_user_branch_id()`) y con una sede vacía esa comparación nunca se cumple. Esto último se leyó en la migración `20261001150000`; no se probó contra la base |
 | `024a` L04 | "borrarlo" debe escribirse **exactamente como lo pide el modal**; no se aceptan mayúsculas | ✅ hecho en `hotfix-124-m` (el modal aceptaba mayúsculas) |
 | `024b` F11 | "Cancelar" al reprogramar **vuelve al panel de Ficha Técnica**, no cierra todo | ✅ hecho en `fix-279-m` |
 | `024b` M08 | El teléfono de "Editar Perfil" usa **la misma regla que Nueva Matrícula**: obligatorio y con al menos 8 caracteres (`personal-data.component.ts:202`). No se agrega validación de formato | ✅ hecho en `hotfix-121-m` |
@@ -619,7 +644,14 @@ track; cada una va a su propio fix/hotfix.
 
 ### Aún pendientes
 
-Ninguna: todas las de §5 de ambos checklists quedaron decididas el 2026-10-01.
+Ninguna. Las de §5 de ambos checklists quedaron decididas el 2026-10-01, y las tres que aparecieron
+al ejecutar O02–O04 de `024a` las decidió Matías el 2026-10-04:
+
+| Caso | Decisión | Estado |
+|---|---|---|
+| `024a` O02 | Falta un aviso al cerrar el wizard con datos sin guardar en el Paso 1; **solo si se escribió algo**, y con eso basta | ✅ hecho en `fix-310-m` |
+| `024a` O03 (B46) | Al cancelar o terminar una matrícula abierta como panel, **el usuario se queda en la pantalla desde la que la abrió** | ✅ hecho en `fix-307-m` |
+| `024a` O04 | Tras elegir sede en el wizard y cerrarlo, **el selector vuelve a "Todas las sedes"** | ✅ hecho en `fix-309-m` |
 
 ## Cambio
 
@@ -694,6 +726,20 @@ muestra el error real de cada uno.
   parte de un día al azar: dos tests en paralelo chocaban con el instructor de muestra. Un
   J08 se corrigió después: ver su fila (no es un `knownBug`). `npm run test:ci`: 3.137 pasan, 5 omitidos.
   `npm run lint:arch`: 0 errores.
+- **O02–O04 de `024a` (2026-10-04, noche):** 3 tests nuevos en `alumnos-b-lista` (bloque "nueva
+  matrícula desde la lista"), que guardan el Paso 1 del wizard por la interfaz y borran al terminar
+  el usuario, el alumno y la matrícula en borrador que ese paso crea. `O03 (parcial)` lleva
+  `knownBug` (B46); con `E2E_SHOW_KNOWN_BUGS=1` falla porque la URL termina en `/dashboard`. Los
+  tres pasan (3 de 3 esperados) sin datos `E2E-` sobrantes. No se tocó código de producción.
+- **Arreglos del wizard y de la tabla (2026-10-04/05):** `fix-307-m` (B46), `fix-308-m` (B47),
+  `fix-309-m` y `fix-310-m`, con 31 unitarios nuevos y un test de navegador nuevo (`fix-308-m`, a
+  1920 px). `O03 (parcial)` perdió su `knownBug`; O02 ahora comprueba el aviso y O04 que el
+  selector vuelve a "Todas las sedes". O03 completo se ejecutó a mano (ver su fila). Corrida
+  completa de los dos archivos más `smoke`: 120 de 120 esperados, con un solo `knownBug` (B10).
+  `npm run test:ci`: 3.170 pasan, 5 omitidos. `npm run lint:arch`: 0 errores.
+- **Cierre (2026-10-05):** `fix-311-m` a `fix-314-m`, `hotfix-140-m` y `hotfix-141-m`; N04 y W08 a mano; P07 y S05 declarados "no aplica". Revisión cruzada de los 414 renglones con ID de los dos checklists contra este registro: faltaban por registrar I01 · I02 de `024a` (ya cubiertos por un test) e Y03 de `024b` (test nuevo, junto con el caso "Debe $X" de T06), y B06 seguía sin datos (2 tests unitarios nuevos). Los demás ID sin fila propia son sospechas, datos de prueba o decisiones, que tienen su propia tabla. Sin casos pendientes.
+- **Observaciones corregidas (2026-10-05, tarde):** `hotfix-142-m` (Paso 6), `hotfix-143-m` (etiqueta del botón de ficha PDF de la tabla), `hotfix-144-m` (L13: doble clic en archivar hace una sola consulta), `fix-315-m` (I01: la ficha mostraba "Pago #N" para todo pago registrado desde "Registrar pago", porque ese formulario guarda el concepto en español), `fix-316-m` (J05: indicador de carga por cada ficha PDF), `fix-317-m` (el panel lateral se adapta al cambiar el tamaño de la ventana) y `fix-318-m` (correo con el contrato firmado). Un test de navegador nuevo (panel y etiqueta) y 40 unitarios nuevos, más 10 de Deno.
+- **Corrida final antes de cerrar el track (2026-10-05):** `npm run test:ci` 3.208 pasan, 5 omitidos, 0 fallan; `npm run lint:arch` 0 errores; compilación sin errores; 10 de 10 tests de Deno del correo del contrato; suite de navegador de los dos archivos más `smoke`: 124 de 124 esperados, con un solo `knownBug` (B10, `ASG-i-056`). Sin datos `E2E-` sobrantes en la base. Quedan a propósito dos alumnos de prueba: "Invitación Prueba Temp Mail" (users#6854) y "Prueba Wizard Matricula Completa" (users#6876, matrículas 0082 egresada y 0083 activa con sus 12 clases).
 - Última verificación (2026-10-01): 4 corridas completas con 57/57 esperados y 0 inesperados, y
   sin datos `E2E-` sobrantes en la BD. Una quinta corrida, hecha justo después de unas 25
   seguidas, falló en el login de 2 roles (30 s sin llegar al dashboard) y la siguiente volvió a

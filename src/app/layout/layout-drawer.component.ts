@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   computed,
   effect,
@@ -235,11 +236,26 @@ export class LayoutDrawerComponent implements OnDestroy {
     document.body.style.overflow = '';
   }
 
+  /**
+   * fix-317-m: el tamaño del panel se decidía solo al abrirlo. Si la ventana cambia con el panel
+   * abierto, se vuelve a aplicar el que corresponde (45 % en escritorio, pantalla completa en
+   * móvil); si no, al achicar la ventana el panel quedaba más ancho que ella y la X fuera de vista.
+   */
+  @HostListener('window:resize')
+  protected onWindowResize(): void {
+    if (!this.isCurrentlyVisible || this.leaving) return;
+    const backdropEl = this.el.nativeElement.querySelector(
+      '[data-drawer-backdrop]',
+    ) as HTMLElement | null;
+    this.gsapService.syncLayoutDrawerToViewport(this.el.nativeElement, backdropEl, this.width());
+  }
+
   back(): void {
     this.layoutDrawer.back();
   }
 
+  /** La X y el fondo: el componente abierto puede pedir confirmación antes (fix-310-m). */
   close(): void {
-    this.layoutDrawer.close();
+    void this.layoutDrawer.requestClose();
   }
 }

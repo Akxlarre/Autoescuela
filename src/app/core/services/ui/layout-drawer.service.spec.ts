@@ -63,4 +63,72 @@ describe('LayoutDrawerService', () => {
   it('should default badge() to null when unset', () => {
     expect(service.badge()).toBeNull();
   });
+
+  describe('cierre con confirmación (fix-310-m)', () => {
+    it('sin pregunta registrada, requestClose() cierra de inmediato', async () => {
+      service.open(DummyComponent, 'Test Title');
+
+      await service.requestClose();
+
+      expect(service.isOpen()).toBe(false);
+    });
+
+    it('si la pregunta responde que no, el panel sigue abierto', async () => {
+      service.open(DummyComponent, 'Test Title');
+      const guard = vi.fn().mockResolvedValue(false);
+      service.setCloseGuard(guard);
+
+      await service.requestClose();
+
+      expect(guard).toHaveBeenCalledTimes(1);
+      expect(service.isOpen()).toBe(true);
+    });
+
+    it('si la pregunta responde que sí, el panel se cierra', async () => {
+      service.open(DummyComponent, 'Test Title');
+      service.setCloseGuard(() => true);
+
+      await service.requestClose();
+
+      expect(service.isOpen()).toBe(false);
+    });
+
+    it('close() cierra sin preguntar', () => {
+      service.open(DummyComponent, 'Test Title');
+      const guard = vi.fn().mockResolvedValue(false);
+      service.setCloseGuard(guard);
+
+      service.close();
+
+      expect(guard).not.toHaveBeenCalled();
+      expect(service.isOpen()).toBe(false);
+    });
+
+    it('abrir otro panel descarta la pregunta del anterior', async () => {
+      service.open(DummyComponent, 'Primero');
+      const guard = vi.fn().mockResolvedValue(false);
+      service.setCloseGuard(guard);
+
+      service.open(DummyComponent, 'Segundo');
+      await service.requestClose();
+
+      expect(guard).not.toHaveBeenCalled();
+      expect(service.isOpen()).toBe(false);
+    });
+
+    it('dos pedidos de cierre seguidos preguntan una sola vez', async () => {
+      service.open(DummyComponent, 'Test Title');
+      let answer!: (value: boolean) => void;
+      const guard = vi.fn().mockReturnValue(new Promise<boolean>((resolve) => (answer = resolve)));
+      service.setCloseGuard(guard);
+
+      const first = service.requestClose();
+      const second = service.requestClose();
+      answer(false);
+      await Promise.all([first, second]);
+
+      expect(guard).toHaveBeenCalledTimes(1);
+      expect(service.isOpen()).toBe(true);
+    });
+  });
 });

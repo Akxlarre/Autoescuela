@@ -21,6 +21,7 @@ import type {
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
+import { formatPaymentConcept } from '@core/utils/ficha-pagos.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
@@ -345,6 +346,9 @@ export class AdminAlumnoDetalleFacade {
 
     // New student: clear and load
     this._alumno.set(null);
+    // fix-313-m: sin esto, tras ver a un alumno con 2+ matrículas la pantalla seguía reservando
+    // la fila del selector mientras cargaba el siguiente, y el skeleton del cuerpo no se veía.
+    this._enrollmentSummaries.set([]);
     this._inasistencias.set([]);
     this._inasistenciasClaseB.set([]);
     this._clasesPracticas.set([]);
@@ -815,7 +819,7 @@ export class AdminAlumnoDetalleFacade {
       (paymentsResult.data ?? []).map((p: any, idx: number) => ({
         id: p.id,
         fecha: this.formatDate(p.payment_date),
-        concepto: this.formatPaymentType(p.type, `Pago #${idx + 1}`),
+        concepto: formatPaymentConcept(p.type, idx + 1),
         monto: p.total_amount ?? 0,
         metodo: this.derivePaymentMethod(p),
         estado: this.formatPaymentStatus(p.status),
@@ -986,7 +990,7 @@ export class AdminAlumnoDetalleFacade {
       (paymentsRes.data ?? []).map((p: any, idx: number) => ({
         id: p.id,
         fecha: this.formatDate(p.payment_date),
-        concepto: this.formatPaymentType(p.type, `Pago #${idx + 1}`),
+        concepto: formatPaymentConcept(p.type, idx + 1),
         monto: p.total_amount ?? 0,
         metodo: this.derivePaymentMethod(p),
         estado: this.formatPaymentStatus(p.status),
@@ -1230,20 +1234,6 @@ export class AdminAlumnoDetalleFacade {
       minute: '2-digit',
       hour12: false,
     }).format(new Date(ts));
-  }
-
-  private formatPaymentType(type: string | null | undefined, fallback: string): string {
-    const map: Record<string, string> = {
-      enrollment: 'Matrícula',
-      online: 'Pago Online',
-      presential: 'Pago Presencial',
-      installment: 'Cuota',
-      partial: 'Pago Parcial',
-      cash: 'Pago en Efectivo',
-      transfer: 'Transferencia',
-      card: 'Pago con Tarjeta',
-    };
-    return map[type?.toLowerCase().trim() ?? ''] ?? fallback;
   }
 
   private formatPaymentStatus(status: string | null | undefined): string {

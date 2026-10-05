@@ -189,7 +189,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
           <button
             type="button"
             role="tab"
-            class="tap-area relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5"
+            class="tap-area relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
             [class.text-brand]="activeId() === tab.id"
             [class.text-text-muted]="activeId() !== tab.id"
             [class.hover:text-text-primary]="activeId() !== tab.id"

@@ -95,6 +95,37 @@ describe('AdminConsentimientosDrawerComponent (AC6)', () => {
     expect(consentsMock.revoke).not.toHaveBeenCalled();
   });
 
+  describe('consentimiento informativo (fix-311-m)', () => {
+    const operativas: ConsentRow = {
+      ...row,
+      id: 8,
+      consentType: 'comunicaciones_operativas',
+      typeLabel: 'Comunicaciones operativas (informativo, no revocable)',
+    };
+
+    it('ofrece revocar un consentimiento otorgado que el alumno puede revocar', () => {
+      const c = setup('admin');
+
+      expect(c.isRevocable(row)).toBe(true);
+      expect(c.isRevocable({ ...row, consentType: 'comunicaciones_promocionales' })).toBe(true);
+      expect(c.isRevocable({ ...row, status: 'revocado' })).toBe(false);
+      expect(setup('secretary').isRevocable(row)).toBe(false);
+    });
+
+    it('no ofrece revocar las comunicaciones operativas: son informativas', () => {
+      expect(setup('admin').isRevocable(operativas)).toBe(false);
+    });
+
+    it('tampoco las revoca si se llega a pedir', async () => {
+      setup('admin');
+
+      await component.onRevoke(operativas);
+
+      expect(confirmMock.confirm).not.toHaveBeenCalled();
+      expect(consentsMock.revoke).not.toHaveBeenCalled();
+    });
+  });
+
   it('traduce los tres estados a etiqueta y variante de badge', () => {
     const c = setup('admin');
 

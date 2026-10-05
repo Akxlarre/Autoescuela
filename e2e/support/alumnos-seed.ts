@@ -117,6 +117,11 @@ export async function createE2eAlumno(spec: E2eAlumnoSpec, cleanup: Cleanup): Pr
         `[e2e] No existe el curso "${courseName}" en la sede ${spec.branchId}: ${courseErr.message}`,
       );
 
+    // Nº de matrícula NO numérico a propósito, y solo válido para filas que el test borra al
+    // terminar (DG-080). El correlativo real sale de la última fila numérica de la serie
+    // (sede × tipo de licencia): un número de prueba numérico lo desviaría mientras exista;
+    // uno no numérico se ignora (fix-252-m). Si una fila sembrada acá se va a DEJAR en la base,
+    // hay que darle después su número real con get_next_enrollment_number(course_id).
     const number = `${E2E_PREFIX}${stamp.slice(-7)}${index}`;
     const pendingBalance = e.pendingBalance ?? 0;
     const row: Record<string, unknown> = {

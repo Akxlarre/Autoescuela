@@ -377,6 +377,40 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
     });
   });
 
+  describe('refresco al cerrar el panel de matrícula (fix-307-m)', () => {
+    let refreshes: number;
+
+    beforeEach(() => {
+      create();
+      refreshes = 0;
+      component.refreshRequested.subscribe(() => refreshes++);
+    });
+
+    it('pide la lista de nuevo cuando se cierra el panel que abrió "Nueva Matrícula"', () => {
+      component.openNuevaMatriculaDrawer();
+      component.onDrawerOpenChange(true);
+      expect(refreshes).toBe(0);
+
+      component.onDrawerOpenChange(false);
+
+      expect(refreshes).toBe(1);
+    });
+
+    it('no la pide al cerrarse un panel que la lista no abrió, ni dos veces por el mismo cierre', () => {
+      component.onDrawerOpenChange(true);
+      component.onDrawerOpenChange(false);
+      expect(refreshes).toBe(0);
+
+      component.openNuevaMatriculaDrawer();
+      component.onDrawerOpenChange(true);
+      component.onDrawerOpenChange(false);
+      component.onDrawerOpenChange(true);
+      component.onDrawerOpenChange(false);
+
+      expect(refreshes).toBe(1);
+    });
+  });
+
   describe('columnas ordenables', () => {
     it('"Sede" solo se ofrece cuando la columna se muestra', () => {
       create();
