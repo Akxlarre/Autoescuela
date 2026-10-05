@@ -1,7 +1,8 @@
 # Fix: Finalizar una promoción a mano no pide confirmación
 > id: fix-324-m-finalizar-promocion-solo-admin-con-confirmacion
 > refs: fix-319-m-testing-clase-profesional-piloto (S4, D3b) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -22,3 +23,12 @@ Ninguno — fix autónomo.
 
 ## Test de Regresión
 - Spec del drawer: elegir Finalizada y guardar abre la confirmación; cancelar no llama al facade.
+
+**Verificado el 2026-10-05:**
+- `admin-promocion-editar-drawer.component.spec.ts` (3 casos nuevos: confirma con el conteo,
+  cancelar no guarda, otros cambios no preguntan) y `promociones.facade.spec.ts`
+  (`countActiveEnrollments()`): 43/43 en verde en los archivos tocados. `tsc` y `lint:arch` sin
+  errores. Usa `ConfirmModalService` (servicio de UI, no Facade) y `PromocionesFacade.countActiveEnrollments()`.
+- Visual (Playwright, admin): editar Promoción 278 → Finalizada → Guardar abre "Finalizar
+  promoción" con el conteo ("0 alumnos con matrícula activa pasarán a completado…"), botón rojo
+  "Finalizar". Se cerró sin confirmar; por API la 278 sigue `in_progress`.

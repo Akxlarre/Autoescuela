@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type { PromocionStatus, PromocionTableRow } from '@core/models/ui/promocion-table.model';
 
 function makePromo(status: PromocionStatus): PromocionTableRow {
@@ -106,5 +107,76 @@ describe('AdminPromocionEditarDrawerComponent — opciones de estado por rol (fi
       c.name.set('Promoción 279 bis');
       expect(c.canSave()).toBe(true);
     });
+  });
+});
+
+describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (fix-324-m, D3b)', () => {
+  let facadeSpy: any;
+  let confirmSpy: any;
+
+  function editor(): any {
+    const component = TestBed.createComponent(AdminPromocionEditarDrawerComponent)
+      .componentInstance as any;
+    component.name.set('Promoción 279');
+    component.code.set('279');
+    component.status.set('in_progress');
+    return component;
+  }
+
+  beforeEach(() => {
+    facadeSpy = {
+      selectedPromocion: signal(makePromo('in_progress')),
+      canManageLifecycle: signal(true),
+      isSubmitting: signal(false),
+      editarPromocion: vi.fn().mockResolvedValue(true),
+      countActiveEnrollments: vi.fn().mockResolvedValue(12),
+      initialize: vi.fn(),
+    };
+    confirmSpy = { confirm: vi.fn() };
+    TestBed.configureTestingModule({
+      imports: [AdminPromocionEditarDrawerComponent],
+      providers: [
+        { provide: PromocionesFacade, useValue: facadeSpy },
+        { provide: ConfirmModalService, useValue: confirmSpy },
+        { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), close: vi.fn() } },
+      ],
+    });
+  });
+
+  it('pasar a Finalizada pregunta antes de guardar e informa cuántos alumnos pasan a completados', async () => {
+    confirmSpy.confirm.mockResolvedValue(true);
+    const c = editor();
+    c.status.set('finished');
+
+    await c.submit();
+
+    expect(facadeSpy.countActiveEnrollments).toHaveBeenCalledWith(1);
+    expect(confirmSpy.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('12 alumnos') }),
+    );
+    expect(facadeSpy.editarPromocion).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ status: 'finished' }),
+    );
+  });
+
+  it('si se cancela la confirmación, no guarda', async () => {
+    confirmSpy.confirm.mockResolvedValue(false);
+    const c = editor();
+    c.status.set('finished');
+
+    await c.submit();
+
+    expect(facadeSpy.editarPromocion).not.toHaveBeenCalled();
+  });
+
+  it('guardar sin cambiar a Finalizada no pide confirmación', async () => {
+    const c = editor();
+    c.name.set('Promoción 279 bis');
+
+    await c.submit();
+
+    expect(confirmSpy.confirm).not.toHaveBeenCalled();
+    expect(facadeSpy.editarPromocion).toHaveBeenCalled();
   });
 });

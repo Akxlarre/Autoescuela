@@ -454,6 +454,20 @@ export class PromocionesFacade {
     ]);
   }
 
+  /**
+   * Matrículas activas de la promoción: las que el trigger de finalizar pasa a `completed`
+   * (fix-324-m, D3b). Se muestra en la confirmación antes de finalizar a mano.
+   */
+  async countActiveEnrollments(promotionId: number): Promise<number> {
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select('id, promotion_courses!inner(promotion_id)')
+      .eq('promotion_courses.promotion_id', promotionId)
+      .eq('status', 'active');
+    if (error) throw error;
+    return (data ?? []).length;
+  }
+
   async editarPromocion(id: number, payload: EditarPromocionPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {

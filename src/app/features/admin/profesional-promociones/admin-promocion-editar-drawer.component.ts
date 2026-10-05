@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
@@ -243,6 +244,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 export class AdminPromocionEditarDrawerComponent {
   protected readonly facade = inject(PromocionesFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly name = signal('');
@@ -369,6 +371,23 @@ export class AdminPromocionEditarDrawerComponent {
   protected async submit(): Promise<void> {
     const p = this.facade.selectedPromocion();
     if (!p) return;
+
+    // Finalizar pasa todas sus matrículas activas a completadas (trigger) y no se deshace desde
+    // la app: se confirma antes, con el número de alumnos afectados (fix-324-m, D3b).
+    if (this.status() === 'finished' && p.status !== 'finished') {
+      const activos = await this.facade.countActiveEnrollments(p.id);
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Finalizar promoción',
+        message:
+          (activos === 1
+            ? '1 alumno con matrícula activa pasará a completado y dejará'
+            : `${activos} alumnos con matrícula activa pasarán a completado y dejarán`) +
+          ' de aparecer en la Base de Alumnos Profesional. Esta acción no se puede deshacer desde la app.',
+        severity: 'danger',
+        confirmLabel: 'Finalizar',
+      });
+      if (!confirmed) return;
+    }
 
     const success = await this.facade.editarPromocion(p.id, {
       name: this.name().trim(),

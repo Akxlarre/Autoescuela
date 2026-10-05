@@ -536,4 +536,14 @@ describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
 
     expect(await facade.suggestNextCode()).toBe('281');
   });
+
+  // fix-324-m (D3b): el modal de finalizar informa cuántas matrículas activas pasan a completadas
+  it('countActiveEnrollments() cuenta las matrículas activas de la promoción', async () => {
+    const { facade, mockSupabase } = setup({ enrollments: { data: [{ id: 1 }, { id: 2 }] } });
+
+    expect(await facade.countActiveEnrollments(7)).toBe(2);
+    const builder = mockSupabase._builders.get('enrollments');
+    expect(builder.eq).toHaveBeenCalledWith('promotion_courses.promotion_id', 7);
+    expect(builder.eq).toHaveBeenCalledWith('status', 'active');
+  });
 });
