@@ -120,9 +120,34 @@ que pasa a ser parte del testing (bloque 3). Al revisarla apareció una sospecha
 
 ## Resultados
 
-### Bloque 1 — Seguridad de edge functions (S1, S2 residuales)
+### Bloque 1 — Seguridad (S1, S2 residuales, S6)
 
-_Pendiente._
+Ejecutado el 2026-10-05 contra la BD de desarrollo (`skvekggejikzxhzsjmkz`) con scripts de API
+(supabase-js). Atacante: `secretaria@test.com` (sede 1, sin Profesional, sin grant multi-sede).
+Víctima: sede 2.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| **S6 — lectura** | ❌ | secretariaA lee de la sede 2: 12 `professional_promotions`, 48 `promotion_courses`, 25 `class_book`. Las políticas vigentes son las de `20260301000011_10_rls_policies.sql:489-529,666-676` (+ `select_class_book` de `20260303120000`): solo `auth_user_role() IN ('admin','secretary')`, sin sede; ninguna migración posterior las cambió. |
+| **S6 — escritura** | ❌ | Promoción desechable creada por admin en sede 2 (`E2E-S6 prueba RLS`, id 23, `cancelled`, 2099-01-05). secretariaA la **editó** (UPDATE → 1 fila) y la **borró** (DELETE → 1 fila). No quedó nada que limpiar. Con el `status` habría disparado S4 (alumnos a `completed`). **El motivo por el que `0047-b` excluyó estas tablas ("el módulo está bloqueado en el piloto") ya no se cumple:** Promociones y Libro están visibles. → **bug propio.** |
+| **S1 — sin sesión** | ✅ regresión | Corregido por `fix-043-i` (`requireStaff(['admin','secretary'])`). |
+| **S1 — sede** | ✅ aceptado | secretariaA pidió el PDF del curso 54 (promoción 279, sede 2): **200**, URL firmada, PDF de 367 KB descargado. El storage directo sí la bloquea ("Object not found", `20261001200000_storage_aislamiento_por_sede.sql`); la función lo salta con la clave de servicio. **No es bug:** `0009-i` decidió no validar la sede en el servidor (Ignacio, 2026-10-01), mismo criterio que Matías ratificó para el carnet (`fix-264-m` J08). |
+| **S1 — teléfono** | — | El PDF **no** imprime teléfono (corrige el checklist). La función lo consulta igual (`index.ts:107,199`) sin usarlo: campo muerto, conviene dejar de pedirlo. |
+| **S1 — reabre el libro** | ✅ sin efecto | El `upsert` pone `status = 'active'` aunque el libro esté `in_review` (lo pone el trigger `trg_class_book_lifecycle` al cambiar el estado de la promoción) — nada en la app pasa un libro a `closed`. **Ni `in_review` ni `closed` se usan en `src/`**: el ciclo de vida del libro hoy no tiene efecto visible. Se anota, no se abre fix. |
+| **S2 — sin sesión** | ✅ regresión | Corregido por `fix-043-i` (solo claim `service_role`). |
+| **S2 — hasta 10 por llamada** | ❌ por lectura | No se ejecutó (requiere la service key y crearía promociones reales). Confirmado leyendo el código: `reserve_next_promotion_slot` solo corta con `in_progress >= 1 AND planned >= 2` (`20260829110000…sql:68-70`); con 0 en curso nunca se cumple y el loop de la función (`index.ts`, `for i < 10`) reserva 10 planificadas por llamada. Pasa si la única en curso se finaliza o cancela a mano — justo lo que D3b permite. → **bug propio.** |
+| **S2 — placeholder** | ❌ por lectura | La reserva (INSERT con `end_date = start_date`) y el armado (UPDATE de nombre/fecha de fin, cursos, libros) no son atómicos: si falla el fetch de feriados o un INSERT, la promoción queda planificada, sin cursos, y cuenta para el colchón. Mismo fix que el anterior. |
+
+**Bug nuevo encontrado (S24):** 🟡 **Generar el PDF le borra la sede al libro.** (Impacto bajo hoy:
+solo la sede 2 tiene Clase Profesional y siempre será así — Matías, 2026-10-05 —, por eso no se
+había notado. Se corrige igual.) La consulta de la
+función pide `branches(name, address)` **sin `id`** (`generate-class-book-pdf/index.ts:92`), así
+que `branch?.id` es siempre `undefined` y el `upsert` escribe `branch_id = null` (`:130,267`), aun
+si el libro ya tenía sede. En la BD de desarrollo: **13 libros con `branch_id = null`**, los 9
+`active` y 4 `in_review` — todos de promociones de la sede 2. Viene desde el commit que creó el
+módulo (`d75c2777`). Bloquea S6: un RLS por sede sobre `class_book` dejaría esos libros fuera
+(`branch_visible()` con NULL, ver `0047-b`), así que el fix de S6 tiene que corregir la función y
+rellenar la sede de esas filas antes.
 
 ### Bloque 2 — A–I: acceso, Base Alumnos Profesional, Papelera, ficha, links bloqueados
 
@@ -144,7 +169,8 @@ _Pendiente._
 
 | Sospecha / caso | Track | Estado |
 |---|---|---|
-| — | — | — |
+| S24 + S6 — el PDF borra la sede del libro; RLS de promociones/cursos/libro sin sede | _por abrir_ | ❌ confirmado |
+| S2 — el cron crea hasta 10 promociones sin una en curso; reserva no atómica | _por abrir_ | ❌ confirmado por lectura |
 
 ## Test de regresión
 
