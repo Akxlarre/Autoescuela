@@ -287,7 +287,6 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
-| ASG-i-024 | Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos | `m` | [fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos](fixes/fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos/fix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -435,6 +434,7 @@
 | ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
 | ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 | ASG-i-041 | Edge functions que responden sin sesión | [fix-043-i-edge-functions-sin-sesion](fixes/fix-043-i-edge-functions-sin-sesion/fix.md) | 2026-10-02 |
+| ASG-i-024 | Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos | [fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos](fixes/fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos/fix.md) | 2026-10-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---

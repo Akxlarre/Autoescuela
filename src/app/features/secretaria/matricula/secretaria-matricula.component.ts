@@ -13,6 +13,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { calcAge } from '@core/utils/age.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
+import { hasUnsavedPersonalData } from '@core/utils/enrollment-unsaved.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -148,6 +149,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       if (currentView !== 'wizard') return;
 
       this._step1Form.set(DEFAULT_PERSONAL_DATA);
+      this._step1Saved.set(DEFAULT_PERSONAL_DATA);
       void this.enrollment.loadCourses(branchId);
     });
 
@@ -218,6 +220,14 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   // ── Estado local del formulario paso 1 (datos no persistidos aún) ────────
   private readonly _step1Form = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
+  /** El Paso 1 tal como está guardado (o vacío si aún no se guarda): base del aviso de fix-310-m. */
+  private readonly _step1Saved = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
+  /** True si en el Paso 1 hay texto escrito que se perdería al cerrar el wizard (fix-310-m). */
+  readonly hasUnsavedStep1 = computed(
+    () =>
+      this._viewMode() === 'wizard' &&
+      hasUnsavedPersonalData(this._step1Form(), this._step1Saved()),
+  );
 
   // ── Estado local del contrato (generación + firma) ────────────────────────
   private readonly _contractPdfUrl = signal<string | null>(null);
@@ -459,7 +469,20 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     () => `stepper-premium stepper-premium--step-${this.activeStep() + 1}`,
   );
 
+  /** True si este wizard se abrió como panel sobre otra pantalla (no como página propia). */
+  private openedAsPanel = false;
+  /**
+   * RUT que traía la dirección al abrirse el wizard (re-matrícula). Se anota al abrir, no al
+   * precargar: el wizard puede cerrarse antes de llegar al Paso 1 (ej. desde la lista de borradores).
+   */
+  private prefilledRut: string | null = null;
+
   ngOnInit(): void {
+    this.openedAsPanel = this.layoutDrawer.component() === SecretariaMatriculaComponent;
+    this.prefilledRut = this.route.snapshot.queryParamMap.get('rut');
+    // fix-310-m: la X y el clic fuera del panel preguntan antes si hay datos sin guardar. El
+    // panel descarta esta pregunta solo, al abrir otro componente o al terminar de cerrarse.
+    this.layoutDrawer.setCloseGuard(() => this.confirmDiscardUnsaved());
     this.setupDrawerActions();
     this.initWizard();
   }
@@ -468,11 +491,30 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this.layoutDrawer.setActions([]);
     this.layoutDrawer.setBadge(null);
     this.branchFacade.setRequiresSpecificBranch(false);
+    // fix-309-m: la sede elegida en la pantalla de selección solo vale para esta matrícula.
+    this.branchFacade.restoreTemporaryBranch();
+    this.clearRutFromUrl();
   }
 
-  /** Llamado por BranchGateComponent cuando el admin elige una sede. */
+  /**
+   * hotfix-141-m: "Re-matricular" pasa el RUT del egresado por la dirección (?rut=). Al cerrarse el
+   * wizard abierto como panel, ese parámetro se quita para que no quede en la pantalla de origen.
+   * Solo si la dirección sigue siendo la misma: si el usuario ya navegó a otra parte, no se toca.
+   */
+  private clearRutFromUrl(): void {
+    if (!this.openedAsPanel || !this.prefilledRut) return;
+    const tree = this.router.parseUrl(this.router.url);
+    if (tree.queryParams['rut'] !== this.prefilledRut) return;
+    delete tree.queryParams['rut'];
+    void this.router.navigateByUrl(tree, { replaceUrl: true });
+  }
+
+  /**
+   * Llamado por BranchGateComponent cuando el admin elige una sede. Es un cambio temporal
+   * (fix-309-m): al cerrarse el wizard el selector vuelve a "Todas las sedes".
+   */
   onBranchSelectedFromGate(id: number): void {
-    this.branchFacade.selectBranch(id);
+    this.branchFacade.selectBranchTemporarily(id);
     void this.initWizard();
   }
 
@@ -521,6 +563,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     // Precarga los datos del alumno que vuelve antes de mostrar el wizard.
     const rut = this.route.snapshot.queryParamMap.get('rut');
     if (rut) await this.prefillStep1(rut);
+    // Lo que llega precargado (incluido ese RUT) no lo escribió el usuario.
+    this._step1Saved.set(this._step1Form());
 
     this._viewMode.set('wizard');
   }
@@ -536,7 +580,10 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       // Sincronizar _step1Form con los datos del draft para que onStep1Next
       // envíe los datos correctos si el usuario navega de vuelta al paso 1.
       const pd = this.enrollment.personalData();
-      if (pd) this._step1Form.set(pd);
+      if (pd) {
+        this._step1Form.set(pd);
+        this._step1Saved.set(pd);
+      }
       this._viewMode.set('wizard');
     } else {
       // Fallback: volver a la lista de drafts
@@ -608,6 +655,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const prefill = await this.enrollment.prefillFromStudent(rut);
     if (!prefill) return;
     this._step1Form.update((form) => ({ ...form, ...prefill, rut }));
+    // Los datos que vienen de la base no son texto escrito por el usuario (fix-310-m).
+    this._step1Saved.update((saved) => ({ ...saved, ...prefill }));
     this.toast.info(
       'Datos precargados',
       'Se cargaron los datos personales de este alumno automáticamente.',
@@ -620,6 +669,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       const branchId = this.activeBranchId();
       const ok = await this.enrollment.savePersonalData(this._step1Form(), branchId);
       if (ok) {
+        this._step1Saved.set(this._step1Form());
         const category = this._step1Form().courseCategory;
         if (category === 'non-professional') {
           await this.enrollment.loadInstructors(branchId);
@@ -630,6 +680,27 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /** "Cancelar" del Paso 1: mismo aviso que al cerrar el panel (fix-310-m). */
+  async onStep1Cancel(): Promise<void> {
+    if (await this.confirmDiscardUnsaved()) this.finishWizard();
+  }
+
+  /**
+   * Responde si se puede cerrar el wizard. Solo pregunta cuando en el Paso 1 hay texto escrito
+   * sin guardar; desde el Paso 2 la matrícula ya es un borrador y no se pierde nada.
+   */
+  async confirmDiscardUnsaved(): Promise<boolean> {
+    if (!this.hasUnsavedStep1()) return true;
+    return this.enrollment.confirm({
+      title: '¿Cerrar sin guardar?',
+      message:
+        'Los datos que escribiste en el Paso 1 todavía no se guardan. Si cierras ahora, se pierden.',
+      severity: 'warn',
+      confirmLabel: 'Sí, cerrar',
+      cancelLabel: 'Seguir editando',
+    });
   }
 
   // ── Paso 2: Asignación ────────────────────────────────────────────────────
@@ -808,17 +879,18 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   // ── Paso 6: Confirmación + cierre ────────────────────────────────────────
   finishWizard(): void {
-    const role = this.auth.currentUser()?.role ?? 'secretaria';
-    const dashboard = role === 'admin' ? '/app/admin/dashboard' : '/app/secretaria/dashboard';
+    // fix-307-m: abierto como panel sobre otra pantalla, cancelar o terminar solo cierra el
+    // panel. Ir al Inicio es para el wizard como página propia (/app/<rol>/matricula).
+    const openedAsPanel = this.layoutDrawer.component() === SecretariaMatriculaComponent;
     this.enrollment.reset();
     this.docs.reset();
     this.payment.reset();
     this.layoutDrawer.close();
-    this.router.navigate([dashboard]);
-  }
+    if (openedAsPanel) return;
 
-  onDownloadReceipt(): void {
-    // TODO: abrir URL del comprobante de pago cuando esté disponible vía EnrollmentPaymentFacade
+    const role = this.auth.currentUser()?.role ?? 'secretaria';
+    const dashboard = role === 'admin' ? '/app/admin/dashboard' : '/app/secretaria/dashboard';
+    this.router.navigate([dashboard]);
   }
 
   onDownloadContract(): void {

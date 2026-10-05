@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  untracked,
   input,
   output,
   signal,
@@ -497,10 +499,11 @@ interface AlumnosEmptyState {
                             class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Exportar Ficha PDF"
                             aria-label="Exportar Ficha PDF"
-                            [disabled]="isGeneratingFicha() === alumno.enrollmentId"
+                            data-llm-action="export-student-row-pdf"
+                            [disabled]="isGeneratingFichaOf(alumno)"
                             (click)="exportarFicha(alumno)"
                           >
-                            @if (isGeneratingFicha() === alumno.enrollmentId) {
+                            @if (isGeneratingFichaOf(alumno)) {
                               <app-icon name="loader-circle" [size]="16" class="animate-spin" />
                             } @else {
                               <app-icon name="download" [size]="16" />
@@ -548,7 +551,7 @@ interface AlumnosEmptyState {
                       [trashView]="trashView()"
                       [showSede]="showSedeColumn()"
                       [basePath]="basePath()"
-                      [isGeneratingFicha]="isGeneratingFicha()"
+                      [isGeneratingFicha]="isGeneratingFichaOf(alumno)"
                       (restaurarRequested)="restaurarRequested.emit($event)"
                       (archivarRequested)="archivarRequested.emit($event)"
                       (fichaExportRequested)="fichaExportRequested.emit($event)"
@@ -620,7 +623,8 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   readonly alumnos = input.required<AlumnoTableRow[]>();
   readonly isLoading = input(false);
   readonly isExporting = input(false);
-  readonly isGeneratingFicha = input<number | false>(false);
+  /** Matrículas cuya ficha PDF se está generando; pueden ser varias a la vez (fix-316-m). */
+  readonly generatingFichaIds = input<ReadonlySet<number>>(new Set());
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/secretaria');
   readonly showSedeColumn = input(false);
@@ -651,6 +655,24 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   // ── Internal UI state ────────────────────────────────────────────────────
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
+  /** True desde que esta lista abre el panel de "Nueva Matrícula" hasta que se cierra. */
+  private matriculaDrawerOpened = false;
+
+  constructor() {
+    // fix-307-m: al cerrarse el panel de matrícula que abrió esta lista, se pide la lista de
+    // nuevo para que el alumno recién matriculado aparezca sin recargar la página.
+    effect(() => {
+      const isOpen = this.layoutDrawer.isOpen();
+      untracked(() => this.onDrawerOpenChange(isOpen));
+    });
+  }
+
+  /** Emite `refreshRequested` una vez, cuando se cierra el panel de matrícula que abrió la lista. */
+  onDrawerOpenChange(isOpen: boolean): void {
+    if (isOpen || !this.matriculaDrawerOpened) return;
+    this.matriculaDrawerOpened = false;
+    this.refreshRequested.emit();
+  }
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
   readonly heroSubtitle = computed(() =>
     this.trashView() ? 'Papelera — Alumnos archivados' : 'Listado de alumnos de la escuela',
@@ -976,6 +998,7 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   }
 
   openNuevaMatriculaDrawer(): void {
+    this.matriculaDrawerOpened = true;
     this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
@@ -985,6 +1008,11 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
       rows: this.sortedAlumnos(),
       showSede: this.showSedeColumn(),
     });
+  }
+
+  /** ¿Se está generando la ficha PDF de este alumno? (fix-316-m) */
+  isGeneratingFichaOf(alumno: AlumnoTableRow): boolean {
+    return alumno.enrollmentId !== undefined && this.generatingFichaIds().has(alumno.enrollmentId);
   }
 
   exportarFicha(alumno: AlumnoTableRow): void {

@@ -49,7 +49,12 @@ describe('SecretariaMatriculaComponent — branch-gate reactivity (fix-067)', ()
       providers: [
         {
           provide: LayoutDrawerFacadeService,
-          useValue: { setActions: vi.fn(), setBadge: vi.fn() },
+          useValue: {
+            setActions: vi.fn(),
+            setBadge: vi.fn(),
+            setCloseGuard: vi.fn(),
+            component: vi.fn().mockReturnValue(null),
+          },
         },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
@@ -109,6 +114,29 @@ describe('SecretariaMatriculaComponent — branch-gate reactivity (fix-067)', ()
     TestBed.tick();
 
     expect(enrollmentFacadeSpy.loadCourses).toHaveBeenCalledWith(2);
+  });
+
+  describe('sede elegida en el wizard (fix-309-m)', () => {
+    // BranchFacade recuerda la sede en localStorage: los tests anteriores dejan una elegida.
+    beforeEach(() => branchFacade.reset());
+
+    it('la sede elegida en la pantalla de selección vale mientras dura el wizard y se deshace al cerrarlo', () => {
+      component.onBranchSelectedFromGate(2);
+      expect(branchFacade.selectedBranchId()).toBe(2);
+
+      component.ngOnDestroy();
+
+      expect(branchFacade.selectedBranchId()).toBeNull();
+    });
+
+    it('una sede elegida en el topbar no se toca al cerrar el wizard', () => {
+      branchFacade.selectBranch(2);
+      TestBed.tick();
+
+      component.ngOnDestroy();
+
+      expect(branchFacade.selectedBranchId()).toBe(2);
+    });
   });
 });
 
@@ -253,5 +281,190 @@ describe('SecretariaMatriculaComponent — error al subir foto carnet inválida 
     expect(docsFacadeSpy.uploadCarnetPhoto).not.toHaveBeenCalled();
     expect(docsFacadeSpy.setUploadError).toHaveBeenCalledWith(expect.any(String));
     expect(toastSpy.error).toHaveBeenCalled();
+  });
+});
+
+// Cancelar o terminar la matrícula abierta como panel no saca de la pantalla — fix-307-m.
+describe('SecretariaMatriculaComponent — finishWizard (fix-307-m)', () => {
+  function setup(drawerComponent: unknown) {
+    const enrollmentFacadeSpy: any = {
+      currentStep: vi.fn().mockReturnValue(1),
+      personalData: vi.fn().mockReturnValue(null),
+      courseOptions: vi.fn().mockReturnValue([]),
+      paymentMode: vi.fn().mockReturnValue('total'),
+      enrollmentBasePrice: vi.fn().mockReturnValue(0),
+      selectedInstructorId: vi.fn().mockReturnValue(null),
+      scheduleGrid: vi.fn().mockReturnValue(null),
+      activeDrafts: vi.fn().mockReturnValue([]),
+      docsComplete: vi.fn().mockReturnValue(true),
+      loadCourses: vi.fn().mockResolvedValue(undefined),
+      loadInstructors: vi.fn().mockResolvedValue(undefined),
+      loadScheduleGrid: vi.fn().mockResolvedValue(undefined),
+      loadActiveDrafts: vi.fn().mockResolvedValue([]),
+      reset: vi.fn(),
+    };
+    const drawerSpy = {
+      setActions: vi.fn(),
+      setBadge: vi.fn(),
+      setCloseGuard: vi.fn(),
+      close: vi.fn(),
+      component: vi.fn().mockReturnValue(drawerComponent),
+    };
+    const routerSpy = { navigate: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LayoutDrawerFacadeService, useValue: drawerSpy },
+        { provide: Router, useValue: routerSpy },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ role: 'secretaria', branchId: 1 }),
+            whenReady: Promise.resolve(),
+          },
+        },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: EnrollmentFacade, useValue: enrollmentFacadeSpy },
+        { provide: EnrollmentDocumentsFacade, useValue: { reset: vi.fn() } },
+        { provide: EnrollmentPaymentFacade, useValue: { reset: vi.fn() } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
+      ],
+    });
+
+    const component = TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent());
+    TestBed.tick();
+    return { component, drawerSpy, routerSpy, enrollmentFacadeSpy };
+  }
+
+  it('abierto como panel: cierra el panel y no navega', () => {
+    const { component, drawerSpy, routerSpy, enrollmentFacadeSpy } = setup(
+      SecretariaMatriculaComponent,
+    );
+
+    component.finishWizard();
+
+    expect(enrollmentFacadeSpy.reset).toHaveBeenCalled();
+    expect(drawerSpy.close).toHaveBeenCalled();
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+  });
+
+  it('como página propia: lleva al Inicio del rol', () => {
+    const { component, routerSpy } = setup(null);
+
+    component.finishWizard();
+
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/secretaria/dashboard']);
+  });
+
+  describe('RUT de la re-matrícula en la dirección (hotfix-141-m)', () => {
+    /** Wizard ya iniciado, con la dirección actual `url` y el RUT que usó para precargar. */
+    function setupConRut(drawerComponent: unknown, queryParams: Record<string, string>) {
+      const ctx = setup(drawerComponent);
+      const tree = { queryParams: { ...queryParams } };
+      const router = ctx.routerSpy as any;
+      router.url = '/app/secretaria/ex-alumnos';
+      router.parseUrl = vi.fn().mockReturnValue(tree);
+      router.navigateByUrl = vi.fn().mockResolvedValue(true);
+      ctx.component.ngOnInit();
+      (ctx.component as any).prefilledRut = '11.111.111-1';
+      return { ...ctx, router, tree };
+    }
+
+    it('abierto como panel: al cerrarse quita el rut y conserva el resto de la dirección', () => {
+      const { component, router, tree } = setupConRut(SecretariaMatriculaComponent, {
+        rut: '11.111.111-1',
+        orden: 'nombre',
+      });
+
+      component.ngOnDestroy();
+
+      expect(tree.queryParams).toEqual({ orden: 'nombre' });
+      expect(router.navigateByUrl).toHaveBeenCalledWith(tree, { replaceUrl: true });
+    });
+
+    it('si la dirección ya no lleva ese rut (el usuario navegó a otra parte), no la toca', () => {
+      const { component, router } = setupConRut(SecretariaMatriculaComponent, {});
+
+      component.ngOnDestroy();
+
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('como página propia no toca la dirección', () => {
+      const { component, router } = setupConRut(null, { rut: '11.111.111-1' });
+
+      component.ngOnDestroy();
+
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('aviso de datos sin guardar (fix-310-m)', () => {
+    function setupWizard(confirmAnswer: boolean) {
+      const ctx = setup(SecretariaMatriculaComponent);
+      ctx.enrollmentFacadeSpy.confirm = vi.fn().mockResolvedValue(confirmAnswer);
+      ctx.enrollmentFacadeSpy.savePersonalData = vi.fn().mockResolvedValue(true);
+      (ctx.component as any)._viewMode.set('wizard');
+      const escribir = (firstNames: string) =>
+        ctx.component.onStep1DataChange({ ...ctx.component.step1Data(), firstNames });
+      return { ...ctx, escribir };
+    }
+
+    it('al iniciar registra su pregunta de cierre en el panel', () => {
+      const { component, drawerSpy } = setupWizard(true);
+
+      component.ngOnInit();
+
+      expect(drawerSpy.setCloseGuard).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('sin nada escrito deja cerrar sin preguntar', async () => {
+      const { component, enrollmentFacadeSpy } = setupWizard(false);
+
+      await expect(component.confirmDiscardUnsaved()).resolves.toBe(true);
+      expect(enrollmentFacadeSpy.confirm).not.toHaveBeenCalled();
+    });
+
+    it('con algo escrito pregunta y respeta la respuesta', async () => {
+      const { component, enrollmentFacadeSpy, escribir } = setupWizard(false);
+      escribir('Ana');
+
+      await expect(component.confirmDiscardUnsaved()).resolves.toBe(false);
+      expect(enrollmentFacadeSpy.confirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('con el Paso 1 ya guardado no pregunta', async () => {
+      const { component, enrollmentFacadeSpy, escribir } = setupWizard(false);
+      escribir('Ana');
+
+      await component.onStep1Next();
+
+      await expect(component.confirmDiscardUnsaved()).resolves.toBe(true);
+      expect(enrollmentFacadeSpy.confirm).not.toHaveBeenCalled();
+    });
+
+    it('"Cancelar" con datos escritos no cierra si se responde que no', async () => {
+      const { component, drawerSpy, escribir } = setupWizard(false);
+      escribir('Ana');
+
+      await component.onStep1Cancel();
+
+      expect(drawerSpy.close).not.toHaveBeenCalled();
+    });
+
+    it('"Cancelar" con datos escritos cierra si se confirma', async () => {
+      const { component, drawerSpy, escribir } = setupWizard(true);
+      escribir('Ana');
+
+      await component.onStep1Cancel();
+
+      expect(drawerSpy.close).toHaveBeenCalled();
+    });
   });
 });

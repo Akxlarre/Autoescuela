@@ -41,7 +41,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       (trashViewToggled)="onTrashViewToggled()"
       (restaurarRequested)="onRestaurar($event)"
       (exportRequested)="onExport($event)"
-      [isGeneratingFicha]="facade.isGeneratingFicha()"
+      [generatingFichaIds]="facade.generatingFichaIds()"
       (fichaExportRequested)="onExportarFicha($event)"
     />
 

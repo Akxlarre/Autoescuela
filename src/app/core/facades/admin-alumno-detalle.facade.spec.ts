@@ -1391,6 +1391,34 @@ describe('AdminAlumnoDetalleFacade', () => {
         expect(facade.historialReagendamientos()).toEqual([]);
       });
 
+      it('al abrir otro alumno, la carga no hereda las matrículas del anterior (fix-313-m)', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+        expect(facade.enrollmentSummaries()).toHaveLength(2);
+
+        // Sin esperar: lo que importa es el estado MIENTRAS se muestra el skeleton.
+        const carga = facade.initialize(43);
+
+        expect(facade.isLoading()).toBe(true);
+        expect(facade.enrollmentSummaries()).toEqual([]);
+        await carga;
+      });
+
+      it('reabrir el mismo alumno conserva sus matrículas y no muestra skeleton (fix-313-m)', async () => {
+        await initWithEnrollments([
+          makeEnrollmentRow(303, 'active', '2026-03-01'),
+          makeEnrollmentRow(304, 'completed', '2026-01-01'),
+        ]);
+
+        const carga = facade.initialize(42);
+
+        expect(facade.isLoading()).toBe(false);
+        expect(facade.enrollmentSummaries()).toHaveLength(2);
+        await carga;
+      });
+
       it('descarta el historial de una matrícula que ya no es la elegida (fix-298-m)', async () => {
         const mock = await initWithEnrollments([
           makeEnrollmentRow(303, 'active', '2026-03-01'),

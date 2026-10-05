@@ -8,7 +8,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
-import type { ConsentRow } from '@core/models/ui/consent.model';
+import { NON_REVOCABLE_CONSENT_TYPES, type ConsentRow } from '@core/models/ui/consent.model';
 
 /**
  * AdminConsentimientosDrawerComponent — Consentimientos del alumno (spec 0009-m, AC6/AC-E3).
@@ -114,7 +114,7 @@ import type { ConsentRow } from '@core/models/ui/consent.model';
               }
             </dl>
 
-            @if (canRevoke() && row.status === 'otorgado') {
+            @if (isRevocable(row)) {
               <footer class="flex justify-end pt-1">
                 <button
                   type="button"
@@ -157,7 +157,20 @@ export class AdminConsentimientosDrawerComponent {
     });
   }
 
+  /**
+   * Se ofrece revocar solo lo otorgado que el alumno puede revocar: los tipos informativos
+   * (comunicaciones operativas) no son una elección suya (fix-311-m).
+   */
+  protected isRevocable(row: ConsentRow): boolean {
+    return (
+      this.canRevoke() &&
+      row.status === 'otorgado' &&
+      !NON_REVOCABLE_CONSENT_TYPES.includes(row.consentType)
+    );
+  }
+
   protected async onRevoke(row: ConsentRow): Promise<void> {
+    if (!this.isRevocable(row)) return;
     const confirmed = await this.confirmModal.confirm({
       title: 'Registrar revocación',
       message: `Se marcará "${row.typeLabel}" como revocado con la fecha de hoy. El registro original se conserva: la revocación no borra que el consentimiento se otorgó.`,

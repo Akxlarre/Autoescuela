@@ -1452,6 +1452,9 @@ export class EnrollmentFacade {
       // Crear cuenta Auth del alumno y enviarle correo de invitación.
       // Fire-and-forget: no bloquea la confirmación si el correo falla.
       this.inviteStudentToAuth(draft.userId, this._personalData()?.email);
+      // fix-318-m: copia del contrato firmado al correo del alumno. Va aparte de la invitación,
+      // que no admite adjuntos y que un alumno con cuenta ya activa (re-matrícula) no recibe.
+      this.sendSignedContractEmail(draft.enrollmentId);
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
@@ -1554,6 +1557,26 @@ export class EnrollmentFacade {
           'La matrícula se confirmó, pero no se pudo crear la cuenta del alumno. Revisa su email desde la ficha del alumno.',
         );
       });
+  }
+
+  /**
+   * Envía al alumno su contrato firmado como adjunto (fix-318-m). Fire-and-forget, igual que la
+   * invitación: la matrícula ya está confirmada y un fallo del correo solo se avisa.
+   */
+  private sendSignedContractEmail(enrollmentId: number): void {
+    const warn = (err: unknown) => {
+      console.error('send-enrollment-contract-email error:', err);
+      this.toast.warning(
+        'La matrícula se confirmó, pero no se pudo enviar el contrato al correo del alumno. Puedes descargarlo y enviárselo.',
+      );
+    };
+
+    this.supabase.client.functions
+      .invoke('send-enrollment-contract-email', { body: { enrollment_id: enrollmentId } })
+      .then(({ error }) => {
+        if (error) warn(error);
+      })
+      .catch(warn);
   }
 
   /**

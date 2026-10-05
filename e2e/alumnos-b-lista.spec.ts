@@ -15,7 +15,8 @@ import {
   markCertificateSent,
 } from './support/alumnos-seed';
 import { getAdminClient } from './support/supabase-admin';
-import { expect, knownBug, test, watchErrors } from './support/fixtures';
+import { calculateRutDv, formatRut } from '../src/app/core/utils/rut.utils';
+import { expect, knownBug, test, watchErrors, type Cleanup } from './support/fixtures';
 
 const SEDE_A = 1; // Autoescuela Chillán
 const SEDE_B = 2; // Conductores Chillán
@@ -1129,6 +1130,36 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     await expect(page.getByText(REPORT)).toBeVisible(CARGA);
     await revisar('una sede');
   });
+
+  test('fix-308-m: a 1920 px el ancho que sobra se reparte, no queda todo en la columna del alumno', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('admin');
+    await page.setViewportSize({ width: 1920, height: 900 });
+    await page.goto('/app/admin/alumnos');
+    await expect(page.getByText(REPORT)).toBeVisible(CARGA);
+
+    const tabla = page.locator('p-table .p-datatable-table-container').first();
+    const medir = () =>
+      tabla.evaluate((el) => {
+        const anchos = [...el.querySelectorAll('thead th')].map(
+          (th) => th.getBoundingClientRect().width,
+        );
+        return {
+          scroll: el.scrollWidth,
+          client: el.clientWidth,
+          alumno: anchos[0] / anchos.reduce((a, b) => a + b, 0),
+          rut: anchos[1],
+        };
+      });
+
+    // Antes del arreglo el alumno ocupaba el 48 % y el RUT sus 91 px justos.
+    await expect.poll(async () => (await medir()).alumno).toBeLessThan(0.36);
+    const { scroll, client, alumno, rut } = await medir();
+    expect(alumno, 'el alumno sigue siendo la columna principal').toBeGreaterThan(0.25);
+    expect(rut, 'las demás columnas reciben parte del ancho que sobra').toBeGreaterThan(98);
+    expect(scroll, 'sin scroll horizontal').toBeLessThanOrEqual(client + 1);
+  });
 });
 
 test.describe('tiempo real', () => {
@@ -1178,5 +1209,233 @@ test.describe('pantalla angosta', () => {
     // Al filtrar, la vista vuelve a 6 tarjetas.
     await page.locator(SEARCH).fill('a');
     await expect(cards).toHaveCount(6);
+  });
+});
+
+test.describe('nueva matrícula desde la lista (fix-264-m, O02–O04)', () => {
+  const RUT_INPUT = '[data-llm-description="Chilean RUT number of the student"]';
+  const NUEVA = '[data-llm-action="nueva-matricula"]';
+  const GATE = '[data-llm-action^="gate-select-branch-"]';
+  const BORRADOR = '[data-llm-action="resume-enrollment-draft"]';
+
+  interface BorradorE2e {
+    rut: string;
+    apellido: string;
+    enrollmentId: number;
+    enrollmentBranchId: number;
+    userBranchId: number;
+  }
+
+  /**
+   * Con el drawer recién abierto: si la sede ya tiene borradores de otras personas, el wizard
+   * muestra primero esa lista; "empezar de cero" lleva al Paso 1.
+   */
+  async function llegarAlPaso1(page: Page): Promise<void> {
+    const empezar = page.locator('[data-llm-action="start-new-enrollment"]');
+    await expect(page.locator(RUT_INPUT).or(empezar).first()).toBeVisible(CARGA);
+    if (await empezar.isVisible()) await empezar.click();
+    await expect(page.locator(RUT_INPUT)).toBeVisible(CARGA);
+  }
+
+  /**
+   * Llena el Paso 1 con un alumno E2E- en Clase B, lo guarda y espera el Paso 2. Deja en
+   * `cleanup` las tres filas que ese guardado crea (usuario, alumno y matrícula en borrador).
+   */
+  async function guardarPaso1(page: Page, label: string, cleanup: Cleanup): Promise<BorradorE2e> {
+    const stamp = `${Date.now()}`.slice(-6);
+    const cuerpo = String(99_000_000 + Math.floor(Math.random() * 999_999));
+    const rut = formatRut(cuerpo + calculateRutDv(cuerpo));
+    const apellido = `Wizard${stamp}`;
+
+    await page.locator(RUT_INPUT).fill(rut);
+    await page.locator('#firstNames').fill(`E2E-${label}`);
+    await page.locator('#paternalLastName').fill(apellido);
+    await page.locator('#birthDate').pressSequentially('15011995');
+    await page.locator('#birthDate').press('Tab');
+    await page
+      .locator(
+        '[data-llm-description="Email address input field with real-time format validation"]',
+      )
+      .fill(`e2e-wizard-${stamp}@test.com`);
+    await page.locator('#phone').fill('+56900000000');
+    await page.getByRole('button', { name: /No Profesional/ }).click();
+    await page
+      .locator('label')
+      .filter({ hasText: /^\s*Clase B\s*Particular\s*$/ })
+      .click();
+
+    await page.locator('[data-llm-action="submit-personal-data"]').click();
+    await expect(page.getByText('Paso 2 de 6')).toBeVisible(CARGA);
+
+    const sb = await getAdminClient();
+    const { data: user, error: userErr } = await sb
+      .from('users')
+      .select('id, branch_id')
+      .eq('paternal_last_name', apellido)
+      .single();
+    if (userErr) throw new Error(`[e2e] El Paso 1 no dejó un usuario: ${userErr.message}`);
+    cleanup.track('users', user.id);
+    const { data: student, error: studentErr } = await sb
+      .from('students')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    if (studentErr) throw new Error(`[e2e] El Paso 1 no dejó un alumno: ${studentErr.message}`);
+    cleanup.track('students', student.id);
+    const { data: enrollment, error: enrollErr } = await sb
+      .from('enrollments')
+      .select('id, branch_id, status')
+      .eq('student_id', student.id)
+      .single();
+    if (enrollErr) throw new Error(`[e2e] El Paso 1 no dejó una matrícula: ${enrollErr.message}`);
+    cleanup.track('enrollments', enrollment.id);
+    expect(enrollment.status).toBe('draft');
+
+    return {
+      rut,
+      apellido,
+      enrollmentId: enrollment.id,
+      enrollmentBranchId: enrollment.branch_id,
+      userBranchId: user.branch_id,
+    };
+  }
+
+  /** Cierra el drawer con la X y espera a que termine de cerrarse (ver B36: reabrir a medio cierre). */
+  async function cerrarDrawer(page: Page): Promise<void> {
+    await page.getByRole('button', { name: 'Cerrar panel' }).click();
+    await expect(page.getByRole('button', { name: 'Cerrar panel' })).toHaveCount(0);
+  }
+
+  test('O02 · fix-310-m: cerrar el wizard avisa si hay datos escritos sin guardar; ya guardado el Paso 1, queda un borrador que se retoma', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(NUEVA).click();
+    await llegarAlPaso1(page);
+    const aviso = page.getByText('¿Cerrar sin guardar?');
+    const cerrar = page.getByRole('button', { name: 'Cerrar panel' });
+
+    // Antes de "Guardar y Continuar" no hay nada en la base. Con algo escrito, la X pregunta;
+    // "Seguir editando" deja el formulario como estaba.
+    await page.locator('#firstNames').fill('E2E-SinGuardar');
+    await cerrar.click();
+    await expect(aviso).toBeVisible();
+    await page.getByRole('button', { name: 'Seguir editando' }).click();
+    await expect(aviso).toHaveCount(0);
+    await expect(page.locator('#firstNames')).toHaveValue('E2E-SinGuardar');
+
+    // "Cancelar" pregunta lo mismo.
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(aviso).toBeVisible();
+    await page.getByRole('button', { name: 'Seguir editando' }).click();
+    await expect(page.locator('#firstNames')).toHaveValue('E2E-SinGuardar');
+
+    // Al confirmar se cierra y lo escrito se pierde: al reabrir, el formulario vuelve vacío.
+    await cerrar.click();
+    await page.getByRole('button', { name: 'Sí, cerrar' }).click();
+    await expect(cerrar).toHaveCount(0);
+    await expect(page).toHaveURL(/\/app\/secretaria\/alumnos$/);
+    await page.locator(NUEVA).click();
+    await llegarAlPaso1(page);
+    await expect(page.locator('#firstNames')).toHaveValue('');
+
+    // Con el Paso 1 guardado no hay nada que perder: cierra sin preguntar y queda el borrador.
+    const borrador = await guardarPaso1(page, 'Cierre', cleanup);
+    await cerrarDrawer(page);
+    await expect(aviso).toHaveCount(0);
+    await expect(page).toHaveURL(/\/app\/secretaria\/alumnos$/);
+
+    // El borrador no cuenta como alumno de la Base (DG-028)…
+    await page.locator(SEARCH).fill(borrador.apellido);
+    await expect(page.getByRole('status', { name: 'No se encontraron alumnos' })).toBeVisible(
+      CARGA,
+    );
+
+    // …y al volver a "Nueva Matrícula" se ofrece retomarlo donde quedó.
+    await page.locator(NUEVA).click();
+    const mio = page.locator(BORRADOR).filter({ hasText: borrador.apellido });
+    await expect(mio).toHaveCount(1, CARGA);
+    await expect(mio).toContainText('Paso 2/6');
+    await mio.click();
+    await expect(page.getByText('Paso 2 de 6')).toBeVisible(CARGA);
+  });
+
+  test('O03 (parcial) · fix-307-m: "Cancelar" en el Paso 1 cierra el wizard y deja al usuario en la lista', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+    await page.locator(NUEVA).click();
+    await llegarAlPaso1(page);
+
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Cerrar panel' })).toHaveCount(0);
+    // Con tiempo para que una navegación indebida alcance a ocurrir.
+    await page.waitForTimeout(1500);
+    await expect(page).toHaveURL(/\/app\/secretaria\/alumnos$/);
+  });
+
+  test('fix-317-m · hotfix-143-m: el panel se adapta al achicar y agrandar la ventana; cada fila tiene su botón de ficha PDF etiquetado', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('secretariaA');
+    await openLista(page, 'secretaria');
+
+    // hotfix-143-m: el botón de ficha PDF de cada fila lleva su etiqueta para agentes.
+    await expect(page.locator('[data-llm-action="export-student-row-pdf"]')).toHaveCount(
+      await rows(page).count(),
+    );
+
+    await page.locator(NUEVA).click();
+    await llegarAlPaso1(page);
+    const cerrar = page.getByRole('button', { name: 'Cerrar panel' });
+    const panel = page.locator('app-layout-drawer');
+    const anchoPanel = async () => Math.round((await panel.boundingBox())?.width ?? 0);
+    expect(await anchoPanel(), 'a 1600 px el panel mide el 45 % de la ventana').toBe(720);
+
+    // Ventana angosta con el panel ya abierto: pasa a pantalla completa y la X sigue a la vista.
+    await page.setViewportSize({ width: 600, height: 800 });
+    await expect.poll(anchoPanel).toBe(600);
+    await expect(cerrar).toBeInViewport({ ratio: 1 });
+
+    // De vuelta a escritorio: recupera su 45 % y la lista vuelve a verse al lado.
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await expect.poll(anchoPanel).toBe(630);
+    await expect(cerrar).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(NUEVA)).toBeInViewport();
+
+    await cerrarDrawer(page);
+  });
+
+  test('O04: con "Todas las sedes" el admin debe elegir sede antes del Paso 1 y la matrícula queda en la elegida', async ({
+    pageAs,
+    cleanup,
+  }) => {
+    const page = await pageAs('admin');
+    await openLista(page, 'admin');
+    const sede = page.locator('[data-llm-action="toggle-branch-dropdown"]');
+    await expect(sede).toContainText('Todas las sedes');
+
+    // Sin sede elegida no hay formulario: solo la pantalla de selección, con las dos sedes.
+    await page.locator(NUEVA).click();
+    await expect(page.locator(GATE)).toHaveCount(2, CARGA);
+    await expect(page.locator(RUT_INPUT)).toHaveCount(0);
+
+    await page.locator(GATE).filter({ hasText: 'Conductores Chillán' }).click();
+    await llegarAlPaso1(page);
+    await expect(sede).toContainText('Conductores Chillán');
+
+    // La matrícula y el usuario nuevo quedan en la sede elegida, no en la primera de la lista.
+    const borrador = await guardarPaso1(page, 'TodasSedes', cleanup);
+    expect(borrador.enrollmentBranchId).toBe(SEDE_B);
+    expect(borrador.userBranchId).toBe(SEDE_B);
+
+    // fix-309-m: la sede se eligió solo para esa matrícula; al cerrar el wizard el selector
+    // vuelve a "Todas las sedes" y la lista a mostrar las dos.
+    await cerrarDrawer(page);
+    await expect(sede).toContainText('Todas las sedes', CARGA);
+    await expect(page.getByRole('columnheader', { name: /Sede/ })).toBeVisible(CARGA);
   });
 });

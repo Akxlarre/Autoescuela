@@ -1018,6 +1018,18 @@ app-main-layout p-toast.p-toast-top-center,
   }
 }
 
+/* Panel ancho (fix-308-m): la columna del alumno deja de quedarse con todo lo que sobra y pasa a
+   un tercio de la tabla; el resto lo reparte el navegador entre las demás columnas. Sin esto, en
+   un monitor de 1920 px el alumno ocupaba la mitad y los datos quedaban apretados a la derecha.
+   Desde 1250 px las demás columnas de la lista más ancha (Base de Alumnos B con Sede, unos
+   780 px) caben holgadas en los dos tercios restantes. max-width 0 se conserva: es lo que
+   recorta el nombre en vez de ensanchar la tabla. */
+@container listContainer (min-width: 1250px) {
+  .table-compact .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td.table-compact-main {
+    width: 32%;
+  }
+}
+
 /* ============================================
    Stepper — Design System Premium 2026
    ============================================ */

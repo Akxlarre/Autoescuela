@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, Type } from '@angular/core';
-import { LayoutDrawerService } from './layout-drawer.service';
+import { LayoutDrawerService, type LayoutDrawerCloseGuard } from './layout-drawer.service';
 
 /**
  * LayoutDrawerFacadeService — Interfaz pública para componentes UI.
@@ -44,5 +44,10 @@ export class LayoutDrawerFacadeService {
 
   close(): void {
     this.layoutDrawer.close();
+  }
+
+  /** Pregunta previa al cierre que pide el usuario (la X o un clic fuera); `null` la quita. */
+  setCloseGuard(guard: LayoutDrawerCloseGuard | null): void {
+    this.layoutDrawer.setCloseGuard(guard);
   }
 }

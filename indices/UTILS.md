@@ -62,7 +62,7 @@
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
 | `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
-| `src/app/core/utils/ficha-pagos.utils.ts` | `canRegistrarPago` |
+| `src/app/core/utils/ficha-pagos.utils.ts` | `canRegistrarPago`, `formatPaymentConcept` (fix-315-m: concepto de un pago para la ficha — traduce el código interno o muestra tal cual el concepto en español de "Registrar pago") |
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
@@ -74,6 +74,7 @@
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |
+| `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` (fix-317-m: tamaño del panel lateral según el ancho de la ventana; lo comparten la apertura y el ajuste al cambiar de tamaño) |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
 | `src/app/core/utils/license-seniority.utils.ts` | `requiredPriorLicenseLabel`, `licenseClassFromCourseType`, `calcLicenseSeniority` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
@@ -94,6 +95,7 @@
 | `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate` |
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
+| `src/app/core/utils/enrollment-unsaved.utils.ts` | `hasUnsavedPersonalData` (fix-310-m: ¿el Paso 1 de la matrícula tiene texto escrito distinto del último guardado?) |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |

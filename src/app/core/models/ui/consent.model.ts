@@ -62,6 +62,12 @@ export const CONSENT_TYPE_LABELS: Record<ConsentType, string> = {
   comunicaciones_promocionales: 'Comunicaciones promocionales (consentimiento, revocable)',
 };
 
+/**
+ * Tipos informativos: no son una elección del titular, así que no se pueden revocar (fix-311-m).
+ * Si se agrega otro, su etiqueta de arriba debe decirlo también.
+ */
+export const NON_REVOCABLE_CONSENT_TYPES: readonly ConsentType[] = ['comunicaciones_operativas'];
+
 export const CONSENT_SOURCE_LABELS: Record<ConsentSource, string> = {
   public: 'En línea',
   secretaria: 'En secretaría',

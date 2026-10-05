@@ -7,6 +7,9 @@ export interface LayoutDrawerAction {
   llmAction?: string;
 }
 
+/** Responde si el panel se puede cerrar (ej. tras confirmar que se descartan datos sin guardar). */
+export type LayoutDrawerCloseGuard = () => boolean | Promise<boolean>;
+
 export interface LayoutDrawerState {
   isOpen: boolean;
   component: Type<any> | null;
@@ -44,6 +47,11 @@ export class LayoutDrawerService {
   /** Historial de estados anteriores para navegación back. */
   private _history = signal<LayoutDrawerState[]>([]);
 
+  /** Pregunta que el componente abierto quiere hacer antes de un cierre pedido por el usuario. */
+  private closeGuard: LayoutDrawerCloseGuard | null = null;
+  /** True mientras una pregunta de cierre espera respuesta. */
+  private closeGuardPending = false;
+
   // Selectors
   readonly state = this._state.asReadonly();
   readonly isOpen = computed(() => this._state().isOpen);
@@ -68,7 +76,35 @@ export class LayoutDrawerService {
     width?: number,
   ): void {
     this._history.set([]);
+    this.closeGuard = null;
     this._state.set({ isOpen: true, component, title, icon, actions, width });
+  }
+
+  /**
+   * Registra la pregunta previa al cierre del componente abierto (fix-310-m); `null` la quita.
+   * Solo la consulta `requestClose()`. Se descarta sola al abrir otro panel y al limpiar este.
+   */
+  setCloseGuard(guard: LayoutDrawerCloseGuard | null): void {
+    this.closeGuard = guard;
+  }
+
+  /**
+   * Cierre pedido por el usuario (la X o un clic fuera del panel): si el componente abierto
+   * registró una pregunta, cierra solo si responde que sí. Un cierre decidido por el propio
+   * componente usa `close()`, que no pregunta.
+   */
+  async requestClose(): Promise<void> {
+    if (this.closeGuardPending) return;
+    const guard = this.closeGuard;
+    if (guard) {
+      this.closeGuardPending = true;
+      try {
+        if (!(await guard())) return;
+      } finally {
+        this.closeGuardPending = false;
+      }
+    }
+    this.close();
   }
 
   /**
@@ -129,6 +165,7 @@ export class LayoutDrawerService {
    * Destruye el componente renderizado (llamado DESPUÉS de la salida GSAP).
    */
   clear(): void {
+    this.closeGuard = null;
     this._state.update((s) => ({
       ...s,
       component: null,

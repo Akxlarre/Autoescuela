@@ -17,17 +17,12 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
 export class ConfirmationComponent {
   data = input.required<EnrollmentConfirmationData>();
   finish = output<void>();
-  downloadReceipt = output<void>();
   downloadContract = output<void>();
 
   today = new Date();
 
   onFinish() {
     this.finish.emit();
-  }
-
-  onDownloadReceipt() {
-    this.downloadReceipt.emit();
   }
 
   onDownloadContract() {

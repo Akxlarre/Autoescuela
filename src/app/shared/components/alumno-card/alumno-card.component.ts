@@ -191,11 +191,11 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
               class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
               pTooltip="Exportar Ficha PDF"
               aria-label="Exportar Ficha PDF"
-              [disabled]="isGeneratingFicha() === alumno().enrollmentId"
+              [disabled]="isGeneratingFicha()"
               (click)="fichaExportClicked()"
               data-llm-action="export-student-card-pdf"
             >
-              @if (isGeneratingFicha() === alumno().enrollmentId) {
+              @if (isGeneratingFicha()) {
                 <app-icon name="loader-circle" [size]="16" class="animate-spin" />
               } @else {
                 <app-icon name="download" [size]="16" />
@@ -231,7 +231,8 @@ export class AlumnoCardComponent {
   /** Muestra la sede: la lista lo pide con la misma regla que su columna "Sede" (hotfix-132-m). */
   readonly showSede = input(false);
   readonly basePath = input<string>('/app/secretaria');
-  readonly isGeneratingFicha = input<number | false>(false);
+  /** True mientras se genera la ficha PDF de ESTE alumno (fix-316-m: lo decide la lista). */
+  readonly isGeneratingFicha = input(false);
 
   readonly restaurarRequested = output<string>();
   readonly archivarRequested = output<string>();

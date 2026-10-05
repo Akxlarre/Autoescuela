@@ -856,6 +856,57 @@ describe('EnrollmentFacade', () => {
       expect(mockNotifications.notifyRole).not.toHaveBeenCalled();
     });
 
+    describe('correo con el contrato firmado — fix-318-m', () => {
+      function prepararConfirmacion(): void {
+        (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+        (facade as any)._enrollment.set({ course_id: 1 });
+        mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      }
+      const llamadasAlContrato = () =>
+        (mockSupabase.client.functions.invoke as any).mock.calls.filter(
+          ([name]: [string]) => name === 'send-enrollment-contract-email',
+        );
+
+      it('al confirmar la matrícula pide enviar el contrato de ESA matrícula', async () => {
+        prepararConfirmacion();
+        mockSupabase.client.functions.invoke = vi.fn().mockResolvedValue({ data: {}, error: null });
+
+        await facade.confirmEnrollment();
+
+        expect(llamadasAlContrato()).toEqual([
+          ['send-enrollment-contract-email', { body: { enrollment_id: 10 } }],
+        ]);
+      });
+
+      it('si el envío falla, la matrícula queda confirmada y se avisa', async () => {
+        prepararConfirmacion();
+        mockSupabase.client.functions.invoke = vi.fn((name: string) =>
+          Promise.resolve(
+            name === 'send-enrollment-contract-email'
+              ? { data: null, error: new Error('SMTP caído') }
+              : { data: {}, error: null },
+          ),
+        );
+
+        const result = await facade.confirmEnrollment();
+        await Promise.resolve();
+
+        expect(result).toBe('2026-0001');
+        expect(mockToast.warning).toHaveBeenCalledWith(expect.stringContaining('contrato'));
+      });
+
+      it('si la matrícula no se confirma, no se envía nada', async () => {
+        (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+        (facade as any)._enrollment.set({ course_id: 1 });
+        mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: null, error: new Error('x') });
+        mockSupabase.client.functions.invoke = vi.fn().mockResolvedValue({ data: {}, error: null });
+
+        await facade.confirmEnrollment();
+
+        expect(llamadasAlContrato()).toEqual([]);
+      });
+    });
+
     // fix-157-m: functions.invoke() no rechaza la promesa en respuestas no-2xx, así que un
     // .catch() a secas nunca se enteraba de que activate-student-account falló.
     it('avisa por toast si activate-student-account falla (ej. email con formato inválido)', async () => {

@@ -1,6 +1,10 @@
 import { Injectable, inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import gsap from 'gsap';
+import {
+  isLayoutDrawerMobile,
+  layoutDrawerDesktopWidth,
+} from '@core/utils/layout-drawer-size.utils';
 import { CustomEase } from 'gsap/CustomEase';
 
 /**
@@ -922,7 +926,7 @@ export class GsapAnimationsService {
       }
     } else {
       // ── DESKTOP: layout-shift animando el width ───────────────────────────
-      const targetWidth = widthOverride ?? Math.max(400, window.innerWidth * 0.45);
+      const targetWidth = layoutDrawerDesktopWidth(window.innerWidth, widthOverride);
 
       if (!this.shouldAnimate()) {
         gsap.set(drawerEl, {
@@ -955,6 +959,50 @@ export class GsapAnimationsService {
         },
       );
     }
+  }
+
+  /**
+   * Layout Drawer — Ajuste al tamaño de la ventana (fix-317-m)
+   *
+   * Deja el panel YA ABIERTO como si se hubiera abierto con el tamaño actual de la ventana:
+   * pantalla completa en móvil, o su ancho de escritorio. Sin animación. No hace nada mientras
+   * corre la animación de entrada o de salida, para no pisarla.
+   */
+  syncLayoutDrawerToViewport(
+    drawerEl: HTMLElement,
+    backdropEl: HTMLElement | null,
+    widthOverride?: number,
+  ): void {
+    if (gsap.isTweening(drawerEl)) return;
+    const panelEl = drawerEl.querySelector('[data-drawer-panel]') as HTMLElement | null;
+    if (panelEl && gsap.isTweening(panelEl)) return;
+
+    if (isLayoutDrawerMobile(window.innerWidth)) {
+      document.body.style.overflow = 'hidden';
+      gsap.set(drawerEl, {
+        position: 'fixed',
+        inset: '0',
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        zIndex: 60,
+        overflow: 'hidden',
+        x: '0%',
+      });
+      if (backdropEl) gsap.set(backdropEl, { display: 'block', opacity: 0.5 });
+    } else {
+      document.body.style.overflow = '';
+      gsap.set(drawerEl, { clearProps: 'inset,height,zIndex,x' });
+      gsap.set(drawerEl, {
+        width: layoutDrawerDesktopWidth(window.innerWidth, widthOverride),
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
+      });
+      if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0 });
+    }
+    if (panelEl) gsap.set(panelEl, { clearProps: 'x' });
   }
 
   /**
