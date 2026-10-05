@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -155,6 +156,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               [(ngModel)]="statusModel"
               optionLabel="label"
               optionValue="value"
+              optionDisabled="disabled"
               [style]="{ width: '100%' }"
               data-llm-description="Cambiar estado de la promoción"
             />
@@ -179,8 +181,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               >
                 <app-icon name="circle-alert" [size]="14" color="var(--state-error)" />
                 <p class="text-xs text-text-secondary">
-                  Cancelar una promoción es una acción irreversible. Los alumnos inscritos deberán
-                  ser reasignados manualmente.
+                  Cancelar una promoción es una acción irreversible.
                 </p>
               </div>
             }
@@ -280,15 +281,28 @@ export class AdminPromocionEditarDrawerComponent {
    *   finished    → Finalizada  (sin más transiciones)
    *   cancelled   → Cancelada   (sin más transiciones)
    * La secretaria no ve Finalizada ni Cancelada como destino (fix-321-m, D5).
+   * Con matrículas activas, Cancelada aparece deshabilitada (fix-325-m, D4): no existe dónde
+   * reasignar a esos alumnos. Mientras el conteo carga (null) también se deshabilita.
    */
   protected readonly availableStatusOptions = computed(() => {
-    const options = this.statusOptionsFor();
-    if (this.facade.canManageLifecycle()) return options;
     const current = this.facade.selectedPromocion()?.status;
+    const activos = this.activeEnrollments();
+    const options = this.statusOptionsFor().map((o) => {
+      const blocked = o.value === 'cancelled' && current !== 'cancelled' && activos !== 0;
+      return {
+        ...o,
+        disabled: blocked,
+        label: blocked && activos ? `Cancelada (tiene ${activos} alumnos activos)` : o.label,
+      };
+    });
+    if (this.facade.canManageLifecycle()) return options;
     return options.filter(
       (o) => o.value === current || (o.value !== 'finished' && o.value !== 'cancelled'),
     );
   });
+
+  /** Matrículas activas de la promoción abierta; null mientras carga (fix-325-m). */
+  protected readonly activeEnrollments = signal<number | null>(null);
 
   private statusOptionsFor(): { label: string; value: PromocionStatus }[] {
     const p = this.facade.selectedPromocion();
@@ -346,7 +360,7 @@ export class AdminPromocionEditarDrawerComponent {
     const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
     const statusChanged =
       this.status() !== p.status &&
-      this.availableStatusOptions().some((o) => o.value === this.status());
+      this.availableStatusOptions().some((o) => o.value === this.status() && !o.disabled);
     return nameOrCodeChanged || statusChanged;
   });
 
@@ -359,6 +373,21 @@ export class AdminPromocionEditarDrawerComponent {
         this.code.set(p.code);
         this.status.set(p.status);
       }
+    });
+
+    // Conteo de matrículas activas para decidir si se puede cancelar (fix-325-m).
+    effect(() => {
+      const p = this.facade.selectedPromocion();
+      this.activeEnrollments.set(null);
+      if (!p || (p.status !== 'planned' && p.status !== 'in_progress')) return;
+      untracked(() =>
+        this.facade
+          .countActiveEnrollments(p.id)
+          .then((n) => {
+            if (this.facade.selectedPromocion()?.id === p.id) this.activeEnrollments.set(n);
+          })
+          .catch(() => this.activeEnrollments.set(null)),
+      );
     });
   }
 

@@ -42,7 +42,12 @@ export function isCadenceDate(isoDate: string): boolean {
 export function promotionWriteErrorMessage(err: unknown, code: string): string | null {
   if (!err || typeof err !== 'object') return null;
   const { code: pgCode, message } = err as { code?: string; message?: string };
-  if (pgCode !== '23505' || !message) return null;
+  if (!message) return null;
+  // Trigger de fix-325-m: no se cancela una promoción con matrículas activas.
+  if (message.includes('promotion_has_active_enrollments')) {
+    return 'No se puede cancelar: la promoción tiene alumnos con matrícula activa.';
+  }
+  if (pgCode !== '23505') return null;
   if (message.includes('professional_promotions_code_key')) {
     return `El número ${code.trim()} ya lo usa otra promoción. Elige otro.`;
   }

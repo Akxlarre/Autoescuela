@@ -71,6 +71,16 @@ describe('promotion-code.utils (fix-323-m)', () => {
       );
     });
 
+    it('cancelar con alumnos activos (trigger de fix-325-m) → mensaje claro', () => {
+      const err = {
+        code: 'P0001',
+        message: 'promotion_has_active_enrollments: la promoción 7 tiene 3 matrícula(s) activa(s)',
+      };
+      expect(promotionWriteErrorMessage(err, '280')).toBe(
+        'No se puede cancelar: la promoción tiene alumnos con matrícula activa.',
+      );
+    });
+
     it('cualquier otro error → null (lo maneja el sanitizer)', () => {
       expect(promotionWriteErrorMessage(new Error('red caída'), '281')).toBeNull();
       expect(promotionWriteErrorMessage(null, '281')).toBeNull();

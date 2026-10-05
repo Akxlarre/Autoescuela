@@ -48,6 +48,7 @@ describe('AdminPromocionEditarDrawerComponent — opciones de estado por rol (fi
             canManageLifecycle: canManage,
             isSubmitting: signal(false),
             editarPromocion: vi.fn(),
+            countActiveEnrollments: vi.fn().mockResolvedValue(0),
           },
         },
         { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), close: vi.fn() } },
@@ -178,5 +179,61 @@ describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (
 
     expect(confirmSpy.confirm).not.toHaveBeenCalled();
     expect(facadeSpy.editarPromocion).toHaveBeenCalled();
+  });
+});
+
+describe('AdminPromocionEditarDrawerComponent — no cancelar con alumnos (fix-325-m, D4)', () => {
+  let facadeSpy: any;
+
+  async function editorWith(activos: number): Promise<any> {
+    facadeSpy.countActiveEnrollments.mockResolvedValue(activos);
+    const fixture = TestBed.createComponent(AdminPromocionEditarDrawerComponent);
+    TestBed.tick();
+    await fixture.whenStable();
+    const c = fixture.componentInstance as any;
+    c.name.set('Promoción 279');
+    c.code.set('279');
+    return c;
+  }
+
+  function cancelada(c: any): { value: string; disabled?: boolean } {
+    return c.availableStatusOptions().find((o: { value: string }) => o.value === 'cancelled');
+  }
+
+  beforeEach(() => {
+    facadeSpy = {
+      selectedPromocion: signal(makePromo('in_progress')),
+      canManageLifecycle: signal(true),
+      isSubmitting: signal(false),
+      editarPromocion: vi.fn().mockResolvedValue(true),
+      countActiveEnrollments: vi.fn(),
+      initialize: vi.fn(),
+    };
+    // Se prueba la lógica (effect + computed), no el template: en JIT los inputs requeridos de
+    // los hijos (app-async-btn) no reciben valor y TestBed.tick() fallaría al dibujarlos.
+    TestBed.overrideComponent(AdminPromocionEditarDrawerComponent, { set: { template: '' } });
+    TestBed.configureTestingModule({
+      imports: [AdminPromocionEditarDrawerComponent],
+      providers: [
+        { provide: PromocionesFacade, useValue: facadeSpy },
+        { provide: ConfirmModalService, useValue: { confirm: vi.fn() } },
+        { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), close: vi.fn() } },
+      ],
+    });
+  });
+
+  it('con alumnos activos, "Cancelada" aparece deshabilitada y no se puede guardar', async () => {
+    const c = await editorWith(12);
+    expect(facadeSpy.countActiveEnrollments).toHaveBeenCalledWith(1);
+    expect(cancelada(c).disabled).toBe(true);
+    c.status.set('cancelled');
+    expect(c.canSave()).toBe(false);
+  });
+
+  it('sin alumnos activos, "Cancelada" está disponible', async () => {
+    const c = await editorWith(0);
+    expect(cancelada(c).disabled).toBe(false);
+    c.status.set('cancelled');
+    expect(c.canSave()).toBe(true);
   });
 });
