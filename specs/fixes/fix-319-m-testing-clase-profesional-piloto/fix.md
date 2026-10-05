@@ -38,7 +38,7 @@ Las 3 capas de la ASG entran en este track:
 |---|---|---|
 | 1 | S1, S2 residuales | Seguridad de edge functions (ver abajo) — primero, por gravedad |
 | 2 | A–I | Acceso y guards, Base Alumnos Profesional, Papelera, ficha, links a módulos bloqueados |
-| 3 | J–N | Promociones: lista, crear, editar, estados, cadencia automática, matrícula tardía |
+| 3 | J–N + Archivo | Promociones: lista, crear, editar, estados, cadencia automática, matrícula tardía; vista Archivo (D3a) |
 | 4 | O–R | Libro de clases: selectores, secciones, código SENCE, PDF |
 | 5 | T–U | Sedes, roles, RLS, tiempo real, visual |
 
@@ -50,7 +50,10 @@ Ajustes sobre el texto de la ASG, tras cruzar las sospechas con tracks ya existe
   regresión** (R11, M06). Quedan abiertas, y se prueban acá, las partes que `fix-043-i` no tocó:
   - S1: el `upsert` del PDF vuelve a poner `class_book.status = 'active'` aunque estuviera `closed`.
   - S1: `requireStaff` valida rol pero no sede (`0009-i` dejó fuera, por decisión, validar la sede
-    en el servidor) → una secretaria de otra sede puede generar el PDF de un curso ajeno.
+    en el servidor) → una secretaria de otra sede puede generar el PDF de un curso ajeno (nombre y
+    RUN de sus alumnos). **Corrección al checklist:** el PDF **no** incluye teléfono — la función
+    lo consulta (`generate-class-book-pdf/index.ts:107,199`) pero nunca lo imprime; es un campo
+    muerto que conviene dejar de pedir (minimización de datos).
   - S2: sin promoción `in_progress`, una sola llamada del cron crea hasta 10 planificadas, y una
     falla a mitad deja una promoción "placeholder" sin cursos.
 - **S6 (RLS de promociones/cursos/libro sin sede) sigue abierta:** `0047-b` (`ASG-i-045`) dejó
@@ -72,8 +75,8 @@ Ajustes sobre el texto de la ASG, tras cruzar las sospechas con tracks ya existe
 
 ### Fuera de alcance
 
-- Los 7 módulos Profesional bloqueados por el recorte: solo se prueba que sigan bloqueados
-  (`ASG-i-022`).
+- Los módulos Profesional bloqueados por el recorte: solo se prueba que sigan bloqueados
+  (`ASG-i-022`). Excepción: Archivo, que se habilita por D3a.
 - La ficha del alumno en lo común con Clase B (`fix-264-m`, checklist `024b`).
 - El wizard de matrícula por dentro (`ASG-i-023`).
 
@@ -84,22 +87,36 @@ Ninguno propio — track de testing. Se verifican los ACs ya documentados en `00
 
 ## Decisiones de negocio pendientes
 
-Salen de §5 del checklist. Bloquean el veredicto de los casos indicados (no el resto del testing).
+Salen de §5 del checklist (+ D12, desde S12). **Todas resueltas por Matías el 2026-10-05.** Los
+casos afectados se evalúan contra la decisión, no contra el comportamiento actual: si la app hace
+otra cosa, es ❌ y va a su propio fix.
 
 | # | Caso | Pregunta | Decisión |
 |---|---|---|---|
-| D1 | I01 / I03 | ¿El botón "Pre-inscritos" de la Base Profesional se oculta en el piloto (como el resto del módulo)? | ⏳ |
-| D2 | B02 / E07 | ¿Dónde se ven en el piloto los alumnos Profesional retirados o cancelados? | ⏳ |
-| D3 | L11 / J08 | ¿Dónde se consultan las promociones finalizadas y sus alumnos (Ex-Alumnos Prof. está bloqueado)? ¿Se debe poder finalizar a mano? | ⏳ |
-| D4 | L12 | ¿Qué pasa con los alumnos de una promoción cancelada? ¿Dónde se reasignan? ¿Hace falta un modal de confirmación? | ⏳ |
-| D5 | K14 | ¿La secretaria puede crear, finalizar y cancelar promociones? | ⏳ |
-| D6 | K02 / M08 | ¿Las promociones manuales siguen la cadencia de 14 días o pueden ir en cualquier lunes? ¿Deben nacer con código? | ⏳ |
-| D7 | L08 | ¿Se permite repetir un código MTT? | ⏳ |
-| D8 | G04 | ¿Archivar desde la Base Profesional debe archivar también a la persona en Clase B? | ⏳ |
-| D9 | G09 / P04 | ¿Retirados, completados y archivados deben aparecer en el Libro de clases y en los conteos de la promoción? | ⏳ |
-| D10 | B05 / D01 | Un alumno con 2 matrículas Profesional: ¿una fila o dos? ¿El total cuenta personas o matrículas? | ⏳ |
-| D11 | C05 | ¿La columna "Promoción" muestra la promoción (nombre/código) o el curso? | ⏳ |
-| D12 | S12 | Asistencia, módulos, nota y certificado salen siempre vacíos en el piloto (sus módulos están bloqueados). ¿Es aceptable? | ⏳ |
+| D1 | I01 / I03 / I04 | ¿El botón "Pre-inscritos" de la Base Profesional se oculta en el piloto? | ✅ **Se oculta** mientras Pre-inscritos esté bloqueado; la notificación de pre-inscripción (S21) tampoco debe llevar al módulo. I03 queda fuera de alcance. |
+| D2 | B02 / E07 | ¿Dónde se ven los alumnos Profesional retirados o cancelados? | ✅ **En ningún lado, porque hoy no existen: se eliminan los filtros y estados imposibles.** Ningún flujo deja una matrícula Profesional en `inactive`, `withdrawn` ni `cancelled`: el único cambio de estado posterior a `active` es `active → completed` al finalizar la promoción (`20260820100000_fix196…sql`); la deserción por inasistencias y el vencimiento de pago online que escriben `cancelled` son de Clase B. Se quitan de la Base Profesional el filtro "Retirado", la etiqueta "Inactivo" y `'inactive'` de `ENROLLED_STATUSES`. *(Corregido el 2026-10-05: la primera versión de esta decisión pedía mostrar retirados, partiendo de que el estado existía.)* |
+| D3a | J08 | ¿Dónde se consultan las promociones finalizadas y sus alumnos? | ✅ **En la vista Archivo, que se habilita en el piloto** (hoy bloqueada). Promociones queda para planificadas y en curso: su filtro **deja de ofrecer "Finalizada"**. **Archivo muestra de una promoción finalizada lo mismo que "Ver promoción"** (información general, alumnos por categoría, cursos con relatores y sus alumnos), **reutilizando el mismo componente** para que no diverjan. Lo académico que hoy tiene Archivo (asistencia teoría/práctica, notas M1–M7, promedio, KPIs de aprobación) queda como una sección adicional, **oculta mientras Asistencia y Evaluaciones sigan bloqueados**; la escala de notas se mantiene (no se migra a "concepto"). |
+| D3b | L11 | ¿Se puede finalizar una promoción a mano? | ✅ **Sí, solo admin y con modal de confirmación** que avise cuántos alumnos pasan a completados. |
+| D4 | L12 | ¿Qué pasa al cancelar una promoción con alumnos? | ✅ **Se bloquea** si tiene matrículas vigentes; solo se cancela una promoción sin alumnos. |
+| D5 | K14 | ¿Qué puede hacer la secretaria con las promociones? | ✅ **Ver y editar datos operativos** (número, nombre…). Crear, finalizar y cancelar: **solo admin**. |
+| D6 | K02 / M08 | ¿Las manuales siguen la cadencia de 14 días? ¿Nacen con número? | ✅ **Cualquier lunes, con número obligatorio al crear.** El cron debe saltar fechas ocupadas en vez de fallar, y su cadencia no debe correrse por una manual (hoy calcula fecha y número desde la última promoción con número). |
+| D7 | L08 | ¿Se puede repetir el número de promoción ("código MTT")? | ✅ **No: único por sede**, validado en el formulario y con restricción de unicidad en BD. |
+| D8 | G04 | ¿Archivar desde la Base Profesional archiva también en Clase B? | ✅ **Sí, se archiva la persona completa**, pero la confirmación debe avisar que tiene Clase B y saldrá también de esa base. |
+| D9 | G09 / P04 | ¿Quiénes aparecen en el Libro y en los conteos de la promoción? | ✅ Solo hay dos casos reales (ver D2). **Completados: siguen en el Libro y cuentan** (el libro de una promoción terminada muestra a sus alumnos). **Archivados** (estado de la persona, `students.status = 'archived'`, con la matrícula aún `active`): **siguen en el Libro, sin columna de estado** (estuvieron en el curso: registro oficial; el PDF es réplica del libro físico, `0017-m`), pero **no cuentan como inscritos** en "Ver promoción". *(Corregido el 2026-10-05: la primera versión decía "con su estado visible"; el libro no muestra estados y no se agrega.)* |
+| D10 | B05 / D01 | 2 matrículas Profesional: ¿una fila o dos? | ✅ **Una fila por matrícula** (como hoy). El KPI se rotula como matrículas. Revisar claves duplicadas en la vista tarjetas. |
+| D11 | C05 | ¿Qué muestra la columna "Promoción"? | ✅ **Número/fecha de la promoción, con la categoría (A2/A3/A4/A5) debajo.** |
+| D12 | S12 / C07 / C08 | Asistencia, módulos, nota y certificado vacíos en el piloto, ¿aceptable? | ✅ **Se ocultan en el piloto** (columnas de la Base y tarjetas/botón de la ficha) mientras sus módulos sigan bloqueados. |
+
+**Pendiente de modelar, para hablar con el dueño (no bloquea este track):** el **desertor** de
+Clase Profesional — alumno que abandona, vuelve tiempo después a pedir el certificado y el dueño lo
+integra a una promoción posterior. Hoy no existe ni el estado ni el movimiento entre promociones;
+cuando se modele, se define dónde se ve (y D2 se revisa).
+
+**Efecto en el alcance:** D3a habilita la vista **Archivo** de Clase Profesional en el piloto, así
+que pasa a ser parte del testing (bloque 3). Al revisarla apareció una sospecha nueva:
+
+- **S23** (🟡 Baja-Media) — Archivo lista las promociones finalizadas **sin filtrar por sede**
+  (`archivo-profesional.facade.ts:134-138`); solo la lista de alumnos filtra por sede (línea 212).
 
 ## Resultados
 
