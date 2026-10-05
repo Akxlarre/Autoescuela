@@ -1596,6 +1596,23 @@
 - **Fuente:** `specs/specs/0009-i-edge-functions-exigir-usuario-staff`,
   `specs/fixes/fix-043-i-edge-functions-sin-sesion`.
 
+### DG-100 — Un `upsert` que arma la fila con `relacion?.id` de un embed sin `id` pisa la FK con NULL en silencio
+
+- **Trampa:** leer una relación embebida de PostgREST pidiendo solo los campos que se muestran
+  (`branches(name, address)`) y después usar `relacion?.id ?? null` para guardar la FK. El embed no
+  trae `id`, el `?.` lo convierte en `undefined` sin error, `?? null` lo vuelve NULL, y el `upsert`
+  **sobrescribe** la FK que la fila ya tenía. TypeScript no lo detecta porque el resultado del
+  `select` con string llega como `any` en las edge functions.
+- **Realidad:** en `generate-class-book-pdf`, cada PDF generado dejaba `class_book.branch_id = NULL`
+  (13 libros afectados en desarrollo, desde que se creó el módulo). Cualquier filtro o RLS por sede
+  sobre esa tabla los perdía.
+- **Regla de aplicabilidad:** en un `upsert`/`update` cuyo payload toma una FK de un objeto
+  embebido, comprobar que el `select` pida ese `id` explícitamente; si la fila ya existe y la FK no
+  cambia, mejor no incluirla en el payload. Al probar, leer la fila **después** del upsert, no solo
+  la respuesta.
+- **Fuente:** `specs/fixes/fix-320-m-libro-pdf-borra-sede`,
+  `supabase/migrations/20261005120000_fix320_class_book_backfill_branch_id.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

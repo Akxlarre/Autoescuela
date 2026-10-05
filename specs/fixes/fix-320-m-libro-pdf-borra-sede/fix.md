@@ -1,7 +1,8 @@
 # Fix: Generar el PDF del libro de clases le borra la sede al libro
 > id: fix-320-m-libro-pdf-borra-sede
 > refs: fix-319-m-testing-clase-profesional-piloto (S24) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -31,3 +32,11 @@ Ninguno — fix autónomo (bug encontrado en el testing de `ASG-i-025`).
 ## Test de Regresión
 - Generar el PDF de un libro de la sede 2 y comprobar por API que `class_book.branch_id = 2`.
 - Consulta de control: 0 filas de `class_book` con `branch_id IS NULL`.
+
+**Verificado el 2026-10-05** (migración aplicada y función desplegada por Matías), por API con
+`admin@test.com` contra la BD de desarrollo:
+- `class_book` con `branch_id IS NULL` → **0** (antes 13). ✓
+- PDF regenerado del libro 48 (sede 2) → HTTP 200 y `branch_id = 2` después del `upsert`. ✓
+
+`deno check` no se pudo correr: falla al resolver `npm:openai` (tipos del runtime de Supabase),
+ajeno a este cambio. Lección general → `indices/DOMAIN-GOTCHAS.md` DG-100.
