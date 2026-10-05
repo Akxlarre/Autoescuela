@@ -1,6 +1,6 @@
 # Asignación ASG-i-024 — Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0

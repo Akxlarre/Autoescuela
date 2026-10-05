@@ -83,7 +83,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `b` | fix | P0 | i | Integración/E2E · Media |
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
-| ASG-i-025 | Testing: Clase Profesional en el piloto | `m` | fix | P1 | i | Integración · Alta |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
 | ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `m` | fix | P1 | i | Integración · Alta |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
@@ -287,6 +286,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | `m` | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
