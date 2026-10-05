@@ -287,6 +287,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
+| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -430,7 +431,6 @@
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 | ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
 | ASG-i-043 | Una secretaria puede editar a cualquier usuario (incluido un admin) | [fix-179-b-edicion-usuarios-sin-validar-objetivo](fixes/fix-179-b-edicion-usuarios-sin-validar-objetivo/fix.md) | 2026-10-01 |
-| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | [fix-180-b-usuarios-desactivados-siguen-entrando](fixes/fix-180-b-usuarios-desactivados-siguen-entrando/fix.md) | 2026-10-01 |
 | ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
 | ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 | ASG-i-041 | Edge functions que responden sin sesión | [fix-043-i-edge-functions-sin-sesion](fixes/fix-043-i-edge-functions-sin-sesion/fix.md) | 2026-10-02 |

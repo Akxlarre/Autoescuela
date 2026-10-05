@@ -1,6 +1,6 @@
 # Asignación ASG-i-044 — Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva
 
-> **status:** completada
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
@@ -8,7 +8,7 @@
 > **created_by:** i
 > **claimed_by:** b
 > **claimed_at:** 2026-10-01
-> **resulting_track:** fix-180-b-usuarios-desactivados-siguen-entrando
+> **resulting_track:** fix-181-b-recuperar-contrasena-punta-a-punta
 
 ---
 
@@ -53,7 +53,7 @@ cuentas:
 ## Notas para quien la reclame
 
 - **Estado (2026-10-01):** parte 1 (cuentas desactivadas, puntos 1 y 3-parcial) cerrada en
-  `fix-180-b-usuarios-desactivados-siguen-entrando`, en producción. **Parte 2 pendiente:** recuperar
+  `fix-180-b-usuarios-desactivados-siguen-entrando`, en producción. **Parte 2 en curso** (`fix-181-b-recuperar-contrasena-punta-a-punta`): recuperar
   contraseña de punta a punta (punto 2) y clave inicial = RUT (punto 3) — va en otro track. La
   Asignación sigue `reclamada` hasta cerrar la parte 2.
 
