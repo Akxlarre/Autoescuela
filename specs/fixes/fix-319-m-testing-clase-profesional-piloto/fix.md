@@ -169,8 +169,25 @@ _Pendiente._
 
 | Sospecha / caso | Track | Estado |
 |---|---|---|
-| S24 + S6 — el PDF borra la sede del libro; RLS de promociones/cursos/libro sin sede | _por abrir_ | ❌ confirmado |
-| S2 — el cron crea hasta 10 promociones sin una en curso; reserva no atómica | _por abrir_ | ❌ confirmado por lectura |
+Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de implementación
+(`fix-320` antes que `fix-321`; `fix-322` y `fix-323` tocan el mismo RPC).
+
+| Sospecha / decisión | Track | Estado |
+|---|---|---|
+| S24 — el PDF borra la sede del libro | `fix-320-m-libro-pdf-borra-sede` | abierto |
+| S6 + D5 — RLS sin sede; secretaria con CRUD completo | `fix-321-m-rls-promociones-profesional-sede-y-rol` | abierto |
+| S2 — cron sin promoción en curso; reserva no atómica | `fix-322-m-cron-promociones-sin-en-curso` | abierto |
+| S5 + S7 + D6 + D7 — número de promoción y cadencia | `fix-323-m-numero-promocion-obligatorio-unico` | abierto |
+| S4 + D3b — finalizar sin confirmación | `fix-324-m-finalizar-promocion-solo-admin-con-confirmacion` | abierto |
+| L12 + D4 — cancelar con alumnos | `fix-325-m-no-cancelar-promocion-con-alumnos` | abierto |
+| S4 + S23 + D3a — Archivo en el piloto | `fix-326-m-archivo-profesional-en-piloto` | abierto |
+| S19 + D9 — conteo con archivados | `fix-327-m-conteo-inscritos-sin-archivados` | abierto |
+| S3 + S21 + D1 — Pre-inscritos alcanzable | `fix-328-m-pre-inscritos-oculto-en-piloto` | abierto |
+| S10 + D2 — estados imposibles | `fix-329-m-base-profesional-sin-estados-imposibles` | abierto |
+| C05 + D11 — columna Promoción | `fix-330-m-columna-promocion-muestra-curso` | abierto |
+| B05 + D10 — total cuenta matrículas | `fix-331-m-kpi-total-cuenta-matriculas` | abierto |
+| S12 + D12 — datos de módulos bloqueados | `fix-332-m-ocultar-datos-de-modulos-bloqueados` | abierto |
+| S15 + D8 — archivar sin aviso de Clase B | `fix-333-m-aviso-archivar-persona-con-clase-b` | abierto |
 
 ## Test de regresión
 
