@@ -14,6 +14,12 @@ export const authGuard: CanActivateFn = async () => {
     return router.createUrlTree(['/login']);
   }
 
+  // Sesión abierta por un link de "recuperar contraseña": primero tiene que fijar la clave nueva
+  // (fix-181-b). Sin esto, el link servía para entrar sin cambiar nada.
+  if (auth.passwordRecovery()) {
+    return router.createUrlTree(['/recuperar-contrasena']);
+  }
+
   // En modo desarrollo se omite la verificación de sesión para acceso rápido.
   // isDevMode() es false en producción (ng build --configuration=production).
   if (isDevMode()) return true;

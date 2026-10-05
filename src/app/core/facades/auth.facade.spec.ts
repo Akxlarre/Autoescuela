@@ -191,9 +191,64 @@ describe('AuthFacade', () => {
     );
   });
 
-  it('resetPasswordForEmail() should call supabase.resetPasswordForEmail', async () => {
+  it('resetPasswordForEmail() pide el link con redirectTo a /recuperar-contrasena (fix-181-b)', async () => {
     await service.resetPasswordForEmail('user@example.com');
-    expect(supabaseSpy.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com');
+    expect(supabaseSpy.resetPasswordForEmail).toHaveBeenCalledWith(
+      'user@example.com',
+      `${window.location.origin}/recuperar-contrasena`,
+    );
+  });
+
+  describe('recuperar contraseña (fix-181-b)', () => {
+    it('passwordRecovery() empieza en false', () => {
+      expect(service.passwordRecovery()).toBe(false);
+    });
+
+    it('PASSWORD_RECOVERY marca la sesión de recuperación y navega a /recuperar-contrasena', () => {
+      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1', email: 'a@b.cl' } });
+
+      expect(service.passwordRecovery()).toBe(true);
+      expect(navigateSpy).toHaveBeenCalledWith(['/recuperar-contrasena']);
+    });
+
+    it('completePasswordRecovery() actualiza la clave y apaga passwordRecovery', async () => {
+      vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+
+      const result = await service.completePasswordRecovery('NuevaClave123');
+
+      expect(result.error).toBeNull();
+      expect((service as any).supabase.client.auth.updateUser).toHaveBeenCalledWith({
+        password: 'NuevaClave123',
+      });
+      expect(service.passwordRecovery()).toBe(false);
+    });
+
+    it('completePasswordRecovery() con error deja passwordRecovery encendido', async () => {
+      vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+      (service as any).supabase.client.auth.updateUser.mockResolvedValue({
+        error: Object.assign(new Error('Password should be at least 6 characters'), {
+          name: 'AuthApiError',
+        }),
+      });
+
+      const result = await service.completePasswordRecovery('123');
+
+      expect(result.error).toBeInstanceOf(Error);
+      expect(service.passwordRecovery()).toBe(true);
+    });
+
+    it('SIGNED_OUT apaga passwordRecovery', () => {
+      vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+
+      authCallback!('SIGNED_OUT', null);
+
+      expect(service.passwordRecovery()).toBe(false);
+    });
   });
 
   it('updatePassword() retorna mensaje de error legible cuando la nueva contraseña es igual a la anterior', async () => {

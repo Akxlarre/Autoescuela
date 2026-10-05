@@ -24,6 +24,13 @@ export class AuthFacade {
 
   private _currentUser = signal<User | null>(null);
 
+  /**
+   * La sesión actual viene de un link de "recuperar contraseña" y todavía no se fijó la clave
+   * nueva (fix-181-b). Mientras sea true, authGuard no deja entrar a /app.
+   */
+  private _passwordRecovery = signal(false);
+  readonly passwordRecovery = this._passwordRecovery.asReadonly();
+
   /** Canal Realtime de la fila propia de `users` (grant multi-sede en caliente, AC-E3). */
   private realtimeChannel: RealtimeChannel | null = null;
   private realtimeDbId: number | null = null;
@@ -57,8 +64,15 @@ export class AuthFacade {
         }
       } else if (event === 'SIGNED_IN' && session?.user) {
         void this.loadUserFromSession(session.user);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // El link del correo abre una sesión: sin esto la app la trataba como un login normal y
+        // el usuario entraba sin fijar clave nueva (fix-181-b).
+        this._passwordRecovery.set(true);
+        if (session?.user) void this.loadUserFromSession(session.user);
+        void this.router.navigate(['/recuperar-contrasena']);
       } else if (event === 'SIGNED_OUT') {
         this.disposeRealtime();
+        this._passwordRecovery.set(false);
         this._currentUser.set(null);
       }
     });
@@ -233,8 +247,18 @@ export class AuthFacade {
   }
 
   async resetPasswordForEmail(email: string): Promise<{ error: Error | null }> {
-    const { error } = await this.supabase.resetPasswordForEmail(email);
+    const { error } = await this.supabase.resetPasswordForEmail(
+      email,
+      `${window.location.origin}/recuperar-contrasena`,
+    );
     return { error: error ? new Error(mapAuthError(error)) : null };
+  }
+
+  /** Fija la clave nueva de una sesión de recuperación y la da por terminada (fix-181-b). */
+  async completePasswordRecovery(password: string): Promise<{ error: Error | null }> {
+    const result = await this.updatePassword(password);
+    if (!result.error) this._passwordRecovery.set(false);
+    return result;
   }
 
   logout(options: { redirect?: boolean } = {}): void {

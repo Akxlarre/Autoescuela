@@ -12,6 +12,7 @@ describe('authGuard — cuenta desactivada (fix-180-b)', () => {
       whenReady: Promise.resolve(),
       currentUser: vi.fn().mockReturnValue(null),
       isAuthenticated: vi.fn().mockReturnValue(false),
+      passwordRecovery: vi.fn().mockReturnValue(false),
       logout: vi.fn(),
     };
     routerSpy = { createUrlTree: vi.fn((cmds: string[]) => ({ __urlTree: cmds })) };
@@ -55,5 +56,13 @@ describe('authGuard — cuenta desactivada (fix-180-b)', () => {
     await run();
 
     expect(authSpy.logout).not.toHaveBeenCalled();
+  });
+
+  it('sesión de recuperación sin clave nueva → /recuperar-contrasena (fix-181-b)', async () => {
+    authSpy.currentUser.mockReturnValue({ id: 'u1', isActive: true });
+    authSpy.isAuthenticated.mockReturnValue(true);
+    authSpy.passwordRecovery.mockReturnValue(true);
+
+    expect(await run()).toEqual({ __urlTree: ['/recuperar-contrasena'] });
   });
 });
