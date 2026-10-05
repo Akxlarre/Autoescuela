@@ -1613,6 +1613,26 @@
 - **Fuente:** `specs/fixes/fix-320-m-libro-pdf-borra-sede`,
   `supabase/migrations/20261005120000_fix320_class_book_backfill_branch_id.sql`.
 
+### DG-101 — Una función `SECURITY DEFINER` en `public` la puede ejecutar cualquiera por la API, aunque solo la llame el servidor
+
+- **Trampa:** proteger una edge function (sesión, rol, `service_role`) y creer que con eso queda
+  protegida la RPC que esa función llama. Postgres da `EXECUTE` a `PUBLIC` por defecto en toda
+  función nueva, y `20260513000002_grant_data_api_access.sql` además lo da a `authenticated` sobre
+  todas las funciones de `public`, presentes y futuras. PostgREST expone cualquier función en
+  `/rest/v1/rpc/<nombre>`: con la anon key pública basta.
+- **Realidad:** `reserve_next_promotion_slot` (solo la llama `auto-create-next-promotions` con la
+  service key) se ejecutaba con la anon key sin sesión hasta su INSERT, saltándose la protección
+  de `fix-043-i`. Como es `SECURITY DEFINER`, además ignora RLS.
+- **Regla de aplicabilidad:** al crear o reemplazar una función que solo usa el servidor (cron,
+  edge function con service key), agregar en la misma migración
+  `REVOKE EXECUTE ON FUNCTION … FROM PUBLIC, anon, authenticated;` y
+  `GRANT EXECUTE ON FUNCTION … TO service_role;`. Si la llama la app, validar dentro de la función
+  `auth.uid()`, rol y sede. Probar llamándola por la API con la anon key: debe dar `42501`.
+- **Fuente:** `specs/fixes/fix-322-m-cron-promociones-sin-en-curso`,
+  `supabase/migrations/20261005140000_fix322_reserve_promotion_slot_colchon_y_permisos.sql`;
+  inventario de las demás en `specs/testing-piloto/037-transversal-multisede-shell.md` §1.4
+  (`ASG-i-047`).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

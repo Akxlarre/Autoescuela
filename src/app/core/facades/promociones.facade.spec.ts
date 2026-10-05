@@ -196,6 +196,7 @@ describe('PromocionesFacade — recuperación de feriados en end_date (0002-m)',
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: START,
       endDate: '2026-09-05', // valor "fijo" que el fix debe IGNORAR
       cursos: [],
@@ -229,6 +230,7 @@ describe('PromocionesFacade — recuperación de feriados en end_date (0002-m)',
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: START,
       endDate: 'irrelevante',
       cursos: [],
@@ -296,7 +298,13 @@ describe('PromocionesFacade — fallo del fetch de feriados es visible (fix-138)
     await facade.previewEndDate(START);
     expect(facade.holidaysCheckFailed()).toBe(true);
 
-    await facade.crearPromocion({ name: 'Promo Nueva', startDate: START, endDate: '', cursos: [] });
+    await facade.crearPromocion({
+      name: 'Promo Nueva',
+      code: '281',
+      startDate: START,
+      endDate: '',
+      cursos: [],
+    });
     expect(facade.holidaysCheckFailed()).toBe(false);
   });
 });
@@ -420,6 +428,7 @@ describe('PromocionesFacade — scope de sede (fix-090)', () => {
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: '2026-08-01',
       endDate: '2026-08-30',
       cursos: [],
@@ -450,5 +459,81 @@ describe('PromocionesFacade — ciclo de vida solo admin (fix-321-m, D5)', () =>
 
   it('secretaria → canManageLifecycle() false', () => {
     expect(setup('secretaria').canManageLifecycle()).toBe(false);
+  });
+});
+
+describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
+  const duplicateCode = {
+    code: '23505',
+    message: 'duplicate key value violates unique constraint "professional_promotions_code_key"',
+  };
+
+  function setup(tables: Record<string, { data?: unknown; error?: unknown }>) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    const mockSupabase = createTableMock(tables);
+    const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: toast },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => 2 } },
+      ],
+    });
+    return { facade: TestBed.inject(PromocionesFacade), mockSupabase, toast };
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('crearPromocion() guarda el número ingresado', async () => {
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+
+    await facade.crearPromocion({
+      name: 'Promoción 281 (12 de Octubre 2026)',
+      code: '281',
+      startDate: '2026-10-12',
+      endDate: '',
+      cursos: [],
+    });
+
+    expect(mockSupabase._builders.get('professional_promotions').insert).toHaveBeenCalledWith(
+      expect.objectContaining({ code: '281' }),
+    );
+  });
+
+  it('crearPromocion() con número repetido → toast claro, no el error crudo de Postgres', async () => {
+    const { facade, toast } = setup({ professional_promotions: { error: duplicateCode } });
+
+    const ok = await facade.crearPromocion({
+      name: 'Promoción 280',
+      code: '280',
+      startDate: '2026-10-12',
+      endDate: '',
+      cursos: [],
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith('El número 280 ya lo usa otra promoción. Elige otro.');
+  });
+
+  it('editarPromocion() con número repetido → toast claro', async () => {
+    const { facade, toast } = setup({ professional_promotions: { error: duplicateCode } });
+
+    const ok = await facade.editarPromocion(1, { name: 'Promo', code: '280', status: 'planned' });
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith('El número 280 ya lo usa otra promoción. Elige otro.');
+  });
+
+  it('suggestNextCode() → mayor número existente + 1', async () => {
+    const { facade } = setup({
+      professional_promotions: { data: [{ code: '279' }, { code: '280' }, { code: null }] },
+    });
+
+    expect(await facade.suggestNextCode()).toBe('281');
   });
 });

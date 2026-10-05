@@ -67,4 +67,44 @@ describe('AdminPromocionEditarDrawerComponent — opciones de estado por rol (fi
     canManage.set(false);
     expect(options('planned')).toEqual(['planned', 'in_progress']);
   });
+
+  // ─── fix-323-m (S7): el número se valida siempre, no solo cuando es lo único que cambió ───
+  describe('canSave valida el número en cualquier cambio (fix-323-m, S7)', () => {
+    function editor(): any {
+      selected.set(makePromo('in_progress'));
+      const component = TestBed.createComponent(AdminPromocionEditarDrawerComponent)
+        .componentInstance as any;
+      component.name.set('Promoción 279');
+      component.code.set('279');
+      component.status.set('in_progress');
+      return component;
+    }
+
+    it('nombre cambiado + número con letras → no guarda', () => {
+      const c = editor();
+      c.name.set('Promoción 279 bis');
+      c.code.set('abc');
+      expect(c.canSave()).toBe(false);
+    });
+
+    it('estado cambiado + número vacío → no guarda', () => {
+      const c = editor();
+      c.status.set('finished');
+      c.code.set('');
+      expect(c.canSave()).toBe(false);
+    });
+
+    it('nombre vacío → no guarda', () => {
+      const c = editor();
+      c.name.set('   ');
+      c.code.set('281');
+      expect(c.canSave()).toBe(false);
+    });
+
+    it('nombre cambiado + número válido → guarda', () => {
+      const c = editor();
+      c.name.set('Promoción 279 bis');
+      expect(c.canSave()).toBe(true);
+    });
+  });
 });

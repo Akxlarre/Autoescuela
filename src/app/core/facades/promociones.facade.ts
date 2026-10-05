@@ -17,6 +17,10 @@ import type {
 } from '@core/models/ui/promocion-table.model';
 import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
 import { computePromotionEndDate } from '@core/utils/promotion-end-date.utils';
+import {
+  promotionWriteErrorMessage,
+  suggestNextPromotionCode,
+} from '@core/utils/promotion-code.utils';
 
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
@@ -286,6 +290,18 @@ export class PromocionesFacade {
     return computePromotionEndDate(startDate, new Set(holidays));
   }
 
+  /**
+   * Siguiente número de promoción para precargar el formulario de crear (fix-323-m): el mayor
+   * existente + 1. El número es único en BD, así que se mira toda la tabla, no solo la sede.
+   */
+  async suggestNextCode(): Promise<string> {
+    const { data, error } = await this.supabase.client
+      .from('professional_promotions')
+      .select('code');
+    if (error) return '';
+    return suggestNextPromotionCode(((data ?? []) as { code: string | null }[]).map((r) => r.code));
+  }
+
   async crearPromocion(payload: CrearPromocionPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
@@ -299,6 +315,7 @@ export class PromocionesFacade {
         .from('professional_promotions')
         .insert({
           name: payload.name,
+          code: payload.code,
           start_date: payload.startDate,
           end_date: endDate,
           status: 'planned',
@@ -341,6 +358,9 @@ export class PromocionesFacade {
         }
       }
 
+      // 4b. El número de la promoción arma el código de cada curso ("281.2" para A2).
+      await this.propagateCodeToCourses(promo.id, payload.code);
+
       // 5. Cancelar sesiones que caen en feriados dentro del rango ya extendido
       const holidaysInRange = holidays.filter((d) => d >= payload.startDate && d <= endDate);
       if (holidaysInRange.length > 0) {
@@ -357,7 +377,8 @@ export class PromocionesFacade {
       return true;
     } catch (err) {
       const msg =
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción';
+        promotionWriteErrorMessage(err, payload.code) ??
+        (err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción');
       this.toast.error(msg);
       return false;
     } finally {
@@ -452,9 +473,10 @@ export class PromocionesFacade {
       return true;
     } catch (err) {
       const msg =
-        err instanceof Error
+        promotionWriteErrorMessage(err, payload.code) ??
+        (err instanceof Error
           ? this.sanitizer.sanitize(err).message
-          : 'Error al actualizar promoción';
+          : 'Error al actualizar promoción');
       this.toast.error(msg);
       return false;
     } finally {

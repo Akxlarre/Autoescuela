@@ -55,9 +55,10 @@ export interface CrearPromocionCursoPayload {
   lecturerIds: number[];
 }
 
-/** Payload para crear promoción. El ID numérico MTT (`code`) se asigna después, vía Editar. */
+/** Payload para crear promoción. `code` (ID numérico MTT) es obligatorio desde fix-323-m. */
 export interface CrearPromocionPayload {
   name: string;
+  code: string;
   startDate: string; // ISO date
   endDate: string; // ISO date
   cursos: CrearPromocionCursoPayload[];

@@ -13,6 +13,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
+import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -108,8 +109,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 placeholder="Ej: 156"
                 data-llm-description="ID numérico MTT de la promoción; se propaga a sus cursos como {id}.{licencia}"
               />
-              @if (code().trim().length > 0 && !codeIsValid()) {
-                <p class="text-2xs mt-1 text-error">Debe ser solo números (ej: 156).</p>
+              @if (!codeIsValid()) {
+                <p class="text-2xs mt-1 text-error">
+                  {{
+                    code().trim().length > 0
+                      ? 'Debe ser solo números (ej: 156).'
+                      : 'El número es obligatorio.'
+                  }}
+                </p>
               }
             </div>
 
@@ -323,14 +330,18 @@ export class AdminPromocionEditarDrawerComponent {
   });
 
   /** El código es el ID numérico MTT — estrictamente dígitos. */
-  protected readonly codeIsValid = computed(() => /^\d+$/.test(this.code().trim()));
+  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
 
-  /** Habilita guardar si nombre/código cambiaron (código válido) O si el nuevo estado es una transición válida. */
+  /**
+   * Habilita guardar si algo cambió (nombre, número o una transición de estado válida) y el
+   * formulario completo es válido: nombre no vacío y número solo dígitos. Hasta fix-323-m el
+   * número solo se validaba cuando era lo único que cambiaba (S7).
+   */
   protected readonly canSave = computed(() => {
     const p = this.facade.selectedPromocion();
     if (!p) return false;
-    const codeChanged = this.code().trim() !== p.code;
-    const nameOrCodeChanged = this.name().trim() !== p.name || (codeChanged && this.codeIsValid());
+    if (!this.name().trim() || !this.codeIsValid()) return false;
+    const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
     const statusChanged =
       this.status() !== p.status &&
       this.availableStatusOptions().some((o) => o.value === this.status());

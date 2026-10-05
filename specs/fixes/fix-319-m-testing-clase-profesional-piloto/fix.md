@@ -176,8 +176,8 @@ Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de i
 |---|---|---|
 | S24 — el PDF borra la sede del libro | `fix-320-m-libro-pdf-borra-sede` | ✅ cerrado 2026-10-05 |
 | S6 + D5 — RLS sin sede; secretaria con CRUD completo | `fix-321-m-rls-promociones-profesional-sede-y-rol` | ✅ cerrado 2026-10-05 |
-| S2 — cron sin promoción en curso; reserva no atómica | `fix-322-m-cron-promociones-sin-en-curso` | abierto |
-| S5 + S7 + D6 + D7 — número de promoción y cadencia | `fix-323-m-numero-promocion-obligatorio-unico` | abierto |
+| S2 — cron sin promoción en curso; reserva no atómica | `fix-322-m-cron-promociones-sin-en-curso` | ✅ cerrado 2026-10-05 |
+| S5 + S7 + D6 + D7 — número de promoción y cadencia | `fix-323-m-numero-promocion-obligatorio-unico` | ✅ cerrado 2026-10-05 |
 | S4 + D3b — finalizar sin confirmación | `fix-324-m-finalizar-promocion-solo-admin-con-confirmacion` | abierto |
 | L12 + D4 — cancelar con alumnos | `fix-325-m-no-cancelar-promocion-con-alumnos` | abierto |
 | S4 + S23 + D3a — Archivo en el piloto | `fix-326-m-archivo-profesional-en-piloto` | abierto |
