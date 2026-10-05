@@ -270,8 +270,18 @@ export class AdminPromocionEditarDrawerComponent {
    *   in_progress → En curso | Finalizada | Cancelada
    *   finished    → Finalizada  (sin más transiciones)
    *   cancelled   → Cancelada   (sin más transiciones)
+   * La secretaria no ve Finalizada ni Cancelada como destino (fix-321-m, D5).
    */
   protected readonly availableStatusOptions = computed(() => {
+    const options = this.statusOptionsFor();
+    if (this.facade.canManageLifecycle()) return options;
+    const current = this.facade.selectedPromocion()?.status;
+    return options.filter(
+      (o) => o.value === current || (o.value !== 'finished' && o.value !== 'cancelled'),
+    );
+  });
+
+  private statusOptionsFor(): { label: string; value: PromocionStatus }[] {
     const p = this.facade.selectedPromocion();
     if (!p) return [];
 
@@ -301,7 +311,7 @@ export class AdminPromocionEditarDrawerComponent {
       default:
         return [];
     }
-  });
+  }
 
   /** True cuando está planificada pero la fecha de inicio aún no llega. */
   protected readonly plannedButNotStarted = computed(() => {

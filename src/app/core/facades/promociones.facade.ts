@@ -52,6 +52,12 @@ export class PromocionesFacade {
   /** true si el último fetch de feriados falló (DNS/red/CORS/5xx) — end_date pudo calcularse sin feriados reales. */
   readonly holidaysCheckFailed = this._holidaysCheckFailed.asReadonly();
 
+  /**
+   * Crear, finalizar y cancelar promociones es solo del admin; la secretaria ve y edita datos
+   * operativos (fix-321-m, D5). La RLS lo hace cumplir en BD; esto solo adapta la UI.
+   */
+  readonly canManageLifecycle = computed(() => this.auth.currentUser()?.role === 'admin');
+
   // ── KPIs ────────────────────────────────────────────────────────────────────
   readonly totalPromociones = computed(() => this._promociones().length);
   readonly planificadas = computed(

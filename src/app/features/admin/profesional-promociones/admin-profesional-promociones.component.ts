@@ -391,9 +391,11 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
-  protected readonly heroActions = computed((): SectionHeroAction[] => [
-    { id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true },
-  ]);
+  protected readonly heroActions = computed((): SectionHeroAction[] =>
+    this.facade.canManageLifecycle()
+      ? [{ id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true }]
+      : [],
+  );
 
   /** Placeholder para satisfacer `promocion` (input.required) en las cards skeleton. */
   protected readonly skeletonPromocion: PromocionTableRow = {

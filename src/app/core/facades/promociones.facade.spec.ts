@@ -429,3 +429,26 @@ describe('PromocionesFacade — scope de sede (fix-090)', () => {
     expect(promoBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ branch_id: 7 }));
   });
 });
+
+describe('PromocionesFacade — ciclo de vida solo admin (fix-321-m, D5)', () => {
+  function setup(role: string) {
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return TestBed.inject(PromocionesFacade);
+  }
+
+  it('admin → canManageLifecycle() true (crear, finalizar y cancelar)', () => {
+    expect(setup('admin').canManageLifecycle()).toBe(true);
+  });
+
+  it('secretaria → canManageLifecycle() false', () => {
+    expect(setup('secretaria').canManageLifecycle()).toBe(false);
+  });
+});

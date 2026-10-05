@@ -27,9 +27,11 @@ describe('AdminProfesionalPromocionesComponent', () => {
   let facadeSpy: any;
 
   const promocionesSig = signal<PromocionTableRow[]>([]);
+  const canManageSig = signal(true);
 
   beforeEach(() => {
     promocionesSig.set([]);
+    canManageSig.set(true);
     facadeSpy = {
       isLoading: signal(false),
       promociones: promocionesSig,
@@ -37,6 +39,7 @@ describe('AdminProfesionalPromocionesComponent', () => {
       enCurso: signal(0),
       planificadas: signal(0),
       canceladas: signal(0),
+      canManageLifecycle: canManageSig,
       initialize: vi.fn(),
       selectPromocion: vi.fn(),
     };
@@ -98,5 +101,17 @@ describe('AdminProfesionalPromocionesComponent', () => {
     const ordered = (component as any).filteredPromociones() as PromocionTableRow[];
 
     expect(ordered.map((p) => p.id)).toEqual([1, 3]);
+  });
+
+  // ─── fix-321-m (D5): crear promociones es solo del admin ───
+  it('admin ve la acción "Programar Promoción"', () => {
+    const ids = ((component as any).heroActions() as { id: string }[]).map((a) => a.id);
+    expect(ids).toContain('new');
+  });
+
+  it('secretaria no ve la acción "Programar Promoción"', () => {
+    canManageSig.set(false);
+    const ids = ((component as any).heroActions() as { id: string }[]).map((a) => a.id);
+    expect(ids).not.toContain('new');
   });
 });

@@ -1,7 +1,8 @@
 # Fix: RLS de promociones, cursos y libro de Clase Profesional sin sede ni restricción de rol
 > id: fix-321-m-rls-promociones-profesional-sede-y-rol
 > refs: fix-319-m-testing-clase-profesional-piloto (S6, D5) · ASG-i-025 · 0047-b
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -36,3 +37,21 @@ Ninguno — fix autónomo.
 - Por API: secretaria de la sede 2 → puede editar nombre/número; no puede INSERT, DELETE ni pasar
   a `finished`/`cancelled`.
 - E2E: la secretaria no ve "Nueva promoción".
+
+## Progreso
+- [x] Migración `20261005130000_fix321_rls_clase_profesional_sede_y_rol.sql` escrita.
+- [x] UI: `PromocionesFacade.canManageLifecycle()`; sin "Programar Promoción" ni Finalizada/Cancelada
+  para la secretaria. Unit tests (7 nuevos) en verde, `tsc` y `lint:arch` sin errores.
+- [x] Matías aplicó la migración (2026-10-05).
+- [x] Regresión por API en verde (17/17), cuentas `secretaria@test.com` (sede 1),
+  `secretaria2@test.com` (sede 2), `secretaria.multisede@test.com` y admin, con una promoción
+  desechable (id 24, 2099-01-05) borrada al final:
+  - sec1 lee 0 promociones / 0 cursos / 0 libros de la sede 2; no edita ni borra la promoción,
+    el curso ni el libro de la sede 2.
+  - sec2 y multisede leen 12 promociones / 48 cursos / 38 libros de la sede 2.
+  - sec2 edita nombre/número, pasa planificada → en curso, edita curso y libro de su sede; **no**
+    puede pasar a `finished` ni `cancelled` ("new row violates row-level security policy"), ni
+    borrar, ni crear.
+- [x] Revisión visual (Playwright, `secretaria2@test.com`, `/app/secretaria/profesional/promociones`):
+  el hero no muestra "Programar Promoción"; el editor de la Promoción 280 (en curso) ofrece solo
+  "En curso". Consola sin errores.

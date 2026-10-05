@@ -767,10 +767,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_class_book | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_class_book | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status != '…` | — |
+| insert_class_book | INSERT | — | admin, o secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m) |
+| update_class_book | UPDATE | admin, o secretary de la sede si `status <> 'closed'` | — |
 | delete_class_book | DELETE | `auth_user_role() = 'admin'` | — |
-| select_class_book | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| select_class_book | SELECT | admin, secretary de la sede, o student inscrito en el curso | — |
 
 ### `consents` — 🔒 RLS
 
@@ -1686,10 +1686,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_professional_promotions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
-| insert_professional_promotions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_professional_promotions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_professional_promotions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_professional_promotions | SELECT | admin, secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
+| insert_professional_promotions | INSERT | — | solo admin (D5, fix-321-m) |
+| update_professional_promotions | UPDATE | admin, o secretary de la sede solo sobre `planned`/`in_progress` | mismo: la secretary no puede dejarla `finished`/`cancelled` (D5) |
+| delete_professional_promotions | DELETE | solo admin (D5, fix-321-m) | — |
 
 ### `professional_theory_attendance` — 🔒 RLS
 
@@ -1788,8 +1788,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_promotion_course_lecturers | SELECT | `true` | — |
-| insert_promotion_course_lecturers | INSERT | — | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
-| update_promotion_course_lecturers | UPDATE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
+| insert_promotion_course_lecturers | INSERT | — | admin, o secretary de la sede de la promoción (fix-321-m) |
+| update_promotion_course_lecturers | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
 | delete_promotion_course_lecturers | DELETE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
 
 **Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
@@ -1812,10 +1812,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_promotion_courses | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
-| insert_promotion_courses | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_promotion_courses | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_promotion_courses | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_promotion_courses | SELECT | admin, secretary de la sede de la promoción (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
+| insert_promotion_courses | INSERT | — | solo admin (fix-321-m) |
+| update_promotion_courses | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
+| delete_promotion_courses | DELETE | solo admin (fix-321-m) | — |
 
 **Índices:** `idx_promotion_courses_promotion`
 
