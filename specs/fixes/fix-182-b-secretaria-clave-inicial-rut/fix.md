@@ -51,7 +51,13 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 ## Progreso
 - [x] Código + tests + build
 - [x] Desplegada `create-secretary` (visto bueno del owner, 2026-10-05). Smoke test: sin usuario → 401, la función arranca con el import de nodemailer
-- [ ] Prueba manual: crear una secretaria de prueba con correo real → llega el correo → crea su
+- [x] **Hallazgo de la 1ª prueba manual (2026-10-05):** el RUT usado (`20.179.020-4`) ya era de un
+      instructor (`users.rut` UNIQUE) → 500 y "error inesperado" en pantalla. La invitación se generó
+      bien y el rollback borró cada cuenta de Auth (sin basura, sin correos). Corregido:
+      `create-secretary` responde 409 "Ese RUT ya está registrado como <rol>" antes de crear la
+      cuenta, y el facade muestra ese mensaje (en producción tras el próximo release del front).
+      Redesplegada `create-secretary`.
+- [ ] Prueba manual: crear una secretaria de prueba con un RUT **no registrado** y correo real → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
 ## Cuenta ya existente
