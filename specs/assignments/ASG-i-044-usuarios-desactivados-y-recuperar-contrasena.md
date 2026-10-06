@@ -55,6 +55,7 @@ cuentas:
 - **Estado (2026-10-01):** parte 1 (cuentas desactivadas, puntos 1 y 3-parcial) cerrada en
   `fix-180-b-usuarios-desactivados-siguen-entrando`, en producción. **Parte 2 en curso** (`fix-181-b-recuperar-contrasena-punta-a-punta`): recuperar
   contraseña de punta a punta (punto 2) y clave inicial = RUT (punto 3) — va en otro track. La
-  Asignación sigue `reclamada` hasta cerrar la parte 2.
+  Asignación sigue `reclamada` hasta cerrar la parte 2. **Punto 3 (clave inicial = RUT):**
+  `fix-182-b-secretaria-clave-inicial-rut`.
 
 - Puede partirse en 2 tracks: (1)+(3) cuentas, (2) recuperar contraseña.
