@@ -10,7 +10,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationStart, Router } from '@angular/router';
+import { filter } from 'rxjs';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { isRouteChange } from '@core/utils/drawer-navigation.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -64,6 +69,8 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <div
       #panelEl
       data-drawer-panel
+      role="dialog"
+      [attr.aria-label]="title()"
       class="relative z-10 flex flex-col w-full h-full bg-base rounded-tl-2xl lg:rounded-tr-2xl lg:border-t lg:border-x border-border-subtle overflow-hidden"
       style="min-height: 0; will-change: transform;"
     >
@@ -166,6 +173,8 @@ export class LayoutDrawerComponent implements OnDestroy {
   private readonly gsapService = inject(GsapAnimationsService);
   private readonly el = inject(ElementRef<HTMLElement>);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   readonly isOpen = this.layoutDrawer.isOpen;
   readonly component = this.layoutDrawer.component;
@@ -185,6 +194,18 @@ export class LayoutDrawerComponent implements OnDestroy {
   protected readonly renderKey = signal(0);
 
   constructor() {
+    // hotfix-061-b: al ir a otra pantalla el drawer se cierra (antes quedaba abierto encima de
+    // la pantalla nueva). En NavigationStart, no en NavigationEnd: una página que abre un drawer
+    // al cargar lo abre después de este evento y no lo ve cerrarse.
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationStart => e instanceof NavigationStart),
+        takeUntilDestroyed(),
+      )
+      .subscribe((e) => {
+        if (this.isOpen() && isRouteChange(this.router.url, e.url)) this.layoutDrawer.close();
+      });
+
     effect(() => {
       const open = this.isOpen();
 
@@ -255,6 +276,18 @@ export class LayoutDrawerComponent implements OnDestroy {
   }
 
   /** La X y el fondo: el componente abierto puede pedir confirmación antes (fix-310-m). */
+  /**
+   * hotfix-061-b: Escape cierra el drawer como la X (respeta la pregunta de "¿descartar
+   * cambios?"). No actúa si otro control ya atendió la tecla — los selects y datepickers de
+   * PrimeNG con la lista abierta la marcan con preventDefault — ni con el modal de confirmación
+   * abierto encima.
+   */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this.isOpen() || event.defaultPrevented || this.confirmModal.isOpen()) return;
+    this.close();
+  }
+
   close(): void {
     void this.layoutDrawer.requestClose();
   }
