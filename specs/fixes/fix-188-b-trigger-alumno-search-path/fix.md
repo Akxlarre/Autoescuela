@@ -1,7 +1,7 @@
 # Fix: El trigger anti doble-agendado del alumno no fija su search_path (DG-063)
 > id: fix-188-b-trigger-alumno-search-path
 > refs: ASG-i-026 (hallazgo de fix-187-b)
-> status: in_progress
+> status: done
 > created: 2026-10-06
 
 ## Root Cause
@@ -36,6 +36,6 @@ Ninguno de una spec previa. ACs propios:
 ## Progreso
 - [x] Migración escrita — lógica idéntica a fix-301-m salvo `search_path = ''` y `public.` (verificado con diff)
 - [x] Caso de prueba agregado a `supabase/tests/agenda/fix-187-b-vehiculo-doble-agendado.sql`
-- [ ] Validar en un envío que se deshace (bloqueado: el MCP de Supabase y la Management API responden "FGA Authentication Error. Unauthorized" desde el 2026-10-06)
-- [ ] Aplicar con aprobación del owner y registrar en `schema_migrations`
-- [ ] Prueba de regresión 10/10 con la migración aplicada
+- [x] Validado en un envío que se deshizo entero (con search_path vacío rechaza con el mensaje del alumno; normal igual; sin choque se guarda)
+- [x] Aplicada en la BD del piloto con aprobación del owner ("si dale") y registrada en `schema_migrations` (`20261006130000`)
+- [x] Prueba de regresión con la migración aplicada: 10/10 ok (9 casos de fix-187-b + el del alumno con search_path vacío)
