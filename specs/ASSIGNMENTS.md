@@ -288,6 +288,7 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | `m` | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-05 |
+| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 <!-- AUTO-GENERATED:END -->
 
 ---
