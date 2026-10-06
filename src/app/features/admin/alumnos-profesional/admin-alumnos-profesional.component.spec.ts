@@ -26,6 +26,7 @@ describe('AdminAlumnosProfesionalComponent — archivar (fix-333-m)', () => {
       archivarAlumno: vi.fn(),
       initialize: vi.fn(),
       dispose: vi.fn(),
+      leaveTrashView: vi.fn(),
     };
     TestBed.configureTestingModule({
       imports: [AdminAlumnosProfesionalComponent],
@@ -97,6 +98,17 @@ describe('AdminAlumnosProfesionalComponent — archivar (fix-333-m)', () => {
 
   // fix-338-m (S16): ngOnInit y el effect de sede llamaban los dos a initialize() → dos
   // consultas idénticas al entrar. El effect ya hace la carga inicial (patrón de hotfix-055-b).
+  // fix-339-m (G06): salir de la pantalla abandona la Papelera; al volver se ve la lista activa.
+  it('al salir abandona la Papelera (fix-339-m)', () => {
+    TestBed.overrideComponent(AdminAlumnosProfesionalComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(AdminAlumnosProfesionalComponent);
+    fixture.detectChanges();
+
+    fixture.destroy();
+
+    expect(facade.leaveTrashView).toHaveBeenCalledTimes(1);
+  });
+
   it('carga una sola vez al entrar (fix-338-m)', () => {
     TestBed.overrideComponent(AdminAlumnosProfesionalComponent, { set: { template: '' } });
     const fixture = TestBed.createComponent(AdminAlumnosProfesionalComponent);

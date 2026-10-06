@@ -375,6 +375,35 @@ describe('AdminAlumnosProfesionalFacade', () => {
     expect(toast.error).toHaveBeenCalled();
   });
 
+  // fix-339-m (G06): el facade es un singleton; sin esto, al volver a la Base Profesional se
+  // abría la Papelera (mismo caso que hotfix-112-m en la Base B).
+  describe('leaveTrashView (fix-339-m)', () => {
+    it('apaga la Papelera sin consultar y la próxima entrada carga la lista activa', async () => {
+      mockTables({ enrollments: [makeProEnrollment()] });
+      await facade.setTrashView(true);
+      supabaseSpy.client.from.mockClear();
+
+      facade.leaveTrashView();
+
+      expect(facade.trashView()).toBe(false);
+      expect(facade.alumnos()).toEqual([]);
+      expect(supabaseSpy.client.from).not.toHaveBeenCalled();
+
+      await facade.initialize();
+      expect(facade.alumnos()).toHaveLength(1);
+    });
+
+    it('fuera de la Papelera no hace nada (no invalida la lista activa)', async () => {
+      mockTables({ enrollments: [makeProEnrollment()] });
+      await facade.initialize();
+
+      facade.leaveTrashView();
+
+      expect(facade.alumnos()).toHaveLength(1);
+      expect((facade as any)._initialized).toBe(true);
+    });
+  });
+
   // fix-337-m (I10): el buscador global necesita la lista, pero no tiene ciclo de vida para cerrar
   // un canal Realtime (swr-pattern.md: nunca suscribir sin su dispose()).
   describe('loadForSearch (fix-337-m)', () => {

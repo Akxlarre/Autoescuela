@@ -92,6 +92,7 @@ export class AdminAlumnosProfesionalComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.branchFacade.setProfessionalOnly(false);
       this.facade.dispose();
+      this.facade.leaveTrashView(); // fix-339-m: al volver se ve la lista activa
     });
   }
 

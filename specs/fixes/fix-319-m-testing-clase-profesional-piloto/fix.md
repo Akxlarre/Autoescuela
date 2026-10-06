@@ -316,7 +316,7 @@ Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta)
 | H06 + D15 — acciones de Clase B en la ficha Profesional | `fix-336-m-ficha-profesional-sin-acciones-de-clase-b` | ✅ cerrado 2026-10-06 |
 | I10 — buscador global sin alumnos Profesional | `fix-337-m-buscador-global-incluye-profesional` | ✅ cerrado 2026-10-06 |
 | F07 + S14 (+ S16) — error de carga como lista vacía en Base Prof. y Promociones | `fix-338-m-error-de-carga-profesional-no-es-lista-vacia` | ✅ cerrado 2026-10-06 |
-| G06 — la Papelera persiste al volver por el menú | `fix-339-m-papelera-profesional-no-persiste` | ⏳ por abrir |
+| G06 — la Papelera persiste al volver por el menú | `fix-339-m-papelera-profesional-no-persiste` | ✅ cerrado 2026-10-06 |
 | F03 + D16 — tarjetas móviles angostas por paddings anidados | `fix-340-m-tarjetas-moviles-paddings-anidados` | ⏳ por abrir |
 
 ## Test de regresión

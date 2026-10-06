@@ -202,6 +202,19 @@ export class AdminAlumnosProfesionalFacade {
     }
   }
 
+  /**
+   * Sale de la Papelera al abandonar la pantalla (fix-339-m, mismo caso que hotfix-112-m en la
+   * Base B). El facade es un singleton: sin esto, al volver a la Base Profesional se abría la
+   * Papelera. No consulta (la pantalla ya no existe): invalida la caché para que la próxima
+   * entrada cargue la lista activa.
+   */
+  leaveTrashView(): void {
+    if (!this._trashView()) return;
+    this._trashView.set(false);
+    this._alumnos.set([]);
+    this._initialized = false;
+  }
+
   async setTrashView(value: boolean): Promise<void> {
     if (this._trashView() === value) return;
     this._trashView.set(value);
