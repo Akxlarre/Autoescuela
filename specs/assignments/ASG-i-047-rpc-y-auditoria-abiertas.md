@@ -69,3 +69,29 @@ funciones `SECURITY DEFINER` no revisan quién las llama:
 
 - El `GRANT … ON ALL FUNCTIONS` global es la causa de fondo: evaluar revocarlo y otorgar solo las
   funciones que el cliente realmente usa.
+
+## Nota de Benjamín (2026-10-06) — puntos 1 y 2 ya resueltos en `fix-191-b`
+
+Testeando `ASG-i-037` (`fix-190-b`) confirmé en vivo, contra la BD del piloto, que el problema era
+peor de lo que dice arriba: las funciones no solo las ejecutaba cualquier **logueado**, sino
+cualquiera **sin sesión** (con la anon key pública). `confirm_enrollment_with_payment` llamada como
+`anon` activó un borrador con un "pago" de $1 (prueba deshecha). Como era P0, lo arreglé en
+**`fix-191-b`**, ya aplicado en la BD del piloto (migración `20261006150000`):
+
+- **Punto 1 (`confirm_enrollment_with_payment`) — resuelto:** fuera `anon`; adentro valida que
+  quien llama sea admin o secretaria de la sede de la matrícula (o con grant). `search_path` fijo.
+- **Punto 2 (`mark_end_of_day_class_b_absences`, `apply_class_b_absence_penalty`) — resuelto:** el
+  cierre nocturno solo lo ejecutan el cron (`postgres`) y `service_role`; la penalización valida
+  rol y sede (desde el cron sigue andando).
+- **Además:** las otras 9 funciones de cron/internas del inventario (`cleanup_*`,
+  `auto_transition_*`, `ensure_theory_cycle`, `notify_vehicle_document_expiry`,
+  `recalc_instructor_monthly_hours`) quedaron solo para `postgres`/`service_role`, y
+  `get_next_enrollment_number` sin `anon`.
+- **Queda pendiente para esta asignación — punto 3 (`audit_log`):** no lo toqué. `log_change()`
+  sigue tomando el header `x-audit-user-id` antes que `auth.uid()` y la policy `insert_audit_log`
+  sigue dejando insertar a cualquier logueado.
+- **No hecho:** revocar el `GRANT … ON ALL FUNCTIONS` global (la causa de fondo). Ojo si se evalúa:
+  varias policies `TO public` llaman helpers (`auth_user_role()`, `branch_visible()`…), que `anon`
+  y `authenticated` necesitan poder ejecutar.
+
+Prueba reutilizable: `supabase/tests/rls/fix-191-b-rpc-sin-sesion.sql` (22 casos, se deshace sola).
