@@ -3,7 +3,22 @@ import {
   resolveListadoRoute,
   resolveListadoLabel,
   shouldShowEnrollmentSelector,
+  showsClaseBActions,
 } from './admin-alumno-detalle.component';
+
+// fix-336-m (H06 / D15): Inasistencias, Ficha Técnica, Reagendamientos y Carnet son de Clase B
+// (clases prácticas con instructor). En una matrícula Profesional no se muestran; mientras la
+// ficha no resuelve el tipo (undefined) tampoco, para no parpadear acciones que luego se van.
+describe('showsClaseBActions (fix-336-m)', () => {
+  it('true solo para una matrícula Clase B', () => {
+    expect(showsClaseBActions('class_b')).toBe(true);
+  });
+
+  it('false para Profesional y mientras el tipo no está resuelto', () => {
+    expect(showsClaseBActions('professional')).toBe(false);
+    expect(showsClaseBActions(undefined)).toBe(false);
+  });
+});
 
 describe('shouldShowEnrollmentSelector (fix-314-m)', () => {
   const cargada = { isLoading: false, hasError: false, hasAlumno: true, enrollmentCount: 2 };
