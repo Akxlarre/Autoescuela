@@ -8,7 +8,7 @@ import {
   afterNextRender,
   computed,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -104,6 +104,7 @@ export class SidebarComponent {
   protected readonly confirmModal = inject(ConfirmModalService);
   protected readonly toast = inject(ToastService);
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly router = inject(Router);
 
   private readonly sidebarEl = viewChild<ElementRef<HTMLElement>>('sidebarEl');
 
@@ -199,6 +200,9 @@ export class SidebarComponent {
         if (proBranch) {
           this.branchFacade.selectBranch(proBranch.id);
           this.toast.success(`Cambiado exitosamente a la sede: ${proBranch.name}`);
+          // fix-334-m (D13): además de conmutar, abrir el ítem que se cliqueó.
+          this.layout.closeSidebar();
+          void this.router.navigateByUrl(item.routerLink);
         } else {
           this.toast.error('No se encontró una sede profesional disponible.');
         }

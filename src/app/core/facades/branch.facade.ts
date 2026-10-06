@@ -57,6 +57,15 @@ export class BranchFacade {
   private readonly _professionalOnly = signal(false);
   /** Sede elegida antes de un cambio temporal; `undefined` = no hay ninguno pendiente. */
   private _branchBeforeTemporary: number | null | undefined = undefined;
+  /**
+   * Sede elegida por el usuario antes de entrar a una pantalla de Clase Profesional
+   * (fix-334-m / D14). `undefined` = no hay modo Profesional activo.
+   */
+  private _branchBeforeProfessional: number | null | undefined = undefined;
+  /** Carga de sedes en curso o terminada; `null` = nadie la pidió todavía. */
+  private _loadPromise: Promise<void> | null = null;
+  /** true cuando `_branches` tiene la lista real de la BD (no el stub de `localStorage`). */
+  private _loaded = false;
 
   // ── 2. ESTADO EXPUESTO (Público, solo lectura) ────────────────────────────
   readonly branches = this._branches.asReadonly();
@@ -97,8 +106,25 @@ export class BranchFacade {
   /**
    * Carga todas las sedes desde la BD.
    * Llamar una sola vez desde AppShellComponent cuando el rol es admin.
+   * Si ya hay una carga en curso, devuelve esa misma promesa (no duplica la consulta).
    */
-  async loadBranches(): Promise<void> {
+  loadBranches(): Promise<void> {
+    if (this._loadPromise && !this._loaded) return this._loadPromise;
+    this._loadPromise = this.fetchBranches();
+    return this._loadPromise;
+  }
+
+  /**
+   * Espera a que `branches()` tenga la lista real de la BD (fix-334-m). Reutiliza la carga en
+   * curso o ya terminada; solo consulta si nadie la pidió. Usado por `professionalBranchGuard`
+   * para que la pantalla Profesional encuentre su sede al montarse.
+   */
+  async ensureBranchesLoaded(): Promise<void> {
+    if (this._loaded) return;
+    await (this._loadPromise ?? this.loadBranches());
+  }
+
+  private async fetchBranches(): Promise<void> {
     this._isLoading.set(true);
     this._error.set(null);
     try {
@@ -116,9 +142,14 @@ export class BranchFacade {
           hasProfessional: b.has_professional ?? false,
         })),
       );
+      this._loaded = true;
       this.validatePersistedBranch();
+      // Si una pantalla Profesional se montó antes de tener la lista, aplicar su sede ahora.
+      if (this._professionalOnly()) this.applyProfessionalBranch();
     } catch (err: any) {
       this._error.set(this.sanitizer.sanitize(err).message ?? 'Error al cargar sedes');
+      // Sin esto, una carga fallida quedaría "en curso" para siempre y nadie reintentaría.
+      this._loadPromise = null;
     } finally {
       this._isLoading.set(false);
     }
@@ -228,21 +259,35 @@ export class BranchFacade {
    * Cuando es true:
    *  - Deshabilita "Todas las escuelas" (implica requiresSpecificBranch).
    *  - Deshabilita las sedes sin has_professional en el selector.
-   *  - Auto-selecciona la primera sede profesional si la activa no lo es.
+   *  - Auto-selecciona la primera sede profesional si la activa no lo es. Lo hace solo en
+   *    memoria: lo guardado sigue siendo la elección del usuario (fix-334-m).
+   * Cuando es false: vuelve a la sede que había antes de entrar y la guarda (D14).
    */
   setProfessionalOnly(value: boolean): void {
-    this._professionalOnly.set(value);
-    this._requiresSpecificBranch.set(value);
     if (value) {
-      const current = this._selectedBranchId();
-      const currentBranch = this._branches().find((b) => b.id === current);
-      if (!currentBranch?.hasProfessional) {
-        const firstPro = this._branches().find((b) => b.hasProfessional);
-        if (firstPro) this._selectedBranchId.set(firstPro.id);
+      // Una llamada anidada (Pre-inscritos embebido) no debe pisar la sede previa.
+      if (this._branchBeforeProfessional === undefined) {
+        this._branchBeforeProfessional = this._selectedBranchId();
       }
-    } else {
-      // Al salir de una vista exclusiva de Clase Profesional, volver a "Todas las escuelas"
-      this._selectedBranchId.set(null);
+      this._professionalOnly.set(true);
+      this._requiresSpecificBranch.set(true);
+      this.applyProfessionalBranch();
+      return;
     }
+
+    this._professionalOnly.set(false);
+    this._requiresSpecificBranch.set(false);
+    if (this._branchBeforeProfessional === undefined) return;
+    const previous = this._branchBeforeProfessional;
+    this._branchBeforeProfessional = undefined;
+    this.selectBranch(previous);
+  }
+
+  /** Si la sede activa no tiene Clase Profesional, cambia (en memoria) a la primera que sí. */
+  private applyProfessionalBranch(): void {
+    const current = this._branches().find((b) => b.id === this._selectedBranchId());
+    if (current?.hasProfessional) return;
+    const firstPro = this._branches().find((b) => b.hasProfessional);
+    if (firstPro) this._selectedBranchId.set(firstPro.id);
   }
 }

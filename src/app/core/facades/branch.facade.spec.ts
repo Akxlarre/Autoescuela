@@ -274,4 +274,135 @@ describe('BranchFacade', () => {
       expect(facade.selectedBranchId()).toBe(1);
     });
   });
+
+  describe('modo Profesional — fix-334-m', () => {
+    // Sede 1 sin Clase Profesional · sede 2 con Clase Profesional (como en producción).
+    const DB_ROWS = [
+      { id: 1, name: 'Autoescuela Chillán', slug: 'autoescuela', has_professional: false },
+      { id: 2, name: 'Conductores Chillán', slug: 'conductores', has_professional: true },
+    ];
+    const persisted = () => localStorage.getItem(STORAGE_KEY);
+
+    function buildFacade(persistedBranch: { id: number; name: string } | null): {
+      facade: BranchFacade;
+      from: ReturnType<typeof vi.fn>;
+    } {
+      localStorage.clear();
+      if (persistedBranch) localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedBranch));
+      const mock = buildSupabaseMock({ data: DB_ROWS, error: null });
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [BranchFacade, { provide: SupabaseService, useValue: mock }],
+      });
+      return { facade: TestBed.inject(BranchFacade), from: mock.client.from };
+    }
+
+    it('al entrar con las sedes cargadas aplica la sede Profesional sin guardarla', async () => {
+      const { facade: f } = buildFacade(null);
+      await f.loadBranches();
+
+      f.setProfessionalOnly(true);
+
+      expect(f.selectedBranchId()).toBe(2);
+      expect(persisted()).toBeNull();
+    });
+
+    it('A10: entrar antes de que carguen las sedes (F5) aplica la Profesional al terminar la carga', async () => {
+      const { facade: f } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
+
+      f.setProfessionalOnly(true);
+      await f.loadBranches();
+
+      expect(f.selectedBranchId()).toBe(2);
+      expect(JSON.parse(persisted()!).id).toBe(1);
+    });
+
+    it('A09: al salir vuelve a "Todas" si era lo previo, y lo guardado coincide', async () => {
+      const { facade: f } = buildFacade(null);
+      await f.loadBranches();
+
+      f.setProfessionalOnly(true);
+      f.setProfessionalOnly(false);
+
+      expect(f.selectedBranchId()).toBeNull();
+      expect(persisted()).toBeNull();
+    });
+
+    it('A09: al salir vuelve a la sede concreta previa (aunque se entró tras un F5)', async () => {
+      const { facade: f } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
+      f.setProfessionalOnly(true);
+      await f.loadBranches();
+
+      f.setProfessionalOnly(false);
+
+      expect(f.selectedBranchId()).toBe(1);
+      expect(JSON.parse(persisted()!).id).toBe(1);
+    });
+
+    it('una llamada anidada (Pre-inscritos embebido) no pisa la sede previa', async () => {
+      const { facade: f } = buildFacade(null);
+      await f.loadBranches();
+
+      f.setProfessionalOnly(true);
+      f.setProfessionalOnly(true);
+      f.setProfessionalOnly(false);
+
+      expect(f.selectedBranchId()).toBeNull();
+    });
+
+    it('salir sin haber entrado no toca la sede elegida', async () => {
+      const { facade: f } = buildFacade(null);
+      await f.loadBranches();
+      f.selectBranch(1);
+
+      f.setProfessionalOnly(false);
+
+      expect(f.selectedBranchId()).toBe(1);
+    });
+
+    it('entrar ya estando en la sede Profesional la conserva al salir', async () => {
+      const { facade: f } = buildFacade({ id: 2, name: 'Conductores Chillán' });
+      await f.loadBranches();
+
+      f.setProfessionalOnly(true);
+      f.setProfessionalOnly(false);
+
+      expect(f.selectedBranchId()).toBe(2);
+      expect(JSON.parse(persisted()!).id).toBe(2);
+    });
+
+    it('ensureBranchesLoaded() reutiliza la carga en curso y no consulta dos veces', async () => {
+      const { facade: f, from } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
+
+      void f.loadBranches();
+      await f.ensureBranchesLoaded();
+      await f.ensureBranchesLoaded();
+
+      expect(from).toHaveBeenCalledTimes(1);
+      expect(f.branches().map((b) => b.id)).toEqual([1, 2]);
+    });
+
+    it('una carga fallida no bloquea un reintento', async () => {
+      const { facade: f, from } = buildFacade(null);
+      const builder = from();
+      builder.order.mockResolvedValueOnce({ data: null, error: { message: 'red caída' } });
+      from.mockClear();
+
+      await f.loadBranches();
+      await f.ensureBranchesLoaded();
+
+      expect(from).toHaveBeenCalledTimes(2);
+      expect(f.branches().map((b) => b.id)).toEqual([1, 2]);
+    });
+
+    it('ensureBranchesLoaded() carga si nadie lo hizo, aunque haya un stub de localStorage', async () => {
+      const { facade: f, from } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
+      expect(f.branches()).toHaveLength(1);
+
+      await f.ensureBranchesLoaded();
+
+      expect(from).toHaveBeenCalledTimes(1);
+      expect(f.branches().find((b) => b.id === 2)?.hasProfessional).toBe(true);
+    });
+  });
 });
