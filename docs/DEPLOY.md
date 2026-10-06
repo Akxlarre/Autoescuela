@@ -98,9 +98,13 @@ falta tocar código. Al cambiarlo:
 
 - [ ] **cPanel**: crear el subdominio (con SSL activo) y una cuenta FTP enjaulada en su docroot.
 - [ ] **GitHub**: actualizar `APP_DOMAIN` y los secrets FTP del environment `Production`.
-- [ ] **Supabase Auth → URL Configuration**: *Site URL* y *Redirect URLs* = `https://<dominio>`.
-      Sin esto, el enlace de "Recuperar contraseña" apunta al dominio viejo
-      (`resetPasswordForEmail` no pasa `redirectTo`, usa la Site URL).
+- [ ] **Supabase Auth → URL Configuration**: *Site URL* = `https://<dominio>` y en *Redirect URLs*
+      agregar `https://<dominio>/recuperar-contrasena`. El link de "Recuperar contraseña" pide volver
+      a esa ruta (fix-181-b); si no está registrada, Supabase lo manda a la Site URL (la app igual
+      redirige a la pantalla, pero no conviene depender de eso).
+- [ ] **Supabase Edge Functions → secret `SITE_URL`** = `https://<dominio>`. Es el destino de los
+      links de activación de cuenta: `create-secretary` (fix-182-b), `create-instructor`,
+      `activate-instructor-account`, `activate-student-account`.
 - [ ] **Supabase Edge Functions → secret `APP_URL`** = `https://<dominio>`. Sin esto, Webpay
       devuelve al usuario a otra URL (`public-enrollment` y `student-payment` usan
       `localhost:4200` por defecto).
