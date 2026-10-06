@@ -280,6 +280,7 @@ interface SemaforoInfo {
                       {{ alumno.nroMatricula }}
                     </td>
                     <td>
+                      <!-- fix-330-m (D11): la promoción, con la categoría debajo -->
                       <div class="flex items-center gap-1.5 flex-wrap">
                         <span
                           class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted whitespace-nowrap"
@@ -297,6 +298,11 @@ interface SemaforoInfo {
                           ></p-tag>
                         }
                       </div>
+                      @if (alumno.licenseClass) {
+                        <span class="text-2xs text-text-muted" data-llm-info="categoria-licencia">
+                          {{ alumno.licenseClass }}
+                        </span>
+                      }
                     </td>
                     <td>
                       <div class="flex items-center gap-2">

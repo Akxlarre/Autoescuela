@@ -59,7 +59,11 @@ describe('AdminAlumnosProfesionalFacade', () => {
       pending_balance: 120000,
       branch_id: 2,
       students: { id: 5, status: 'active', users: makeUser() },
-      promotion_courses: { id: 3, courses: { name: 'Profesional A4', license_class: 'A4' } },
+      courses: { license_class: 'A4' },
+      promotion_courses: {
+        id: 3,
+        professional_promotions: { code: '280', start_date: '2026-10-05' },
+      },
       ...over,
     };
   }
@@ -116,6 +120,32 @@ describe('AdminAlumnosProfesionalFacade', () => {
     expect(builders['enrollments'].in).toHaveBeenCalledWith('status', ['active']);
   });
 
+  // fix-330-m (D11): la columna "Promoción" muestra la promoción; la categoría sale del curso
+  // de la matrícula (también existe cuando el alumno aún no tiene promoción).
+  describe('columna Promoción y categoría (fix-330-m)', () => {
+    it('sin promoción → "—", pero la categoría sale igual del curso de la matrícula', async () => {
+      mockTables({ enrollments: [makeProEnrollment({ promotion_courses: null })] });
+      await facade.initialize();
+      expect(facade.alumnos()[0].promocion).toBe('—');
+      expect(facade.alumnos()[0].licenseClass).toBe('A4');
+    });
+
+    it('promoción sin número → se identifica por su fecha de inicio', async () => {
+      mockTables({
+        enrollments: [
+          makeProEnrollment({
+            promotion_courses: {
+              id: 3,
+              professional_promotions: { code: null, start_date: '2026-10-12' },
+            },
+          }),
+        ],
+      });
+      await facade.initialize();
+      expect(facade.alumnos()[0].promocion).toBe('Promoción del 12-10-2026');
+    });
+  });
+
   it('mapea un alumno profesional con promoción, semáforo, módulos y saldo (AC6)', async () => {
     mockTables({
       enrollments: [makeProEnrollment()],
@@ -131,7 +161,7 @@ describe('AdminAlumnosProfesionalFacade', () => {
 
     const row = facade.alumnos()[0];
     expect(row.id).toBe('5');
-    expect(row.promocion).toBe('Profesional A4');
+    expect(row.promocion).toBe('Promoción 280');
     expect(row.licenseClass).toBe('A4');
     expect(row.semaforo).toBe('yellow');
     expect(row.modulosAprobados).toBe(2);
@@ -182,7 +212,8 @@ describe('AdminAlumnosProfesionalFacade', () => {
 
     const row = facade.alumnos()[0];
     expect(row.promocion).toBe('—');
-    expect(row.licenseClass).toBe('');
+    // fix-330-m: la categoría sale del curso de la matrícula, no de la promoción.
+    expect(row.licenseClass).toBe('A4');
     expect(row.semaforo).toBeNull();
     expect(row.modulosAprobados).toBe(0);
     expect(row.nroMatricula).toBe('—');

@@ -115,6 +115,10 @@ import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesion
                 <app-badge variant="info">Convalida {{ alumno().convalidatedLicense }}</app-badge>
               }
             </div>
+            <!-- fix-330-m (D11): la categoría debajo de la promoción -->
+            @if (alumno().licenseClass) {
+              <span class="text-2xs text-text-muted">{{ alumno().licenseClass }}</span>
+            }
           </div>
           <div class="flex flex-col gap-1">
             <span class="micro-label">Asistencia</span>

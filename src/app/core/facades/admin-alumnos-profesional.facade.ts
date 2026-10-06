@@ -41,7 +41,28 @@ interface RawProEnrollment {
   pending_balance: number | null;
   branch_id: number | null;
   students: { id: number; status: string | null; users: RawProUser };
-  promotion_courses: { id: number; courses: { name: string; license_class: string } | null } | null;
+  /** Curso de la matrícula: de aquí sale la categoría (A2–A5), tenga o no promoción. */
+  courses: { license_class: string | null } | null;
+  promotion_courses: {
+    id: number;
+    professional_promotions: { code: string | null; start_date: string | null } | null;
+  } | null;
+}
+
+/**
+ * Etiqueta de la columna "Promoción" (fix-330-m, D11): el número de la promoción; si no tiene,
+ * su fecha de inicio; sin promoción, "—".
+ */
+function promocionLabel(
+  promo: { code: string | null; start_date: string | null } | null | undefined,
+): string {
+  if (!promo) return '—';
+  if (promo.code) return `Promoción ${promo.code}`;
+  if (promo.start_date) {
+    const [y, m, d] = promo.start_date.split('-');
+    return `Promoción del ${d}-${m}-${y}`;
+  }
+  return '—';
 }
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
@@ -298,7 +319,8 @@ export class AdminAlumnosProfesionalFacade {
           `
           id, number, status, pending_balance, branch_id,
           students!inner(id, status, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id)),
-          promotion_courses(id, courses(name, license_class))
+          courses(license_class),
+          promotion_courses(id, professional_promotions(code, start_date))
         `,
         )
         .eq('license_group', 'professional')
@@ -375,7 +397,6 @@ export class AdminAlumnosProfesionalFacade {
     convalidationMap: Map<number, 'A4' | 'A3'>,
   ): AlumnoProfesionalTableRow {
     const u = e.students.users;
-    const course = e.promotion_courses?.courses ?? null;
     return {
       id: String(e.students.id),
       nombre: u.first_names,
@@ -384,8 +405,8 @@ export class AdminAlumnosProfesionalFacade {
       email: u.email,
       celular: u.phone ?? '',
       nroMatricula: e.number ?? '—',
-      promocion: course?.name ?? '—',
-      licenseClass: course?.license_class ?? '',
+      promocion: promocionLabel(e.promotion_courses?.professional_promotions),
+      licenseClass: e.courses?.license_class ?? '',
       semaforo: flagMap.get(e.id) ?? null,
       modulosAprobados: passedMap.get(e.id) ?? 0,
       modulosTotal: MODULE_COUNT,
