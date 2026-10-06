@@ -14,6 +14,12 @@ import { mapAuthError } from '@core/utils/auth-errors.utils';
  * Mantiene el estado de sesión como Signals y expone métodos de autenticación.
  * La UI inyecta AuthFacade; nunca inyecta SupabaseService directamente.
  */
+/** Tope de espera de la carga inicial de sesión (solo si Supabase no responde). */
+const AUTH_READY_TIMEOUT_MS = 15_000;
+
+/** Esperas entre reintentos al leer el perfil tras un error de red/servidor (fix-185-b). */
+const PROFILE_RETRY_DELAYS_MS = [1000, 2000];
+
 @Injectable({
   providedIn: 'root',
 })
@@ -47,8 +53,11 @@ export class AuthFacade {
       resolveReady = resolve;
     });
 
-    // Safety timeout: si Supabase no responde en 5s, resolvemos para no colgar la app.
-    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
+    // Safety timeout: solo para no colgar la app si Supabase no responde. NO es el camino normal:
+    // whenReady se resuelve cuando termina la carga inicial (sesión + perfil). Era de 5 s y, con
+    // red lenta, ganaba la carrera: los guards leían currentUser() = null y mandaban a /login a
+    // usuarios con sesión válida (S17, fix-185-b).
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, AUTH_READY_TIMEOUT_MS));
     this.whenReady = Promise.race([readyPromise, timeout]);
 
     this.supabase.client.auth.onAuthStateChange((event: any, session: any) => {
@@ -58,17 +67,19 @@ export class AuthFacade {
         // condition que provocaba "Refresh Token Not Found" cuando getUser()
         // y INITIAL_SESSION intentaban rotar el token en paralelo.
         if (session?.user) {
-          void this.loadUserFromSession(session.user).finally(() => resolveReady());
+          this.loadUserFromSession(session.user)
+            .catch(() => undefined)
+            .finally(() => resolveReady());
         } else {
           resolveReady();
         }
       } else if (event === 'SIGNED_IN' && session?.user) {
-        void this.loadUserFromSession(session.user);
+        this.loadUserFromSession(session.user).catch(() => undefined);
       } else if (event === 'PASSWORD_RECOVERY') {
         // El link del correo abre una sesión: sin esto la app la trataba como un login normal y
         // el usuario entraba sin fijar clave nueva (fix-181-b).
         this._passwordRecovery.set(true);
-        if (session?.user) void this.loadUserFromSession(session.user);
+        if (session?.user) this.loadUserFromSession(session.user).catch(() => undefined);
         void this.router.navigate(['/recuperar-contrasena']);
       } else if (event === 'SIGNED_OUT') {
         this.disposeRealtime();
@@ -78,14 +89,24 @@ export class AuthFacade {
     });
   }
 
-  private async loadUserFromSession(authUser: {
+  /** Cargas de perfil en curso por id de Auth: SIGNED_IN y login() comparten una sola (fix-185-b). */
+  private readonly profileLoads = new Map<string, Promise<void>>();
+
+  private loadUserFromSession(authUser: {
     id: string;
     email?: string;
     user_metadata?: Record<string, unknown>;
   }): Promise<void> {
     // Si ya tenemos el usuario y el ID no ha cambiado, no recargamos
-    if (this._currentUser()?.id === authUser.id) return;
-    this._currentUser.set(await this.buildUserFromDb(authUser));
+    if (this._currentUser()?.id === authUser.id) return Promise.resolve();
+    const inFlight = this.profileLoads.get(authUser.id);
+    if (inFlight) return inFlight;
+
+    const load = this.buildUserFromDb(authUser)
+      .then((user) => this._currentUser.set(user))
+      .finally(() => this.profileLoads.delete(authUser.id));
+    this.profileLoads.set(authUser.id, load);
+    return load;
   }
 
   /**
@@ -112,20 +133,21 @@ export class AuthFacade {
       } | null;
     }
 
-    const result = await this.supabase.client
-      .from('users')
-      .select(
-        'id, first_names, paternal_last_name, branch_id, can_access_both_branches, first_login, active, role_id, roles(name)',
-      )
-      .eq('supabase_uid', authUser.id)
-      .maybeSingle();
+    // Un corte de red al leer el perfil NO es "usuario sin rol": antes se armaba el usuario con
+    // rol 'unknown' y roleRedirectGuard cerraba una sesión válida (S17, fix-185-b). Se reintenta
+    // y, si sigue fallando, se lanza: el usuario queda sin cargar pero la sesión no se cierra.
+    let result = await this.fetchProfileRow(authUser.id);
+    for (const delayMs of PROFILE_RETRY_DELAYS_MS) {
+      if (!result.error) break;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      result = await this.fetchProfileRow(authUser.id);
+    }
+    if (result.error) {
+      console.error('Error fetching user profile:', result.error);
+      throw result.error;
+    }
 
     const dbUser = result.data as unknown as UserWithRole | null;
-    const error = result.error;
-
-    if (error) {
-      console.error('Error fetching user profile:', error);
-    }
 
     const name = dbUser
       ? `${dbUser.first_names} ${dbUser.paternal_last_name}`
@@ -158,6 +180,16 @@ export class AuthFacade {
       canAccessBothBranches: dbUser?.can_access_both_branches ?? false,
       isActive: dbUser?.active,
     };
+  }
+
+  private fetchProfileRow(supabaseUid: string) {
+    return this.supabase.client
+      .from('users')
+      .select(
+        'id, first_names, paternal_last_name, branch_id, can_access_both_branches, first_login, active, role_id, roles(name)',
+      )
+      .eq('supabase_uid', supabaseUid)
+      .maybeSingle();
   }
 
   // ── Realtime: grant multi-sede en caliente (AC-E3, spec 0017) ──────────────
@@ -201,7 +233,12 @@ export class AuthFacade {
     const cur = this._currentUser();
     if (!cur) return;
     const wasGranted = cur.canAccessBothBranches ?? false;
-    const updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
+    let updated: User;
+    try {
+      updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
+    } catch {
+      return; // sin red: se conserva el perfil vigente (fix-185-b)
+    }
     this._currentUser.set(updated);
     if (wasGranted && !(updated.canAccessBothBranches ?? false)) {
       this.branchFacade.reset();
@@ -209,21 +246,32 @@ export class AuthFacade {
   }
 
   async login(email: string, password: string): Promise<{ error: Error | null }> {
-    const { error } = await this.supabase.signIn(email, password);
+    const { data, error } = await this.supabase.signIn(email, password);
+    if (error) return { error: new Error(mapAuthError(error)) };
 
-    // Si el inicio de sesión es exitoso, debemos esperar a que el listener onAuthStateChange
-    // termine de obtener el perfil de usuario de la base de datos antes de resolver,
-    // de lo contrario, el router navegará sin un rol de usuario válido en memoria.
-    if (!error) {
-      // 50 intentos * 100ms = 5 segundos de espera máxima
-      let attempts = 0;
-      while (this._currentUser() === null && attempts < 50) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        attempts++;
+    // Se espera la carga del perfil de ESTA sesión antes de devolver éxito; si no, el router
+    // navega sin rol. Antes era un polling de 5 s que, con red lenta, devolvía éxito sin perfil y
+    // roleRedirectGuard cerraba la sesión en silencio (S17/S6, fix-185-b).
+    const authUser = data?.session?.user ?? data?.user;
+    if (authUser) {
+      try {
+        await this.loadUserFromSession(authUser);
+      } catch (profileError) {
+        console.error('Error loading user profile after login:', profileError);
       }
     }
 
-    return { error: error ? new Error(mapAuthError(error)) : null };
+    const user = this._currentUser();
+    if (!user || !user.role || user.role === 'unknown') {
+      await this.supabase.signOut();
+      this._currentUser.set(null);
+      return {
+        error: new Error(
+          'No se pudo cargar tu perfil. Si el problema continúa, contacta al administrador.',
+        ),
+      };
+    }
+    return { error: null };
   }
 
   async signUp(

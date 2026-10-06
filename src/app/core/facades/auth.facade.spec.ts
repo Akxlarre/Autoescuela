@@ -168,16 +168,162 @@ describe('AuthFacade', () => {
     expect(supabaseSpy.signIn).toHaveBeenCalledWith('user@example.com', 'password123');
   });
 
-  it('login() should return null error on success', async () => {
-    // login() polls _currentUser every 100ms up to 5s after signIn succeeds.
-    // Since onAuthStateChange never fires in the test, advance fake timers past 5s.
-    vi.useFakeTimers();
-    supabaseSpy.signIn.mockResolvedValue({ error: null } as any);
-    const loginPromise = service.login('user@example.com', 'correct');
-    await vi.advanceTimersByTimeAsync(5100);
-    const result = await loginPromise;
-    vi.useRealTimers();
-    expect(result.error).toBeNull();
+  describe('sesión lenta (fix-185-b, S17)', () => {
+    const PROFILE = {
+      id: 7,
+      first_names: 'Ana',
+      paternal_last_name: 'Soto',
+      branch_id: 1,
+      can_access_both_branches: false,
+      first_login: false,
+      active: true,
+      role_id: 2,
+      roles: { name: 'secretary' },
+    };
+
+    /** Perfil que tarda `ms` en llegar (o nunca, si data es null → rol unknown). */
+    function profileAfter(ms: number, data: unknown = PROFILE) {
+      const maybeSingle = vi.fn(
+        () => new Promise((resolve) => setTimeout(() => resolve({ data, error: null }), ms)),
+      );
+      (service as any).supabase.client.from = vi.fn(() => ({
+        select: () => ({ eq: () => ({ maybeSingle }) }),
+      }));
+      return maybeSingle;
+    }
+
+    afterEach(() => vi.useRealTimers());
+
+    /**
+     * Timers falsos + servicio NUEVO: el reloj de seguridad de whenReady se arma en el
+     * constructor, así que el servicio tiene que crearse después de vi.useFakeTimers().
+     */
+    function fakeTimersFreshService(): void {
+      vi.useFakeTimers();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideRouter([]), { provide: SupabaseService, useValue: supabaseSpy }],
+      });
+      service = TestBed.inject(AuthFacade);
+      router = TestBed.inject(Router);
+    }
+
+    it('whenReady espera al perfil aunque tarde más de 5 s (no decide con usuario null)', async () => {
+      fakeTimersFreshService();
+      profileAfter(8000);
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await vi.advanceTimersByTimeAsync(5100);
+      expect(ready).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(ready).toBe(true);
+      expect(service.currentUser()?.role).toBe('secretaria');
+    });
+
+    it('whenReady igual se resuelve a los 15 s si Supabase no responde (la app no queda colgada)', async () => {
+      fakeTimersFreshService();
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+      await vi.advanceTimersByTimeAsync(14_900);
+      expect(ready).toBe(false);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(ready).toBe(true);
+    });
+
+    it('login() espera el perfil de la sesión aunque tarde 8 s y devuelve éxito con el usuario cargado', async () => {
+      fakeTimersFreshService();
+      profileAfter(8000);
+      supabaseSpy.signIn.mockResolvedValue({
+        data: { session: { user: { id: 'u1', email: 'a@b.cl' } }, user: { id: 'u1' } },
+        error: null,
+      } as any);
+
+      const loginPromise = service.login('a@b.cl', 'Clave12345');
+      await vi.advanceTimersByTimeAsync(8100);
+      const result = await loginPromise;
+
+      expect(result.error).toBeNull();
+      expect(service.currentUser()?.role).toBe('secretaria');
+    });
+
+    it('login() con sesión pero sin perfil en users → error claro y cierra la sesión', async () => {
+      profileAfter(0, null);
+      supabaseSpy.signIn.mockResolvedValue({
+        data: { session: { user: { id: 'u1', email: 'a@b.cl' } }, user: { id: 'u1' } },
+        error: null,
+      } as any);
+
+      const result = await service.login('a@b.cl', 'Clave12345');
+
+      expect(result.error?.message).toBe(
+        'No se pudo cargar tu perfil. Si el problema continúa, contacta al administrador.',
+      );
+      expect(supabaseSpy.signOut).toHaveBeenCalled();
+      expect(service.currentUser()).toBeNull();
+    });
+
+    it('SIGNED_IN y login() del mismo usuario comparten una sola consulta del perfil', async () => {
+      const maybeSingle = profileAfter(50);
+      supabaseSpy.signIn.mockImplementation(async () => {
+        authCallback!('SIGNED_IN', { user: { id: 'u1', email: 'a@b.cl' } });
+        return { data: { session: { user: { id: 'u1', email: 'a@b.cl' } } }, error: null } as any;
+      });
+
+      await service.login('a@b.cl', 'Clave12345');
+
+      expect(maybeSingle).toHaveBeenCalledTimes(1);
+    });
+
+    /** Cada llamada a maybeSingle devuelve el siguiente resultado de la lista (el último se repite). */
+    function profileResults(...results: { data: unknown; error: unknown }[]) {
+      let call = 0;
+      const maybeSingle = vi.fn(async () => results[Math.min(call++, results.length - 1)]);
+      (service as any).supabase.client.from = vi.fn(() => ({
+        select: () => ({ eq: () => ({ maybeSingle }) }),
+      }));
+      return maybeSingle;
+    }
+    const NET_ERROR = { data: null, error: { message: 'TypeError: Failed to fetch', code: '' } };
+
+    it('un corte de red al leer el perfil se reintenta y la sesión sigue (no rol unknown)', async () => {
+      fakeTimersFreshService();
+      const maybeSingle = profileResults(NET_ERROR, NET_ERROR, { data: PROFILE, error: null });
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await vi.advanceTimersByTimeAsync(3100);
+
+      expect(ready).toBe(true);
+      expect(maybeSingle).toHaveBeenCalledTimes(3);
+      expect(service.currentUser()?.role).toBe('secretaria');
+    });
+
+    it('si el perfil no se puede leer tras los reintentos, queda sin usuario pero NO cierra la sesión', async () => {
+      fakeTimersFreshService();
+      const maybeSingle = profileResults(NET_ERROR);
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await vi.advanceTimersByTimeAsync(3100);
+
+      expect(ready).toBe(true);
+      expect(maybeSingle).toHaveBeenCalledTimes(3);
+      expect(service.currentUser()).toBeNull();
+      expect(supabaseSpy.signOut).not.toHaveBeenCalled();
+    });
+
+    it('sin fila en users (respuesta OK, data null) no reintenta: es un perfil inexistente', async () => {
+      const maybeSingle = profileResults({ data: null, error: null });
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await service.whenReady;
+      expect(maybeSingle).toHaveBeenCalledTimes(1);
+      expect(service.currentUser()?.role).toBe('unknown');
+    });
   });
 
   it('login() should return an Error instance on failure', async () => {
