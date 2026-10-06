@@ -318,7 +318,9 @@ Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta)
 | F07 + S14 (+ S16) — error de carga como lista vacía en Base Prof. y Promociones | `fix-338-m-error-de-carga-profesional-no-es-lista-vacia` | ✅ cerrado 2026-10-06 |
 | G06 — la Papelera persiste al volver por el menú | `fix-339-m-papelera-profesional-no-persiste` | ✅ cerrado 2026-10-06 |
 | F03 + D16 — tarjetas móviles angostas por paddings anidados | `fix-340-m-tarjetas-moviles-paddings-anidados` | ✅ cerrado 2026-10-06 (mínimo, D16) |
-| `.card` sin capa le gana a `p-0`/`p-N` (~92 archivos, también escritorio) — causa de fondo de F03 | sin track (requiere revisión visual de toda la app) | ⏳ pendiente |
+| `.card` sin capa le gana a `p-0`/`p-N` (~92 archivos, también escritorio) — causa de fondo de F03 | `fix-341-m-card-respeta-utilities-de-tailwind` | ✅ cerrado 2026-10-06 (portales alumno/instructor sin verificar visualmente: bloqueados) |
+| Base Profesional 375 px: la lista tapa los KPIs del hero (previo) | sin track — bloque 5 | ⏳ |
+| Comunicación 375 px: pestañas sin texto (previo) | sin track — bloque 5 | ⏳ |
 
 ## Test de regresión
 
