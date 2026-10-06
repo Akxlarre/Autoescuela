@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { formatCLP } from '@core/utils/date.utils';
 import { buildCuadraturaHeroKpis } from '@core/utils/cuadratura-hero-kpis.utils';
+import { medioDePagoLabel } from '@core/utils/cuadratura-medio-pago.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -137,20 +138,25 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
               </div>
 
               <!-- Tabla (Desktop) / Cards (Mobile) -->
-              <div class="flex flex-col flex-1 min-h-0" style="container-type: inline-size;">
+              <!-- fix-192-b: contenedor con nombre para el modo compacto de la tabla (ver
+                   .ingresos-grid en los estilos). -->
+              <div
+                class="flex flex-col flex-1 min-h-0"
+                style="container-type: inline-size; container-name: ingresos-tabla"
+              >
                 <!-- Header Columnas (Desktop) — fijo, NO scrollea con las filas (spec 0004-i,
                    feedback: "no debería moverse con el app-like, solo los datos de abajo") -->
                 <div class="hidden sm:block shrink-0" [class.!hidden]="isDrawerOpen()">
                   <div
-                    class="px-6 py-3 grid items-center gap-2 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
-                    style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
+                    class="ingresos-grid px-6 py-3 grid items-center gap-2 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
                   >
                     <span>N° Boleta</span>
                     <span>Glosa / Alumno</span>
-                    <span class="text-right">Efectivo</span>
-                    <span class="text-right">Transf.</span>
-                    <span class="text-right">Voucher</span>
-                    <span class="text-right">Tarjeta</span>
+                    <span class="col-monto text-right">Efectivo</span>
+                    <span class="col-monto text-right">Transf.</span>
+                    <span class="col-monto text-right">Voucher</span>
+                    <span class="col-monto text-right">Tarjeta</span>
+                    <span class="col-medio">Medio</span>
                     <span class="text-right text-text-primary">Total</span>
                     <span></span>
                   </div>
@@ -177,35 +183,22 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                       @if (isLoading()) {
                         <div class="divide-y divide-border-muted/50">
                           @for (row of [1, 2, 3]; track row) {
-                            <div
-                              class="px-6 py-4 grid gap-2 items-center"
-                              style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
-                            >
+                            <div class="ingresos-grid px-6 py-4 grid gap-2 items-center">
                               <app-skeleton-block variant="text" width="60px" height="14px" />
                               <app-skeleton-block variant="text" width="80%" height="14px" />
+                              @for (col of [1, 2, 3, 4]; track col) {
+                                <app-skeleton-block
+                                  variant="text"
+                                  width="50px"
+                                  height="14px"
+                                  class="col-monto ml-auto"
+                                />
+                              }
                               <app-skeleton-block
                                 variant="text"
                                 width="50px"
                                 height="14px"
-                                class="ml-auto"
-                              />
-                              <app-skeleton-block
-                                variant="text"
-                                width="50px"
-                                height="14px"
-                                class="ml-auto"
-                              />
-                              <app-skeleton-block
-                                variant="text"
-                                width="50px"
-                                height="14px"
-                                class="ml-auto"
-                              />
-                              <app-skeleton-block
-                                variant="text"
-                                width="50px"
-                                height="14px"
-                                class="ml-auto"
+                                class="col-medio"
                               />
                               <app-skeleton-block
                                 variant="text"
@@ -221,8 +214,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                         <div class="divide-y divide-border-muted/50">
                           @for (fila of pagosHoy(); track fila.id) {
                             <div
-                              class="px-6 py-3.5 grid gap-2 items-center hover:bg-subtle transition-colors group"
-                              style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
+                              class="ingresos-grid px-6 py-3.5 grid gap-2 items-center hover:bg-subtle transition-colors group"
                             >
                               <span class="text-compact font-mono font-medium text-text-secondary">
                                 {{ fila.nBoleta ?? '—' }}
@@ -231,24 +223,27 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                                 {{ fila.glosa }}
                               </span>
                               <span
-                                class="text-compact text-right text-text-secondary tabular-nums"
+                                class="col-monto text-compact text-right text-text-secondary tabular-nums"
                               >
                                 {{ fila.claseB > 0 ? fila.claseB.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
-                                class="text-compact text-right text-text-secondary tabular-nums"
+                                class="col-monto text-compact text-right text-text-secondary tabular-nums"
                               >
                                 {{ fila.claseA > 0 ? fila.claseA.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
-                                class="text-compact text-right text-text-secondary tabular-nums"
+                                class="col-monto text-compact text-right text-text-secondary tabular-nums"
                               >
                                 {{ fila.sence > 0 ? fila.sence.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
-                                class="text-compact text-right text-text-secondary tabular-nums"
+                                class="col-monto text-compact text-right text-text-secondary tabular-nums"
                               >
                                 {{ fila.otros > 0 ? fila.otros.toLocaleString('es-CL') : '—' }}
+                              </span>
+                              <span class="col-medio text-compact text-text-secondary truncate">
+                                {{ medioDePago(fila) }}
                               </span>
                               <span
                                 class="text-sm text-right font-black text-text-primary tabular-nums tracking-tight"
@@ -701,9 +696,50 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
        debajo se apila (comportamiento probado en 0004-i). Un cuadratura-stack
        de 1200px+ implica siempre layoutmain de 1024px+ (esta anidado en main),
        asi que la fila nunca aparece en modo fill-screen OFF. */
-    @container cuadratura-stack (min-width: 1200px) {
+    /* fix-192-b: el umbral era 1200px (tabla de Ingresos completa al lado de Egresos), y con el
+       menu lateral eso exigia pantallas de ~1580px: en notebooks de 1366/1440 la Caja nunca iba
+       en dos columnas y la pagina scrolleaba. Ahora 900px (pantallas de ~1280px en adelante);
+       la tabla de Ingresos pasa a su modo compacto cuando no le alcanza (.ingresos-grid). */
+    @container cuadratura-stack (min-width: 900px) {
       .cuadratura-cols {
         flex-direction: row;
+      }
+
+      /* En fila, el eje principal es el ANCHO: el "flex: 1 0 auto" de arriba (pensado para
+         repartir alto apiladas) no deja achicar las cards y Egresos se sale por la derecha.
+         Aca se reparten el ancho 1:1 (mismo tamaño, fix-234-m); el alto lo da el stretch. */
+      .cuadratura-stack-ingresos,
+      .cuadratura-stack-egresos {
+        flex: 1 1 0%;
+        min-width: 0;
+      }
+    }
+
+    /* ── Tabla de Ingresos: completa (8 columnas) o compacta (fix-192-b) ──
+       Completa: N° Boleta | Glosa | Efectivo | Transf. | Voucher | Tarjeta | Total | acción.
+       Compacta, bajo 800px de tabla: las 4 columnas de medio de pago se reemplazan por una
+       "Medio" (medioDePagoLabel). 800px = ~660px fijos (montos, total, accion, gaps y padding)
+       + ~140px minimos para la glosa; con menos, la glosa quedaba en ~80px y se cortaba.
+       Las celdas ocultas con display:none no ocupan pista. */
+    .ingresos-grid {
+      grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px;
+    }
+
+    .col-medio {
+      display: none;
+    }
+
+    @container ingresos-tabla (max-width: 799px) {
+      .ingresos-grid {
+        grid-template-columns: 70px 1fr 80px 100px 36px;
+      }
+
+      .col-monto {
+        display: none;
+      }
+
+      .col-medio {
+        display: block;
       }
     }
 
@@ -836,6 +872,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   // ── Helpers de template ───────────────────────────────────────────────────
   protected readonly clp = formatCLP;
+  protected readonly medioDePago = medioDePagoLabel;
 
   private static readonly CATEGORY_LABELS: Record<string, string> = {
     combustible: 'Combustible',
