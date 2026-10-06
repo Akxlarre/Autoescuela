@@ -57,7 +57,13 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
       `create-secretary` responde 409 "Ese RUT ya está registrado como <rol>" antes de crear la
       cuenta, y el facade muestra ese mensaje (en producción tras el próximo release del front).
       Redesplegada `create-secretary`.
-- [ ] Prueba manual: crear una secretaria de prueba con un RUT **no registrado** y correo real → llega el correo → crea su
+- [x] **2ª prueba (2026-10-05):** secretaria creada; el correo "Activa tu cuenta de secretaria" llegó
+      con nombre y link correctos (cayó en spam: entregabilidad SMTP, SPF/DKIM del remitente —
+      ajeno a este fix). El link redirige a `http://localhost:4200` porque en Supabase Auth la Site
+      URL y la allowlist son localhost y no existe el secret `SITE_URL` (configuración de dominio
+      diferida por el owner, `docs/DEPLOY.md`). Afecta igual a instructores y alumnos.
+- [ ] Prueba manual: abrir el link, cambiar `http://localhost:4200` por el dominio de la app
+      (conservando el `#access_token…`) → crear contraseña → entrar. Pendiente del owner → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
 ## Cuenta ya existente
