@@ -25,6 +25,7 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { FormsModule } from '@angular/forms';
+import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
 import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
 import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-precios/precios-cursos-drawer.component';
@@ -175,7 +176,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       class="w-full rounded-lg border border-border-default bg-base px-3 py-2 text-sm text-text-primary outline-none focus:border-brand"
                       [(ngModel)]="newPassword"
                       (ngModelChange)="markDirty()"
-                      placeholder="Min. 6 caracteres"
+                      [placeholder]="'Mínimo ' + minPasswordLength + ' caracteres'"
                       data-llm-description="input for the new account password"
                     />
                   </div>
@@ -196,7 +197,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     type="button"
                     class="btn-primary w-full py-2 text-sm"
                     [disabled]="
-                      isSaving() || newPassword().length < 6 || newPassword() !== confirmPassword()
+                      isSaving() ||
+                      newPassword().length < minPasswordLength ||
+                      newPassword() !== confirmPassword()
                     "
                     data-llm-action="update-password"
                     (click)="updatePassword()"
@@ -560,6 +563,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
 })
 export class AjustesDrawerComponent {
+  /** Igual al mínimo de Supabase Auth (hotfix-059-b). */
+  protected readonly minPasswordLength = PASSWORD_MIN_LENGTH;
+
   protected readonly auth = inject(AuthFacade);
   protected readonly branchFacade = inject(BranchFacade);
   protected readonly theme = inject(ThemeService);

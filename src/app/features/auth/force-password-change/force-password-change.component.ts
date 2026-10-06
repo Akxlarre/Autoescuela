@@ -14,6 +14,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AuthFacade } from '@core/facades/auth.facade';
 import gsap from 'gsap';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
 
 @Component({
   selector: 'app-force-password-change',
@@ -72,7 +73,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                   [type]="showPassword() ? 'text' : 'password'"
                   formControlName="password"
                   class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) pl-(--input-padding-x) pr-10 font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
-                  placeholder="Mínimo 8 caracteres"
+                  [placeholder]="'Mínimo ' + minLength + ' caracteres'"
                   required
                   data-llm-description="input for the new account password"
                 />
@@ -110,6 +111,9 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 export class ForcePasswordChangeComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly fb = inject(FormBuilder);
+
+  /** Igual al mínimo de Supabase Auth (hotfix-059-b). */
+  readonly minLength = PASSWORD_MIN_LENGTH;
   private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -138,7 +142,7 @@ export class ForcePasswordChangeComponent {
   private readonly gsap = inject(GsapAnimationsService);
 
   readonly form = this.fb.nonNullable.group({
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH)]],
   });
 
   readonly loading = signal(false);

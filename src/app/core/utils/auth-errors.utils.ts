@@ -1,4 +1,11 @@
 /**
+ * Largo mínimo de contraseña. Debe coincidir con `password_min_length` de Supabase Auth del
+ * proyecto (8): si el front pide menos, el usuario escribe una clave que el servidor rechaza
+ * (hotfix-059-b).
+ */
+export const PASSWORD_MIN_LENGTH = 8;
+
+/**
  * Mapea errores de Supabase (GoTrue) a mensajes amigables en español.
  */
 export function mapAuthError(error: any): string {
@@ -45,8 +52,10 @@ export function mapAuthError(error: any): string {
     return 'Este correo ya está registrado.';
   }
 
-  if (message.includes('Password should be at least 6 characters')) {
-    return 'La contraseña debe tener al menos 6 caracteres.';
+  // Supabase informa el mínimo configurado en el proyecto ("at least 8 characters").
+  const minLength = message.match(/Password should be at least (\d+) characters/);
+  if (minLength) {
+    return `La contraseña debe tener al menos ${minLength[1]} caracteres.`;
   }
 
   if (message.includes('Rate limit exceeded')) {
