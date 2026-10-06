@@ -262,10 +262,19 @@ export class AgendaFacade {
     try {
       await this.fetchWeekData();
     } catch {
+      // fix-189-b: sin esto la grilla seguía mostrando la semana anterior bajo la etiqueta nueva.
+      this._weekData.set(null);
       this._error.set('Error al cargar la agenda. Intenta de nuevo.');
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  /** Reintento tras un error (fix-189-b): recarga todo con skeleton, como la primera vez. */
+  async retry(): Promise<void> {
+    this._error.set(null);
+    this._initialized = false;
+    await this.initialize();
   }
 
   /**
@@ -307,6 +316,7 @@ export class AgendaFacade {
     if (!this.weekDataGuard.isCurrent(requestToken)) return;
 
     this._weekData.set(this.buildWeekData(weekStart, weekEnd, filteredSlots, sessionsResult));
+    this._error.set(null); // fix-189-b F3: una carga que sale bien borra el error anterior
   }
 
   goToNextWeek(): void {
@@ -378,14 +388,17 @@ export class AgendaFacade {
 
   // ── Queries privadas ───────────────────────────────────────────────────────
 
+  // fix-189-b: todas las consultas lanzan su error en vez de devolver [] — antes un timeout de la
+  // vista o un corte de red se veía igual que una semana sin horarios.
   private async fetchAvailableSlots(rangeStart: string, rangeEnd: string): Promise<RawSlot[]> {
-    const { data } = await this.supabase.client
+    const { data, error } = await this.supabase.client
       .from('v_class_b_schedule_availability')
       .select('instructor_id, vehicle_id, slot_start, slot_end, slot_status')
       .eq('slot_status', 'available')
       .gte('slot_start', rangeStart)
       .lt('slot_start', rangeEnd)
       .order('slot_start', { ascending: true });
+    if (error) throw error;
     return (data as RawSlot[]) ?? [];
   }
 
@@ -414,7 +427,8 @@ export class AgendaFacade {
 
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw error;
     return (data as unknown as RawSession[]) ?? [];
   }
 
@@ -434,6 +448,8 @@ export class AgendaFacade {
         .from('vehicle_documents')
         .select('vehicle_id, type, expiry_date, status'),
     ]);
+    const lookupError = instrResult.error ?? vehResult.error ?? docsResult.error;
+    if (lookupError) throw lookupError;
 
     this.instructorMap.clear();
     for (const i of (instrResult.data as unknown as RawInstructor[]) ?? []) {
@@ -463,7 +479,8 @@ export class AgendaFacade {
 
     if (branchId !== null) query = query.eq('users.branch_id', branchId);
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw error;
     let rows = (data as unknown as RawInstructor[]) ?? [];
 
     // fix-028-i: un instructor `both_branches=true` de OTRA sede también debe aparecer en el
@@ -471,12 +488,13 @@ export class AgendaFacade {
     // una columna raíz (`both_branches`) en un solo `.or()` (PGRST100) — mismo patrón ya usado
     // en `InstructoresFacade.fetchData()` (spec 0004-m, AC6): segunda query + merge client-side.
     if (branchId !== null) {
-      const { data: bothBranchesData } = await this.supabase.client
+      const { data: bothBranchesData, error: bothBranchesError } = await this.supabase.client
         .from('instructors')
         .select('id, users!inner ( first_names, paternal_last_name )')
         .eq('active', true)
         .neq('type', 'theory')
         .eq('both_branches', true);
+      if (bothBranchesError) throw bothBranchesError;
 
       const seenIds = new Set(rows.map((r) => r.id));
       for (const extra of (bothBranchesData as unknown as RawInstructor[]) ?? []) {

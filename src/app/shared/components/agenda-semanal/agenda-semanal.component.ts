@@ -258,6 +258,21 @@ interface CellSummary {
               }
             }
           </div>
+        } @else if (error()) {
+          <!-- fix-189-b: un error de carga ya no se ve como una semana vacía -->
+          <div
+            class="flex flex-1 items-center justify-center border-t border-(--color-border)"
+            role="alert"
+          >
+            <app-empty-state
+              icon="alert-triangle"
+              message="No se pudo cargar la agenda"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="retry.emit()"
+            />
+          </div>
         } @else if (!weekData() || timeRows().length === 0) {
           <div class="flex flex-1 items-center justify-center border-t border-(--color-border)">
             <app-empty-state
@@ -1016,6 +1031,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
   maxVisibleDateIso = input<string | null>(null);
   /** Etiqueta legible de esa misma fecha límite, ej. "18 de septiembre, 2026". */
   maxVisibleDateLabel = input<string | null>(null);
+  /** Mensaje de error de carga (fix-189-b). Con valor, reemplaza la grilla por un aviso con "Reintentar". */
+  error = input<string | null>(null);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
@@ -1026,6 +1043,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
   weekJump = output<string>();
   instructorFilterChange = output<number | null>();
   slotClick = output<AgendaSlot>();
+  /** "Reintentar" del aviso de error de carga (fix-189-b). */
+  retry = output<void>();
 
   // ── ViewChildren ─────────────────────────────────────────────────────────────
 

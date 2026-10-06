@@ -197,13 +197,20 @@ test.describe('A. Carga y acceso', () => {
     expect(doc.scroll).toBeLessThanOrEqual(doc.client + 1);
   });
 
-  test('A08: si la carga falla, la Agenda lo dice (S11)', async ({ pageAs }) => {
-    knownBug('S11 (fix-186-b)');
+  test('A08: si la carga falla, la Agenda lo dice y "Reintentar" la recupera (S11, fix-189-b)', async ({
+    pageAs,
+  }) => {
     const page = await pageAs('admin');
     await page.route('**/rest/v1/v_class_b_schedule_availability**', (r) => r.abort());
     await page.route('**/rest/v1/class_b_sessions**', (r) => r.abort());
     await page.goto(AGENDA.admin);
-    await expect(page.getByText(/error al cargar la agenda/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('No se pudo cargar la agenda')).toBeVisible({ timeout: 30_000 });
+    await expect(grid(page)).toHaveCount(0);
+
+    await page.unrouteAll();
+    await page.getByRole('button', { name: 'Reintentar' }).click();
+    await expect(grid(page)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('No se pudo cargar la agenda')).toHaveCount(0);
   });
 });
 

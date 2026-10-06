@@ -383,4 +383,77 @@ describe('AgendaFacade', () => {
       expect(eqCols).not.toContain('both_branches');
     });
   });
+
+  describe('errores de carga — fix-189-b (S11)', () => {
+    const SLOT = {
+      instructor_id: 1,
+      vehicle_id: 1,
+      slot_start: '2026-10-06T11:30:00+00:00',
+      slot_end: '2026-10-06T12:15:00+00:00',
+      slot_status: 'available',
+    };
+
+    it('F1: si falla la vista de disponibilidad, expone error y no deja grilla', async () => {
+      supabaseSpy.setResult('v_class_b_schedule_availability', null, { message: 'timeout' });
+
+      await facade.loadWeek();
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.weekData()).toBeNull();
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('F1: si falla la consulta de clases, también', async () => {
+      supabaseSpy.setResult('class_b_sessions', null, { message: 'Failed to fetch' });
+
+      await facade.loadWeek();
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.weekData()).toBeNull();
+    });
+
+    it('F1: si falla la carga de instructores al iniciar, expone error', async () => {
+      supabaseSpy.setResult('instructors', null, { message: 'Failed to fetch' });
+
+      await facade.initialize();
+
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('F1: una semana que falla no deja la grilla de la semana anterior', async () => {
+      supabaseSpy.setResult('v_class_b_schedule_availability', [SLOT]);
+      await facade.loadWeek();
+      expect(facade.weekData()).not.toBeNull();
+
+      supabaseSpy.setResult('v_class_b_schedule_availability', null, { message: 'timeout' });
+      facade.goToPrevWeek();
+      await vi.waitFor(() => expect(facade.isLoading()).toBe(false));
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.weekData()).toBeNull();
+    });
+
+    it('F2/F3: retry() recarga todo y limpia el error cuando sale bien', async () => {
+      supabaseSpy.setResult('instructors', null, { message: 'Failed to fetch' });
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      supabaseSpy.setResult('instructors', []);
+      await facade.retry();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.weekData()).not.toBeNull();
+    });
+
+    it('F4: un refresco silencioso que falla no borra la grilla que ya se ve', async () => {
+      await facade.loadWeek();
+      const visible = facade.weekData();
+      expect(visible).not.toBeNull();
+
+      supabaseSpy.setResult('class_b_sessions', null, { message: 'Failed to fetch' });
+      await (facade as any).refreshSilently();
+
+      expect(facade.weekData()).toBe(visible);
+    });
+  });
 });
