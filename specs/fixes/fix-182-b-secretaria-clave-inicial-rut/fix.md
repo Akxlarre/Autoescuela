@@ -1,7 +1,8 @@
 # Fix: La clave inicial de una secretaria nueva es su RUT
 > id: fix-182-b-secretaria-clave-inicial-rut
 > refs: ASG-i-044 (punto 3: clave inicial = RUT. Puntos 1 y 2 en fix-180-b y fix-181-b)
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -62,9 +63,8 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
       ajeno a este fix). El link redirige a `http://localhost:4200` porque en Supabase Auth la Site
       URL y la allowlist son localhost y no existe el secret `SITE_URL` (configuración de dominio
       diferida por el owner, `docs/DEPLOY.md`). Afecta igual a instructores y alumnos.
-- [ ] Prueba manual (owner): el 1er link se consumió en un intento con el `redirect_to` editado
-      (`otp_expired`). Repetir con una 2ª secretaria de prueba y la app corriendo en
-      `localhost:4200` (el destino actual del link) → crear contraseña → entrar → llega el correo → crea su
+- [x] Prueba manual (owner, 2026-10-05): 2ª secretaria de prueba → llegó el correo → con la app en
+      `localhost:4200` (destino actual del link) creó su contraseña y entró. ✅ Cerrado → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
 ## Cuenta ya existente
