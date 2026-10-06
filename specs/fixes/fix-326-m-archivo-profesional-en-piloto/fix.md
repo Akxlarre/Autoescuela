@@ -1,7 +1,8 @@
 # Fix: Las promociones finalizadas no se pueden consultar en el piloto
 > id: fix-326-m-archivo-profesional-en-piloto
 > refs: fix-319-m-testing-clase-profesional-piloto (S4, S23, D3a) · fix-256-m · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -41,3 +42,29 @@ Ninguno — fix autónomo.
 - E2E: Archivo accesible para admin y secretaria; elegir una promoción finalizada muestra sus
   cursos, relatores y alumnos; no se ven columnas de asistencia/nota.
 - E2E: el filtro de Promociones no ofrece "Finalizada".
+
+**Verificado el 2026-10-05** (unit + visual con Playwright; no se agregó un E2E nuevo):
+- Vitest 82/82 en los 9 archivos tocados: `archivo-profesional.facade.spec` (S23: filtra por
+  sede; "todas" no filtra), `promociones.facade.spec` (`loadPromocionDetalle()`),
+  `promocion-detalle-content.component.spec` (nuevo, 4), `admin-profesional-archivo.component.spec`
+  (nuevo, 4: académico oculto en piloto, elegir carga el detalle, no muestra una seleccionada de
+  otra pantalla, recarga al volver), `admin-profesional-promociones.component.spec` (filtro sin
+  "Finalizada"), `menu-config.service.spec` (Archivo visible), drawers. `tsc` y `lint:arch` sin
+  errores (ARCH-09 por tamaño del componente nuevo: aviso; `bg-surface-elevated` de Archivo, previo).
+- Visual admin: `/app/admin/clase-profesional/archivo` carga (antes "Módulo no disponible"), lista
+  7 finalizadas; la 277 muestra el mismo detalle que "Ver promoción" (A2 con 1 alumno
+  "Completado"), sin columnas de asistencia/nota. A 1440 px el detalle scrollea dentro del panel
+  (main 843/843, panel 1482/427); a 929 px scroll nativo. "Ver promoción" de la 280 se ve igual que
+  antes. Consola sin errores.
+- Visual secretaria (`secretaria2@test.com`, sede 2): ítem Archivo en el menú y la página lista
+  las 7 finalizadas de su sede.
+
+## Cambios hechos
+- `PromocionesFacade.loadPromocionDetalle(id)` + `isLoadingDetalle`; consulta y conteo de inscritos
+  extraídos (`PROMOTION_ROW_SELECT`, `fetchEnrolledCounts()`) para no duplicarlos.
+- `ArchivoFacade.fetchPromociones()` filtra por la sede activa (S23).
+- `app-promocion-detalle-content` (nuevo, `shared/`); el drawer "Ver promoción" quedó en ~100 líneas.
+- Archivo: detalle reutilizado; selector de curso, tabla y KPIs académicos solo si
+  `!isBlockedInPilot('clase-profesional-recorte')`.
+- Rutas admin/secretaria y menú: Archivo sin bloqueo de piloto. Filtro de Promociones sin
+  "Finalizada".

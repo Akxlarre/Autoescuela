@@ -216,3 +216,39 @@ describe('ArchivoFacade (archivo profesional)', () => {
     });
   });
 });
+
+describe('ArchivoFacade — promociones por sede (fix-326-m, S23)', () => {
+  function setupWithBranch(selectedBranchId: number | null) {
+    const mockSupabase = createMockSupabase({ professional_promotions: { data: [], error: null } });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: SupabaseService, useValue: mockSupabase },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: vi.fn(() => ({ role: 'admin', branchId: null })) },
+        },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => selectedBranchId) } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+    return { facade: TestBed.inject(ArchivoFacade), mockSupabase };
+  }
+
+  it('con una sede activa, lista solo las promociones finalizadas de esa sede', async () => {
+    const { facade, mockSupabase } = setupWithBranch(2);
+    await facade.initialize();
+    expect(mockSupabase._builders.get('professional_promotions').eq).toHaveBeenCalledWith(
+      'branch_id',
+      2,
+    );
+  });
+
+  it('con "Todas las sedes", no filtra por sede', async () => {
+    const { facade, mockSupabase } = setupWithBranch(null);
+    await facade.initialize();
+    expect(mockSupabase._builders.get('professional_promotions').eq).not.toHaveBeenCalledWith(
+      'branch_id',
+      expect.anything(),
+    );
+  });
+});

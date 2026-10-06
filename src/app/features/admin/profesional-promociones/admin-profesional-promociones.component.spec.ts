@@ -103,6 +103,15 @@ describe('AdminProfesionalPromocionesComponent', () => {
     expect(ordered.map((p) => p.id)).toEqual([1, 3]);
   });
 
+  // ─── fix-326-m (D3a): las finalizadas se consultan en Archivo, no en Promociones ───
+  it('el filtro de estado no ofrece "Finalizada"', () => {
+    const values = ((component as any).estadoOptions as { value: string | null }[]).map(
+      (o) => o.value,
+    );
+    expect(values).not.toContain('finished');
+    expect(values).toContain('in_progress');
+  });
+
   // ─── fix-321-m (D5): crear promociones es solo del admin ───
   it('admin ve la acción "Programar Promoción"', () => {
     const ids = ((component as any).heroActions() as { id: string }[]).map((a) => a.id);

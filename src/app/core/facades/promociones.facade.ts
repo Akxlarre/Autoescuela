@@ -22,6 +22,17 @@ import {
   suggestNextPromotionCode,
 } from '@core/utils/promotion-code.utils';
 
+/** Columnas de una promoción con sus cursos y relatores, tal como las mapea `mapToRow()`. */
+const PROMOTION_ROW_SELECT = `id, code, name, start_date, end_date, max_students, status, created_at,
+         promotion_courses (
+           id, course_id, max_students, status,
+           courses!inner ( id, code, name, is_convalidation ),
+           promotion_course_lecturers (
+             id, lecturer_id, role,
+             lecturers!inner ( id, first_names, paternal_last_name, maternal_last_name, specializations )
+           )
+         )`;
+
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
@@ -40,6 +51,7 @@ export class PromocionesFacade {
   private readonly _professionalCourses = signal<{ id: number; code: string; name: string }[]>([]);
   private readonly _cursoStudents = signal<Record<number, PromocionAlumno[]>>({});
   private readonly _isLoadingStudents = signal(false);
+  private readonly _isLoadingDetalle = signal(false);
   private readonly _holidaysCheckFailed = signal(false);
   private _initialized = false;
 
@@ -53,6 +65,8 @@ export class PromocionesFacade {
   readonly professionalCourses = this._professionalCourses.asReadonly();
   readonly cursoStudents = this._cursoStudents.asReadonly();
   readonly isLoadingStudents = this._isLoadingStudents.asReadonly();
+  /** Carga de `loadPromocionDetalle()` (Archivo, fix-326-m). */
+  readonly isLoadingDetalle = this._isLoadingDetalle.asReadonly();
   /** true si el último fetch de feriados falló (DNS/red/CORS/5xx) — end_date pudo calcularse sin feriados reales. */
   readonly holidaysCheckFailed = this._holidaysCheckFailed.asReadonly();
 
@@ -112,17 +126,7 @@ export class PromocionesFacade {
     // 1. Fetch promotions with courses, lecturers
     let query = this.supabase.client
       .from('professional_promotions')
-      .select(
-        `id, code, name, start_date, end_date, max_students, status, created_at,
-         promotion_courses (
-           id, course_id, max_students, status,
-           courses!inner ( id, code, name, is_convalidation ),
-           promotion_course_lecturers (
-             id, lecturer_id, role,
-             lecturers!inner ( id, first_names, paternal_last_name, maternal_last_name, specializations )
-           )
-         )`,
-      )
+      .select(PROMOTION_ROW_SELECT)
       .not('status', 'eq', 'finished')
       .order('start_date', { ascending: false });
 
@@ -133,26 +137,61 @@ export class PromocionesFacade {
     if (error) throw error;
 
     // 2. Fetch enrolled counts per promotion_course from enrollments
-    const allPcIds = (data as any[]).flatMap((p) =>
-      (p.promotion_courses ?? []).map((pc: any) => pc.id),
-    );
-    let enrolledCounts: Record<number, number> = {};
-    if (allPcIds.length > 0) {
-      const { data: enrollData } = await this.supabase.client
-        .from('enrollments')
-        .select('promotion_course_id')
-        .in('promotion_course_id', allPcIds)
-        .not('status', 'in', '("cancelled","draft")');
-      if (enrollData) {
-        enrolledCounts = enrollData.reduce((acc: Record<number, number>, e: any) => {
-          acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
-          return acc;
-        }, {});
-      }
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrolledCounts = await this.fetchEnrolledCounts(data as any[]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this._promociones.set((data as any[]).map((p) => this.mapToRow(p, enrolledCounts)));
+  }
+
+  /** Inscritos por promotion_course (excluye cancelados y borradores). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async fetchEnrolledCounts(promos: any[]): Promise<Record<number, number>> {
+    const allPcIds = promos.flatMap((p) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p.promotion_courses ?? []).map((pc: any) => pc.id),
+    );
+    if (allPcIds.length === 0) return {};
+    const { data: enrollData } = await this.supabase.client
+      .from('enrollments')
+      .select('promotion_course_id')
+      .in('promotion_course_id', allPcIds)
+      .not('status', 'in', '("cancelled","draft")');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (enrollData ?? []).reduce((acc: Record<number, number>, e: any) => {
+      acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  /**
+   * Carga una promoción por id (de cualquier estado, incluida finalizada) con el mismo detalle
+   * que "Ver promoción", la deja seleccionada y carga sus alumnos. Lo usa Archivo (fix-326-m),
+   * cuyas promociones no están en la lista de Promociones (excluye finalizadas).
+   */
+  async loadPromocionDetalle(id: number): Promise<void> {
+    this._selectedPromocion.set(null);
+    this._cursoStudents.set({});
+    this._isLoadingDetalle.set(true);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('professional_promotions')
+        .select(PROMOTION_ROW_SELECT)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+      const counts = await this.fetchEnrolledCounts([data]);
+      this.selectPromocion(this.mapToRow(data, counts));
+    } catch (err) {
+      this.toast.error(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar la promoción',
+      );
+    } finally {
+      this._isLoadingDetalle.set(false);
+    }
   }
 
   private async refreshSilently(): Promise<void> {

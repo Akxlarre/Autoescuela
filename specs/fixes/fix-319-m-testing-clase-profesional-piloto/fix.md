@@ -180,7 +180,7 @@ Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de i
 | S5 + S7 + D6 + D7 — número de promoción y cadencia | `fix-323-m-numero-promocion-obligatorio-unico` | ✅ cerrado 2026-10-05 |
 | S4 + D3b — finalizar sin confirmación | `fix-324-m-finalizar-promocion-solo-admin-con-confirmacion` | ✅ cerrado 2026-10-05 |
 | L12 + D4 — cancelar con alumnos | `fix-325-m-no-cancelar-promocion-con-alumnos` | ✅ cerrado 2026-10-05 |
-| S4 + S23 + D3a — Archivo en el piloto | `fix-326-m-archivo-profesional-en-piloto` | abierto |
+| S4 + S23 + D3a — Archivo en el piloto | `fix-326-m-archivo-profesional-en-piloto` | ✅ cerrado 2026-10-05 |
 | S19 + D9 — conteo con archivados | `fix-327-m-conteo-inscritos-sin-archivados` | abierto |
 | S3 + S21 + D1 — Pre-inscritos alcanzable | `fix-328-m-pre-inscritos-oculto-en-piloto` | abierto |
 | S10 + D2 — estados imposibles | `fix-329-m-base-profesional-sin-estados-imposibles` | abierto |

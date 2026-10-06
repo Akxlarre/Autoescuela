@@ -1,0 +1,402 @@
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
+import { getCourseColor } from '@core/utils/course-colors';
+import type { PromocionAlumno, PromocionTableRow } from '@core/models/ui/promocion-table.model';
+
+const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> = {
+  planned: { label: 'Planificada', variant: 'brand' },
+  in_progress: { label: 'En curso', variant: 'success' },
+  finished: { label: 'Finalizada', variant: 'surface' },
+  cancelled: { label: 'Cancelada', variant: 'error' },
+};
+
+/**
+ * Detalle de una promoción de Clase Profesional: información general, alumnos por categoría y
+ * cursos con relatores y alumnos. Lo usan el drawer "Ver promoción" y la vista Archivo
+ * (fix-326-m, D3a), para que ambas muestren lo mismo sin divergir.
+ *
+ * Dumb: recibe todo por input(); el estado de expandir/colapsar es solo de UI.
+ */
+@Component({
+  selector: 'app-promocion-detalle-content',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [IconComponent, BadgeComponent, SkeletonBlockComponent, StatBoxComponent],
+  template: `
+    @let p = promo();
+    <div class="flex flex-col gap-5">
+      <!-- ── Header ──────────────────────────────────────────────── -->
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="text-lg font-semibold text-text-primary">
+            {{ p.name }}
+          </h2>
+          <app-badge [variant]="statusBadgeVariant(p.status)">
+            {{ statusCfg(p.status).label }}
+          </app-badge>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span
+            class="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+          >
+            {{ p.code }}
+          </span>
+          <span class="text-xs text-text-muted">
+            {{ formatDate(p.startDate) }} → {{ formatDate(p.endDate) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- ── Status banner ───────────────────────────────────────── -->
+      @if (p.status === 'in_progress') {
+        <div class="rounded-lg p-4 bg-brand/6 border border-brand/20">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-text-primary">
+              Día de clase {{ p.currentDay }} de 30
+            </span>
+            <span class="text-sm font-semibold text-brand"> {{ progressPercent() }}% </span>
+          </div>
+          <div class="w-full rounded-full overflow-hidden bg-elevated" style="height: 8px">
+            <div class="h-full rounded-full bg-brand" [style.width.%]="progressPercent()"></div>
+          </div>
+        </div>
+      }
+
+      @if (p.status === 'finished') {
+        <div class="rounded-lg p-4 flex items-center gap-3 bg-success/6 border border-success/20">
+          <app-icon name="check-circle" [size]="20" color="var(--state-success)" />
+          <div>
+            <p class="text-sm font-medium text-text-primary">Promoción completada</p>
+            <p class="text-xs text-text-muted">
+              Esta promoción finalizó el {{ formatDate(p.endDate) }}. Se completaron los 30 días de
+              clase (lun-sáb) con {{ p.totalEnrolled }} alumnos inscritos.
+            </p>
+          </div>
+        </div>
+      }
+
+      <!-- ── Info general ────────────────────────────────────────── -->
+      <div>
+        <h3 class="micro-label mb-3">Información general</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <app-stat-box
+            label="Código"
+            [value]="p.code"
+            variant="surface"
+            [compact]="true"
+            [useMono]="true"
+          />
+          <app-stat-box
+            label="Estado"
+            [value]="statusCfg(p.status).label"
+            [variant]="statusCfg(p.status).variant"
+            [compact]="true"
+          />
+          <app-stat-box
+            label="Inicio"
+            [value]="formatDate(p.startDate)"
+            variant="surface"
+            [compact]="true"
+          />
+          <app-stat-box
+            label="Fin"
+            [value]="formatDate(p.endDate)"
+            variant="surface"
+            [compact]="true"
+          />
+          <app-stat-box
+            label="Duración"
+            value="30 días"
+            suffix="clase"
+            variant="surface"
+            [compact]="true"
+            class="col-span-2"
+          />
+          <app-stat-box
+            label="Alumnos"
+            [value]="p.totalEnrolled"
+            [suffix]="'/ ' + p.maxStudents"
+            [variant]="p.totalEnrolled >= p.maxStudents ? 'error' : 'success'"
+            [compact]="true"
+            class="col-span-2"
+          />
+        </div>
+      </div>
+
+      <!-- ── Alumnos por categoría ───────────────────────────────── -->
+      <div>
+        <h3 class="micro-label mb-3">Alumnos por categoría</h3>
+        <div class="grid grid-cols-2 gap-3">
+          @for (curso of p.cursos; track curso.id) {
+            <app-stat-box
+              [label]="curso.courseCode"
+              [value]="curso.enrolledStudents"
+              [suffix]="'/ ' + curso.maxStudents"
+              [variant]="curso.enrolledStudents >= curso.maxStudents ? 'error' : 'default'"
+              [compact]="true"
+            />
+          }
+        </div>
+      </div>
+
+      <!-- ── Cursos de la promoción ──────────────────────────────── -->
+      <div>
+        <h3 class="micro-label mb-3">Cursos de la promoción</h3>
+        <div class="flex flex-col gap-3">
+          @for (curso of p.cursos; track curso.id) {
+            <div
+              class="rounded-lg p-4 border border-border-subtle"
+              [style.borderLeft]="'3px solid ' + courseColor(curso.courseCode)"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex items-center justify-center min-w-6.5 px-1.5 py-0.5 rounded text-2xs font-bold"
+                    style="color: var(--color-primary-text)"
+                    [style.background]="courseColor(curso.courseCode)"
+                  >
+                    {{ curso.courseCode }}
+                  </span>
+                  <span class="text-sm text-text-muted">
+                    {{ curso.courseName }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Relatores -->
+              <div class="mb-3">
+                <p class="text-2xs font-semibold mb-1.5 text-brand">Relatores</p>
+                @if (curso.relatores.length > 0) {
+                  @for (rel of curso.relatores; track rel.id) {
+                    <div class="flex items-center gap-2 mb-1.5">
+                      <div
+                        class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-brand-tint text-brand"
+                      >
+                        {{ rel.initials }}
+                      </div>
+                      <div>
+                        <span class="text-sm text-text-primary">
+                          {{ rel.nombre }}
+                        </span>
+                        @if (rel.role) {
+                          <span
+                            class="text-2xs ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                          >
+                            {{ roleLabel(rel.role) }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  }
+                } @else {
+                  <p class="text-xs italic text-text-muted">Sin relator asignado</p>
+                }
+              </div>
+
+              <!-- Alumnos bar + expandable list -->
+              <div>
+                <button
+                  class="students-toggle"
+                  (click)="toggleStudents(curso.id)"
+                  data-llm-action="toggle-alumnos-curso"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <app-icon name="users" [size]="12" color="var(--ds-brand)" />
+                    <span class="text-2xs font-semibold text-brand"> Alumnos </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-text-secondary">
+                      {{ curso.enrolledStudents }} / {{ curso.maxStudents }}
+                    </span>
+                    <app-icon
+                      [name]="isExpanded(curso.id) ? 'chevron-up' : 'chevron-down'"
+                      [size]="14"
+                      color="var(--text-muted)"
+                    />
+                  </div>
+                </button>
+
+                <div
+                  class="w-full rounded-full overflow-hidden mb-2 bg-elevated"
+                  style="height: 6px"
+                >
+                  <div
+                    class="h-full rounded-full"
+                    [style.background]="courseColor(curso.courseCode)"
+                    [style.width.%]="enrollPercent(curso)"
+                  ></div>
+                </div>
+
+                @if (isExpanded(curso.id)) {
+                  <div class="student-list">
+                    @if (loadingStudents()) {
+                      @for (i of [1, 2, 3]; track i) {
+                        <div class="flex items-center gap-2 py-2">
+                          <app-skeleton-block variant="circle" width="28px" height="28px" />
+                          <div class="flex-1">
+                            <app-skeleton-block variant="text" width="70%" height="12px" />
+                            <app-skeleton-block
+                              variant="text"
+                              width="40%"
+                              height="10px"
+                              style="margin-top: 4px"
+                            />
+                          </div>
+                        </div>
+                      }
+                    } @else {
+                      @if (studentsOf(curso.id).length === 0) {
+                        <p class="text-xs italic py-2 text-center text-text-muted">
+                          Sin alumnos inscritos en este curso
+                        </p>
+                      } @else {
+                        @for (alumno of studentsOf(curso.id); track alumno.enrollmentId) {
+                          <div
+                            class="flex items-center gap-2.5 py-2"
+                            style="border-bottom: 1px solid var(--border-subtle);"
+                          >
+                            <div
+                              class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-elevated text-text-secondary"
+                            >
+                              {{ alumno.initials }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <p class="text-xs font-medium truncate text-text-primary">
+                                {{ alumno.nombre }}
+                              </p>
+                              <p class="text-2xs font-mono text-text-muted">
+                                {{ alumno.rut }}
+                              </p>
+                            </div>
+                            <app-badge
+                              [variant]="enrollStatusVariant(alumno.enrollmentStatus)"
+                              class="shrink-0"
+                            >
+                              {{ enrollStatusLabel(alumno.enrollmentStatus) }}
+                            </app-badge>
+                          </div>
+                        }
+                      }
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  `,
+  styles: `
+    .students-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0;
+      margin-bottom: 6px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .students-toggle:hover {
+      opacity: 0.8;
+    }
+
+    .student-list {
+      padding: 4px 0 0;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+  `,
+})
+export class PromocionDetalleContentComponent {
+  readonly promo = input.required<PromocionTableRow>();
+  /** Alumnos por id de promotion_course. */
+  readonly studentsByCurso = input<Record<number, PromocionAlumno[]>>({});
+  readonly loadingStudents = input(false);
+
+  private readonly _expandedCourses = signal<Set<number>>(new Set());
+
+  protected readonly progressPercent = computed(() =>
+    Math.round((this.promo().currentDay / 30) * 100),
+  );
+
+  protected isExpanded(cursoId: number): boolean {
+    return this._expandedCourses().has(cursoId);
+  }
+
+  protected toggleStudents(cursoId: number): void {
+    const current = new Set(this._expandedCourses());
+    if (current.has(cursoId)) {
+      current.delete(cursoId);
+    } else {
+      current.add(cursoId);
+    }
+    this._expandedCourses.set(current);
+  }
+
+  protected studentsOf(cursoId: number): PromocionAlumno[] {
+    return this.studentsByCurso()[cursoId] ?? [];
+  }
+
+  protected statusCfg(status: string): { label: string; variant: StatBoxVariant } {
+    return STATUS_CONFIG[status] ?? STATUS_CONFIG['planned'];
+  }
+
+  protected statusBadgeVariant(
+    status: string,
+  ): 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand' {
+    const variant = this.statusCfg(status).variant;
+    return variant === 'default' || variant === 'surface' ? 'neutral' : variant;
+  }
+
+  protected courseColor(code: string): string {
+    return getCourseColor(code);
+  }
+
+  protected enrollPercent(curso: { enrolledStudents: number; maxStudents: number }): number {
+    return curso.maxStudents > 0
+      ? Math.round((curso.enrolledStudents / curso.maxStudents) * 100)
+      : 0;
+  }
+
+  protected roleLabel(role: string): string {
+    const labels: Record<string, string> = {
+      theory: 'Teoría',
+      practice: 'Práctica',
+      both: 'Teoría y práctica',
+    };
+    return labels[role] ?? '';
+  }
+
+  protected enrollStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      active: 'Activo',
+      completed: 'Completado',
+      inactive: 'Inactivo',
+      pending_payment: 'Pago pendiente',
+    };
+    return map[status] ?? status;
+  }
+
+  protected enrollStatusVariant(status: string): 'success' | 'warning' | 'error' | 'neutral' {
+    const map: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+      active: 'success',
+      completed: 'neutral',
+      inactive: 'error',
+      pending_payment: 'warning',
+    };
+    return map[status] ?? 'neutral';
+  }
+
+  protected formatDate(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  }
+}

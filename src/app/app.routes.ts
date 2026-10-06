@@ -351,8 +351,8 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-326-m (D3a): habilitada en el piloto (promociones finalizadas).
             path: 'clase-profesional/archivo',
-            canActivate: [pilotPhaseGuard('clase-profesional-recorte')],
             loadComponent: () =>
               import('./features/admin/profesional-archivo/admin-profesional-archivo.component').then(
                 (m) => m.AdminProfesionalArchivoComponent,
@@ -553,8 +553,9 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-326-m (D3a): habilitada en el piloto (promociones finalizadas).
             path: 'profesional/archivo',
-            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-archivo/secretaria-profesional-archivo.component').then(
                 (m) => m.SecretariaProfesionalArchivoComponent,

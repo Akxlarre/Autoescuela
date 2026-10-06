@@ -82,8 +82,10 @@ function createTableMock(tables: Record<string, { data?: unknown; error?: unknow
         insert: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue(res),
+        maybeSingle: vi.fn().mockResolvedValue(res),
         then: (resolve: any, reject: any) => Promise.resolve(res).then(resolve, reject),
       };
       builders.set(table, builder);
@@ -545,5 +547,39 @@ describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
     const builder = mockSupabase._builders.get('enrollments');
     expect(builder.eq).toHaveBeenCalledWith('promotion_courses.promotion_id', 7);
     expect(builder.eq).toHaveBeenCalledWith('status', 'active');
+  });
+
+  // fix-326-m (D3a): Archivo muestra una promoción finalizada con el mismo detalle que "Ver promoción"
+  it('loadPromocionDetalle() deja seleccionada una promoción finalizada con sus cursos', async () => {
+    const promo = {
+      id: 14,
+      code: '277',
+      name: 'Promoción 277 (24 de Agosto 2026)',
+      start_date: '2026-08-24',
+      end_date: '2026-09-28',
+      max_students: 100,
+      status: 'finished',
+      promotion_courses: [
+        {
+          id: 50,
+          course_id: 3,
+          max_students: 25,
+          status: 'finished',
+          courses: { id: 3, code: 'PROF-A2', name: 'Clase A2', is_convalidation: false },
+          promotion_course_lecturers: [],
+        },
+      ],
+    };
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: promo },
+      enrollments: { data: [] },
+    });
+    await facade.loadPromocionDetalle(14);
+
+    const sel = facade.selectedPromocion();
+    expect(sel?.id).toBe(14);
+    expect(sel?.status).toBe('finished');
+    expect(sel?.cursos.map((c) => c.id)).toEqual([50]);
+    expect(mockSupabase._builders.get('professional_promotions').eq).toHaveBeenCalledWith('id', 14);
   });
 });
