@@ -41,6 +41,19 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 - Prueba manual tras desplegar: crear una secretaria de prueba con un correo real → llega el correo
   → el link lleva a crear la contraseña → entra con ella.
 
+## Resultado (2026-10-05)
+- `deno test` del correo compartido → 4 passed (nombre, rol, link, sin mención de RUT/clave
+  temporal, nombre escapado, link no-https rechazado).
+- `vitest secretarias.facade.spec` → 5 passed (los 2 casos nuevos fallaron antes de implementar).
+- `ng build` OK. `lint:arch` exit 0. `deno lint` sin problemas nuevos (solo las categorías de estilo
+  que ya tiene todo `supabase/functions`).
+
+## Progreso
+- [x] Código + tests + build
+- [ ] Desplegar `create-secretary` (**espera visto bueno del owner**)
+- [ ] Prueba manual: crear una secretaria de prueba con correo real → llega el correo → crea su
+      contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
+
 ## Cuenta ya existente
 Hay 1 secretaria con `first_login = true` y cuenta de Auth (su clave sigue siendo el RUT). Este fix no
 la toca: el admin debe pedirle que entre y cambie la clave, o que use "recuperar contraseña".
