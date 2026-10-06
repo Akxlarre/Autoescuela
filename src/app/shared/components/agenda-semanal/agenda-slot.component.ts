@@ -36,7 +36,9 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
     <div
       class="slot-block"
       [class]="statusClass()"
-      [attr.data-llm-action]="slot().status === 'available' ? 'schedule-class' : 'view-slot-detail'"
+      [attr.data-llm-action]="
+        slot().status === 'available' ? 'view-available-slot' : 'view-slot-detail'
+      "
     >
       @if (showVehicleDocWarning()) {
         <app-icon
@@ -280,7 +282,8 @@ export class AgendaSlotComponent {
       return `${s.startTime} — fuera del rango de visualización configurado.`;
     }
     if (s.status === 'available') {
-      return `Slot disponible ${s.startTime} — ${s.instructorName}. Clic para agendar.`;
+      // hotfix-060-b: la Agenda es de solo lectura (fix-017); el clic abre el detalle, no agenda.
+      return `Slot disponible ${s.startTime} — ${s.instructorName}. Clic para ver detalle.`;
     }
     const who = s.studentName ? `${s.studentName}, ` : '';
     return `${who}${s.startTime} — ${s.instructorName}. Clic para ver detalle.`;

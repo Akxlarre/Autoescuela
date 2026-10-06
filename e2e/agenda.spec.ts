@@ -294,9 +294,11 @@ test.describe('C. Navegación de semanas', () => {
       await page.getByRole('button', { name: 'Semana siguiente' }).click();
       await waitWeekLoaded(page);
     }
-    await expect(grid(page).locator('[data-llm-action="schedule-class"]').first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(grid(page).locator('[data-llm-action="view-available-slot"]').first()).toBeVisible(
+      {
+        timeout: 15_000,
+      },
+    );
   });
 });
 
@@ -348,7 +350,7 @@ test.describe('E. Detalle de slot', () => {
     await waitWeekLoaded(page);
     await grid(page)
       .locator('app-agenda-slot')
-      .filter({ has: page.locator('[data-llm-action="schedule-class"]') })
+      .filter({ has: page.locator('[data-llm-action="view-available-slot"]') })
       .first()
       .click();
     await expect(
@@ -360,10 +362,9 @@ test.describe('E. Detalle de slot', () => {
     await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toHaveCount(0);
   });
 
-  test('E01b: el horario libre no promete "Clic para agendar" si el detalle es de solo lectura (S18)', async ({
+  test('E01b: el horario libre no promete "Clic para agendar" si el detalle es de solo lectura (S18, hotfix-060-b)', async ({
     pageAs,
   }) => {
-    knownBug('S18 (fix-186-b)');
     const page = await pageAs('admin');
     await openAgenda(page, 'admin');
     await selectInstructor(page, SEDE1_INSTRUCTOR);
@@ -371,7 +372,7 @@ test.describe('E. Detalle de slot', () => {
     await waitWeekLoaded(page);
     const libre = grid(page)
       .locator('app-agenda-slot')
-      .filter({ has: page.locator('[data-llm-action="schedule-class"]') })
+      .filter({ has: page.locator('[data-llm-action="view-available-slot"]') })
       .first();
     await expect(libre).toBeVisible();
     expect(await libre.getAttribute('aria-label')).not.toMatch(/agendar/i);
@@ -405,11 +406,10 @@ test.describe('E. Detalle de slot', () => {
     await expect(drawer.getByText('Distancia recorrida: 25 km')).toBeVisible();
   });
 
-  test('E03: la pastilla "Agendada" del detalle tiene color (S18: --state-brand no existe)', async ({
+  test('E03: la pastilla "Agendada" del detalle tiene color (S18, hotfix-060-b)', async ({
     pageAs,
     cleanup,
   }) => {
-    knownBug('S18 (fix-186-b)');
     const seeded = await seedClasses(cleanup);
     const page = await pageAs('admin');
     await openAgenda(page, 'admin');
