@@ -37,7 +37,10 @@ const SUBMIT = '[data-llm-action="submit-auth-form"]';
 /** Navega y espera a que la URL se asiente en `expected` (los guards redirigen en cadena). */
 async function expectLandsOn(page: Page, url: string, expected: string): Promise<void> {
   await page.goto(url);
-  await expect(page).toHaveURL(new RegExp(`${expected.replace(/[?]/g, '\\?')}$`));
+  // 20 s: la cadena de guards + carga de sesión contra la BD en la nube a veces pasa de 10 s.
+  await expect(page).toHaveURL(new RegExp(`${expected.replace(/[?]/g, '\\?')}$`), {
+    timeout: 20_000,
+  });
 }
 
 /** Texto de la pantalla 404. */
@@ -217,9 +220,11 @@ test.describe('F. Rutas de otro rol', () => {
   for (const url of ADMIN_ONLY) {
     test(`F01/F02: secretaria no entra a ${url} (su dashboard + aviso)`, async ({ pageAs }) => {
       const page = await pageAs('secretariaA');
+      // fix-184-b: la redirección ya no es silenciosa. El aviso dura 4 s, así que se espera
+      // DURANTE la navegación (buscarlo después de que la URL se asienta puede llegar tarde).
+      const aviso = page.getByText('No tienes acceso a esa sección').waitFor({ timeout: 30_000 });
       await expectLandsOn(page, url, DASH.secretariaA);
-      // fix-184-b: la redirección ya no es silenciosa.
-      await expect(page.getByText('No tienes acceso a esa sección')).toBeVisible();
+      await aviso;
     });
   }
 
@@ -326,7 +331,9 @@ test.describe('G. Fase piloto', () => {
       const page = await pageAs('admin');
       await expectLandsOn(page, url, url);
       await expect(page.getByRole('heading', { name: 'Página no encontrada' })).toHaveCount(0);
-      await expect(page.getByRole('heading', { name: 'Módulo no habilitado todavía' })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Módulo no habilitado todavía' })).toHaveCount(
+        0,
+      );
     });
   }
 
