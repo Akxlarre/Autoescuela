@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
 import { AuthFacade } from '../facades/auth.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 /**
  * Guard funcional que verifica si el usuario autenticado tiene el rol requerido
@@ -11,6 +12,7 @@ export function hasRoleGuard(allowedRoles: string[]): CanActivateFn {
     return async () => {
         const auth = inject(AuthFacade);
         const router = inject(Router);
+        const toast = inject(ToastService); // antes del await: inject() necesita el contexto
 
         await auth.whenReady;
 
@@ -32,7 +34,9 @@ export function hasRoleGuard(allowedRoles: string[]): CanActivateFn {
             return true;
         }
 
-        // Role redirect fallback si no tiene permiso.
+        // Sin permiso: a su propio portal, pero avisando (fix-184-b). Antes la redirección era
+        // silenciosa y abrir un link de otro rol parecía un error de la app.
+        toast.warning('No tienes acceso a esa sección');
         return router.createUrlTree(['/app']);
     };
 }

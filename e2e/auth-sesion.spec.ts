@@ -12,7 +12,7 @@
  *   secretariaB (sede 2, con Clase Profesional)          → D3
  *   secretariaMultisede (sede 1 + grant ambas sedes)     → D4
  */
-import { expect, knownBug, test, watchErrors } from './support/fixtures';
+import { expect, test, watchErrors } from './support/fixtures';
 import type { Page } from '@playwright/test';
 import type { E2eRole } from './support/accounts';
 
@@ -168,9 +168,9 @@ test.describe('E. Cerrar sesión', () => {
   test('E01–E04: modal, Cancelar, "Sí, salir" → /login, y Atrás no vuelve a la pantalla', async ({
     page,
   }) => {
-    // Sesión propia (por UI). El cierre de sesión de Supabase es GLOBAL (revoca todas las
-    // sesiones de la cuenta, ver E11): se intercepta la llamada para no tumbar la sesión que usan
-    // en paralelo los demás tests de esta cuenta. La app igual limpia su sesión local.
+    // Sesión propia (por UI). Desde fix-184-b el cierre de sesión es local (E11); igual se
+    // intercepta la llamada al servidor para que el test no dependa de ella. La app limpia su
+    // sesión local de todas formas.
     await page.route('**/auth/v1/logout**', (route) => route.fulfill({ status: 204, body: '' }));
     await page.goto('/login');
     await page.locator(EMAIL).fill('secretaria@test.com');
@@ -215,9 +215,11 @@ test.describe('F. Rutas de otro rol', () => {
   ];
 
   for (const url of ADMIN_ONLY) {
-    test(`F01/F02: secretaria no entra a ${url} (termina en su dashboard)`, async ({ pageAs }) => {
+    test(`F01/F02: secretaria no entra a ${url} (su dashboard + aviso)`, async ({ pageAs }) => {
       const page = await pageAs('secretariaA');
       await expectLandsOn(page, url, DASH.secretariaA);
+      // fix-184-b: la redirección ya no es silenciosa.
+      await expect(page.getByText('No tienes acceso a esa sección')).toBeVisible();
     });
   }
 
@@ -253,10 +255,13 @@ test.describe('F. Rutas de otro rol', () => {
     }
   });
 
-  test('F07: /app/admin sin sub-ruta → dashboard (S18)', async ({ pageAs }) => {
-    knownBug('S18 (fix-183-b): /app/admin y /app/secretaria sin sub-ruta dan 404');
-    const page = await pageAs('admin');
-    await expectLandsOn(page, '/app/admin', DASH.admin);
+  test('F07: /app/admin y /app/secretaria sin sub-ruta → su dashboard (S18, fix-184-b)', async ({
+    pageAs,
+  }) => {
+    const admin = await pageAs('admin');
+    await expectLandsOn(admin, '/app/admin', DASH.admin);
+    const sec = await pageAs('secretariaA');
+    await expectLandsOn(sec, '/app/secretaria', DASH.secretariaA);
   });
 
   test('F08: ruta inexistente fuera de /app → 404 y "Volver al inicio" lleva al dashboard', async ({
@@ -279,7 +284,6 @@ test.describe('G. Fase piloto', () => {
     '/app/admin/clase-profesional/asistencia',
     '/app/admin/clase-profesional/certificados',
     '/app/admin/clase-profesional/evaluaciones',
-    '/app/admin/clase-profesional/archivo',
     '/app/admin/ex-alumnos-profesional',
   ];
   for (const url of ADMIN_BLOCKED) {
@@ -295,7 +299,6 @@ test.describe('G. Fase piloto', () => {
     '/app/secretaria/profesional/asistencia',
     '/app/secretaria/profesional/evaluaciones',
     '/app/secretaria/profesional/certificados',
-    '/app/secretaria/profesional/archivo',
     '/app/secretaria/ex-alumnos-profesional',
   ];
   const SEC_EXPECTED: Record<'secretariaA' | 'secretariaB' | 'secretariaMultisede', string> = {
@@ -312,9 +315,11 @@ test.describe('G. Fase piloto', () => {
     }
   }
 
+  // Archivo de Clase Profesional se habilitó en el piloto con fix-326-m (antes estaba en G06/G13).
   for (const url of [
     '/app/admin/clase-profesional/alumnos',
     '/app/admin/clase-profesional/promociones',
+    '/app/admin/clase-profesional/archivo',
     '/app/admin/libro-de-clases',
   ]) {
     test(`G15–G17: admin ${url} renderiza (no MND ni 404)`, async ({ pageAs }) => {
@@ -328,6 +333,7 @@ test.describe('G. Fase piloto', () => {
   for (const url of [
     '/app/secretaria/profesional/alumnos',
     '/app/secretaria/profesional/promociones',
+    '/app/secretaria/profesional/archivo',
     '/app/secretaria/libro-de-clases',
   ]) {
     test(`G18/H02/H03: ${url} → D3 renderiza, D2 su dashboard`, async ({ pageAs }) => {
@@ -372,7 +378,6 @@ const BLOCKED_MENU_LABELS = [
   'Asistencia Prof',
   'Evaluaciones',
   'Certificados Prof',
-  'Archivo',
   'Ex-Alumnos Prof',
   'Pre-inscritos',
 ];
@@ -454,10 +459,11 @@ test.describe('J. Pantallas de aviso y públicas', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('J06: /acceso-denegado no muestra un stub "PLANO" (S9)', async ({ page }) => {
-    knownBug('S9 (fix-183-b): /acceso-denegado es un stub que ningún código usa');
+  test('J06: /acceso-denegado ya no existe (stub eliminado, S9 / fix-184-b) → 404', async ({
+    page,
+  }) => {
     await page.goto('/acceso-denegado');
-    await page.waitForLoadState('networkidle');
+    await expectNotFound(page);
     await expect(page.getByText(/PLANO|Pendiente calcar/)).toHaveCount(0);
   });
 

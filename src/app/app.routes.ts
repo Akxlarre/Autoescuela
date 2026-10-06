@@ -52,13 +52,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'acceso-denegado',
-    loadComponent: () =>
-      import('./features/acceso-denegado/acceso-denegado.component').then(
-        (m) => m.AccesoDenegadoComponent,
-      ),
-  },
-  {
     path: 'modulo-no-disponible',
     loadComponent: () =>
       import('./features/modulo-no-disponible/modulo-no-disponible.component').then(
@@ -113,6 +106,8 @@ export const routes: Routes = [
         path: 'admin',
         canActivate: [hasRoleGuard(['admin'])],
         children: [
+          // /app/admin sin sub-ruta → su dashboard (fix-184-b; antes daba 404).
+          { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
           {
             path: 'dashboard',
             loadComponent: () =>
@@ -386,6 +381,8 @@ export const routes: Routes = [
         path: 'secretaria',
         canActivate: [hasRoleGuard(['secretaria'])],
         children: [
+          // /app/secretaria sin sub-ruta → su dashboard (fix-184-b; antes daba 404).
+          { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
           {
             path: 'dashboard',
             loadComponent: () =>
