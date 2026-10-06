@@ -357,6 +357,7 @@ interface SemaforoInfo {
                             class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                            [queryParams]="fichaQueryParams(alumno)"
                           >
                             <app-icon name="eye" [size]="16" />
                           </button>
@@ -467,6 +468,14 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly trashViewToggled = output<void>();
   /** El Smart genera el archivo con las filas recibidas (spec 0023-m). */
   readonly exportRequested = output<AlumnosProfesionalExportRequest>();
+
+  /**
+   * fix-335-m: la ficha abre la matrícula de la fila. Sin esto abría la más reciente de la
+   * persona — la Clase B, si tenía una posterior — y "volver" llevaba a la Base B.
+   */
+  protected fichaQueryParams(alumno: Pick<AlumnoProfesionalTableRow, 'enrollmentId'>) {
+    return { enrollment: alumno.enrollmentId };
+  }
 
   // ── Orden por columna (spec 0023-m) ─────────────────────────────────────
   /** Orden elegido; null = orden por defecto (como llega del Facade). */

@@ -172,6 +172,7 @@ import { isBlockedInPilot } from '@core/config/pilot-phase.config';
               class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
               pTooltip="Ver ficha"
               [routerLink]="[basePath() + '/alumnos/' + alumno().id]"
+              [queryParams]="fichaQueryParams()"
             >
               <app-icon name="eye" [size]="16" />
             </button>
@@ -212,6 +213,10 @@ export class AlumnoProfesionalCardComponent {
     () => `${this.alumno().nombre[0] ?? ''}${this.alumno().apellido[0] ?? ''}`,
   );
   protected readonly palette = computed(() => avatarPalette(this.fullName()));
+  /** fix-335-m: la ficha abre la matrícula de esta tarjeta, no la más reciente de la persona. */
+  protected readonly fichaQueryParams = computed(() => ({
+    enrollment: this.alumno().enrollmentId,
+  }));
 
   protected readonly statusBadgeVariant = computed(() =>
     getAlumnoStatusBadgeVariant(this.alumno().estado),

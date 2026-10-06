@@ -51,3 +51,19 @@ describe('AlumnosProfesionalListContentComponent — acciones del hero (fix-328-
     expect(ids).toContain('papelera');
   });
 });
+
+// fix-335-m (H02 / S17): sin `?enrollment=` la ficha abre la matrícula más reciente; a una persona
+// con una Clase B posterior le abría la B (y "volver" llevaba a la Base B). Igual que la Base B
+// desde fix-272-m, la fila dice sobre qué matrícula se hizo clic.
+// Los tests de template están excluidos de Vitest (ver vitest.config.ts): se prueba la decisión;
+// el binding del template se verifica en navegador (fix.md).
+describe('AlumnosProfesionalListContentComponent — "Ver ficha" (fix-335-m)', () => {
+  it('"Ver ficha" manda la matrícula de la fila (2 filas de la misma persona → 2 matrículas)', () => {
+    TestBed.overrideComponent(AlumnosProfesionalListContentComponent, { set: { template: '' } });
+    const c = TestBed.createComponent(AlumnosProfesionalListContentComponent)
+      .componentInstance as any;
+
+    expect(c.fichaQueryParams({ id: '7334', enrollmentId: 6982 })).toEqual({ enrollment: 6982 });
+    expect(c.fichaQueryParams({ id: '7334', enrollmentId: 6983 })).toEqual({ enrollment: 6983 });
+  });
+});
