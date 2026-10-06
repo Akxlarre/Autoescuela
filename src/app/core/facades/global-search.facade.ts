@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { AdminAlumnosProfesionalFacade } from '@core/facades/admin-alumnos-profesional.facade';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import type {
@@ -25,6 +26,7 @@ export function buildAlumnoQuickActions(
   rolePrefix: string,
   studentId: string,
   role?: UserRole,
+  options: { professional?: boolean } = {},
 ): AlumnoQuickAction[] {
   const verFicha: AlumnoQuickAction = {
     label: 'Ver Ficha',
@@ -45,12 +47,17 @@ export function buildAlumnoQuickActions(
       actionType: 'payment',
       route: [`${rolePrefix}/pagos`],
     },
-    {
-      label: 'Agendar Clase',
-      icon: 'calendar',
-      actionType: 'schedule',
-      route: [`${rolePrefix}/agenda`],
-    },
+    // fix-337-m: la agenda es de Clase B; a un alumno solo Profesional no se le ofrece.
+    ...(options.professional
+      ? []
+      : [
+          {
+            label: 'Agendar Clase',
+            icon: 'calendar',
+            actionType: 'schedule' as const,
+            route: [`${rolePrefix}/agenda`],
+          },
+        ]),
     {
       label: 'Nueva Matrícula',
       icon: 'user-plus',
@@ -64,6 +71,7 @@ export function buildAlumnoQuickActions(
 export class GlobalSearchFacade {
   private readonly auth = inject(AuthFacade);
   private readonly adminAlumnos = inject(AdminAlumnosFacade);
+  private readonly adminAlumnosProf = inject(AdminAlumnosProfesionalFacade);
   private readonly instructorAlumnos = inject(InstructorAlumnosFacade);
   private readonly instructoresFacade = inject(InstructoresFacade);
   private readonly router = inject(Router);
@@ -131,10 +139,9 @@ export class GlobalSearchFacade {
     // alumno (student) y roles desconocidos: sin acceso a datos de otros alumnos.
     if (role !== 'admin' && role !== 'secretaria') return [];
 
-    return this.adminAlumnos
+    const claseB = this.adminAlumnos
       .alumnos()
       .filter((a) => matches(`${a.nombre} ${a.apellido}`, a.rut))
-      .slice(0, 5)
       .map((a) => ({
         type: 'alumno' as const,
         studentId: a.id,
@@ -144,6 +151,31 @@ export class GlobalSearchFacade {
         route: [`${detailBase}/${a.id}`],
         quickActions: buildAlumnoQuickActions(detailBase, prefix, a.id),
       }));
+
+    // fix-337-m (I10): los alumnos solo Profesional no están en la Base B. Una fila por matrícula
+    // → uno por persona; quien también está en la Base B ya salió arriba. En la Papelera las filas
+    // son archivados: no se ofrecen.
+    const seen = new Set(this.adminAlumnos.alumnos().map((a) => a.id));
+    const profesional: AlumnoResult[] = [];
+    if (!this.adminAlumnosProf.trashView()) {
+      for (const p of this.adminAlumnosProf.alumnos()) {
+        if (seen.has(p.id) || !matches(`${p.nombre} ${p.apellido}`, p.rut)) continue;
+        seen.add(p.id);
+        profesional.push({
+          type: 'alumno' as const,
+          studentId: p.id,
+          label: `${p.nombre} ${p.apellido}`,
+          rut: p.rut,
+          status: p.estado,
+          route: [`${detailBase}/${p.id}`],
+          quickActions: buildAlumnoQuickActions(detailBase, prefix, p.id, undefined, {
+            professional: true,
+          }),
+        });
+      }
+    }
+
+    return [...claseB, ...profesional].slice(0, 5);
   });
 
   // ── Computed: instructores encontrados en memoria (solo admin/secretaria) ──
@@ -233,6 +265,7 @@ export class GlobalSearchFacade {
     const role = this.auth.currentUser()?.role;
     if (role === 'admin' || role === 'secretaria') {
       void this.adminAlumnos.loadAlumnos();
+      void this.adminAlumnosProf.loadForSearch();
       void this.instructoresFacade.initialize();
     } else if (role === 'instructor') {
       void this.instructorAlumnos.initialize();

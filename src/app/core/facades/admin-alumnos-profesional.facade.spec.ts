@@ -374,4 +374,34 @@ describe('AdminAlumnosProfesionalFacade', () => {
     await expect(facade.archivarAlumno(5)).resolves.toBe(false);
     expect(toast.error).toHaveBeenCalled();
   });
+
+  // fix-337-m (I10): el buscador global necesita la lista, pero no tiene ciclo de vida para cerrar
+  // un canal Realtime (swr-pattern.md: nunca suscribir sin su dispose()).
+  describe('loadForSearch (fix-337-m)', () => {
+    it('carga la lista sin suscribir Realtime', async () => {
+      mockTables({ enrollments: [makeProEnrollment()] });
+
+      await facade.loadForSearch();
+
+      expect(facade.alumnos()).toHaveLength(1);
+      expect(supabaseSpy.client.channel).not.toHaveBeenCalled();
+    });
+
+    it('no vuelve a consultar si ya hay datos de la misma sede', async () => {
+      mockTables({ enrollments: [makeProEnrollment()] });
+      await facade.loadForSearch();
+      supabaseSpy.client.from.mockClear();
+
+      await facade.loadForSearch();
+
+      expect(supabaseSpy.client.from).not.toHaveBeenCalled();
+    });
+
+    it('si la consulta falla no lanza (el buscador sigue con lo que tenga)', async () => {
+      supabaseSpy.client.from = vi.fn(() => {
+        throw new Error('red caída');
+      });
+      await expect(facade.loadForSearch()).resolves.toBeUndefined();
+    });
+  });
 });

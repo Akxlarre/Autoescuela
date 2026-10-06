@@ -314,7 +314,7 @@ Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta)
 | A09 + A10 + A07/A11 + S22 + D13 + D14 — sede al entrar/salir de Profesional | `fix-334-m-sede-al-entrar-y-salir-de-profesional` | ✅ cerrado 2026-10-06 (`29fc21e5`) |
 | H02 + S17 — la Base Profesional no pasa la matrícula a la ficha | `fix-335-m-ficha-desde-base-profesional-abre-su-matricula` | ✅ cerrado 2026-10-06 |
 | H06 + D15 — acciones de Clase B en la ficha Profesional | `fix-336-m-ficha-profesional-sin-acciones-de-clase-b` | ✅ cerrado 2026-10-06 |
-| I10 — buscador global sin alumnos Profesional | `fix-337-m-buscador-global-incluye-profesional` | ⏳ por abrir |
+| I10 — buscador global sin alumnos Profesional | `fix-337-m-buscador-global-incluye-profesional` | ✅ cerrado 2026-10-06 |
 | F07 + S14 (+ S16) — error de carga como lista vacía en Base Prof. y Promociones | `fix-338-m-error-de-carga-profesional-no-es-lista-vacia` | ⏳ por abrir |
 | G06 — la Papelera persiste al volver por el menú | `fix-339-m-papelera-profesional-no-persiste` | ⏳ por abrir |
 | F03 + D16 — tarjetas móviles angostas por paddings anidados | `fix-340-m-tarjetas-moviles-paddings-anidados` | ⏳ por abrir |

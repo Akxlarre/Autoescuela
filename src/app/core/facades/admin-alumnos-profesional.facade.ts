@@ -175,6 +175,23 @@ export class AdminAlumnosProfesionalFacade {
     return this.initialize();
   }
 
+  /**
+   * Carga la lista para el buscador global (fix-337-m), **sin** Realtime: el buscador no tiene un
+   * ciclo de vida que cierre el canal (swr-pattern.md). No consulta si ya hay datos de la sede
+   * vigente; si falla, el buscador sigue con lo que tenga.
+   */
+  async loadForSearch(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) return;
+    try {
+      await this.fetchData(branchId);
+      this._initialized = true;
+      this._lastBranchId = branchId;
+    } catch {
+      // fetchData ya dejó el error en su signal; la búsqueda no debe romperse por esto.
+    }
+  }
+
   private async refreshSilently(): Promise<void> {
     try {
       const currentBranchId = this.getActiveBranchId();
