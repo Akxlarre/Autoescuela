@@ -113,10 +113,18 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               >
                 {{ confirmModal.config()?.title }}
               </h3>
-              <p
-                class="text-sm text-text-secondary leading-relaxed"
-                [innerHTML]="confirmModal.config()?.message"
-              ></p>
+              <!-- hotfix-062-b: texto por defecto (los mensajes interpolan datos de usuario);
+                   HTML solo si la llamada lo pide con allowHtml y escapó sus datos. -->
+              @if (confirmModal.config()?.allowHtml) {
+                <p
+                  class="text-sm text-text-secondary leading-relaxed"
+                  [innerHTML]="confirmModal.config()?.message"
+                ></p>
+              } @else {
+                <p class="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
+                  {{ confirmModal.config()?.message }}
+                </p>
+              }
             </div>
           </div>
           <div class="flex items-center gap-3 justify-end">

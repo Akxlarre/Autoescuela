@@ -8,6 +8,12 @@ export interface ConfirmConfig {
   severity?: ConfirmSeverity;
   confirmLabel?: string;
   cancelLabel?: string;
+  /**
+   * hotfix-062-b: por defecto el mensaje se muestra como TEXTO (Angular lo escapa y respeta los
+   * saltos de línea). `true` lo interpreta como HTML: solo para mensajes armados por código, con
+   * todo dato de usuario pasado por `escapeHtml()` (ej. el `<strong>` de "Rematricular").
+   */
+  allowHtml?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +41,7 @@ export class ConfirmModalService {
         severity: config.severity ?? 'secondary',
         confirmLabel: config.confirmLabel ?? 'Aceptar',
         cancelLabel: config.cancelLabel ?? 'Cancelar',
+        allowHtml: config.allowHtml ?? false,
       });
     });
   }
