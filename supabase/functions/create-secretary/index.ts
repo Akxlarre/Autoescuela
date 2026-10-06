@@ -121,6 +121,32 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Rol "secretary" no encontrado en la BD', 500);
     }
 
+    // ── RUT ya registrado → 409 con mensaje claro (fix-182-b) ──────────────────
+    // users.rut es UNIQUE: una misma persona no puede ser, por ejemplo, instructor y secretaria.
+    // Se revisa ANTES de crear la cuenta de Auth para no crear/borrar una invitación en vano y
+    // para que el admin vea el motivo real (antes recibía "error inesperado").
+    const { data: rutOwner } = await supabaseAdmin
+      .from('users')
+      .select('id, roles ( name )')
+      .eq('rut', rut)
+      .maybeSingle();
+
+    if (rutOwner) {
+      const roleLabels: Record<string, string> = {
+        admin: 'administrador',
+        secretary: 'secretaria',
+        instructor: 'instructor',
+        student: 'alumno',
+      };
+      const label = roleLabels[rutOwner.roles?.name ?? ''];
+      return errorResponse(
+        label
+          ? `Ese RUT ya está registrado como ${label}. Una persona no puede tener dos cuentas.`
+          : 'Ese RUT ya está registrado en el sistema.',
+        409,
+      );
+    }
+
     // ── Crear la cuenta de Auth SIN contraseña (fix-182-b) ──────────────────────
     // Antes la clave inicial era el cuerpo del RUT, un dato que no es secreto. generateLink
     // ('invite') crea el usuario y devuelve el link de activación sin enviar el correo nativo de
@@ -164,6 +190,9 @@ Deno.serve(async (req: Request) => {
     if (insertError) {
       // Rollback: eliminar el usuario de Auth si falló el INSERT
       await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+      if (insertError.code === '23505') {
+        return errorResponse('Ya existe un usuario registrado con ese RUT o correo.', 409);
+      }
       return errorResponse(`Error al registrar la secretaria: ${insertError.message}`, 500);
     }
 
