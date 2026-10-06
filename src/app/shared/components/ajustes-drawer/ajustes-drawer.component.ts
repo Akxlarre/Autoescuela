@@ -30,6 +30,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
 import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
 import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-precios/precios-cursos-drawer.component';
 import { TarifaInstructoresDrawerComponent } from '@features/admin/configuracion-nomina/tarifa-instructores-drawer.component';
+import { PenalizacionInasistenciasDrawerComponent } from '@features/admin/configuracion-inasistencias/penalizacion-inasistencias-drawer.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
@@ -214,300 +215,341 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
         <!-- ── TAB: CONFIGURACIONES ──────────────────────────────── -->
         @if (activeTab() === 'config') {
-          <div class="space-y-5">
-            <h3 class="font-bold text-text-primary">Apariencia y Visualización</h3>
-
-            <!-- Theme cycle -->
-            <div
-              class="flex items-center justify-between rounded-xl bg-base p-4 border border-border-default"
-            >
-              <div class="space-y-0.5">
-                <p class="item-title">Modo Oscuro</p>
-                <p class="text-xs text-text-muted">Cambia la paleta de colores del sistema</p>
+          <div class="space-y-6">
+            <!-- spec 0048-b AC8: la pestaña se agrupa en preferencias personales, reglas de la
+                 escuela y catálogos. Cada título se muestra solo si el rol ve algún bloque. -->
+            <section class="space-y-3">
+              <h3 class="micro-label">Mis preferencias</h3>
+              <!-- Theme cycle -->
+              <div class="card p-4 flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <p class="item-title">Modo Oscuro</p>
+                  <p class="text-xs text-text-muted">Cambia la paleta de colores del sistema</p>
+                </div>
+                <button
+                  type="button"
+                  class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg border border-border-default bg-surface hover:bg-subtle text-text-secondary"
+                  data-llm-action="toggle-color-mode"
+                  [attr.aria-label]="
+                    theme.darkMode() ? 'Activar modo claro' : 'Activar modo oscuro'
+                  "
+                  (click)="theme.cycleColorMode($event)"
+                >
+                  <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
+                </button>
               </div>
-              <button
-                type="button"
-                class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg border border-border-default bg-surface hover:bg-subtle text-text-secondary"
-                data-llm-action="toggle-color-mode"
-                [attr.aria-label]="theme.darkMode() ? 'Activar modo claro' : 'Activar modo oscuro'"
-                (click)="theme.cycleColorMode($event)"
-              >
-                <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
-              </button>
-            </div>
 
-            @if (isAlumno()) {
-              <!-- Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8).
-                   Acotado a comunicaciones_promocionales: la operativa no tiene control,
-                   se informa (Art. 13 c), no se consiente (ver consent-builder.utils.ts). -->
-              <div class="card p-4 space-y-3">
-                @if (consents.isLoading()) {
-                  <app-skeleton-block variant="text" width="60%" height="18px" />
-                  <app-skeleton-block variant="text" width="85%" height="13px" />
-                } @else if (promotionalConsent(); as consent) {
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="space-y-0.5">
-                      <p class="item-title">Promociones y Novedades</p>
-                      <p class="text-xs text-text-muted">
-                        Correos ocasionales de la escuela. No afecta los avisos de tu curso (clases,
-                        documentos, certificados, saldo), que siempre llegan igual.
-                      </p>
+              @if (isAlumno()) {
+                <!-- Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8).
+                     Acotado a comunicaciones_promocionales: la operativa no tiene control,
+                     se informa (Art. 13 c), no se consiente (ver consent-builder.utils.ts). -->
+                <div class="card p-4 space-y-3">
+                  @if (consents.isLoading()) {
+                    <app-skeleton-block variant="text" width="60%" height="18px" />
+                    <app-skeleton-block variant="text" width="85%" height="13px" />
+                  } @else if (promotionalConsent(); as consent) {
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="space-y-0.5">
+                        <p class="item-title">Promociones y Novedades</p>
+                        <p class="text-xs text-text-muted">
+                          Correos ocasionales de la escuela. No afecta los avisos de tu curso
+                          (clases, documentos, certificados, saldo), que siempre llegan igual.
+                        </p>
+                      </div>
+                      <app-badge
+                        class="shrink-0"
+                        [variant]="isPromoGranted() ? 'success' : 'neutral'"
+                      >
+                        {{ isPromoGranted() ? 'Activo' : 'Desactivado' }}
+                      </app-badge>
                     </div>
-                    <app-badge
-                      class="shrink-0"
-                      [variant]="isPromoGranted() ? 'success' : 'neutral'"
-                    >
-                      {{ isPromoGranted() ? 'Activo' : 'Desactivado' }}
-                    </app-badge>
-                  </div>
-                  @if (isPromoRevoked() && consent.revokedAt) {
+                    @if (isPromoRevoked() && consent.revokedAt) {
+                      <p class="text-xs text-text-muted">
+                        Desactivado el {{ formatConsentDate(consent.revokedAt) }}.
+                      </p>
+                    }
+                    @if (isPromoGranted()) {
+                      <button
+                        type="button"
+                        class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                        [disabled]="consents.isSaving()"
+                        data-llm-action="revocar-comunicaciones-promocionales"
+                        (click)="onRevokePromotionalConsent()"
+                      >
+                        <app-icon name="bell-off" [size]="14" />
+                        <span>Dejar de recibir promociones</span>
+                      </button>
+                    }
+                  } @else {
                     <p class="text-xs text-text-muted">
-                      Desactivado el {{ formatConsentDate(consent.revokedAt) }}.
+                      Todavía no tienes una preferencia de comunicaciones promocionales registrada.
                     </p>
                   }
-                  @if (isPromoGranted()) {
+                </div>
+              }
+            </section>
+
+            @if (canManageSiteConfig()) {
+              <section class="space-y-3">
+                <h3 class="micro-label">Reglas de la escuela</h3>
+                @if (canManageSiteConfig()) {
+                  <!-- Límite de Visualización de Agenda -->
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Límite de Visualización de Agenda</p>
+                      <p class="text-xs text-text-muted">
+                        Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar
+                        clases
+                      </p>
+                    </div>
+                    <select
+                      class="w-full cursor-pointer rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-subtle focus:border-brand"
+                      [ngModel]="agendaSettings.visibilityMonths()"
+                      (ngModelChange)="onVisibilityMonthsChange($event)"
+                      data-llm-description="Selector del límite de meses visibles en la Agenda"
+                    >
+                      <option [ngValue]="2">2 meses</option>
+                      <option [ngValue]="3">3 meses</option>
+                      <option [ngValue]="4">4 meses</option>
+                    </select>
+                  </div>
+
+                  <!-- Cancelación automática por inasistencias (spec 0048-b). Regla de la escuela
+                       por sede: admin la cambia, secretaria la ve en solo lectura. -->
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Cancelación automática por inasistencias</p>
+                      <p class="text-xs text-text-muted">
+                        Si se cancela la agenda del alumno tras 2 inasistencias seguidas, por sede
+                      </p>
+                    </div>
                     <button
                       type="button"
                       class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                      [disabled]="consents.isSaving()"
-                      data-llm-action="revocar-comunicaciones-promocionales"
-                      (click)="onRevokePromotionalConsent()"
+                      data-llm-action="open-absence-penalty-config"
+                      (click)="abrirPenalizacionInasistencias()"
                     >
-                      <app-icon name="bell-off" [size]="14" />
-                      <span>Dejar de recibir promociones</span>
+                      <app-icon name="calendar-x" [size]="14" />
+                      <span>{{ isAdmin() ? 'Configurar' : 'Ver estado' }}</span>
                     </button>
-                  }
-                } @else {
-                  <p class="text-xs text-text-muted">
-                    Todavía no tienes una preferencia de comunicaciones promocionales registrada.
-                  </p>
-                }
-              </div>
-            }
+                  </div>
 
-            @if (canManageSiteConfig()) {
-              <!-- Límite de Visualización de Agenda -->
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Límite de Visualización de Agenda</p>
-                  <p class="text-xs text-text-muted">
-                    Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar
-                    clases
-                  </p>
-                </div>
-                <select
-                  class="w-full cursor-pointer rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-subtle focus:border-brand"
-                  [ngModel]="agendaSettings.visibilityMonths()"
-                  (ngModelChange)="onVisibilityMonthsChange($event)"
-                  data-llm-description="Selector del límite de meses visibles en la Agenda"
-                >
-                  <option [ngValue]="2">2 meses</option>
-                  <option [ngValue]="3">3 meses</option>
-                  <option [ngValue]="4">4 meses</option>
-                </select>
-              </div>
-
-              <!-- Website Landing Config card -->
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Landing Pages en Caliente</p>
-                  <p class="text-xs text-text-muted">
-                    Personaliza la web promocional y tarifas de venta en vivo
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand-muted py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-text"
-                  data-llm-nav="config-web-editor"
-                  (click)="navigateToConfigWeb()"
-                >
-                  <app-icon name="globe" [size]="14" />
-                  <span>Ir al Editor Visual de Sede ↗</span>
-                </button>
-              </div>
-            }
-
-            <!-- Horarios Config card -->
-            @if (isAdmin()) {
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Grilla Horaria Base</p>
-                  <p class="text-xs text-text-muted">
-                    Configura la estructura matemática de los bloques de horarios
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-schedule-generator"
-                  (click)="abrirGeneradorHorario()"
-                >
-                  <app-icon name="calendar-clock" [size]="14" />
-                  <span>Generar Bloques Horarios</span>
-                </button>
-              </div>
-            }
-
-            <!-- Precios de Cursos card -->
-            @if (isAdmin()) {
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Precios de Cursos</p>
-                  <p class="text-xs text-text-muted">
-                    Edita el precio base de los cursos existentes por sede
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-course-prices-manager"
-                  (click)="abrirPreciosCursos()"
-                >
-                  <app-icon name="dollar-sign" [size]="14" />
-                  <span>Editar Precios</span>
-                </button>
-              </div>
-            }
-
-            <!-- Tarifa por Hora de Instructores card -->
-            @if (isAdmin()) {
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Tarifa por Hora de Instructores</p>
-                  <p class="text-xs text-text-muted">
-                    Valor pagado por hora equivalente en las liquidaciones, global por sede
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-instructor-rate-manager"
-                  (click)="abrirTarifaInstructores()"
-                >
-                  <app-icon name="banknote" [size]="14" />
-                  <span>Editar Tarifa</span>
-                </button>
-              </div>
-            }
-
-            <!-- Descuentos Predefinidos card -->
-            @if (isAdmin()) {
-              <!-- Plantillas de comunicado (spec 0042-b). Vive acá y no en un ítem de menú
-                   nuevo: es configuración institucional de admin, como precios y tarifas. -->
-              <div class="card p-4 space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Plantillas de Comunicado</p>
-                  <p class="text-xs text-text-muted">
-                    Textos reutilizables para los avisos que se repiten
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-template-manager"
-                  (click)="abrirPlantillas()"
-                >
-                  <app-icon name="file-text" [size]="14" />
-                  <span>Administrar Plantillas</span>
-                </button>
-              </div>
-            }
-
-            <!-- Malla de temas Clase B (ASG-m-007 / fix-169-b). Mismo criterio que
-                 plantillas: es configuración institucional de admin, no un ítem de menú. -->
-            @if (isAdmin()) {
-              <div class="card p-4 space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Temas de las Clases Prácticas (Clase B)</p>
-                  <p class="text-xs text-text-muted">
-                    Define el tema fijo de cada una de las 12 clases
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-class-b-topics-manager"
-                  (click)="abrirTemasClaseB()"
-                >
-                  <app-icon name="book-open" [size]="14" />
-                  <span>Editar Temas</span>
-                </button>
-              </div>
-            }
-
-            @if (isAdmin()) {
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Descuentos Predefinidos</p>
-                  <p class="text-xs text-text-muted">
-                    Crea y administra los descuentos disponibles al matricular
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                  data-llm-action="open-discounts-manager"
-                  (click)="abrirDescuentos()"
-                >
-                  <app-icon name="tag" [size]="14" />
-                  <span>Administrar Descuentos</span>
-                </button>
-              </div>
-            }
-
-            <!-- Branch details and switcher -->
-            @if (isAdmin()) {
-              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
-                <div class="space-y-0.5">
-                  <p class="item-title">Conmutar Sede Activa</p>
-                  <p class="text-xs text-text-muted">
-                    Cambia rápidamente el filtro global de la autoescuela
-                  </p>
-                </div>
-                <div class="space-y-2">
-                  @for (branch of branchFacade.branches(); track branch.id) {
+                  <!-- Website Landing Config card -->
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Landing Pages en Caliente</p>
+                      <p class="text-xs text-text-muted">
+                        Personaliza la web promocional y tarifas de venta en vivo
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      class="w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium border cursor-pointer transition-colors"
-                      [class.bg-brand-muted]="branchFacade.selectedBranchId() === branch.id"
-                      [class.border-brand]="branchFacade.selectedBranchId() === branch.id"
-                      [class.text-brand]="branchFacade.selectedBranchId() === branch.id"
-                      [class.bg-surface]="branchFacade.selectedBranchId() !== branch.id"
-                      [class.border-border-default]="branchFacade.selectedBranchId() !== branch.id"
-                      [class.text-text-secondary]="branchFacade.selectedBranchId() !== branch.id"
-                      data-llm-action="select-branch"
-                      (click)="branchFacade.selectBranch(branch.id)"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand-muted py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-text"
+                      data-llm-nav="config-web-editor"
+                      (click)="navigateToConfigWeb()"
                     >
-                      <span>{{ branch.name }}</span>
-                      @if (branchFacade.selectedBranchId() === branch.id) {
-                        <app-icon name="check" [size]="14" />
-                      } @else if (branch.hasProfessional) {
-                        <span
-                          class="text-2xs px-1.5 py-0.5 rounded bg-brand text-brand-text font-bold uppercase"
-                          >Pro</span
-                        >
-                      }
+                      <app-icon name="globe" [size]="14" />
+                      <span>Ir al Editor Visual de Sede ↗</span>
                     </button>
-                  }
-                  <button
-                    type="button"
-                    class="w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium border cursor-pointer transition-colors"
-                    [class.bg-brand-muted]="branchFacade.selectedBranchId() === null"
-                    [class.border-brand]="branchFacade.selectedBranchId() === null"
-                    [class.text-brand]="branchFacade.selectedBranchId() === null"
-                    [class.bg-surface]="branchFacade.selectedBranchId() !== null"
-                    [class.border-border-default]="branchFacade.selectedBranchId() !== null"
-                    [class.text-text-secondary]="branchFacade.selectedBranchId() !== null"
-                    data-llm-action="select-all-branches"
-                    (click)="branchFacade.selectBranch(null)"
-                  >
-                    <span>Todas las escuelas</span>
-                    @if (branchFacade.selectedBranchId() === null) {
-                      <app-icon name="check" [size]="14" />
-                    }
-                  </button>
-                </div>
-              </div>
+                  </div>
+                }
+
+                <!-- Horarios Config card -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Grilla Horaria Base</p>
+                      <p class="text-xs text-text-muted">
+                        Configura la estructura matemática de los bloques de horarios
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-schedule-generator"
+                      (click)="abrirGeneradorHorario()"
+                    >
+                      <app-icon name="calendar-clock" [size]="14" />
+                      <span>Generar Bloques Horarios</span>
+                    </button>
+                  </div>
+                }
+
+                <!-- Precios de Cursos card -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Precios de Cursos</p>
+                      <p class="text-xs text-text-muted">
+                        Edita el precio base de los cursos existentes por sede
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-course-prices-manager"
+                      (click)="abrirPreciosCursos()"
+                    >
+                      <app-icon name="dollar-sign" [size]="14" />
+                      <span>Editar Precios</span>
+                    </button>
+                  </div>
+                }
+
+                <!-- Tarifa por Hora de Instructores card -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Tarifa por Hora de Instructores</p>
+                      <p class="text-xs text-text-muted">
+                        Valor pagado por hora equivalente en las liquidaciones, global por sede
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-instructor-rate-manager"
+                      (click)="abrirTarifaInstructores()"
+                    >
+                      <app-icon name="banknote" [size]="14" />
+                      <span>Editar Tarifa</span>
+                    </button>
+                  </div>
+                }
+              </section>
+            }
+
+            @if (isAdmin()) {
+              <section class="space-y-3">
+                <h3 class="micro-label">Catálogos</h3>
+                @if (isAdmin()) {
+                  <!-- Plantillas de comunicado (spec 0042-b). Vive acá y no en un ítem de menú
+                       nuevo: es configuración institucional de admin, como precios y tarifas. -->
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Plantillas de Comunicado</p>
+                      <p class="text-xs text-text-muted">
+                        Textos reutilizables para los avisos que se repiten
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-template-manager"
+                      (click)="abrirPlantillas()"
+                    >
+                      <app-icon name="file-text" [size]="14" />
+                      <span>Administrar Plantillas</span>
+                    </button>
+                  </div>
+                }
+
+                <!-- Malla de temas Clase B (ASG-m-007 / fix-169-b). Mismo criterio que
+                     plantillas: es configuración institucional de admin, no un ítem de menú. -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Temas de las Clases Prácticas (Clase B)</p>
+                      <p class="text-xs text-text-muted">
+                        Define el tema fijo de cada una de las 12 clases
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-class-b-topics-manager"
+                      (click)="abrirTemasClaseB()"
+                    >
+                      <app-icon name="book-open" [size]="14" />
+                      <span>Editar Temas</span>
+                    </button>
+                  </div>
+                }
+
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Descuentos Predefinidos</p>
+                      <p class="text-xs text-text-muted">
+                        Crea y administra los descuentos disponibles al matricular
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-discounts-manager"
+                      (click)="abrirDescuentos()"
+                    >
+                      <app-icon name="tag" [size]="14" />
+                      <span>Administrar Descuentos</span>
+                    </button>
+                  </div>
+                }
+              </section>
+            }
+
+            @if (isAdmin()) {
+              <section class="space-y-3">
+                <h3 class="micro-label">Sede activa</h3>
+                <!-- Branch details and switcher -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Conmutar Sede Activa</p>
+                      <p class="text-xs text-text-muted">
+                        Cambia rápidamente el filtro global de la autoescuela
+                      </p>
+                    </div>
+                    <div class="space-y-2">
+                      @for (branch of branchFacade.branches(); track branch.id) {
+                        <button
+                          type="button"
+                          class="w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium border cursor-pointer transition-colors"
+                          [class.bg-brand-muted]="branchFacade.selectedBranchId() === branch.id"
+                          [class.border-brand]="branchFacade.selectedBranchId() === branch.id"
+                          [class.text-brand]="branchFacade.selectedBranchId() === branch.id"
+                          [class.bg-surface]="branchFacade.selectedBranchId() !== branch.id"
+                          [class.border-border-default]="
+                            branchFacade.selectedBranchId() !== branch.id
+                          "
+                          [class.text-text-secondary]="
+                            branchFacade.selectedBranchId() !== branch.id
+                          "
+                          data-llm-action="select-branch"
+                          (click)="branchFacade.selectBranch(branch.id)"
+                        >
+                          <span>{{ branch.name }}</span>
+                          @if (branchFacade.selectedBranchId() === branch.id) {
+                            <app-icon name="check" [size]="14" />
+                          } @else if (branch.hasProfessional) {
+                            <span
+                              class="text-2xs px-1.5 py-0.5 rounded bg-brand text-brand-text font-bold uppercase"
+                              >Pro</span
+                            >
+                          }
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium border cursor-pointer transition-colors"
+                        [class.bg-brand-muted]="branchFacade.selectedBranchId() === null"
+                        [class.border-brand]="branchFacade.selectedBranchId() === null"
+                        [class.text-brand]="branchFacade.selectedBranchId() === null"
+                        [class.bg-surface]="branchFacade.selectedBranchId() !== null"
+                        [class.border-border-default]="branchFacade.selectedBranchId() !== null"
+                        [class.text-text-secondary]="branchFacade.selectedBranchId() !== null"
+                        data-llm-action="select-all-branches"
+                        (click)="branchFacade.selectBranch(null)"
+                      >
+                        <span>Todas las escuelas</span>
+                        @if (branchFacade.selectedBranchId() === null) {
+                          <app-icon name="check" [size]="14" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                }
+              </section>
             }
           </div>
         }
@@ -742,6 +784,14 @@ export class AjustesDrawerComponent {
 
   abrirTarifaInstructores(): void {
     this.layoutDrawer.push(TarifaInstructoresDrawerComponent, 'Tarifa Instructores', 'banknote');
+  }
+
+  abrirPenalizacionInasistencias(): void {
+    this.layoutDrawer.push(
+      PenalizacionInasistenciasDrawerComponent,
+      'Cancelación por inasistencias',
+      'calendar-x',
+    );
   }
 
   navigateToAuditoria(): void {
