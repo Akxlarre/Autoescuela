@@ -118,6 +118,28 @@ que pasa a ser parte del testing (bloque 3). Al revisarla apareció una sospecha
 - **S23** (🟡 Baja-Media) — Archivo lista las promociones finalizadas **sin filtrar por sede**
   (`archivo-profesional.facade.ts:134-138`); solo la lista de alumnos filtra por sede (línea 212).
 
+## Datos de prueba
+
+**Qué trae la BD de desarrollo (2026-10-05, solo lectura):** la Base Profesional (sede 2) lista 60
+alumnos del seed, todos con matrícula `active` pero **sin promoción** (`promotion_course_id` NULL,
+columna "—"). En promociones vigentes (280/281) no había ninguna matrícula; la única matrícula con
+promoción es `completed` (promoción 277, 1 alumno). Promociones: 278–280 en curso, 281–282
+planificadas, 275–277 y 100–103 finalizadas.
+
+**Sembrados y DEJADOS a propósito** (autorizado por Matías, 2026-10-05) para `fix-330…333` y los
+bloques 2–5. Creados por API como admin; Nº de matrícula = correlativo real de su serie vía
+`get_next_enrollment_number()` pedido justo antes de cada INSERT (DG-080). Comprobado después: la
+serie Profesional sede 2 sigue en `0096` y la Clase B sede 2 en `0074`.
+
+| Alumno | user / student | RUT | Matrículas (id · Nº · curso) | Sirve para |
+|---|---|---|---|---|
+| E2E-ProfA2 Prueba Profesional | 7619 / 7333 | 99.776.111-1 | 6981 · 0092 · A2 en 280.2 | columna Promoción (330), datos ocultos (332) |
+| E2E-ProfDoble Prueba Profesional | 7620 / 7334 | 99.949.296-7 | 6982 · 0093 · A2 en 280.2; 6983 · 0094 · A4 en 281.4 | 2 matrículas Prof. (331) |
+| E2E-ProfConB Prueba Profesional | 7621 / 7335 | 99.563.148-2 | 6984 · 0095 · A3 en 280.3; 6985 · 0073 · Clase B | aviso al archivar con B (333) |
+
+Todas `active`, `pending_balance` 180.000, `payment_status` pending, sin pagos, sin cuenta Auth.
+Script: `seed-prof.cjs` (scratchpad de la sesión del 2026-10-05).
+
 ## Resultados
 
 ### Bloque 1 — Seguridad (S1, S2 residuales, S6)

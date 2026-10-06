@@ -40,4 +40,6 @@ estado posible ("Activo") se quitó **el selector de Estado completo** (un filtr
 filtra nada), junto con `selectedEstado` y las variantes "Retirado"/"Inactivo" del badge. El tipo
 `AlumnoStatus` no se tocó: lo comparte la Base B, donde esos estados sí existen. Visual
 (`secretaria2@test.com`, Base Profesional): los selectores son "clase" y "ordenar"; consola sin
-errores. En desarrollo no hay matrículas Profesional activas, así que la lista sale vacía.
+errores. La lista muestra los 60 alumnos del seed con estado "Activo". *(Corregido: una primera
+versión de esta nota decía que la lista salía vacía; el selector que usé para buscar los badges no
+correspondía.)*
