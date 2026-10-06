@@ -26,7 +26,6 @@
 | `/login` | `LoginComponent` | `guestGuard` | `src/app/app.routes.ts` |
 | `/force-password-change` | `ForcePasswordChangeComponent` | `firstLoginGuard` | `src/app/app.routes.ts` |
 | `/recuperar-contrasena` | `ForcePasswordChangeComponent` | `passwordRecoveryGuard` | `src/app/app.routes.ts` |
-| `/acceso-denegado` | `AccesoDenegadoComponent` | — | `src/app/app.routes.ts` |
 | `/modulo-no-disponible` | `ModuloNoDisponibleComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion` | `PublicEnrollmentComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
 | `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
@@ -34,6 +33,7 @@
 | `/app` | `AppShellComponent` | `authGuard` | `src/app/app.routes.ts` |
 | `/app` | — | `roleRedirectGuard` | `src/app/app.routes.ts` |
 | `/app/admin` | — | `hasRoleGuard(['admin'])` | `src/app/app.routes.ts` |
+| `/app/admin` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/admin/dashboard` | `DashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/alumnos` | `AdminAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | — | `src/app/app.routes.ts` |
@@ -71,6 +71,7 @@
 | `/app/admin/auditoria` | `AdminAuditoriaComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/configuracion-web` | `AdminConfiguracionWebComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria` | — | `hasRoleGuard(['secretaria'])` | `src/app/app.routes.ts` |
+| `/app/secretaria` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/dashboard` | `SecretariaDashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/alumnos` | `SecretariaAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/alumnos/:id` | `AdminAlumnoDetalleComponent` | — | `src/app/app.routes.ts` |

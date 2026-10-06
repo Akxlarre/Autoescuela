@@ -1,7 +1,8 @@
 # Fix: Cerrar sesión cierra todos los equipos y las rutas de otro rol redirigen sin aviso
 > id: fix-184-b-logout-local-y-aviso-acceso
 > refs: ASG-i-022 (hallazgos E11, S9 y S18 de fix-183-b; decisiones del owner 2026-10-05)
-> status: in_progress
+> status: done
+> closed: 2026-10-06
 > created: 2026-10-05
 
 ## Root Cause
@@ -37,3 +38,13 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-022). ACs propios:
 ## Test de Regresión
 - `npx vitest run src/app/core/guards src/app/core/facades/auth.facade.spec.ts`
 - `npx playwright test e2e/auth-sesion.spec.ts` contra build de producción.
+
+## Resultado (2026-10-06)
+- `vitest` guards + supabase.service + auth.facade: 51 passed (TDD: los 2 casos nuevos —
+  `signOut({ scope: 'local' })` y el aviso de `hasRoleGuard`— fallaron antes de implementar).
+- `ng build` OK, `lint:arch` exit 0.
+- `e2e/auth-sesion.spec.ts` contra build de producción: **88/88 en verde**. F07 (S18) y J06 (S9)
+  dejaron de ser `knownBug`; F01 verifica el aviso "No tienes acceso a esa sección".
+- Nota del spec: el Archivo de Clase Profesional se habilitó en el piloto con `fix-326-m` (Matías);
+  las expectativas de G06/G13 e I03 se movieron a "visible".
+- El cambio de front llega a producción con el próximo release (tag `v*`).

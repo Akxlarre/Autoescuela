@@ -30,6 +30,6 @@
 | `pilotPhaseGuard` | `CanActivateFn` | `Router` | `src/app/core/guards/pilot-phase.guard.ts` |
 | `professionalBranchGuard` | `CanActivateFn` | `AuthFacade`, `BranchFacade`, `Router` | `src/app/core/guards/professional-branch.guard.ts` |
 | `roleRedirectGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/role-redirect.guard.ts` |
-| `hasRoleGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/role.guard.ts` |
+| `hasRoleGuard` | `CanActivateFn` | `AuthFacade`, `Router`, `ToastService` | `src/app/core/guards/role.guard.ts` |
 
 <!-- AUTO-GENERATED:END -->

@@ -43,6 +43,12 @@ describe('SupabaseService', () => {
     expect(typeof service.signOut).toBe('function');
   });
 
+  it('signOut() cierra solo la sesión de este equipo (scope local, fix-184-b)', async () => {
+    const spy = vi.spyOn(service.client.auth, 'signOut').mockResolvedValue({ error: null });
+    await service.signOut();
+    expect(spy).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('signUp() should be a function', () => {
     expect(typeof service.signUp).toBe('function');
   });
