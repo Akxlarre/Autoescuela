@@ -1,7 +1,8 @@
 # Fix: Pre-inscritos (bloqueado en el piloto) se abre igual desde la Base Profesional y las notificaciones
 > id: fix-328-m-pre-inscritos-oculto-en-piloto
 > refs: fix-319-m-testing-clase-profesional-piloto (S3, S21, D1) · fix-256-m · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -27,3 +28,11 @@ Ninguno — fix autónomo.
 ## Test de Regresión
 - E2E (admin y secretaria): la Base Profesional no muestra "Pre-inscritos".
 - Spec del topbar: con el recorte activo, la notificación de pre-inscripción no navega.
+
+**Verificado el 2026-10-05:** `alumnos-profesional-list-content.component.spec.ts` (nuevo: el hero
+no ofrece "Pre-inscritos" y sí "Papelera") y `topbar.component.spec.ts` (caso nuevo:
+`resolveNotificationRoute('preinscription', …)` → `null` para admin y secretaria): 7/7. `tsc` y
+`lint:arch` sin errores. Visual (Playwright, `secretaria2@test.com`,
+`/app/secretaria/profesional/alumnos`): las acciones del hero son solo "Papelera". Ambos lugares
+usan `isBlockedInPilot('clase-profesional-recorte')`, la misma fuente que las rutas y el menú
+(`fix-256-m`): al levantar el recorte vuelven solos.

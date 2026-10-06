@@ -58,6 +58,7 @@ import type {
   SemaforoAsistencia,
 } from '@core/models/ui/alumno-profesional-table-row.model';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -578,7 +579,11 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly heroActions = computed((): SectionHeroAction[] => {
     const isTrash = this.trashView();
     return [
-      { id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false },
+      // fix-328-m (D1): Pre-inscritos está bloqueado en el piloto (fix-256-m); el botón lo
+      // embebía igual dentro de esta pantalla, saltándose el guard de su ruta.
+      ...(isBlockedInPilot('clase-profesional-recorte')
+        ? []
+        : [{ id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false }]),
       { id: 'papelera', label: 'Papelera', icon: 'trash-2', primary: false, danger: isTrash },
     ];
   });
