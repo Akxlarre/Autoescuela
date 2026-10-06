@@ -16,6 +16,7 @@ import {
   buildAlumnosProfesionalPdfTable,
 } from '@core/utils/alumnos-profesional-export.utils';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
+import { buildFutureClassesBlockMessage } from '@core/utils/archive-confirmation.utils';
 import type {
   AlumnoProfesionalTableRow,
   SemaforoAsistencia,
@@ -198,18 +199,31 @@ export class AdminAlumnosProfesionalFacade {
    * actividad académica asociada. Se usa para decidir qué modal de confirmación
    * mostrar antes de archivar (`EliminarAlumnoModalComponent`).
    */
-  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean }> {
+  async checkHistorial(
+    studentId: number,
+  ): Promise<{ hasHistory: boolean; hasClaseB: boolean; clasesFuturas: number }> {
     const { data: enrollmentRows } = await this.supabase.client
       .from('enrollments')
-      .select('id')
+      .select('id, license_group, status')
       .eq('student_id', studentId)
       .neq('status', 'draft');
 
-    const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
+    const rows = (enrollmentRows ?? []) as {
+      id: number;
+      license_group: string | null;
+      status: string | null;
+    }[];
+    const enrollmentIds = rows.map((e) => e.id);
+    // fix-333-m (D8): archivar desde aquí archiva a la persona completa; si también está en
+    // Clase B, sale de esa base. Vigente = activa o con el pago en curso.
+    const hasClaseB = rows.some(
+      (e) =>
+        e.license_group === 'class_b' && (e.status === 'active' || e.status === 'pending_payment'),
+    );
 
-    if (enrollmentIds.length === 0) return { hasHistory: false };
+    if (enrollmentIds.length === 0) return { hasHistory: false, hasClaseB, clasesFuturas: 0 };
 
-    const [paymentsResult, theoryResult, practiceResult] = await Promise.all([
+    const [paymentsResult, theoryResult, practiceResult, futureClassesResult] = await Promise.all([
       this.supabase.client
         .from('payments')
         .select('id', { count: 'exact', head: true })
@@ -222,6 +236,13 @@ export class AdminAlumnosProfesionalFacade {
         .from('professional_practice_attendance')
         .select('id', { count: 'exact', head: true })
         .in('enrollment_id', enrollmentIds),
+      // fix-333-m: misma regla que la Base B (fix-277-m) — clases de Clase B por dictarse.
+      this.supabase.client
+        .from('class_b_sessions')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString()),
     ]);
 
     return {
@@ -229,10 +250,29 @@ export class AdminAlumnosProfesionalFacade {
         (paymentsResult.count ?? 0) > 0 ||
         (theoryResult.count ?? 0) > 0 ||
         (practiceResult.count ?? 0) > 0,
+      hasClaseB,
+      clasesFuturas: futureClassesResult.count ?? 0,
     };
   }
 
-  async archivarAlumno(studentId: number): Promise<void> {
+  /**
+   * Paso previo a archivar (fix-333-m). Archivar desde la Base Profesional archiva a la persona
+   * completa (D8), así que aplica la misma regla de la Base B (fix-277-m): con clases agendadas a
+   * futuro no se puede (toast). Si se puede, dice qué modal mostrar y si avisar de la Clase B.
+   */
+  async prepararArchivado(
+    studentId: number,
+  ): Promise<{ permitido: boolean; hasHistory: boolean; hasClaseB: boolean }> {
+    const { hasHistory, hasClaseB, clasesFuturas } = await this.checkHistorial(studentId);
+    if (clasesFuturas > 0) {
+      this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
+      return { permitido: false, hasHistory, hasClaseB };
+    }
+    return { permitido: true, hasHistory, hasClaseB };
+  }
+
+  /** true si se archivó. Si falla, avisa por toast y devuelve false (fix-333-m: ya no lanza). */
+  async archivarAlumno(studentId: number): Promise<boolean> {
     this._isArchiving.set(true);
     try {
       const { error } = await this.supabase.client
@@ -242,9 +282,10 @@ export class AdminAlumnosProfesionalFacade {
       if (error) throw error;
       this.toast.success('Alumno archivado correctamente.');
       await this.refreshSilently();
+      return true;
     } catch {
       this.toast.error('No se pudo archivar al alumno. Inténtalo de nuevo.');
-      throw new Error('archivar_failed');
+      return false;
     } finally {
       this._isArchiving.set(false);
     }

@@ -209,7 +209,7 @@ Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de i
 | C05 + D11 — columna Promoción | `fix-330-m-columna-promocion-muestra-curso` | ✅ cerrado 2026-10-05 |
 | B05 + D10 — total cuenta matrículas | `fix-331-m-kpi-total-cuenta-matriculas` | ✅ cerrado 2026-10-05 |
 | S12 + D12 — datos de módulos bloqueados | `fix-332-m-ocultar-datos-de-modulos-bloqueados` | ✅ cerrado 2026-10-05 |
-| S15 + D8 — archivar sin aviso de Clase B | `fix-333-m-aviso-archivar-persona-con-clase-b` | abierto |
+| S15 + D8 — archivar sin aviso de Clase B | `fix-333-m-aviso-archivar-persona-con-clase-b` | ✅ cerrado 2026-10-05 |
 
 ## Test de regresión
 

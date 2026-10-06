@@ -12,6 +12,14 @@ export function buildFutureClassesBlockMessage(futureClasses: number): string {
 }
 
 /**
+ * Aviso al archivar desde la Base Profesional a alguien que también tiene Clase B (fix-333-m, D8):
+ * archivar es sobre la persona, así que sale de ambas bases.
+ */
+export const CLASE_B_ARCHIVE_WARNING =
+  'Esta persona también tiene una matrícula de Clase B vigente. Al archivarla dejará de aparecer ' +
+  'también en la Base de Alumnos B.';
+
+/**
  * true solo si se escribió la palabra de confirmación exactamente como la pide el modal: en
  * minúsculas (hotfix-124-m). Los espacios al inicio y al final no cuentan.
  */
