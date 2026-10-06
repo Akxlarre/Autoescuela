@@ -108,6 +108,12 @@ falta tocar código. Al cambiarlo:
 - [ ] **Supabase Edge Functions → secret `APP_URL`** = `https://<dominio>`. Sin esto, Webpay
       devuelve al usuario a otra URL (`public-enrollment` y `student-payment` usan
       `localhost:4200` por defecto).
+- [ ] **Correo (SMTP) — SPF y DKIM del remitente.** Los correos que envían las Edge Functions
+      (activación de secretarias e instructores, invitaciones de alumnos, certificados, Zoom) llegan
+      a **spam** (verificado 2026-10-05, fix-182-b). En el DNS del dominio de `SMTP_FROM`: registro
+      SPF que autorice al servidor SMTP, firma DKIM activada en el proveedor de correo y, idealmente,
+      un registro DMARC. Si el remitente cambia junto con el dominio, actualizar también el secret
+      `SMTP_FROM`. Verificar enviando un correo de prueba y revisando que llegue a la bandeja principal.
 - [ ] Publicar un tag y verificar `https://<dominio>/version.json`.
 
 ## Problemas conocidos
