@@ -1,7 +1,8 @@
 # Fix: El conteo de inscritos de una promoción incluye a personas archivadas
 > id: fix-327-m-conteo-inscritos-sin-archivados
 > refs: fix-319-m-testing-clase-profesional-piloto (S19, G09, P04, D9) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -25,3 +26,10 @@ Ninguno — fix autónomo.
 ## Test de Regresión
 - Spec del facade: una matrícula `active` de un alumno `archived` no suma al conteo; una
   `completed` sí.
+
+**Verificado el 2026-10-05:** `promociones.facade.spec.ts` (caso nuevo: activa + completada cuentan,
+activa de persona archivada no → 2) y specs de Promociones/Archivo, 52/52; `tsc` sin errores. Por
+API (solo lectura) la consulta nueva (`students!inner(status)`, `status in (active, completed)`)
+responde sin error con RLS para admin y `secretaria2@test.com`. El conteo se calcula en
+`fetchEnrolledCounts()`, que usan tanto la lista de Promociones como el detalle de Archivo.
+Libro de clases sin cambios.

@@ -549,6 +549,48 @@ describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
     expect(builder.eq).toHaveBeenCalledWith('status', 'active');
   });
 
+  // fix-327-m (D9): inscritos = matrículas activas o completadas, sin personas archivadas
+  it('el conteo de inscritos excluye a las personas archivadas y cuenta las completadas', async () => {
+    const promo = {
+      id: 1,
+      code: '280',
+      name: 'Promoción 280',
+      start_date: '2026-10-05',
+      end_date: '2026-11-10',
+      max_students: 100,
+      status: 'in_progress',
+      promotion_courses: [
+        {
+          id: 50,
+          course_id: 3,
+          max_students: 25,
+          status: 'in_progress',
+          courses: { id: 3, code: 'PROF-A2', name: 'Clase A2', is_convalidation: false },
+          promotion_course_lecturers: [],
+        },
+      ],
+    };
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: promo },
+      enrollments: {
+        data: [
+          { promotion_course_id: 50, status: 'active', students: { status: 'active' } },
+          { promotion_course_id: 50, status: 'completed', students: { status: 'graduated' } },
+          { promotion_course_id: 50, status: 'active', students: { status: 'archived' } },
+        ],
+      },
+    });
+
+    await facade.loadPromocionDetalle(1);
+
+    expect(facade.selectedPromocion()?.cursos[0].enrolledStudents).toBe(2);
+    expect(facade.selectedPromocion()?.totalEnrolled).toBe(2);
+    expect(mockSupabase._builders.get('enrollments').in).toHaveBeenCalledWith('status', [
+      'active',
+      'completed',
+    ]);
+  });
+
   // fix-326-m (D3a): Archivo muestra una promoción finalizada con el mismo detalle que "Ver promoción"
   it('loadPromocionDetalle() deja seleccionada una promoción finalizada con sus cursos', async () => {
     const promo = {

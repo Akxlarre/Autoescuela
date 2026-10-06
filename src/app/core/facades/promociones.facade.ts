@@ -152,16 +152,23 @@ export class PromocionesFacade {
       (p.promotion_courses ?? []).map((pc: any) => pc.id),
     );
     if (allPcIds.length === 0) return {};
+    // fix-327-m (D9): inscritos = matrículas activas o completadas, sin personas archivadas
+    // (archivar cambia students.status, no la matrícula). El Libro de clases sí las sigue listando.
     const { data: enrollData } = await this.supabase.client
       .from('enrollments')
-      .select('promotion_course_id')
+      .select('promotion_course_id, students!inner(status)')
       .in('promotion_course_id', allPcIds)
-      .not('status', 'in', '("cancelled","draft")');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (enrollData ?? []).reduce((acc: Record<number, number>, e: any) => {
-      acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
-      return acc;
-    }, {});
+      .in('status', ['active', 'completed']);
+    return (
+      (enrollData ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((e: any) => e.students?.status !== 'archived')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .reduce((acc: Record<number, number>, e: any) => {
+          acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
+          return acc;
+        }, {})
+    );
   }
 
   /**
