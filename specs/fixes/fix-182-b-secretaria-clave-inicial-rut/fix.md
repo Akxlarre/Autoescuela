@@ -50,7 +50,7 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 
 ## Progreso
 - [x] Código + tests + build
-- [ ] Desplegar `create-secretary` (**espera visto bueno del owner**)
+- [x] Desplegada `create-secretary` (visto bueno del owner, 2026-10-05). Smoke test: sin usuario → 401, la función arranca con el import de nodemailer
 - [ ] Prueba manual: crear una secretaria de prueba con correo real → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
