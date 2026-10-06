@@ -55,6 +55,39 @@ describe('AlumnosProfesionalListContentComponent — acciones del hero (fix-328-
 // fix-335-m (H02 / S17): sin `?enrollment=` la ficha abre la matrícula más reciente; a una persona
 // con una Clase B posterior le abría la B (y "volver" llevaba a la Base B). Igual que la Base B
 // desde fix-272-m, la fila dice sobre qué matrícula se hizo clic.
+// fix-338-m (F07 / S14): si la carga falla y no hay filas, no es "no hay alumnos · Limpiar
+// filtros": es un error con "Reintentar" (patrón de app-alumnos-list-content, hotfix-113-m).
+describe('AlumnosProfesionalListContentComponent — error de carga (fix-338-m)', () => {
+  function create(error: string | null, alumnos: unknown[]): any {
+    TestBed.overrideComponent(AlumnosProfesionalListContentComponent, { set: { template: '' } });
+    const c = TestBed.createComponent(AlumnosProfesionalListContentComponent)
+      .componentInstance as any;
+    Object.defineProperty(c, 'alumnos', { value: () => alumnos });
+    Object.defineProperty(c, 'error', { value: () => error });
+    return c;
+  }
+
+  it('con error y sin filas muestra el error, no la lista vacía', () => {
+    expect(create('Error al cargar alumnos profesionales', []).showLoadError()).toBe(true);
+  });
+
+  it('sin error, una lista vacía sigue siendo lista vacía', () => {
+    expect(create(null, []).showLoadError()).toBe(false);
+  });
+
+  it('si hay filas (datos previos), un error de refresco no las tapa', () => {
+    expect(create('Error', [{ id: '1' }]).showLoadError()).toBe(false);
+  });
+
+  it('"Reintentar" pide recargar', () => {
+    const c = create('Error', []);
+    const spy = vi.fn();
+    c.refreshRequested.subscribe(spy);
+    c.retryLoad();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
 // Los tests de template están excluidos de Vitest (ver vitest.config.ts): se prueba la decisión;
 // el binding del template se verifica en navegador (fix.md).
 describe('AlumnosProfesionalListContentComponent — "Ver ficha" (fix-335-m)', () => {

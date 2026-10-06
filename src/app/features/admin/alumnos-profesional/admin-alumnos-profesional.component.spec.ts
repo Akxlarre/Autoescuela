@@ -94,4 +94,15 @@ describe('AdminAlumnosProfesionalComponent — archivar (fix-333-m)', () => {
     expect(c.deleteTarget()).toBeNull();
     expect(c.archiveWarning()).toBeNull();
   });
+
+  // fix-338-m (S16): ngOnInit y el effect de sede llamaban los dos a initialize() → dos
+  // consultas idénticas al entrar. El effect ya hace la carga inicial (patrón de hotfix-055-b).
+  it('carga una sola vez al entrar (fix-338-m)', () => {
+    TestBed.overrideComponent(AdminAlumnosProfesionalComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(AdminAlumnosProfesionalComponent);
+    fixture.detectChanges(); // ngOnInit
+    TestBed.tick(); // effects
+
+    expect(facade.initialize).toHaveBeenCalledTimes(1);
+  });
 });
