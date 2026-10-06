@@ -60,7 +60,9 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 
 ## Progreso
 - [x] Código + tests + build
-- [ ] **Owner:** agregar `https://app.autoescuelachillan.cl/recuperar-contrasena` (y el dominio
-      definitivo cuando exista) a Supabase → Auth → URL Configuration → Redirect URLs
+- [ ] **Owner — diferido al dominio final (decisión 2026-10-05):** registrar
+      `https://<dominio>/recuperar-contrasena` en Supabase → Auth → Redirect URLs. Queda en el
+      checklist "Cambiar de dominio" de `docs/DEPLOY.md`. Mientras tanto la app igual lleva a la
+      pantalla (F2), así que no bloquea.
 - [ ] Prueba manual en producción tras el release: pedir "recuperar contraseña" con una cuenta de
       prueba con correo real → abrir el link → fijar clave → entrar con la clave nueva
