@@ -132,11 +132,16 @@ export class ArchivoFacade {
   // ── Fetch privados ──────────────────────────────────────────────────────────
 
   private async fetchPromociones(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    // fix-326-m (S23): la lista respeta la sede activa, igual que la de alumnos (fetchAlumnos).
+    const branchId = this.getActiveBranchId();
+    let query = this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, start_date, end_date, status')
       .eq('status', 'finished')
       .order('start_date', { ascending: false });
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data, error } = await query;
 
     if (error) {
       this._error.set('Error cargando promociones archivadas');

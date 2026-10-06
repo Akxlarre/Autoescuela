@@ -58,6 +58,7 @@ import type {
   SemaforoAsistencia,
 } from '@core/models/ui/alumno-profesional-table-row.model';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -157,16 +158,6 @@ interface SemaforoInfo {
             placeholder="Todas las clases"
             class="h-9"
             data-llm-description="Filter professional students by license class"
-          />
-          <p-select
-            [options]="estadoOptions"
-            [(ngModel)]="selectedEstado"
-            (ngModelChange)="resetPagination()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Todos los estados"
-            class="h-9"
-            data-llm-description="Filter professional students by enrollment status"
           />
           <app-clear-filters-button
             llmSubject="professional-students"
@@ -289,6 +280,7 @@ interface SemaforoInfo {
                       {{ alumno.nroMatricula }}
                     </td>
                     <td>
+                      <!-- fix-330-m (D11): la promoción, con la categoría debajo -->
                       <div class="flex items-center gap-1.5 flex-wrap">
                         <span
                           class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted whitespace-nowrap"
@@ -306,28 +298,35 @@ interface SemaforoInfo {
                           ></p-tag>
                         }
                       </div>
+                      @if (alumno.licenseClass) {
+                        <span class="text-2xs text-text-muted" data-llm-info="categoria-licencia">
+                          {{ alumno.licenseClass }}
+                        </span>
+                      }
                     </td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
-                          <div
-                            class="h-full bg-brand rounded-full"
-                            [style.width.%]="moduloPct(alumno)"
-                          ></div>
+                    @if (academicoVisible) {
+                      <td>
+                        <div class="flex items-center gap-2">
+                          <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
+                            <div
+                              class="h-full bg-brand rounded-full"
+                              [style.width.%]="moduloPct(alumno)"
+                            ></div>
+                          </div>
+                          <span class="text-xs text-text-secondary font-mono"
+                            >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
+                          >
                         </div>
-                        <span class="text-xs text-text-secondary font-mono"
-                          >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
-                        >
-                      </div>
-                    </td>
-                    <td>
-                      @let sem = getSemaforo(alumno.semaforo);
-                      <p-tag
-                        [value]="sem.label"
-                        [severity]="sem.severity"
-                        styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
-                      ></p-tag>
-                    </td>
+                      </td>
+                      <td>
+                        @let sem = getSemaforo(alumno.semaforo);
+                        <p-tag
+                          [value]="sem.label"
+                          [severity]="sem.severity"
+                          styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
+                        ></p-tag>
+                      </td>
+                    }
                     <td>
                       <p-tag
                         [value]="alumno.estado"
@@ -396,7 +395,8 @@ interface SemaforoInfo {
             <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
-                @for (alumno of sortedAlumnos(); track alumno.id) {
+                <!-- track por matrícula: un alumno con 2 matrículas Profesional sale 2 veces (fix-331-m) -->
+                @for (alumno of sortedAlumnos(); track alumno.enrollmentId) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card
                       [alumno]="alumno"
@@ -471,7 +471,17 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   // ── Orden por columna (spec 0023-m) ─────────────────────────────────────
   /** Orden elegido; null = orden por defecto (como llega del Facade). */
   readonly sort = signal<AlumnoProfesionalListSort | null>(null);
-  protected readonly sortColumns = ALUMNO_PROFESIONAL_SORT_OPTIONS;
+  /**
+   * Asistencia y módulos salen de Asistencia/Evaluaciones Profesional, bloqueados por el recorte
+   * del piloto: siempre "Sin datos" y 0/7. Mientras lo estén se ocultan (fix-332-m, D12).
+   */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
+
+  protected readonly sortColumns = this.academicoVisible
+    ? ALUMNO_PROFESIONAL_SORT_OPTIONS
+    : ALUMNO_PROFESIONAL_SORT_OPTIONS.filter(
+        (c) => c.value !== 'modulos' && c.value !== 'asistencia',
+      );
   /** Índice de la primera fila de la página visible de la tabla. */
   protected readonly tableFirst = signal(0);
 
@@ -536,7 +546,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   searchTerm = '';
   selectedClase = '';
-  selectedEstado = '';
 
   /** Cada filtro abre con su opción "todos", con el mismo '' por defecto (spec 0022-m). */
   readonly claseOptions = withAllOption(
@@ -549,19 +558,12 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     'Todas las clases',
     '',
   );
-  readonly estadoOptions = withAllOption(
-    [
-      { label: 'Activo', value: 'Activo' },
-      { label: 'Inactivo', value: 'Inactivo' },
-      { label: 'Retirado', value: 'Retirado' },
-    ],
-    'Todos los estados',
-    '',
-  );
+  // Sin filtro de estado (fix-329-m, D2): la Base Profesional solo trae matrículas activas;
+  // "Inactivo" y "Retirado" no pueden existir en Clase Profesional.
 
   /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
   hasActiveFilters(): boolean {
-    return this.searchTerm !== '' || this.selectedClase !== '' || this.selectedEstado !== '';
+    return this.searchTerm !== '' || this.selectedClase !== '';
   }
 
   // ── Derivados ─────────────────────────────────────────────────────────────
@@ -571,14 +573,20 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       : 'Listado de alumnos de Clase Profesional',
   );
 
+  // fix-331-m (D10): una fila por matrícula (un alumno con A2 y A4 sale dos veces), así que el
+  // conteo es de matrículas.
   readonly heroChips = computed((): SectionHeroChip[] => [
-    { label: `${this.alumnos().length} alumnos`, icon: 'graduation-cap', style: 'default' },
+    { label: `${this.alumnos().length} matrículas`, icon: 'graduation-cap', style: 'default' },
   ]);
 
   readonly heroActions = computed((): SectionHeroAction[] => {
     const isTrash = this.trashView();
     return [
-      { id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false },
+      // fix-328-m (D1): Pre-inscritos está bloqueado en el piloto (fix-256-m); el botón lo
+      // embebía igual dentro de esta pantalla, saltándose el guard de su ruta.
+      ...(isBlockedInPilot('clase-profesional-recorte')
+        ? []
+        : [{ id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false }]),
       { id: 'papelera', label: 'Papelera', icon: 'trash-2', primary: false, danger: isTrash },
     ];
   });
@@ -586,14 +594,14 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     {
       id: 'total',
-      label: 'Total',
+      label: 'Matrículas',
       value: this.alumnos().length,
       icon: 'graduation-cap',
       color: 'default',
     },
     {
       id: 'activos',
-      label: 'Activos',
+      label: 'Activas',
       value: this.activos(),
       icon: 'user-check',
       color: 'success',
@@ -605,13 +613,18 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       icon: 'circle-alert',
       color: 'warning',
     },
-    {
-      id: 'riesgo',
-      label: 'En riesgo',
-      value: this.enRiesgo(),
-      icon: 'alert-triangle',
-      color: 'error',
-    },
+    // "En riesgo" cuenta el semáforo de asistencia: sin Asistencia Profesional no tiene datos.
+    ...(this.academicoVisible
+      ? [
+          {
+            id: 'riesgo',
+            label: 'En riesgo',
+            value: this.enRiesgo(),
+            icon: 'alert-triangle',
+            color: 'error' as const,
+          },
+        ]
+      : []),
   ]);
 
   readonly activos = computed(() => this.alumnos().filter((a) => a.estado === 'Activo').length);
@@ -628,8 +641,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     return this.alumnos().filter((a) => {
       const matchSearch = matchesSearchTokens([a.nombre, a.apellido, a.rut, a.nroMatricula], term);
       const matchClase = !this.selectedClase || a.licenseClass === this.selectedClase;
-      const matchEstado = !this.selectedEstado || a.estado === this.selectedEstado;
-      return matchSearch && matchClase && matchEstado;
+      return matchSearch && matchClase;
     });
   }
 
@@ -658,10 +670,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
         return 'success';
       case 'Finalizado':
         return 'info';
-      case 'Retirado':
-        return 'danger';
-      case 'Inactivo':
-        return 'secondary';
       default:
         return 'warn';
     }
@@ -680,7 +688,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     this.tableFirst.set(0);
     this.searchTerm = '';
     this.selectedClase = '';
-    this.selectedEstado = '';
   }
 
   handleHeroAction(actionId: string): void {

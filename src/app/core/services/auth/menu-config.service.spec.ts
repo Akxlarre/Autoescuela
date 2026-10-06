@@ -102,13 +102,12 @@ describe('MenuConfigService', () => {
     }
   });
 
-  it('fix-256-m/fix-257-m: oculta los 6 ítems recortados de Academia Profesional en admin y secretaria, pero mantiene Promociones', () => {
+  it('fix-256-m/fix-257-m/fix-326-m: oculta los 5 ítems recortados de Academia Profesional en admin y secretaria, pero mantiene Promociones y Archivo', () => {
     const hiddenRoutes = [
       'relatores',
       'asistencia',
       'evaluaciones',
       'certificados',
-      'archivo',
       'ex-alumnos-profesional',
     ];
     for (const role of ['admin', 'secretaria'] as const) {
@@ -125,6 +124,8 @@ describe('MenuConfigService', () => {
       expect(routerLinks.some((r) => r.endsWith('/alumnos'))).toBe(true);
       expect(routerLinks.some((r) => r.endsWith('/libro-de-clases'))).toBe(true);
       expect(routerLinks.some((r) => r.includes('promociones'))).toBe(true);
+      // fix-326-m (D3a): Archivo es donde se consultan las promociones finalizadas en el piloto.
+      expect(routerLinks.some((r) => r.endsWith('/archivo'))).toBe(true);
     }
   });
 

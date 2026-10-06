@@ -391,9 +391,11 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
-  protected readonly heroActions = computed((): SectionHeroAction[] => [
-    { id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true },
-  ]);
+  protected readonly heroActions = computed((): SectionHeroAction[] =>
+    this.facade.canManageLifecycle()
+      ? [{ id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true }]
+      : [],
+  );
 
   /** Placeholder para satisfacer `promocion` (input.required) en las cards skeleton. */
   protected readonly skeletonPromocion: PromocionTableRow = {
@@ -448,12 +450,14 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly searchTerm = signal('');
   protected readonly filtroEstado = signal<string | null>(null);
 
-  /** Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m). */
+  /**
+   * Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m).
+   * Sin "Finalizada": la lista no trae finalizadas; se consultan en Archivo (fix-326-m, D3a).
+   */
   readonly estadoOptions = withAllOption(
     [
       { label: 'Planificada', value: 'planned' },
       { label: 'En curso', value: 'in_progress' },
-      { label: 'Finalizada', value: 'finished' },
       { label: 'Cancelada', value: 'cancelled' },
     ],
     'Todos los estados',

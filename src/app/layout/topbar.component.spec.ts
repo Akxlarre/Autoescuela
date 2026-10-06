@@ -22,3 +22,12 @@ describe('resolveNotificationRoute — referenceType "class_b"', () => {
     expect(resolveNotificationRoute('class_b', 1, 'admin')).toBeNull();
   });
 });
+
+// fix-328-m (D1): Pre-inscritos está bloqueado en el piloto; la notificación no debe llevar ahí
+// (terminaba en "Módulo no disponible").
+describe('resolveNotificationRoute — referenceType "preinscription" en el piloto', () => {
+  it('no navega a Pre-inscritos mientras el recorte de Clase Profesional esté activo', () => {
+    expect(resolveNotificationRoute('preinscription', 1, 'admin')).toBeNull();
+    expect(resolveNotificationRoute('preinscription', 1, 'secretaria')).toBeNull();
+  });
+});

@@ -59,7 +59,11 @@ describe('AdminAlumnosProfesionalFacade', () => {
       pending_balance: 120000,
       branch_id: 2,
       students: { id: 5, status: 'active', users: makeUser() },
-      promotion_courses: { id: 3, courses: { name: 'Profesional A4', license_class: 'A4' } },
+      courses: { license_class: 'A4' },
+      promotion_courses: {
+        id: 3,
+        professional_promotions: { code: '280', start_date: '2026-10-05' },
+      },
       ...over,
     };
   }
@@ -110,10 +114,36 @@ describe('AdminAlumnosProfesionalFacade', () => {
     expect(builders['enrollments'].eq).toHaveBeenCalledWith('license_group', 'professional');
   });
 
-  it('excluye enrollments completed de la query — ya son Ex-Alumnos (fix-084)', async () => {
+  it('trae solo matrículas activas — completed ya son Ex-Alumnos (fix-084); inactive/cancelled no existen en Profesional (fix-329-m)', async () => {
     mockTables({ enrollments: [] });
     await facade.initialize();
-    expect(builders['enrollments'].in).toHaveBeenCalledWith('status', ['active', 'inactive']);
+    expect(builders['enrollments'].in).toHaveBeenCalledWith('status', ['active']);
+  });
+
+  // fix-330-m (D11): la columna "Promoción" muestra la promoción; la categoría sale del curso
+  // de la matrícula (también existe cuando el alumno aún no tiene promoción).
+  describe('columna Promoción y categoría (fix-330-m)', () => {
+    it('sin promoción → "—", pero la categoría sale igual del curso de la matrícula', async () => {
+      mockTables({ enrollments: [makeProEnrollment({ promotion_courses: null })] });
+      await facade.initialize();
+      expect(facade.alumnos()[0].promocion).toBe('—');
+      expect(facade.alumnos()[0].licenseClass).toBe('A4');
+    });
+
+    it('promoción sin número → se identifica por su fecha de inicio', async () => {
+      mockTables({
+        enrollments: [
+          makeProEnrollment({
+            promotion_courses: {
+              id: 3,
+              professional_promotions: { code: null, start_date: '2026-10-12' },
+            },
+          }),
+        ],
+      });
+      await facade.initialize();
+      expect(facade.alumnos()[0].promocion).toBe('Promoción del 12-10-2026');
+    });
   });
 
   it('mapea un alumno profesional con promoción, semáforo, módulos y saldo (AC6)', async () => {
@@ -131,7 +161,7 @@ describe('AdminAlumnosProfesionalFacade', () => {
 
     const row = facade.alumnos()[0];
     expect(row.id).toBe('5');
-    expect(row.promocion).toBe('Profesional A4');
+    expect(row.promocion).toBe('Promoción 280');
     expect(row.licenseClass).toBe('A4');
     expect(row.semaforo).toBe('yellow');
     expect(row.modulosAprobados).toBe(2);
@@ -182,7 +212,8 @@ describe('AdminAlumnosProfesionalFacade', () => {
 
     const row = facade.alumnos()[0];
     expect(row.promocion).toBe('—');
-    expect(row.licenseClass).toBe('');
+    // fix-330-m: la categoría sale del curso de la matrícula, no de la promoción.
+    expect(row.licenseClass).toBe('A4');
     expect(row.semaforo).toBeNull();
     expect(row.modulosAprobados).toBe(0);
     expect(row.nroMatricula).toBe('—');
@@ -223,12 +254,25 @@ describe('AdminAlumnosProfesionalFacade', () => {
       payments?: number;
       theory?: number;
       practice?: number;
+      /** fix-333-m: matrículas de Clase B de la misma persona (id → status). */
+      claseB?: { id: number; status: string }[];
+      /** fix-333-m: clases de Clase B agendadas a futuro. */
+      futureClassB?: number;
     }): void {
       const counts: Record<string, number> = {
         payments: config.payments ?? 0,
         professional_theory_attendance: config.theory ?? 0,
         professional_practice_attendance: config.practice ?? 0,
+        class_b_sessions: config.futureClassB ?? 0,
       };
+      const rows = [
+        ...config.enrollmentIds.map((id) => ({
+          id,
+          license_group: 'professional',
+          status: 'active',
+        })),
+        ...(config.claseB ?? []).map((e) => ({ ...e, license_group: 'class_b' })),
+      ];
 
       supabaseSpy.client.from = vi.fn((table: string) => {
         let countMode = false;
@@ -240,10 +284,11 @@ describe('AdminAlumnosProfesionalFacade', () => {
           eq: vi.fn(() => builder),
           neq: vi.fn(() => builder),
           in: vi.fn(() => builder),
+          gte: vi.fn(() => builder),
           then: (resolve: any) =>
             countMode
               ? resolve({ count: counts[table] ?? 0, error: null })
-              : resolve({ data: config.enrollmentIds.map((id) => ({ id })), error: null }),
+              : resolve({ data: rows, error: null }),
         };
         return builder;
       });
@@ -278,5 +323,55 @@ describe('AdminAlumnosProfesionalFacade', () => {
       const result = await facade.checkHistorial(5);
       expect(result.hasHistory).toBe(true);
     });
+
+    // ── fix-333-m (D8): archivar desde Profesional archiva a la persona completa ──
+    it('detecta que la persona también tiene una matrícula de Clase B vigente', async () => {
+      makeHistorialMock({ enrollmentIds: [100], claseB: [{ id: 200, status: 'active' }] });
+      expect((await facade.checkHistorial(5)).hasClaseB).toBe(true);
+    });
+
+    it('una Clase B ya completada no cuenta como vigente', async () => {
+      makeHistorialMock({ enrollmentIds: [100], claseB: [{ id: 200, status: 'completed' }] });
+      expect((await facade.checkHistorial(5)).hasClaseB).toBe(false);
+    });
+
+    it('prepararArchivado: con clases de Clase B agendadas a futuro no deja archivar (regla de fix-277-m)', async () => {
+      makeHistorialMock({
+        enrollmentIds: [100],
+        claseB: [{ id: 200, status: 'active' }],
+        futureClassB: 2,
+      });
+      const toast = TestBed.inject(ToastService) as any;
+
+      const result = await facade.prepararArchivado(5);
+
+      expect(result.permitido).toBe(false);
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se puede archivar',
+        'Tiene 2 clases agendadas. Cancélalas o reagéndalas antes de archivar al alumno.',
+      );
+    });
+
+    it('prepararArchivado: sin clases futuras deja archivar e informa si tiene Clase B', async () => {
+      makeHistorialMock({ enrollmentIds: [100], claseB: [{ id: 200, status: 'active' }] });
+      const result = await facade.prepararArchivado(5);
+      expect(result).toEqual({ permitido: true, hasHistory: false, hasClaseB: true });
+    });
+  });
+
+  // fix-333-m: si el archivado falla, el toast ya avisa; no debe quedar una promesa rechazada
+  it('archivarAlumno con error → false y toast, sin lanzar', async () => {
+    supabaseSpy.client.from = vi.fn(() => {
+      const b: any = {
+        update: vi.fn(() => b),
+        eq: vi.fn(() => b),
+        then: (resolve: any) => resolve({ error: { message: 'boom' } }),
+      };
+      return b;
+    });
+    const toast = TestBed.inject(ToastService) as any;
+
+    await expect(facade.archivarAlumno(5)).resolves.toBe(false);
+    expect(toast.error).toHaveBeenCalled();
   });
 });

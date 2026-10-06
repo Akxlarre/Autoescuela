@@ -80,7 +80,7 @@
 | `tasks` | M8 - Tareas | `id` (UUID), `branch_id`, `from_user_id`, `from_role` (`admin`\|`secretary`), `to_user_id`, `to_role` (`admin`\|`secretary`\|`instructor`), `type` (`task`\|`observation`\|`question`), `subject`, `body`, `status` (`pending`\|`in_progress`\|`completed`\|`seen`), `due_date` (solo type=task), `completed_at`, `seen_at`, `seen_by`, `created_at`, `updated_at`, `deleted_at` | `branch_id`→branches, `from_user_id`→users, `to_user_id`→users, `seen_by`→users · constraints: `role_matrix` (admin→{sec,inst}, sec→{admin,inst}), `due_date_only_for_tasks` | Admin: SELECT (branch_visible), INSERT/UPDATE (branch_visible), DELETE (admin). Sec: SELECT (from=me OR to=me), INSERT (from_role=secretary, to_role in admin/instructor, misma sede), UPDATE (from=me OR to=me). Inst: SELECT (to=me), UPDATE (to=me). Soft delete vía UPDATE.deleted_at | ✅ Definida — `20260518000000` · Realtime habilitado (publicación supabase_realtime) · Reemplaza `secretary_observations` |
 | `task_replies` | M8 - Tareas | `id` (UUID), `task_id`, `from_user_id`, `body`, `created_at` | `task_id`→tasks (ON DELETE CASCADE), `from_user_id`→users | Admin/Sec: SELECT (si puede ver la task padre), INSERT (si participante y task.status≠completed). Inst: INSERT solo en type=question donde to_user_id=me. DELETE: solo admin. Sin UPDATE (replies inmutables). | ✅ Definida — `20260518000000` |
 | `school_schedules` | M8 - Admin | `id`, `branch_id` | `branch_id` | Admin: CRUD, Sec: R | ✅ Definida |
-| `class_book` | M9 - Calidad| `id`, `period`, `sence_code` (TEXT), `horario` (TEXT) | `branch_id`, `promotion_course_id`, `generated_by`, `closed_by`, `sence_code_updated_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260405100000`: añadidos `sence_code` (código SENCE autorizado) y `horario` (texto libre). Auto-insert para promotion_courses existentes sin registro. · `20260801130000`: añadidos `sence_code_updated_by`/`sence_code_updated_at` (fix-098-m) — auditoría de quién cambió el código SENCE y cuándo; sigue editable con el libro cerrado (decisión explícita del owner). |
+| `class_book` | M9 - Calidad| `id`, `period`, `sence_code` (TEXT), `horario` (TEXT) | `branch_id`, `promotion_course_id`, `generated_by`, `closed_by`, `sence_code_updated_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260405100000`: añadidos `sence_code` (código SENCE autorizado) y `horario` (texto libre). Auto-insert para promotion_courses existentes sin registro. · `20260801130000`: añadidos `sence_code_updated_by`/`sence_code_updated_at` (fix-098-m) — auditoría de quién cambió el código SENCE y cuándo; sigue editable con el libro cerrado (decisión explícita del owner). · `20261005120000` (fix-320-m): rellena `branch_id` NULL desde la promoción — `generate-class-book-pdf` lo pisaba con NULL en cada PDF (pedía `branches` sin `id`); la función ya lo guarda bien. |
 | `disciplinary_notes` | M10 - Reglas| `id`, `student_id` | `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Stu: R (suyas) | ✅ Definida |
 | `pricing_seasons` | M10 - Reglas| `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `certificate_batches` | M10 - Reglas| `id`, `batch_code` | `branch_id`, `received_by` | Admin: CRUD, Sec: R | ✅ Definida |
@@ -110,7 +110,7 @@
 | `update-secretary` | `supabase/functions/update-secretary/index.ts` | `supabase.functions.invoke('update-secretary', { body: { id, ... } })` | Actualiza secretaria. Detecta cambio de email → `updateUserById` en Auth + UPDATE en `users`. Payload parcial. |
 | `create-instructor` | `supabase/functions/create-instructor/index.ts` | `supabase.functions.invoke('create-instructor', { body: { ... } })` | Crea instructor en Auth + `users` + `instructors`. Valida caller admin/secretary, valida licencia no expirada, crea auth user con password = RUT sin DV, INSERT en `users` (role instructor), INSERT en `instructors` (tipo, licencia), opcionalmente INSERT en `vehicle_assignments`. Rollback cascado: borra instructor → users → auth si falla. |
 | `update-instructor` | `supabase/functions/update-instructor/index.ts` | `supabase.functions.invoke('update-instructor', { body: { id, ... } })` | Actualiza instructor. Detecta cambio de email → Auth sync. UPDATE en `users` + `instructors` (recomputa `license_status`). Gestiona cambio de vehículo: cierra asignación anterior (`end_date=now`), crea nueva en `vehicle_assignments`. |
-| `auto-create-next-promotions` | `supabase/functions/auto-create-next-promotions/index.ts` | pg_cron → `net.http_post` (migración `20260807090000_auto_create_next_promotions_cron.sql`, diario `0 6 * * *`, DESPUÉS de `auto_transition_promotion_status()` en el mismo horario) | 0002-m. Garantiza colchón de 1 `professional_promotions` `in_progress` + 2 `planned` (branch_id=2 fijo) hacia adelante — no solo "la siguiente". Ancla la cadencia (+14 días) en `MAX(start_date)` existente; `code` en `MAX(code::int)+1` (fallback `start_date='2026-07-27'`/`code=275` solo si la tabla está vacía, no se espera en producción). Por cada promoción que falte: fetchea feriados del año vía `_shared/holidays.ts` (`fetchHolidaysForYears`, puerto Deno de `fetchHolidaysForYears` de `promociones.facade.ts`), calcula `end_date` con `computePromotionEndDate()` (puerto de `core/utils/promotion-end-date.utils.ts` — mismo algoritmo, recuperación de feriados AC6), INSERT `professional_promotions`, y por cada curso `type='professional' AND is_convalidation=false`: INSERT `promotion_courses` (dispara `generate_sessions_from_promotion()`, por eso `end_date` debe estar correcto antes) + INSERT `class_book` explícito (`status='draft'`, no depende de los 2 puntos de creación perezosa existentes). Cancela sesiones que caen en feriados del rango extendido. Idempotente por `start_date` (AC-E1): si ya existe, no duplica, la cadena avanza igual. Usa `SUPABASE_SERVICE_ROLE_KEY` (bypassa RLS). |
+| `auto-create-next-promotions` | `supabase/functions/auto-create-next-promotions/index.ts` | pg_cron → `net.http_post` (migración `20260807090000_auto_create_next_promotions_cron.sql`, diario `0 6 * * *`, DESPUÉS de `auto_transition_promotion_status()` en el mismo horario) | 0002-m. Garantiza colchón de 2 `professional_promotions` `planned` por delante (branch_id=2 fijo; hasta fix-322-m exigía además 1 `in_progress` y sin ella reservaba 10 por corrida). Si el armado de una reservada falla, la borra (`_shared/promotion-reservation.ts`) — no solo "la siguiente". Ancla la cadencia (+14 días) en `MAX(start_date)` existente; `code` en `MAX(code::int)+1` (fallback `start_date='2026-07-27'`/`code=275` solo si la tabla está vacía, no se espera en producción). Por cada promoción que falte: fetchea feriados del año vía `_shared/holidays.ts` (`fetchHolidaysForYears`, puerto Deno de `fetchHolidaysForYears` de `promociones.facade.ts`), calcula `end_date` con `computePromotionEndDate()` (puerto de `core/utils/promotion-end-date.utils.ts` — mismo algoritmo, recuperación de feriados AC6), INSERT `professional_promotions`, y por cada curso `type='professional' AND is_convalidation=false`: INSERT `promotion_courses` (dispara `generate_sessions_from_promotion()`, por eso `end_date` debe estar correcto antes) + INSERT `class_book` explícito (`status='draft'`, no depende de los 2 puntos de creación perezosa existentes). Cancela sesiones que caen en feriados del rango extendido. Idempotente por `start_date` (AC-E1): si ya existe, no duplica, la cadena avanza igual. Usa `SUPABASE_SERVICE_ROLE_KEY` (bypassa RLS). |
 | `_shared/staff-auth.ts` (helper, no es una función desplegable) | `supabase/functions/_shared/staff-auth.ts` | `const access = await requireStaff(req, ['admin','secretary']); if (!access.ok) return authErrorResponse(access, corsHeaders);` al inicio del handler | **Spec 0009-i.** Autorización de staff para funciones que usan la clave de servicio. `verify_jwt` acepta la anon key como JWT válido, así que no basta "hay token": resuelve el usuario real (`auth.getUser()`) y su rol desde `users`/`roles` (nombres reales: `admin`, `secretary`; el rol nunca sale del body). Sin usuario real → **401**; sin fila en `users` o rol no permitido → **403**; error leyendo `users` → 500. Responde `{ "error": "..." }` con los CORS de la función (formato que lee `readEdgeFunctionError`, DG-085). Núcleo puro `decideStaffAccess()` testeado con `npx deno test --no-lock --node-modules-dir=none supabase/functions/_shared/staff-auth.test.ts`. **Lo usan (admin + secretary):** `generate-enrollment-sheet`, `generate-payroll-report`, `export-certificates-zip`, `generate-cash-closing-report`, `generate-cash-history-report`, `generate-payment-report`, `generate-financial-report`, `generate-student-license-pdf`, `generate-certificate-b-pdf` (los 3 modos; el bypass `force` sigue solo admin); desde fix-043-i también `generate-contract-pdf` (los 3 modos), `generate-class-book-pdf`, `export-special-services`, `generate-certificate-professional-pdf` (la auditoría usa `access.userId`). **Solo admin:** `generate-audit-report`. No valida sede (decisión de la spec). |
 | `_shared/service-role-auth.ts` (helper, no es una función desplegable) | `supabase/functions/_shared/service-role-auth.ts` | `if (!isServiceRoleRequest(req.headers.get('Authorization'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))) return 401` al inicio del handler | **fix-043-i.** Autorización para funciones que solo invoca un proceso del servidor (pg_cron vía `net.http_post` con la service key del Vault), nunca un usuario. Valida el claim `role = service_role` del JWT (o igualdad exacta con la service key del entorno). ⚠️ Solo es seguro con `verify_jwt` en su default `true`: la firma la verifica el gateway, el helper solo decide la autorización. Tests: `npx deno test --no-lock --node-modules-dir=none supabase/functions/_shared/service-role-auth.test.ts`. **Lo usa:** `auto-create-next-promotions`. `dispatch-scheduled-announcements` tiene una copia local equivalente (`isServiceRole`) — candidata a migrar (ver ASG-i-058). |
 | `public-enrollment` | `supabase/functions/public-enrollment/index.ts` | `supabase.functions.invoke('public-enrollment', { body: { action: '...' } })` | Matrícula pública (sin auth). Actions: `load-instructors`, `load-schedule` (filtra `slot_holds` de otras sesiones como ocupados, acepta `sessionToken`), `reserve-slots` (crea/reemplaza holds TTL 20 min), `release-slots` (libera holds al retroceder), `submit-clase-b` (idempotente vía `payment_attempts.session_token`; acepta `carnetStoragePath` opcional para mover foto desde ruta temporal a `students/{id}/id_photo` + registrar en `student_documents`), `submit-pre-inscription`, `initiate-payment` (crea enrollment `pending_payment` + class_b_sessions `reserved` + draft_snapshot en BD incluyendo `carnetStoragePath`; sets `base_price`, `pending_balance`, `total_paid=0`, `payment_status='pending'` en enrollment; inicia transacción Webpay Plus vía REST; retorna `{webpayUrl, webpayToken}`), `confirm-payment` (recibe `tokenWs` del return_url, llama `webpayCommit`, valida `response_code===0 && status==='AUTHORIZED'`, activa enrollment + actualiza `total_paid`/`pending_balance`/`payment_status`, activa sesiones, genera número matrícula, inserta registro en `payments` (type='online', card_amount), mueve foto carnet desde ruta temporal del snapshot, libera slot_holds; retorna respuesta enriquecida con `branchName`, `courseName`, `amountPaid`, `courseBasePrice`, `pendingBalance`, `sessionCount`, `paymentMode`, `studentName`). Usa `SERVICE_ROLE_KEY` para bypass RLS. Transbank: env `TRANSBANK_ENV` (`integration`\|`production`), credenciales en `TRANSBANK_COMMERCE_CODE`/`TRANSBANK_API_KEY`; en integration usa credenciales públicas predefinidas. **Foto carnet (flujo 2 etapas):** cliente anón sube a `documents/public-uploads/carnet/{sessionToken}` (política `20260317140000`); `carnetStoragePath` se guarda en `draft_snapshot` durante `initiate-payment`; la EF mueve vía `storage.move()` a `documents/students/{enrollmentId}/id_photo` e inserta en `student_documents` (tipo `id_photo`, status `approved`) durante `confirm-payment`. |
@@ -767,10 +767,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_class_book | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_class_book | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status != '…` | — |
+| insert_class_book | INSERT | — | admin, o secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m) |
+| update_class_book | UPDATE | admin, o secretary de la sede si `status <> 'closed'` | — |
 | delete_class_book | DELETE | `auth_user_role() = 'admin'` | — |
-| select_class_book | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| select_class_book | SELECT | admin, secretary de la sede, o student inscrito en el curso | — |
 
 ### `consents` — 🔒 RLS
 
@@ -1686,10 +1686,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_professional_promotions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
-| insert_professional_promotions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_professional_promotions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_professional_promotions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_professional_promotions | SELECT | admin, secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
+| insert_professional_promotions | INSERT | — | solo admin (D5, fix-321-m) |
+| update_professional_promotions | UPDATE | admin, o secretary de la sede solo sobre `planned`/`in_progress` | mismo: la secretary no puede dejarla `finished`/`cancelled` (D5) |
+| delete_professional_promotions | DELETE | solo admin (D5, fix-321-m) | — |
 
 ### `professional_theory_attendance` — 🔒 RLS
 
@@ -1788,8 +1788,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_promotion_course_lecturers | SELECT | `true` | — |
-| insert_promotion_course_lecturers | INSERT | — | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
-| update_promotion_course_lecturers | UPDATE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
+| insert_promotion_course_lecturers | INSERT | — | admin, o secretary de la sede de la promoción (fix-321-m) |
+| update_promotion_course_lecturers | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
 | delete_promotion_course_lecturers | DELETE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
 
 **Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
@@ -1812,10 +1812,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_promotion_courses | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
-| insert_promotion_courses | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_promotion_courses | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_promotion_courses | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_promotion_courses | SELECT | admin, secretary de la sede de la promoción (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
+| insert_promotion_courses | INSERT | — | solo admin (fix-321-m) |
+| update_promotion_courses | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
+| delete_promotion_courses | DELETE | solo admin (fix-321-m) | — |
 
 **Índices:** `idx_promotion_courses_promotion`
 
@@ -2452,13 +2452,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `notify_task_reply` | `()` |
 | `notify_vehicle_document_expiry` | `()` |
 | `prevent_concurrent_in_progress_class_b_sessions` | `()` |
+| `prevent_cancel_promotion_with_active_enrollments` | `()` — trigger `BEFORE UPDATE OF status` en `professional_promotions`: rechaza pasar a `cancelled` con matrículas `active` (fix-325-m) |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `prevent_double_booking_class_b_sessions` | `()` |
 | `prevent_student_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
-| `reserve_next_promotion_slot` | `(p_branch_id INT)` |
+| `reserve_next_promotion_slot` | `(p_branch_id INT)` — reserva el próximo lunes de la cadencia (2026-07-27 + 14k) hasta tener 2 planificadas **de la cadencia** por delante; las manuales fuera de ella no cuentan ni la corren; número = mayor existente + 1; EXECUTE solo `service_role` (fix-322-m, fix-323-m) |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |

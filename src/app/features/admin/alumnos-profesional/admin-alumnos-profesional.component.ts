@@ -14,6 +14,7 @@ import { AdminPreInscritosComponent } from '@features/admin/alumnos/pre-inscrito
 import { AdminAlumnosProfesionalFacade } from '@core/facades/admin-alumnos-profesional.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesional-table-row.model';
+import { CLASE_B_ARCHIVE_WARNING } from '@core/utils/archive-confirmation.utils';
 
 @Component({
   selector: 'app-admin-alumnos-profesional',
@@ -50,6 +51,7 @@ import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesion
       [visible]="!!deleteTarget()"
       [alumnoNombre]="deleteTargetNombre()"
       [hasHistory]="hasHistory()"
+      [extraWarning]="archiveWarning()"
       [isDeleting]="facade.isArchiving()"
       (confirmado)="onConfirmArchivar()"
       (cancelado)="onCancelArchivar()"
@@ -66,6 +68,8 @@ export class AdminAlumnosProfesionalComponent implements OnInit {
   // ── Estado del modal de borrado (homologado con AdminAlumnosComponent/Clase B) ──
   protected readonly deleteTarget = signal<AlumnoProfesionalTableRow | null>(null);
   protected readonly hasHistory = signal(false);
+  /** Aviso de que archivar también la saca de la Base B (fix-333-m, D8). */
+  protected readonly archiveWarning = signal<string | null>(null);
   protected readonly deleteTargetNombre = computed(() => {
     const t = this.deleteTarget();
     return t ? `${t.nombre} ${t.apellido}` : '';
@@ -93,25 +97,28 @@ export class AdminAlumnosProfesionalComponent implements OnInit {
     const alumno = this.facade.alumnos().find((a) => a.id === alumnoId);
     if (!alumno) return;
 
-    const { hasHistory } = await this.facade.checkHistorial(Number(alumnoId));
+    // fix-333-m: con clases de Clase B agendadas no se archiva (fix-277-m; el facade avisa).
+    const { permitido, hasHistory, hasClaseB } = await this.facade.prepararArchivado(
+      Number(alumnoId),
+    );
+    if (!permitido) return;
     this.hasHistory.set(hasHistory);
+    this.archiveWarning.set(hasClaseB ? CLASE_B_ARCHIVE_WARNING : null);
     this.deleteTarget.set(alumno);
   }
 
   protected async onConfirmArchivar(): Promise<void> {
     const target = this.deleteTarget();
     if (!target) return;
-    try {
-      await this.facade.archivarAlumno(Number(target.id));
-    } finally {
-      this.deleteTarget.set(null);
-      this.hasHistory.set(false);
-    }
+    // archivarAlumno ya avisa por toast si falla y no lanza (fix-333-m).
+    await this.facade.archivarAlumno(Number(target.id));
+    this.onCancelArchivar();
   }
 
   protected onCancelArchivar(): void {
     this.deleteTarget.set(null);
     this.hasHistory.set(false);
+    this.archiveWarning.set(null);
   }
 
   protected onTrashViewToggled(): void {

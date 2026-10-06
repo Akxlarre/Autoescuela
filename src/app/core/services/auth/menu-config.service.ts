@@ -136,7 +136,7 @@ const ADMIN_NAV: NavGroup[] = [
         icon: 'archive',
         routerLink: '/app/admin/clase-profesional/archivo',
         requiresProfessional: true,
-        hiddenInPilotRecorte: true,
+        // fix-326-m (D3a): visible en el piloto — es donde se consultan las promociones finalizadas.
       },
       {
         label: 'Ex-Alumnos Prof.',
@@ -269,7 +269,7 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'archive',
         routerLink: '/app/secretaria/profesional/archivo',
         requiresProfessional: true,
-        hiddenInPilotRecorte: true,
+        // fix-326-m (D3a): visible en el piloto — es donde se consultan las promociones finalizadas.
       },
       {
         label: 'Ex-Alumnos Prof.',

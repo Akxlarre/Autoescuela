@@ -5,14 +5,17 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
+import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -108,8 +111,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 placeholder="Ej: 156"
                 data-llm-description="ID numérico MTT de la promoción; se propaga a sus cursos como {id}.{licencia}"
               />
-              @if (code().trim().length > 0 && !codeIsValid()) {
-                <p class="text-2xs mt-1 text-error">Debe ser solo números (ej: 156).</p>
+              @if (!codeIsValid()) {
+                <p class="text-2xs mt-1 text-error">
+                  {{
+                    code().trim().length > 0
+                      ? 'Debe ser solo números (ej: 156).'
+                      : 'El número es obligatorio.'
+                  }}
+                </p>
               }
             </div>
 
@@ -147,6 +156,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               [(ngModel)]="statusModel"
               optionLabel="label"
               optionValue="value"
+              optionDisabled="disabled"
               [style]="{ width: '100%' }"
               data-llm-description="Cambiar estado de la promoción"
             />
@@ -171,8 +181,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               >
                 <app-icon name="circle-alert" [size]="14" color="var(--state-error)" />
                 <p class="text-xs text-text-secondary">
-                  Cancelar una promoción es una acción irreversible. Los alumnos inscritos deberán
-                  ser reasignados manualmente.
+                  Cancelar una promoción es una acción irreversible.
                 </p>
               </div>
             }
@@ -236,6 +245,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 export class AdminPromocionEditarDrawerComponent {
   protected readonly facade = inject(PromocionesFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly name = signal('');
@@ -270,8 +280,31 @@ export class AdminPromocionEditarDrawerComponent {
    *   in_progress → En curso | Finalizada | Cancelada
    *   finished    → Finalizada  (sin más transiciones)
    *   cancelled   → Cancelada   (sin más transiciones)
+   * La secretaria no ve Finalizada ni Cancelada como destino (fix-321-m, D5).
+   * Con matrículas activas, Cancelada aparece deshabilitada (fix-325-m, D4): no existe dónde
+   * reasignar a esos alumnos. Mientras el conteo carga (null) también se deshabilita.
    */
   protected readonly availableStatusOptions = computed(() => {
+    const current = this.facade.selectedPromocion()?.status;
+    const activos = this.activeEnrollments();
+    const options = this.statusOptionsFor().map((o) => {
+      const blocked = o.value === 'cancelled' && current !== 'cancelled' && activos !== 0;
+      return {
+        ...o,
+        disabled: blocked,
+        label: blocked && activos ? `Cancelada (tiene ${activos} alumnos activos)` : o.label,
+      };
+    });
+    if (this.facade.canManageLifecycle()) return options;
+    return options.filter(
+      (o) => o.value === current || (o.value !== 'finished' && o.value !== 'cancelled'),
+    );
+  });
+
+  /** Matrículas activas de la promoción abierta; null mientras carga (fix-325-m). */
+  protected readonly activeEnrollments = signal<number | null>(null);
+
+  private statusOptionsFor(): { label: string; value: PromocionStatus }[] {
     const p = this.facade.selectedPromocion();
     if (!p) return [];
 
@@ -301,7 +334,7 @@ export class AdminPromocionEditarDrawerComponent {
       default:
         return [];
     }
-  });
+  }
 
   /** True cuando está planificada pero la fecha de inicio aún no llega. */
   protected readonly plannedButNotStarted = computed(() => {
@@ -313,17 +346,21 @@ export class AdminPromocionEditarDrawerComponent {
   });
 
   /** El código es el ID numérico MTT — estrictamente dígitos. */
-  protected readonly codeIsValid = computed(() => /^\d+$/.test(this.code().trim()));
+  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
 
-  /** Habilita guardar si nombre/código cambiaron (código válido) O si el nuevo estado es una transición válida. */
+  /**
+   * Habilita guardar si algo cambió (nombre, número o una transición de estado válida) y el
+   * formulario completo es válido: nombre no vacío y número solo dígitos. Hasta fix-323-m el
+   * número solo se validaba cuando era lo único que cambiaba (S7).
+   */
   protected readonly canSave = computed(() => {
     const p = this.facade.selectedPromocion();
     if (!p) return false;
-    const codeChanged = this.code().trim() !== p.code;
-    const nameOrCodeChanged = this.name().trim() !== p.name || (codeChanged && this.codeIsValid());
+    if (!this.name().trim() || !this.codeIsValid()) return false;
+    const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
     const statusChanged =
       this.status() !== p.status &&
-      this.availableStatusOptions().some((o) => o.value === this.status());
+      this.availableStatusOptions().some((o) => o.value === this.status() && !o.disabled);
     return nameOrCodeChanged || statusChanged;
   });
 
@@ -337,6 +374,21 @@ export class AdminPromocionEditarDrawerComponent {
         this.status.set(p.status);
       }
     });
+
+    // Conteo de matrículas activas para decidir si se puede cancelar (fix-325-m).
+    effect(() => {
+      const p = this.facade.selectedPromocion();
+      this.activeEnrollments.set(null);
+      if (!p || (p.status !== 'planned' && p.status !== 'in_progress')) return;
+      untracked(() =>
+        this.facade
+          .countActiveEnrollments(p.id)
+          .then((n) => {
+            if (this.facade.selectedPromocion()?.id === p.id) this.activeEnrollments.set(n);
+          })
+          .catch(() => this.activeEnrollments.set(null)),
+      );
+    });
   }
 
   protected formatDate(iso: string): string {
@@ -348,6 +400,23 @@ export class AdminPromocionEditarDrawerComponent {
   protected async submit(): Promise<void> {
     const p = this.facade.selectedPromocion();
     if (!p) return;
+
+    // Finalizar pasa todas sus matrículas activas a completadas (trigger) y no se deshace desde
+    // la app: se confirma antes, con el número de alumnos afectados (fix-324-m, D3b).
+    if (this.status() === 'finished' && p.status !== 'finished') {
+      const activos = await this.facade.countActiveEnrollments(p.id);
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Finalizar promoción',
+        message:
+          (activos === 1
+            ? '1 alumno con matrícula activa pasará a completado y dejará'
+            : `${activos} alumnos con matrícula activa pasarán a completado y dejarán`) +
+          ' de aparecer en la Base de Alumnos Profesional. Esta acción no se puede deshacer desde la app.',
+        severity: 'danger',
+        confirmLabel: 'Finalizar',
+      });
+      if (!confirmed) return;
+    }
 
     const success = await this.facade.editarPromocion(p.id, {
       name: this.name().trim(),

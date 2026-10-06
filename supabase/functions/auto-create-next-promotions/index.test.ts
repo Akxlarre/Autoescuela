@@ -41,13 +41,14 @@ Deno.test({
       `;
       branchId = branch.id;
 
-      // Colchón: 1 in_progress + 1 planned → falta exactamente 1 planned.
+      // Colchón: 1 in_progress + 1 planned → falta exactamente 1 planned. Fechas en la cadencia
+      // (2026-07-27 + 14k, fix-323-m): fuera de ella no cuentan para el colchón.
       await setup`
         INSERT INTO professional_promotions
           (code, name, start_date, end_date, status, current_day, branch_id)
         VALUES
-          ('9001', 'Test activa', '2026-01-01', '2026-02-01', 'in_progress', 0, ${branchId}),
-          ('9002', 'Test planificada', '2026-02-15', '2026-03-15', 'planned', 0, ${branchId})
+          ('9001', 'Test activa', '2026-01-12', '2026-02-13', 'in_progress', 0, ${branchId}),
+          ('9002', 'Test planificada', '2026-01-26', '2026-02-27', 'planned', 0, ${branchId})
       `;
 
       // Dos invocaciones concurrentes del mismo slot.
@@ -78,6 +79,84 @@ Deno.test({
       await sqlA.end();
       await sqlB.end();
       await setup.end();
+    }
+  },
+});
+
+// fix-322-m: sin ninguna promoción en curso, la condición vieja (`in_progress >= 1 AND
+// planned >= 2`) nunca se cumplía y la Edge Function reservaba 10 por llamada (su tope).
+Deno.test({
+  name: 'reserve_next_promotion_slot: sin promoción en curso reserva hasta 2 planificadas y para',
+  async fn() {
+    const sql = postgres(LOCAL_DB_URL, { max: 1 });
+    let branchId: number;
+    try {
+      const [branch] = await sql<{ id: number }[]>`
+        INSERT INTO branches (name) VALUES ('fix-322-m test branch') RETURNING id
+      `;
+      branchId = branch.id;
+      // Solo una finalizada (la única en curso se cerró a mano): 0 en curso, 0 planificadas.
+      await sql`
+        INSERT INTO professional_promotions
+          (code, name, start_date, end_date, status, current_day, branch_id)
+        VALUES ('9101', 'Test finalizada', '2026-01-05', '2026-02-06', 'finished', 0, ${branchId})
+      `;
+
+      const reservas: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const rows = await sql`SELECT * FROM reserve_next_promotion_slot(${branchId})`;
+        reservas.push(rows.length);
+      }
+      assertEquals(
+        reservas,
+        [1, 1, 0, 0, 0],
+        'debe reservar exactamente 2 y después no reservar más',
+      );
+    } finally {
+      await sql`DELETE FROM professional_promotions WHERE branch_id = ${branchId!}`;
+      await sql`DELETE FROM branches WHERE id = ${branchId!}`;
+      await sql.end();
+    }
+  },
+});
+
+// fix-323-m: las promociones manuales (cualquier lunes, con número) no corren ni traban la
+// cadencia automática. Antes la reserva tomaba "la última con número + 14 días" y "su número + 1".
+Deno.test({
+  name: 'reserve_next_promotion_slot: una manual fuera de la cadencia no la corre y el número no choca',
+  async fn() {
+    const sql = postgres(LOCAL_DB_URL, { max: 1 });
+    let branchId: number;
+    try {
+      const [branch] = await sql<{ id: number }[]>`
+        INSERT INTO branches (name) VALUES ('fix-323-m test branch') RETURNING id
+      `;
+      branchId = branch.id;
+      await sql`
+        INSERT INTO professional_promotions
+          (code, name, start_date, end_date, status, current_day, branch_id)
+        VALUES
+          ('9201', 'Automática en curso', '2026-01-12', '2026-02-13', 'in_progress', 0, ${branchId}),
+          ('9202', 'Manual en la cadencia', '2026-01-26', '2026-02-27', 'planned', 0, ${branchId}),
+          ('9500', 'Manual fuera de la cadencia', '2026-02-02', '2026-03-06', 'planned', 0, ${branchId})
+      `;
+
+      // Solo 1 planificada de la cadencia (la de 01-26) → reserva 1: el lunes de cadencia
+      // siguiente a 01-26 (no a 02-02) y el número mayor + 1 (no 9203, que podría estar usado).
+      const [primera] = await sql<{ reserved_code: string; start: string }[]>`
+        SELECT reserved_code, reserved_start_date::text AS start
+          FROM reserve_next_promotion_slot(${branchId})
+      `;
+      assertEquals(primera.start, '2026-02-09');
+      assertEquals(primera.reserved_code, '9501');
+
+      // Ahora hay 2 planificadas de la cadencia → no reserva más (la manual no cuenta).
+      const segunda = await sql`SELECT * FROM reserve_next_promotion_slot(${branchId})`;
+      assertEquals(segunda.length, 0);
+    } finally {
+      await sql`DELETE FROM professional_promotions WHERE branch_id = ${branchId!}`;
+      await sql`DELETE FROM branches WHERE id = ${branchId!}`;
+      await sql.end();
     }
   },
 });

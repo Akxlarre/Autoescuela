@@ -38,6 +38,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { isServiceRoleRequest } from '../_shared/service-role-auth.ts';
 import { computePromotionEndDate, fetchHolidaysForYears } from '../_shared/holidays.ts';
+import { discardReservedPromotion } from '../_shared/promotion-reservation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -127,7 +128,7 @@ Deno.serve(async (req: Request) => {
 
     // fix-228-m: cada iteración pide un slot ya reservado/insertado atómicamente por
     // reserve_next_promotion_slot() (advisory lock). Si no devuelve fila, el colchón
-    // (1 in_progress + 2 planned) ya está completo — corta el loop. Tope defensivo de 10
+    // (2 planificadas por delante, fix-322-m) ya está completo — corta el loop. Tope defensivo de 10
     // iteraciones: el colchón real nunca necesita más de 2-3 slots por corrida.
     for (let i = 0; i < 10; i++) {
       const { data: slot, error: slotError } = await supabase
@@ -140,55 +141,66 @@ Deno.serve(async (req: Request) => {
       const nextCode = slot.reserved_code as string;
       const nextStart = slot.reserved_start_date as string;
 
-      // Feriados y end_date se resuelven DESPUÉS de reservar el slot (AC6): se fetchea el
-      // año completo, no se puede filtrar por end_date todavía porque aún no existe.
-      const holidays = await fetchHolidaysForYears(nextStart);
-      const nextEnd = computePromotionEndDate(nextStart, new Set(holidays));
+      // fix-322-m: si el armado falla a mitad, borrar lo reservado — si no, queda una
+      // planificada sin cursos que cuenta para el colchón y nunca se completa.
+      try {
+        // Feriados y end_date se resuelven DESPUÉS de reservar el slot (AC6): se fetchea el
+        // año completo, no se puede filtrar por end_date todavía porque aún no existe.
+        const holidays = await fetchHolidaysForYears(nextStart);
+        const nextEnd = computePromotionEndDate(nextStart, new Set(holidays));
 
-      const { error: updateError } = await supabase
-        .from('professional_promotions')
-        .update({
-          name: `Promoción ${nextCode} (${formatStartDateLabel(nextStart)})`,
-          end_date: nextEnd,
-        })
-        .eq('id', promoId);
-      if (updateError) throw updateError;
-
-      const promo = { id: promoId };
-      const createdPcIds: number[] = [];
-      for (const course of courses ?? []) {
-        const suffix = licenseClassToSuffix(course.license_class ?? '');
-
-        // Dispara generate_sessions_from_promotion() — end_date ya debe estar correcto.
-        const { data: pc, error: pcError } = await supabase
-          .from('promotion_courses')
-          .insert({
-            promotion_id: promo.id,
-            course_id: course.id,
-            max_students: 25,
-            status: 'planned',
-            code: `${nextCode}.${suffix}`,
+        const { error: updateError } = await supabase
+          .from('professional_promotions')
+          .update({
+            name: `Promoción ${nextCode} (${formatStartDateLabel(nextStart)})`,
+            end_date: nextEnd,
           })
-          .select('id')
-          .single();
-        if (pcError) throw pcError;
-        createdPcIds.push(pc.id);
+          .eq('id', promoId);
+        if (updateError) throw updateError;
 
-        // class_book explícito (AC2) — no depender de la creación perezosa existente.
-        const { error: cbError } = await supabase.from('class_book').insert({
-          branch_id: BRANCH_ID,
-          promotion_course_id: pc.id,
-          period: nextCode,
-          status: 'draft',
-        });
-        if (cbError) throw cbError;
-      }
+        const promo = { id: promoId };
+        const createdPcIds: number[] = [];
+        for (const course of courses ?? []) {
+          const suffix = licenseClassToSuffix(course.license_class ?? '');
 
-      const holidaysInRange = holidays.filter((d) => d >= nextStart && d <= nextEnd);
-      if (holidaysInRange.length > 0) {
-        await Promise.all(
-          createdPcIds.map((pcId) => cancelHolidaySessions(supabase, pcId, holidaysInRange)),
-        );
+          // Dispara generate_sessions_from_promotion() — end_date ya debe estar correcto.
+          const { data: pc, error: pcError } = await supabase
+            .from('promotion_courses')
+            .insert({
+              promotion_id: promo.id,
+              course_id: course.id,
+              max_students: 25,
+              status: 'planned',
+              code: `${nextCode}.${suffix}`,
+            })
+            .select('id')
+            .single();
+          if (pcError) throw pcError;
+          createdPcIds.push(pc.id);
+
+          // class_book explícito (AC2) — no depender de la creación perezosa existente.
+          const { error: cbError } = await supabase.from('class_book').insert({
+            branch_id: BRANCH_ID,
+            promotion_course_id: pc.id,
+            period: nextCode,
+            status: 'draft',
+          });
+          if (cbError) throw cbError;
+        }
+
+        const holidaysInRange = holidays.filter((d) => d >= nextStart && d <= nextEnd);
+        if (holidaysInRange.length > 0) {
+          await Promise.all(
+            createdPcIds.map((pcId) => cancelHolidaySessions(supabase, pcId, holidaysInRange)),
+          );
+        }
+      } catch (err) {
+        try {
+          await discardReservedPromotion(supabase, promoId);
+        } catch (cleanupErr) {
+          console.error(`[auto-create-next-promotions] no se pudo deshacer la promoción ${promoId}:`, cleanupErr);
+        }
+        throw err;
       }
 
       created++;

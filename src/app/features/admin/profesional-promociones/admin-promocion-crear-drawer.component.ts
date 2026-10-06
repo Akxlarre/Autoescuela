@@ -19,9 +19,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { getCourseColor } from '@core/utils/course-colors';
+import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
 
 /** Genera los próximos N lunes disponibles a partir de hoy. */
-function generateAvailableMondays(count: number): { date: string; suggested: boolean }[] {
+function generateAvailableMondays(count: number): { date: string }[] {
   const today = new Date();
   today.setHours(12, 0, 0, 0);
 
@@ -34,13 +35,11 @@ function generateAvailableMondays(count: number): { date: string; suggested: boo
     nextMonday.setDate(today.getDate());
   }
 
-  const mondays: { date: string; suggested: boolean }[] = [];
+  const mondays: { date: string }[] = [];
   const current = new Date(nextMonday);
 
-  for (let i = 0; mondays.length < count; i++) {
-    const iso = current.toISOString().split('T')[0];
-    const suggested = i % 2 === 0;
-    mondays.push({ date: iso, suggested });
+  while (mondays.length < count) {
+    mondays.push({ date: current.toISOString().split('T')[0] });
     current.setDate(current.getDate() + 7);
   }
 
@@ -58,7 +57,7 @@ function formatMondayLabel(iso: string): string {
   });
 }
 
-function generatePromoName(startIso: string): string {
+function generatePromoName(startIso: string, code: string): string {
   const d = new Date(startIso + 'T12:00:00');
   const day = d.getDate();
   const monthNames = [
@@ -75,7 +74,8 @@ function generatePromoName(startIso: string): string {
     'Noviembre',
     'Diciembre',
   ];
-  return `Promoción ${day} de ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  const dateLabel = `${day} de ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  return code ? `Promoción ${code} (${dateLabel})` : `Promoción ${dateLabel}`;
 }
 
 @Component({
@@ -144,22 +144,23 @@ function generatePromoName(startIso: string): string {
                 <button
                   class="monday-btn"
                   [class.selected]="selectedStartDate() === monday.date"
-                  [class.suggested]="monday.suggested && selectedStartDate() !== monday.date"
+                  [disabled]="isTaken(monday.date)"
+                  [attr.title]="
+                    isTaken(monday.date) ? 'Ya hay una promoción que parte este lunes' : null
+                  "
                   (click)="selectStartDate(monday.date)"
                   data-llm-action="seleccionar-fecha-inicio"
                 >
                   {{ formatMonday(monday.date) }}
-                  @if (monday.suggested) {
-                    <span class="suggested-dot"></span>
-                  }
                 </button>
               }
             </div>
 
             <p class="text-xs mb-4 text-text-muted">
               <app-icon name="info" [size]="12" />
-              Los lunes marcados con punto son las fechas sugeridas (cada 2 semanas). Puede
-              seleccionar cualquier lunes si necesita flexibilidad.
+              Las promociones de la cadencia (cada 2 semanas) se crean solas. Aquí puedes programar
+              una en cualquier lunes libre; los lunes que ya tienen promoción aparecen
+              deshabilitados.
             </p>
 
             <!-- Fecha de término -->
@@ -194,10 +195,32 @@ function generatePromoName(startIso: string): string {
             }
           </section>
 
-          <!-- ── Nombre (auto-generado) ──────────────────────────────────────── -->
-          @if (selectedStartDate()) {
-            <section>
-              <h3 class="item-title mb-3">Información de la promoción</h3>
+          <!-- ── Número (obligatorio) y nombre (auto-generado) ──────────────── -->
+          <section>
+            <h3 class="item-title mb-3">Información de la promoción</h3>
+            <div class="mb-4">
+              <label class="text-xs font-medium mb-1 block text-text-secondary">
+                Código (ID numérico MTT) *
+              </label>
+              <input
+                class="form-input"
+                type="text"
+                inputmode="numeric"
+                [(ngModel)]="codeModel"
+                placeholder="Ej: 281"
+                data-llm-description="ID numérico MTT de la promoción, obligatorio y único; se propaga a sus cursos como {id}.{licencia}"
+              />
+              @if (!codeIsValid()) {
+                <p class="text-2xs mt-1 text-error">
+                  {{
+                    code().trim().length > 0
+                      ? 'Debe ser solo números (ej: 281).'
+                      : 'El número es obligatorio.'
+                  }}
+                </p>
+              }
+            </div>
+            @if (selectedStartDate()) {
               <div>
                 <label class="text-xs font-medium mb-1 block text-text-secondary">
                   Nombre (automático)
@@ -208,11 +231,10 @@ function generatePromoName(startIso: string): string {
               </div>
               <p class="text-2xs mt-1.5 text-text-muted">
                 <app-icon name="info" [size]="10" />
-                El nombre se genera automáticamente a partir de la fecha de inicio seleccionada. El
-                ID numérico del MTT se asigna después, desde "Editar Promoción".
+                El nombre se genera a partir del número y la fecha de inicio.
               </p>
-            </section>
-          }
+            }
+          </section>
 
           <!-- ── Cursos y asignación de relatores ──────────────────────────── -->
           <section>
@@ -361,18 +383,11 @@ function generatePromoName(startIso: string): string {
       border-color: var(--color-primary);
       font-weight: 600;
     }
-    .monday-btn.suggested {
-      border-color: color-mix(in srgb, var(--ds-brand) 40%, transparent);
-    }
-
-    .suggested-dot {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--ds-brand);
+    .monday-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      border-color: var(--border-default);
+      color: var(--text-muted);
     }
 
     .btn-secondary {
@@ -397,8 +412,21 @@ export class AdminPromocionCrearDrawerComponent {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Form state ────────────────────────────────────────────────────────────
-  protected readonly nombre = signal('');
+  /** Número de la promoción (ID numérico MTT). Obligatorio desde fix-323-m (D6). */
+  protected readonly code = signal('');
+  protected get codeModel(): string {
+    return this.code();
+  }
+  protected set codeModel(v: string) {
+    this.code.set(v);
+  }
+  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
   protected readonly selectedStartDate = signal<string | null>(null);
+  /** Igual que las promociones automáticas: "Promoción 281 (12 de Octubre 2026)". */
+  protected readonly nombre = computed(() => {
+    const date = this.selectedStartDate();
+    return date ? generatePromoName(date, this.code().trim()) : '';
+  });
   protected readonly endDate = signal('');
   protected readonly endDateLoading = signal(false);
   private readonly endDateGuard = createRequestGuard();
@@ -426,12 +454,19 @@ export class AdminPromocionCrearDrawerComponent {
   });
 
   // ── Available mondays ─────────────────────────────────────────────────────
+  /** Cualquier lunes sirve (D6, fix-323-m); los que ya tienen promoción no se pueden repetir. */
   protected readonly availableMondays = generateAvailableMondays(8);
+  private readonly takenDates = computed(
+    () => new Set(this.facade.promociones().map((p) => p.startDate)),
+  );
 
   // ── Validation ────────────────────────────────────────────────────────────
   protected readonly canSubmit = computed(() => {
+    const date = this.selectedStartDate();
     return (
-      this.nombre().trim().length > 0 &&
+      this.codeIsValid() &&
+      !!date &&
+      !this.isTaken(date) &&
       !!this.selectedStartDate() &&
       !!this.endDate() &&
       !this.endDateLoading()
@@ -443,12 +478,9 @@ export class AdminPromocionCrearDrawerComponent {
     this.facade.loadRelatoresDisponibles();
     this.facade.loadProfessionalCourses();
 
-    // Auto-generate name from start date (non-editable)
-    effect(() => {
-      const date = this.selectedStartDate();
-      if (date) {
-        this.nombre.set(generatePromoName(date));
-      }
+    // Precarga el siguiente número; el admin puede cambiarlo.
+    this.facade.suggestNextCode().then((next) => {
+      if (!this.code()) this.code.set(next);
     });
 
     // Preview async de la fecha de término real (con recuperación de feriados, AC6) —
@@ -470,7 +502,13 @@ export class AdminPromocionCrearDrawerComponent {
   }
 
   protected selectStartDate(date: string): void {
+    if (this.isTaken(date)) return;
     this.selectedStartDate.set(date);
+  }
+
+  /** True si ya hay una promoción que parte ese lunes (UNIQUE branch_id, start_date). */
+  protected isTaken(date: string): boolean {
+    return this.takenDates().has(date);
   }
 
   protected formatMonday(iso: string): string {
@@ -514,6 +552,7 @@ export class AdminPromocionCrearDrawerComponent {
 
     const success = await this.facade.crearPromocion({
       name: this.nombre().trim(),
+      code: this.code().trim(),
       startDate: this.selectedStartDate()!,
       endDate: this.endDate(),
       cursos,
