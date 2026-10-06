@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
         .from('promotion_courses')
         .select(
           `id, code, courses!inner(name, code, license_class),
-             professional_promotions!inner(name, code, start_date, end_date, status, branches(name, address))`,
+             professional_promotions!inner(name, code, start_date, end_date, status, branches(id, name, address))`,
         )
         .eq('id', promotion_course_id)
         .single(),
@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
       supabase
         .from('enrollments')
         .select(
-          'id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut, phone))',
+          'id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut))',
         )
         .eq('promotion_course_id', promotion_course_id)
         .not('status', 'in', '("cancelled","draft")')
@@ -196,7 +196,6 @@ Deno.serve(async (req: Request) => {
           .filter(Boolean)
           .join(' '),
         rut: u.rut ?? '',
-        telefono: u.phone ?? '',
       };
     });
     // Module names based on license class (spec 0018-m: 5 asignaturas en convalidación)
@@ -3120,7 +3119,7 @@ interface ClassBookData {
   senceCode: string;
   lecturers: { name: string; role: string | null }[];
   moduleNames: string[];
-  enrollments: { id: number; numero: number; nombre: string; rut: string; telefono: string }[];
+  enrollments: { id: number; numero: number; nombre: string; rut: string }[];
   theorySessions: { id: number; date: string; status: string }[];
 }
 

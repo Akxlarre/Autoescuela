@@ -15,6 +15,8 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
@@ -127,6 +129,7 @@ export function resolveCertificadoBAction(
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TooltipModule,
+    EmptyStateComponent,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
@@ -671,7 +674,21 @@ export function resolveCertificadoBAction(
             }
 
             <!-- ── PROGRESO: CLASE PROFESIONAL ── -->
-            @if (alumno.licenseGroup === 'professional') {
+            <!-- fix-332-m (D12): asistencia, nota y elegibilidad salen de Asistencia y Evaluaciones
+                 Profesional, bloqueados en el piloto. En vez de tarjetas en cero, se explica. -->
+            @if (alumno.licenseGroup === 'professional' && !academicoProfVisible) {
+              <div
+                class="bento-card flex-1 flex items-center justify-center"
+                data-llm-info="progreso-profesional-no-disponible"
+              >
+                <app-empty-state
+                  icon="book-open"
+                  message="Asistencia y evaluaciones aún no habilitadas"
+                  subtitle="La asistencia, las notas y el certificado de Clase Profesional se registran en módulos que no están disponibles en esta etapa."
+                />
+              </div>
+            }
+            @if (alumno.licenseGroup === 'professional' && academicoProfVisible) {
               <!-- Asistencia Teórica Prof -->
               <div class="bento-card shrink-0" appCardHover>
                 <div class="bento-card__body bento-card__body--spread">
@@ -1369,13 +1386,19 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     }),
   );
 
+  /**
+   * Asistencia, notas y certificado de Clase Profesional dependen de Asistencia y Evaluaciones
+   * Profesional, bloqueados por el recorte del piloto (fix-332-m, D12).
+   */
+  protected readonly academicoProfVisible = !isBlockedInPilot('clase-profesional-recorte');
+
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
     const alumno = this.facade.alumno();
     if (!alumno) return [];
 
     const certPath = this.facade.certPdfPath();
-    let certAction: SectionHeroAction;
+    let certAction: SectionHeroAction | null = null;
 
     if (alumno.licenseGroup === 'professional') {
       const isGeneratingCert = this.certProfFacade.generatingId() === alumno.enrollmentId;
@@ -1390,6 +1413,10 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           loading: isViewingCert,
           disabled: isViewingCert,
         };
+      } else if (!this.academicoProfVisible) {
+        // fix-332-m (D12): los criterios (asistencia, nota) salen de módulos bloqueados en el
+        // piloto; el botón saldría siempre "Certificado (1/3 criterios)" deshabilitado.
+        certAction = null;
       } else if (this.facade.elegibleProf()) {
         certAction = {
           id: 'generar-certificado',
@@ -1572,7 +1599,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       ...reagendarActions,
       ...contractActions,
       ...carnetActions,
-      certAction,
+      ...(certAction ? [certAction] : []),
       ...exAlumnoActions,
       { id: 'editar-alumno', label: 'Editar Perfil', icon: 'user-pen', primary: true },
       {

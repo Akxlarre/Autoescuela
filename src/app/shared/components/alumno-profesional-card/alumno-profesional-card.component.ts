@@ -16,6 +16,7 @@ import {
   getSemaforoBadgeVariant,
 } from '@core/utils/alumno-profesional-status.utils';
 import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesional-table-row.model';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /**
  * AlumnoProfesionalCard — card de alumno profesional para la vista comprimida/móvil.
@@ -115,24 +116,32 @@ import type { AlumnoProfesionalTableRow } from '@core/models/ui/alumno-profesion
                 <app-badge variant="info">Convalida {{ alumno().convalidatedLicense }}</app-badge>
               }
             </div>
+            <!-- fix-330-m (D11): la categoría debajo de la promoción -->
+            @if (alumno().licenseClass) {
+              <span class="text-2xs text-text-muted">{{ alumno().licenseClass }}</span>
+            }
           </div>
-          <div class="flex flex-col gap-1">
-            <span class="micro-label">Asistencia</span>
-            <div class="flex items-center w-fit">
-              <app-badge [variant]="semaforoBadgeVariant()">{{ semaforo().label }}</app-badge>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="micro-label">Progreso Módulos</span>
-            <div class="flex items-center gap-2">
-              <div class="w-14 h-1.5 rounded-full bg-elevated overflow-hidden">
-                <div class="h-full bg-brand rounded-full" [style.width.%]="progressPct()"></div>
+          <!-- fix-332-m (D12): asistencia y módulos ocultos mientras Asistencia/Evaluaciones
+               Profesional sigan bloqueados en el piloto (siempre saldrían vacíos) -->
+          @if (academicoVisible) {
+            <div class="flex flex-col gap-1">
+              <span class="micro-label">Asistencia</span>
+              <div class="flex items-center w-fit">
+                <app-badge [variant]="semaforoBadgeVariant()">{{ semaforo().label }}</app-badge>
               </div>
-              <span class="font-medium text-text-secondary font-mono text-xs"
-                >{{ alumno().modulosAprobados }}/{{ alumno().modulosTotal }}</span
-              >
             </div>
-          </div>
+            <div class="flex flex-col gap-1">
+              <span class="micro-label">Progreso Módulos</span>
+              <div class="flex items-center gap-2">
+                <div class="w-14 h-1.5 rounded-full bg-elevated overflow-hidden">
+                  <div class="h-full bg-brand rounded-full" [style.width.%]="progressPct()"></div>
+                </div>
+                <span class="font-medium text-text-secondary font-mono text-xs"
+                  >{{ alumno().modulosAprobados }}/{{ alumno().modulosTotal }}</span
+                >
+              </div>
+            </div>
+          }
           <div class="flex flex-col gap-1">
             <span class="micro-label">Saldo</span>
             <span class="font-medium text-text-secondary text-xs">{{
@@ -207,6 +216,9 @@ export class AlumnoProfesionalCardComponent {
   protected readonly statusBadgeVariant = computed(() =>
     getAlumnoStatusBadgeVariant(this.alumno().estado),
   );
+
+  /** Asistencia/módulos solo si sus módulos no están bloqueados en el piloto (fix-332-m). */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   protected readonly semaforo = computed(() => getSemaforo(this.alumno().semaforo));
   protected readonly semaforoBadgeVariant = computed(() =>

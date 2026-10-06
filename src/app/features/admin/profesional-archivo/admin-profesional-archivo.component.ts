@@ -22,6 +22,9 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { PromocionesFacade } from '@core/facades/promociones.facade';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { PromocionDetalleContentComponent } from '@shared/components/promocion-detalle-content/promocion-detalle-content.component';
 
 @Component({
   selector: 'app-admin-profesional-archivo',
@@ -37,6 +40,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    PromocionDetalleContentComponent,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout #bentoGrid>
@@ -46,7 +50,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         [animateOnInit]="false"
         [loading]="facade.isLoadingAlumnos()"
         title="Archivo · Clase Profesional"
-        subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
+        [subtitle]="
+          showAcademic
+            ? 'Historial completo de promociones finalizadas — asistencia y evaluaciones'
+            : 'Promociones finalizadas: sus cursos, relatores y alumnos'
+        "
         [actions]="[]"
       />
 
@@ -57,7 +65,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           <div class="flex-1 max-w-xl">
             <label class="item-title mb-2 block"> Promoción archivada </label>
             <p class="mb-4 text-xs text-text-muted">
-              Busca y selecciona una promoción archivada para revisar notas y asistencia.
+              @if (showAcademic) {
+                Busca y selecciona una promoción archivada para revisar notas y asistencia.
+              } @else {
+                Busca y selecciona una promoción finalizada para ver sus cursos, relatores y
+                alumnos.
+              }
             </p>
 
             @if (facade.isLoading()) {
@@ -80,8 +93,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             }
           </div>
 
-          <!-- Pills de cursos (solo visible si hay promo seleccionada) -->
-          @if (facade.selectedPromocionId()) {
+          <!-- Pills de cursos (solo visible si hay promo seleccionada y la parte académica está habilitada) -->
+          @if (showAcademic && facade.selectedPromocionId()) {
             <div
               class="flex-1 border-t md:border-t-0 md:border-l border-border-subtle pt-4 md:pt-0 md:pl-6"
             >
@@ -126,17 +139,41 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             <div>
               <p class="text-sm font-medium text-text-primary">Selecciona una promoción</p>
               <p class="mt-1 text-xs text-text-muted">
-                Elige una promoción del desplegable para consultar su historial de asistencia y
-                notas.
+                Elige una promoción del desplegable para consultar sus cursos, relatores y alumnos.
               </p>
             </div>
           }
         </div>
       }
 
+      <!-- ═══ Detalle de la promoción elegida: el mismo de "Ver promoción" (fix-326-m) ═══ -->
+      @if (facade.selectedPromocionId()) {
+        <section class="bento-banner bento-fill bento-card flex flex-col" appCardHover>
+          @if (detalle(); as p) {
+            <div class="flex-1 min-h-0 overflow-y-auto p-5">
+              <app-promocion-detalle-content
+                [promo]="p"
+                [studentsByCurso]="promociones.cursoStudents()"
+                [loadingStudents]="promociones.isLoadingStudents()"
+              />
+            </div>
+          } @else {
+            <div class="flex-1 flex flex-col gap-3 p-5">
+              <app-skeleton-block variant="text" width="45%" height="20px" />
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="120px" />
+              <app-skeleton-block variant="rect" width="100%" height="160px" />
+            </div>
+          }
+        </section>
+      }
+
       <!-- ═══ Seleccionada promoción pero sin curso ═══ -->
       @if (
-        facade.selectedPromocionId() && !facade.selectedCursoId() && !facade.isLoadingAlumnos()
+        showAcademic &&
+        facade.selectedPromocionId() &&
+        !facade.selectedCursoId() &&
+        !facade.isLoadingAlumnos()
       ) {
         <div
           class="bento-banner bento-fill bento-card flex flex-col items-center justify-center gap-3 text-center"
@@ -148,8 +185,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         </div>
       }
 
-      <!-- ═══ Tabla de alumnos ═══ -->
-      @if (facade.selectedCursoId()) {
+      <!-- ═══ Tabla de alumnos (resultados académicos; oculta en el piloto) ═══ -->
+      @if (showAcademic && facade.selectedCursoId()) {
         <section class="bento-banner bento-fill bento-card p-0 flex flex-col" appCardHover>
           <div class="p-5 pb-0">
             <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -800,8 +837,23 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 })
 export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly facade = inject(ArchivoFacade);
+  /** Detalle de la promoción elegida: el mismo de "Ver promoción" (fix-326-m, D3a). */
+  protected readonly promociones = inject(PromocionesFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
+
+  /**
+   * Resultados académicos (asistencia, notas M1–M7, aprobación). Salen de Asistencia y
+   * Evaluaciones Profesional, bloqueados por el recorte del piloto: mientras lo estén, la sección
+   * se oculta en vez de mostrarse vacía (fix-326-m, D3a).
+   */
+  protected readonly showAcademic = !isBlockedInPilot('clase-profesional-recorte');
+
+  /** Solo la promoción elegida en Archivo (no una que haya quedado seleccionada en Promociones). */
+  protected readonly detalle = computed(() => {
+    const p = this.promociones.selectedPromocion();
+    return p && p.id === this.facade.selectedPromocionId() ? p : null;
+  });
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
@@ -853,6 +905,9 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
   ngOnInit(): void {
     this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
+    // ArchivoFacade es singleton (SWR): si ya había una promoción elegida, recargar su detalle.
+    const id = this.facade.selectedPromocionId();
+    if (id !== null) void this.promociones.loadPromocionDetalle(id);
   }
 
   ngAfterViewInit(): void {
@@ -866,6 +921,7 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
 
   protected onPromoChange(id: number | null): void {
     void this.facade.selectPromocion(id);
+    if (id !== null) void this.promociones.loadPromocionDetalle(id);
   }
 
   protected onCursoChange(id: number | null): void {

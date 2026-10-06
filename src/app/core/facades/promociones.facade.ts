@@ -17,6 +17,21 @@ import type {
 } from '@core/models/ui/promocion-table.model';
 import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
 import { computePromotionEndDate } from '@core/utils/promotion-end-date.utils';
+import {
+  promotionWriteErrorMessage,
+  suggestNextPromotionCode,
+} from '@core/utils/promotion-code.utils';
+
+/** Columnas de una promoción con sus cursos y relatores, tal como las mapea `mapToRow()`. */
+const PROMOTION_ROW_SELECT = `id, code, name, start_date, end_date, max_students, status, created_at,
+         promotion_courses (
+           id, course_id, max_students, status,
+           courses!inner ( id, code, name, is_convalidation ),
+           promotion_course_lecturers (
+             id, lecturer_id, role,
+             lecturers!inner ( id, first_names, paternal_last_name, maternal_last_name, specializations )
+           )
+         )`;
 
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
@@ -36,6 +51,7 @@ export class PromocionesFacade {
   private readonly _professionalCourses = signal<{ id: number; code: string; name: string }[]>([]);
   private readonly _cursoStudents = signal<Record<number, PromocionAlumno[]>>({});
   private readonly _isLoadingStudents = signal(false);
+  private readonly _isLoadingDetalle = signal(false);
   private readonly _holidaysCheckFailed = signal(false);
   private _initialized = false;
 
@@ -49,8 +65,16 @@ export class PromocionesFacade {
   readonly professionalCourses = this._professionalCourses.asReadonly();
   readonly cursoStudents = this._cursoStudents.asReadonly();
   readonly isLoadingStudents = this._isLoadingStudents.asReadonly();
+  /** Carga de `loadPromocionDetalle()` (Archivo, fix-326-m). */
+  readonly isLoadingDetalle = this._isLoadingDetalle.asReadonly();
   /** true si el último fetch de feriados falló (DNS/red/CORS/5xx) — end_date pudo calcularse sin feriados reales. */
   readonly holidaysCheckFailed = this._holidaysCheckFailed.asReadonly();
+
+  /**
+   * Crear, finalizar y cancelar promociones es solo del admin; la secretaria ve y edita datos
+   * operativos (fix-321-m, D5). La RLS lo hace cumplir en BD; esto solo adapta la UI.
+   */
+  readonly canManageLifecycle = computed(() => this.auth.currentUser()?.role === 'admin');
 
   // ── KPIs ────────────────────────────────────────────────────────────────────
   readonly totalPromociones = computed(() => this._promociones().length);
@@ -102,17 +126,7 @@ export class PromocionesFacade {
     // 1. Fetch promotions with courses, lecturers
     let query = this.supabase.client
       .from('professional_promotions')
-      .select(
-        `id, code, name, start_date, end_date, max_students, status, created_at,
-         promotion_courses (
-           id, course_id, max_students, status,
-           courses!inner ( id, code, name, is_convalidation ),
-           promotion_course_lecturers (
-             id, lecturer_id, role,
-             lecturers!inner ( id, first_names, paternal_last_name, maternal_last_name, specializations )
-           )
-         )`,
-      )
+      .select(PROMOTION_ROW_SELECT)
       .not('status', 'eq', 'finished')
       .order('start_date', { ascending: false });
 
@@ -123,26 +137,68 @@ export class PromocionesFacade {
     if (error) throw error;
 
     // 2. Fetch enrolled counts per promotion_course from enrollments
-    const allPcIds = (data as any[]).flatMap((p) =>
-      (p.promotion_courses ?? []).map((pc: any) => pc.id),
-    );
-    let enrolledCounts: Record<number, number> = {};
-    if (allPcIds.length > 0) {
-      const { data: enrollData } = await this.supabase.client
-        .from('enrollments')
-        .select('promotion_course_id')
-        .in('promotion_course_id', allPcIds)
-        .not('status', 'in', '("cancelled","draft")');
-      if (enrollData) {
-        enrolledCounts = enrollData.reduce((acc: Record<number, number>, e: any) => {
-          acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
-          return acc;
-        }, {});
-      }
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrolledCounts = await this.fetchEnrolledCounts(data as any[]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this._promociones.set((data as any[]).map((p) => this.mapToRow(p, enrolledCounts)));
+  }
+
+  /** Inscritos por promotion_course (excluye cancelados y borradores). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async fetchEnrolledCounts(promos: any[]): Promise<Record<number, number>> {
+    const allPcIds = promos.flatMap((p) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p.promotion_courses ?? []).map((pc: any) => pc.id),
+    );
+    if (allPcIds.length === 0) return {};
+    // fix-327-m (D9): inscritos = matrículas activas o completadas, sin personas archivadas
+    // (archivar cambia students.status, no la matrícula). El Libro de clases sí las sigue listando.
+    const { data: enrollData } = await this.supabase.client
+      .from('enrollments')
+      .select('promotion_course_id, students!inner(status)')
+      .in('promotion_course_id', allPcIds)
+      .in('status', ['active', 'completed']);
+    return (
+      (enrollData ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((e: any) => e.students?.status !== 'archived')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .reduce((acc: Record<number, number>, e: any) => {
+          acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
+          return acc;
+        }, {})
+    );
+  }
+
+  /**
+   * Carga una promoción por id (de cualquier estado, incluida finalizada) con el mismo detalle
+   * que "Ver promoción", la deja seleccionada y carga sus alumnos. Lo usa Archivo (fix-326-m),
+   * cuyas promociones no están en la lista de Promociones (excluye finalizadas).
+   */
+  async loadPromocionDetalle(id: number): Promise<void> {
+    this._selectedPromocion.set(null);
+    this._cursoStudents.set({});
+    this._isLoadingDetalle.set(true);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('professional_promotions')
+        .select(PROMOTION_ROW_SELECT)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+      const counts = await this.fetchEnrolledCounts([data]);
+      this.selectPromocion(this.mapToRow(data, counts));
+    } catch (err) {
+      this.toast.error(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar la promoción',
+      );
+    } finally {
+      this._isLoadingDetalle.set(false);
+    }
   }
 
   private async refreshSilently(): Promise<void> {
@@ -280,6 +336,18 @@ export class PromocionesFacade {
     return computePromotionEndDate(startDate, new Set(holidays));
   }
 
+  /**
+   * Siguiente número de promoción para precargar el formulario de crear (fix-323-m): el mayor
+   * existente + 1. El número es único en BD, así que se mira toda la tabla, no solo la sede.
+   */
+  async suggestNextCode(): Promise<string> {
+    const { data, error } = await this.supabase.client
+      .from('professional_promotions')
+      .select('code');
+    if (error) return '';
+    return suggestNextPromotionCode(((data ?? []) as { code: string | null }[]).map((r) => r.code));
+  }
+
   async crearPromocion(payload: CrearPromocionPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
@@ -293,6 +361,7 @@ export class PromocionesFacade {
         .from('professional_promotions')
         .insert({
           name: payload.name,
+          code: payload.code,
           start_date: payload.startDate,
           end_date: endDate,
           status: 'planned',
@@ -335,6 +404,9 @@ export class PromocionesFacade {
         }
       }
 
+      // 4b. El número de la promoción arma el código de cada curso ("281.2" para A2).
+      await this.propagateCodeToCourses(promo.id, payload.code);
+
       // 5. Cancelar sesiones que caen en feriados dentro del rango ya extendido
       const holidaysInRange = holidays.filter((d) => d >= payload.startDate && d <= endDate);
       if (holidaysInRange.length > 0) {
@@ -351,7 +423,8 @@ export class PromocionesFacade {
       return true;
     } catch (err) {
       const msg =
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción';
+        promotionWriteErrorMessage(err, payload.code) ??
+        (err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción');
       this.toast.error(msg);
       return false;
     } finally {
@@ -427,6 +500,20 @@ export class PromocionesFacade {
     ]);
   }
 
+  /**
+   * Matrículas activas de la promoción: las que el trigger de finalizar pasa a `completed`
+   * (fix-324-m, D3b). Se muestra en la confirmación antes de finalizar a mano.
+   */
+  async countActiveEnrollments(promotionId: number): Promise<number> {
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select('id, promotion_courses!inner(promotion_id)')
+      .eq('promotion_courses.promotion_id', promotionId)
+      .eq('status', 'active');
+    if (error) throw error;
+    return (data ?? []).length;
+  }
+
   async editarPromocion(id: number, payload: EditarPromocionPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
@@ -446,9 +533,10 @@ export class PromocionesFacade {
       return true;
     } catch (err) {
       const msg =
-        err instanceof Error
+        promotionWriteErrorMessage(err, payload.code) ??
+        (err instanceof Error
           ? this.sanitizer.sanitize(err).message
-          : 'Error al actualizar promoción';
+          : 'Error al actualizar promoción');
       this.toast.error(msg);
       return false;
     } finally {

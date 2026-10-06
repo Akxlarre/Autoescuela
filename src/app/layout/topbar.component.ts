@@ -29,6 +29,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { AjustesDrawerComponent } from '@shared/components/ajustes-drawer/ajustes-drawer.component';
 import { NotificationsHistoryDrawerComponent } from '@features/notificaciones-historial/notifications-history-drawer.component';
 import { Button } from 'primeng/button';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /**
  * Tabla de deep-links por `referenceType` × rol (Spec 0024, AC3; extendida fix-092-m).
@@ -49,6 +50,9 @@ export function resolveNotificationRoute(
       if (role === 'instructor') return '/app/instructor/tareas';
       return null;
     case 'preinscription':
+      // fix-328-m (D1): Pre-inscritos está bloqueado en el piloto; navegar terminaba en
+      // "Módulo no disponible". Sin ruta, la notificación solo cierra el panel.
+      if (isBlockedInPilot('clase-profesional-recorte')) return null;
       if (role === 'admin') return '/app/admin/clase-profesional/pre-inscritos';
       if (isSecretaria) return '/app/secretaria/profesional/pre-inscritos';
       return null;

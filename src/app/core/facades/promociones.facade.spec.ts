@@ -82,8 +82,10 @@ function createTableMock(tables: Record<string, { data?: unknown; error?: unknow
         insert: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue(res),
+        maybeSingle: vi.fn().mockResolvedValue(res),
         then: (resolve: any, reject: any) => Promise.resolve(res).then(resolve, reject),
       };
       builders.set(table, builder);
@@ -196,6 +198,7 @@ describe('PromocionesFacade — recuperación de feriados en end_date (0002-m)',
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: START,
       endDate: '2026-09-05', // valor "fijo" que el fix debe IGNORAR
       cursos: [],
@@ -229,6 +232,7 @@ describe('PromocionesFacade — recuperación de feriados en end_date (0002-m)',
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: START,
       endDate: 'irrelevante',
       cursos: [],
@@ -296,7 +300,13 @@ describe('PromocionesFacade — fallo del fetch de feriados es visible (fix-138)
     await facade.previewEndDate(START);
     expect(facade.holidaysCheckFailed()).toBe(true);
 
-    await facade.crearPromocion({ name: 'Promo Nueva', startDate: START, endDate: '', cursos: [] });
+    await facade.crearPromocion({
+      name: 'Promo Nueva',
+      code: '281',
+      startDate: START,
+      endDate: '',
+      cursos: [],
+    });
     expect(facade.holidaysCheckFailed()).toBe(false);
   });
 });
@@ -420,6 +430,7 @@ describe('PromocionesFacade — scope de sede (fix-090)', () => {
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
+      code: '281',
       startDate: '2026-08-01',
       endDate: '2026-08-30',
       cursos: [],
@@ -427,5 +438,190 @@ describe('PromocionesFacade — scope de sede (fix-090)', () => {
 
     const promoBuilder = mockSupabase._builders.get('professional_promotions');
     expect(promoBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ branch_id: 7 }));
+  });
+});
+
+describe('PromocionesFacade — ciclo de vida solo admin (fix-321-m, D5)', () => {
+  function setup(role: string) {
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return TestBed.inject(PromocionesFacade);
+  }
+
+  it('admin → canManageLifecycle() true (crear, finalizar y cancelar)', () => {
+    expect(setup('admin').canManageLifecycle()).toBe(true);
+  });
+
+  it('secretaria → canManageLifecycle() false', () => {
+    expect(setup('secretaria').canManageLifecycle()).toBe(false);
+  });
+});
+
+describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
+  const duplicateCode = {
+    code: '23505',
+    message: 'duplicate key value violates unique constraint "professional_promotions_code_key"',
+  };
+
+  function setup(tables: Record<string, { data?: unknown; error?: unknown }>) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    const mockSupabase = createTableMock(tables);
+    const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: toast },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => 2 } },
+      ],
+    });
+    return { facade: TestBed.inject(PromocionesFacade), mockSupabase, toast };
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('crearPromocion() guarda el número ingresado', async () => {
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: { id: 5 } },
+      promotion_courses: { data: [] },
+    });
+
+    await facade.crearPromocion({
+      name: 'Promoción 281 (12 de Octubre 2026)',
+      code: '281',
+      startDate: '2026-10-12',
+      endDate: '',
+      cursos: [],
+    });
+
+    expect(mockSupabase._builders.get('professional_promotions').insert).toHaveBeenCalledWith(
+      expect.objectContaining({ code: '281' }),
+    );
+  });
+
+  it('crearPromocion() con número repetido → toast claro, no el error crudo de Postgres', async () => {
+    const { facade, toast } = setup({ professional_promotions: { error: duplicateCode } });
+
+    const ok = await facade.crearPromocion({
+      name: 'Promoción 280',
+      code: '280',
+      startDate: '2026-10-12',
+      endDate: '',
+      cursos: [],
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith('El número 280 ya lo usa otra promoción. Elige otro.');
+  });
+
+  it('editarPromocion() con número repetido → toast claro', async () => {
+    const { facade, toast } = setup({ professional_promotions: { error: duplicateCode } });
+
+    const ok = await facade.editarPromocion(1, { name: 'Promo', code: '280', status: 'planned' });
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith('El número 280 ya lo usa otra promoción. Elige otro.');
+  });
+
+  it('suggestNextCode() → mayor número existente + 1', async () => {
+    const { facade } = setup({
+      professional_promotions: { data: [{ code: '279' }, { code: '280' }, { code: null }] },
+    });
+
+    expect(await facade.suggestNextCode()).toBe('281');
+  });
+
+  // fix-324-m (D3b): el modal de finalizar informa cuántas matrículas activas pasan a completadas
+  it('countActiveEnrollments() cuenta las matrículas activas de la promoción', async () => {
+    const { facade, mockSupabase } = setup({ enrollments: { data: [{ id: 1 }, { id: 2 }] } });
+
+    expect(await facade.countActiveEnrollments(7)).toBe(2);
+    const builder = mockSupabase._builders.get('enrollments');
+    expect(builder.eq).toHaveBeenCalledWith('promotion_courses.promotion_id', 7);
+    expect(builder.eq).toHaveBeenCalledWith('status', 'active');
+  });
+
+  // fix-327-m (D9): inscritos = matrículas activas o completadas, sin personas archivadas
+  it('el conteo de inscritos excluye a las personas archivadas y cuenta las completadas', async () => {
+    const promo = {
+      id: 1,
+      code: '280',
+      name: 'Promoción 280',
+      start_date: '2026-10-05',
+      end_date: '2026-11-10',
+      max_students: 100,
+      status: 'in_progress',
+      promotion_courses: [
+        {
+          id: 50,
+          course_id: 3,
+          max_students: 25,
+          status: 'in_progress',
+          courses: { id: 3, code: 'PROF-A2', name: 'Clase A2', is_convalidation: false },
+          promotion_course_lecturers: [],
+        },
+      ],
+    };
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: promo },
+      enrollments: {
+        data: [
+          { promotion_course_id: 50, status: 'active', students: { status: 'active' } },
+          { promotion_course_id: 50, status: 'completed', students: { status: 'graduated' } },
+          { promotion_course_id: 50, status: 'active', students: { status: 'archived' } },
+        ],
+      },
+    });
+
+    await facade.loadPromocionDetalle(1);
+
+    expect(facade.selectedPromocion()?.cursos[0].enrolledStudents).toBe(2);
+    expect(facade.selectedPromocion()?.totalEnrolled).toBe(2);
+    expect(mockSupabase._builders.get('enrollments').in).toHaveBeenCalledWith('status', [
+      'active',
+      'completed',
+    ]);
+  });
+
+  // fix-326-m (D3a): Archivo muestra una promoción finalizada con el mismo detalle que "Ver promoción"
+  it('loadPromocionDetalle() deja seleccionada una promoción finalizada con sus cursos', async () => {
+    const promo = {
+      id: 14,
+      code: '277',
+      name: 'Promoción 277 (24 de Agosto 2026)',
+      start_date: '2026-08-24',
+      end_date: '2026-09-28',
+      max_students: 100,
+      status: 'finished',
+      promotion_courses: [
+        {
+          id: 50,
+          course_id: 3,
+          max_students: 25,
+          status: 'finished',
+          courses: { id: 3, code: 'PROF-A2', name: 'Clase A2', is_convalidation: false },
+          promotion_course_lecturers: [],
+        },
+      ],
+    };
+    const { facade, mockSupabase } = setup({
+      professional_promotions: { data: promo },
+      enrollments: { data: [] },
+    });
+    await facade.loadPromocionDetalle(14);
+
+    const sel = facade.selectedPromocion();
+    expect(sel?.id).toBe(14);
+    expect(sel?.status).toBe('finished');
+    expect(sel?.cursos.map((c) => c.id)).toEqual([50]);
+    expect(mockSupabase._builders.get('professional_promotions').eq).toHaveBeenCalledWith('id', 14);
   });
 });

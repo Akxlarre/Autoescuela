@@ -16,6 +16,7 @@ import {
   buildAlumnosProfesionalPdfTable,
 } from '@core/utils/alumnos-profesional-export.utils';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
+import { buildFutureClassesBlockMessage } from '@core/utils/archive-confirmation.utils';
 import type {
   AlumnoProfesionalTableRow,
   SemaforoAsistencia,
@@ -41,7 +42,28 @@ interface RawProEnrollment {
   pending_balance: number | null;
   branch_id: number | null;
   students: { id: number; status: string | null; users: RawProUser };
-  promotion_courses: { id: number; courses: { name: string; license_class: string } | null } | null;
+  /** Curso de la matrícula: de aquí sale la categoría (A2–A5), tenga o no promoción. */
+  courses: { license_class: string | null } | null;
+  promotion_courses: {
+    id: number;
+    professional_promotions: { code: string | null; start_date: string | null } | null;
+  } | null;
+}
+
+/**
+ * Etiqueta de la columna "Promoción" (fix-330-m, D11): el número de la promoción; si no tiene,
+ * su fecha de inicio; sin promoción, "—".
+ */
+function promocionLabel(
+  promo: { code: string | null; start_date: string | null } | null | undefined,
+): string {
+  if (!promo) return '—';
+  if (promo.code) return `Promoción ${promo.code}`;
+  if (promo.start_date) {
+    const [y, m, d] = promo.start_date.split('-');
+    return `Promoción del ${d}-${m}-${y}`;
+  }
+  return '—';
 }
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
@@ -49,8 +71,10 @@ interface RawProEnrollment {
 /**
  * Estados de matrícula considerados "matriculados" en la Base Profesional.
  * 'completed' queda fuera: esos alumnos ya son Ex-Alumnos y solo se listan ahí.
+ * Solo 'active': ningún flujo deja una matrícula Profesional en 'inactive', 'withdrawn' ni
+ * 'cancelled' (fix-329-m, D2). Cuando se modele al desertor se define dónde se ve.
  */
-const ENROLLED_STATUSES = ['active', 'inactive'];
+const ENROLLED_STATUSES = ['active'];
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosProfesionalFacade {
@@ -175,18 +199,31 @@ export class AdminAlumnosProfesionalFacade {
    * actividad académica asociada. Se usa para decidir qué modal de confirmación
    * mostrar antes de archivar (`EliminarAlumnoModalComponent`).
    */
-  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean }> {
+  async checkHistorial(
+    studentId: number,
+  ): Promise<{ hasHistory: boolean; hasClaseB: boolean; clasesFuturas: number }> {
     const { data: enrollmentRows } = await this.supabase.client
       .from('enrollments')
-      .select('id')
+      .select('id, license_group, status')
       .eq('student_id', studentId)
       .neq('status', 'draft');
 
-    const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
+    const rows = (enrollmentRows ?? []) as {
+      id: number;
+      license_group: string | null;
+      status: string | null;
+    }[];
+    const enrollmentIds = rows.map((e) => e.id);
+    // fix-333-m (D8): archivar desde aquí archiva a la persona completa; si también está en
+    // Clase B, sale de esa base. Vigente = activa o con el pago en curso.
+    const hasClaseB = rows.some(
+      (e) =>
+        e.license_group === 'class_b' && (e.status === 'active' || e.status === 'pending_payment'),
+    );
 
-    if (enrollmentIds.length === 0) return { hasHistory: false };
+    if (enrollmentIds.length === 0) return { hasHistory: false, hasClaseB, clasesFuturas: 0 };
 
-    const [paymentsResult, theoryResult, practiceResult] = await Promise.all([
+    const [paymentsResult, theoryResult, practiceResult, futureClassesResult] = await Promise.all([
       this.supabase.client
         .from('payments')
         .select('id', { count: 'exact', head: true })
@@ -199,6 +236,13 @@ export class AdminAlumnosProfesionalFacade {
         .from('professional_practice_attendance')
         .select('id', { count: 'exact', head: true })
         .in('enrollment_id', enrollmentIds),
+      // fix-333-m: misma regla que la Base B (fix-277-m) — clases de Clase B por dictarse.
+      this.supabase.client
+        .from('class_b_sessions')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString()),
     ]);
 
     return {
@@ -206,10 +250,29 @@ export class AdminAlumnosProfesionalFacade {
         (paymentsResult.count ?? 0) > 0 ||
         (theoryResult.count ?? 0) > 0 ||
         (practiceResult.count ?? 0) > 0,
+      hasClaseB,
+      clasesFuturas: futureClassesResult.count ?? 0,
     };
   }
 
-  async archivarAlumno(studentId: number): Promise<void> {
+  /**
+   * Paso previo a archivar (fix-333-m). Archivar desde la Base Profesional archiva a la persona
+   * completa (D8), así que aplica la misma regla de la Base B (fix-277-m): con clases agendadas a
+   * futuro no se puede (toast). Si se puede, dice qué modal mostrar y si avisar de la Clase B.
+   */
+  async prepararArchivado(
+    studentId: number,
+  ): Promise<{ permitido: boolean; hasHistory: boolean; hasClaseB: boolean }> {
+    const { hasHistory, hasClaseB, clasesFuturas } = await this.checkHistorial(studentId);
+    if (clasesFuturas > 0) {
+      this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
+      return { permitido: false, hasHistory, hasClaseB };
+    }
+    return { permitido: true, hasHistory, hasClaseB };
+  }
+
+  /** true si se archivó. Si falla, avisa por toast y devuelve false (fix-333-m: ya no lanza). */
+  async archivarAlumno(studentId: number): Promise<boolean> {
     this._isArchiving.set(true);
     try {
       const { error } = await this.supabase.client
@@ -219,9 +282,10 @@ export class AdminAlumnosProfesionalFacade {
       if (error) throw error;
       this.toast.success('Alumno archivado correctamente.');
       await this.refreshSilently();
+      return true;
     } catch {
       this.toast.error('No se pudo archivar al alumno. Inténtalo de nuevo.');
-      throw new Error('archivar_failed');
+      return false;
     } finally {
       this._isArchiving.set(false);
     }
@@ -296,7 +360,8 @@ export class AdminAlumnosProfesionalFacade {
           `
           id, number, status, pending_balance, branch_id,
           students!inner(id, status, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id)),
-          promotion_courses(id, courses(name, license_class))
+          courses(license_class),
+          promotion_courses(id, professional_promotions(code, start_date))
         `,
         )
         .eq('license_group', 'professional')
@@ -373,7 +438,6 @@ export class AdminAlumnosProfesionalFacade {
     convalidationMap: Map<number, 'A4' | 'A3'>,
   ): AlumnoProfesionalTableRow {
     const u = e.students.users;
-    const course = e.promotion_courses?.courses ?? null;
     return {
       id: String(e.students.id),
       nombre: u.first_names,
@@ -382,8 +446,8 @@ export class AdminAlumnosProfesionalFacade {
       email: u.email,
       celular: u.phone ?? '',
       nroMatricula: e.number ?? '—',
-      promocion: course?.name ?? '—',
-      licenseClass: course?.license_class ?? '',
+      promocion: promocionLabel(e.promotion_courses?.professional_promotions),
+      licenseClass: e.courses?.license_class ?? '',
       semaforo: flagMap.get(e.id) ?? null,
       modulosAprobados: passedMap.get(e.id) ?? 0,
       modulosTotal: MODULE_COUNT,
@@ -400,10 +464,6 @@ export class AdminAlumnosProfesionalFacade {
         return 'Activo';
       case 'completed':
         return 'Finalizado';
-      case 'inactive':
-        return 'Inactivo';
-      case 'cancelled':
-        return 'Retirado';
       default:
         return 'Pre-inscrito';
     }

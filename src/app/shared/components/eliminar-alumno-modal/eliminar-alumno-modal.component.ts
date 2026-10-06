@@ -113,6 +113,26 @@ import { isArchiveConfirmationText } from '@core/utils/archive-confirmation.util
 
           <!-- Body -->
           <div class="px-6 py-5 flex flex-col gap-4">
+            <!-- fix-333-m: aviso adicional opcional (p. ej. archivar desde Profesional saca a la
+                 persona también de la Base B) -->
+            @if (extraWarning(); as warning) {
+              <div
+                class="flex items-start gap-3 p-4 rounded-xl"
+                style="
+                  background: var(--state-warning-bg);
+                  border: 1px solid var(--state-warning-border);
+                "
+                data-llm-info="aviso-archivar-otra-licencia"
+              >
+                <app-icon
+                  name="alert-triangle"
+                  [size]="16"
+                  color="var(--state-warning)"
+                  class="shrink-0 mt-0.5"
+                />
+                <p class="text-sm leading-relaxed m-0 text-text-primary">{{ warning }}</p>
+              </div>
+            }
             @if (hasHistory()) {
               <!-- Advertencia historial contable -->
               <div
@@ -207,6 +227,8 @@ export class EliminarAlumnoModalComponent {
   readonly alumnoNombre = input.required<string>();
   readonly hasHistory = input(false);
   readonly isDeleting = input(false);
+  /** Aviso adicional opcional que se muestra arriba del cuerpo (fix-333-m). */
+  readonly extraWarning = input<string | null>(null);
 
   readonly confirmado = output<void>();
   readonly cancelado = output<void>();
