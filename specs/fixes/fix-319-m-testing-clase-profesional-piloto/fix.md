@@ -114,6 +114,7 @@ otra cosa, es ❌ y va a su propio fix.
 | D13 | A07 / A11 | Al aceptar "Conmutar Sede", ¿se queda en la pantalla actual? | ✅ **Navega al ítem** que se cliqueó, además de cambiar la sede. |
 | D14 | A09 / S22 | Al salir de una pantalla Profesional, ¿en qué sede queda el selector? | ✅ **En la que tenía antes de entrar** ("Todas" si venía de "Todas"), y se guarda igual que se muestra. |
 | D15 | H06 | Inasistencias, Reagendamientos, Ficha Técnica y "Generar Carnet" en la ficha Profesional | ✅ **Se ocultan los 4 en modo Profesional**; Clase B no cambia. |
+| D17 | (Matías, nuevo) | Ficha del alumno: ¿se puede cambiar la sede del topbar? | ✅ **No: toda ficha (B y Profesional) bloquea el selector en la sede de la matrícula abierta**, sigue a la pestaña elegida y al salir vuelve a la sede previa (`fix-342-m`). |
 | D16 | F03 | Tarjetas móviles angostas (patrón compartido) | ✅ **Fix propio que corrige el patrón en todas las pantallas** que lo usan, no solo las bases de alumnos. |
 
 **Pendiente de modelar, para hablar con el dueño (no bloquea este track):** el **desertor** de
@@ -321,6 +322,7 @@ Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta)
 | `.card` sin capa le gana a `p-0`/`p-N` (~92 archivos, también escritorio) — causa de fondo de F03 | `fix-341-m-card-respeta-utilities-de-tailwind` | ✅ cerrado 2026-10-06 (portales alumno/instructor sin verificar visualmente: bloqueados) |
 | Base Profesional 375 px: la lista tapa los KPIs del hero (previo) | sin track — bloque 5 | ⏳ |
 | Comunicación 375 px: pestañas sin texto (previo) | sin track — bloque 5 | ⏳ |
+| D17 — la ficha deja cambiar la sede del topbar (reportado por Matías) | `fix-342-m-ficha-bloquea-sede-del-alumno` | ✅ cerrado 2026-10-06 |
 
 ## Test de regresión
 

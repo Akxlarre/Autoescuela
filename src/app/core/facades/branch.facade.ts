@@ -62,6 +62,13 @@ export class BranchFacade {
    * (fix-334-m / D14). `undefined` = no hay modo Profesional activo.
    */
   private _branchBeforeProfessional: number | null | undefined = undefined;
+  /**
+   * Bloqueo de la sede en una vista que pertenece a una sola sede (ficha del alumno, fix-342-m).
+   * `null` = sin bloqueo.
+   */
+  private readonly _branchLock = signal<{ id: number; reason: string } | null>(null);
+  /** Sede que había antes del primer `lockToBranch()`; `undefined` = sin bloqueo activo. */
+  private _branchBeforeLock: number | null | undefined = undefined;
   /** Carga de sedes en curso o terminada; `null` = nadie la pidió todavía. */
   private _loadPromise: Promise<void> | null = null;
   /** true cuando `_branches` tiene la lista real de la BD (no el stub de `localStorage`). */
@@ -72,17 +79,27 @@ export class BranchFacade {
   readonly selectedBranchId = this._selectedBranchId.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  readonly requiresSpecificBranch = this._requiresSpecificBranch.asReadonly();
+  readonly requiresSpecificBranch = computed(
+    () => this._requiresSpecificBranch() || this._branchLock() !== null,
+  );
   readonly professionalOnly = this._professionalOnly.asReadonly();
 
-  /** IDs de sedes deshabilitadas en el selector. No vacío solo cuando professionalOnly=true. */
-  readonly disabledBranchIds = computed(() =>
-    this._professionalOnly()
+  /**
+   * IDs de sedes deshabilitadas en el selector: con un bloqueo de sede (ficha del alumno,
+   * fix-342-m) todas menos la bloqueada; en modo Profesional, las sin Clase Profesional.
+   */
+  readonly disabledBranchIds = computed(() => {
+    const lock = this._branchLock();
+    if (lock)
+      return this._branches()
+        .filter((b) => b.id !== lock.id)
+        .map((b) => b.id);
+    return this._professionalOnly()
       ? this._branches()
           .filter((b) => !b.hasProfessional)
           .map((b) => b.id)
-      : [],
-  );
+      : [];
+  });
 
   /** Etiqueta de la sede activa; "Todas las escuelas" cuando no hay filtro. */
   readonly selectedBranchLabel = computed(() => {
@@ -96,6 +113,8 @@ export class BranchFacade {
    * null cuando no hay restricción activa (estado normal).
    */
   readonly lockReason = computed<string | null>(() => {
+    const lock = this._branchLock();
+    if (lock) return lock.reason;
     if (this._professionalOnly()) return 'Solo sedes con Clase Profesional';
     if (this._requiresSpecificBranch()) return 'Se requiere una sede para esta vista';
     return null;
@@ -281,6 +300,28 @@ export class BranchFacade {
     const previous = this._branchBeforeProfessional;
     this._branchBeforeProfessional = undefined;
     this.selectBranch(previous);
+  }
+
+  /**
+   * Fija la sede (en memoria, sin guardarla) y bloquea el selector en ella, con `reason` como
+   * motivo visible (fix-342-m / D17: la ficha del alumno, en la sede de su matrícula). Llamarlo
+   * de nuevo mueve el bloqueo sin olvidar la sede original.
+   */
+  lockToBranch(id: number, reason: string): void {
+    if (this._branchBeforeLock === undefined) {
+      this._branchBeforeLock = this._selectedBranchId();
+    }
+    this._branchLock.set({ id, reason });
+    this._selectedBranchId.set(id);
+  }
+
+  /** Quita el bloqueo y vuelve a la sede que había antes del primer `lockToBranch()`. */
+  releaseBranchLock(): void {
+    if (this._branchBeforeLock === undefined) return;
+    const previous = this._branchBeforeLock;
+    this._branchBeforeLock = undefined;
+    this._branchLock.set(null);
+    this._selectedBranchId.set(previous);
   }
 
   /** Si la sede activa no tiene Clase Profesional, cambia (en memoria) a la primera que sí. */

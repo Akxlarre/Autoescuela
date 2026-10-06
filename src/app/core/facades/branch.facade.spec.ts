@@ -395,6 +395,77 @@ describe('BranchFacade', () => {
       expect(f.branches().map((b) => b.id)).toEqual([1, 2]);
     });
 
+    // fix-342-m (D17): la ficha del alumno bloquea el selector en la sede de su matrícula.
+    describe('bloqueo de sede (fix-342-m)', () => {
+      const REASON = 'Sede de la matrícula del alumno';
+
+      it('fija la sede en memoria, sin guardarla, y deshabilita "Todas" y las demás', async () => {
+        const { facade: f } = buildFacade(null);
+        await f.loadBranches();
+
+        f.lockToBranch(1, REASON);
+
+        expect(f.selectedBranchId()).toBe(1);
+        expect(persisted()).toBeNull();
+        expect(f.requiresSpecificBranch()).toBe(true);
+        expect(f.disabledBranchIds()).toEqual([2]);
+        expect(f.lockReason()).toBe(REASON);
+      });
+
+      it('al liberar vuelve a la sede previa ("Todas") y deja de bloquear', async () => {
+        const { facade: f } = buildFacade(null);
+        await f.loadBranches();
+        f.lockToBranch(1, REASON);
+
+        f.releaseBranchLock();
+
+        expect(f.selectedBranchId()).toBeNull();
+        expect(f.requiresSpecificBranch()).toBe(false);
+        expect(f.disabledBranchIds()).toEqual([]);
+        expect(f.lockReason()).toBeNull();
+      });
+
+      it('cambiar de matrícula mueve el bloqueo y al liberar vuelve a la sede ORIGINAL', async () => {
+        const { facade: f } = buildFacade({ id: 2, name: 'Conductores Chillán' });
+        await f.loadBranches();
+
+        f.lockToBranch(1, REASON);
+        f.lockToBranch(2, REASON);
+        expect(f.selectedBranchId()).toBe(2);
+        expect(f.disabledBranchIds()).toEqual([1]);
+
+        f.lockToBranch(1, REASON);
+        f.releaseBranchLock();
+        expect(f.selectedBranchId()).toBe(2);
+        expect(JSON.parse(persisted()!).id).toBe(2);
+      });
+
+      it('liberar sin bloqueo no toca la sede', async () => {
+        const { facade: f } = buildFacade(null);
+        await f.loadBranches();
+        f.selectBranch(2);
+
+        f.releaseBranchLock();
+
+        expect(f.selectedBranchId()).toBe(2);
+      });
+
+      it('salir de Base Profesional → ficha → volver: la ficha bloquea y la Base vuelve a su sede', async () => {
+        const { facade: f } = buildFacade(null);
+        await f.loadBranches();
+        f.setProfessionalOnly(true); // Base Profesional
+        f.setProfessionalOnly(false); // se destruye al abrir la ficha → vuelve a "Todas"
+        f.lockToBranch(2, REASON); // ficha de un alumno de Conductores
+        expect(f.selectedBranchId()).toBe(2);
+        expect(f.lockReason()).toBe(REASON);
+
+        f.releaseBranchLock(); // Volver
+        f.setProfessionalOnly(true); // Base Profesional otra vez
+        expect(f.selectedBranchId()).toBe(2);
+        expect(f.lockReason()).toBe('Solo sedes con Clase Profesional');
+      });
+    });
+
     it('ensureBranchesLoaded() carga si nadie lo hizo, aunque haya un stub de localStorage', async () => {
       const { facade: f, from } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
       expect(f.branches()).toHaveLength(1);

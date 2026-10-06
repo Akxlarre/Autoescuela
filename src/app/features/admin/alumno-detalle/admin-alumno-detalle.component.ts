@@ -24,6 +24,7 @@ import { PagosFacade } from '@core/facades/pagos.facade';
 import { AdminPagoDetalleDrawerComponent } from '@features/admin/pagos/admin-pago-detalle-drawer.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -1296,6 +1297,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   private readonly certProfFacade = inject(CertificacionProfesionalFacade);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
   protected readonly showsClaseBActions = showsClaseBActions;
@@ -1346,6 +1348,15 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       if (this.layoutDrawer.isOpen() || !this.refrescarAlCerrarPanelDePagos) return;
       this.refrescarAlCerrarPanelDePagos = false;
       untracked(() => void this.facade.refresh());
+    });
+
+    // fix-342-m (D17): la ficha es de un alumno y su matrícula tiene una sede. El selector del
+    // topbar queda bloqueado en esa sede (sigue a la pestaña de matrícula elegida); al salir
+    // vuelve a la que había. Antes quedaba libre y se podía elegir una sede ajena al alumno.
+    effect(() => {
+      const branchId = this.facade.alumno()?.branchId;
+      if (branchId == null) return;
+      untracked(() => this.branchFacade.lockToBranch(branchId, 'Sede de la matrícula del alumno'));
     });
   }
 
@@ -1769,6 +1780,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     window.removeEventListener('scroll', this.repositionCardMenuListener, true);
     window.removeEventListener('resize', this.repositionCardMenuListener);
     this.facade.destroyRealtime();
+    this.branchFacade.releaseBranchLock(); // fix-342-m
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────
