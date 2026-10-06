@@ -144,7 +144,8 @@ const BILLING_LABEL: Record<string, string> = {
           </div>
 
           <!-- ══ VISTA MOBILE (contenedor angosto): cards apiladas ═══════════════ -->
-          <div class="mobile-view show-on-squeeze p-4 space-y-3">
+          <!-- fix-341-m: el card ya da el margen lateral (no es p-0); sin px propio -->
+          <div class="mobile-view show-on-squeeze py-4 space-y-3">
             @if (facade.isLoading()) {
               @for (i of skeletonRows; track i) {
                 <div class="rounded-xl p-4 flex flex-col gap-3 border border-border-muted">

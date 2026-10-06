@@ -36,6 +36,7 @@ import { CLASE_B_ARCHIVE_WARNING } from '@core/utils/archive-confirmation.utils'
         basePath="/app/admin"
         [alumnos]="facade.alumnos()"
         [isLoading]="facade.isLoading()"
+        [error]="facade.error()"
         [trashView]="facade.trashView()"
         (refreshRequested)="facade.initialize()"
         (preInscritosRequested)="showPreInscritos.set(true)"
@@ -86,10 +87,12 @@ export class AdminAlumnosProfesionalComponent implements OnInit {
     // fix-028: fuerza una sede con Clase Profesional (deshabilita "Todas"/sedes sin profesional
     // en el selector) para no quedar en una vista vacía. Patrón de las demás páginas profesionales.
     this.branchFacade.setProfessionalOnly(true);
-    this.facade.initialize();
+    // La carga inicial la hace el effect() del constructor; llamarla también acá duplicaba la
+    // consulta (fix-338-m / S16, mismo caso que hotfix-055-b).
     this.destroyRef.onDestroy(() => {
       this.branchFacade.setProfessionalOnly(false);
       this.facade.dispose();
+      this.facade.leaveTrashView(); // fix-339-m: al volver se ve la lista activa
     });
   }
 

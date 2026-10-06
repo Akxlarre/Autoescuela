@@ -24,6 +24,7 @@ import { PagosFacade } from '@core/facades/pagos.facade';
 import { AdminPagoDetalleDrawerComponent } from '@features/admin/pagos/admin-pago-detalle-drawer.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -91,6 +92,16 @@ export function shouldShowEnrollmentSelector(state: {
   enrollmentCount: number;
 }): boolean {
   return !state.isLoading && !state.hasError && state.hasAlumno && state.enrollmentCount > 1;
+}
+
+/**
+ * ¿La ficha muestra las acciones de Clase B? (fix-336-m / D15). Inasistencias, Ficha Técnica,
+ * Reagendamientos y Carnet giran en torno a las clases prácticas con instructor: en una matrícula
+ * Profesional no tienen sentido. Con el tipo aún sin resolver tampoco, para no mostrarlas un
+ * instante y quitarlas.
+ */
+export function showsClaseBActions(licenseGroup: 'class_b' | 'professional' | undefined): boolean {
+  return licenseGroup === 'class_b';
 }
 
 /** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
@@ -392,66 +403,71 @@ export function resolveCertificadoBAction(
 
               <!-- ── Acciones operativas (Editar/Eliminar viven en el header) ── -->
               <div class="flex flex-col gap-2">
-                <div class="grid grid-cols-2 gap-2">
-                  @for (action of secondaryActions(); track action.id) {
-                    <button
-                      type="button"
-                      class="btn-secondary w-full justify-center gap-1.5"
-                      [disabled]="action.disabled ?? false"
-                      [pTooltip]="action.label"
-                      tooltipPosition="top"
-                      [attr.data-llm-action]="action.id"
-                      [attr.aria-haspopup]="action.menu ? 'menu' : null"
-                      [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
-                      (click)="
-                        action.menu
-                          ? toggleCardMenu(action.id, $event)
-                          : handleHeroAction(action.id)
-                      "
-                    >
-                      @if (action.icon) {
-                        <app-icon
-                          [name]="action.icon"
-                          [size]="14"
-                          [class.animate-spin]="action.loading"
-                        />
-                      }
-                      <span class="truncate min-w-0">{{ action.label }}</span>
-                      @if (action.menu) {
-                        <app-icon
-                          name="chevron-down"
-                          [size]="12"
-                          class="shrink-0 card-menu-chevron"
-                          [class.card-menu-chevron--open]="openCardMenuId() === action.id"
-                        />
-                      }
-                    </button>
-                  }
+                <!-- fix-336-m: en Profesional puede quedar vacía; sin esto deja un hueco extra -->
+                @if (secondaryActions().length > 0 || showsClaseBActions(alumno.licenseGroup)) {
+                  <div class="grid grid-cols-2 gap-2">
+                    @for (action of secondaryActions(); track action.id) {
+                      <button
+                        type="button"
+                        class="btn-secondary w-full justify-center gap-1.5"
+                        [disabled]="action.disabled ?? false"
+                        [pTooltip]="action.label"
+                        tooltipPosition="top"
+                        [attr.data-llm-action]="action.id"
+                        [attr.aria-haspopup]="action.menu ? 'menu' : null"
+                        [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
+                        (click)="
+                          action.menu
+                            ? toggleCardMenu(action.id, $event)
+                            : handleHeroAction(action.id)
+                        "
+                      >
+                        @if (action.icon) {
+                          <app-icon
+                            [name]="action.icon"
+                            [size]="14"
+                            [class.animate-spin]="action.loading"
+                          />
+                        }
+                        <span class="truncate min-w-0">{{ action.label }}</span>
+                        @if (action.menu) {
+                          <app-icon
+                            name="chevron-down"
+                            [size]="12"
+                            class="shrink-0 card-menu-chevron"
+                            [class.card-menu-chevron--open]="openCardMenuId() === action.id"
+                          />
+                        }
+                      </button>
+                    }
 
-                  <!-- Nuevos (Fase 1 — solo UI, sin lógica todavía) -->
-                  <button
-                    type="button"
-                    class="btn-secondary w-full justify-center gap-1.5"
-                    data-llm-action="ver-inasistencias"
-                    pTooltip="Inasistencias"
-                    tooltipPosition="top"
-                    (click)="openInasistenciasPanel()"
-                  >
-                    <app-icon name="alert-triangle" [size]="14" />
-                    <span class="truncate min-w-0">Inasistencias</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-secondary w-full justify-center gap-1.5"
-                    data-llm-action="ver-ficha-tecnica"
-                    pTooltip="Ficha Técnica"
-                    tooltipPosition="top"
-                    (click)="openFichaTecnicaPanel()"
-                  >
-                    <app-icon name="file-text" [size]="14" />
-                    <span class="truncate min-w-0">Ficha Técnica</span>
-                  </button>
-                </div>
+                    <!-- fix-336-m (D15): clases prácticas de Clase B; no aplican a Profesional -->
+                    @if (showsClaseBActions(alumno.licenseGroup)) {
+                      <button
+                        type="button"
+                        class="btn-secondary w-full justify-center gap-1.5"
+                        data-llm-action="ver-inasistencias"
+                        pTooltip="Inasistencias"
+                        tooltipPosition="top"
+                        (click)="openInasistenciasPanel()"
+                      >
+                        <app-icon name="alert-triangle" [size]="14" />
+                        <span class="truncate min-w-0">Inasistencias</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-secondary w-full justify-center gap-1.5"
+                        data-llm-action="ver-ficha-tecnica"
+                        pTooltip="Ficha Técnica"
+                        tooltipPosition="top"
+                        (click)="openFichaTecnicaPanel()"
+                      >
+                        <app-icon name="file-text" [size]="14" />
+                        <span class="truncate min-w-0">Ficha Técnica</span>
+                      </button>
+                    }
+                  </div>
+                }
 
                 <!-- spec 0009-m (AC6): evidencia del consentimiento, en solo lectura -->
                 <button
@@ -467,17 +483,19 @@ export function resolveCertificadoBAction(
                 </button>
 
                 <!-- fix-009-i: Historial de Reagendamientos — fila completa, abre drawer -->
-                <button
-                  type="button"
-                  class="btn-secondary w-full justify-center gap-1.5"
-                  data-llm-action="ver-reagendamientos"
-                  pTooltip="Reagendamientos"
-                  tooltipPosition="top"
-                  (click)="openReagendamientosPanel()"
-                >
-                  <app-icon name="calendar-clock" [size]="14" />
-                  <span class="truncate min-w-0">Reagendamientos</span>
-                </button>
+                @if (showsClaseBActions(alumno.licenseGroup)) {
+                  <button
+                    type="button"
+                    class="btn-secondary w-full justify-center gap-1.5"
+                    data-llm-action="ver-reagendamientos"
+                    pTooltip="Reagendamientos"
+                    tooltipPosition="top"
+                    (click)="openReagendamientosPanel()"
+                  >
+                    <app-icon name="calendar-clock" [size]="14" />
+                    <span class="truncate min-w-0">Reagendamientos</span>
+                  </button>
+                }
               </div>
             </div>
           </div>
@@ -1279,8 +1297,10 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   private readonly certProfFacade = inject(CertificacionProfesionalFacade);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+  protected readonly showsClaseBActions = showsClaseBActions;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -1328,6 +1348,15 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       if (this.layoutDrawer.isOpen() || !this.refrescarAlCerrarPanelDePagos) return;
       this.refrescarAlCerrarPanelDePagos = false;
       untracked(() => void this.facade.refresh());
+    });
+
+    // fix-342-m (D17): la ficha es de un alumno y su matrícula tiene una sede. El selector del
+    // topbar queda bloqueado en esa sede (sigue a la pestaña de matrícula elegida); al salir
+    // vuelve a la que había. Antes quedaba libre y se podía elegir una sede ajena al alumno.
+    effect(() => {
+      const branchId = this.facade.alumno()?.branchId;
+      if (branchId == null) return;
+      untracked(() => this.branchFacade.lockToBranch(branchId, 'Sede de la matrícula del alumno'));
     });
   }
 
@@ -1490,7 +1519,8 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     const isCarnetBusy = isGenerating || isViewingCarnet;
     const carnetActions: SectionHeroAction[] = [];
 
-    if (alumno.licenseGroup === 'class_b') {
+    // fix-336-m (D15): solo Clase B tiene carnet; antes Profesional veía "Generar Carnet" deshabilitado.
+    if (showsClaseBActions(alumno.licenseGroup)) {
       carnetActions.push({
         id: 'carnet-menu',
         label: isGenerating ? 'Generando...' : isViewingCarnet ? 'Cargando...' : 'Carnet',
@@ -1503,14 +1533,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           fullPath: this.facade.licenseFullPath(),
           isReinforcement: alumno.isReinforcement,
         }),
-      });
-    } else {
-      carnetActions.push({
-        id: 'generar-carnet',
-        label: 'Generar Carnet',
-        icon: 'id-card',
-        primary: false,
-        disabled: true,
       });
     }
 
@@ -1758,6 +1780,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
     window.removeEventListener('scroll', this.repositionCardMenuListener, true);
     window.removeEventListener('resize', this.repositionCardMenuListener);
     this.facade.destroyRealtime();
+    this.branchFacade.releaseBranchLock(); // fix-342-m
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

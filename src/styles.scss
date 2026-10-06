@@ -11,6 +11,7 @@
 /* Layouts */
 @use './styles/layout/bento-grid';
 @use './styles/layout/page-shell';
+@use './styles/layout/mobile-view';
 
 /* Componentes — tokens canónicos de campos de formulario (fix-025 / form-ux §2) */
 @use './styles/components/form-fields';

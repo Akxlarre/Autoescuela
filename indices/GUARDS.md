@@ -14,7 +14,7 @@
 | `roleGuard` | `CanActivateFn` | Bloquea acceso a portales de rol incorrecto | `/app/admin`, `/app/secretaria`, `/app/instructor`, `/app/alumno` |
 | `firstLoginGuard` | `CanActivateFn` | Fuerza cambio de contraseña en primer login (`first_login=true`) | Rutas de portal tras autenticar |
 | `enrollmentDraftGuard` | `CanDeactivateFn` | Confirma salida si hay un draft de matrícula activo (no guardado) | `SecretariaMatriculaComponent` |
-| `professionalBranchGuard` | `CanActivateFn` | Bloquea rutas profesionales de secretaría si la sede no ofrece Clase Profesional (fix-028-m/029) | 11 rutas profesionales de secretaría |
+| `professionalBranchGuard` | `CanActivateFn` | Bloquea rutas profesionales de secretaría si la sede no ofrece Clase Profesional (fix-028-m/029). Desde fix-334-m espera `BranchFacade.ensureBranchesLoaded()` para todos, así la página fija la sede Profesional al montarse (tras F5/URL directa) | 11 rutas profesionales de secretaría + 10 de admin (fix-334-m) |
 | `pilotPhaseGuard(module)` | `CanActivateFn` (factory) | Bloquea un módulo mientras esté en `core/config/pilot-phase.config.ts` (`isBlockedInPilot`), redirige a `/modulo-no-disponible`. Sin dependencia de `AuthFacade` — aplica igual a rutas públicas. Fuente única de verdad del flag en `pilot-phase.config.ts`, no repetida en el guard (fix-255-m) | `/inscripcion`, `/inscripcion/retorno`, `/app/instructor/**`, `/app/alumno/**` |
 
 ## Auto-Index — Guards detectados por AST (generado automáticamente)

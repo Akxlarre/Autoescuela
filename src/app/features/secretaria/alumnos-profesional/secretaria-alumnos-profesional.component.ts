@@ -38,6 +38,7 @@ import { CLASE_B_ARCHIVE_WARNING } from '@core/utils/archive-confirmation.utils'
         basePath="/app/secretaria"
         [alumnos]="facade.alumnos()"
         [isLoading]="facade.isLoading()"
+        [error]="facade.error()"
         [trashView]="facade.trashView()"
         (refreshRequested)="facade.initialize()"
         (preInscritosRequested)="showPreInscritos.set(true)"
@@ -87,10 +88,11 @@ export class SecretariaAlumnosProfesionalComponent implements OnInit {
   ngOnInit(): void {
     // fix-028: con grant, la secretaria se comporta como admin → fuerza sede con profesional.
     this.branchFacade.setProfessionalOnly(true);
-    this.facade.initialize();
+    // La carga inicial la hace el effect() del constructor (fix-338-m / S16).
     this.destroyRef.onDestroy(() => {
       this.branchFacade.setProfessionalOnly(false);
       this.facade.dispose();
+      this.facade.leaveTrashView(); // fix-339-m: al volver se ve la lista activa
     });
   }
 

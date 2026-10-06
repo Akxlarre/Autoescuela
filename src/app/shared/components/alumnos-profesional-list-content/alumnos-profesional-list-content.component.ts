@@ -210,6 +210,19 @@ interface SemaforoInfo {
               </div>
             </div>
           </div>
+        } @else if (showLoadError()) {
+          <!-- fix-338-m: la carga falló y no hay nada que mostrar; no es una lista vacía.
+               Centrado en el alto disponible de la celda bento-fill. -->
+          <div class="flex-1 flex items-center justify-center bg-surface" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="error() ?? ''"
+              subtitle="No se pudo obtener la lista. Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="retryLoad()"
+            />
+          </div>
         } @else {
           <!-- Contenido principal interactivo -->
           <div
@@ -357,6 +370,7 @@ interface SemaforoInfo {
                             class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                             pTooltip="Ver ficha"
                             [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                            [queryParams]="fichaQueryParams(alumno)"
                           >
                             <app-icon name="eye" [size]="16" />
                           </button>
@@ -454,6 +468,10 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────
   readonly alumnos = input.required<AlumnoProfesionalTableRow[]>();
   readonly isLoading = input(false);
+  /** Error de carga del Facade (fix-338-m). */
+  readonly error = input<string | null>(null);
+  /** La carga falló y no hay nada que mostrar: no es una lista vacía (patrón de hotfix-113-m). */
+  readonly showLoadError = computed(() => !!this.error() && this.alumnos().length === 0);
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/admin');
   /** Hay una exportación en curso (signal isExporting del Facade). */
@@ -467,6 +485,14 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly trashViewToggled = output<void>();
   /** El Smart genera el archivo con las filas recibidas (spec 0023-m). */
   readonly exportRequested = output<AlumnosProfesionalExportRequest>();
+
+  /**
+   * fix-335-m: la ficha abre la matrícula de la fila. Sin esto abría la más reciente de la
+   * persona — la Clase B, si tenía una posterior — y "volver" llevaba a la Base B.
+   */
+  protected fichaQueryParams(alumno: Pick<AlumnoProfesionalTableRow, 'enrollmentId'>) {
+    return { enrollment: alumno.enrollmentId };
+  }
 
   // ── Orden por columna (spec 0023-m) ─────────────────────────────────────
   /** Orden elegido; null = orden por defecto (como llega del Facade). */
@@ -684,6 +710,11 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   }
 
   /** Vuelve filtros y buscador a su valor inicial. El orden elegido se conserva (spec 0023-m). */
+  /** "Reintentar" del estado de error de carga (fix-338-m). */
+  protected retryLoad(): void {
+    this.refreshRequested.emit();
+  }
+
   resetFilters(): void {
     this.tableFirst.set(0);
     this.searchTerm = '';

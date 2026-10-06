@@ -123,4 +123,17 @@ describe('AdminProfesionalPromocionesComponent', () => {
     const ids = ((component as any).heroActions() as { id: string }[]).map((a) => a.id);
     expect(ids).not.toContain('new');
   });
+
+  // ─── fix-338-m (F07 / S14): error de carga ≠ "No se encontraron promociones" ───
+  it('con error y sin promociones muestra el error; con datos previos no los tapa', () => {
+    facadeSpy.error = signal<string | null>('No se pudieron cargar las promociones');
+    expect((component as any).showLoadError()).toBe(true);
+
+    promocionesSig.set([makeRow(1, 'in_progress')]);
+    expect((component as any).showLoadError()).toBe(false);
+
+    facadeSpy.error.set(null);
+    promocionesSig.set([]);
+    expect((component as any).showLoadError()).toBe(false);
+  });
 });

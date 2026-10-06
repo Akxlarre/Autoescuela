@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalSearchFacade, buildAlumnoQuickActions } from './global-search.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { AdminAlumnosProfesionalFacade } from '@core/facades/admin-alumnos-profesional.facade';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 
@@ -58,6 +59,24 @@ const instructoresMock = {
 };
 const routerMock = { navigate: vi.fn().mockResolvedValue(true) };
 
+// fix-337-m: filas de la Base Profesional (una por matrícula).
+const makeProfRow = (overrides: Record<string, unknown> = {}) => ({
+  id: 'stu-p1',
+  nombre: 'Rosa',
+  apellido: 'Muñoz Lagos',
+  rut: '22.222.222-2',
+  estado: 'Activo',
+  enrollmentId: 500,
+  ...overrides,
+});
+const profAlumnos$ = signal<ReturnType<typeof makeProfRow>[]>([]);
+const profTrash$ = signal(false);
+const adminAlumnosProfMock = {
+  alumnos: profAlumnos$.asReadonly(),
+  trashView: profTrash$.asReadonly(),
+  loadForSearch: vi.fn().mockResolvedValue(undefined),
+};
+
 // ── Suite ────────────────────────────────────────────────────────────────────
 
 describe('GlobalSearchFacade', () => {
@@ -69,12 +88,15 @@ describe('GlobalSearchFacade', () => {
     alumnos$.set([]);
     instructorStudents$.set([]);
     instructores$.set([]);
+    profAlumnos$.set([]);
+    profTrash$.set(false);
 
     TestBed.configureTestingModule({
       providers: [
         GlobalSearchFacade,
         { provide: AuthFacade, useValue: authMock },
         { provide: AdminAlumnosFacade, useValue: adminAlumnosMock },
+        { provide: AdminAlumnosProfesionalFacade, useValue: adminAlumnosProfMock },
         { provide: InstructorAlumnosFacade, useValue: instructorAlumnosMock },
         { provide: InstructoresFacade, useValue: instructoresMock },
         { provide: Router, useValue: routerMock },
@@ -261,6 +283,63 @@ describe('GlobalSearchFacade', () => {
       currentUser$.set({ role: 'alumno' });
       alumnos$.set([makeAlumno()]);
       facade.setQuery('juan');
+      expect(facade.alumnoResults()).toEqual([]);
+    });
+  });
+
+  // ── fix-337-m (I10): alumnos de Clase Profesional ────────────────────────
+  // Antes el buscador solo miraba la Base B: un alumno solo Profesional no aparecía.
+
+  describe('alumnos de Clase Profesional (fix-337-m)', () => {
+    it('encuentra a un alumno que solo es Profesional, por nombre y por RUT', () => {
+      profAlumnos$.set([makeProfRow()]);
+      facade.setQuery('rosa');
+      expect(facade.alumnoResults().map((r) => r.label)).toEqual(['Rosa Muñoz Lagos']);
+      facade.setQuery('22222222');
+      expect(facade.alumnoResults()).toHaveLength(1);
+    });
+
+    it('"Ver Ficha" abre su ficha; no ofrece "Agendar Clase" (la agenda es de Clase B)', () => {
+      profAlumnos$.set([makeProfRow({ id: 'stu-p9' })]);
+      facade.setQuery('rosa');
+      const result = facade.alumnoResults()[0];
+      expect(result.route).toEqual(['/app/admin/alumnos/stu-p9']);
+      const types = result.quickActions.map((a) => a.actionType);
+      expect(types).toEqual(['view', 'payment', 'enrollment']);
+    });
+
+    it('2 matrículas Profesional de la misma persona → un solo resultado', () => {
+      profAlumnos$.set([makeProfRow({ enrollmentId: 500 }), makeProfRow({ enrollmentId: 501 })]);
+      facade.setQuery('rosa');
+      expect(facade.alumnoResults()).toHaveLength(1);
+    });
+
+    it('con Clase B y Profesional sale una vez, como el resultado de la Base B', () => {
+      alumnos$.set([makeAlumno({ id: 'stu-p1', nombre: 'Rosa', apellido: 'Muñoz Lagos' })]);
+      profAlumnos$.set([makeProfRow({ id: 'stu-p1' })]);
+      facade.setQuery('rosa');
+      const results = facade.alumnoResults();
+      expect(results).toHaveLength(1);
+      expect(results[0].quickActions.map((a) => a.actionType)).toContain('schedule');
+    });
+
+    it('con la Base Profesional en la Papelera no ofrece a los archivados', () => {
+      profTrash$.set(true);
+      profAlumnos$.set([makeProfRow()]);
+      facade.setQuery('rosa');
+      expect(facade.alumnoResults()).toEqual([]);
+    });
+
+    it('al empezar a buscar carga también la Base Profesional (sin Realtime)', () => {
+      facade.setQuery('ro');
+      expect(adminAlumnosProfMock.loadForSearch).toHaveBeenCalledTimes(1);
+    });
+
+    it('instructor: no carga ni muestra alumnos Profesional', () => {
+      currentUser$.set({ role: 'instructor' });
+      profAlumnos$.set([makeProfRow()]);
+      facade.setQuery('rosa');
+      expect(adminAlumnosProfMock.loadForSearch).not.toHaveBeenCalled();
       expect(facade.alumnoResults()).toEqual([]);
     });
   });

@@ -1,0 +1,19 @@
+/* ═══════════════════════════════════════════════════════════════
+   Vista móvil de las listas duales (.mobile-view) — fix-340-m / fix-341-m
+   ═══════════════════════════════════════════════════════════════
+
+   Las listas con vista dual (tabla en escritorio, tarjetas en móvil o con un panel abierto)
+   ponen sus tarjetas en `.mobile-view` (que trae su propio `p-4`). En la Base B, la Base
+   Profesional, Ex-Alumnos y Alumnos del instructor, las tarjetas van además en un `.bento-grid`
+   interno cuyo padding duplicaba ese margen: a 375 px la tarjeta perdía 32 px más.
+
+   fix-340-m también le quitaba el margen lateral a `.mobile-view` porque el recuadro `.card`
+   que la envuelve siempre tenía 24 px. Desde fix-341-m `.card p-0` se respeta: ese recuadro ya
+   no da margen y `.mobile-view` vuelve a ser quien lo pone.
+
+   Va SIN @layer a propósito: tiene que ganarle al padding del `.bento-grid` (@layer bento.grid).
+   ─────────────────────────────────────────────────────────────── */
+
+.mobile-view > .bento-grid {
+  padding: 0;
+}

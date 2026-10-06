@@ -167,6 +167,18 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
               <app-promocion-card [loading]="true" [promocion]="skeletonPromocion" />
             }
           </div>
+        } @else if (showLoadError()) {
+          <!-- fix-338-m: la carga falló y no hay nada que mostrar; no es una lista vacía. -->
+          <div class="flex-1 flex items-center justify-center" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="facade.error() ?? ''"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="facade.initialize()"
+            />
+          </div>
         } @else {
           <!-- VISTA Desktop: Tabla clásica con paginación (oculta cuando se comprime) -->
           <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
@@ -391,6 +403,11 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
+  /** La carga falló y no hay promociones que mostrar: no es una lista vacía (fix-338-m). */
+  protected readonly showLoadError = computed(
+    () => !!this.facade.error() && this.facade.promociones().length === 0,
+  );
+
   protected readonly heroActions = computed((): SectionHeroAction[] =>
     this.facade.canManageLifecycle()
       ? [{ id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true }]

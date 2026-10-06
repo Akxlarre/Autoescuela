@@ -67,6 +67,41 @@ describe('PromocionesFacade', () => {
     facade.selectPromocion(promo);
     expect(facade.selectedPromocion()).toBe(promo);
   });
+
+  // fix-338-m (F07 / S14): initialize() no capturaba el error — promesa rechazada sin manejar,
+  // error() vacío (la página mostraba "No se encontraron promociones") y _initialized en true
+  // (sin reintento con skeleton).
+  describe('error de carga (fix-338-m)', () => {
+    /** Builder thenable: cualquier método encadena; `await` resuelve `result`. */
+    function builder(result: { data: unknown; error: unknown }): any {
+      const b: any = {};
+      for (const m of ['select', 'not', 'order', 'eq', 'in']) b[m] = vi.fn(() => b);
+      b.then = (resolve: (v: unknown) => void) => resolve(result);
+      return b;
+    }
+
+    it('expone el error, no lanza y deja de cargar', async () => {
+      supabaseSpy.client.from = vi.fn(() => builder({ data: null, error: { message: 'red' } }));
+
+      await expect(facade.initialize()).resolves.toBeUndefined();
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('reintentar vuelve a cargar con skeleton y una carga correcta limpia el error', async () => {
+      supabaseSpy.client.from = vi.fn(() => builder({ data: null, error: { message: 'red' } }));
+      await facade.initialize();
+
+      supabaseSpy.client.from = vi.fn(() => builder({ data: [], error: null }));
+      const retry = facade.initialize();
+      expect(facade.isLoading()).toBe(true);
+      await retry;
+
+      expect(facade.error()).toBeNull();
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
 });
 
 /** Builder por tabla: encadenable (select/update/eq/order/not devuelven `this`) y thenable. */

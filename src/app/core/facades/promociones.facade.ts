@@ -101,6 +101,13 @@ export class PromocionesFacade {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+      this._error.set(null);
+    } catch {
+      // fix-338-m (S14): antes la promesa quedaba rechazada sin manejar y la página mostraba
+      // "No se encontraron promociones". Sin marcar inicializado, "Reintentar" vuelve a cargar
+      // con skeleton.
+      this._initialized = false;
+      this._error.set('No se pudieron cargar las promociones');
     } finally {
       this._isLoading.set(false);
     }

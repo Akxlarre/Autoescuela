@@ -107,6 +107,16 @@ otra cosa, es ❌ y va a su propio fix.
 | D11 | C05 | ¿Qué muestra la columna "Promoción"? | ✅ **Número/fecha de la promoción, con la categoría (A2/A3/A4/A5) debajo.** |
 | D12 | S12 / C07 / C08 | Asistencia, módulos, nota y certificado vacíos en el piloto, ¿aceptable? | ✅ **Se ocultan en el piloto** (columnas de la Base y tarjetas/botón de la ficha) mientras sus módulos sigan bloqueados. |
 
+**Decisiones tomadas en el bloque 2 (Matías, 2026-10-06):**
+
+| # | Caso | Pregunta | Decisión |
+|---|---|---|---|
+| D13 | A07 / A11 | Al aceptar "Conmutar Sede", ¿se queda en la pantalla actual? | ✅ **Navega al ítem** que se cliqueó, además de cambiar la sede. |
+| D14 | A09 / S22 | Al salir de una pantalla Profesional, ¿en qué sede queda el selector? | ✅ **En la que tenía antes de entrar** ("Todas" si venía de "Todas"), y se guarda igual que se muestra. |
+| D15 | H06 | Inasistencias, Reagendamientos, Ficha Técnica y "Generar Carnet" en la ficha Profesional | ✅ **Se ocultan los 4 en modo Profesional**; Clase B no cambia. |
+| D17 | (Matías, nuevo) | Ficha del alumno: ¿se puede cambiar la sede del topbar? | ✅ **No: toda ficha (B y Profesional) bloquea el selector en la sede de la matrícula abierta**, sigue a la pestaña elegida y al salir vuelve a la sede previa (`fix-342-m`). |
+| D16 | F03 | Tarjetas móviles angostas (patrón compartido) | ✅ **Fix propio que corrige el patrón en todas las pantallas** que lo usan, no solo las bases de alumnos. |
+
 **Pendiente de modelar, para hablar con el dueño (no bloquea este track):** el **desertor** de
 Clase Profesional — alumno que abandona, vuelve tiempo después a pedir el certificado y el dueño lo
 integra a una promoción posterior. Hoy no existe ni el estado ni el movimiento entre promociones;
@@ -173,11 +183,98 @@ rellenar la sede de esas filas antes.
 
 ### Bloque 2 — A–I: acceso, Base Alumnos Profesional, Papelera, ficha, links bloqueados
 
-_Pendiente._
+Ejecutado el 2026-10-06 en navegador (Playwright MCP, `ng serve` local, BD de desarrollo) con
+admin, secretariaB (sede 2), secretariaA (sede 1) y secretaria multisede, sobre las pantallas ya
+corregidas por `fix-320…333`. Datos: los 3 alumnos E2E-Prof* + los 60 del seed. Al terminar, la BD
+queda igual que al empezar (E2E-ProfConB se archivó y se restauró).
+
+**A — Acceso, menú y guards**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| A01 | ✅ | Admin: 4 ítems (Base Alumnos Prof., Promociones, Libro de Clases, **Archivo** — el cuarto por D3a). |
+| A02 | ✅ | secretariaB: los mismos 4 ítems. |
+| A03 | ✅ | secretariaA: sin grupo "Academia Profesional". |
+| A04 | ✅ | secretariaA: las 3 URLs + `/profesional/archivo` → `/app/secretaria/dashboard`. |
+| A05 | — | No hay cuenta de secretaria sin sede. No se ejecutó. |
+| A06 | ✅ | secretariaB en las 3 URLs de admin → `/app/secretaria/dashboard`. |
+| A07 | ⚠️ decisión | Desde "Todas" el clic en un ítem Profesional **navega directo** y cambia sola a Conductores Chillán (sin modal). Desde una sede **sin** Profesional (Autoescuela Chillán) aparece el modal "Conmutar Sede"; al aceptar cambia la sede pero **se queda en la pantalla actual**: hay que volver a hacer clic. |
+| A08 | ✅ | Selector fijo en Conductores Chillán; "Todas" y Autoescuela Chillán deshabilitadas con "Solo sedes con Clase Profesional". |
+| A09 | ❌ | Multisede: Autoescuela → (conmutar) Conductores → Base Prof. → Base B: el selector muestra **"Todas las sedes"**, pero tras F5 muestra **Conductores Chillán** (`setProfessionalOnly(false)` pone `null` sin persistir). Lo que se ve y lo que queda guardado no coinciden. S22. |
+| A10 | ❌ | Al recargar, la pantalla Profesional queda en la sede **guardada**, no en la Profesional: `setProfessionalOnly(true)` corre antes de que carguen las sedes y no se reevalúa (`branch.facade.ts:233-247`). Además, entrar por el menú desde "Todas" cambia la sede **visible** a Conductores sin guardarla. Verificado: (1) desde "Todas" → menú Promociones (se ve Conductores, guardada "Todas") → F5 → **"Todas las sedes"** con "Programar Promoción" habilitado (crearía con `branch_id = null`); (2) entrar por URL/marcador con Autoescuela guardada → queda en **Autoescuela Chillán**, "0 matrículas" (esperado 9 s). Entrar desde otra sede vía "Conmutar Sede" sí guarda Conductores y sobrevive al F5. S22. |
+| A11 | ✅ | Multisede con sede sin Profesional → modal "Conmutar Sede" → cambia a Conductores Chillán (mismo "no navega" de A07). |
+| A12 | ✅ | Admin y secretaria: relatores, asistencia, evaluaciones, certificados, pre-inscritos y ex-alumnos-profesional → `/modulo-no-disponible`. Archivo abre (D3a). |
+| A13 | ✅ | "Volver al inicio" → `/app/admin/dashboard` con la sesión intacta. |
+
+**B–F — Base Alumnos Profesional**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| B01 | ✅ parcial | D1 (E2E-ProfA2) aparece. **No hay datos D2/D3** (ninguna `license_validations` en la BD) ni D4 (`inactive` ya no existe, D2). |
+| B03 | ✅ | La única matrícula `completed` (Samuel José Merino, 0031) no aparece. |
+| B04 | ✅ | E2E-ProfConB (B + Prof.) sale con Nº 0095, Promoción 280 · A3 y el saldo de la Profesional. |
+| B05 / D01 | ✅ | E2E-ProfDoble: 2 filas (0093 y 0094); chip y KPI "64 matrículas" = 64 filas `active` de la BD. |
+| B06 | ✅ | Archivado → solo en la Papelera (ver G05). |
+| B07, H03 | — | No hay matrículas Profesional `draft` en la BD. No se ejecutó. |
+| B08 | ✅ | Orden por matrícula descendente (0095, 0094, 0093, 0092, 0091…). |
+| B09 | — | Depende de `ASG-i-023` (wizard). No se ejecutó. |
+| C01, C02, C04, C09, C10 | ✅ | Iniciales "EP" en tarjeta; "Apellidos Nombres" + RUT; todos con Nº; "Activo"; saldo 180.000 CLP = ficha. |
+| C05 | ✅ | "Promoción 280" con la categoría debajo (D11, `fix-330-m`); sin promoción, "—". |
+| C06, E05 (convalida) | — | Sin datos de convalidación. Filtro A4 sí funciona (16 resultados). |
+| C07, C08, D04 | ✅ | Columnas Módulos / Asistencia y KPI "En riesgo" ya no están (D12, `fix-332-m`). |
+| C03, C11, E02 | — | El seed no tiene nombres con tilde/ñ, sin materno ni muy largos. |
+| D02, D03 | ✅ | Activas 64; Con deuda 19 = matrículas activas con `pending_balance > 0` en la BD. |
+| D05 | ✅ | Los KPIs no cambian al buscar (64/64/19 con y sin filtro). |
+| D06 | ⚠️ observación | En la Papelera los KPIs cuentan al archivado como "Activas 1" (la matrícula sigue `active`); se lee raro. Chip "1 matrículas" sin singular. |
+| E01, E03, E04 | ✅ | Nombre, apellido, "nombre apellido", "apellido nombre", mayúsculas, RUT con/sin puntos y guion, Nº de matrícula. |
+| E06, E07 | ✅ | El filtro Estado ya no existe (D2, `fix-329-m`). |
+| E08, E09, E10, E11 | ✅ | El select ofrece "Todas las clases"; "Limpiar filtros" resetea todo; contador = filas; buscar desde la página 3 muestra los resultados. |
+| F01 | ✅ | "Mostrando 61 a 64 de 64" en la última página. Detalle: dice "alumnos" y son matrículas (D10). |
+| F02 | ✅ | `scrollHeight` = `clientHeight` (900): el documento no scrollea. |
+| F03 | ❌ | A 375 px se ven tarjetas sin scroll horizontal, pero **la tarjeta mide 183 px de 343 disponibles**: se suman el padding de la card (24), el de `.mobile-view` (16) y el del `.bento-grid` interno (16) por lado. El nombre se corta ("Prue…") y las etiquetas "PROMOCIÓN" y "SALDO" se montan. **Compartido:** la Base B mide lo mismo (184 px); el patrón `mobile-view` + `bento-grid` está en ~10 pantallas. |
+| F04, F05 | — | No ejecutados (requieren drawer abierto / >20 tarjetas medidas a mano). |
+| F06 | ✅ | La tarjeta tiene ver y archivar. |
+| F07 | ❌ | Con las consultas a `enrollments` y `professional_promotions` abortadas: la Base muestra "No hay alumnos profesionales · Limpiar filtros" y Promociones "No se encontraron promociones". Ningún mensaje de error. S14. Además la consulta de matrículas sale **dos veces** en el mismo milisegundo (S16). |
+
+**G — Archivar y Papelera**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| G02 | ✅ | E2E-ProfConB (sin pagos): modal simple, sin "borrarlo". |
+| G03 | ✅ | Doble clic en el tacho → un solo modal. |
+| G04 | ✅ | Modal con el aviso de Clase B (D8, `fix-333-m`); al archivar desaparece de las dos bases; al restaurar vuelve a ambas. |
+| G05, G07 | ✅ | Ciclo archivar → Papelera → restaurar (sin confirmación) → vuelve con los mismos datos; "← Alumnos Profesional" vuelve a la lista activa. |
+| G06 | ❌ | Papelera → Promociones (menú) → Base Alumnos Prof. (menú): **sigue abierta la Papelera** (estado en el facade singleton). Criterio acordado: los filtros/vistas solo se conservan al volver desde el detalle. Detalle: el estado vacío de la Papelera dice "Ajusta los filtros o registra nuevas matrículas profesionales". |
+| G01, G08 | — | Ningún alumno Prof. de prueba tiene pagos; no se simuló falla al archivar. |
+| G09 | — | Resuelto por D9; se verifica en el bloque 3/4 (Libro y "Ver promoción"). |
+
+**H — Ficha desde la lista Profesional**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| H01 | ✅ | Admin y secretariaB: E2E-ProfA2 abre `/app/{admin,secretaria}/alumnos/7333` en modo Profesional ("PROFESIONAL A2 · MATRÍCULA #0092"). |
+| H02 | ❌ | E2E-ProfConB desde la Base Prof. abre **"CLASE B · MATRÍCULA #0073"** con 12 clases prácticas, y el enlace de vuelta es "Listado de Alumnos" (Base B). Causa: la lista y la tarjeta Profesional no pasan `?enrollment=` (la Base B sí, `alumnos-list-content.component.ts:492`, `fix-272-m`). S17. |
+| H04, H05 | ✅ | Tarjeta "Asistencia y evaluaciones aún no habilitadas" en vez de cards vacías y sin botón de certificado (D12). |
+| H06 | ⚠️ decisión | "Generar Carnet" deshabilitado. Además la ficha Profesional muestra **Inasistencias** (con "Registrar Nueva"), **Reagendamientos** y **Ficha Técnica** ("Desempeño en clases prácticas"), los tres de Clase B. |
+| H07 | ✅ | "Listado de Alumnos Profesionales" → `/app/{admin,secretaria}/profesional…/alumnos`. |
+| H08 | ✅ | secretariaA con la ficha 7333 (sede 2) por URL: "Error al cargar la ficha · El alumno no existe o no tienes acceso". |
+
+**I — Links a módulos bloqueados**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| I01, I02 | ✅ | El hero no tiene botón "Pre-inscritos" (admin y secretaria). La URL lleva a `/modulo-no-disponible`. |
+| I04 | ✅ por regresión | Cubierto por `fix-328-m` (cerrado 2026-10-05); no se sembró una notificación nueva. |
+| I05 | ✅ | `?from=ex-alumnos` vuelve a Ex-Alumnos Prof. (bloqueado), pero ese parámetro solo lo genera esa pantalla: inalcanzable en el piloto. |
+| I09 | ✅ | Ningún botón de la Base ni de la ficha Profesional lleva a un módulo bloqueado. |
+| I10 | ❌ | El buscador global (Ctrl+K) **no encuentra a E2E-ProfA2** (solo Profesional); a E2E-ProfConB sí, porque busca sobre `AdminAlumnosFacade` (Base B, `global-search.facade.ts:125-138`), y abre su ficha en la matrícula B con "Agendar Clase". |
+| I06–I08 | — | Bloques 3 y 4. |
 
 ### Bloque 3 — J–N: Promociones
 
-_Pendiente._
+_Pendiente._ Para revisar al ejecutarlo: a 1280×800 la tabla de Promociones tiene scroll
+horizontal y la columna "Acciones" queda fuera de la vista (visto el 2026-10-06 en el `/verify`
+de `fix-334-m`).
 
 ### Bloque 4 — O–R: Libro de clases
 
@@ -210,6 +307,22 @@ Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de i
 | B05 + D10 — total cuenta matrículas | `fix-331-m-kpi-total-cuenta-matriculas` | ✅ cerrado 2026-10-05 |
 | S12 + D12 — datos de módulos bloqueados | `fix-332-m-ocultar-datos-de-modulos-bloqueados` | ✅ cerrado 2026-10-05 |
 | S15 + D8 — archivar sin aviso de Clase B | `fix-333-m-aviso-archivar-persona-con-clase-b` | ✅ cerrado 2026-10-05 |
+
+Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta):
+
+| Caso / decisión | Track propuesto | Estado |
+|---|---|---|
+| A09 + A10 + A07/A11 + S22 + D13 + D14 — sede al entrar/salir de Profesional | `fix-334-m-sede-al-entrar-y-salir-de-profesional` | ✅ cerrado 2026-10-06 (`29fc21e5`) |
+| H02 + S17 — la Base Profesional no pasa la matrícula a la ficha | `fix-335-m-ficha-desde-base-profesional-abre-su-matricula` | ✅ cerrado 2026-10-06 |
+| H06 + D15 — acciones de Clase B en la ficha Profesional | `fix-336-m-ficha-profesional-sin-acciones-de-clase-b` | ✅ cerrado 2026-10-06 |
+| I10 — buscador global sin alumnos Profesional | `fix-337-m-buscador-global-incluye-profesional` | ✅ cerrado 2026-10-06 |
+| F07 + S14 (+ S16) — error de carga como lista vacía en Base Prof. y Promociones | `fix-338-m-error-de-carga-profesional-no-es-lista-vacia` | ✅ cerrado 2026-10-06 |
+| G06 — la Papelera persiste al volver por el menú | `fix-339-m-papelera-profesional-no-persiste` | ✅ cerrado 2026-10-06 |
+| F03 + D16 — tarjetas móviles angostas por paddings anidados | `fix-340-m-tarjetas-moviles-paddings-anidados` | ✅ cerrado 2026-10-06 (mínimo, D16) |
+| `.card` sin capa le gana a `p-0`/`p-N` (~92 archivos, también escritorio) — causa de fondo de F03 | `fix-341-m-card-respeta-utilities-de-tailwind` | ✅ cerrado 2026-10-06 (portales alumno/instructor sin verificar visualmente: bloqueados) |
+| Base Profesional 375 px: la lista tapa los KPIs del hero (previo) | sin track — bloque 5 | ⏳ |
+| Comunicación 375 px: pestañas sin texto (previo) | sin track — bloque 5 | ⏳ |
+| D17 — la ficha deja cambiar la sede del topbar (reportado por Matías) | `fix-342-m-ficha-bloquea-sede-del-alumno` | ✅ cerrado 2026-10-06 |
 
 ## Test de regresión
 
