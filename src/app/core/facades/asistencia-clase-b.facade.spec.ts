@@ -232,6 +232,64 @@ describe('AsistenciaClaseBFacade', () => {
     );
   });
 
+  describe('regla desactivada en la sede (spec 0048-b)', () => {
+    function alertaPara(enrollmentId: number, faltasConsecutivas: number) {
+      return {
+        studentId: 5,
+        enrollmentId,
+        alumnoName: 'Ana',
+        faltasConsecutivas,
+        nivel: 'critico',
+        ultimaFechaFalta: '2026-10-06',
+        horarioActivo: true,
+        branchId: 1,
+      };
+    }
+
+    it('AC-E2: la RPC devuelve -1 y el alumno queda con 2 faltas consecutivas → aviso de que no se canceló', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setRpcResult('apply_class_b_absence_penalty', -1);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockImplementation(async () =>
+        (facade as any)._alertas.set([alertaPara(10, 2)]),
+      );
+
+      await facade.markAttendance(1, 'ausente');
+
+      expect(toast.info).toHaveBeenCalledWith(
+        'Agenda no cancelada',
+        expect.stringContaining('desactivada'),
+      );
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it('AC-E2: la RPC devuelve -1 pero el alumno no tiene 2 faltas seguidas → sin aviso', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setRpcResult('apply_class_b_absence_penalty', -1);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockImplementation(async () =>
+        (facade as any)._alertas.set([alertaPara(10, 1)]),
+      );
+
+      await facade.markAttendance(1, 'ausente');
+
+      expect(toast.info).not.toHaveBeenCalled();
+    });
+  });
+
+  it('markAttendance guarda recorded_at con la hora actual (spec 0048-b AC4)', async () => {
+    (facade as any)._clasesPracticas.set([makeRow()]);
+    mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setRpcResult('apply_class_b_absence_penalty', 0);
+
+    const before = Date.now();
+    await facade.markAttendance(1, 'ausente');
+
+    const upsert = mock.builderFor('class_b_practice_attendance').upsert;
+    const payload = upsert.mock.calls[0][0];
+    expect(new Date(payload.recorded_at).getTime()).toBeGreaterThanOrEqual(before);
+  });
+
   it('markAttendance no invoca la penalización al marcar presente', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });

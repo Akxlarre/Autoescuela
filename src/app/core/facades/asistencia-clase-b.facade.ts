@@ -166,6 +166,10 @@ export class AsistenciaClaseBFacade {
               // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
               // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
               archived_at: null,
+              // spec 0048-b: la penalización solo cuenta faltas registradas desde que se activó
+              // la regla en la sede; sin esto, un upsert sobre una fila existente conservaba la
+              // fecha vieja y la falta nueva no contaba.
+              recorded_at: new Date().toISOString(),
             },
             { onConflict: 'class_b_session_id,student_id' },
           );
@@ -502,6 +506,21 @@ export class AsistenciaClaseBFacade {
     );
 
     await this.refreshAlertasSilently();
+
+    // spec 0048-b: -1 = la cancelación automática está desactivada en la sede. Si el alumno
+    // igual quedó con 2 faltas seguidas, se avisa que su agenda NO se canceló (AC-E2).
+    if (cancelledCount === -1) {
+      const quedoEnRiesgo = this._alertas().some(
+        (a) => a.enrollmentId === enrollmentId && a.faltasConsecutivas >= 2,
+      );
+      if (quedoEnRiesgo) {
+        this.toast.info(
+          'Agenda no cancelada',
+          `${alumnoName ?? 'El alumno'} tiene 2 inasistencias seguidas, pero la cancelación automática está desactivada en esta sede. Sus clases siguen agendadas.`,
+        );
+      }
+      return;
+    }
 
     if ((cancelledCount ?? 0) > 0) {
       this.toast.warning(
