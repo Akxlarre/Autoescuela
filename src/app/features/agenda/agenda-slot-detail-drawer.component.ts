@@ -249,9 +249,12 @@ export class AgendaSlotDetailDrawerComponent {
     if (cfg.variant === 'surface') {
       return { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)' };
     }
+    // hotfix-060-b: `--state-brand` no existe (la pastilla salía sin color); la marca es `--ds-brand`,
+    // el mismo color con que la grilla pinta las clases agendadas y en curso.
+    const token = cfg.variant === 'brand' ? 'var(--ds-brand)' : `var(--state-${cfg.variant})`;
     return {
-      bg: `color-mix(in srgb, var(--state-${cfg.variant}) 12%, transparent)`,
-      color: `var(--state-${cfg.variant})`,
+      bg: `color-mix(in srgb, ${token} 12%, transparent)`,
+      color: token,
     };
   }
 
