@@ -1,7 +1,8 @@
 # Fix: La Base Profesional y la ficha muestran datos de módulos bloqueados, siempre vacíos
 > id: fix-332-m-ocultar-datos-de-modulos-bloqueados
 > refs: fix-319-m-testing-clase-profesional-piloto (S12, C07, C08, D12) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -27,5 +28,22 @@ Ninguno — fix autónomo.
 - **`src/app/core/facades/admin-alumnos-profesional.facade.ts`** — no consultar asistencia/notas
   mientras esté bloqueado.
 
+**Ajuste al implementar:** el facade **sigue consultando** asistencia y notas (no se cortó la
+consulta). Cortarla dejaba sin cobertura el test del mapeo semáforo/módulos (AC6) y son dos
+consultas livianas; ocultar en la UI cumple D12 y, al levantar el recorte, todo vuelve sin tocar
+el facade. En la ficha, en vez de dejar la columna de progreso vacía, se muestra un estado vacío
+que explica por qué no hay datos.
+
 ## Test de Regresión
 - E2E: la Base Profesional y la ficha Profesional no muestran asistencia, módulos ni certificado.
+
+**Verificado el 2026-10-05:** spec de la lista (sin columnas `modulos`/`asistencia` ni KPI
+`riesgo`) y specs de tarjeta, ficha y facade: 69/69. `tsc` y `lint:arch` sin errores. Visual
+(`secretaria2@test.com`, 1440 px): encabezados de la Base Profesional "Alumno · Nº Mat. ·
+Promoción · Estado · Saldo · Acciones" (celdas alineadas), KPIs sin "En riesgo"; ficha de
+`E2E-ProfA2` (student 7333): columna central con "Asistencia y evaluaciones aún no habilitadas",
+sin tarjetas de asistencia/nota ni botón de certificado; consola sin errores. Todo bajo
+`isBlockedInPilot('clase-profesional-recorte')`.
+
+**Visto de paso, fuera de este fix (para el bloque 2, casos H):** la ficha Profesional muestra los
+botones "Inasistencias" y "Reagendamientos" (propios de Clase B) y "Generar Carnet" deshabilitado.

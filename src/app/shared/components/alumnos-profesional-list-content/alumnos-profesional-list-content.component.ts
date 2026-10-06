@@ -304,27 +304,29 @@ interface SemaforoInfo {
                         </span>
                       }
                     </td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
-                          <div
-                            class="h-full bg-brand rounded-full"
-                            [style.width.%]="moduloPct(alumno)"
-                          ></div>
+                    @if (academicoVisible) {
+                      <td>
+                        <div class="flex items-center gap-2">
+                          <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
+                            <div
+                              class="h-full bg-brand rounded-full"
+                              [style.width.%]="moduloPct(alumno)"
+                            ></div>
+                          </div>
+                          <span class="text-xs text-text-secondary font-mono"
+                            >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
+                          >
                         </div>
-                        <span class="text-xs text-text-secondary font-mono"
-                          >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
-                        >
-                      </div>
-                    </td>
-                    <td>
-                      @let sem = getSemaforo(alumno.semaforo);
-                      <p-tag
-                        [value]="sem.label"
-                        [severity]="sem.severity"
-                        styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
-                      ></p-tag>
-                    </td>
+                      </td>
+                      <td>
+                        @let sem = getSemaforo(alumno.semaforo);
+                        <p-tag
+                          [value]="sem.label"
+                          [severity]="sem.severity"
+                          styleClass="text-xs font-bold px-2 py-0.5 whitespace-nowrap"
+                        ></p-tag>
+                      </td>
+                    }
                     <td>
                       <p-tag
                         [value]="alumno.estado"
@@ -469,7 +471,17 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   // ── Orden por columna (spec 0023-m) ─────────────────────────────────────
   /** Orden elegido; null = orden por defecto (como llega del Facade). */
   readonly sort = signal<AlumnoProfesionalListSort | null>(null);
-  protected readonly sortColumns = ALUMNO_PROFESIONAL_SORT_OPTIONS;
+  /**
+   * Asistencia y módulos salen de Asistencia/Evaluaciones Profesional, bloqueados por el recorte
+   * del piloto: siempre "Sin datos" y 0/7. Mientras lo estén se ocultan (fix-332-m, D12).
+   */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
+
+  protected readonly sortColumns = this.academicoVisible
+    ? ALUMNO_PROFESIONAL_SORT_OPTIONS
+    : ALUMNO_PROFESIONAL_SORT_OPTIONS.filter(
+        (c) => c.value !== 'modulos' && c.value !== 'asistencia',
+      );
   /** Índice de la primera fila de la página visible de la tabla. */
   protected readonly tableFirst = signal(0);
 
@@ -601,13 +613,18 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       icon: 'circle-alert',
       color: 'warning',
     },
-    {
-      id: 'riesgo',
-      label: 'En riesgo',
-      value: this.enRiesgo(),
-      icon: 'alert-triangle',
-      color: 'error',
-    },
+    // "En riesgo" cuenta el semáforo de asistencia: sin Asistencia Profesional no tiene datos.
+    ...(this.academicoVisible
+      ? [
+          {
+            id: 'riesgo',
+            label: 'En riesgo',
+            value: this.enRiesgo(),
+            icon: 'alert-triangle',
+            color: 'error' as const,
+          },
+        ]
+      : []),
   ]);
 
   readonly activos = computed(() => this.alumnos().filter((a) => a.estado === 'Activo').length);

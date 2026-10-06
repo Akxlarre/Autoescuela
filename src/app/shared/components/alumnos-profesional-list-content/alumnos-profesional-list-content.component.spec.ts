@@ -33,6 +33,18 @@ describe('AlumnosProfesionalListContentComponent — acciones del hero (fix-328-
     expect(kpis.find((k) => k.id === 'activos')?.label).toBe('Activas');
   });
 
+  // fix-332-m (D12): asistencia y módulos salen de Asistencia/Evaluaciones Profesional, bloqueados
+  // en el piloto: siempre "Sin datos" y 0/7. Se ocultan en vez de mostrarse vacíos.
+  it('en el piloto no tiene columnas Módulos ni Asistencia, ni el KPI "En riesgo"', () => {
+    const c = create();
+    Object.defineProperty(c, 'alumnos', { value: () => [] });
+    const cols = (c.sortColumns as { value: string }[]).map((col) => col.value);
+    expect(cols).not.toContain('modulos');
+    expect(cols).not.toContain('asistencia');
+    expect(cols).toContain('promocion');
+    expect((c.heroKpis() as { id: string }[]).map((k) => k.id)).not.toContain('riesgo');
+  });
+
   it('en el piloto no ofrece "Pre-inscritos"; sí la Papelera', () => {
     const ids = (create().heroActions() as { id: string }[]).map((a) => a.id);
     expect(ids).not.toContain('preinscritos');
