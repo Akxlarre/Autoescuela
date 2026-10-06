@@ -47,3 +47,20 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 - `npx vitest run src/app/core/facades/auth.facade.spec.ts src/app/core/guards` — F1, F2, F3, F5.
 - Build (`ng build`) para el componente y la ruta (F4); verificación visual con `/verify` si hay
   servidor disponible.
+
+## Resultado (2026-10-05)
+
+- **Tests:** `vitest` auth.facade + guards + auth-errors → 41 passed (TDD: los 7 casos nuevos
+  fallaron antes de implementar). F1 `redirectTo`, F2 `PASSWORD_RECOVERY`, F3 `authGuard`, F5
+  `passwordRecoveryGuard`, más `completePasswordRecovery` con éxito/error y `SIGNED_OUT`.
+- **Build:** `ng build` OK. **`lint:arch`:** exit 0.
+- **F4 (pantalla):** el componente reutiliza el formulario y estilos del primer login; solo cambian
+  textos, ícono (`shield-check`, ya registrado) y la acción. No se verificó en navegador: la ruta
+  exige una sesión de recuperación real (link de correo). Queda para la prueba manual de abajo.
+
+## Progreso
+- [x] Código + tests + build
+- [ ] **Owner:** agregar `https://app.autoescuelachillan.cl/recuperar-contrasena` (y el dominio
+      definitivo cuando exista) a Supabase → Auth → URL Configuration → Redirect URLs
+- [ ] Prueba manual en producción tras el release: pedir "recuperar contraseña" con una cuenta de
+      prueba con correo real → abrir el link → fijar clave → entrar con la clave nueva

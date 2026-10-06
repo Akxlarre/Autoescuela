@@ -7,7 +7,7 @@ import {
   ElementRef,
   afterNextRender,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -40,16 +40,13 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary"
               style="box-shadow:  0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
             >
-              <app-icon name="shield-alert" [size]="32" color="white" />
+              <app-icon [name]="copy.icon" [size]="32" color="white" />
             </div>
             <p class="micro-label m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
-              Actualiza tu contraseña
+              {{ copy.title }}
             </h1>
-            <p class="m-0 text-sm text-text-muted">
-              Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio
-              de sesión.
-            </p>
+            <p class="m-0 text-sm text-text-muted">{{ copy.subtitle }}</p>
           </div>
 
           <div #errorMsgRef class="overflow-hidden">
@@ -94,14 +91,14 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               type="submit"
               class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
               [disabled]="form.invalid || loading()"
-              data-llm-action="actualizar-contrasena-forzada"
+              [attr.data-llm-action]="copy.llmAction"
             >
               @if (loading()) {
                 <span
                   class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-current"
                 ></span>
               }
-              Actualizar y Continuar
+              {{ copy.submit }}
             </button>
           </form>
         </div>
@@ -115,6 +112,29 @@ export class ForcePasswordChangeComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Misma pantalla para dos flujos: el primer login (clave temporal) y el link de "recuperar
+   * contraseña" (fix-181-b, ruta /recuperar-contrasena con data.mode = 'recovery').
+   */
+  readonly isRecovery = this.route.snapshot.data['mode'] === 'recovery';
+  readonly copy = this.isRecovery
+    ? {
+        icon: 'shield-check',
+        title: 'Crea una contraseña nueva',
+        subtitle: 'Escribe la contraseña que usarás de ahora en adelante para entrar.',
+        submit: 'Guardar y entrar',
+        llmAction: 'guardar-contrasena-recuperada',
+      }
+    : {
+        icon: 'shield-alert',
+        title: 'Actualiza tu contraseña',
+        subtitle:
+          'Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio de sesión.',
+        submit: 'Actualizar y Continuar',
+        llmAction: 'actualizar-contrasena-forzada',
+      };
   private readonly gsap = inject(GsapAnimationsService);
 
   readonly form = this.fb.nonNullable.group({
@@ -174,7 +194,9 @@ export class ForcePasswordChangeComponent {
       const newPassword = this.form.getRawValue().password;
 
       // Actualizar la contraseña a través de AuthFacade
-      const { error } = await this.auth.updatePassword(newPassword);
+      const { error } = this.isRecovery
+        ? await this.auth.completePasswordRecovery(newPassword)
+        : await this.auth.updatePassword(newPassword);
 
       if (error) {
         this.showError(this.sanitizer.sanitize(error).message);

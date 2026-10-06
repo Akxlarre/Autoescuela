@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
 import { firstLoginGuard } from '@core/guards/first-login.guard';
 import { guestGuard } from '@core/guards/guest.guard';
+import { passwordRecoveryGuard } from '@core/guards/password-recovery.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
@@ -40,11 +41,14 @@ export const routes: Routes = [
       ),
   },
   {
+    // Destino del link de "recuperar contraseña" (fix-181-b): misma pantalla que el primer login,
+    // en modo recuperación. No usa guestGuard: el link abre una sesión y ese guard la mandaba a /app.
     path: 'recuperar-contrasena',
-    canActivate: [guestGuard],
+    canActivate: [passwordRecoveryGuard],
+    data: { mode: 'recovery' },
     loadComponent: () =>
-      import('./features/auth/recuperar-contrasena/recuperar-contrasena.component').then(
-        (m) => m.RecuperarContrasenaComponent,
+      import('./features/auth/force-password-change/force-password-change.component').then(
+        (m) => m.ForcePasswordChangeComponent,
       ),
   },
   {

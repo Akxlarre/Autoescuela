@@ -7,8 +7,9 @@
 
 | Guard | Tipo | Propósito | Rutas protegidas |
 |-------|------|-----------|-----------------|
-| `authGuard` | `CanActivateFn` | Redirige a `/login` si no hay sesión activa, o si el perfil está desactivado (`isActive === false`: cierra la sesión — fix-180-b) | Todas las rutas bajo `/app` |
-| `guestGuard` | `CanActivateFn` | Redirige a `/app` si ya hay sesión (evita volver al login) | `/login`, `/recuperar-contrasena` |
+| `authGuard` | `CanActivateFn` | Redirige a `/login` si no hay sesión activa, o si el perfil está desactivado (`isActive === false`: cierra la sesión — fix-180-b). Si la sesión viene de un link de recuperación sin clave nueva, manda a `/recuperar-contrasena` (fix-181-b) | Todas las rutas bajo `/app` |
+| `guestGuard` | `CanActivateFn` | Redirige a `/app` si ya hay sesión (evita volver al login) | `/login` |
+| `passwordRecoveryGuard` | `CanActivateFn` | Deja pasar solo si la sesión viene de un link de "recuperar contraseña" (`AuthFacade.passwordRecovery()`); si no, `/login` (fix-181-b) | `/recuperar-contrasena` |
 | `roleRedirectGuard` | `CanActivateFn` | Redirige al portal correcto según el rol del usuario autenticado | `/app` (raíz) |
 | `roleGuard` | `CanActivateFn` | Bloquea acceso a portales de rol incorrecto | `/app/admin`, `/app/secretaria`, `/app/instructor`, `/app/alumno` |
 | `firstLoginGuard` | `CanActivateFn` | Fuerza cambio de contraseña en primer login (`first_login=true`) | Rutas de portal tras autenticar |
@@ -25,6 +26,7 @@
 | `enrollmentDraftGuard` | `CanDeactivateFn` | `EnrollmentFacade`, `ConfirmModalService` | `src/app/core/guards/enrollment-draft.guard.ts` |
 | `firstLoginGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/first-login.guard.ts` |
 | `guestGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/guest.guard.ts` |
+| `passwordRecoveryGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/password-recovery.guard.ts` |
 | `pilotPhaseGuard` | `CanActivateFn` | `Router` | `src/app/core/guards/pilot-phase.guard.ts` |
 | `professionalBranchGuard` | `CanActivateFn` | `AuthFacade`, `BranchFacade`, `Router` | `src/app/core/guards/professional-branch.guard.ts` |
 | `roleRedirectGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/role-redirect.guard.ts` |
