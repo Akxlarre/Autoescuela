@@ -51,8 +51,13 @@ export class SupabaseService {
     return await this.supabase.auth.signInWithPassword({ email, password });
   }
 
+  /**
+   * Cierra la sesión solo en este equipo (fix-184-b). El default de Supabase es `global`: cerrar
+   * en el mostrador sacaba a la persona también de su celular. Para sacar a alguien de todos los
+   * equipos se desactiva el usuario (fix-180-b).
+   */
   async signOut() {
-    return await this.supabase.auth.signOut();
+    return await this.supabase.auth.signOut({ scope: 'local' });
   }
 
   async getUser() {
