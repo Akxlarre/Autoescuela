@@ -234,6 +234,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 |---------|-------------------|-----------|--------|--------|
 | `_bento-grid.scss` | `.bento-grid`, `.bento-square`, `.bento-wide`, `.bento-tall`, `.bento-feature`, `.bento-hero`, `.bento-banner`, `.bento-card`, `.bento-media` + data-attributes de placement | `styles/layout/_bento-grid.scss` | `_bento-grid.README.md` | ✅ Estable |
 | `_page-shell.scss` | `.page-centered`, `.page-narrow`, `.page-content`, `.page-wide`, `.page-split`, `.page-header`, `.page-section`, `.page-empty` | `styles/layout/_page-shell.scss` | `_page-shell.README.md` | ✅ Estable |
+| `_mobile-view.scss` | `.card .mobile-view` sin padding lateral y su `.bento-grid` interno sin padding (fix-340-m). **Sin @layer** a propósito: tiene que ganarle al `p-4` de Tailwind. La vista móvil de las listas duales vive dentro de un `.card`, que ya da el margen; duplicarlo dejaba las tarjetas en ~180 px a 375 px. Ojo: `.card` también está sin capa y por eso `p-0`/`p-N` sobre `.card` **no aplican** (pendiente, fuera de fix-340-m) | `styles/layout/_mobile-view.scss` | — | ✅ Estable |
 
 ## Motion
 

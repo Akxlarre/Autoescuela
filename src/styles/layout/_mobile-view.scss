@@ -1,0 +1,21 @@
+/* ═══════════════════════════════════════════════════════════════
+   Vista móvil de las listas duales (.mobile-view) — fix-340-m
+   ═══════════════════════════════════════════════════════════════
+
+   Las listas con vista dual (tabla en escritorio, tarjetas en móvil o con un panel abierto)
+   ponen sus tarjetas en `.mobile-view` dentro de un recuadro `.card`, que ya da el margen
+   interno. El `p-4` de `.mobile-view` y el padding del `.bento-grid` interno (Base B, Base
+   Profesional, Ex-Alumnos, Alumnos del instructor) lo duplicaban: a 375 px la tarjeta quedaba
+   en ~180 px, con el nombre cortado y etiquetas montadas.
+
+   Va SIN @layer a propósito: tiene que ganarle a las utilities de Tailwind (`p-4`), que viven
+   en @layer utilities. Solo bajo `.card`, para que las tarjetas nunca toquen el borde.
+   ─────────────────────────────────────────────────────────────── */
+
+.card .mobile-view {
+  padding-inline: 0;
+}
+
+.card .mobile-view > .bento-grid {
+  padding: 0;
+}
