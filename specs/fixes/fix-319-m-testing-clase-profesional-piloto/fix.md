@@ -183,7 +183,7 @@ Abiertos el 2026-10-05, uno por causa raíz, numerados en el orden sugerido de i
 | S4 + S23 + D3a — Archivo en el piloto | `fix-326-m-archivo-profesional-en-piloto` | ✅ cerrado 2026-10-05 |
 | S19 + D9 — conteo con archivados | `fix-327-m-conteo-inscritos-sin-archivados` | ✅ cerrado 2026-10-05 |
 | S3 + S21 + D1 — Pre-inscritos alcanzable | `fix-328-m-pre-inscritos-oculto-en-piloto` | ✅ cerrado 2026-10-05 |
-| S10 + D2 — estados imposibles | `fix-329-m-base-profesional-sin-estados-imposibles` | abierto |
+| S10 + D2 — estados imposibles | `fix-329-m-base-profesional-sin-estados-imposibles` | ✅ cerrado 2026-10-05 |
 | C05 + D11 — columna Promoción | `fix-330-m-columna-promocion-muestra-curso` | abierto |
 | B05 + D10 — total cuenta matrículas | `fix-331-m-kpi-total-cuenta-matriculas` | abierto |
 | S12 + D12 — datos de módulos bloqueados | `fix-332-m-ocultar-datos-de-modulos-bloqueados` | abierto |

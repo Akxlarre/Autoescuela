@@ -159,16 +159,6 @@ interface SemaforoInfo {
             class="h-9"
             data-llm-description="Filter professional students by license class"
           />
-          <p-select
-            [options]="estadoOptions"
-            [(ngModel)]="selectedEstado"
-            (ngModelChange)="resetPagination()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Todos los estados"
-            class="h-9"
-            data-llm-description="Filter professional students by enrollment status"
-          />
           <app-clear-filters-button
             llmSubject="professional-students"
             [active]="hasActiveFilters()"
@@ -537,7 +527,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   searchTerm = '';
   selectedClase = '';
-  selectedEstado = '';
 
   /** Cada filtro abre con su opción "todos", con el mismo '' por defecto (spec 0022-m). */
   readonly claseOptions = withAllOption(
@@ -550,19 +539,12 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     'Todas las clases',
     '',
   );
-  readonly estadoOptions = withAllOption(
-    [
-      { label: 'Activo', value: 'Activo' },
-      { label: 'Inactivo', value: 'Inactivo' },
-      { label: 'Retirado', value: 'Retirado' },
-    ],
-    'Todos los estados',
-    '',
-  );
+  // Sin filtro de estado (fix-329-m, D2): la Base Profesional solo trae matrículas activas;
+  // "Inactivo" y "Retirado" no pueden existir en Clase Profesional.
 
   /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
   hasActiveFilters(): boolean {
-    return this.searchTerm !== '' || this.selectedClase !== '' || this.selectedEstado !== '';
+    return this.searchTerm !== '' || this.selectedClase !== '';
   }
 
   // ── Derivados ─────────────────────────────────────────────────────────────
@@ -633,8 +615,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     return this.alumnos().filter((a) => {
       const matchSearch = matchesSearchTokens([a.nombre, a.apellido, a.rut, a.nroMatricula], term);
       const matchClase = !this.selectedClase || a.licenseClass === this.selectedClase;
-      const matchEstado = !this.selectedEstado || a.estado === this.selectedEstado;
-      return matchSearch && matchClase && matchEstado;
+      return matchSearch && matchClase;
     });
   }
 
@@ -663,10 +644,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
         return 'success';
       case 'Finalizado':
         return 'info';
-      case 'Retirado':
-        return 'danger';
-      case 'Inactivo':
-        return 'secondary';
       default:
         return 'warn';
     }
@@ -685,7 +662,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     this.tableFirst.set(0);
     this.searchTerm = '';
     this.selectedClase = '';
-    this.selectedEstado = '';
   }
 
   handleHeroAction(actionId: string): void {

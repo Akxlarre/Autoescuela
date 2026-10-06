@@ -1,7 +1,8 @@
 # Fix: La Base Profesional ofrece estados que en Clase Profesional no pueden existir
 > id: fix-329-m-base-profesional-sin-estados-imposibles
 > refs: fix-319-m-testing-clase-profesional-piloto (S10, B02, E07, D2) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -31,3 +32,12 @@ Ninguno — fix autónomo.
 ## Test de Regresión
 - Spec del facade: solo consulta `active`.
 - E2E: el filtro de estado no ofrece "Retirado".
+
+**Verificado el 2026-10-05:** `admin-alumnos-profesional.facade.spec.ts` (la consulta pide solo
+`['active']`) y `alumnos-profesional-list-content.component.spec.ts` (sin `estadoOptions`;
+"Limpiar filtros" solo mira búsqueda y clase): 18/18. `tsc` y `lint:arch` sin errores. Con un solo
+estado posible ("Activo") se quitó **el selector de Estado completo** (un filtro de una opción no
+filtra nada), junto con `selectedEstado` y las variantes "Retirado"/"Inactivo" del badge. El tipo
+`AlumnoStatus` no se tocó: lo comparte la Base B, donde esos estados sí existen. Visual
+(`secretaria2@test.com`, Base Profesional): los selectores son "clase" y "ordenar"; consola sin
+errores. En desarrollo no hay matrículas Profesional activas, así que la lista sale vacía.

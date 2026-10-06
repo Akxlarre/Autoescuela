@@ -110,10 +110,10 @@ describe('AdminAlumnosProfesionalFacade', () => {
     expect(builders['enrollments'].eq).toHaveBeenCalledWith('license_group', 'professional');
   });
 
-  it('excluye enrollments completed de la query — ya son Ex-Alumnos (fix-084)', async () => {
+  it('trae solo matrículas activas — completed ya son Ex-Alumnos (fix-084); inactive/cancelled no existen en Profesional (fix-329-m)', async () => {
     mockTables({ enrollments: [] });
     await facade.initialize();
-    expect(builders['enrollments'].in).toHaveBeenCalledWith('status', ['active', 'inactive']);
+    expect(builders['enrollments'].in).toHaveBeenCalledWith('status', ['active']);
   });
 
   it('mapea un alumno profesional con promoción, semáforo, módulos y saldo (AC6)', async () => {

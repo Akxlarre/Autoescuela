@@ -49,8 +49,10 @@ interface RawProEnrollment {
 /**
  * Estados de matrícula considerados "matriculados" en la Base Profesional.
  * 'completed' queda fuera: esos alumnos ya son Ex-Alumnos y solo se listan ahí.
+ * Solo 'active': ningún flujo deja una matrícula Profesional en 'inactive', 'withdrawn' ni
+ * 'cancelled' (fix-329-m, D2). Cuando se modele al desertor se define dónde se ve.
  */
-const ENROLLED_STATUSES = ['active', 'inactive'];
+const ENROLLED_STATUSES = ['active'];
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosProfesionalFacade {
@@ -400,10 +402,6 @@ export class AdminAlumnosProfesionalFacade {
         return 'Activo';
       case 'completed':
         return 'Finalizado';
-      case 'inactive':
-        return 'Inactivo';
-      case 'cancelled':
-        return 'Retirado';
       default:
         return 'Pre-inscrito';
     }
