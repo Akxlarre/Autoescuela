@@ -393,7 +393,8 @@ interface SemaforoInfo {
             <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
-                @for (alumno of sortedAlumnos(); track alumno.id) {
+                <!-- track por matrícula: un alumno con 2 matrículas Profesional sale 2 veces (fix-331-m) -->
+                @for (alumno of sortedAlumnos(); track alumno.enrollmentId) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card
                       [alumno]="alumno"
@@ -560,8 +561,10 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       : 'Listado de alumnos de Clase Profesional',
   );
 
+  // fix-331-m (D10): una fila por matrícula (un alumno con A2 y A4 sale dos veces), así que el
+  // conteo es de matrículas.
   readonly heroChips = computed((): SectionHeroChip[] => [
-    { label: `${this.alumnos().length} alumnos`, icon: 'graduation-cap', style: 'default' },
+    { label: `${this.alumnos().length} matrículas`, icon: 'graduation-cap', style: 'default' },
   ]);
 
   readonly heroActions = computed((): SectionHeroAction[] => {
@@ -579,14 +582,14 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     {
       id: 'total',
-      label: 'Total',
+      label: 'Matrículas',
       value: this.alumnos().length,
       icon: 'graduation-cap',
       color: 'default',
     },
     {
       id: 'activos',
-      label: 'Activos',
+      label: 'Activas',
       value: this.activos(),
       icon: 'user-check',
       color: 'success',

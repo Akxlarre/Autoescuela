@@ -21,6 +21,18 @@ describe('AlumnosProfesionalListContentComponent — acciones del hero (fix-328-
     expect(c.hasActiveFilters()).toBe(false);
   });
 
+  // fix-331-m (D10): una fila por matrícula (un alumno con A2 y A4 sale dos veces), así que el
+  // total cuenta matrículas y debe decirlo.
+  it('el chip y el KPI de total cuentan matrículas, no alumnos', () => {
+    const c = create();
+    // En JIT los signal inputs no se pueden escribir: se sustituye el input requerido.
+    Object.defineProperty(c, 'alumnos', { value: () => [] });
+    expect(c.heroChips()[0].label).toBe('0 matrículas');
+    const kpis = c.heroKpis() as { id: string; label: string }[];
+    expect(kpis.find((k) => k.id === 'total')?.label).toBe('Matrículas');
+    expect(kpis.find((k) => k.id === 'activos')?.label).toBe('Activas');
+  });
+
   it('en el piloto no ofrece "Pre-inscritos"; sí la Papelera', () => {
     const ids = (create().heroActions() as { id: string }[]).map((a) => a.id);
     expect(ids).not.toContain('preinscritos');

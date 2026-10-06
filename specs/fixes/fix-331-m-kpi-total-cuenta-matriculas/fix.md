@@ -1,7 +1,8 @@
 # Fix: El total de la Base Profesional dice "alumnos" pero cuenta matrículas
 > id: fix-331-m-kpi-total-cuenta-matriculas
 > refs: fix-319-m-testing-clase-profesional-piloto (B05, D01, D10) · ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -23,3 +24,10 @@ Ninguno — fix autónomo.
 ## Test de Regresión
 - E2E con un alumno de 2 matrículas Profesional: 2 filas, el total las cuenta y no hay errores de
   claves duplicadas en consola.
+
+**Verificado el 2026-10-05:** B05 confirmado antes del fix: con `E2E-ProfDoble` (2 matrículas
+Profesional, sembrado en `fix-319-m`) la consola mostraba `NG0955` (claves duplicadas) en la vista
+de tarjetas, que rastreaba por `alumno.id` (id del alumno). La tabla (`p-table`) no usa `track`.
+Después del fix (Playwright, `secretaria2@test.com`): búsqueda "E2E-ProfDoble" → 2 tarjetas, hero
+"64 matrículas · MATRÍCULAS 64 · ACTIVAS 64", consola sin warnings. Spec del componente: chip
+"N matrículas" y KPIs "Matrículas"/"Activas" (3/3).
