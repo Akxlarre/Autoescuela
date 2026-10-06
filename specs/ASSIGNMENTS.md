@@ -81,7 +81,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-022 | Testing: Autenticación, sesión, roles y fase piloto | `b` | fix | P0 | i | Integración/E2E · Media |
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
 | ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `m` | fix | P1 | i | Integración · Alta |
@@ -287,6 +286,8 @@
 |----|--------|----------------|-------------------|-------|
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 | ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | `m` | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-05 |
+| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
+| ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -430,7 +431,6 @@
 | ASG-i-040 | XSS almacenado en la landing pública (innerHTML con texto editable) | [hotfix-008-i-xss-landing-publica-innerhtml](hotfixes/hotfix-008-i-xss-landing-publica-innerhtml/hotfix.md) | 2026-10-01 |
 | ASG-i-042 | Edge functions con sesión pero sin validar rol ni sede | [0009-i-edge-functions-exigir-usuario-staff](specs/0009-i-edge-functions-exigir-usuario-staff/spec.md) | 2026-10-01 |
 | ASG-i-043 | Una secretaria puede editar a cualquier usuario (incluido un admin) | [fix-179-b-edicion-usuarios-sin-validar-objetivo](fixes/fix-179-b-edicion-usuarios-sin-validar-objetivo/fix.md) | 2026-10-01 |
-| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | [fix-180-b-usuarios-desactivados-siguen-entrando](fixes/fix-180-b-usuarios-desactivados-siguen-entrando/fix.md) | 2026-10-01 |
 | ASG-i-045 | RLS que filtra por rol pero no por sede | [0047-b-rls-aislamiento-por-sede](specs/0047-b-rls-aislamiento-por-sede/spec.md) | 2026-10-01 |
 | ASG-i-046 | Storage: leer y sobrescribir archivos de otra sede, y subida anónima | [fix-178-b-storage-aislamiento-por-sede](fixes/fix-178-b-storage-aislamiento-por-sede/fix.md) | 2026-10-01 |
 | ASG-i-041 | Edge functions que responden sin sesión | [fix-043-i-edge-functions-sin-sesion](fixes/fix-043-i-edge-functions-sin-sesion/fix.md) | 2026-10-02 |

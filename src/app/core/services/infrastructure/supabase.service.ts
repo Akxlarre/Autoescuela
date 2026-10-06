@@ -69,7 +69,8 @@ export class SupabaseService {
     return await this.supabase.auth.refreshSession();
   }
 
-  async resetPasswordForEmail(email: string) {
-    return await this.supabase.auth.resetPasswordForEmail(email);
+  /** `redirectTo`: pantalla a la que vuelve el link del correo (fix-181-b). */
+  async resetPasswordForEmail(email: string, redirectTo?: string) {
+    return await this.supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
   }
 }

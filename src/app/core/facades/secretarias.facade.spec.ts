@@ -56,4 +56,47 @@ describe('SecretariasFacade', () => {
     facade.selectSecretaria(sec);
     expect(facade.selectedSecretaria()).toBe(sec);
   });
+
+  describe('crearSecretaria — cuenta sin clave RUT (fix-182-b)', () => {
+    const payload = {
+      firstNames: 'Ana',
+      paternalLastName: 'Pérez',
+      maternalLastName: 'Soto',
+      rut: '11.111.111-1',
+      email: 'ana@test.cl',
+      telefono: '',
+      branchId: 1,
+    } as any;
+
+    beforeEach(() => {
+      (supabaseSpy.client as any).functions = { invoke: vi.fn() };
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+    });
+
+    it('correo enviado → avisa que le llegará un correo para activar la cuenta', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValue({
+        data: { success: true, inviteSent: true },
+        error: null,
+      });
+
+      expect(await facade.crearSecretaria(payload)).toBe(true);
+      expect(toastSpy.success).toHaveBeenCalledWith(
+        'Secretaria creada',
+        'Le enviamos un correo a ana@test.cl para que active su cuenta y cree su contraseña.',
+      );
+    });
+
+    it('correo no enviado → indica activar con "recuperar contraseña"', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValue({
+        data: { success: true, inviteSent: false },
+        error: null,
+      });
+
+      expect(await facade.crearSecretaria(payload)).toBe(true);
+      expect(toastSpy.success).toHaveBeenCalledWith(
+        'Secretaria creada',
+        'No pudimos enviar el correo de activación. Pídele que use "¿Olvidaste tu contraseña?" con ana@test.cl.',
+      );
+    });
+  });
 });

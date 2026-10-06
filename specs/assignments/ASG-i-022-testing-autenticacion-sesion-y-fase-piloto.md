@@ -1,14 +1,14 @@
 # Asignación ASG-i-022 — Testing: Autenticación, sesión, roles y bloqueo de fase piloto
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-05
+> **resulting_track:** fix-183-b-testing-autenticacion-sesion
 
 ---
 

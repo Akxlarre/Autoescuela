@@ -193,12 +193,18 @@ export class SecretariasFacade {
   async crearSecretaria(payload: CrearSecretariaPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
-      const { error } = await this.supabase.client.functions.invoke('create-secretary', {
+      const { data, error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
       if (error)
         throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
-      this.toast.success('Secretaria creada', 'La cuenta ha sido creada correctamente.');
+      // fix-182-b: la cuenta se crea sin contraseña; la secretaria la crea desde el correo.
+      this.toast.success(
+        'Secretaria creada',
+        data?.inviteSent === false
+          ? `No pudimos enviar el correo de activación. Pídele que use "¿Olvidaste tu contraseña?" con ${payload.email}.`
+          : `Le enviamos un correo a ${payload.email} para que active su cuenta y cree su contraseña.`,
+      );
       await this.refreshSilently();
       return true;
     } catch (err: unknown) {

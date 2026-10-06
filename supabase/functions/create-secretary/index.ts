@@ -16,14 +16,20 @@
 //   canAccessBothBranches : boolean (opcional) — grant multi-sede (spec 0017); default false
 //
 // Flujo:
-//   1. Valida que el email no exista ya en auth.users
-//   2. Crea el usuario en Supabase Auth (sin password → recibirá email de invite)
-//   3. Inserta la fila en public.users con role_id = secretary
+//   1. Crea la cuenta de Auth SIN contraseña con generateLink('invite') — fix-182-b
+//   2. Inserta la fila en public.users con role_id = secretary (rollback de Auth si falla)
+//   3. Envía por SMTP propio el correo con el link para crear su contraseña. Si el envío falla,
+//      la cuenta queda creada y puede activarse con "recuperar contraseña".
+//
+// Secrets: SITE_URL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM (los mismos que
+// create-instructor).
 //
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import nodemailer from 'npm:nodemailer@6';
+import { buildStaffInviteEmail } from '../_shared/staff-invite-email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,19 +121,18 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Rol "secretary" no encontrado en la BD', 500);
     }
 
-    // ── Derivar contraseña inicial desde el RUT ───────────────────────────────
-    // Contraseña = cuerpo del RUT sin puntos ni dígito verificador.
-    // Ej: "15.206.231-3" → "15206231"
-    // En el primer login, force-password-change obliga al cambio (firstLogin=true).
-    const initialPassword = rut.replace(/\./g, '').split('-')[0];
-
-    // ── Crear usuario en Supabase Auth ────────────────────────────────────────
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // ── Crear la cuenta de Auth SIN contraseña (fix-182-b) ──────────────────────
+    // Antes la clave inicial era el cuerpo del RUT, un dato que no es secreto. generateLink
+    // ('invite') crea el usuario y devuelve el link de activación sin enviar el correo nativo de
+    // Supabase (su plantilla es la del flujo de alumnos); el correo lo enviamos abajo, como
+    // create-instructor.
+    const fullName = `${firstNames} ${paternalLastName}${maternalLastName ? ' ' + maternalLastName : ''}`;
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'invite',
       email,
-      password: initialPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: `${firstNames} ${paternalLastName}${maternalLastName ? ' ' + maternalLastName : ''}`,
+      options: {
+        redirectTo: Deno.env.get('SITE_URL') ?? '',
+        data: { role: 'secretary', full_name: fullName },
       },
     });
 
@@ -162,7 +167,34 @@ Deno.serve(async (req: Request) => {
       return errorResponse(`Error al registrar la secretaria: ${insertError.message}`, 500);
     }
 
-    return jsonResponse({ success: true, email }, 201);
+    // ── Correo de activación ─────────────────────────────────────────────────
+    // Un fallo acá no deshace la cuenta: puede activarse con "recuperar contraseña".
+    let inviteSent = true;
+    try {
+      const { subject, html } = buildStaffInviteEmail({
+        name: fullName,
+        roleLabel: 'secretaria',
+        actionLink: authData.properties.action_link,
+      });
+      const port = Number(Deno.env.get('SMTP_PORT') ?? 465);
+      const transporter = nodemailer.createTransport({
+        host: Deno.env.get('SMTP_HOST'),
+        port,
+        secure: port === 465,
+        auth: { user: Deno.env.get('SMTP_USER'), pass: Deno.env.get('SMTP_PASS') },
+      });
+      await transporter.sendMail({
+        from: Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER'),
+        to: email,
+        subject,
+        html,
+      });
+    } catch (emailError) {
+      inviteSent = false;
+      console.error('Error al enviar correo de activación:', emailError?.message ?? emailError);
+    }
+
+    return jsonResponse({ success: true, email, inviteSent }, 201);
   } catch (err) {
     return errorResponse(`Error interno: ${err?.message ?? 'desconocido'}`, 500);
   }

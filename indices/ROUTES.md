@@ -25,7 +25,7 @@
 |------|-----------|--------|------------------|
 | `/login` | `LoginComponent` | `guestGuard` | `src/app/app.routes.ts` |
 | `/force-password-change` | `ForcePasswordChangeComponent` | `firstLoginGuard` | `src/app/app.routes.ts` |
-| `/recuperar-contrasena` | `RecuperarContrasenaComponent` | `guestGuard` | `src/app/app.routes.ts` |
+| `/recuperar-contrasena` | `ForcePasswordChangeComponent` | `passwordRecoveryGuard` | `src/app/app.routes.ts` |
 | `/acceso-denegado` | `AccesoDenegadoComponent` | — | `src/app/app.routes.ts` |
 | `/modulo-no-disponible` | `ModuloNoDisponibleComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion` | `PublicEnrollmentComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
