@@ -1,4 +1,4 @@
-import { mapAuthError } from './auth-errors.utils';
+import { mapAuthError, PASSWORD_MIN_LENGTH } from './auth-errors.utils';
 
 describe('mapAuthError', () => {
   it('detecta error de red por name AuthRetryableFetchError', () => {
@@ -29,6 +29,16 @@ describe('mapAuthError', () => {
     const error = { message: 'Something totally unexpected' };
     expect(mapAuthError(error)).toBe(
       'Error de autenticación. Por favor, verifica tus datos e intenta de nuevo.',
+    );
+  });
+
+  it('PASSWORD_MIN_LENGTH = 8, igual que password_min_length de Supabase Auth (hotfix-059-b)', () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(8);
+  });
+
+  it('"at least 8 characters" de Supabase → mensaje en español con el número real', () => {
+    expect(mapAuthError({ message: 'Password should be at least 8 characters.' })).toBe(
+      'La contraseña debe tener al menos 8 caracteres.',
     );
   });
 });
