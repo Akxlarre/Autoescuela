@@ -62,8 +62,9 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
       ajeno a este fix). El link redirige a `http://localhost:4200` porque en Supabase Auth la Site
       URL y la allowlist son localhost y no existe el secret `SITE_URL` (configuración de dominio
       diferida por el owner, `docs/DEPLOY.md`). Afecta igual a instructores y alumnos.
-- [ ] Prueba manual: abrir el link, cambiar `http://localhost:4200` por el dominio de la app
-      (conservando el `#access_token…`) → crear contraseña → entrar. Pendiente del owner → llega el correo → crea su
+- [ ] Prueba manual (owner): el 1er link se consumió en un intento con el `redirect_to` editado
+      (`otp_expired`). Repetir con una 2ª secretaria de prueba y la app corriendo en
+      `localhost:4200` (el destino actual del link) → crear contraseña → entrar → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
 ## Cuenta ya existente
