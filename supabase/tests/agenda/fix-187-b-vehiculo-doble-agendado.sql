@@ -187,6 +187,20 @@ BEGIN
   EXCEPTION WHEN SQLSTATE 'ZZ001' THEN NULL; END;
   INSERT INTO pg_temp.r187 VALUES ('DG-063 con search_path vacío', 'rechazado (mensaje del vehículo)', coalesce(v_err, 'se guardó'),
     CASE WHEN v_err = c_msg THEN 'ok' ELSE 'FALLA' END);
+
+  -- ── fix-188-b: el trigger del ALUMNO también funciona con search_path vacío ──
+  -- INSERT de una clase activa del mismo alumno a la misma hora, con otro instructor y vehículo.
+  v_err := NULL;
+  BEGIN
+    INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, scheduled_at, status) VALUES (v_e1, c_i1, c_v1, v_t, 'scheduled');
+    PERFORM set_config('search_path', '', true);
+    BEGIN
+      INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, scheduled_at, status) VALUES (v_e1, c_i2, c_v2, v_t, 'scheduled');
+    EXCEPTION WHEN OTHERS THEN v_err := SQLERRM; END;
+    RAISE SQLSTATE 'ZZ001';
+  EXCEPTION WHEN SQLSTATE 'ZZ001' THEN NULL; END;
+  INSERT INTO pg_temp.r187 VALUES ('fix-188-b alumno con search_path vacío', 'rechazado (mensaje del alumno)', coalesce(v_err, 'se guardó'),
+    CASE WHEN v_err = 'El alumno ya tiene otra clase agendada que se solapa con este horario.' THEN 'ok' ELSE 'FALLA' END);
 END
 $test$;
 
