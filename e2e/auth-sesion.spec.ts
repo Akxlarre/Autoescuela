@@ -16,11 +16,14 @@ import { expect, test, watchErrors } from './support/fixtures';
 import type { Page } from '@playwright/test';
 import type { E2eRole } from './support/accounts';
 
-// En serie dentro de un worker: con varios navegadores en paralelo la restauración de sesión
-// supera los 5 s del timeout de `whenReady` y los guards mandan a /login a usuarios con sesión
-// válida (S17, hallazgo de fix-183-b). Mientras S17 no se corrija, en paralelo el resultado sería
-// ruido. 90 s por test: los de matriz navegan varias pantallas contra la BD en la nube.
-test.describe.configure({ mode: 'default', timeout: 90_000 });
+// En serie por defecto (resultado estable contra la BD en la nube). `E2E_PARALLEL=1` corre el
+// archivo en paralelo: es la prueba de carga de S17 (fix-185-b) — antes de ese fix, con varios
+// navegadores la restauración de sesión superaba los 5 s de `whenReady` y los guards mandaban a
+// /login a usuarios con sesión válida. 90 s por test: los de matriz navegan varias pantallas.
+test.describe.configure({
+  mode: process.env['E2E_PARALLEL'] ? 'parallel' : 'default',
+  timeout: 90_000,
+});
 
 const MND = '/modulo-no-disponible';
 const DASH: Record<E2eRole, string> = {
@@ -37,9 +40,10 @@ const SUBMIT = '[data-llm-action="submit-auth-form"]';
 /** Navega y espera a que la URL se asiente en `expected` (los guards redirigen en cadena). */
 async function expectLandsOn(page: Page, url: string, expected: string): Promise<void> {
   await page.goto(url);
-  // 20 s: la cadena de guards + carga de sesión contra la BD en la nube a veces pasa de 10 s.
+  // 30 s: la cadena de guards + carga de sesión contra la BD en la nube pasa de 20 s cuando la
+  // suite corre en paralelo (E2E_PARALLEL) y satura la BD del piloto (consultas de 30 s).
   await expect(page).toHaveURL(new RegExp(`${expected.replace(/[?]/g, '\\?')}$`), {
-    timeout: 20_000,
+    timeout: 30_000,
   });
 }
 
@@ -391,7 +395,7 @@ const BLOCKED_MENU_LABELS = [
 
 async function sidebarText(page: Page): Promise<string> {
   const nav = page.getByRole('navigation', { name: 'Navegación principal' });
-  await expect(nav).toBeVisible();
+  await expect(nav).toBeVisible({ timeout: 20_000 });
   return (await nav.innerText()).replace(/\s+/g, ' ');
 }
 
@@ -427,7 +431,7 @@ test.describe('H/I. Menú lateral', () => {
       const page = await pageAs(role);
       const errors = watchErrors(page);
       await page.goto(DASH[role]);
-      await expect(page.locator('[data-llm-nav]').first()).toBeVisible();
+      await expect(page.locator('[data-llm-nav]').first()).toBeVisible({ timeout: 20_000 });
       const links = await page
         .locator('[data-llm-nav]')
         .evaluateAll((els) => els.map((e) => e.getAttribute('data-llm-nav')).filter(Boolean));

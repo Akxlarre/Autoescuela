@@ -276,6 +276,54 @@ describe('AuthFacade', () => {
 
       expect(maybeSingle).toHaveBeenCalledTimes(1);
     });
+
+    /** Cada llamada a maybeSingle devuelve el siguiente resultado de la lista (el último se repite). */
+    function profileResults(...results: { data: unknown; error: unknown }[]) {
+      let call = 0;
+      const maybeSingle = vi.fn(async () => results[Math.min(call++, results.length - 1)]);
+      (service as any).supabase.client.from = vi.fn(() => ({
+        select: () => ({ eq: () => ({ maybeSingle }) }),
+      }));
+      return maybeSingle;
+    }
+    const NET_ERROR = { data: null, error: { message: 'TypeError: Failed to fetch', code: '' } };
+
+    it('un corte de red al leer el perfil se reintenta y la sesión sigue (no rol unknown)', async () => {
+      fakeTimersFreshService();
+      const maybeSingle = profileResults(NET_ERROR, NET_ERROR, { data: PROFILE, error: null });
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await vi.advanceTimersByTimeAsync(3100);
+
+      expect(ready).toBe(true);
+      expect(maybeSingle).toHaveBeenCalledTimes(3);
+      expect(service.currentUser()?.role).toBe('secretaria');
+    });
+
+    it('si el perfil no se puede leer tras los reintentos, queda sin usuario pero NO cierra la sesión', async () => {
+      fakeTimersFreshService();
+      const maybeSingle = profileResults(NET_ERROR);
+      let ready = false;
+      service.whenReady.then(() => (ready = true));
+
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await vi.advanceTimersByTimeAsync(3100);
+
+      expect(ready).toBe(true);
+      expect(maybeSingle).toHaveBeenCalledTimes(3);
+      expect(service.currentUser()).toBeNull();
+      expect(supabaseSpy.signOut).not.toHaveBeenCalled();
+    });
+
+    it('sin fila en users (respuesta OK, data null) no reintenta: es un perfil inexistente', async () => {
+      const maybeSingle = profileResults({ data: null, error: null });
+      authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+      await service.whenReady;
+      expect(maybeSingle).toHaveBeenCalledTimes(1);
+      expect(service.currentUser()?.role).toBe('unknown');
+    });
   });
 
   it('login() should return an Error instance on failure', async () => {

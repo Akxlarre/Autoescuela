@@ -17,6 +17,9 @@ import { mapAuthError } from '@core/utils/auth-errors.utils';
 /** Tope de espera de la carga inicial de sesión (solo si Supabase no responde). */
 const AUTH_READY_TIMEOUT_MS = 15_000;
 
+/** Esperas entre reintentos al leer el perfil tras un error de red/servidor (fix-185-b). */
+const PROFILE_RETRY_DELAYS_MS = [1000, 2000];
+
 @Injectable({
   providedIn: 'root',
 })
@@ -64,17 +67,19 @@ export class AuthFacade {
         // condition que provocaba "Refresh Token Not Found" cuando getUser()
         // y INITIAL_SESSION intentaban rotar el token en paralelo.
         if (session?.user) {
-          void this.loadUserFromSession(session.user).finally(() => resolveReady());
+          this.loadUserFromSession(session.user)
+            .catch(() => undefined)
+            .finally(() => resolveReady());
         } else {
           resolveReady();
         }
       } else if (event === 'SIGNED_IN' && session?.user) {
-        void this.loadUserFromSession(session.user);
+        this.loadUserFromSession(session.user).catch(() => undefined);
       } else if (event === 'PASSWORD_RECOVERY') {
         // El link del correo abre una sesión: sin esto la app la trataba como un login normal y
         // el usuario entraba sin fijar clave nueva (fix-181-b).
         this._passwordRecovery.set(true);
-        if (session?.user) void this.loadUserFromSession(session.user);
+        if (session?.user) this.loadUserFromSession(session.user).catch(() => undefined);
         void this.router.navigate(['/recuperar-contrasena']);
       } else if (event === 'SIGNED_OUT') {
         this.disposeRealtime();
@@ -128,20 +133,21 @@ export class AuthFacade {
       } | null;
     }
 
-    const result = await this.supabase.client
-      .from('users')
-      .select(
-        'id, first_names, paternal_last_name, branch_id, can_access_both_branches, first_login, active, role_id, roles(name)',
-      )
-      .eq('supabase_uid', authUser.id)
-      .maybeSingle();
+    // Un corte de red al leer el perfil NO es "usuario sin rol": antes se armaba el usuario con
+    // rol 'unknown' y roleRedirectGuard cerraba una sesión válida (S17, fix-185-b). Se reintenta
+    // y, si sigue fallando, se lanza: el usuario queda sin cargar pero la sesión no se cierra.
+    let result = await this.fetchProfileRow(authUser.id);
+    for (const delayMs of PROFILE_RETRY_DELAYS_MS) {
+      if (!result.error) break;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      result = await this.fetchProfileRow(authUser.id);
+    }
+    if (result.error) {
+      console.error('Error fetching user profile:', result.error);
+      throw result.error;
+    }
 
     const dbUser = result.data as unknown as UserWithRole | null;
-    const error = result.error;
-
-    if (error) {
-      console.error('Error fetching user profile:', error);
-    }
 
     const name = dbUser
       ? `${dbUser.first_names} ${dbUser.paternal_last_name}`
@@ -174,6 +180,16 @@ export class AuthFacade {
       canAccessBothBranches: dbUser?.can_access_both_branches ?? false,
       isActive: dbUser?.active,
     };
+  }
+
+  private fetchProfileRow(supabaseUid: string) {
+    return this.supabase.client
+      .from('users')
+      .select(
+        'id, first_names, paternal_last_name, branch_id, can_access_both_branches, first_login, active, role_id, roles(name)',
+      )
+      .eq('supabase_uid', supabaseUid)
+      .maybeSingle();
   }
 
   // ── Realtime: grant multi-sede en caliente (AC-E3, spec 0017) ──────────────
@@ -217,7 +233,12 @@ export class AuthFacade {
     const cur = this._currentUser();
     if (!cur) return;
     const wasGranted = cur.canAccessBothBranches ?? false;
-    const updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
+    let updated: User;
+    try {
+      updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
+    } catch {
+      return; // sin red: se conserva el perfil vigente (fix-185-b)
+    }
     this._currentUser.set(updated);
     if (wasGranted && !(updated.canAccessBothBranches ?? false)) {
       this.branchFacade.reset();
