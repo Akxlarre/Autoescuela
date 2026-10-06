@@ -24,6 +24,8 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [showKpis]="false"
       [maxVisibleDateIso]="agendaSettings.maxVisibleDateIso()"
       [maxVisibleDateLabel]="agendaSettings.maxVisibleDateLabel()"
+      [error]="facade.error()"
+      (retry)="facade.retry()"
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"
       (weekToday)="facade.goToToday()"
