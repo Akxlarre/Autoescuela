@@ -331,13 +331,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 <app-icon name="shield-check" [size]="16" />
                 Ver documentos
               </button>
-              <button
-                class="quick-action-btn border-brand text-brand"
-                data-llm-action="ver-clases-activas-instructor"
-              >
-                <app-icon name="clipboard-list" [size]="16" />
-                Ver clases activas ({{ inst.activeClassesCount }})
-              </button>
             </div>
           </ng-template>
         </app-drawer-content-loader>

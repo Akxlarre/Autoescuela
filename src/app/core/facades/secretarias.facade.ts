@@ -79,6 +79,7 @@ export class SecretariasFacade {
   private readonly _secretarias = signal<SecretariaTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly listGuard = createRequestGuard();
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -155,6 +156,8 @@ export class SecretariasFacade {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+    } catch {
+      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
     } finally {
       this._isLoading.set(false);
     }
@@ -169,6 +172,7 @@ export class SecretariasFacade {
   }
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.listGuard.next();
     const branchId = this.branchFacade.selectedBranchId();
 
     let query = this.supabase.client
@@ -199,11 +203,16 @@ export class SecretariasFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._error.set(this.sanitizer.sanitize(error).message);
+      }
       throw error;
     }
+    // fix-209-b (S19): una respuesta de otra sede (más vieja) no pisa la vigente.
+    if (!this.listGuard.isCurrent(requestToken)) return;
 
     const rows = (data as unknown as SecretariaRow[]) ?? [];
+    this._error.set(null);
     this._secretarias.set(rows.map((r) => this.mapRow(r)));
   }
 
