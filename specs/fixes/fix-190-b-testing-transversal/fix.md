@@ -174,3 +174,27 @@ la Caja cruza con **ASG-i-048** (escrituras de Cuadratura, de i).
 | Token vence (reloj +2 h) y la renovación falla (`invalid_grant`) | ✅ | Vuelve sola a `/login` en < 20 s, **sin toasts** (test `X04`) |
 | Borrar el token de `localStorage` (lo del checklist) | ✅ con matiz | supabase-js conserva la sesión en memoria: la app sigue funcionando hasta recargar; con F5 → `/login` sin toasts. Es el comportamiento esperable del cliente, no un bug |
 | Mensaje en el login | ⚠️ | `/login` muestra el "Bienvenido de vuelta" de siempre, sin "tu sesión expiró". Observación de UX, sin track (decisión del owner si se quiere) |
+
+## Z — Rendimiento con D6 (secretaria sede 2, build de producción, 2026-10-07)
+
+**D6 cargado** con `supabase/scripts/seed_d6_volumen.sql` (aprobado por el owner; se revierte con
+`cleanup_d6_volumen.sql`). Sede 2: 318 alumnos, 1.104 clases, 537 pagos, 315 documentos. Sin efectos
+en la operación: clases `cancelled` en 2025 (horas de instructores intactas: 798 → 798) y pagos con
+fecha y `created_at` de 2025 (0 pagos con fecha de hoy). Ensayado antes en una transacción revertida.
+
+| Caso | Res. | Medición |
+|---|---|---|
+| Z01 Dashboard, Alumnos, Pagos, Documentos, Caja, Asistencia, Ex-Alumnos, Reportes | ✅ | 0,5–2,3 s (3 corridas) |
+| Z01 Certificados | ⚠️ | 2,9–3,6 s (consultas secuenciales; al borde de los 3 s) |
+| Z01 **Agenda** | ❌ | **5,5–6,2 s**, estable. Una sola consulta: `v_class_b_schedule_availability` (4,8 s). Ver abajo |
+| Z01 congelamiento | ✅ | Bloqueo del hilo principal ≤ 414 ms (Alumnos) |
+| Z03 Tope de 1.000 filas | ✅ | Ninguna respuesta de PostgREST cortada en `0-999/` en las 10 pantallas |
+| Z05 Buscador | ✅ | 157 ms la primera búsqueda (incluye carga de la Base), 94 ms la siguiente |
+| Z02 / Z04 | — | No medidos (scroll fluido y memoria a 30 min: manuales) |
+
+**Agenda:** no es por D6 (sus clases están canceladas y el índice parcial las excluye). `EXPLAIN
+ANALYZE` impersonando a la secretaria: ~5 s; como superusuario, 0,2 s. La vista es
+`security_invoker`: el `NOT EXISTS` de choques evalúa la RLS de `class_b_sessions` fila por fila
+(`auth_user_role()` por fila, 4,7 ms por turno × 520 turnos) y **dos veces** (filtro + `CASE`).
+Además, con RLS la secretaria no ve clases de la otra sede → un instructor/vehículo compartido
+ocupado allá se le muestra **disponible**. → **`fix-196-b`**.
