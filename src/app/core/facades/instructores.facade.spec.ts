@@ -690,4 +690,79 @@ describe('InstructoresFacade', () => {
       expect(facade.clasesFuturasSeleccionado()).toBe(5);
     });
   });
+
+  // fix-209-b (S19 de ASG-i-034): error visible + guard de orden en la lista.
+  describe('carga de la lista — fix-209-b', () => {
+    function query(result: Promise<unknown>): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'in', 'is', 'gte', 'lte']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (res: any, rej: any) => result.then(res, rej);
+      return q;
+    }
+    const row = (id: number) => ({
+      id,
+      user_id: id * 10,
+      type: 'practice',
+      license_number: 'X',
+      license_class: 'B',
+      license_expiry: null,
+      license_status: 'valid',
+      active: true,
+      registration_date: null,
+      both_branches: false,
+      users: {
+        id: id * 10,
+        rut: `${id}`,
+        first_names: 'Juan',
+        paternal_last_name: `P${id}`,
+        maternal_last_name: null,
+        email: `i${id}@t.cl`,
+        phone: null,
+        active: true,
+        branch_id: 1,
+      },
+      vehicle_assignments: [],
+    });
+    /** `instructors` responde en orden la cola dada; el resto de tablas, vacío. */
+    function mockTables(instructorResults: Promise<unknown>[]): void {
+      supabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'instructors'
+          ? query(instructorResults.shift() ?? Promise.resolve({ data: [], error: null }))
+          : query(Promise.resolve({ data: [], error: null })),
+      );
+    }
+
+    it('con error → initialize() no rechaza y deja el error expuesto', async () => {
+      mockTables([Promise.resolve({ data: null, error: { message: 'boom' } })]);
+      await expect(facade.initialize()).resolves.toBeUndefined();
+      expect(facade.error()).toBeTruthy();
+      expect(facade.instructores()).toEqual([]);
+    });
+
+    it('una carga exitosa limpia el error anterior', async () => {
+      mockTables([Promise.resolve({ data: null, error: { message: 'boom' } })]);
+      await facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockTables([Promise.resolve({ data: [row(1)], error: null })]);
+      await facade.initialize();
+      expect(facade.error()).toBeNull();
+      expect(facade.instructores().length).toBe(1);
+    });
+
+    it('la respuesta de la sede anterior no pisa la de la sede vigente', async () => {
+      let resolveOld!: (v: unknown) => void;
+      mockTables([
+        new Promise((r) => (resolveOld = r)),
+        Promise.resolve({ data: [row(2)], error: null }),
+      ]);
+      const first = facade.initialize(); // admin, todas las sedes
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      await facade.initialize();
+      resolveOld({ data: [row(1)], error: null });
+      await first;
+      expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+    });
+  });
 });

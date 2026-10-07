@@ -166,6 +166,7 @@ export class InstructoresFacade {
   /** Clases futuras del instructor en edición (fix-205-b); `null` = sin cargar o error. */
   private readonly _clasesFuturasSeleccionado = signal<number | null>(null);
   private readonly clasesFuturasGuard = createRequestGuard();
+  private readonly listGuard = createRequestGuard();
 
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly instructores = this._instructores.asReadonly();
@@ -231,6 +232,8 @@ export class InstructoresFacade {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+    } catch {
+      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
     } finally {
       this._isLoading.set(false);
     }
@@ -276,6 +279,7 @@ export class InstructoresFacade {
   `;
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.listGuard.next();
     const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
@@ -291,37 +295,46 @@ export class InstructoresFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._error.set(this.sanitizer.sanitize(error).message);
+      }
       throw error;
     }
 
     let rows = (data as unknown as InstructorRow[]) ?? [];
-
-    // spec 0004-m (AC6): un instructor `both_branches=true` de OTRA sede también debe
-    // aparecer. PostgREST rechaza `or=()` mezclando una columna de recurso embebido
-    // (`users.branch_id`) con una columna raíz (`both_branches`) — PGRST100, confirmado
-    // contra Supabase local — por eso es una segunda query + merge client-side, no un
-    // solo `.or()`.
-    if (branchId !== null) {
-      const { data: bothBranchesData, error: bbError } = await this.supabase.client
-        .from('instructors')
-        .select(InstructoresFacade.INSTRUCTOR_SELECT)
-        .is('vehicle_assignments.end_date', null)
-        .eq('both_branches', true);
-
-      if (!bbError && bothBranchesData) {
-        const seenIds = new Set(rows.map((r) => r.id));
-        for (const extra of bothBranchesData as unknown as InstructorRow[]) {
-          if (!seenIds.has(extra.id)) {
-            rows = [...rows, extra];
-            seenIds.add(extra.id);
-          }
-        }
-      }
-    }
+    if (branchId !== null) rows = await this.mergeBothBranchesInstructors(rows);
 
     const activeClassesById = await this.fetchActiveClassesCounts(rows.map((r) => r.id));
+    // fix-209-b (S19): una respuesta de otra sede (más vieja) no pisa la vigente.
+    if (!this.listGuard.isCurrent(requestToken)) return;
+    this._error.set(null);
     this._instructores.set(rows.map((r) => this.mapRow(r, activeClassesById.get(r.id) ?? 0)));
+  }
+
+  /**
+   * spec 0004-m (AC6): un instructor `both_branches=true` de OTRA sede también debe
+   * aparecer. PostgREST rechaza `or=()` mezclando una columna de recurso embebido
+   * (`users.branch_id`) con una columna raíz (`both_branches`) — PGRST100, confirmado
+   * contra Supabase local — por eso es una segunda query + merge client-side, no un
+   * solo `.or()`.
+   */
+  private async mergeBothBranchesInstructors(rows: InstructorRow[]): Promise<InstructorRow[]> {
+    const { data: bothBranchesData, error: bbError } = await this.supabase.client
+      .from('instructors')
+      .select(InstructoresFacade.INSTRUCTOR_SELECT)
+      .is('vehicle_assignments.end_date', null)
+      .eq('both_branches', true);
+
+    if (bbError || !bothBranchesData) return rows;
+    const seenIds = new Set(rows.map((r) => r.id));
+    const merged = [...rows];
+    for (const extra of bothBranchesData as unknown as InstructorRow[]) {
+      if (!seenIds.has(extra.id)) {
+        merged.push(extra);
+        seenIds.add(extra.id);
+      }
+    }
+    return merged;
   }
 
   /** COUNT en vivo de `class_b_sessions` en curso ("Transcurriendo") por instructor, acotado a hoy. */

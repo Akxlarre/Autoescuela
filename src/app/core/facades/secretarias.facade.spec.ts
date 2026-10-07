@@ -57,6 +57,76 @@ describe('SecretariasFacade', () => {
     expect(facade.selectedSecretaria()).toBe(sec);
   });
 
+  // fix-209-b (S19 de ASG-i-034): error visible + guard de orden en la lista.
+  describe('carga de la lista — fix-209-b', () => {
+    /** Query encadenable: cualquier método devuelve la misma query; al await resuelve `result`. */
+    function query(result: Promise<unknown>): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'in', 'is', 'gte', 'lte']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (res: any, rej: any) => result.then(res, rej);
+      return q;
+    }
+    const row = (id: number) => ({
+      id,
+      rut: `${id}`,
+      first_names: `Sec${id}`,
+      paternal_last_name: 'X',
+      maternal_last_name: null,
+      email: `s${id}@t.cl`,
+      phone: null,
+      active: true,
+      updated_at: null,
+      branch_id: 1,
+      can_access_both_branches: false,
+      roles: { name: 'secretary' },
+      branches: { name: 'Sede' },
+    });
+
+    it('con error → initialize() no rechaza y deja el error expuesto', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValue(query(Promise.resolve({ data: null, error: { message: 'boom' } })));
+      await expect(facade.initialize()).resolves.toBeUndefined();
+      expect(facade.error()).toBeTruthy();
+      expect(facade.secretarias()).toEqual([]);
+    });
+
+    it('una carga exitosa limpia el error anterior', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValue(query(Promise.resolve({ data: null, error: { message: 'boom' } })));
+      await facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValue(query(Promise.resolve({ data: [row(1)], error: null })));
+      await facade.initialize();
+      expect(facade.error()).toBeNull();
+      expect(facade.secretarias().length).toBe(1);
+    });
+
+    it('la respuesta de la sede anterior no pisa la de la sede vigente', async () => {
+      let resolveOld!: (v: unknown) => void;
+      const old = new Promise((r) => (resolveOld = r));
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValueOnce(query(old))
+        .mockReturnValueOnce(query(Promise.resolve({ data: [row(2)], error: null })));
+
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      const first = facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      await facade.initialize();
+      resolveOld({ data: [row(1)], error: null });
+      await first;
+      expect(facade.secretarias().map((s) => s.id)).toEqual([2]);
+    });
+  });
+
   describe('crearSecretaria — cuenta sin clave RUT (fix-182-b)', () => {
     const payload = {
       firstNames: 'Ana',
