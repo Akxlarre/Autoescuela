@@ -37,7 +37,7 @@ Ninguno de una spec previa — track de testing (origen ASG-i-034). Criterios pr
 | S4 | ❌ Confirmada → **corregida en `fix-198-b`** (PR #214, desplegado) | `create-instructor` usaba el `branchId` del body; `activate-instructor-account` reenviaba de cualquier sede. En vivo, secretaria sede 1: crear en sede 2 → 403, reenviar de sede 2 → 403 |
 | S5 | ❌ Confirmada → **corregida en `fix-199-b`** (PR #215, desplegado) | Los 3 `update-*` cambiaban Auth antes que `users` sin revertir. En vivo: correo de otro usuario → 409 y nada cambia (ni `users` ni Auth) |
 | S6 (servidor) | ❌ Confirmada → **`fix-199-b`** | `includes('already registered')` no calzaba con "…already been registered": 409 → 500. Ahora `isEmailTakenError` |
-| S6 (front) | Pendiente | Facades de crear instructor, crear/editar secretaria y reenviar invitación muestran mensaje genérico (DG-085) |
+| S6 (front) | ❌ Confirmada → **corregida en `fix-200-b`** (PR #217) | Crear instructor, crear/editar secretaria y reenviar invitación mostraban un texto genérico (DG-085); ahora un 4xx muestra el motivo real |
 | S11 | ✅ Descartada | La cerró `fix-182-b` (secretaria sin clave inicial = RUT) |
 
 **Hallazgo lateral:** `create-secretary` desplegado tiene código de `fix-182-b` que nunca llegó a
