@@ -3404,7 +3404,7 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
   // "idSuffix": "ID:" + código en negrita, a un offset FIJO del inicio del valor (nunca
   // calculado a partir del ancho del texto del curso — un cálculo por caracter se desalineó
   // y quedó pisando el texto, ver captura del dueño 2026-09-22). El nombre del curso siempre
-  // es corto ("CURSO PROFESIONAL CLASE A2"), así que un offset generoso nunca se solapa.
+  // es corto ("CURSO PROFESIONAL CLASE A-2"), así que un offset generoso nunca se solapa.
   const fields: {
     label: string;
     value: string;
@@ -3418,7 +3418,8 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       // igual que el real.
       value: d.convalidation
         ? `CURSO CONVALIDACIÓN CLASE A-${d.convalidation.slice(1)}`
-        : `CURSO PROFESIONAL CLASE ${d.course.licenseClass}`,
+        : // Con guion, como el libro real: "CLASE A-2" (hotfix-146-m).
+          `CURSO PROFESIONAL CLASE ${d.course.licenseClass.replace(/^([A-Za-z])(\d)$/, '$1-$2')}`,
       idSuffix: { code: d.course.code, offset: 260 },
       h: 42,
     },

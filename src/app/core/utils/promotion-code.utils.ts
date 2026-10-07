@@ -69,6 +69,19 @@ export function promotionNameForCode(name: string, oldCode: string, newCode: str
 }
 
 /**
+ * Texto para mostrar una promoción con su número. Desde fix-323-m el nombre ya lo trae
+ * ("Promoción 280 (5 de Octubre 2026)"): en ese caso no se repite. Las promociones antiguas
+ * ("Promoción 15 de Junio 2026", número 103) lo llevan entre paréntesis (hotfix-146-m).
+ */
+export function promotionLabel(name: string, code: string | null | undefined): string {
+  const number = (code ?? '').trim();
+  if (!number) return name;
+  const alreadyNamed =
+    new RegExp(`(^|\\D)${number}(\\D|$)`).test(name) && isValidPromotionCode(number);
+  return alreadyNamed ? name : `${name} (${number})`;
+}
+
+/**
  * Ordena los grupos de promociones del paso 2 de la matrícula por fecha de inicio, de la más
  * antigua a la más nueva; los que no tienen fecha van al final (hotfix-145-m). No muta la entrada.
  */

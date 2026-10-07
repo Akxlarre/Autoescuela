@@ -594,6 +594,8 @@ export class LibroDeClasesFacade {
     const cabecera = this._cabecera();
     const promotionCourseId = this._selectedCursoId();
     if (!cabecera || !promotionCourseId) return false;
+    // Un segundo clic mientras se guarda no vuelve a escribir (hotfix-146-m).
+    if (this._isSaving()) return false;
 
     // El código SENCE es un dato oficial fiscalizable (RF-103): registrar quién lo cambió
     // y cuándo, pero solo si efectivamente cambió.

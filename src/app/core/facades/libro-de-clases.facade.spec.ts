@@ -355,6 +355,26 @@ describe('LibroDeClasesFacade', () => {
       expect(facade.cabecera()?.senceCode).toBe('SENCE-TRAS-PDF');
       expect(mockToast.error).not.toHaveBeenCalled();
     });
+
+    // hotfix-146-m (Q08)
+    it('dos guardados seguidos (doble clic) → una sola escritura', async () => {
+      const tables = cursoCompleto();
+      tables['class_book'] = {
+        maybeSingle: { data: { id: 7, sence_code: 'OLD' }, error: null },
+      };
+      const { facade, mockSupabase } = setup(tables);
+      await facade.selectPromocion(1);
+
+      const [first, second] = await Promise.all([
+        facade.saveClassBookFields('NEW'),
+        facade.saveClassBookFields('NEW'),
+      ]);
+
+      expect(first).toBe(true);
+      expect(second).toBe(false);
+      expect(mockSupabase._builders.get('class_book').update).toHaveBeenCalledTimes(1);
+    });
+
     it('con libro existente → UPDATE por id y cabecera local sincronizada', async () => {
       const tables = cursoCompleto();
       tables['class_book'] = {
