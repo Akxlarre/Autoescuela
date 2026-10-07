@@ -71,6 +71,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 <!-- AUTO-GENERATED:BEGIN -->
 | Clase | Dependencias | Signals expuestos | Archivo |
 |-------|-------------|------------------|---------|
+| `AbsencePenaltyConfigFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/absence-penalty-config.facade.ts` |
 | `AdminAlumnoDetalleFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `DmsViewerService`, `NotificationsFacade`, `AgendaSettingsService`, `AuthFacade` | — | `src/app/core/facades/admin-alumno-detalle.facade.ts` |
 | `AdminAlumnosProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/admin-alumnos-profesional.facade.ts` |
 | `AdminAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/admin-alumnos.facade.ts` |
@@ -106,7 +107,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `ExecutiveDashboardFacade` | `SupabaseService`, `BranchFacade` | `preset`, `range`, `isLoading`, `kpis`, `series`, `instructorHours`, `receivables`, `todayOps`, `errors`, `stages`, `hasData` | `src/app/core/facades/executive-dashboard.facade.ts` |
 | `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |
 | `FlotaFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |
-| `GlobalSearchFacade` | `AuthFacade`, `AdminAlumnosFacade`, `AdminAlumnosProfesionalFacade` (fix-337-m: alumnos solo Profesional, vía `loadForSearch()` sin Realtime), `InstructorAlumnosFacade`, `InstructoresFacade`, `Router` | — | `src/app/core/facades/global-search.facade.ts` |
+| `GlobalSearchFacade` | `AuthFacade`, `AdminAlumnosFacade`, `AdminAlumnosProfesionalFacade`, `InstructorAlumnosFacade`, `InstructoresFacade`, `Router` | — | `src/app/core/facades/global-search.facade.ts` |
 | `HistorialCuadraturasFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService`, `LayoutDrawerFacadeService` | — | `src/app/core/facades/historial-cuadraturas.facade.ts` |
 | `InstructorAlumnosFacade` | `ErrorSanitizerService`, `InstructorProfileFacade`, `SupabaseService`, `ToastService`, `LayoutDrawerService` | — | `src/app/core/facades/instructor-alumnos.facade.ts` |
 | `InstructorClasesFacade` | `ErrorSanitizerService`, `InstructorProfileFacade`, `SupabaseService`, `ToastService`, `LayoutDrawerFacadeService` | — | `src/app/core/facades/instructor-clases.facade.ts` |
@@ -124,7 +125,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `RelatoresFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService` | — | `src/app/core/facades/relatores.facade.ts` |
 | `ReportesContablesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | `isLoading`, `isExporting`, `isRegistrando`, `error`, `filtros`, `gastosFijos`, `kpis`, `ingresosCategoria`, `gastosCategoria`, `evolucionMensual`, `rangoEvolucion`, `rentabilidadCursos`, `escuela` | `src/app/core/facades/reportes-contables.facade.ts` |
 | `SecretariasFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade` | — | `src/app/core/facades/secretarias.facade.ts` |
-| `ServiciosEspecialesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerFacadeService`, `NotificationsFacade` | `catalogo`, `ventas`, `selectedServicio`, `servicioAEditar`, `isLoading`, `isExporting`, `error`, `kpis`, `requiereElegirSede`, `sedePorDefecto`, `sedeOptions` | `src/app/core/facades/servicios-especiales.facade.ts` |
+| `ServiciosEspecialesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerFacadeService`, `NotificationsFacade` | `catalogo`, `ventas`, `selectedServicio`, `servicioAEditar`, `isLoading`, `isExporting`, `error`, `requiereElegirSede`, `sedePorDefecto`, `sedeOptions`, `kpis` | `src/app/core/facades/servicios-especiales.facade.ts` |
 | `StudentClasesFacade` | `SupabaseService`, `AuthFacade`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-clases.facade.ts` |
 | `StudentEnrollmentContextFacade` | `SupabaseService` | — | `src/app/core/facades/student-enrollment-context.facade.ts` |
 | `StudentHomeFacade` | `SupabaseService`, `AuthFacade`, `ToastService`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-home.facade.ts` |

@@ -324,17 +324,17 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 446 | `#38bdf8` |
-| `--text-muted` | 380 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 445 | `#38bdf8` |
+| `--text-muted` | 381 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
-| `--state-error` | 237 | `#f87171` |
+| `--state-error` | 235 | `#f87171` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 210 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 192 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
-| `--border-default` | 139 | `rgba(255, 255, 255, 0.28)` |
+| `--border-default` | 140 | `rgba(255, 255, 255, 0.28)` |
 | `--color-primary` | 133 | `#38bdf8` |
-| `--state-warning` | 125 | `#fbbf24` |
+| `--state-warning` | 129 | `#fbbf24` |
 | `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
@@ -344,7 +344,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--bg-subtle` | 50 | `rgba(255, 255, 255, 0.1)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 39 | `—` |
-| `--color-primary-text` | 37 | `#ffffff` |
+| `--color-primary-text` | 39 | `#ffffff` |
 | `--border-muted` | 36 | `var(--border-subtle)` |
 | `--bg-base` | 28 | `#09090b` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
@@ -354,9 +354,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 309 | `src/styles/tokens/_variables.scss` — en `@layer components` desde fix-341-m: las utilities (`p-0`, `p-4`, `bg-*`, `rounded-*`, `shadow-*`, `border-*`) **sí** se aplican sobre una card. Antes, sin capa, las ignoraba todas |
-| `.micro-label` | 189 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 188 | `src/styles/tokens/_variables.scss` |
+| `.micro-label` | 194 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 191 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |
@@ -459,8 +458,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 50 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 875 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 48 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 873 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -468,19 +467,19 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 15 | `font-bold text-lg text-text-primary` |
+| 16 | `font-bold text-lg text-text-primary` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 13 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 12 | `text-xs font-semibold text-text-primary` |
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
-| 11 | `text-2xl font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-warning` |
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |
 | 9 | `text-xs font-semibold text-text-muted mb-1 block` |
+| 9 | `text-2xl font-semibold text-text-primary` |
+| 8 | `w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle` |
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 7 | `m-0 font-semibold text-text-primary` |
-| 7 | `w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
 | 6 | `text-xs font-semibold uppercase tracking-wider` |
 
