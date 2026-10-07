@@ -247,6 +247,7 @@ import { isValidLicenseNumber } from '@core/utils/license-number.utils';
                   [branchId]="sedeId()"
                   [bothBranches]="bothBranches()"
                   [role]="authFacade.currentUser()?.role ?? ''"
+                  [canAccessBothBranches]="!!authFacade.currentUser()?.canAccessBothBranches"
                   mode="crear"
                   (valueChange)="onSedeScopeChange($event)"
                 />
