@@ -107,13 +107,12 @@ Deno.serve(async (req: Request) => {
       !userId ||
       !firstNames ||
       !paternalLastName ||
-      !maternalLastName ||
       !branchId ||
       email === undefined ||
       active === undefined
     ) {
       return errorResponse(
-        'Faltan campos requeridos: userId, firstNames, paternalLastName, maternalLastName, branchId, active, email',
+        'Faltan campos requeridos: userId, firstNames, paternalLastName, branchId, active, email',
       );
     }
 
@@ -164,7 +163,8 @@ Deno.serve(async (req: Request) => {
     const updatePayload: Record<string, unknown> = {
       first_names: firstNames.trim(),
       paternal_last_name: paternalLastName.trim(),
-      maternal_last_name: maternalLastName.trim(),
+      // fix-204-b (S12): opcional → NULL si viene vacío o no viene.
+      maternal_last_name: maternalLastName?.trim() || null,
       phone: phone?.trim() || null,
       branch_id: branchId,
       active,
