@@ -27,6 +27,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeStudentProfileEdit } from '../_shared/user-edit-authz.ts';
+import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +103,7 @@ Deno.serve(async (req: Request) => {
     // Esta función usa la clave de servicio: sin esto, cualquier userId (un admin) era editable.
     const { data: targetUser, error: findError } = await supabaseAdmin
       .from('users')
-      .select('supabase_uid, branch_id, roles ( name )')
+      .select('supabase_uid, email, branch_id, roles ( name )')
       .eq('id', userId)
       .maybeSingle();
 
@@ -123,7 +124,17 @@ Deno.serve(async (req: Request) => {
     // ── Si el email cambió → actualizar en Supabase Auth PRIMERO ─────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
+    let authEmailChanged = false;
     if (emailChanged) {
+      // fix-199-b: un correo de otro usuario en public.users se rechaza ANTES de tocar Auth.
+      const { data: emailOwner } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email.trim().toLowerCase())
+        .neq('id', userId)
+        .maybeSingle();
+      if (emailOwner) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
+
       // El alumno nunca tuvo cuenta Auth creada (ej. la invitación falló al matricularlo,
       // fix-157-m) → no hay nada que sincronizar en Auth, se guarda el email directo en
       // public.users más abajo. Cuando se le envíe la invitación (botón "Enviar invitación"),
@@ -136,14 +147,13 @@ Deno.serve(async (req: Request) => {
 
         if (authUpdateError) {
           // Auth rechazó el cambio → NO se toca public.users, evita la desincronización.
-          if (authUpdateError.message?.toLowerCase().includes('already registered')) {
-            return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
-          }
+          if (isEmailTakenError(authUpdateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
           return errorResponse(
             `Error al actualizar email en Auth: ${authUpdateError.message}`,
             500,
           );
         }
+        authEmailChanged = true;
       }
     }
 
@@ -166,6 +176,15 @@ Deno.serve(async (req: Request) => {
       .eq('id', userId);
 
     if (updateError) {
+      // fix-199-b: Auth ya tiene el correo nuevo → revertirlo para no dejarlos desincronizados.
+      if (authEmailChanged && targetUser.email) {
+        const { error: revertError } = await supabaseAdmin.auth.admin.updateUserById(
+          targetUser.supabase_uid,
+          { email: targetUser.email.trim().toLowerCase() },
+        );
+        if (revertError) console.error('No se pudo revertir el email en Auth:', revertError.message);
+      }
+      if (isUniqueViolation(updateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
       return errorResponse(`Error al actualizar el alumno: ${updateError.message}`, 500);
     }
 
