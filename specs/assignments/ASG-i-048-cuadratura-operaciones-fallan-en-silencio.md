@@ -51,3 +51,14 @@ toast de éxito igual:
 ## Notas para quien la reclame
 
 - Coordinar con `ASG-i-049` (trigger de saldo) si se toca el cálculo de `pending_balance`.
+- **Nota de b (2026-10-07, fix-190-b / ASG-i-037 caso X01) — se suma a esta asignación por decisión
+  del owner: la Caja también falla en silencio al LEER.** Confirmado en vivo con el build de
+  producción (secretaria sede 2, red hacia Supabase cortada con la Caja ya abierta): la pantalla
+  muestra ingresos y egresos del día en **$0** y "Caja Abierta", **sin ningún aviso**.
+  `fetchPayments()` (y las demás lecturas de `fetchAll()`) no revisan `error` y aplican
+  `data ?? []`; `initialize()` solo pone `_error` si algo *lanza*, cosa que supabase-js no hace.
+  Como `cerrarCaja()` guarda `totalIngresosHoy()`/`totalEgresosHoy()` tal como están en pantalla,
+  **se puede cerrar el día con $0 habiendo cobrado**. Sugerido: que las lecturas lancen en
+  `{ error }`, mostrar error + Reintentar (patrón de `fix-189-b` en Agenda) y **bloquear "Cerrar
+  caja" si la carga del día falló**. El resto de las pantallas con el mismo problema (lectura) están
+  en `ASG-b-102`; la Caja queda acá. Método de prueba: `fix-190-b` §X01.
