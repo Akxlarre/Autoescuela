@@ -46,3 +46,12 @@ El inventario completo (archivo:línea y qué fecha de negocio afecta) está en
 ## Notas para quien la reclame
 
 - Tamaño spec por la cantidad de archivos; conviene la util primero y después reemplazar por tandas.
+- **Nota de b (2026-10-06, fix-190-b / ASG-i-037): el "Paso 1, confirmar" ya está hecho.** Se
+  confirmó en vivo contra el build de producción, sin escribir datos: con `timezoneId:
+  America/Santiago` y el reloj del navegador fijado al 6-oct, "Registrar anticipo" propone
+  **06/10/2026 a las 15:00** (control) y **07/10/2026 a las 23:30** (bug). El test ya existe:
+  `e2e/transversal-shell.spec.ts`, casos `T02` (rama `fix/190-b-testing-transversal`); el de las
+  23:30 está marcado `knownBug('ASG-i-054 …')`. Al terminar el fix, quitar esa marca y correr
+  `npx playwright test e2e/transversal-shell.spec.ts -g T02` contra el build de producción: los
+  dos deben pasar. El inventario de §1.8 del checklist 037 sigue vigente (grep de
+  `toISOString().slice/split` en `src/app`: ~40 ocurrencias el 2026-10-06).
