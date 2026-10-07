@@ -44,6 +44,13 @@ interface RouteSpec {
   path: string;
   /** false en las rutas que no son app-like por diseño (wizard de matrícula, maquetas): no se mide C4. */
   appLike: boolean;
+  /**
+   * La pantalla ocupa a propósito el canal que `.shell-content` reserva para su barra de scroll
+   * (`scrollbar-gutter: stable`), para que su propia barra quede alineada con la de las demás
+   * páginas: el wizard de matrícula (`secretaria-matricula.component.scss`). En C3 se le tolera
+   * exactamente el ancho de ese canal; no se ve ningún scroll horizontal.
+   */
+  fillsScrollbarGutter?: boolean;
 }
 
 const ADMIN: RouteSpec[] = [
@@ -56,7 +63,7 @@ const ADMIN: RouteSpec[] = [
   { id: 'B07', path: '/app/admin/libro-de-clases', appLike: true },
   { id: 'B08', path: '/app/admin/agenda', appLike: true },
   { id: 'B09', path: '/app/admin/asistencia', appLike: true },
-  { id: 'B10', path: '/app/admin/matricula', appLike: false },
+  { id: 'B10', path: '/app/admin/matricula', appLike: false, fillsScrollbarGutter: true },
   { id: 'B11', path: '/app/admin/pagos', appLike: true },
   { id: 'B12', path: '/app/admin/contabilidad/cuadratura', appLike: true },
   { id: 'B13', path: '/app/admin/contabilidad/historial-cuadraturas', appLike: true },
@@ -88,7 +95,7 @@ const SECRETARIA: RouteSpec[] = [
   { id: 'B07', path: '/app/secretaria/libro-de-clases', appLike: true },
   { id: 'B08', path: '/app/secretaria/agenda', appLike: true },
   { id: 'B09', path: '/app/secretaria/asistencia', appLike: true },
-  { id: 'B10', path: '/app/secretaria/matricula', appLike: false },
+  { id: 'B10', path: '/app/secretaria/matricula', appLike: false, fillsScrollbarGutter: true },
   { id: 'B11', path: '/app/secretaria/pagos', appLike: true },
   { id: 'B12', path: '/app/secretaria/contabilidad/cuadratura', appLike: true },
   { id: 'B13', path: '/app/secretaria/contabilidad/historial-cuadraturas', appLike: true },
@@ -137,6 +144,8 @@ async function measure(page: Page) {
     return {
       docOverflowX: doc.scrollWidth - window.innerWidth,
       shellOverflowX: shell ? shell.scrollWidth - shell.clientWidth : 0,
+      /** Ancho del canal reservado para la barra de scroll vertical del shell. */
+      shellGutter: shell ? shell.offsetWidth - shell.clientWidth : 0,
       shellOverflowY: shell ? shell.scrollHeight - shell.clientHeight : 0,
       docOverflowY: doc.scrollHeight - doc.clientHeight,
     };
@@ -183,7 +192,8 @@ function runSweep(role: E2eRole, routes: RouteSpec[], branchForIds: number) {
           const unexpected = errors.filter((e) => !isKnownError(e));
           if (unexpected.length)
             failures.push(`${tag} C1/C2: ${unexpected.slice(0, 3).join(' · ')}`);
-          if (m.docOverflowX > 1 || m.shellOverflowX > 1)
+          const shellTolerance = route.fillsScrollbarGutter ? m.shellGutter : 0;
+          if (m.docOverflowX > 1 || m.shellOverflowX > shellTolerance + 1)
             failures.push(
               `${tag} C3: scroll horizontal (doc ${m.docOverflowX}px, shell ${m.shellOverflowX}px)`,
             );
