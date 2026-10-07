@@ -159,6 +159,8 @@ export class InstructoresFacade {
   private readonly _horasYear = signal<number>(new Date().getFullYear());
   private readonly _horasMensuales = signal<InstructorHoraRow[]>([]);
   private readonly _isLoadingHoras = signal<boolean>(false);
+  private readonly _horasError = signal<string | null>(null);
+  private readonly horasGuard = createRequestGuard();
 
   private readonly _horario = signal<InstructorHorarioSession[]>([]);
   private readonly _isLoadingHorario = signal<boolean>(false);
@@ -180,6 +182,7 @@ export class InstructoresFacade {
   readonly horasYear = this._horasYear.asReadonly();
   readonly horasMensuales = this._horasMensuales.asReadonly();
   readonly isLoadingHoras = this._isLoadingHoras.asReadonly();
+  readonly horasError = this._horasError.asReadonly();
   readonly isHorasCurrentMonth = computed(() => {
     const now = new Date();
     return this._horasMonth() === now.getMonth() + 1 && this._horasYear() === now.getFullYear();
@@ -462,44 +465,71 @@ export class InstructoresFacade {
     );
   }
 
+  /** Abre el drawer de horas en el mes actual (fix-208-b: antes quedaba el mes de la vez anterior). */
+  async abrirHorasMensuales(): Promise<void> {
+    const now = new Date();
+    this._horasMonth.set(now.getMonth() + 1);
+    this._horasYear.set(now.getFullYear());
+    await this.loadHorasMensuales();
+  }
+
   async loadHorasMensuales(): Promise<void> {
+    const requestToken = this.horasGuard.next();
     this._isLoadingHoras.set(true);
+    this._horasError.set(null);
     try {
       const month = this._horasMonth();
       const year = this._horasYear();
       const period = `${year}-${String(month).padStart(2, '0')}`;
 
+      // fix-208-b (S16): acotado a la lista de instructores, que ya viene filtrada por sede.
+      const instructores = this._instructores();
+      if (instructores.length === 0) {
+        this._horasMensuales.set([]);
+        return;
+      }
+
       const { data, error } = await this.supabase.client
         .from('instructor_monthly_hours')
         .select('instructor_id, practical_sessions, total_equivalent')
-        .eq('period', period);
+        .eq('period', period)
+        .in(
+          'instructor_id',
+          instructores.map((i) => i.id),
+        );
 
       if (error) throw error;
+      if (!this.horasGuard.isCurrent(requestToken)) return;
 
-      const instructores = this._instructores();
-      const rows: InstructorHoraRow[] = (data ?? []).map(
-        (h: {
-          instructor_id: number;
-          practical_sessions: number | null;
-          total_equivalent: number | null;
-        }) => {
-          const inst = instructores.find((i) => i.id === h.instructor_id);
-          return {
-            instructorId: h.instructor_id,
-            nombre: inst?.nombre ?? `Instructor #${h.instructor_id}`,
-            initials: inst?.initials ?? '?',
-            practicalSessions: h.practical_sessions ?? 0,
-            totalEquivalent: h.total_equivalent ?? 0,
-          };
-        },
-      );
-      rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-      this._horasMensuales.set(rows);
+      this._horasMensuales.set(this.mapHorasRows(data ?? [], instructores));
     } catch {
+      if (!this.horasGuard.isCurrent(requestToken)) return;
       this._horasMensuales.set([]);
+      this._horasError.set('No se pudieron cargar las horas. Intenta de nuevo.');
     } finally {
-      this._isLoadingHoras.set(false);
+      if (this.horasGuard.isCurrent(requestToken)) this._isLoadingHoras.set(false);
     }
+  }
+
+  private mapHorasRows(
+    data: {
+      instructor_id: number;
+      practical_sessions: number | null;
+      total_equivalent: number | null;
+    }[],
+    instructores: InstructorTableRow[],
+  ): InstructorHoraRow[] {
+    const rows = data.map((h) => {
+      const inst = instructores.find((i) => i.id === h.instructor_id);
+      return {
+        instructorId: h.instructor_id,
+        nombre: inst?.nombre ?? `Instructor #${h.instructor_id}`,
+        initials: inst?.initials ?? '?',
+        practicalSessions: h.practical_sessions ?? 0,
+        totalEquivalent: h.total_equivalent ?? 0,
+      };
+    });
+    return rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }
 
   navHorasAnterior(): void {
