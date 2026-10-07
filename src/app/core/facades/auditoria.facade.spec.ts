@@ -58,4 +58,27 @@ describe('AuditoriaFacade', () => {
     facade.clearFilters();
     expect(facade.filters().accion).toBeNull();
   });
+
+  // fix-206-b (S18 de ASG-i-034): las 3 tablas que ahora se auditan tienen módulo propio.
+  describe('módulos de las tablas auditadas en fix-206-b', () => {
+    function chainableQuery(): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lte', 'in', 'not']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (resolve: (v: unknown) => unknown) => resolve({ data: [], error: null, count: 0 });
+      return q;
+    }
+
+    it.each([
+      ['Instructores', ['instructors', 'vehicle_assignments']],
+      ['Liquidaciones', ['branch_payroll_config']],
+    ])('filtrar por "%s" consulta %j', async (modulo, entities) => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ modulo });
+      await facade.initialize();
+      expect(q.in).toHaveBeenCalledWith('entity', entities);
+    });
+  });
 });
