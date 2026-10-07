@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -25,6 +26,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -479,10 +481,14 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                 </button>
               </div>
               @if (!activo()) {
-                <div class="rounded-lg p-3 bg-error/6 border border-error/20">
-                  <p class="text-xs text-error">
-                    Desactivar este instructor impedirá nuevas asignaciones de clases.
-                  </p>
+                <!-- fix-205-b (S9): avisa qué queda colgando; no bloquea el guardado. -->
+                <div
+                  class="rounded-lg p-3 bg-error/6 border border-error/20 flex flex-col gap-1"
+                  data-llm-description="aviso de lo que queda pendiente al desactivar al instructor"
+                >
+                  @for (aviso of avisosDesactivacion(); track aviso) {
+                    <p class="text-xs text-error">{{ aviso }}</p>
+                  }
                 </div>
               }
             </div>
@@ -664,6 +670,16 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       }));
   });
 
+  /** fix-205-b (S9): clases futuras y vehículo que quedan colgando al desactivar. */
+  protected readonly avisosDesactivacion = computed(() => {
+    const vid = this.vehicleId();
+    const plate =
+      vid === null
+        ? null
+        : (this.facade.vehicles().find((v) => v.id === vid)?.licensePlate ?? null);
+    return instructorDeactivationNotices(this.facade.clasesFuturasSeleccionado(), plate);
+  });
+
   /** AC-E1: instructor "Ambas" con vehículo que no cubre la otra sede. */
   protected readonly sedeSinCoberturaWarning = computed((): string | null => {
     if (!this.bothBranches()) return null;
@@ -737,6 +753,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.sedeId.set(inst.branchId);
         this.bothBranches.set(inst.bothBranches);
         this.activo.set(inst.estado === 'activo');
+        untracked(() => this.facade.cargarClasesFuturas(inst.id));
 
         // Parse license expiry date
         if (inst.licenseExpiry) {
