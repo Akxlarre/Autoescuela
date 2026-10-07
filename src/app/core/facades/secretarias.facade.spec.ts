@@ -57,6 +57,51 @@ describe('SecretariasFacade', () => {
     expect(facade.selectedSecretaria()).toBe(sec);
   });
 
+  // fix-212-b (S14 de ASG-i-034): último acceso real (auth.users) vía RPC, no users.updated_at.
+  describe('cargarUltimoAcceso — fix-212-b', () => {
+    it('pide el login real de esa secretaria y lo expone', async () => {
+      supabaseSpy.client.rpc = vi.fn().mockResolvedValue({
+        data: [{ user_id: 8, last_sign_in_at: '2026-10-07T21:12:34+00:00' }],
+        error: null,
+      });
+      await facade.cargarUltimoAcceso(8);
+      expect(supabaseSpy.client.rpc).toHaveBeenCalledWith('secretary_last_sign_in', {
+        p_user_ids: [8],
+      });
+      expect(facade.ultimoAccesoSeleccionada()).toEqual({
+        estado: 'ok',
+        fecha: '2026-10-07T21:12:34+00:00',
+      });
+    });
+
+    it('sin login registrado → ok con fecha null', async () => {
+      supabaseSpy.client.rpc = vi
+        .fn()
+        .mockResolvedValue({ data: [{ user_id: 8, last_sign_in_at: null }], error: null });
+      await facade.cargarUltimoAcceso(8);
+      expect(facade.ultimoAccesoSeleccionada()).toEqual({ estado: 'ok', fecha: null });
+    });
+
+    it('con error → estado error (no inventa una fecha)', async () => {
+      supabaseSpy.client.rpc = vi.fn().mockResolvedValue({ data: null, error: { message: 'x' } });
+      await facade.cargarUltimoAcceso(8);
+      expect(facade.ultimoAccesoSeleccionada()).toEqual({ estado: 'error', fecha: null });
+    });
+
+    it('una respuesta vieja no pisa la de la secretaria vigente', async () => {
+      let resolveOld!: (v: unknown) => void;
+      supabaseSpy.client.rpc = vi
+        .fn()
+        .mockReturnValueOnce(new Promise((r) => (resolveOld = r)))
+        .mockResolvedValueOnce({ data: [{ user_id: 33, last_sign_in_at: 'B' }], error: null });
+      const old = facade.cargarUltimoAcceso(8);
+      await facade.cargarUltimoAcceso(33);
+      resolveOld({ data: [{ user_id: 8, last_sign_in_at: 'A' }], error: null });
+      await old;
+      expect(facade.ultimoAccesoSeleccionada()).toEqual({ estado: 'ok', fecha: 'B' });
+    });
+  });
+
   describe('crearSecretaria — cuenta sin clave RUT (fix-182-b)', () => {
     const payload = {
       firstNames: 'Ana',

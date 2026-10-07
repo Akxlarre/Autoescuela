@@ -2,7 +2,11 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
-import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
+import type {
+  SecretariaTableRow,
+  UltimoAccesoEstado,
+} from '@core/models/ui/secretaria-table.model';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
@@ -56,7 +60,6 @@ interface SecretariaRow {
   email: string;
   phone: string | null;
   active: boolean;
-  updated_at: string | null;
   branch_id: number | null;
   can_access_both_branches: boolean;
   roles: RoleRow | null;
@@ -84,6 +87,11 @@ export class SecretariasFacade {
   private readonly _isSubmitting = signal(false);
 
   private readonly _selectedSecretaria = signal<SecretariaTableRow | null>(null);
+  private readonly _ultimoAccesoSeleccionada = signal<UltimoAccesoEstado>({
+    estado: 'cargando',
+    fecha: null,
+  });
+  private readonly ultimoAccesoGuard = createRequestGuard();
 
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly secretarias = this._secretarias.asReadonly();
@@ -92,6 +100,7 @@ export class SecretariasFacade {
   readonly branches = this._branches.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly selectedSecretaria = this._selectedSecretaria.asReadonly();
+  readonly ultimoAccesoSeleccionada = this._ultimoAccesoSeleccionada.asReadonly();
 
   // ── KPIs computed ──────────────────────────────────────────────────────────
   readonly totalSecretarias = computed<number>(() => this._secretarias().length);
@@ -112,6 +121,26 @@ export class SecretariasFacade {
 
   selectSecretaria(sec: SecretariaTableRow): void {
     this._selectedSecretaria.set(sec);
+  }
+
+  /**
+   * Último inicio de sesión real (fix-212-b, S14 de ASG-i-034): `auth.users.last_sign_in_at` vía
+   * `secretary_last_sign_in()` (solo admin). Antes la ficha mostraba `users.updated_at`, que sin
+   * trigger es la fecha de creación de la cuenta.
+   */
+  async cargarUltimoAcceso(userId: number): Promise<void> {
+    const requestToken = this.ultimoAccesoGuard.next();
+    this._ultimoAccesoSeleccionada.set({ estado: 'cargando', fecha: null });
+    const { data, error } = await this.supabase.client.rpc('secretary_last_sign_in', {
+      p_user_ids: [userId],
+    });
+    if (!this.ultimoAccesoGuard.isCurrent(requestToken)) return;
+    if (error) {
+      this._ultimoAccesoSeleccionada.set({ estado: 'error', fecha: null });
+      return;
+    }
+    const row = ((data ?? []) as { user_id: number; last_sign_in_at: string | null }[])[0];
+    this._ultimoAccesoSeleccionada.set({ estado: 'ok', fecha: row?.last_sign_in_at ?? null });
   }
 
   async initialize(): Promise<void> {
@@ -154,7 +183,6 @@ export class SecretariasFacade {
         email,
         phone,
         active,
-        updated_at,
         branch_id,
         can_access_both_branches,
         roles!inner ( name ),
@@ -284,7 +312,6 @@ export class SecretariasFacade {
       email: r.email,
       sede: r.branches?.name ?? '—',
       estado: r.active ? 'activa' : 'inactiva',
-      ultimoAcceso: r.updated_at,
       aliasPublico: r.email,
       firstName: r.first_names,
       paternalLastName: r.paternal_last_name,
