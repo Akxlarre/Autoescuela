@@ -549,7 +549,8 @@ describe('ExAlumnosFacade', () => {
       });
       const scopedFacade = TestBed.inject(ExAlumnosFacade);
 
-      await (scopedFacade as any).loadStatistics();
+      // fix-195-b: loadStatistics aplica el resultado solo con un token vigente del guard.
+      await (scopedFacade as any).loadStatistics((scopedFacade as any).egresadosGuard.next());
 
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('status', 'completed');
       expect(enrollmentsChain.eq).toHaveBeenCalledWith('license_group', 'class_b');
@@ -559,6 +560,126 @@ describe('ExAlumnosFacade', () => {
       // fix-276-m: los egresados archivados tampoco cuentan en el total del año.
       expect(enrollmentsChain.neq).toHaveBeenCalledWith('students.status', 'archived');
       expect(scopedFacade.annualEgresadosTotal()).toBe(2);
+    });
+  });
+
+  // fix-195-b (D06 de ASG-i-037): admin A → B → A rápido con la respuesta de B demorada. Antes la
+  // respuesta vieja de B llegaba al final y dejaba la pantalla en "A" mostrando los egresados de B.
+  describe('respuestas fuera de orden al cambiar de sede (fix-195-b, spec 0005-m)', () => {
+    const egresado = (id: number, branchId: number) => ({
+      id,
+      number: String(id),
+      pending_balance: 0,
+      completed_at: '2026-05-01T12:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: branchId, name: `Sede ${branchId}` },
+      students: {
+        id,
+        status: 'active',
+        users: {
+          first_names: 'N',
+          paternal_last_name: 'P',
+          maternal_last_name: null,
+          rut: '1-9',
+          email: null,
+        },
+      },
+    });
+    const LISTA: Record<number, unknown[]> = {
+      1: [egresado(1, 1), egresado(2, 1), egresado(3, 1)],
+      2: [egresado(10, 2)],
+    };
+    const CONTEO: Record<number, number> = { 1: 3, 2: 1 };
+
+    let selected: number;
+    let liberarB: () => void;
+    let bRetenida: Promise<void>;
+
+    /** Builder encadenable: resuelve según la sede filtrada; las consultas de la sede 2 esperan. */
+    function builder(table: string) {
+      const state: { branch?: number; head?: boolean } = {};
+      const b: any = {
+        select: (_cols: string, opts?: { head?: boolean }) => {
+          state.head = !!opts?.head;
+          return b;
+        },
+        eq: (col: string, val: unknown) => {
+          if (col === 'branch_id') state.branch = val as number;
+          return b;
+        },
+        neq: () => b,
+        gte: () => b,
+        in: () => b,
+        order: () => b,
+        then: async (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
+          try {
+            if (state.branch === 2) await bRetenida;
+            if (table === 'enrollments' && state.head) {
+              resolve({ count: CONTEO[state.branch!], error: null });
+            } else if (table === 'enrollments') {
+              resolve({ data: LISTA[state.branch!], error: null });
+            } else {
+              resolve({ data: [], count: 0, error: null });
+            }
+          } catch (e) {
+            reject(e);
+          }
+        },
+      };
+      return b;
+    }
+
+    let racer: ExAlumnosFacade;
+
+    beforeEach(() => {
+      bRetenida = new Promise<void>((r) => (liberarB = r));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          ExAlumnosFacade,
+          { provide: SupabaseService, useValue: { client: { from: builder } } },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => selected } },
+          {
+            provide: ErrorSanitizerService,
+            useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+          },
+          { provide: ToastService, useValue: toastSpy },
+        ],
+      });
+      racer = TestBed.inject(ExAlumnosFacade);
+    });
+
+    it('primera visita A → B → A: queda con los datos de A aunque B responda al final', async () => {
+      selected = 2;
+      const cargaB = racer.loadEgresados();
+      selected = 1;
+      await racer.loadEgresados();
+      liberarB();
+      await cargaB;
+
+      expect(racer.egresados().map((e) => e.branchId)).toEqual([1, 1, 1]);
+      expect(racer.annualEgresadosTotal()).toBe(3);
+      expect(racer.isLoading()).toBe(false);
+    });
+
+    it('A ya cargada → B (lenta) → A (refresco SWR): datos de A y sin skeleton colgado', async () => {
+      selected = 1;
+      await racer.loadEgresados(); // A inicial
+      selected = 2;
+      const cargaB = racer.loadEgresados(); // carga completa de B, retenida
+      expect(racer.isLoading()).toBe(true);
+      selected = 1;
+      await racer.loadEgresados(); // vuelve a A: refresco silencioso
+      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
+      liberarB();
+      await cargaB;
+
+      expect(racer.egresados().map((e) => e.branchId)).toEqual([1, 1, 1]);
+      expect(racer.annualEgresadosTotal()).toBe(3);
+      expect(racer.isLoading()).toBe(false);
     });
   });
 });

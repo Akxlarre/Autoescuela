@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -122,6 +123,13 @@ export class ExAlumnosFacade {
     );
   }
 
+  /**
+   * fix-195-b (spec 0005-m): un solo guard para la carga completa y el refresco SWR. La llamada
+   * que sigue vigente al terminar aplica los datos y apaga `isLoading`; una respuesta de una sede
+   * anterior no toca nada (antes dejaba la pantalla en "A" con los egresados de "B").
+   */
+  private readonly egresadosGuard = createRequestGuard();
+
   // ── Acción principal ─────────────────────────────────────────────────────────
   async loadEgresados(): Promise<void> {
     const branchId = this.getActiveBranchId();
@@ -131,28 +139,44 @@ export class ExAlumnosFacade {
       return;
     }
 
+    const token = this.egresadosGuard.next();
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      await Promise.all([this.loadEgresadosList(), this.loadStatistics(), this.loadSurveys()]);
+      await this.fetchAll(token);
+      if (!this.egresadosGuard.isCurrent(token)) return;
       // fix-287-m: una carga fallida no cuenta como hecha; reintentar vuelve a cargar completo.
       if (this._error()) return;
       this._initialized = true;
       this._lastBranchId = branchId;
     } finally {
-      this._isLoading.set(false);
+      if (this.egresadosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
   private async refreshSilently(): Promise<void> {
+    const token = this.egresadosGuard.next();
+    const branchId = this.getActiveBranchId();
     try {
-      await Promise.all([this.loadEgresadosList(), this.loadStatistics(), this.loadSurveys()]);
+      await this.fetchAll(token);
+      if (this.egresadosGuard.isCurrent(token) && !this._error()) this._lastBranchId = branchId;
     } catch {
       // Swallowed
+    } finally {
+      // Si este refresco reemplazó a una carga completa de otra sede, el skeleton es suyo.
+      if (this.egresadosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
-  private async loadEgresadosList(): Promise<void> {
+  private fetchAll(token: number): Promise<unknown> {
+    return Promise.all([
+      this.loadEgresadosList(token),
+      this.loadStatistics(token),
+      this.loadSurveys(),
+    ]);
+  }
+
+  private async loadEgresadosList(token: number): Promise<void> {
     const branchId = this.getActiveBranchId();
     let query: any = this.supabase.client
       .from('enrollments')
@@ -182,6 +206,7 @@ export class ExAlumnosFacade {
       .order('completed_at', { ascending: false });
     if (branchId !== null) query = query.eq('branch_id', branchId);
     const { data, error } = await query;
+    if (!this.egresadosGuard.isCurrent(token)) return;
 
     if (error) {
       this._error.set(this.sanitizer.sanitize(error).message);
@@ -197,6 +222,7 @@ export class ExAlumnosFacade {
       this.supabase.client,
       rows.map((r) => r.id),
     );
+    if (!this.egresadosGuard.isCurrent(token)) return;
     this._egresados.set(rows.map((r: EgresadoRow) => this.mapRow(r, convalidationMap)));
   }
 
@@ -244,7 +270,7 @@ export class ExAlumnosFacade {
     };
   }
 
-  private async loadStatistics(): Promise<void> {
+  private async loadStatistics(token: number): Promise<void> {
     try {
       const year = new Date().getFullYear();
       const startOfYear = `${year}-01-01`;
@@ -281,6 +307,7 @@ export class ExAlumnosFacade {
       const { count: egresadosCount, error: countErr } = await egresadosCountQuery;
 
       if (countErr) throw countErr;
+      if (!this.egresadosGuard.isCurrent(token)) return;
       this.annualEgresadosTotal.set(egresadosCount || 0);
 
       // Contar licencias (surveys with obtained_license = true este año)
@@ -291,6 +318,7 @@ export class ExAlumnosFacade {
         .gte('created_at', startOfYear);
 
       if (licErr) throw licErr;
+      if (!this.egresadosGuard.isCurrent(token)) return;
       const licTotal = licensesCount || 0;
       this.annualLicensesTotal.set(licTotal);
 
