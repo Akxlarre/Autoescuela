@@ -111,6 +111,34 @@ describe('BranchFacade', () => {
     });
   });
 
+  describe('trySelectBranch() — hotfix-063-b', () => {
+    beforeEach(async () => {
+      await facade.loadBranches();
+    });
+
+    it('sin bloqueos elige la sede o "Todas"', () => {
+      expect(facade.trySelectBranch(2)).toBe(true);
+      expect(facade.selectedBranchId()).toBe(2);
+      expect(facade.trySelectBranch(null)).toBe(true);
+      expect(facade.selectedBranchId()).toBeNull();
+    });
+
+    it('con una vista que exige sede, rechaza "Todas"', () => {
+      facade.selectBranch(1);
+      facade.setRequiresSpecificBranch(true);
+      expect(facade.trySelectBranch(null)).toBe(false);
+      expect(facade.selectedBranchId()).toBe(1);
+      expect(facade.trySelectBranch(2)).toBe(true);
+    });
+
+    it('con la sede bloqueada (ficha del alumno), rechaza las demás', () => {
+      facade.lockToBranch(1, 'Ficha de un alumno de esta sede');
+      expect(facade.trySelectBranch(2)).toBe(false);
+      expect(facade.selectedBranchId()).toBe(1);
+      expect(facade.trySelectBranch(null)).toBe(false);
+    });
+  });
+
   describe('selectedBranchLabel (computed)', () => {
     beforeEach(async () => {
       await facade.loadBranches();
