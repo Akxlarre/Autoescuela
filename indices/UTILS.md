@@ -69,17 +69,20 @@
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
+| `src/app/core/utils/hourly-rate.utils.ts` | `isValidHourlyRate` |
 | `src/app/core/utils/html.utils.ts` | `escapeHtml` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/inasistencia.utils.ts` | `canJustificarInasistencia` |
 | `src/app/core/utils/instructor-create-branch.utils.ts` | `InstructorCreateBranch`, `resolveInstructorCreateBranch` |
+| `src/app/core/utils/instructor-deactivation.utils.ts` | `instructorDeactivationNotices` |
 | `src/app/core/utils/instructor-doc-types.util.ts` | `INSTRUCTOR_DOC_TYPES` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |
 | `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
+| `src/app/core/utils/license-number.utils.ts` | `isValidLicenseNumber` |
 | `src/app/core/utils/license-seniority.utils.ts` | `requiredPriorLicenseLabel`, `licenseClassFromCourseType`, `calcLicenseSeniority` |
 | `src/app/core/utils/license-status.utils.ts` | `LICENSE_EXPIRING_SOON_DAYS`, `licenseStatusFromExpiry`, `expiredLicenseNotice` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
@@ -89,6 +92,7 @@
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
+| `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/payment-status.utils.ts` | `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
@@ -104,7 +108,7 @@
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
-| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
+| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `formatRutTyping`, `completeRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch`, `matchesSearchTokens`, `filterBySearchTokens` |

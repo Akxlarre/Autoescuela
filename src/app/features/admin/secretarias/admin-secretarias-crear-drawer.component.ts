@@ -11,7 +11,7 @@ import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, validateRut, completeRutDv } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -164,7 +164,9 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
             </div>
@@ -486,15 +488,15 @@ export class AdminSecretariasCrearDrawerComponent {
 
   protected onRutInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const formatted = formatRut(input.value);
+    const formatted = formatRutTyping(input.value);
     this.rut.set(formatted);
     input.value = formatted;
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
     this.rutTouched.set(true);
-    this.rut.set(autocompleteRutDv(this.rut()));
+    this.rut.set(completeRutDv(this.rut()));
   }
 
   protected async submit(): Promise<void> {
