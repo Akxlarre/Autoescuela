@@ -26,7 +26,7 @@ Ninguno de una spec previa. ACs propios:
 - **F2:** si Auth ya cambió y el UPDATE de `users` falla, el correo de Auth se revierte al anterior.
   Si el fallo es por duplicado (23505), la respuesta es el mismo 409.
 - **F3:** un correo duplicado en Auth (`email_exists` / "already (been) registered") → 409 con el
-  mensaje en español, en las cinco funciones.
+  mensaje en español, en las cuatro funciones (create-secretary queda fuera, ver abajo).
 - **F4:** sin cambios en el camino feliz (correo nuevo y libre, o correo sin cambios).
 
 ## Cambio
