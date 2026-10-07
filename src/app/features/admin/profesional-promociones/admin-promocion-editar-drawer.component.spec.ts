@@ -49,6 +49,7 @@ describe('AdminPromocionEditarDrawerComponent — opciones de estado por rol (fi
             isSubmitting: signal(false),
             editarPromocion: vi.fn(),
             countActiveEnrollments: vi.fn().mockResolvedValue(0),
+            fetchMaxPromotionCode: vi.fn().mockResolvedValue(282),
           },
         },
         { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), close: vi.fn() } },
@@ -131,6 +132,7 @@ describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (
       isSubmitting: signal(false),
       editarPromocion: vi.fn().mockResolvedValue(true),
       countActiveEnrollments: vi.fn().mockResolvedValue(12),
+      fetchMaxPromotionCode: vi.fn().mockResolvedValue(282),
       initialize: vi.fn(),
     };
     confirmSpy = { confirm: vi.fn() };
@@ -221,6 +223,27 @@ describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (
     expect(c.name()).toBe('Promoción de verano');
   });
 
+  // ─── fix-347-m (D19) ───
+  it('un número más de 10 por sobre el último usado no deja guardar', async () => {
+    const c = editor();
+    await Promise.resolve();
+    c.codeModel = '2790';
+    expect(c.codeError()).toBe('No puede ser mayor que 292: el último número usado es 282.');
+    expect(c.canSave()).toBe(false);
+    c.codeModel = '285';
+    expect(c.canSave()).toBe(true);
+  });
+
+  it('el número ya guardado sirve aunque supere el tope', async () => {
+    facadeSpy.selectedPromocion.set({ ...makePromo('planned'), code: '9002' });
+    const c = editor();
+    await Promise.resolve();
+    c.code.set('9002');
+    c.name.set('Otro nombre');
+    expect(c.codeError()).toBeNull();
+    expect(c.canSave()).toBe(true);
+  });
+
   it('guardar sin cambiar a Finalizada no pide confirmación', async () => {
     const c = editor();
     c.name.set('Promoción 279 bis');
@@ -257,6 +280,7 @@ describe('AdminPromocionEditarDrawerComponent — no cancelar con alumnos (fix-3
       isSubmitting: signal(false),
       editarPromocion: vi.fn().mockResolvedValue(true),
       countActiveEnrollments: vi.fn(),
+      fetchMaxPromotionCode: vi.fn().mockResolvedValue(282),
       initialize: vi.fn(),
     };
     // Se prueba la lógica (effect + computed), no el template: en JIT los inputs requeridos de

@@ -19,7 +19,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { getCourseColor } from '@core/utils/course-colors';
-import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
+import { promotionCodeError } from '@core/utils/promotion-code.utils';
 
 /** Genera los próximos N lunes disponibles a partir de hoy. */
 function generateAvailableMondays(count: number): { date: string }[] {
@@ -210,14 +210,8 @@ function generatePromoName(startIso: string, code: string): string {
                 placeholder="Ej: 281"
                 data-llm-description="ID numérico MTT de la promoción, obligatorio y único; se propaga a sus cursos como {id}.{licencia}"
               />
-              @if (!codeIsValid()) {
-                <p class="text-2xs mt-1 text-error">
-                  {{
-                    code().trim().length > 0
-                      ? 'Debe ser solo números (ej: 281).'
-                      : 'El número es obligatorio.'
-                  }}
-                </p>
+              @if (codeError(); as message) {
+                <p class="text-2xs mt-1 text-error">{{ message }}</p>
               }
             </div>
             @if (selectedStartDate()) {
@@ -420,7 +414,13 @@ export class AdminPromocionCrearDrawerComponent {
   protected set codeModel(v: string) {
     this.code.set(v);
   }
-  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
+  /** Último número de promoción usado; null mientras carga (sin tope). fix-347-m, D19. */
+  protected readonly maxExistingCode = signal<number | null>(null);
+  /** Mensaje de error del número, o null si sirve. */
+  protected readonly codeError = computed(() =>
+    promotionCodeError(this.code(), this.maxExistingCode()),
+  );
+  protected readonly codeIsValid = computed(() => this.codeError() === null);
   protected readonly selectedStartDate = signal<string | null>(null);
   /** Igual que las promociones automáticas: "Promoción 281 (12 de Octubre 2026)". */
   protected readonly nombre = computed(() => {
@@ -477,6 +477,8 @@ export class AdminPromocionCrearDrawerComponent {
     // Load relatores and courses when drawer opens
     this.facade.loadRelatoresDisponibles();
     this.facade.loadProfessionalCourses();
+
+    this.facade.fetchMaxPromotionCode().then((max) => this.maxExistingCode.set(max));
 
     // Precarga el siguiente número; el admin puede cambiarlo.
     this.facade.suggestNextCode().then((next) => {

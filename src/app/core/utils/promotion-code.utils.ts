@@ -14,16 +14,45 @@ const FIRST_PROMOTION_CODE = 276;
 
 const DAY_MS = 86_400_000;
 
+/**
+ * Cuánto puede adelantarse el número de una promoción manual respecto del último usado
+ * (fix-347-m, D19). La siguiente automática toma "el mayor + 1": sin tope, un número mal tipeado
+ * (2830 por 283) deja corrida toda la numeración.
+ */
+export const PROMOTION_CODE_MAX_AHEAD = 10;
+
+/** Entero mayor que 0, sin ceros a la izquierda. */
 export function isValidPromotionCode(code: string): boolean {
-  return /^\d+$/.test(code.trim());
+  return /^[1-9]\d*$/.test(code.trim());
+}
+
+/** Mayor número de promoción existente, o null si no hay ninguno. Ignora vacíos y no numéricos. */
+export function maxPromotionCode(codes: readonly (string | null)[]): number | null {
+  const numbers = codes
+    .filter((c): c is string => c !== null && isValidPromotionCode(c))
+    .map((c) => Number(c.trim()));
+  return numbers.length > 0 ? Math.max(...numbers) : null;
 }
 
 /** Mayor número existente + 1. Ignora códigos vacíos o no numéricos. */
 export function suggestNextPromotionCode(codes: readonly (string | null)[]): string {
-  const numbers = codes
-    .filter((c): c is string => c !== null && isValidPromotionCode(c))
-    .map((c) => Number(c.trim()));
-  return String(numbers.length > 0 ? Math.max(...numbers) + 1 : FIRST_PROMOTION_CODE);
+  const max = maxPromotionCode(codes);
+  return String(max !== null ? max + 1 : FIRST_PROMOTION_CODE);
+}
+
+/**
+ * Mensaje de error del número de promoción para el formulario, o null si sirve. `maxExisting` es
+ * el último número usado (null si todavía no se conoce o no hay ninguno: no se aplica el tope).
+ */
+export function promotionCodeError(code: string, maxExisting: number | null): string | null {
+  const value = code.trim();
+  if (value.length === 0) return 'El número es obligatorio.';
+  if (!/^\d+$/.test(value)) return 'Debe ser solo números (ej: 281).';
+  if (!isValidPromotionCode(value)) return 'Debe ser un número mayor que 0, sin ceros delante.';
+  if (maxExisting !== null && Number(value) > maxExisting + PROMOTION_CODE_MAX_AHEAD) {
+    return `No puede ser mayor que ${maxExisting + PROMOTION_CODE_MAX_AHEAD}: el último número usado es ${maxExisting}.`;
+  }
+  return null;
 }
 
 /**

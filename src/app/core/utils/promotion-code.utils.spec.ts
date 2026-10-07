@@ -1,6 +1,8 @@
 import {
   isCadenceDate,
   isValidPromotionCode,
+  maxPromotionCode,
+  promotionCodeError,
   promotionNameForCode,
   promotionWriteErrorMessage,
   suggestNextPromotionCode,
@@ -34,6 +36,45 @@ describe('promotion-code.utils (fix-323-m)', () => {
     it('sin ningún número previo parte en 276 (mismo fallback que la creación automática)', () => {
       expect(suggestNextPromotionCode([])).toBe('276');
       expect(suggestNextPromotionCode([null, 'abc'])).toBe('276');
+    });
+  });
+
+  // fix-347-m (D19): el número de una manual no puede adelantarse sin tope.
+  describe('número acotado (fix-347-m)', () => {
+    it('isValidPromotionCode rechaza 0 y ceros a la izquierda', () => {
+      expect(isValidPromotionCode('0')).toBe(false);
+      expect(isValidPromotionCode('007')).toBe(false);
+      expect(isValidPromotionCode('100')).toBe(true);
+    });
+
+    it('maxPromotionCode devuelve el mayor número, o null si no hay', () => {
+      expect(maxPromotionCode(['279', '282', null, 'abc', '99'])).toBe(282);
+      expect(maxPromotionCode([null, ''])).toBeNull();
+    });
+
+    it('promotionCodeError: vacío, letras y cero', () => {
+      expect(promotionCodeError('  ', 282)).toBe('El número es obligatorio.');
+      expect(promotionCodeError('28a', 282)).toBe('Debe ser solo números (ej: 281).');
+      expect(promotionCodeError('0', 282)).toBe(
+        'Debe ser un número mayor que 0, sin ceros delante.',
+      );
+    });
+
+    it('promotionCodeError: hasta "último + 10" sirve; más allá no', () => {
+      expect(promotionCodeError('283', 282)).toBeNull();
+      expect(promotionCodeError('292', 282)).toBeNull();
+      expect(promotionCodeError('293', 282)).toBe(
+        'No puede ser mayor que 292: el último número usado es 282.',
+      );
+      expect(promotionCodeError('2830', 282)).not.toBeNull();
+    });
+
+    it('promotionCodeError: un número anterior libre sirve', () => {
+      expect(promotionCodeError('150', 282)).toBeNull();
+    });
+
+    it('promotionCodeError: sin último número conocido no aplica el tope', () => {
+      expect(promotionCodeError('9001', null)).toBeNull();
     });
   });
 

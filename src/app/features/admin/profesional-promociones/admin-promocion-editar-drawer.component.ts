@@ -15,7 +15,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus, PromocionTableRow } from '@core/models/ui/promocion-table.model';
-import { isValidPromotionCode, promotionNameForCode } from '@core/utils/promotion-code.utils';
+import { promotionCodeError, promotionNameForCode } from '@core/utils/promotion-code.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -111,14 +111,8 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 placeholder="Ej: 156"
                 data-llm-description="ID numérico MTT de la promoción; se propaga a sus cursos como {id}.{licencia}"
               />
-              @if (!codeIsValid()) {
-                <p class="text-2xs mt-1 text-error">
-                  {{
-                    code().trim().length > 0
-                      ? 'Debe ser solo números (ej: 156).'
-                      : 'El número es obligatorio.'
-                  }}
-                </p>
+              @if (codeError(); as message) {
+                <p class="text-2xs mt-1 text-error">{{ message }}</p>
               }
             </div>
 
@@ -354,8 +348,20 @@ export class AdminPromocionEditarDrawerComponent {
     return new Date(p.startDate + 'T00:00:00') > today;
   });
 
-  /** El código es el ID numérico MTT — estrictamente dígitos. */
-  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
+  /** Último número de promoción usado; null mientras carga (sin tope). fix-347-m, D19. */
+  protected readonly maxExistingCode = signal<number | null>(null);
+
+  /**
+   * Mensaje de error del número, o null si sirve. El número que la promoción ya tiene guardado
+   * siempre sirve: el tope es para números nuevos, no para invalidar uno histórico.
+   */
+  protected readonly codeError = computed(() => {
+    const unchanged = this.code().trim() === this.facade.selectedPromocion()?.code;
+    return promotionCodeError(this.code(), unchanged ? null : this.maxExistingCode());
+  });
+
+  /** El código es el ID numérico MTT: dígitos, mayor que 0 y sin adelantarse más del tope. */
+  protected readonly codeIsValid = computed(() => this.codeError() === null);
 
   /**
    * Habilita guardar si algo cambió (nombre, número o una transición de estado válida) y el
@@ -374,6 +380,8 @@ export class AdminPromocionEditarDrawerComponent {
   });
 
   constructor() {
+    this.facade.fetchMaxPromotionCode().then((max) => this.maxExistingCode.set(max));
+
     // Pre-fill al cambiar la promoción seleccionada
     effect(() => {
       const p = this.facade.selectedPromocion();

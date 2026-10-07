@@ -22,6 +22,7 @@ import {
   promotionHolidayYears,
 } from '@core/utils/promotion-end-date.utils';
 import {
+  maxPromotionCode,
   promotionWriteErrorMessage,
   suggestNextPromotionCode,
 } from '@core/utils/promotion-code.utils';
@@ -352,11 +353,26 @@ export class PromocionesFacade {
    * existente + 1. El número es único en BD, así que se mira toda la tabla, no solo la sede.
    */
   async suggestNextCode(): Promise<string> {
+    const codes = await this.fetchPromotionCodes();
+    return codes ? suggestNextPromotionCode(codes) : '';
+  }
+
+  /**
+   * Último número de promoción usado (el mayor), para acotar el número de una manual en los
+   * formularios (fix-347-m, D19). null si no hay ninguno o no se pudo consultar: sin tope.
+   */
+  async fetchMaxPromotionCode(): Promise<number | null> {
+    const codes = await this.fetchPromotionCodes();
+    return codes ? maxPromotionCode(codes) : null;
+  }
+
+  /** Números de todas las promociones (el número es único en toda la tabla); null si falla. */
+  private async fetchPromotionCodes(): Promise<(string | null)[] | null> {
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('code');
-    if (error) return '';
-    return suggestNextPromotionCode(((data ?? []) as { code: string | null }[]).map((r) => r.code));
+    if (error) return null;
+    return ((data ?? []) as { code: string | null }[]).map((r) => r.code);
   }
 
   async crearPromocion(payload: CrearPromocionPayload): Promise<boolean> {
