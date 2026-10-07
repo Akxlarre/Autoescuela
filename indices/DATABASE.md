@@ -2461,7 +2461,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
-| `reserve_next_promotion_slot` | `(p_branch_id INT)` — reserva el próximo lunes de la cadencia (2026-07-27 + 14k) hasta tener 2 planificadas **de la cadencia** por delante; las manuales fuera de ella no cuentan ni la corren; número = mayor existente + 1; EXECUTE solo `service_role` (fix-322-m, fix-323-m) |
+| `reserve_next_promotion_slot` | `(p_branch_id INT)` — reserva el primer lunes **libre** de la cadencia (2026-07-27 + 14k) contado desde la última promoción de la cadencia que **ya partió** (en curso o finalizada), hasta tener 2 planificadas **de la cadencia** por delante; las manuales fuera de ella no cuentan, y una manual o cancelada en un lunes futuro de la cadencia ocupa su lunes sin hacer saltar los intermedios; número = mayor existente + 1; EXECUTE solo `service_role` (fix-322-m, fix-323-m, fix-344-m) |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
