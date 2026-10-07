@@ -59,6 +59,7 @@ import type {
 } from '@core/models/ui/alumno-profesional-table-row.model';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -410,7 +411,7 @@ interface SemaforoInfo {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 <!-- track por matrícula: un alumno con 2 matrículas Profesional sale 2 veces (fix-331-m) -->
-                @for (alumno of sortedAlumnos(); track alumno.enrollmentId) {
+                @for (alumno of visibleCards(); track alumno.enrollmentId) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card
                       [alumno]="alumno"
@@ -430,6 +431,21 @@ interface SemaforoInfo {
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
+                  </div>
+                }
+
+                <!-- Cargar más: la vista de tarjetas muestra de a 6, igual que la Base B (fix-354-m) -->
+                @if (remainingCards() > 0) {
+                  <div class="col-span-full pt-1">
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                      (click)="loadMoreCards()"
+                      data-llm-action="load-more-professional-students"
+                    >
+                      <app-icon name="chevron-down" [size]="16" />
+                      Cargar más ({{ remainingCards() }} restantes)
+                    </button>
                   </div>
                 }
               </div>
@@ -535,10 +551,35 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     return ariaSortOf(this.sort(), field);
   }
 
-  /** Un orden nuevo se mira desde la primera página. */
+  /** Un orden nuevo se mira desde el principio: primera página y primeras tarjetas. */
   private applySort(sort: AlumnoProfesionalListSort | null): void {
     this.sort.set(sort);
     this.tableFirst.set(0);
+    this.resetCards();
+  }
+
+  // ── Vista de tarjetas: de a 6 con "Cargar más" (fix-354-m) ──────────────
+  /**
+   * Pintar todas las matrículas dejaba una celda de ~22.000 px y la animación de entrada la
+   * montaba sobre el hero. Mismo paso que la Base B.
+   */
+  private static readonly CARDS_STEP = 6;
+  private readonly mobileShown = signal(AlumnosProfesionalListContentComponent.CARDS_STEP);
+
+  visibleCards(): AlumnoProfesionalTableRow[] {
+    return sliceByBudget(this.sortedAlumnos(), this.mobileShown());
+  }
+
+  remainingCards(): number {
+    return Math.max(0, this.filteredAlumnos().length - this.mobileShown());
+  }
+
+  loadMoreCards(): void {
+    this.mobileShown.update((n) => n + AlumnosProfesionalListContentComponent.CARDS_STEP);
+  }
+
+  private resetCards(): void {
+    this.mobileShown.set(AlumnosProfesionalListContentComponent.CARDS_STEP);
   }
 
   /** Exporta lo que se ve: la lista filtrada (o la Papelera), completa y en el orden elegido. */
@@ -707,6 +748,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
    */
   resetPagination(): void {
     this.tableFirst.set(0);
+    this.resetCards();
   }
 
   /** Vuelve filtros y buscador a su valor inicial. El orden elegido se conserva (spec 0023-m). */
@@ -717,6 +759,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   resetFilters(): void {
     this.tableFirst.set(0);
+    this.resetCards();
     this.searchTerm = '';
     this.selectedClase = '';
   }
@@ -727,6 +770,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
         this.preInscritosRequested.emit();
         break;
       case 'papelera':
+        this.resetCards();
         this.trashViewToggled.emit();
         break;
       default:
