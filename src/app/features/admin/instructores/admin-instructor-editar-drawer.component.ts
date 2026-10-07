@@ -27,7 +27,10 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
 import { isValidLicenseNumber } from '@core/utils/license-number.utils';
-import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
+import {
+  instructorBranchChangeNotice,
+  instructorDeactivationNotices,
+} from '@core/utils/instructor-deactivation.utils';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -269,6 +272,15 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                     mode="editar"
                     (valueChange)="onSedeScopeChange($event)"
                   />
+                  <!-- hotfix-070-b (E13): las clases ya agendadas no se mueven; solo avisa. -->
+                  @if (avisoCambioSede(); as aviso) {
+                    <p
+                      class="text-xs text-warning"
+                      data-llm-description="aviso de clases futuras al cambiar de sede al instructor"
+                    >
+                      {{ aviso }}
+                    </p>
+                  }
                 </div>
               }
             </div>
@@ -717,6 +729,19 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     const sedeVehiculo = this.branchFacade.branches().find((b) => b.id === vehicle.branchId)?.name;
     if (!sedeNoCubierta || !sedeVehiculo) return null;
     return `Este instructor no podrá dictar clases en ${sedeNoCubierta}: su vehículo asignado es de ${sedeVehiculo} y no está marcado "Ambas". Para que pueda operar en las dos sedes, asígnale un vehículo "Ambas".`;
+  });
+
+  /** hotfix-070-b (E13): aviso de clases futuras si cambia de sede (y no queda en "Ambas"). */
+  protected readonly avisoCambioSede = computed(() => {
+    const inst = this.facade.selectedInstructor();
+    if (!inst) return null;
+    const scopeChanged =
+      this.sedeId() !== inst.branchId || this.bothBranches() !== inst.bothBranches;
+    return instructorBranchChangeNotice(
+      this.facade.clasesFuturasSeleccionado(),
+      scopeChanged,
+      this.bothBranches(),
+    );
   });
 
   protected onSedeScopeChange(value: { branchId: number | null; bothBranches: boolean }): void {
