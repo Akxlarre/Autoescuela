@@ -247,7 +247,7 @@ export function resolveNotificationRoute(
               size="small"
               [severity]="userPanelOpen() ? 'primary' : 'secondary'"
               [attr.aria-expanded]="userPanelOpen()"
-              [attr.aria-label]="'Perfil de ' + user.name"
+              [ariaLabel]="'Perfil de ' + user.name"
               aria-haspopup="menu"
               data-llm-action="open-user-profile-menu"
               (onClick)="userPanelOpen.set(!userPanelOpen())"
