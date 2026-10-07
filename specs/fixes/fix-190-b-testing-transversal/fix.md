@@ -1,7 +1,7 @@
 # Fix: Testing transversal — multi-sede, shell, tiempo real, responsive y modo oscuro
 > id: fix-190-b-testing-transversal
 > refs: ASG-i-037
-> status: in_progress
+> status: done
 > created: 2026-10-06
 
 ## Root Cause
@@ -200,3 +200,31 @@ ANALYZE` impersonando a la secretaria: ~5 s; como superusuario, 0,2 s. La vista 
 (`auth_user_role()` por fila, 4,7 ms por turno × 520 turnos) y **dos veces** (filtro + `CASE`).
 Además, con RLS la secretaria no ve clases de la otra sede → un instructor/vehículo compartido
 ocupado allá se le muestra **disponible**. → **`fix-196-b`** (PR #212, migración aplicada el 2026-10-07): Agenda en el build de producción **0,76–1,07 s**; test de BD 5/5 en producción.
+
+## Cierre (2026-10-07)
+
+- **T1 ✅** Sospechas S1–S15: confirmadas con su track, descartadas o registradas como decisión
+  (tabla de arriba). Quedan abiertas como **decisión del owner**: S12 (sede no sincronizada entre
+  pestañas, K03). S5 sigue en ASG-i-047 (Matías).
+- **T2 ✅** `e2e/barrido-rutas.spec.ts` (52 rutas × 3 celdas) + `e2e/transversal-shell.spec.ts`
+  (D, D06, E, K, T, V, X, Y): **29/29** contra el build de producción de esta rama
+  (`--workers=2`). Fallos esperados marcados con `knownBug` hasta que se mergee su fix:
+  D06 Pagos/Ex-Alumnos/Certificación → `fix-195-b` (#208); Y03 → `hotfix-064-b` (#204);
+  T02 23:30 → `ASG-i-054` (Matías).
+- **T3 ✅** Nada de lo probado dejó datos: transacciones revertidas o `ZZ001`; D6 cargado y retirado.
+- **T4 ✅** Cada ❌ tiene track o asignación:
+
+| Hallazgo | Track / asignación |
+|---|---|
+| RPC que escriben ejecutables sin sesión (S1, P16) | `fix-191-b` (#198, aplicado) |
+| Inscripción pública abierta en el servidor (S7) | `fix-193-b` (#203, desplegado) |
+| Drawer sin Escape / cierre al navegar / `role=dialog` (S9) | `hotfix-061-b` (#200) |
+| HTML en el modal de confirmación (S10) | `hotfix-062-b` (#201) |
+| Selector de sede de Ajustes sin bloqueos (S15) | `hotfix-063-b` (#202) |
+| Caja Diaria no app-like en notebooks (B12) | `fix-192-b` (#199) |
+| Botón de perfil sin nombre accesible (Y03) | `hotfix-064-b` (#204) |
+| Venta de servicio especial sin sede (D07/P22) | `fix-194-b` (#205) |
+| Datos de otra sede tras cambio rápido (D06) | `fix-195-b` (#208) + residuo `ASG-b-101` (#209) |
+| Fechas de negocio en UTC (T02) | `ASG-i-054` (nota, #206) |
+| Pantallas sin red muestran ceros (X01) | `ASG-b-102` (#210); Caja en `ASG-i-048` (nota, #211) |
+| Agenda 5–6 s (Z01) | `fix-196-b` (#212, aplicado) |

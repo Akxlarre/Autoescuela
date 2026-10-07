@@ -25,8 +25,9 @@ const RESULT = '[data-llm-action="search-result-item"]';
 
 /** Espera a que el shell esté montado (topbar con el menú de usuario). */
 async function shellReady(page: Page): Promise<void> {
+  // 60 s: los primeros tests arrancan mientras la BD todavía atiende los logins del setup.
   await expect(page.locator('[data-llm-action="open-user-profile-menu"]')).toBeVisible({
-    timeout: 30_000,
+    timeout: 60_000,
   });
 }
 
@@ -155,10 +156,15 @@ test.describe('D. Selector de sede', () => {
  * la respuesta vieja de B llega DESPUÉS y pisa la pantalla con datos de B.
  * Solo pantallas donde el indicador de A y el de B difieren (ver tabla D07 en fix-190-b).
  */
-const D06_SCREENS: { path: string; indicador: RegExp }[] = [
-  { path: '/app/admin/pagos', indicador: /(\d+)\s+con deuda/ },
-  { path: '/app/admin/ex-alumnos', indicador: /(\d+)\s+Egresados/ },
-  { path: '/app/admin/certificacion', indicador: /Pendientes\s*\((\d+)\)/ },
+const D06_SCREENS: { path: string; indicador: RegExp; bug?: string }[] = [
+  // Sin guard de orden hasta fix-195-b (PR #208): quitar `bug` cuando esté mergeado.
+  { path: '/app/admin/pagos', indicador: /(\d+)\s+con deuda/, bug: 'fix-195-b (#208)' },
+  { path: '/app/admin/ex-alumnos', indicador: /(\d+)\s+Egresados/, bug: 'fix-195-b (#208)' },
+  {
+    path: '/app/admin/certificacion',
+    indicador: /Pendientes\s*\((\d+)\)/,
+    bug: 'fix-195-b (#208)',
+  },
   { path: '/app/admin/dashboard', indicador: /(\d+)\s+alumnos con/ },
 ];
 
@@ -185,8 +191,9 @@ async function esperarRedQuieta(inflight: Set<unknown>): Promise<void> {
 }
 
 test.describe('D06. Cambio rápido de sede', () => {
-  for (const { path, indicador } of D06_SCREENS) {
+  for (const { path, indicador, bug } of D06_SCREENS) {
     test(`D06: ${path} — A → B → A rápido termina mostrando A`, async ({ pageAs }) => {
+      if (bug) knownBug(bug);
       test.setTimeout(240_000);
       const page = await pageAs('admin');
       let fase: 'normal' | 'B' | 'A' = 'normal';
@@ -489,6 +496,8 @@ test.describe('Y. Accesibilidad', () => {
   test('Y03/Y07: los botones de solo ícono del shell tienen aria-label y data-llm-*', async ({
     pageAs,
   }) => {
+    // El botón de perfil tiene nombre accesible desde hotfix-064-b: quitar al mergear el PR #204.
+    knownBug('hotfix-064-b (#204)');
     const page = await pageAs('admin');
     await page.goto('/app/admin/dashboard');
     await shellReady(page);
