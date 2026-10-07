@@ -166,3 +166,11 @@ y se navega por el menú lateral (SPA). Se busca un error visible en `<main>` o 
 Ninguna pantalla mostró un toast. Historial de cuadraturas y Notificaciones no tienen link directo
 en el menú (no medidas). → **ASG-b-102** (lecturas fallidas que se muestran como "sin datos");
 la Caja cruza con **ASG-i-048** (escrituras de Cuadratura, de i).
+
+## X04 — Sesión expirada (`transversal-shell.spec.ts`, 2026-10-07)
+
+| Variante | Res. | Qué pasa |
+|---|---|---|
+| Token vence (reloj +2 h) y la renovación falla (`invalid_grant`) | ✅ | Vuelve sola a `/login` en < 20 s, **sin toasts** (test `X04`) |
+| Borrar el token de `localStorage` (lo del checklist) | ✅ con matiz | supabase-js conserva la sesión en memoria: la app sigue funcionando hasta recargar; con F5 → `/login` sin toasts. Es el comportamiento esperable del cliente, no un bug |
+| Mensaje en el login | ⚠️ | `/login` muestra el "Bienvenido de vuelta" de siempre, sin "tu sesión expiró". Observación de UX, sin track (decisión del owner si se quiere) |

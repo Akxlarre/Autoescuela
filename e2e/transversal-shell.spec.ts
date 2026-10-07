@@ -346,6 +346,61 @@ test.describe('K. Dos pestañas', () => {
   });
 });
 
+// ── X. Errores y sesión ───────────────────────────────────────────────────────
+
+test.describe('X. Sesión expirada', () => {
+  test('X04: el token vence y la renovación falla → vuelve a /login sin toasts en cadena', async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    // Sesión propia por UI (no la compartida del setup) con el reloj del navegador controlado.
+    await page.context().route('**/auth/v1/logout**', (r) => r.fulfill({ status: 204, body: '' }));
+    await page.clock.install();
+    await page.goto('/login');
+    await page
+      .locator('[data-llm-description="User email address for authentication"]')
+      .fill(ACCOUNTS.secretariaA.email);
+    await page
+      .locator('[data-llm-description="User password for authentication"]')
+      .fill(ACCOUNTS.secretariaA.password);
+    await page.locator('[data-llm-action="submit-auth-form"]').click();
+    await expect(page).toHaveURL(/\/app\/secretaria\/dashboard$/, { timeout: 60_000 });
+    await shellReady(page);
+
+    // Sesión revocada/vencida: el refresh token ya no sirve y el access token expira (+2 h).
+    await page.route('**/auth/v1/token**', (r) =>
+      r.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'invalid_grant',
+          error_description: 'Invalid Refresh Token',
+        }),
+      }),
+    );
+    await page.route('**/rest/v1/**', (r) =>
+      r.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'PGRST301', message: 'JWT expired' }),
+      }),
+    );
+    let toasts = 0;
+    const contar = setInterval(() => {
+      page
+        .locator('.p-toast-message')
+        .count()
+        .then((n) => (toasts = Math.max(toasts, n)))
+        .catch(() => undefined);
+    }, 250);
+    await page.clock.fastForward('02:00:00');
+
+    await expect(page).toHaveURL(/\/login$/, { timeout: 20_000 });
+    clearInterval(contar);
+    expect(toasts, 'toasts de error en cadena').toBe(0);
+  });
+});
+
 // ── T. Hora de Chile ──────────────────────────────────────────────────────────
 
 test.describe('T. Hora de Chile', () => {
