@@ -122,7 +122,12 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
           />
 
           <span class="text-xs text-text-muted ml-auto">
-            {{ filteredPromociones().length }} promociones encontradas
+            {{ filteredPromociones().length }}
+            {{
+              filteredPromociones().length === 1
+                ? 'promoción encontrada'
+                : 'promociones encontradas'
+            }}
           </span>
         </div>
 
@@ -180,8 +185,12 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
             />
           </div>
         } @else {
-          <!-- VISTA Desktop: Tabla clásica con paginación (oculta cuando se comprime) -->
-          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+          <!-- VISTA Desktop: Tabla clásica con paginación (oculta cuando se comprime).
+               table-compact (fix-345-m): misma tabla compacta que las listas de alumnos, para
+               que quepa en un notebook sin scroll horizontal. -->
+          <div
+            class="desktop-view table-compact hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full"
+          >
             <p-table
               [value]="filteredPromociones()"
               [rows]="10"
@@ -194,7 +203,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
             >
               <ng-template pTemplate="header">
                 <tr class="micro-label text-left">
-                  <th class="pl-6 py-4">Promoción</th>
+                  <th class="table-compact-main pl-6 py-4">Promoción</th>
                   <th>Fechas</th>
                   <th>Alumnos</th>
                   <th>Cursos</th>
@@ -205,7 +214,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
               <ng-template pTemplate="body" let-promo>
                 <tr class="list-item-hover transition-colors border-b border-border-subtle">
                   <!-- Promoción -->
-                  <td class="pl-6 py-4">
+                  <td class="table-compact-main pl-6 py-4">
                     <div class="flex items-center gap-3">
                       <div
                         class="w-9 h-9 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
@@ -213,7 +222,9 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
                         <app-icon name="calendar" [size]="16" />
                       </div>
                       <div class="flex flex-col min-w-0">
-                        <span class="item-title truncate">{{ promo.name }}</span>
+                        <span class="item-title truncate" [attr.title]="promo.name">{{
+                          promo.name
+                        }}</span>
                         <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
                       </div>
                     </div>
@@ -229,7 +240,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
                   </td>
                   <!-- Cursos -->
                   <td>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-nowrap gap-1.5">
                       @for (curso of promo.cursos; track curso.id) {
                         <span
                           class="course-badge"
@@ -262,7 +273,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
                       <button
                         aria-label="Ver detalle"
                         pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Ver detalle"
                         (click)="openVerDrawer(promo)"
                         data-llm-action="ver-promocion"
@@ -272,7 +283,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
                       <button
                         aria-label="Editar promoción"
                         pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        class="table-compact-action p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                         pTooltip="Editar promoción"
                         (click)="openEditarDrawer(promo)"
                         data-llm-action="editar-promocion"
@@ -444,13 +455,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
       color: 'success',
     },
     { id: 'planificadas', label: 'Planificadas', value: this.facade.planificadas(), icon: 'clock' },
-    {
-      id: 'canceladas',
-      label: 'Canceladas',
-      value: this.facade.canceladas(),
-      icon: 'ban',
-      color: 'warning',
-    },
   ]);
 
   protected handleHeroAction(actionId: string): void {
@@ -470,12 +474,13 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   /**
    * Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m).
    * Sin "Finalizada": la lista no trae finalizadas; se consultan en Archivo (fix-326-m, D3a).
+   * Sin "Cancelada": ya no se cancela, se elimina (fix-348-m, D20); una cancelada histórica sigue
+   * en la lista con su etiqueta.
    */
   readonly estadoOptions = withAllOption(
     [
       { label: 'Planificada', value: 'planned' },
       { label: 'En curso', value: 'in_progress' },
-      { label: 'Cancelada', value: 'cancelled' },
     ],
     'Todos los estados',
   );

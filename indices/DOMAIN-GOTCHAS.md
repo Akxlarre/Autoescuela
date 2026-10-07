@@ -668,8 +668,19 @@
   runtime (si corre localmente vía `supabase start`) permite probar llamadas de red aisladas
   con el mismo binario y la misma red que usará el cron en producción — más confiable que
   asumir que el comportamiento del navegador se traslada 1:1 a otro runtime.
+- **Actualización — una fuente de respaldo que responde 200 no está necesariamente respondiendo lo
+  que se le pidió:** `api.boostr.cl` ignora el parámetro `year` y devuelve siempre los feriados del
+  año en curso. Para el año siguiente respondía con éxito y sin una sola fecha útil, la señal de
+  fallo quedaba apagada y una promoción que cruzaba de año perdía el 1 de enero. Cuándo aplica:
+  cada vez que se consulta una API externa con un parámetro que acota el resultado (año, país,
+  rango), validar que la respuesta corresponde a ese parámetro antes de darla por buena, y tratar
+  la que no corresponde como fuente caída para seguir con la siguiente. Hoy las fuentes son tres
+  (`apis.digital.gob.cl`, `api.boostr.cl`, `date.nager.at`) y solo se acepta la que entrega fechas
+  del año pedido; `date.nager.at` incluye feriados regionales, que se descartan por su campo
+  `global`.
 - **Fuente:** `specs/fixes/fix-138-m-fallback-silencioso-fetch-feriados`,
-  `specs/fixes/fix-139-m-fallback-fuente-feriados-alternativa`
+  `specs/fixes/fix-139-m-fallback-fuente-feriados-alternativa`,
+  `specs/fixes/fix-343-m-feriados-del-ano-siguiente-en-promociones`
 
 ### DG-058 — Una función `SECURITY DEFINER` sin `SET search_path` propio hereda el search_path del caller que la invoca anidada, no el de quien finalmente disparó la transacción
 - **Trampa:** asumir que porque `log_change()` (trigger de auditoría) es `SECURITY DEFINER` y

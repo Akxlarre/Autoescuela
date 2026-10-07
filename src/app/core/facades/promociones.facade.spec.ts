@@ -316,7 +316,11 @@ describe('PromocionesFacade — fallo del fetch de feriados es visible (fix-138)
   });
 
   it('fetch exitoso → holidaysCheckFailed() permanece en false', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
+    // Feriado del año pedido pero anterior al inicio: la fuente responde y no toca el rango.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => [{ fecha: '2026-01-01' }] }),
+    );
     const facade = makeFacade();
 
     await facade.previewEndDate(START);
@@ -325,15 +329,14 @@ describe('PromocionesFacade — fallo del fetch de feriados es visible (fix-138)
   });
 
   it('fetch falla en previewEndDate() pero luego se recupera en crearPromocion() → la señal vuelve a false', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValue({ ok: true, json: async () => [] });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     vi.stubGlobal('fetch', fetchMock);
     const facade = makeFacade();
 
     await facade.previewEndDate(START);
     expect(facade.holidaysCheckFailed()).toBe(true);
+
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [{ fecha: '2026-01-01' }] });
 
     await facade.crearPromocion({
       name: 'Promo Nueva',
@@ -401,6 +404,86 @@ describe('PromocionesFacade — fallback a fuente alternativa de feriados (fix-1
 
     expect(preview).toBe('2026-09-05'); // start+33, sin feriados
     expect(facade.holidaysCheckFailed()).toBe(true);
+  });
+});
+
+// fix-343-m — una promoción que cruza de año necesita los feriados del año siguiente
+describe('PromocionesFacade — feriados del año siguiente (fix-343)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('inicio 30-11-2026 → consulta 2026 y 2027, y el 1 de enero extiende el término al 06-01-2027', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          url.endsWith('/2027')
+            ? [{ fecha: '2027-01-01' }]
+            : [{ fecha: '2026-12-08' }, { fecha: '2026-12-25' }],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: createTableMock({}) },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    const facade = TestBed.inject(PromocionesFacade);
+
+    const preview = await facade.previewEndDate('2026-11-30');
+
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls.some((u) => u.endsWith('/2026'))).toBe(true);
+    expect(urls.some((u) => u.endsWith('/2027'))).toBe(true);
+    expect(preview).toBe('2027-01-06');
+  });
+
+  it('la oficial falla y boostr responde 2026 para el año 2027 → se usa la tercera fuente y no se pierde el 1 de enero', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('apis.digital.gob.cl')) {
+        return Promise.reject(new TypeError('Failed to fetch'));
+      }
+      if (url.includes('api.boostr.cl')) {
+        // Ignora `year`: siempre el año en curso.
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: [{ date: '2026-12-08' }, { date: '2026-12-25' }] }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => [
+          { date: '2027-01-01', global: true },
+          { date: '2027-01-04', global: false }, // regional: no cuenta
+        ],
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: createTableMock({}) },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    const facade = TestBed.inject(PromocionesFacade);
+
+    const preview = await facade.previewEndDate('2026-11-30');
+
+    expect(preview).toBe('2027-01-06');
+    expect(facade.holidaysCheckFailed()).toBe(false);
+    expect(
+      fetchMock.mock.calls.some((c) =>
+        (c[0] as string).includes('date.nager.at/api/v3/PublicHolidays/2027/CL'),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -496,6 +579,54 @@ describe('PromocionesFacade — ciclo de vida solo admin (fix-321-m, D5)', () =>
 
   it('secretaria → canManageLifecycle() false', () => {
     expect(setup('secretaria').canManageLifecycle()).toBe(false);
+  });
+});
+
+// fix-348-m (D20) — eliminar en vez de cancelar
+describe('PromocionesFacade — eliminarPromocion (fix-348-m)', () => {
+  function setup(rpcResult: { error: unknown }) {
+    const rpc = vi.fn().mockResolvedValue(rpcResult);
+    const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() };
+    const mockSupabase = createTableMock({ professional_promotions: { data: [] } });
+    (mockSupabase.client as any).rpc = rpc;
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: toast },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return { facade: TestBed.inject(PromocionesFacade), rpc, toast };
+  }
+
+  it('llama a la función de borrado con el id y avisa que se eliminó', async () => {
+    const { facade, rpc, toast } = setup({ error: null });
+
+    const ok = await facade.eliminarPromocion(36);
+
+    expect(ok).toBe(true);
+    expect(rpc).toHaveBeenCalledWith('delete_promotion_without_students', { p_promotion_id: 36 });
+    expect(toast.success).toHaveBeenCalledWith('Promoción eliminada');
+    expect(facade.isSubmitting()).toBe(false);
+  });
+
+  it('si la promoción tiene alumnos, muestra el motivo y devuelve false', async () => {
+    const { facade, toast } = setup({
+      error: {
+        code: 'P0001',
+        message: 'promotion_has_enrollments: la promoción 20 tiene 3 matrícula(s)',
+      },
+    });
+
+    const ok = await facade.eliminarPromocion(20);
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith(
+      'No se puede eliminar: la promoción tiene alumnos matriculados.',
+    );
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });
 

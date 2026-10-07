@@ -5,7 +5,6 @@ import {
   effect,
   inject,
   signal,
-  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -14,8 +13,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
-import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
-import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
+import type { PromocionStatus, PromocionTableRow } from '@core/models/ui/promocion-table.model';
+import { promotionCodeError, promotionNameForCode } from '@core/utils/promotion-code.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -111,14 +110,8 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 placeholder="Ej: 156"
                 data-llm-description="ID numérico MTT de la promoción; se propaga a sus cursos como {id}.{licencia}"
               />
-              @if (!codeIsValid()) {
-                <p class="text-2xs mt-1 text-error">
-                  {{
-                    code().trim().length > 0
-                      ? 'Debe ser solo números (ej: 156).'
-                      : 'El número es obligatorio.'
-                  }}
-                </p>
+              @if (codeError(); as message) {
+                <p class="text-2xs mt-1 text-error">{{ message }}</p>
               }
             </div>
 
@@ -156,7 +149,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               [(ngModel)]="statusModel"
               optionLabel="label"
               optionValue="value"
-              optionDisabled="disabled"
               [style]="{ width: '100%' }"
               data-llm-description="Cambiar estado de la promoción"
             />
@@ -175,17 +167,39 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
 
-            @if (status() === 'cancelled') {
+            @if (showAskAdminNotice()) {
               <div
-                class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-error/6 border border-error/20"
+                class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-warning/8 border border-warning/20"
+                data-llm-description="aviso: solo el administrador puede eliminar una promoción creada por error"
               >
-                <app-icon name="circle-alert" [size]="14" color="var(--state-error)" />
+                <app-icon name="info" [size]="14" color="var(--state-warning)" />
                 <p class="text-xs text-text-secondary">
-                  Cancelar una promoción es una acción irreversible.
+                  ¿Esta promoción se creó por error? Pídele al administrador que la elimine.
                 </p>
               </div>
             }
           </section>
+
+          <!-- ── Eliminar (admin; planificada o cancelada, sin alumnos) ──── -->
+          @if (canDelete()) {
+            <section class="mt-3 rounded-lg p-4 bg-error/6 border border-error/20">
+              <h3 class="item-title mb-1">Eliminar promoción</h3>
+              <p class="text-xs text-text-secondary mb-3">
+                Si se creó por error, puedes eliminarla: se borra con sus cursos y sesiones, y su
+                lunes y su número quedan libres. No se puede deshacer.
+              </p>
+              <button
+                type="button"
+                class="btn-danger-ghost"
+                [disabled]="facade.isSubmitting()"
+                (click)="deletePromocion()"
+                data-llm-action="eliminar-promocion"
+              >
+                <app-icon name="trash-2" [size]="13" />
+                Eliminar promoción
+              </button>
+            </section>
+          }
         </ng-template>
       </app-drawer-content-loader>
 
@@ -256,15 +270,24 @@ export class AdminPromocionEditarDrawerComponent {
     return this.name();
   }
   protected set nameModel(v: string) {
+    this.nameEditedByHand = true;
     this.name.set(v);
   }
 
   protected get codeModel(): string {
     return this.code();
   }
+  /** El nombre automático sigue al número mientras no se haya escrito a mano (fix-346-m, D18). */
   protected set codeModel(v: string) {
     this.code.set(v);
+    const p = this.facade.selectedPromocion();
+    if (p && !this.nameEditedByHand) this.name.set(promotionNameForCode(p.name, p.code, v));
   }
+
+  /** True desde que el usuario escribe en el campo Nombre; se limpia al cargar otra promoción. */
+  private nameEditedByHand = false;
+  /** Guardado o confirmación en curso: un segundo clic no vuelve a guardar (fix-346-m). */
+  private saving = false;
 
   protected get statusModel(): PromocionStatus {
     return this.status();
@@ -276,33 +299,42 @@ export class AdminPromocionEditarDrawerComponent {
   /**
    * Opciones del selector incluyendo el estado actual como primera entrada.
    * Al seleccionar el estado actual, canSave permanece false (sin cambio real).
-   *   planned     → Planificada | En curso (solo si start_date ≤ hoy) | Cancelada
-   *   in_progress → En curso | Finalizada | Cancelada
+   *   planned     → Planificada | En curso (solo si start_date ≤ hoy)
+   *   in_progress → En curso | Finalizada
    *   finished    → Finalizada  (sin más transiciones)
-   *   cancelled   → Cancelada   (sin más transiciones)
-   * La secretaria no ve Finalizada ni Cancelada como destino (fix-321-m, D5).
-   * Con matrículas activas, Cancelada aparece deshabilitada (fix-325-m, D4): no existe dónde
-   * reasignar a esos alumnos. Mientras el conteo carga (null) también se deshabilita.
+   *   cancelled   → Cancelada   (histórica; sin más transiciones)
+   * "Cancelada" dejó de ser un destino: una promoción creada por error se elimina (fix-348-m,
+   * D20). La secretaria no ve Finalizada como destino (fix-321-m, D5).
    */
   protected readonly availableStatusOptions = computed(() => {
     const current = this.facade.selectedPromocion()?.status;
-    const activos = this.activeEnrollments();
-    const options = this.statusOptionsFor().map((o) => {
-      const blocked = o.value === 'cancelled' && current !== 'cancelled' && activos !== 0;
-      return {
-        ...o,
-        disabled: blocked,
-        label: blocked && activos ? `Cancelada (tiene ${activos} alumnos activos)` : o.label,
-      };
-    });
+    const options = this.statusOptionsFor();
     if (this.facade.canManageLifecycle()) return options;
-    return options.filter(
-      (o) => o.value === current || (o.value !== 'finished' && o.value !== 'cancelled'),
+    return options.filter((o) => o.value === current || o.value !== 'finished');
+  });
+
+  /**
+   * El admin puede eliminar una promoción que no partió (planificada o cancelada) y no tiene
+   * alumnos (fix-348-m, D20). La función de BD vuelve a validarlo: cuenta también las matrículas
+   * de personas archivadas, que `totalEnrolled` no incluye.
+   */
+  protected readonly canDelete = computed(() => {
+    const p = this.facade.selectedPromocion();
+    return (
+      !!p &&
+      this.facade.canManageLifecycle() &&
+      (p.status === 'planned' || p.status === 'cancelled') &&
+      p.totalEnrolled === 0
     );
   });
 
-  /** Matrículas activas de la promoción abierta; null mientras carga (fix-325-m). */
-  protected readonly activeEnrollments = signal<number | null>(null);
+  /** La secretaria no puede eliminar: si la promoción parece un error, se le dice a quién pedirlo. */
+  protected readonly showAskAdminNotice = computed(() => {
+    const p = this.facade.selectedPromocion();
+    return (
+      !!p && !this.facade.canManageLifecycle() && p.status === 'planned' && p.totalEnrolled === 0
+    );
+  });
 
   private statusOptionsFor(): { label: string; value: PromocionStatus }[] {
     const p = this.facade.selectedPromocion();
@@ -319,13 +351,11 @@ export class AdminPromocionEditarDrawerComponent {
           ...(startDate <= today
             ? [{ label: 'En curso', value: 'in_progress' as PromocionStatus }]
             : []),
-          { label: 'Cancelada', value: 'cancelled' as PromocionStatus },
         ];
       case 'in_progress':
         return [
           { label: 'En curso', value: 'in_progress' as PromocionStatus },
           { label: 'Finalizada', value: 'finished' as PromocionStatus },
-          { label: 'Cancelada', value: 'cancelled' as PromocionStatus },
         ];
       case 'finished':
         return [{ label: 'Finalizada', value: 'finished' as PromocionStatus }];
@@ -345,8 +375,20 @@ export class AdminPromocionEditarDrawerComponent {
     return new Date(p.startDate + 'T00:00:00') > today;
   });
 
-  /** El código es el ID numérico MTT — estrictamente dígitos. */
-  protected readonly codeIsValid = computed(() => isValidPromotionCode(this.code()));
+  /** Último número de promoción usado; null mientras carga (sin tope). fix-347-m, D19. */
+  protected readonly maxExistingCode = signal<number | null>(null);
+
+  /**
+   * Mensaje de error del número, o null si sirve. El número que la promoción ya tiene guardado
+   * siempre sirve: el tope es para números nuevos, no para invalidar uno histórico.
+   */
+  protected readonly codeError = computed(() => {
+    const unchanged = this.code().trim() === this.facade.selectedPromocion()?.code;
+    return promotionCodeError(this.code(), unchanged ? null : this.maxExistingCode());
+  });
+
+  /** El código es el ID numérico MTT: dígitos, mayor que 0 y sin adelantarse más del tope. */
+  protected readonly codeIsValid = computed(() => this.codeError() === null);
 
   /**
    * Habilita guardar si algo cambió (nombre, número o una transición de estado válida) y el
@@ -360,35 +402,43 @@ export class AdminPromocionEditarDrawerComponent {
     const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
     const statusChanged =
       this.status() !== p.status &&
-      this.availableStatusOptions().some((o) => o.value === this.status() && !o.disabled);
+      this.availableStatusOptions().some((o) => o.value === this.status());
     return nameOrCodeChanged || statusChanged;
   });
 
   constructor() {
+    this.facade.fetchMaxPromotionCode().then((max) => this.maxExistingCode.set(max));
+
     // Pre-fill al cambiar la promoción seleccionada
     effect(() => {
       const p = this.facade.selectedPromocion();
       if (p) {
+        this.nameEditedByHand = false;
         this.name.set(p.name);
         this.code.set(p.code);
         this.status.set(p.status);
       }
     });
+  }
 
-    // Conteo de matrículas activas para decidir si se puede cancelar (fix-325-m).
-    effect(() => {
-      const p = this.facade.selectedPromocion();
-      this.activeEnrollments.set(null);
-      if (!p || (p.status !== 'planned' && p.status !== 'in_progress')) return;
-      untracked(() =>
-        this.facade
-          .countActiveEnrollments(p.id)
-          .then((n) => {
-            if (this.facade.selectedPromocion()?.id === p.id) this.activeEnrollments.set(n);
-          })
-          .catch(() => this.activeEnrollments.set(null)),
-      );
-    });
+  /** Elimina la promoción abierta tras confirmar (fix-348-m, D20). */
+  protected async deletePromocion(): Promise<void> {
+    const p = this.facade.selectedPromocion();
+    if (!p || !this.canDelete() || this.saving) return;
+    this.saving = true;
+    try {
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Eliminar promoción',
+        message: `Se eliminará "${p.name}" con sus cursos y sesiones. Su lunes y su número quedarán libres. Esta acción no se puede deshacer.`,
+        severity: 'danger',
+        confirmLabel: 'Eliminar',
+      });
+      if (!confirmed) return;
+
+      if (await this.facade.eliminarPromocion(p.id)) this.layoutDrawer.close();
+    } finally {
+      this.saving = false;
+    }
   }
 
   protected formatDate(iso: string): string {
@@ -399,8 +449,16 @@ export class AdminPromocionEditarDrawerComponent {
 
   protected async submit(): Promise<void> {
     const p = this.facade.selectedPromocion();
-    if (!p) return;
+    if (!p || this.saving) return;
+    this.saving = true;
+    try {
+      await this.save(p);
+    } finally {
+      this.saving = false;
+    }
+  }
 
+  private async save(p: PromocionTableRow): Promise<void> {
     // Finalizar pasa todas sus matrículas activas a completadas (trigger) y no se deshace desde
     // la app: se confirma antes, con el número de alumnos afectados (fix-324-m, D3b).
     if (this.status() === 'finished' && p.status !== 'finished') {

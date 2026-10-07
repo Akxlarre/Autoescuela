@@ -15,6 +15,7 @@ import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
+import { sortPromotionGroupsByStart } from '@core/utils/promotion-code.utils';
 import { calcAge } from '@core/utils/age.utils';
 import {
   buildEnrollmentConsents,
@@ -988,7 +989,7 @@ export class EnrollmentFacade {
       options,
     }));
 
-    this._promotionGroups.set(groups);
+    this._promotionGroups.set(sortPromotionGroupsByStart(groups));
   }
 
   /** Selecciona una promoción profesional (promotion_course_id). */

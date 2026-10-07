@@ -16,8 +16,13 @@ import type {
   EditarPromocionPayload,
 } from '@core/models/ui/promocion-table.model';
 import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
-import { computePromotionEndDate } from '@core/utils/promotion-end-date.utils';
 import {
+  computePromotionEndDate,
+  holidaysOfYear,
+  promotionHolidayYears,
+} from '@core/utils/promotion-end-date.utils';
+import {
+  maxPromotionCode,
   promotionWriteErrorMessage,
   suggestNextPromotionCode,
 } from '@core/utils/promotion-code.utils';
@@ -83,9 +88,6 @@ export class PromocionesFacade {
   );
   readonly enCurso = computed(
     () => this._promociones().filter((p) => p.status === 'in_progress').length,
-  );
-  readonly canceladas = computed(
-    () => this._promociones().filter((p) => p.status === 'cancelled').length,
   );
   readonly totalAlumnos = computed(() =>
     this._promociones().reduce((sum, p) => sum + p.totalEnrolled, 0),
@@ -348,11 +350,26 @@ export class PromocionesFacade {
    * existente + 1. El número es único en BD, así que se mira toda la tabla, no solo la sede.
    */
   async suggestNextCode(): Promise<string> {
+    const codes = await this.fetchPromotionCodes();
+    return codes ? suggestNextPromotionCode(codes) : '';
+  }
+
+  /**
+   * Último número de promoción usado (el mayor), para acotar el número de una manual en los
+   * formularios (fix-347-m, D19). null si no hay ninguno o no se pudo consultar: sin tope.
+   */
+  async fetchMaxPromotionCode(): Promise<number | null> {
+    const codes = await this.fetchPromotionCodes();
+    return codes ? maxPromotionCode(codes) : null;
+  }
+
+  /** Números de todas las promociones (el número es único en toda la tabla); null si falla. */
+  private async fetchPromotionCodes(): Promise<(string | null)[] | null> {
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('code');
-    if (error) return '';
-    return suggestNextPromotionCode(((data ?? []) as { code: string | null }[]).map((r) => r.code));
+    if (error) return null;
+    return ((data ?? []) as { code: string | null }[]).map((r) => r.code);
   }
 
   async crearPromocion(payload: CrearPromocionPayload): Promise<boolean> {
@@ -448,10 +465,7 @@ export class PromocionesFacade {
    * rango (fix-139) — en ese caso, retorna [] sin bloquear la creación de la promoción.
    */
   private async fetchHolidaysForYears(startDate: string): Promise<string[]> {
-    const anchor = new Date(`${startDate}T12:00:00`);
-    const startYear = anchor.getFullYear();
-    // Solo cruza a un 2º año calendario si arranca en diciembre (rango ~35-40 días).
-    const years = anchor.getMonth() === 11 ? [startYear, startYear + 1] : [startYear];
+    const years = promotionHolidayYears(startDate);
 
     const perYear = await Promise.all(years.map((year) => this.fetchHolidaysForYear(year)));
     this._holidaysCheckFailed.set(perYear.some((r) => r === null));
@@ -460,31 +474,44 @@ export class PromocionesFacade {
   }
 
   /**
-   * Intenta la API oficial del gobierno (`apis.digital.gob.cl`); si falla (DNS/red/CORS/5xx),
-   * reintenta con `api.boostr.cl` como respaldo. `null` indica que AMBAS fuentes fallaron
-   * para ese año (fix-139 — `apis.digital.gob.cl` quedó inalcanzable en producción).
+   * Consulta las fuentes en orden — `apis.digital.gob.cl` (oficial), `api.boostr.cl` y
+   * `date.nager.at` — y se queda con la primera que entregue fechas **del año pedido**. `null`
+   * indica que ninguna lo hizo (fix-139: la oficial quedó inalcanzable en producción).
+   *
+   * El filtro por año no es defensivo: `api.boostr.cl` ignora el parámetro `year` y devuelve
+   * siempre el año en curso, así que para el año siguiente respondía 200 sin un solo feriado
+   * útil y el 1 de enero se perdía en silencio (fix-343-m).
    */
   private async fetchHolidaysForYear(year: number): Promise<string[] | null> {
-    try {
-      const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
-      if (resp.ok) {
-        const data = (await resp.json()) as { fecha: string }[];
-        return data.map((f) => f.fecha);
-      }
-    } catch {
-      // sigue al respaldo
-    }
+    const sources: (() => Promise<string[]>)[] = [
+      async () => {
+        const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
+        if (!resp.ok) return [];
+        return ((await resp.json()) as { fecha: string }[]).map((f) => f.fecha);
+      },
+      async () => {
+        const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
+        if (!resp.ok) return [];
+        return ((await resp.json()) as { data: { date: string }[] }).data.map((f) => f.date);
+      },
+      async () => {
+        const resp = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/CL`);
+        if (!resp.ok) return [];
+        // Los que no son globales son feriados regionales de otras zonas del país.
+        return ((await resp.json()) as { date: string; global: boolean }[])
+          .filter((f) => f.global)
+          .map((f) => f.date);
+      },
+    ];
 
-    try {
-      const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
-      if (resp.ok) {
-        const json = (await resp.json()) as { data: { date: string }[] };
-        return json.data.map((f) => f.date);
+    for (const source of sources) {
+      try {
+        const ofYear = holidaysOfYear(await source(), year);
+        if (ofYear.length > 0) return ofYear;
+      } catch {
+        // sigue a la siguiente fuente
       }
-    } catch {
-      // ambas fuentes fallaron
     }
-
     return null;
   }
 
@@ -544,6 +571,36 @@ export class PromocionesFacade {
         (err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al actualizar promoción');
+      this.toast.error(msg);
+      return false;
+    } finally {
+      this._isSubmitting.set(false);
+    }
+  }
+
+  /**
+   * Elimina una promoción creada por error (fix-348-m, D20): planificada o cancelada y sin
+   * alumnos. Lo hace `delete_promotion_without_students` en una sola transacción, porque sus
+   * cursos, sesiones y libros no se borran en cascada; también valida rol, estado y matrículas.
+   * Libera el lunes y el número.
+   */
+  async eliminarPromocion(id: number): Promise<boolean> {
+    this._isSubmitting.set(true);
+    try {
+      const { error } = await this.supabase.client.rpc('delete_promotion_without_students', {
+        p_promotion_id: id,
+      });
+      if (error) throw error;
+
+      this.toast.success('Promoción eliminada');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      const msg =
+        promotionWriteErrorMessage(err, '') ??
+        (err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al eliminar la promoción');
       this.toast.error(msg);
       return false;
     } finally {

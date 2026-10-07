@@ -160,3 +160,40 @@ Deno.test({
     }
   },
 });
+
+// fix-344-m: una manual puesta en un lunes futuro de la cadencia ocupa su lunes, pero no corre el
+// punto de partida. Antes la reserva era "la última de la cadencia + 14" y saltaba los intermedios.
+Deno.test({
+  name: 'reserve_next_promotion_slot: una manual en un lunes futuro de la cadencia no hace saltar los intermedios',
+  async fn() {
+    const sql = postgres(LOCAL_DB_URL, { max: 1 });
+    let branchId: number;
+    try {
+      const [branch] = await sql<{ id: number }[]>`
+        INSERT INTO branches (name) VALUES ('fix-344-m test branch') RETURNING id
+      `;
+      branchId = branch.id;
+      await sql`
+        INSERT INTO professional_promotions
+          (code, name, start_date, end_date, status, current_day, branch_id)
+        VALUES
+          ('9301', 'Automática en curso', '2026-01-12', '2026-02-13', 'in_progress', 0, ${branchId}),
+          ('9302', 'Manual en la cadencia, más adelante', '2026-02-23', '2026-03-27', 'planned', 0, ${branchId})
+      `;
+
+      // Primer lunes libre de la cadencia tras la que ya partió (01-12): 01-26, no 03-09.
+      const [primera] = await sql<{ start: string }[]>`
+        SELECT reserved_start_date::text AS start FROM reserve_next_promotion_slot(${branchId})
+      `;
+      assertEquals(primera.start, '2026-01-26');
+
+      // 2 planificadas de la cadencia (01-26 y la manual de 02-23) → no reserva más.
+      const segunda = await sql`SELECT * FROM reserve_next_promotion_slot(${branchId})`;
+      assertEquals(segunda.length, 0);
+    } finally {
+      await sql`DELETE FROM professional_promotions WHERE branch_id = ${branchId!}`;
+      await sql`DELETE FROM branches WHERE id = ${branchId!}`;
+      await sql.end();
+    }
+  },
+});

@@ -72,7 +72,8 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
             <p class="text-sm font-medium text-text-primary">Promoción completada</p>
             <p class="text-xs text-text-muted">
               Esta promoción finalizó el {{ formatDate(p.endDate) }}. Se completaron los 30 días de
-              clase (lun-sáb) con {{ p.totalEnrolled }} alumnos inscritos.
+              clase (lun-sáb) con {{ p.totalEnrolled }}
+              {{ p.totalEnrolled === 1 ? 'alumno inscrito' : 'alumnos inscritos' }}.
             </p>
           </div>
         </div>

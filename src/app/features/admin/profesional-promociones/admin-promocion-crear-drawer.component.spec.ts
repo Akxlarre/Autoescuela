@@ -31,6 +31,7 @@ describe('AdminPromocionCrearDrawerComponent — número obligatorio y lunes lib
       loadProfessionalCourses: vi.fn(),
       previewEndDate: vi.fn().mockResolvedValue('2026-11-14'),
       suggestNextCode: vi.fn().mockResolvedValue('281'),
+      fetchMaxPromotionCode: vi.fn().mockResolvedValue(280),
       crearPromocion: vi.fn().mockResolvedValue(true),
       initialize: vi.fn(),
     };
@@ -53,6 +54,18 @@ describe('AdminPromocionCrearDrawerComponent — número obligatorio y lunes lib
   it('número vacío o con letras → no se puede crear', () => {
     expect(filled('').canSubmit()).toBe(false);
     expect(filled('28a').canSubmit()).toBe(false);
+  });
+
+  // fix-347-m (D19)
+  it('número 0 o más de 10 por sobre el último usado → no se puede crear, con mensaje', async () => {
+    expect(filled('0').canSubmit()).toBe(false);
+    const c = filled('2810');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(c.canSubmit()).toBe(false);
+    expect(c.codeError()).toBe('No puede ser mayor que 290: el último número usado es 280.');
+    c.code.set('290');
+    expect(c.canSubmit()).toBe(true);
   });
 
   it('número válido + lunes + fecha de término → se puede crear', () => {

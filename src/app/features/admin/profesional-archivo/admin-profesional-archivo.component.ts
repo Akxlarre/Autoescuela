@@ -80,7 +80,7 @@ import { PromocionDetalleContentComponent } from '@shared/components/promocion-d
                 [options]="facade.promociones()"
                 optionLabel="label"
                 optionValue="id"
-                placeholder="Buscar promoción (ej. Clase 123...)"
+                placeholder="Buscar por número o nombre…"
                 [ngModel]="facade.selectedPromocionId()"
                 (ngModelChange)="onPromoChange($event)"
                 styleClass="w-full"
