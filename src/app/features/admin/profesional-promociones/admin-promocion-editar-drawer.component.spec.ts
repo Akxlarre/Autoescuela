@@ -171,6 +171,56 @@ describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (
     expect(facadeSpy.editarPromocion).not.toHaveBeenCalled();
   });
 
+  // ─── fix-346-m ───
+  it('dos clics seguidos en Guardar → un solo guardado', async () => {
+    const c = editor();
+    c.name.set('Promoción 279 bis');
+
+    await Promise.all([c.submit(), c.submit()]);
+
+    expect(facadeSpy.editarPromocion).toHaveBeenCalledTimes(1);
+  });
+
+  it('tras terminar un guardado fallido se puede volver a guardar', async () => {
+    facadeSpy.editarPromocion.mockResolvedValue(false);
+    const c = editor();
+    c.name.set('Promoción 279 bis');
+
+    await c.submit();
+    await c.submit();
+
+    expect(facadeSpy.editarPromocion).toHaveBeenCalledTimes(2);
+  });
+
+  it('al cambiar el número, el nombre automático lo sigue (D18)', () => {
+    facadeSpy.selectedPromocion.set({
+      ...makePromo('planned'),
+      code: '9001',
+      name: 'Promoción 9001 (30 de Noviembre 2026)',
+    });
+    const c = editor();
+    c.name.set('Promoción 9001 (30 de Noviembre 2026)');
+    c.code.set('9001');
+
+    c.codeModel = '9002';
+
+    expect(c.name()).toBe('Promoción 9002 (30 de Noviembre 2026)');
+  });
+
+  it('si el nombre se escribió a mano, cambiar el número no lo toca', () => {
+    facadeSpy.selectedPromocion.set({
+      ...makePromo('planned'),
+      code: '9001',
+      name: 'Promoción 9001 (30 de Noviembre 2026)',
+    });
+    const c = editor();
+    c.nameModel = 'Promoción de verano';
+
+    c.codeModel = '9002';
+
+    expect(c.name()).toBe('Promoción de verano');
+  });
+
   it('guardar sin cambiar a Finalizada no pide confirmación', async () => {
     const c = editor();
     c.name.set('Promoción 279 bis');

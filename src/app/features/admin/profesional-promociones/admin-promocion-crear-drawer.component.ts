@@ -543,7 +543,8 @@ export class AdminPromocionCrearDrawerComponent {
   }
 
   protected async submit(): Promise<void> {
-    if (!this.canSubmit()) return;
+    // Un segundo clic mientras se crea no vuelve a enviar (fix-346-m).
+    if (!this.canSubmit() || this.facade.isSubmitting()) return;
 
     const cursos = this.cursoSlots().map((c) => ({
       courseId: c.courseId,

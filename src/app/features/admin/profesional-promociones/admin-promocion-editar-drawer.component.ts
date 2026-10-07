@@ -14,8 +14,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
-import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
-import { isValidPromotionCode } from '@core/utils/promotion-code.utils';
+import type { PromocionStatus, PromocionTableRow } from '@core/models/ui/promocion-table.model';
+import { isValidPromotionCode, promotionNameForCode } from '@core/utils/promotion-code.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -256,15 +256,24 @@ export class AdminPromocionEditarDrawerComponent {
     return this.name();
   }
   protected set nameModel(v: string) {
+    this.nameEditedByHand = true;
     this.name.set(v);
   }
 
   protected get codeModel(): string {
     return this.code();
   }
+  /** El nombre automático sigue al número mientras no se haya escrito a mano (fix-346-m, D18). */
   protected set codeModel(v: string) {
     this.code.set(v);
+    const p = this.facade.selectedPromocion();
+    if (p && !this.nameEditedByHand) this.name.set(promotionNameForCode(p.name, p.code, v));
   }
+
+  /** True desde que el usuario escribe en el campo Nombre; se limpia al cargar otra promoción. */
+  private nameEditedByHand = false;
+  /** Guardado o confirmación en curso: un segundo clic no vuelve a guardar (fix-346-m). */
+  private saving = false;
 
   protected get statusModel(): PromocionStatus {
     return this.status();
@@ -369,6 +378,7 @@ export class AdminPromocionEditarDrawerComponent {
     effect(() => {
       const p = this.facade.selectedPromocion();
       if (p) {
+        this.nameEditedByHand = false;
         this.name.set(p.name);
         this.code.set(p.code);
         this.status.set(p.status);
@@ -399,8 +409,16 @@ export class AdminPromocionEditarDrawerComponent {
 
   protected async submit(): Promise<void> {
     const p = this.facade.selectedPromocion();
-    if (!p) return;
+    if (!p || this.saving) return;
+    this.saving = true;
+    try {
+      await this.save(p);
+    } finally {
+      this.saving = false;
+    }
+  }
 
+  private async save(p: PromocionTableRow): Promise<void> {
     // Finalizar pasa todas sus matrículas activas a completadas (trigger) y no se deshace desde
     // la app: se confirma antes, con el número de alumnos afectados (fix-324-m, D3b).
     if (this.status() === 'finished' && p.status !== 'finished') {

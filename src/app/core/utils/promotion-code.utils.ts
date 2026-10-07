@@ -26,6 +26,19 @@ export function suggestNextPromotionCode(codes: readonly (string | null)[]): str
   return String(numbers.length > 0 ? Math.max(...numbers) + 1 : FIRST_PROMOTION_CODE);
 }
 
+/**
+ * Nombre de una promoción cuando su número cambia de `oldCode` a `newCode` (fix-346-m, D18). Si el
+ * nombre guardado es el automático de su número ("Promoción 280 (5 de Octubre 2026)"), devuelve el
+ * mismo con el número nuevo; un nombre escrito a mano, o un número nuevo inválido, lo deja igual.
+ */
+export function promotionNameForCode(name: string, oldCode: string, newCode: string): string {
+  const from = oldCode.trim();
+  const to = newCode.trim();
+  const prefix = `Promoción ${from} (`;
+  if (!from || !isValidPromotionCode(to) || !name.startsWith(prefix)) return name;
+  return `Promoción ${to} (${name.slice(prefix.length)}`;
+}
+
 /** True si la fecha (YYYY-MM-DD) es un lunes de la cadencia automática. */
 export function isCadenceDate(isoDate: string): boolean {
   const days = Math.round(

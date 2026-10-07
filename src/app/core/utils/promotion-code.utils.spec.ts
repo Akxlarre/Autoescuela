@@ -1,6 +1,7 @@
 import {
   isCadenceDate,
   isValidPromotionCode,
+  promotionNameForCode,
   promotionWriteErrorMessage,
   suggestNextPromotionCode,
 } from './promotion-code.utils';
@@ -33,6 +34,36 @@ describe('promotion-code.utils (fix-323-m)', () => {
     it('sin ningún número previo parte en 276 (mismo fallback que la creación automática)', () => {
       expect(suggestNextPromotionCode([])).toBe('276');
       expect(suggestNextPromotionCode([null, 'abc'])).toBe('276');
+    });
+  });
+
+  // fix-346-m (D18): al cambiar el número, el nombre automático lo sigue.
+  describe('promotionNameForCode', () => {
+    it('nombre automático → mismo nombre con el número nuevo', () => {
+      expect(promotionNameForCode('Promoción 9001 (30 de Noviembre 2026)', '9001', '9002')).toBe(
+        'Promoción 9002 (30 de Noviembre 2026)',
+      );
+    });
+
+    it('nombre escrito a mano → no cambia', () => {
+      expect(promotionNameForCode('Promoción 15 de Junio 2026', '103', '104')).toBe(
+        'Promoción 15 de Junio 2026',
+      );
+      expect(promotionNameForCode('Curso especial verano', '280', '281')).toBe(
+        'Curso especial verano',
+      );
+    });
+
+    it('número nuevo vacío o con letras → deja el nombre guardado', () => {
+      const name = 'Promoción 280 (5 de Octubre 2026)';
+      expect(promotionNameForCode(name, '280', '')).toBe(name);
+      expect(promotionNameForCode(name, '280', '28a')).toBe(name);
+    });
+
+    it('no confunde un número que es prefijo de otro', () => {
+      expect(promotionNameForCode('Promoción 2801 (5 de Octubre 2026)', '280', '281')).toBe(
+        'Promoción 2801 (5 de Octubre 2026)',
+      );
     });
   });
 
