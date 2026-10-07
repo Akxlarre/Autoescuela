@@ -46,13 +46,13 @@ Ninguno de una spec previa — track de testing (origen ASG-i-034). Criterios pr
 | S10 | ❌ Confirmada → **corregida en `hotfix-067-b`** (PR #228) | Reenviar invitación usaba el correo del formulario (400 si se editó sin guardar); ahora el guardado + nota. E2E con la función interceptada |
 | S12 | ❌ Confirmada → **corregida en `fix-204-b`** (PR #223, desplegado) | Decisión del owner: materno opcional en los 4 formularios y en `create/update-secretary` |
 | S13 | ⚠️ Parcial → **`hotfix-068-b`** (PR #229) | "Se enviará confirmación al nuevo correo" era falso (la API de admin cambia directo): corregido. "No podrá iniciar sesión mientras esté inactiva" ya es cierto desde `fix-180-b` (ban en Auth) |
-| S14 | ❌ Confirmada → **pendiente de decisión del owner** | "Último acceso" = `users.updated_at`, que no tiene trigger: en las 8 secretarias es igual a la fecha de creación. El login real está en `auth.users.last_sign_in_at` (requiere función SQL nueva) |
+| S14 | ❌ Confirmada → **corregida en `fix-212-b`** (PR #235, migración aplicada) | Decisión del owner: mostrar el login real. `secretary_last_sign_in()` (solo admin, solo rol secretary); test SQL 5/5 en prod; la ficha muestra el login de hoy en vez de la fecha de creación |
 | S15 | ❌ Confirmada → **corregida en `fix-207-b`** (PR #230) | Rango de "hoy" sin offset (Postgres lo leía en UTC) → `getChileDateTimeRange()`; botón "Ver clases activas" sin acción, quitado. Se respeta la decisión de `fix-072-m` (solo hoy) |
 | S16 | ❌ Confirmada → **corregida en `fix-208-b`** (PR #231) | Horas acotadas a la lista (sede), error visible, mes actual al abrir, guard de orden. E2E |
 | S17 | ❌ Confirmada → **corregida en `hotfix-066-b`** (PR #222) | Decisión del owner: se eliminó `/app/admin/usuarios` |
 | S18 | ❌ Confirmada → **corregida en `fix-206-b`** (PR #226, migración aplicada) | Decisión del owner: auditar todo. Triggers en `instructors`, `vehicle_assignments`, `branch_payroll_config`; test SQL 7/7 en prod sin efectos |
 | S19 | ❌ Confirmada → **corregida en `fix-209-b`** (PR #232) | Error de carga mostrado como "No hay…" + sin guard de orden en instructores/secretarias. E2E con 500 simulado |
-| S20 | ❌ Confirmada → **pendiente de decisión del owner** | Editar acepta licencia vencida (Crear la bloquea; la ficha ya la marca "Vencida") y marca "Número de licencia *" sin validarlo; Crear no lo pide (manda vacío). Las 16 filas actuales tienen número |
+| S20 | ❌ Confirmada → **corregida en `fix-211-b`** (PR #234) | Decisión del owner: número obligatorio en Crear y Editar; Editar sigue guardando con licencia vencida (si no, no se podría ni desactivar). Regla solo en el front: las edge functions aceptan el número vacío si se llaman directo |
 | S21 | ✅ Descartada | El botón "Limpiar filtros" ya existe (`app-clear-filters-button`). "Sedes con personal = 1" con una sede elegida es coherente: todos los KPIs de la página se acotan a la sede del topbar |
 | S22 | ❌ Confirmada → **corregida en `fix-210-b`** (PR #233) | Decimales (columna INTEGER → error crudo) y 0 habilitaban Guardar; ahora solo enteros > 0, con aviso |
 
