@@ -54,3 +54,24 @@ test('D01/D02 (S3): la secretaria crea en SU sede aunque el navegador guarde la 
   await expect.poll(() => body, { timeout: 15_000 }).not.toBeNull();
   expect(body!['branchId']).toBe(1); // antes: 2 (la sede guardada)
 });
+
+test('C04 (S8): instructor práctico sin vehículo → aviso de que no aparecerá en la Agenda', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.goto('/app/admin/instructores');
+  await page.locator('[data-llm-action="new"]').first().click();
+  const aviso = page.locator(
+    '[data-llm-description="aviso: instructor práctico sin vehículo no aparece en la Agenda"]',
+  );
+
+  // Sin tipo elegido todavía → sin aviso.
+  await expect(page.locator('#c-type')).toBeVisible({ timeout: 30_000 });
+  await expect(aviso).toHaveCount(0);
+
+  // Práctico y sin vehículo → aviso.
+  await page.locator('#c-type').click();
+  await page.getByRole('option', { name: 'Práctico' }).click();
+  await expect(aviso).toBeVisible();
+  await expect(aviso).toContainText('no aparecerá en la Agenda');
+});
