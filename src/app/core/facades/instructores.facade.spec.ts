@@ -5,6 +5,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { getChileDateTimeRange, toISODate } from '@core/utils/date.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 describe('InstructoresFacade', () => {
   let facade: InstructoresFacade;
@@ -596,6 +597,31 @@ describe('InstructoresFacade', () => {
       branchId: 1,
       bothBranches: false,
     } as any;
+
+    // fix-214-b (H06/C29): sendInvite según el piloto; aviso si el correo no salió.
+    it('crearInstructor() manda sendInvite según el piloto y avisa si el correo no salió', async () => {
+      toastSpy.warning = vi.fn();
+      const invoke = vi.fn().mockResolvedValue({
+        data: { success: true, instructorId: 9, inviteEmailSent: false },
+        error: null,
+      });
+      supabaseSpy.client.functions = { invoke };
+      const enPiloto = isBlockedInPilot('instructor');
+
+      expect(await facade.crearInstructor(payload)).toBe(9);
+      expect(invoke.mock.calls[0][1].body.sendInvite).toBe(!enPiloto);
+      if (enPiloto) {
+        expect(toastSpy.success).toHaveBeenCalledWith(
+          'Instructor creado',
+          expect.stringContaining('cuando termine el piloto'),
+        );
+      } else {
+        expect(toastSpy.warning).toHaveBeenCalledWith(
+          'Instructor creado',
+          expect.stringContaining('No se pudo enviar el correo de invitación'),
+        );
+      }
+    });
 
     it('crearInstructor() con 409 → muestra el mensaje de la función', async () => {
       supabaseSpy.client.functions = {

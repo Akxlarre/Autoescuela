@@ -19,6 +19,11 @@
 //   vehicleId         : number | null — ID del vehículo a asignar (opcional)
 //   bothBranches      : boolean — instructor dicta clases en las dos sedes (spec 0004-m).
 //                        Solo admin puede pedirlo — se fuerza false para secretary.
+//   sendInvite        : boolean (opcional, default true) — false durante el piloto del portal
+//                        de instructores (fix-214-b): crea la cuenta sin mandar el correo.
+//
+// Respuesta 201: { success, email, instructorId, inviteEmailSent } — inviteEmailSent=false si
+// no se pidió el correo o si el envío falló (fix-214-b, C29).
 //
 // Flujo:
 //   1. Valida que el llamador sea admin o secretary
@@ -230,6 +235,9 @@ Deno.serve(async (req: Request) => {
       vehicleId,
       branchId,
       bothBranches,
+      // fix-214-b (H06): false durante el piloto del portal de instructores. Sin el campo
+      // (llamadores viejos) se envía, como antes.
+      sendInvite = true,
     } = await req.json();
 
     // Defensa en profundidad: solo admin puede crear un instructor "Ambas sedes"
@@ -327,7 +335,8 @@ Deno.serve(async (req: Request) => {
 
     if (insertUserError) {
       await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
-      if (isUniqueViolation(insertUserError)) return errorResponse(duplicateUserMessage(insertUserError), 409);
+      if (isUniqueViolation(insertUserError))
+        return errorResponse(duplicateUserMessage(insertUserError), 409);
       return errorResponse(`Error al registrar el usuario: ${insertUserError.message}`, 500);
     }
 
@@ -375,15 +384,23 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Enviar correo de invitación (setea su propia contraseña) ────────────
-    try {
-      await sendInstructorInviteEmail(fullName, email, actionLink);
-    } catch (emailError) {
-      // No hacemos rollback: el instructor ya fue creado exitosamente.
-      // Un admin puede reenviar el link manualmente (generateLink es idempotente).
-      console.error('Error al enviar correo de invitación:', emailError?.message ?? emailError);
+    // fix-214-b: se omite durante el piloto (sendInvite=false) y se informa si no salió (C29).
+    let inviteEmailSent = false;
+    if (sendInvite !== false) {
+      try {
+        await sendInstructorInviteEmail(fullName, email, actionLink);
+        inviteEmailSent = true;
+      } catch (emailError) {
+        // No hacemos rollback: el instructor ya fue creado exitosamente.
+        // Un admin puede reenviar el link manualmente (generateLink es idempotente).
+        console.error('Error al enviar correo de invitación:', emailError?.message ?? emailError);
+      }
     }
 
-    return jsonResponse({ success: true, email, instructorId: instructorRow.id }, 201);
+    return jsonResponse(
+      { success: true, email, instructorId: instructorRow.id, inviteEmailSent },
+      201,
+    );
   } catch (err) {
     return errorResponse(`Error interno: ${err?.message ?? 'desconocido'}`, 500);
   }

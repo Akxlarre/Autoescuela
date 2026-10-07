@@ -26,6 +26,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { isValidLicenseNumber } from '@core/utils/license-number.utils';
 import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
 
@@ -448,30 +449,41 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   <app-icon name="alert-triangle" [size]="16" />
                   Este instructor todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
-                <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
-                @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
+                <!-- fix-214-b (H06): sin invitaciones mientras el portal está en piloto. -->
+                @if (invitacionesEnPiloto) {
                   <span
                     class="text-xs"
-                    data-llm-description="nota de que la invitación va al correo guardado"
+                    data-llm-description="nota de invitaciones pausadas durante el piloto"
                   >
-                    La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla al
-                    correo nuevo.
+                    Las invitaciones se habilitan cuando termine el piloto del portal de
+                    instructores.
                   </span>
-                }
-                <button
-                  type="button"
-                  class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || !inst.email"
-                  (click)="onEnviarInvitacion(inst.userId, inst.email)"
-                  data-llm-action="enviar-invitacion-instructor"
-                >
-                  @if (isSendingInvite()) {
-                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
-                    Enviando...
-                  } @else {
-                    Reenviar invitación
+                } @else {
+                  <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
+                  @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
+                    <span
+                      class="text-xs"
+                      data-llm-description="nota de que la invitación va al correo guardado"
+                    >
+                      La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla
+                      al correo nuevo.
+                    </span>
                   }
-                </button>
+                  <button
+                    type="button"
+                    class="btn-secondary self-start flex items-center gap-2"
+                    [disabled]="isSendingInvite() || !inst.email"
+                    (click)="onEnviarInvitacion(inst.userId, inst.email)"
+                    data-llm-action="enviar-invitacion-instructor"
+                  >
+                    @if (isSendingInvite()) {
+                      <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                      Enviando...
+                    } @else {
+                      Reenviar invitación
+                    }
+                  </button>
+                }
               </div>
             }
 
@@ -614,6 +626,8 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly bothBranches = signal(false);
   protected readonly activo = signal(true);
   protected readonly isSendingInvite = signal(false);
+  /** fix-214-b (H06): con el portal de instructores en piloto no se ofrece reenviar. */
+  protected readonly invitacionesEnPiloto = isBlockedInPilot('instructor');
 
   protected currentEmail = '';
   protected readonly currentVehicleId = signal<number | null>(null);
