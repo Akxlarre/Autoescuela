@@ -1,7 +1,8 @@
 # Fix: Testing — Clase Profesional en el piloto (Alumnos Profesional, Promociones, Libro de clases)
 > id: fix-319-m-testing-clase-profesional-piloto
 > refs: ASG-i-025
-> status: in_progress
+> status: done
+> closed: 2026-10-07
 > created: 2026-10-05
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -596,7 +597,7 @@ Del bloque 5 (2026-10-07), uno por causa raíz. **Propuestos, aún sin carpeta:*
 | U06 — los badges `p-tag` conservan fondo claro en modo oscuro (toda la app) | `fix-356-m-etiquetas-de-estado-en-modo-oscuro` | ✅ cerrado 2026-10-07 (revisado en navegador) |
 | Comunicación y Anticipos en móvil/tablet — ~80 px vacíos bajo la barra de pestañas (observación de `fix-355-m`) | `fix-359-m-hueco-bajo-la-barra-de-pestanas-en-movil` | ✅ cerrado 2026-10-07 (medido antes y después; barrido de rutas 56/56) |
 | Comunicación en móvil — el desplegable de pestañas de la lista quedaba pegado a los bordes de la tarjeta | `hotfix-148-m-desplegable-de-pestanas-con-margen-dentro-de-la-tarjeta` | ✅ cerrado 2026-10-07 (revisado en navegador) |
-| U01 + U02 — tiempo real muerto en la Base Prof. | `ASG-i-056` (ya existe; agregar que archivar cambia `students`) | ⏳ |
+| U01 + U02 — tiempo real muerto en la Base Prof. | `ASG-i-056` (traspasado el 2026-10-07 con sus casos y el dato de que archivar cambia `students`) | ➡️ fuera de este track |
 
 Descartado al revisar: "Crear promoción" sí tiene `data-llm-action` (`submit-crear-promocion`, en
 el componente del botón); la revisión del bloque 5 miró el `<button>` interno.
@@ -651,3 +652,13 @@ Casos "Auto ✓" que **no** se automatizaron, y por qué:
   pagos, promoción finalizada concreta) o el caso dejó de existir por una decisión (D2, D20).
   Quedan cubiertos por la ejecución manual de los bloques 2–4.
 - **U06** (modo oscuro legible): es un juicio visual; se revisó a mano en el bloque 5.
+
+## Cierre (2026-10-07)
+
+Los 5 bloques del checklist están ejecutados, los tracks que salieron de ellos (`fix-320-m` …
+`fix-359-m`, `hotfix-145-m` … `hotfix-148-m`) están cerrados y la capa Playwright está en
+`e2e/clase-profesional.spec.ts`. Lo único que no se resolvió acá es el tiempo real de la Base
+Profesional (U01, U02), que pertenece a `ASG-i-056` y quedó traspasado ahí con sus casos.
+
+Pendiente de modelar con el dueño, fuera de este track: el desertor de Clase Profesional (ver
+"Decisiones de negocio").
