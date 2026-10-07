@@ -1,6 +1,6 @@
 # Asignación ASG-i-037 — Testing transversal: multi-sede (RLS), responsive, modo oscuro y app-like
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
