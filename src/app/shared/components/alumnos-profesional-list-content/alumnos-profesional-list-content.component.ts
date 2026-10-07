@@ -245,7 +245,7 @@ interface SemaforoInfo {
                 scrollHeight="flex"
                 styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
                 [showCurrentPageReport]="true"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} matrículas"
               >
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
@@ -394,10 +394,10 @@ interface SemaforoInfo {
                   <tr>
                     <td colspan="8" class="p-0">
                       <app-empty-state
-                        icon="graduation-cap"
-                        message="No hay alumnos profesionales"
-                        subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
-                        actionLabel="Limpiar filtros"
+                        [icon]="emptyState().icon"
+                        [message]="emptyState().message"
+                        [subtitle]="emptyState().subtitle"
+                        [actionLabel]="emptyState().actionLabel"
                         actionIcon="refresh-cw"
                         (action)="resetFilters()"
                       />
@@ -424,10 +424,10 @@ interface SemaforoInfo {
                 } @empty {
                   <div class="col-span-full py-8">
                     <app-empty-state
-                      icon="graduation-cap"
-                      message="No hay alumnos profesionales"
-                      subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
-                      actionLabel="Limpiar filtros"
+                      [icon]="emptyState().icon"
+                      [message]="emptyState().message"
+                      [subtitle]="emptyState().subtitle"
+                      [actionLabel]="emptyState().actionLabel"
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
@@ -642,9 +642,40 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   // fix-331-m (D10): una fila por matrícula (un alumno con A2 y A4 sale dos veces), así que el
   // conteo es de matrículas.
-  readonly heroChips = computed((): SectionHeroChip[] => [
-    { label: `${this.alumnos().length} matrículas`, icon: 'graduation-cap', style: 'default' },
-  ]);
+  readonly heroChips = computed((): SectionHeroChip[] => {
+    const total = this.alumnos().length;
+    return [
+      {
+        label: `${total} ${total === 1 ? 'matrícula' : 'matrículas'}`,
+        icon: 'graduation-cap',
+        style: 'default',
+      },
+    ];
+  });
+
+  /** Texto de la lista vacía: sin resultados por filtros, Papelera vacía o sin alumnos aún. */
+  emptyState(): { icon: string; message: string; subtitle: string; actionLabel?: string } {
+    if (this.hasActiveFilters()) {
+      return {
+        icon: 'search',
+        message: 'No se encontraron alumnos',
+        subtitle: 'Intenta ajustar los criterios de búsqueda o filtros.',
+        actionLabel: 'Limpiar filtros',
+      };
+    }
+    if (this.trashView()) {
+      return {
+        icon: 'trash-2',
+        message: 'No hay alumnos archivados',
+        subtitle: 'Los alumnos que archives aparecerán aquí y podrás restaurarlos.',
+      };
+    }
+    return {
+      icon: 'graduation-cap',
+      message: 'Aún no hay alumnos profesionales',
+      subtitle: 'Los alumnos aparecerán aquí cuando se matriculen.',
+    };
+  }
 
   readonly heroActions = computed((): SectionHeroAction[] => {
     const isTrash = this.trashView();

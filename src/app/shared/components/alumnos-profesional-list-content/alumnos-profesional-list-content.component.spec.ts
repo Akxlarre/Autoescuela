@@ -169,3 +169,46 @@ describe('AlumnosProfesionalListContentComponent — tarjetas de a 6 (fix-354-m)
     }
   });
 });
+
+/** hotfix-147-m: textos del chip de total y del estado vacío. */
+describe('AlumnosProfesionalListContentComponent — textos (hotfix-147-m)', () => {
+  function create(total: number, trash = false): any {
+    TestBed.overrideComponent(AlumnosProfesionalListContentComponent, { set: { template: '' } });
+    const c = TestBed.createComponent(AlumnosProfesionalListContentComponent)
+      .componentInstance as any;
+    Object.defineProperty(c, 'alumnos', { value: () => Array.from({ length: total }, () => ({})) });
+    Object.defineProperty(c, 'trashView', { value: () => trash });
+    return c;
+  }
+
+  it('el chip de total usa singular con una sola matrícula', () => {
+    expect(create(1).heroChips()[0].label).toBe('1 matrícula');
+  });
+
+  it('el chip de total usa plural con varias', () => {
+    expect(create(2).heroChips()[0].label).toBe('2 matrículas');
+  });
+
+  it('con filtros puestos, la lista vacía ofrece limpiarlos', () => {
+    const c = create(0);
+    c.searchTerm = 'zzz';
+    expect(c.emptyState().message).toBe('No se encontraron alumnos');
+    expect(c.emptyState().actionLabel).toBe('Limpiar filtros');
+  });
+
+  it('la Papelera vacía lo dice y no ofrece limpiar filtros', () => {
+    const c = create(0, true);
+    c.searchTerm = '';
+    c.selectedClase = '';
+    expect(c.emptyState().message).toBe('No hay alumnos archivados');
+    expect(c.emptyState().actionLabel).toBeUndefined();
+  });
+
+  it('la lista vacía sin filtros no ofrece limpiar filtros', () => {
+    const c = create(0);
+    c.searchTerm = '';
+    c.selectedClase = '';
+    expect(c.emptyState().message).toBe('Aún no hay alumnos profesionales');
+    expect(c.emptyState().actionLabel).toBeUndefined();
+  });
+});
