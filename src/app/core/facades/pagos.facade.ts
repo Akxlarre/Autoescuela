@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   AlumnoDeudor,
   EstadoCuentaHistorialItem,
@@ -104,6 +105,12 @@ export class PagosFacade {
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
+  /**
+   * fix-195-b (spec 0005-m): un solo guard para la carga completa, el refresco SWR y Realtime.
+   * Solo la llamada vigente aplica sus 7 resultados; antes, A → B → A rápido dejaba "A" con los
+   * deudores de B.
+   */
+  private readonly pagosGuard = createRequestGuard();
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
   readonly ingresosHoy = this._ingresosHoy.asReadonly();
@@ -164,28 +171,36 @@ export class PagosFacade {
       return;
     }
 
+    const token = this.pagosGuard.next();
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      await this.fetchAll();
+      await this.fetchAll(token);
+      if (!this.pagosGuard.isCurrent(token)) return;
       this._initialized = true;
       this._lastBranchId = branchId;
     } catch {
-      this._error.set('Error al cargar datos financieros.');
+      if (this.pagosGuard.isCurrent(token)) this._error.set('Error al cargar datos financieros.');
     } finally {
-      this._isLoading.set(false);
+      if (this.pagosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
   private async refreshSilently(): Promise<void> {
+    const token = this.pagosGuard.next();
+    const branchId = this.getActiveBranchId();
     try {
-      await this.fetchAll();
+      await this.fetchAll(token);
+      if (this.pagosGuard.isCurrent(token)) this._lastBranchId = branchId;
     } catch {
       // Swallowed
+    } finally {
+      // Si este refresco reemplazó a una carga completa de otra sede, el skeleton es suyo.
+      if (this.pagosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
-  private async fetchAll(): Promise<void> {
+  private async fetchAll(token: number): Promise<void> {
     const today = toISODate(new Date());
     const [year, month] = today.split('-');
     const firstOfMonth = `${year}-${month}-01`;
@@ -193,29 +208,33 @@ export class PagosFacade {
     const branchId = this.getActiveBranchId();
 
     await Promise.all([
-      this.fetchIngresosHoy(today, branchId),
-      this.fetchIngresosMes(firstOfMonth, lastOfMonth, branchId),
-      this.fetchBoletasMes(firstOfMonth, lastOfMonth, branchId),
-      this.fetchPagosPendientes(branchId),
-      this.fetchAlumnosConDeuda(branchId),
-      this.fetchPagosRecientes(branchId),
-      this.fetchMetodosPagoMes(firstOfMonth, lastOfMonth, branchId),
+      this.fetchIngresosHoy(token, today, branchId),
+      this.fetchIngresosMes(token, firstOfMonth, lastOfMonth, branchId),
+      this.fetchBoletasMes(token, firstOfMonth, lastOfMonth, branchId),
+      this.fetchPagosPendientes(token, branchId),
+      this.fetchAlumnosConDeuda(token, branchId),
+      this.fetchPagosRecientes(token, branchId),
+      this.fetchMetodosPagoMes(token, firstOfMonth, lastOfMonth, branchId),
     ]);
   }
 
-  private async fetchIngresosHoy(today: string, branchId: number | null): Promise<void> {
+  private async fetchIngresosHoy(
+    token: number,
+    today: string, branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
       .eq('payment_date', today);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
     this._ingresosHoy.set(
       (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
     );
   }
 
   private async fetchIngresosMes(
+    token: number,
     first: string,
     last: string,
     branchId: number | null,
@@ -227,12 +246,14 @@ export class PagosFacade {
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
     this._ingresosMes.set(
       (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
     );
   }
 
   private async fetchBoletasMes(
+    token: number,
     first: string,
     last: string,
     branchId: number | null,
@@ -244,10 +265,13 @@ export class PagosFacade {
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
     const { count } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
     this._boletasMes.set(count ?? 0);
   }
 
-  private async fetchPagosPendientes(branchId: number | null): Promise<void> {
+  private async fetchPagosPendientes(
+    token: number,
+    branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select('pending_balance')
@@ -255,12 +279,15 @@ export class PagosFacade {
       .neq('status', 'draft');
     if (branchId !== null) q = q.eq('branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
     this._pagosPendientesTotales.set(
       (data ?? []).reduce((acc: number, r: any) => acc + (r.pending_balance ?? 0), 0),
     );
   }
 
-  private async fetchAlumnosConDeuda(branchId: number | null): Promise<void> {
+  private async fetchAlumnosConDeuda(
+    token: number,
+    branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select(
@@ -275,6 +302,7 @@ export class PagosFacade {
       .limit(200);
     if (branchId !== null) q = q.eq('branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
 
     this._alumnosConDeuda.set(
       (data ?? []).map((row: any) => ({
@@ -297,7 +325,9 @@ export class PagosFacade {
     );
   }
 
-  private async fetchPagosRecientes(branchId: number | null): Promise<void> {
+  private async fetchPagosRecientes(
+    token: number,
+    branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('payments')
       .select(
@@ -311,6 +341,7 @@ export class PagosFacade {
       .limit(50);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
 
     this._pagosRecientes.set(
       (data ?? []).map((row: any) => {
@@ -335,6 +366,7 @@ export class PagosFacade {
   }
 
   private async fetchMetodosPagoMes(
+    token: number,
     first: string,
     last: string,
     branchId: number | null,
@@ -348,6 +380,7 @@ export class PagosFacade {
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
     const { data } = await q;
+    if (!this.pagosGuard.isCurrent(token)) return;
     const totals = METODOS_CONFIG.map((cfg) => ({
       ...cfg,
       total: (data ?? []).reduce((acc: number, r: any) => acc + (r[cfg.key] ?? 0), 0),

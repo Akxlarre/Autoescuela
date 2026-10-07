@@ -68,6 +68,101 @@ describe('PagosFacade', () => {
     expect(facade).toBeTruthy();
   });
 
+  // fix-195-b (D06 de ASG-i-037): admin A → B → A rápido con la respuesta de B demorada. Antes
+  // la respuesta vieja llegaba al final y dejaba la pantalla en "A" con los deudores de B.
+  describe('respuestas fuera de orden al cambiar de sede (fix-195-b, spec 0005-m)', () => {
+    let selected: number;
+    let liberarB: () => void;
+    let racer: PagosFacade;
+
+    const deudor = (id: number, branchId: number) => ({
+      id,
+      base_price: 100,
+      discount: 0,
+      total_paid: 0,
+      pending_balance: 100,
+      created_at: '2026-01-01',
+      branch_id: branchId,
+      students: { users: { first_names: 'N', paternal_last_name: 'P', rut: '1-9' } },
+      courses: { type: 'class_b', name: 'B' },
+      branches: { name: `Sede ${branchId}` },
+    });
+    const DEUDORES: Record<number, unknown[]> = {
+      1: [deudor(1, 1), deudor(2, 1)],
+      2: [deudor(10, 2)],
+    };
+
+    beforeEach(() => {
+      const bRetenida = new Promise<void>((r) => (liberarB = r));
+      const builder = (table: string) => {
+        const state: { branch?: number; cols?: string } = {};
+        const b: any = {
+          select: (cols: string) => ((state.cols = cols), b),
+          eq: (col: string, val: unknown) => {
+            if (col.endsWith('branch_id')) state.branch = val as number;
+            return b;
+          },
+          gt: () => b,
+          gte: () => b,
+          lte: () => b,
+          neq: () => b,
+          order: () => b,
+          limit: () => b,
+          then: async (resolve: (v: unknown) => void) => {
+            if (state.branch === 2) await bRetenida;
+            const esDeudores = table === 'enrollments' && state.cols?.includes('students');
+            resolve({ data: esDeudores ? DEUDORES[state.branch!] : [], count: 0, error: null });
+          },
+        };
+        return b;
+      };
+      const channel: any = { on: () => channel, subscribe: () => channel };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          PagosFacade,
+          {
+            provide: SupabaseService,
+            useValue: { client: { from: builder, channel: () => channel } },
+          },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => selected } },
+          { provide: NotificationsFacade, useValue: { notifyUsers: vi.fn() } },
+        ],
+      });
+      racer = TestBed.inject(PagosFacade);
+    });
+
+    it('primera visita A → B → A: queda con los deudores de A aunque B responda al final', async () => {
+      selected = 2;
+      const cargaB = racer.initialize();
+      selected = 1;
+      await racer.initialize();
+      liberarB();
+      await cargaB;
+
+      expect(racer.alumnosConDeuda().map((d) => d.sedeId)).toEqual([1, 1]);
+      expect(racer.isLoading()).toBe(false);
+    });
+
+    it('A ya cargada → B (lenta) → A (refresco SWR): deudores de A y sin skeleton colgado', async () => {
+      selected = 1;
+      await racer.initialize();
+      selected = 2;
+      const cargaB = racer.initialize();
+      expect(racer.isLoading()).toBe(true);
+      selected = 1;
+      await racer.initialize();
+      await flushMicrotasks();
+      liberarB();
+      await cargaB;
+
+      expect(racer.alumnosConDeuda().map((d) => d.sedeId)).toEqual([1, 1]);
+      expect(racer.isLoading()).toBe(false);
+    });
+  });
+
   it('should have initial empty state', () => {
     expect(facade.ingresosHoy()).toBe(0);
     expect(facade.isLoading()).toBe(false);

@@ -9,6 +9,7 @@ import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -46,6 +47,12 @@ export class CertificacionClaseBFacade {
   private readonly _isExporting = signal(false);
   private readonly _generatingPendientes = signal(false);
   private _initialized = false;
+  /**
+   * fix-195-b (spec 0005-m): un solo guard para initialize, reload (cambio de sede) y el refresco
+   * SWR. Solo la llamada vigente aplica alumnos y log; antes, A → B → A rápido dejaba "A" con los
+   * pendientes de B.
+   */
+  private readonly certGuard = createRequestGuard();
 
   // ── Estado público (readonly) ──
   public readonly alumnos = this._alumnos.asReadonly();
@@ -85,26 +92,30 @@ export class CertificacionClaseBFacade {
       return;
     }
     this._initialized = true;
+    const token = this.certGuard.next();
     this._isLoading.set(true);
     try {
-      await this.fetchData();
+      await this.fetchData(token);
     } catch (e) {
-      this._error.set('Error al cargar certificación');
-      this.toast.error('Error al cargar datos de certificación');
+      if (this.certGuard.isCurrent(token)) {
+        this._error.set('Error al cargar certificación');
+        this.toast.error('Error al cargar datos de certificación');
+      }
     } finally {
-      this._isLoading.set(false);
+      if (this.certGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
   /** Recarga completa con skeleton (cambio de sede). */
   async reload(): Promise<void> {
+    const token = this.certGuard.next();
     this._isLoading.set(true);
     try {
-      await this.fetchData();
+      await this.fetchData(token);
     } catch {
-      this._error.set('Error al recargar certificación');
+      if (this.certGuard.isCurrent(token)) this._error.set('Error al recargar certificación');
     } finally {
-      this._isLoading.set(false);
+      if (this.certGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
@@ -437,12 +448,13 @@ export class CertificacionClaseBFacade {
   // ── Fetch privado ──
 
   // Bug fix: sequential so fetchLog can use cert IDs from freshly loaded _alumnos
-  private async fetchData(): Promise<void> {
-    await this.fetchAlumnos();
-    await this.fetchLog();
+  private async fetchData(token: number): Promise<void> {
+    await this.fetchAlumnos(token);
+    if (!this.certGuard.isCurrent(token)) return;
+    await this.fetchLog(token);
   }
 
-  private async fetchAlumnos(): Promise<void> {
+  private async fetchAlumnos(token: number): Promise<void> {
     const branchId = this.getActiveBranchId();
     const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
@@ -478,6 +490,7 @@ export class CertificacionClaseBFacade {
     }
 
     const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
+    if (!this.certGuard.isCurrent(token)) return;
     if (enrollmentError) throw enrollmentError;
     if (!enrollments || enrollments.length === 0) {
       this._alumnos.set([]);
@@ -581,10 +594,11 @@ export class CertificacionClaseBFacade {
       return a.nombre.localeCompare(b.nombre);
     });
 
+    if (!this.certGuard.isCurrent(token)) return;
     this._alumnos.set(rows);
   }
 
-  private async fetchLog(): Promise<void> {
+  private async fetchLog(token: number): Promise<void> {
     // Scope log to the certs already in view — avoids unreliable deep-nested PostgREST filters
     const certIds = this._alumnos()
       .map((a) => a.certificadoId)
@@ -615,6 +629,7 @@ export class CertificacionClaseBFacade {
       .in('certificate_id', certIds)
       .order('created_at', { ascending: false })
       .limit(50);
+    if (!this.certGuard.isCurrent(token)) return;
 
     if (error || !data) {
       this._log.set([]);
@@ -649,10 +664,14 @@ export class CertificacionClaseBFacade {
   }
 
   private async refreshSilently(): Promise<void> {
+    const token = this.certGuard.next();
     try {
-      await this.fetchData();
+      await this.fetchData(token);
     } catch {
       // Fail silencioso — datos stale siguen visibles
+    } finally {
+      // Si este refresco reemplazó a una recarga de otra sede, el skeleton es suyo.
+      if (this.certGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 }

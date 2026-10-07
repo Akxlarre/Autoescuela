@@ -159,6 +159,73 @@ describe('CertificacionClaseBFacade', () => {
     });
   });
 
+  // fix-195-b (D06 de ASG-i-037): A → B → A rápido con la respuesta de B demorada. Antes la
+  // respuesta vieja llegaba al final y dejaba la pantalla en "A" con los pendientes de B.
+  describe('respuestas fuera de orden al cambiar de sede (fix-195-b, spec 0005-m)', () => {
+    let selected: number;
+    let liberarB: () => void;
+
+    const matricula = (id: number, branchId: number) => ({
+      id,
+      branch_id: branchId,
+      certificate_b_pdf_url: null,
+      courses: { name: 'Clase B', type: 'class_b', practical_hours: 12, is_reinforcement: false },
+      students: {
+        id,
+        users: {
+          first_names: 'N',
+          paternal_last_name: 'P',
+          maternal_last_name: null,
+          rut: '1-9',
+          email: '',
+        },
+      },
+      certificates: [],
+    });
+    const MATRICULAS: Record<number, unknown[]> = {
+      1: [matricula(1, 1), matricula(2, 1)],
+      2: [matricula(10, 2)],
+    };
+
+    beforeEach(() => {
+      const bRetenida = new Promise<void>((r) => (liberarB = r));
+      branchFacadeSpy.selectedBranchId.mockImplementation(() => selected);
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        const state: { branch?: number } = {};
+        const b: any = {
+          select: () => b,
+          in: () => b,
+          order: () => b,
+          limit: () => b,
+          eq: (col: string, val: unknown) => {
+            if (col === 'branch_id') state.branch = val as number;
+            return b;
+          },
+          then: async (resolve: (v: unknown) => void) => {
+            if (state.branch === 2) await bRetenida;
+            const data = table === 'enrollments' ? MATRICULAS[state.branch!] : [];
+            resolve({ data, error: null });
+          },
+        };
+        return b;
+      });
+    });
+
+    it('reload A → B → A: queda con los alumnos de A aunque B responda al final', async () => {
+      selected = 1;
+      await facade.initialize();
+      selected = 2;
+      const cargaB = facade.reload();
+      selected = 1;
+      await facade.reload();
+      liberarB();
+      await cargaB;
+
+      expect(facade.alumnos().map((a) => a.enrollmentId)).toEqual([1, 2]);
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
   describe('fetchAlumnos — Refuerzo Clase B (spec 0006-m)', () => {
     function mockEnrollments(enrollments: any[]) {
       supabaseSpy.client.from = mockFromByTable({
