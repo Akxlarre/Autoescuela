@@ -180,7 +180,18 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto">
-              @if (visibleSecretarias().length === 0) {
+              @if (facade.error() && facade.secretarias().length === 0) {
+                <!-- fix-209-b (S19): un error no se disfraza de "sin resultados". -->
+                <div
+                  class="py-14 flex flex-col items-center gap-2 text-center"
+                  data-llm-description="error al cargar la lista de secretarias"
+                >
+                  <app-icon name="alert-triangle" [size]="36" color="var(--state-error)" />
+                  <p class="text-sm mt-1 text-error">
+                    No se pudo cargar la lista de secretarias. Recarga la página para reintentar.
+                  </p>
+                </div>
+              } @else if (visibleSecretarias().length === 0) {
                 <div class="py-14 text-center">
                   <div class="flex flex-col items-center gap-2">
                     <app-icon name="users" [size]="36" />

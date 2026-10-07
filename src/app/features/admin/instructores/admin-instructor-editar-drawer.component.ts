@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -24,6 +25,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isValidLicenseNumber } from '@core/utils/license-number.utils';
+import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -182,7 +186,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
               <!-- Apellido Materno -->
               <div class="flex flex-col gap-1.5">
-                <label class="field-label" for="e-materno">Apellido Materno *</label>
+                <label class="field-label" for="e-materno">Apellido Materno</label>
                 <input
                   id="e-materno"
                   type="text"
@@ -195,7 +199,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
 
@@ -279,11 +285,16 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   id="e-license-num"
                   type="text"
                   class="field-input"
+                  [class.field-input--error]="licenseNumberTouched() && !licenseNumberValido()"
                   placeholder="15234567"
                   [ngModel]="licenseNumber()"
                   (ngModelChange)="licenseNumber.set($event)"
+                  (blur)="licenseNumberTouched.set(true)"
                   data-llm-description="Número de licencia del instructor"
                 />
+                @if (licenseNumberTouched() && !licenseNumberValido()) {
+                  <span class="field-error">Ingresa el número de licencia.</span>
+                }
               </div>
 
               <!-- Fecha de vencimiento -->
@@ -437,11 +448,21 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   <app-icon name="alert-triangle" [size]="16" />
                   Este instructor todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
+                <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
+                @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
+                  <span
+                    class="text-xs"
+                    data-llm-description="nota de que la invitación va al correo guardado"
+                  >
+                    La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla al
+                    correo nuevo.
+                  </span>
+                }
                 <button
                   type="button"
                   class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || !emailValido()"
-                  (click)="onEnviarInvitacion(inst.userId)"
+                  [disabled]="isSendingInvite() || !inst.email"
+                  (click)="onEnviarInvitacion(inst.userId, inst.email)"
                   data-llm-action="enviar-invitacion-instructor"
                 >
                   @if (isSendingInvite()) {
@@ -478,10 +499,14 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 </button>
               </div>
               @if (!activo()) {
-                <div class="rounded-lg p-3 bg-error/6 border border-error/20">
-                  <p class="text-xs text-error">
-                    Desactivar este instructor impedirá nuevas asignaciones de clases.
-                  </p>
+                <!-- fix-205-b (S9): avisa qué queda colgando; no bloquea el guardado. -->
+                <div
+                  class="rounded-lg p-3 bg-error/6 border border-error/20 flex flex-col gap-1"
+                  data-llm-description="aviso de lo que queda pendiente al desactivar al instructor"
+                >
+                  @for (aviso of avisosDesactivacion(); track aviso) {
+                    <p class="text-xs text-error">{{ aviso }}</p>
+                  }
                 </div>
               }
             </div>
@@ -598,15 +623,21 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly paternoTouched = signal(false);
   protected readonly maternoTouched = signal(false);
   protected readonly emailTouched = signal(false);
+  protected readonly licenseNumberTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly tipoTouched = signal(false);
 
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
   protected readonly paternoValido = computed(() => this.paterno().trim().length >= 2);
-  protected readonly maternoValido = computed(() => this.materno().trim().length >= 2);
+  // fix-204-b (S12): opcional; si se escribe, ≥ 2 caracteres.
+  protected readonly maternoValido = computed(() => isOptionalSurnameValid(this.materno()));
   protected readonly emailValido = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim()),
+  );
+  // fix-211-b (S20): obligatorio. La licencia vencida SÍ se puede guardar (decisión del owner).
+  protected readonly licenseNumberValido = computed(() =>
+    isValidLicenseNumber(this.licenseNumber()),
   );
   protected readonly licenseExpiryValido = computed(() => !!this.licenseExpiry());
   protected readonly tipoValido = computed(() => !!this.tipo());
@@ -638,6 +669,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       this.paternoValido() &&
       this.maternoValido() &&
       this.emailValido() &&
+      this.licenseNumberValido() &&
       this.licenseExpiryValido() &&
       this.tipoValido(),
   );
@@ -660,6 +692,16 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         label: v.label,
         value: v.id,
       }));
+  });
+
+  /** fix-205-b (S9): clases futuras y vehículo que quedan colgando al desactivar. */
+  protected readonly avisosDesactivacion = computed(() => {
+    const vid = this.vehicleId();
+    const plate =
+      vid === null
+        ? null
+        : (this.facade.vehicles().find((v) => v.id === vid)?.licensePlate ?? null);
+    return instructorDeactivationNotices(this.facade.clasesFuturasSeleccionado(), plate);
   });
 
   /** AC-E1: instructor "Ambas" con vehículo que no cubre la otra sede. */
@@ -735,6 +777,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.sedeId.set(inst.branchId);
         this.bothBranches.set(inst.bothBranches);
         this.activo.set(inst.estado === 'activo');
+        untracked(() => this.facade.cargarClasesFuturas(inst.id));
 
         // Parse license expiry date
         if (inst.licenseExpiry) {
@@ -760,12 +803,12 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
   }
 
-  protected async onEnviarInvitacion(userId: number): Promise<void> {
-    if (!userId || !this.emailValido()) return;
+  protected async onEnviarInvitacion(userId: number, savedEmail: string): Promise<void> {
+    if (!userId || !savedEmail) return;
 
     this.isSendingInvite.set(true);
     try {
-      await this.facade.enviarInvitacion(userId, this.email());
+      await this.facade.enviarInvitacion(userId, savedEmail);
     } finally {
       this.isSendingInvite.set(false);
     }
@@ -776,6 +819,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.paternoTouched.set(true);
     this.maternoTouched.set(true);
     this.emailTouched.set(true);
+    this.licenseNumberTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.tipoTouched.set(true);
 

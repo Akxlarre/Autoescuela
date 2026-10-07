@@ -11,6 +11,9 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { toISODate, todayIso } from '@core/utils/date.utils';
+import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
+import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
@@ -25,6 +28,8 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isValidLicenseNumber } from '@core/utils/license-number.utils';
 
 @Component({
   selector: 'app-admin-instructor-crear-drawer',
@@ -138,7 +143,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
 
             <!-- Apellido Materno -->
             <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="c-materno">Apellido Materno *</label>
+              <label class="field-label" for="c-materno">Apellido Materno</label>
               <input
                 id="c-materno"
                 type="text"
@@ -152,7 +157,9 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                 aria-required="true"
               />
               @if (maternoTouched() && !maternoValido()) {
-                <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+                <span class="field-error"
+                  >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                >
               }
             </div>
 
@@ -226,8 +233,14 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
               }
             </div>
 
-            <!-- Sede (solo admin: la secretaria pertenece a una única sede, ya implícita) -->
-            @if (authFacade.currentUser()?.role === 'admin') {
+            <!-- Sede: la elige el admin o la secretaria multi-sede; la secretaria anclada usa
+                 la suya (fix-201-b) -->
+            @if (branchRule().missingOwnBranch) {
+              <span class="field-error" data-llm-description="alta de instructor sin sede asignada">
+                Tu usuario no tiene una sede asignada. Pide a un administrador que te asigne una.
+              </span>
+            }
+            @if (branchRule().canPick) {
               <div class="flex flex-col gap-1.5">
                 <app-branch-scope-selector
                   [branches]="branchFacade.branches()"
@@ -249,6 +262,25 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                Profesional son la tabla lecturers, aparte) — se guarda 'B' fijo al enviar. -->
           <h3 class="section-title">Licencia Clase B</h3>
           <div class="flex flex-col gap-4 mb-6">
+            <!-- Número de licencia (fix-211-b, S20: obligatorio) -->
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label" for="c-license-num">Número de licencia *</label>
+              <input
+                id="c-license-num"
+                type="text"
+                class="field-input"
+                [class.field-input--error]="licenseNumberTouched() && !licenseNumberValido()"
+                placeholder="15234567"
+                [ngModel]="licenseNumber()"
+                (ngModelChange)="licenseNumber.set($event)"
+                (blur)="licenseNumberTouched.set(true)"
+                data-llm-description="Número de licencia de conducir del instructor"
+              />
+              @if (licenseNumberTouched() && !licenseNumberValido()) {
+                <span class="field-error">Ingresa el número de licencia.</span>
+              }
+            </div>
+
             <!-- Fecha de vencimiento -->
             <div class="flex flex-col gap-1.5">
               <app-date-input
@@ -380,6 +412,17 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                 data-llm-description="Vehículo asignado al instructor (opcional)"
               />
               <span class="text-xs text-text-muted"> Solo se muestran vehículos disponibles </span>
+              <!-- hotfix-065-b (S8): sin vehículo, la Agenda no le genera turnos -->
+              @if (sinVehiculoParaAgenda()) {
+                <span
+                  class="flex items-start gap-1.5 text-xs text-warning"
+                  data-llm-description="aviso: instructor práctico sin vehículo no aparece en la Agenda"
+                >
+                  <app-icon name="alert-triangle" [size]="14" class="shrink-0 mt-px" />
+                  Sin vehículo asignado, este instructor no aparecerá en la Agenda para agendar
+                  clases prácticas hasta que se le asigne uno.
+                </span>
+              }
             </div>
           </div>
         </ng-template>
@@ -429,6 +472,7 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly telefono = signal('');
   protected readonly sedeId = signal<number | null>(null);
   protected readonly bothBranches = signal(false);
+  protected readonly licenseNumber = signal('');
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
@@ -445,14 +489,27 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly rutTouched = signal(false);
   protected readonly emailTouched = signal(false);
   protected readonly telefonoTouched = signal(false);
+  protected readonly licenseNumberTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly typeTouched = signal(false);
   protected readonly sedeTouched = signal(false);
 
+  /** fix-201-b: quién elige la sede y con cuál parte el formulario. */
+  protected readonly branchRule = computed(() => {
+    const user = this.authFacade.currentUser();
+    return resolveInstructorCreateBranch(
+      user?.role,
+      user?.branchId,
+      !!user?.canAccessBothBranches,
+      this.branchFacade.selectedBranchId(),
+    );
+  });
+
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
   protected readonly paternoValido = computed(() => this.paterno().trim().length >= 2);
-  protected readonly maternoValido = computed(() => this.materno().trim().length >= 2);
+  // fix-204-b (S12): opcional; si se escribe, ≥ 2 caracteres.
+  protected readonly maternoValido = computed(() => isOptionalSurnameValid(this.materno()));
   protected readonly rutValido = computed(() => {
     const cleaned = this.rut().replace(/[^0-9kK]/g, '');
     return cleaned.length >= 8 && validateRut(this.rut());
@@ -463,20 +520,23 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly telefonoValido = computed(
     () => this.telefono().replace(/\D/g, '').length >= 8,
   );
+  // fix-211-b (S20): obligatorio (antes no se pedía y se guardaba vacío).
+  protected readonly licenseNumberValido = computed(() =>
+    isValidLicenseNumber(this.licenseNumber()),
+  );
   protected readonly licenseExpiryValida = computed(() => this.licenseExpiry() !== null);
   protected readonly typeValido = computed(() => this.tipo() !== null);
 
+  /** hotfix-065-b (S8): práctico (o ambos) sin vehículo → no tendrá turnos en la Agenda. */
+  protected readonly sinVehiculoParaAgenda = computed(() => {
+    const tipo = this.tipo();
+    return (tipo === 'practice' || tipo === 'both') && this.vehicleId() === null;
+  });
+
+  // fix-202-b: misma regla que la lista y la Agenda (antes, una copia local).
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
-    if (!d) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiry = new Date(d);
-    expiry.setHours(0, 0, 0, 0);
-    if (expiry < today) return 'expired';
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 30) return 'expiring_soon';
-    return 'valid';
+    return d ? licenseStatusFromExpiry(toISODate(d), todayIso()) : null;
   });
 
   protected readonly sedeValida = computed(() => this.sedeId() !== null);
@@ -490,6 +550,7 @@ export class AdminInstructorCrearDrawerComponent {
       this.emailValido() &&
       this.telefonoValido() &&
       this.sedeValida() &&
+      this.licenseNumberValido() &&
       this.licenseExpiryValida() &&
       this.typeValido() &&
       this.licenseStatusPreview() !== 'expired',
@@ -597,12 +658,15 @@ export class AdminInstructorCrearDrawerComponent {
   }
 
   constructor() {
-    // Sincroniza la sede del formulario con el branch selector del topbar
+    // fix-201-b: quien elige parte con la sede del topbar; la secretaria anclada, con la suya
+    // (antes salía solo del topbar: sin selector nunca había sede, o quedaba la de otro usuario).
     effect(() => {
-      const branchId = this.branchFacade.selectedBranchId();
-      if (branchId !== null) {
-        this.sedeId.set(branchId);
+      const rule = this.branchRule();
+      if (rule.branchId !== null) {
+        this.sedeId.set(rule.branchId);
         this.sedeTouched.set(true);
+      } else if (!rule.canPick) {
+        this.sedeId.set(null);
       }
     });
     this.facade.loadVehicles();
@@ -630,6 +694,7 @@ export class AdminInstructorCrearDrawerComponent {
     this.emailTouched.set(true);
     this.telefonoTouched.set(true);
     this.sedeTouched.set(true);
+    this.licenseNumberTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.typeTouched.set(true);
 
@@ -646,7 +711,7 @@ export class AdminInstructorCrearDrawerComponent {
       email: this.email().trim().toLowerCase(),
       phone: this.telefono().trim(),
       type: this.tipo()!,
-      licenseNumber: '',
+      licenseNumber: this.licenseNumber().trim(),
       licenseClass: 'B', // instructors es exclusivamente Clase B
       licenseExpiry: expiryStr,
       vehicleId: this.vehicleId(),

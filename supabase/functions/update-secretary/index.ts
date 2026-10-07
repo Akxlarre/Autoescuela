@@ -27,6 +27,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,13 +107,12 @@ Deno.serve(async (req: Request) => {
       !userId ||
       !firstNames ||
       !paternalLastName ||
-      !maternalLastName ||
       !branchId ||
       email === undefined ||
       active === undefined
     ) {
       return errorResponse(
-        'Faltan campos requeridos: userId, firstNames, paternalLastName, maternalLastName, branchId, active, email',
+        'Faltan campos requeridos: userId, firstNames, paternalLastName, branchId, active, email',
       );
     }
 
@@ -124,11 +124,13 @@ Deno.serve(async (req: Request) => {
     // ── Si el email cambió → actualizar en Supabase Auth ─────────────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
+    // fix-199-b: uid y correo anterior salen de la BD (para revertir Auth si falla public.users).
+    let emailTarget: { supabase_uid: string; email: string | null } | null = null;
     if (emailChanged) {
       // Buscar el supabase_uid de la secretaria
       const { data: targetUser, error: findError } = await supabaseAdmin
         .from('users')
-        .select('supabase_uid')
+        .select('supabase_uid, email')
         .eq('id', userId)
         .maybeSingle();
 
@@ -136,24 +138,33 @@ Deno.serve(async (req: Request) => {
         return errorResponse('No se encontró la secretaria en la BD', 404);
       }
 
+      // fix-199-b: un correo de otro usuario en public.users se rechaza ANTES de tocar Auth.
+      const { data: emailOwner } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email.trim().toLowerCase())
+        .neq('id', userId)
+        .maybeSingle();
+      if (emailOwner) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
+
       const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
         targetUser.supabase_uid,
         { email: email.trim().toLowerCase() },
       );
 
       if (authUpdateError) {
-        if (authUpdateError.message?.toLowerCase().includes('already registered')) {
-          return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
-        }
+        if (isEmailTakenError(authUpdateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
         return errorResponse(`Error al actualizar email en Auth: ${authUpdateError.message}`, 500);
       }
+      emailTarget = targetUser;
     }
 
     // ── Actualizar public.users ───────────────────────────────────────────────
     const updatePayload: Record<string, unknown> = {
       first_names: firstNames.trim(),
       paternal_last_name: paternalLastName.trim(),
-      maternal_last_name: maternalLastName.trim(),
+      // fix-204-b (S12): opcional → NULL si viene vacío o no viene.
+      maternal_last_name: maternalLastName?.trim() || null,
       phone: phone?.trim() || null,
       branch_id: branchId,
       active,
@@ -176,6 +187,15 @@ Deno.serve(async (req: Request) => {
       .eq('id', userId);
 
     if (updateError) {
+      // fix-199-b: Auth ya tiene el correo nuevo → revertirlo para no dejarlos desincronizados.
+      if (emailTarget?.email) {
+        const { error: revertError } = await supabaseAdmin.auth.admin.updateUserById(
+          emailTarget.supabase_uid,
+          { email: emailTarget.email.trim().toLowerCase() },
+        );
+        if (revertError) console.error('No se pudo revertir el email en Auth:', revertError.message);
+      }
+      if (isUniqueViolation(updateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
       return errorResponse(`Error al actualizar la secretaria: ${updateError.message}`, 500);
     }
 

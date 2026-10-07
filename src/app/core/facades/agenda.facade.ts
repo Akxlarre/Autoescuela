@@ -20,7 +20,14 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
-import { toISODate, to24hTime, buildDayLabel, addMinutesToTime } from '@core/utils/date.utils';
+import {
+  toISODate,
+  todayIso,
+  to24hTime,
+  buildDayLabel,
+  addMinutesToTime,
+} from '@core/utils/date.utils';
+import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -115,7 +122,19 @@ interface RawSession {
 
 interface RawInstructor {
   id: number;
+  license_expiry?: string | null;
   users: { first_names: string; paternal_last_name: string } | null;
+}
+
+/** Opción del selector de instructor. fix-202-b (S7, opción B): se ofrece aunque la licencia
+ * haya vencido, marcada para que la Agenda avise. */
+function toInstructorFilter(i: RawInstructor, today: string): AgendaInstructorFilter {
+  return {
+    id: i.id,
+    name: i.users ? `${i.users.first_names} ${i.users.paternal_last_name}` : `Instructor ${i.id}`,
+    licenseExpiry: i.license_expiry ?? null,
+    licenseExpired: licenseStatusFromExpiry(i.license_expiry, today) === 'expired',
+  };
 }
 
 interface RawVehicle {
@@ -473,7 +492,7 @@ export class AgendaFacade {
 
     let query: any = this.supabase.client
       .from('instructors')
-      .select('id, users!inner ( first_names, paternal_last_name )')
+      .select('id, license_expiry, users!inner ( first_names, paternal_last_name )')
       .eq('active', true)
       .neq('type', 'theory');
 
@@ -490,7 +509,7 @@ export class AgendaFacade {
     if (branchId !== null) {
       const { data: bothBranchesData, error: bothBranchesError } = await this.supabase.client
         .from('instructors')
-        .select('id, users!inner ( first_names, paternal_last_name )')
+        .select('id, license_expiry, users!inner ( first_names, paternal_last_name )')
         .eq('active', true)
         .neq('type', 'theory')
         .eq('both_branches', true);
@@ -505,10 +524,8 @@ export class AgendaFacade {
       }
     }
 
-    const filters: AgendaInstructorFilter[] = rows.map((i) => ({
-      id: i.id,
-      name: i.users ? `${i.users.first_names} ${i.users.paternal_last_name}` : `Instructor ${i.id}`,
-    }));
+    const today = todayIso();
+    const filters = rows.map((i) => toInstructorFilter(i, today));
 
     this._instructors.set(filters);
     // fix-010-i (H-010): `loadInstructors()` solo corre en un cambio de sede real

@@ -4,7 +4,9 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { toISODate } from '@core/utils/date.utils';
+import { getChileDateTimeRange, toISODate, todayIso } from '@core/utils/date.utils';
+import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -16,6 +18,7 @@ import type {
 } from '@core/models/ui/instructor-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 
@@ -115,6 +118,16 @@ const LICENSE_STATUS_LABELS: Record<string, string> = {
   expired: 'Vencida',
 };
 
+/**
+ * fix-202-b (S7): `license_status` solo se recalcula al editar al instructor, así que se calcula
+ * con la fecha de vencimiento y hoy. El valor guardado queda solo para filas sin fecha.
+ */
+function resolveLicenseStatus(expiry: string | null, stored: string | null): LicenseStatus {
+  const fromExpiry = licenseStatusFromExpiry(expiry, todayIso());
+  if (fromExpiry) return fromExpiry;
+  return ((stored ?? 'valid').trim().toLowerCase() as LicenseStatus) || 'valid';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -146,9 +159,16 @@ export class InstructoresFacade {
   private readonly _horasYear = signal<number>(new Date().getFullYear());
   private readonly _horasMensuales = signal<InstructorHoraRow[]>([]);
   private readonly _isLoadingHoras = signal<boolean>(false);
+  private readonly _horasError = signal<string | null>(null);
+  private readonly horasGuard = createRequestGuard();
 
   private readonly _horario = signal<InstructorHorarioSession[]>([]);
   private readonly _isLoadingHorario = signal<boolean>(false);
+
+  /** Clases futuras del instructor en edición (fix-205-b); `null` = sin cargar o error. */
+  private readonly _clasesFuturasSeleccionado = signal<number | null>(null);
+  private readonly clasesFuturasGuard = createRequestGuard();
+  private readonly listGuard = createRequestGuard();
 
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly instructores = this._instructores.asReadonly();
@@ -163,12 +183,14 @@ export class InstructoresFacade {
   readonly horasYear = this._horasYear.asReadonly();
   readonly horasMensuales = this._horasMensuales.asReadonly();
   readonly isLoadingHoras = this._isLoadingHoras.asReadonly();
+  readonly horasError = this._horasError.asReadonly();
   readonly isHorasCurrentMonth = computed(() => {
     const now = new Date();
     return this._horasMonth() === now.getMonth() + 1 && this._horasYear() === now.getFullYear();
   });
   readonly horario = this._horario.asReadonly();
   readonly isLoadingHorario = this._isLoadingHorario.asReadonly();
+  readonly clasesFuturasSeleccionado = this._clasesFuturasSeleccionado.asReadonly();
 
   // ── KPIs computed ──────────────────────────────────────────────────────────
   readonly totalInstructores = computed<number>(() => this._instructores().length);
@@ -213,6 +235,8 @@ export class InstructoresFacade {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+    } catch {
+      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
     } finally {
       this._isLoading.set(false);
     }
@@ -258,6 +282,7 @@ export class InstructoresFacade {
   `;
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.listGuard.next();
     const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
@@ -273,37 +298,46 @@ export class InstructoresFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._error.set(this.sanitizer.sanitize(error).message);
+      }
       throw error;
     }
 
     let rows = (data as unknown as InstructorRow[]) ?? [];
-
-    // spec 0004-m (AC6): un instructor `both_branches=true` de OTRA sede también debe
-    // aparecer. PostgREST rechaza `or=()` mezclando una columna de recurso embebido
-    // (`users.branch_id`) con una columna raíz (`both_branches`) — PGRST100, confirmado
-    // contra Supabase local — por eso es una segunda query + merge client-side, no un
-    // solo `.or()`.
-    if (branchId !== null) {
-      const { data: bothBranchesData, error: bbError } = await this.supabase.client
-        .from('instructors')
-        .select(InstructoresFacade.INSTRUCTOR_SELECT)
-        .is('vehicle_assignments.end_date', null)
-        .eq('both_branches', true);
-
-      if (!bbError && bothBranchesData) {
-        const seenIds = new Set(rows.map((r) => r.id));
-        for (const extra of bothBranchesData as unknown as InstructorRow[]) {
-          if (!seenIds.has(extra.id)) {
-            rows = [...rows, extra];
-            seenIds.add(extra.id);
-          }
-        }
-      }
-    }
+    if (branchId !== null) rows = await this.mergeBothBranchesInstructors(rows);
 
     const activeClassesById = await this.fetchActiveClassesCounts(rows.map((r) => r.id));
+    // fix-209-b (S19): una respuesta de otra sede (más vieja) no pisa la vigente.
+    if (!this.listGuard.isCurrent(requestToken)) return;
+    this._error.set(null);
     this._instructores.set(rows.map((r) => this.mapRow(r, activeClassesById.get(r.id) ?? 0)));
+  }
+
+  /**
+   * spec 0004-m (AC6): un instructor `both_branches=true` de OTRA sede también debe
+   * aparecer. PostgREST rechaza `or=()` mezclando una columna de recurso embebido
+   * (`users.branch_id`) con una columna raíz (`both_branches`) — PGRST100, confirmado
+   * contra Supabase local — por eso es una segunda query + merge client-side, no un
+   * solo `.or()`.
+   */
+  private async mergeBothBranchesInstructors(rows: InstructorRow[]): Promise<InstructorRow[]> {
+    const { data: bothBranchesData, error: bbError } = await this.supabase.client
+      .from('instructors')
+      .select(InstructoresFacade.INSTRUCTOR_SELECT)
+      .is('vehicle_assignments.end_date', null)
+      .eq('both_branches', true);
+
+    if (bbError || !bothBranchesData) return rows;
+    const seenIds = new Set(rows.map((r) => r.id));
+    const merged = [...rows];
+    for (const extra of bothBranchesData as unknown as InstructorRow[]) {
+      if (!seenIds.has(extra.id)) {
+        merged.push(extra);
+        seenIds.add(extra.id);
+      }
+    }
+    return merged;
   }
 
   /** COUNT en vivo de `class_b_sessions` en curso ("Transcurriendo") por instructor, acotado a hoy. */
@@ -311,15 +345,16 @@ export class InstructoresFacade {
     const counts = new Map<number, number>();
     if (instructorIds.length === 0) return counts;
 
-    const todayStr = toISODate(new Date());
+    // fix-207-b (S15): "hoy" en Chile con su offset; sin offset Postgres lo leía en UTC.
+    const { start, end } = getChileDateTimeRange(toISODate(new Date()));
 
     const { data, error } = await this.supabase.client
       .from('class_b_sessions')
       .select('instructor_id')
       .eq('status', 'in_progress')
       .in('instructor_id', instructorIds)
-      .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`);
+      .gte('scheduled_at', start)
+      .lte('scheduled_at', end);
 
     if (error) return counts;
 
@@ -444,44 +479,71 @@ export class InstructoresFacade {
     );
   }
 
+  /** Abre el drawer de horas en el mes actual (fix-208-b: antes quedaba el mes de la vez anterior). */
+  async abrirHorasMensuales(): Promise<void> {
+    const now = new Date();
+    this._horasMonth.set(now.getMonth() + 1);
+    this._horasYear.set(now.getFullYear());
+    await this.loadHorasMensuales();
+  }
+
   async loadHorasMensuales(): Promise<void> {
+    const requestToken = this.horasGuard.next();
     this._isLoadingHoras.set(true);
+    this._horasError.set(null);
     try {
       const month = this._horasMonth();
       const year = this._horasYear();
       const period = `${year}-${String(month).padStart(2, '0')}`;
 
+      // fix-208-b (S16): acotado a la lista de instructores, que ya viene filtrada por sede.
+      const instructores = this._instructores();
+      if (instructores.length === 0) {
+        this._horasMensuales.set([]);
+        return;
+      }
+
       const { data, error } = await this.supabase.client
         .from('instructor_monthly_hours')
         .select('instructor_id, practical_sessions, total_equivalent')
-        .eq('period', period);
+        .eq('period', period)
+        .in(
+          'instructor_id',
+          instructores.map((i) => i.id),
+        );
 
       if (error) throw error;
+      if (!this.horasGuard.isCurrent(requestToken)) return;
 
-      const instructores = this._instructores();
-      const rows: InstructorHoraRow[] = (data ?? []).map(
-        (h: {
-          instructor_id: number;
-          practical_sessions: number | null;
-          total_equivalent: number | null;
-        }) => {
-          const inst = instructores.find((i) => i.id === h.instructor_id);
-          return {
-            instructorId: h.instructor_id,
-            nombre: inst?.nombre ?? `Instructor #${h.instructor_id}`,
-            initials: inst?.initials ?? '?',
-            practicalSessions: h.practical_sessions ?? 0,
-            totalEquivalent: h.total_equivalent ?? 0,
-          };
-        },
-      );
-      rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-      this._horasMensuales.set(rows);
+      this._horasMensuales.set(this.mapHorasRows(data ?? [], instructores));
     } catch {
+      if (!this.horasGuard.isCurrent(requestToken)) return;
       this._horasMensuales.set([]);
+      this._horasError.set('No se pudieron cargar las horas. Intenta de nuevo.');
     } finally {
-      this._isLoadingHoras.set(false);
+      if (this.horasGuard.isCurrent(requestToken)) this._isLoadingHoras.set(false);
     }
+  }
+
+  private mapHorasRows(
+    data: {
+      instructor_id: number;
+      practical_sessions: number | null;
+      total_equivalent: number | null;
+    }[],
+    instructores: InstructorTableRow[],
+  ): InstructorHoraRow[] {
+    const rows = data.map((h) => {
+      const inst = instructores.find((i) => i.id === h.instructor_id);
+      return {
+        instructorId: h.instructor_id,
+        nombre: inst?.nombre ?? `Instructor #${h.instructor_id}`,
+        initials: inst?.initials ?? '?',
+        practicalSessions: h.practical_sessions ?? 0,
+        totalEquivalent: h.total_equivalent ?? 0,
+      };
+    });
+    return rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }
 
   navHorasAnterior(): void {
@@ -569,6 +631,24 @@ export class InstructoresFacade {
     }
   }
 
+  /**
+   * Cuenta las clases `scheduled` del instructor desde ahora (fix-205-b, S9 de ASG-i-034), para
+   * avisar al desactivarlo de las clases que quedarán con un instructor inactivo.
+   */
+  async cargarClasesFuturas(instructorId: number): Promise<void> {
+    const requestToken = this.clasesFuturasGuard.next();
+    this._clasesFuturasSeleccionado.set(null);
+    const { count, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('instructor_id', instructorId)
+      .eq('status', 'scheduled')
+      .gte('scheduled_at', new Date().toISOString());
+
+    if (!this.clasesFuturasGuard.isCurrent(requestToken)) return;
+    this._clasesFuturasSeleccionado.set(error ? null : (count ?? 0));
+  }
+
   /** Devuelve el `instructorId` recién creado (para subir sus documentos), o `null` si falló. */
   async crearInstructor(payload: CrearInstructorPayload): Promise<number | null> {
     this._isSubmitting.set(true);
@@ -577,8 +657,14 @@ export class InstructoresFacade {
         body: payload,
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear instructor');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al crear instructor'),
+        );
+        return null;
+      }
 
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
@@ -692,8 +778,14 @@ export class InstructoresFacade {
         'activate-instructor-account',
         { body: { userId, email: email.trim().toLowerCase() } },
       );
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al enviar la invitación');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al enviar la invitación'),
+        );
+        return false;
+      }
       if (data?.error) throw new Error(data.error);
 
       this.toast.success('Invitación enviada correctamente.');
@@ -724,8 +816,7 @@ export class InstructoresFacade {
 
     const tipoRaw = ((r.type as string) ?? 'practice').trim().toLowerCase();
     const tipo = (tipoRaw as InstructorType) || 'practice';
-    const statusRaw = ((r.license_status as string) ?? 'valid').trim().toLowerCase();
-    const licenseStatus = (statusRaw as LicenseStatus) || 'valid';
+    const licenseStatus = resolveLicenseStatus(r.license_expiry, r.license_status);
 
     return {
       id: r.id,

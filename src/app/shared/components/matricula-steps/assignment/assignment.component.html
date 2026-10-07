@@ -315,8 +315,8 @@
                             ? 'var(--color-primary-muted)'
                             : 'var(--bg-surface)'
                         "
-                        [disabled]="option.status === 'finished'"
-                        [class.opacity-50]="option.status === 'finished'"
+                        [disabled]="option.status !== 'open'"
+                        [class.opacity-50]="option.status !== 'open'"
                         [attr.aria-pressed]="data().promotionId === option.id"
                         [attr.data-llm-action]="'select-promotion-' + option.id"
                         (click)="emitField('promotionId', option.id)"
@@ -332,7 +332,13 @@
                             {{ option.enrolledCount }} / {{ option.maxCapacity }} cupos
                           </p>
                           <p class="text-xs text-text-muted uppercase tracking-tight">
-                            {{ option.status === 'open' ? 'DISPONIBLE' : 'CERRADA' }}
+                            {{
+                              option.status === 'open'
+                                ? 'DISPONIBLE'
+                                : option.status === 'full'
+                                  ? 'SIN CUPO'
+                                  : 'CERRADA'
+                            }}
                           </p>
                         </div>
                       </button>

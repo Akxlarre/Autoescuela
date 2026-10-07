@@ -72,4 +72,8 @@ export interface AgendaWeekData {
 export interface AgendaInstructorFilter {
   id: number;
   name: string;
+  /** `instructors.license_expiry` (YYYY-MM-DD) o null. */
+  licenseExpiry?: string | null;
+  /** fix-202-b: licencia ya vencida hoy. La Agenda lo sigue ofreciendo, con aviso (opción B). */
+  licenseExpired?: boolean;
 }

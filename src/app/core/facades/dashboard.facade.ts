@@ -509,6 +509,10 @@ export class DashboardFacade {
       professional_practice_sessions: 'Sesión Práctica Profesional',
       professional_module_grades: 'Nota de Módulo',
       website_config: 'Configuración Web',
+      // fix-206-b
+      instructors: 'Instructor',
+      vehicle_assignments: 'Asignación de vehículo',
+      branch_payroll_config: 'Valor hora de instructores',
     };
     const entityLabel = entityNames[log.entity] || 'Registro';
     const userName = log.users

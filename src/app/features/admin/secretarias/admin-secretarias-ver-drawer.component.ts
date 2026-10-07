@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -148,11 +148,25 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   <p class="text-2xs font-bold uppercase tracking-wider text-text-muted">
                     Último acceso
                   </p>
-                  <p class="text-sm font-medium text-text-primary">
-                    @if (sec.ultimoAcceso) {
-                      {{ sec.ultimoAcceso | date: 'dd/MM/yyyy HH:mm' }}
-                    } @else {
-                      Sin registros
+                  <!-- fix-212-b (S14): último inicio de sesión real (antes, la fecha de creación). -->
+                  <p
+                    class="text-sm font-medium text-text-primary"
+                    data-llm-description="último inicio de sesión de la secretaria"
+                  >
+                    @switch (facade.ultimoAccesoSeleccionada().estado) {
+                      @case ('cargando') {
+                        <app-skeleton-block variant="text" width="110px" height="14px" />
+                      }
+                      @case ('error') {
+                        No disponible
+                      }
+                      @default {
+                        @if (facade.ultimoAccesoSeleccionada().fecha; as fecha) {
+                          {{ fecha | date: 'dd/MM/yyyy HH:mm' }}
+                        } @else {
+                          Nunca ha ingresado
+                        }
+                      }
                     }
                   </p>
                 </div>
@@ -231,9 +245,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     }
   `,
 })
-export class AdminSecretariasVerDrawerComponent {
+export class AdminSecretariasVerDrawerComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  ngOnInit(): void {
+    // fix-212-b (S14): último inicio de sesión real, no users.updated_at.
+    const sec = this.facade.selectedSecretaria();
+    if (sec) this.facade.cargarUltimoAcceso(sec.id);
+  }
 
   protected editar(): void {
     this.layoutDrawer.open(AdminSecretariasEditarDrawerComponent, 'Editar Secretaria', 'edit');

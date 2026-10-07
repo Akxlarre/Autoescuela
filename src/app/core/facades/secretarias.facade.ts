@@ -2,9 +2,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
-import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
+import type {
+  SecretariaTableRow,
+  UltimoAccesoEstado,
+} from '@core/models/ui/secretaria-table.model';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 
 export interface CrearSecretariaPayload {
   firstNames: string;
@@ -55,7 +60,6 @@ interface SecretariaRow {
   email: string;
   phone: string | null;
   active: boolean;
-  updated_at: string | null;
   branch_id: number | null;
   can_access_both_branches: boolean;
   roles: RoleRow | null;
@@ -75,6 +79,7 @@ export class SecretariasFacade {
   private readonly _secretarias = signal<SecretariaTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly listGuard = createRequestGuard();
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -83,6 +88,11 @@ export class SecretariasFacade {
   private readonly _isSubmitting = signal(false);
 
   private readonly _selectedSecretaria = signal<SecretariaTableRow | null>(null);
+  private readonly _ultimoAccesoSeleccionada = signal<UltimoAccesoEstado>({
+    estado: 'cargando',
+    fecha: null,
+  });
+  private readonly ultimoAccesoGuard = createRequestGuard();
 
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly secretarias = this._secretarias.asReadonly();
@@ -91,6 +101,7 @@ export class SecretariasFacade {
   readonly branches = this._branches.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly selectedSecretaria = this._selectedSecretaria.asReadonly();
+  readonly ultimoAccesoSeleccionada = this._ultimoAccesoSeleccionada.asReadonly();
 
   // ── KPIs computed ──────────────────────────────────────────────────────────
   readonly totalSecretarias = computed<number>(() => this._secretarias().length);
@@ -113,6 +124,26 @@ export class SecretariasFacade {
     this._selectedSecretaria.set(sec);
   }
 
+  /**
+   * Último inicio de sesión real (fix-212-b, S14 de ASG-i-034): `auth.users.last_sign_in_at` vía
+   * `secretary_last_sign_in()` (solo admin). Antes la ficha mostraba `users.updated_at`, que sin
+   * trigger es la fecha de creación de la cuenta.
+   */
+  async cargarUltimoAcceso(userId: number): Promise<void> {
+    const requestToken = this.ultimoAccesoGuard.next();
+    this._ultimoAccesoSeleccionada.set({ estado: 'cargando', fecha: null });
+    const { data, error } = await this.supabase.client.rpc('secretary_last_sign_in', {
+      p_user_ids: [userId],
+    });
+    if (!this.ultimoAccesoGuard.isCurrent(requestToken)) return;
+    if (error) {
+      this._ultimoAccesoSeleccionada.set({ estado: 'error', fecha: null });
+      return;
+    }
+    const row = ((data ?? []) as { user_id: number; last_sign_in_at: string | null }[])[0];
+    this._ultimoAccesoSeleccionada.set({ estado: 'ok', fecha: row?.last_sign_in_at ?? null });
+  }
+
   async initialize(): Promise<void> {
     const currentBranchId = this.branchFacade.selectedBranchId();
     // SWR: si ya está inicializado Y la sede no cambió, refrescar silenciosamente
@@ -125,6 +156,8 @@ export class SecretariasFacade {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+    } catch {
+      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
     } finally {
       this._isLoading.set(false);
     }
@@ -139,6 +172,7 @@ export class SecretariasFacade {
   }
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.listGuard.next();
     const branchId = this.branchFacade.selectedBranchId();
 
     let query = this.supabase.client
@@ -153,7 +187,6 @@ export class SecretariasFacade {
         email,
         phone,
         active,
-        updated_at,
         branch_id,
         can_access_both_branches,
         roles!inner ( name ),
@@ -170,11 +203,16 @@ export class SecretariasFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._error.set(this.sanitizer.sanitize(error).message);
+      }
       throw error;
     }
+    // fix-209-b (S19): una respuesta de otra sede (más vieja) no pisa la vigente.
+    if (!this.listGuard.isCurrent(requestToken)) return;
 
     const rows = (data as unknown as SecretariaRow[]) ?? [];
+    this._error.set(null);
     this._secretarias.set(rows.map((r) => this.mapRow(r)));
   }
 
@@ -196,8 +234,15 @@ export class SecretariasFacade {
       const { data, error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
+      // fix-200-b (generaliza lo de fix-182-b): el motivo real de la función (4xx), no un texto
+      // genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al crear secretaria'),
+        );
+        return false;
+      }
       // fix-182-b: la cuenta se crea sin contraseña; la secretaria la crea desde el correo.
       this.toast.success(
         'Secretaria creada',
@@ -235,8 +280,14 @@ export class SecretariasFacade {
         },
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al actualizar secretaria'),
+        );
+        return false;
+      }
 
       this._initialized = false;
       await this.refreshSilently();
@@ -270,7 +321,6 @@ export class SecretariasFacade {
       email: r.email,
       sede: r.branches?.name ?? '—',
       estado: r.active ? 'activa' : 'inactiva',
-      ultimoAcceso: r.updated_at,
       aliasPublico: r.email,
       firstName: r.first_names,
       paternalLastName: r.paternal_last_name,

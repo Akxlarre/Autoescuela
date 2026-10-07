@@ -160,6 +160,22 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <td><app-skeleton-block variant="rect" width="60px" height="28px" /></td>
                     </tr>
                   }
+                } @else if (facade.error() && facade.instructores().length === 0) {
+                  <!-- fix-209-b (S19): un error no se disfraza de "sin resultados". -->
+                  <tr>
+                    <td [attr.colspan]="showSedeColumn() ? 8 : 7">
+                      <div
+                        class="py-14 flex flex-col items-center gap-2 text-center"
+                        data-llm-description="error al cargar la lista de instructores"
+                      >
+                        <app-icon name="alert-triangle" [size]="36" color="var(--state-error)" />
+                        <p class="text-sm mt-1 text-error">
+                          No se pudo cargar la lista de instructores. Recarga la página para
+                          reintentar.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
                 } @else if (filteredInstructores().length === 0) {
                   <tr>
                     <td [attr.colspan]="showSedeColumn() ? 8 : 7">

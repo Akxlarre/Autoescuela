@@ -3,7 +3,9 @@ import {
   isValidPromotionCode,
   maxPromotionCode,
   promotionCodeError,
+  promotionLabel,
   promotionNameForCode,
+  promotionOptionStatus,
   promotionWriteErrorMessage,
   sortPromotionGroupsByStart,
   suggestNextPromotionCode,
@@ -106,6 +108,49 @@ describe('promotion-code.utils (fix-323-m)', () => {
       expect(promotionNameForCode('Promoción 2801 (5 de Octubre 2026)', '280', '281')).toBe(
         'Promoción 2801 (5 de Octubre 2026)',
       );
+    });
+  });
+
+  // fix-351-m: un curso lleno no se puede elegir en la matrícula.
+  describe('promotionOptionStatus', () => {
+    it('vigente con cupo → abierta', () => {
+      expect(promotionOptionStatus('planned', 0, 25)).toBe('open');
+      expect(promotionOptionStatus('in_progress', 24, 25)).toBe('open');
+    });
+
+    it('vigente con el cupo completo o excedido → llena', () => {
+      expect(promotionOptionStatus('in_progress', 25, 25)).toBe('full');
+      expect(promotionOptionStatus('planned', 27, 25)).toBe('full');
+    });
+
+    it('finalizada, cancelada o sin estado → cerrada, tenga o no cupo', () => {
+      expect(promotionOptionStatus('finished', 3, 25)).toBe('finished');
+      expect(promotionOptionStatus('cancelled', 0, 25)).toBe('finished');
+      expect(promotionOptionStatus(null, 0, 25)).toBe('finished');
+    });
+  });
+
+  // hotfix-146-m: no repetir el número cuando el nombre ya lo trae.
+  describe('promotionLabel', () => {
+    it('el nombre ya trae el número → no lo repite', () => {
+      expect(promotionLabel('Promoción 280 (5 de Octubre 2026)', '280')).toBe(
+        'Promoción 280 (5 de Octubre 2026)',
+      );
+    });
+
+    it('promoción antigua sin número en el nombre → lo agrega entre paréntesis', () => {
+      expect(promotionLabel('Promoción 15 de Junio 2026', '103')).toBe(
+        'Promoción 15 de Junio 2026 (103)',
+      );
+    });
+
+    it('un número que solo es parte de otro no cuenta como presente', () => {
+      expect(promotionLabel('Promoción 2026', '20')).toBe('Promoción 2026 (20)');
+    });
+
+    it('sin número → solo el nombre', () => {
+      expect(promotionLabel('Promoción de prueba', '')).toBe('Promoción de prueba');
+      expect(promotionLabel('Promoción de prueba', null)).toBe('Promoción de prueba');
     });
   });
 

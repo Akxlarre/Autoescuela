@@ -26,8 +26,8 @@
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
-| `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `isArchiveConfirmationText` |
-| `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
+| `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
+| `src/app/core/utils/auth-errors.utils.ts` | `PASSWORD_MIN_LENGTH`, `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch` |
@@ -52,18 +52,20 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
-| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError` |
+| `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
+| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/egresados-export.utils.ts` | `ExportTable`, `buildEgresadosExcelTable`, `EGRESADOS_PDF_COLUMN_WEIGHTS`, `buildEgresadosPdfTable` |
 | `src/app/core/utils/egresados-sort.utils.ts` | `EgresadoSortField`, `EgresadoListSort`, `egresadoSortOptions`, `sortEgresados` |
 | `src/app/core/utils/egreso-confirmation.utils.ts` | `buildMarcarExAlumnoMessage` |
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail`, `isSameEmail` |
+| `src/app/core/utils/enrollment-unsaved.utils.ts` | `hasUnsavedPersonalData` |
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
 | `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
-| `src/app/core/utils/ficha-pagos.utils.ts` | `canRegistrarPago`, `formatPaymentConcept` (fix-315-m: concepto de un pago para la ficha — traduce el código interno o muestra tal cual el concepto en español de "Registrar pago") |
+| `src/app/core/utils/ficha-pagos.utils.ts` | `formatPaymentConcept`, `canRegistrarPago` |
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
@@ -71,13 +73,15 @@
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/inasistencia.utils.ts` | `canJustificarInasistencia` |
+| `src/app/core/utils/instructor-create-branch.utils.ts` | `InstructorCreateBranch`, `resolveInstructorCreateBranch` |
 | `src/app/core/utils/instructor-doc-types.util.ts` | `INSTRUCTOR_DOC_TYPES` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |
-| `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` (fix-317-m: tamaño del panel lateral según el ancho de la ventana; lo comparten la apertura y el ajuste al cambiar de tamaño) |
+| `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
 | `src/app/core/utils/license-seniority.utils.ts` | `requiredPriorLicenseLabel`, `licenseClassFromCourseType`, `calcLicenseSeniority` |
+| `src/app/core/utils/license-status.utils.ts` | `LICENSE_EXPIRING_SOON_DAYS`, `licenseStatusFromExpiry`, `expiredLicenseNotice` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
 | `src/app/core/utils/line-chart.utils.ts` | `niceMax`, `niceTickCount`, `yTicks`, `pointY`, `pointX`, `buildLinePath`, `formatCompactNumber` |
 | `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
@@ -93,15 +97,13 @@
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
-| `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `isValidPromotionCode`, `suggestNextPromotionCode`, `isCadenceDate`, `promotionWriteErrorMessage` (fix-323-m: número de promoción y cadencia de 14 días; el ancla debe coincidir con `reserve_next_promotion_slot`); `PROMOTION_CODE_MAX_AHEAD`, `maxPromotionCode`, `promotionCodeError` (fix-347-m: número mayor que 0 y como máximo "último usado + 10", con su mensaje para el formulario); `promotionNameForCode` (fix-346-m: el nombre automático sigue al número); `sortPromotionGroupsByStart` (hotfix-145-m: orden de las promociones en el paso 2 de la matrícula) |
-| `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate`; `promotionHolidayYears` (años cuyos feriados hay que consultar: el de inicio y el de "inicio + 60 días"), `holidaysOfYear` (descarta fechas de otro año: una fuente que responde con otro año no sirve) — fix-343-m; espejo Deno en `supabase/functions/_shared/holidays.ts` |
+| `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `PROMOTION_CODE_MAX_AHEAD`, `isValidPromotionCode`, `maxPromotionCode`, `suggestNextPromotionCode`, `promotionCodeError`, `promotionNameForCode`, `promotionLabel`, `promotionOptionStatus`, `sortPromotionGroupsByStart`, `isCadenceDate`, `promotionWriteErrorMessage` |
+| `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate`, `promotionHolidayYears`, `holidaysOfYear` |
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
-| `src/app/core/utils/enrollment-unsaved.utils.ts` | `hasUnsavedPersonalData` (fix-310-m: ¿el Paso 1 de la matrícula tiene texto escrito distinto del último guardado?) |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
-| `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |

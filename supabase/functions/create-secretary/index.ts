@@ -104,9 +104,10 @@ Deno.serve(async (req: Request) => {
       canAccessBothBranches,
     } = await req.json();
 
-    if (!firstNames || !paternalLastName || !maternalLastName || !rut || !email || !branchId) {
+    // fix-204-b (S12): el materno es opcional (como ya decía el encabezado).
+    if (!firstNames || !paternalLastName || !rut || !email || !branchId) {
       return errorResponse(
-        'Faltan campos requeridos: firstNames, paternalLastName, maternalLastName, rut, email, branchId',
+        'Faltan campos requeridos: firstNames, paternalLastName, rut, email, branchId',
       );
     }
 
@@ -119,6 +120,32 @@ Deno.serve(async (req: Request) => {
 
     if (roleError || !roleRow) {
       return errorResponse('Rol "secretary" no encontrado en la BD', 500);
+    }
+
+    // ── RUT ya registrado → 409 con mensaje claro (fix-182-b) ──────────────────
+    // users.rut es UNIQUE: una misma persona no puede ser, por ejemplo, instructor y secretaria.
+    // Se revisa ANTES de crear la cuenta de Auth para no crear/borrar una invitación en vano y
+    // para que el admin vea el motivo real (antes recibía "error inesperado").
+    const { data: rutOwner } = await supabaseAdmin
+      .from('users')
+      .select('id, roles ( name )')
+      .eq('rut', rut)
+      .maybeSingle();
+
+    if (rutOwner) {
+      const roleLabels: Record<string, string> = {
+        admin: 'administrador',
+        secretary: 'secretaria',
+        instructor: 'instructor',
+        student: 'alumno',
+      };
+      const label = roleLabels[rutOwner.roles?.name ?? ''];
+      return errorResponse(
+        label
+          ? `Ese RUT ya está registrado como ${label}. Una persona no puede tener dos cuentas.`
+          : 'Ese RUT ya está registrado en el sistema.',
+        409,
+      );
     }
 
     // ── Crear la cuenta de Auth SIN contraseña (fix-182-b) ──────────────────────
@@ -151,7 +178,7 @@ Deno.serve(async (req: Request) => {
       rut,
       first_names: firstNames,
       paternal_last_name: paternalLastName,
-      maternal_last_name: maternalLastName,
+      maternal_last_name: maternalLastName?.trim() || null,
       email,
       phone: telefono || null,
       role_id: roleRow.id,
@@ -164,6 +191,9 @@ Deno.serve(async (req: Request) => {
     if (insertError) {
       // Rollback: eliminar el usuario de Auth si falló el INSERT
       await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+      if (insertError.code === '23505') {
+        return errorResponse('Ya existe un usuario registrado con ese RUT o correo.', 409);
+      }
       return errorResponse(`Error al registrar la secretaria: ${insertError.message}`, 500);
     }
 

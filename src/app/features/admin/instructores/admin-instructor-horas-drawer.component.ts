@@ -90,6 +90,19 @@ const MONTH_NAMES = [
                     </td>
                   </tr>
                 }
+              } @else if (facade.horasError(); as horasError) {
+                <!-- fix-208-b (S16): un error no se disfraza de "sin clases". -->
+                <tr>
+                  <td colspan="3">
+                    <div
+                      class="py-10 flex flex-col items-center gap-2"
+                      data-llm-description="error al cargar las horas trabajadas"
+                    >
+                      <app-icon name="alert-triangle" [size]="32" color="var(--state-error)" />
+                      <p class="text-sm text-error">{{ horasError }}</p>
+                    </div>
+                  </td>
+                </tr>
               } @else if (facade.horasMensuales().length === 0) {
                 <tr>
                   <td colspan="3">
@@ -254,6 +267,7 @@ export class AdminInstructorHorasDrawerComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.facade.loadHorasMensuales();
+    // fix-208-b (S16): siempre parte en el mes actual.
+    this.facade.abrirHorasMensuales();
   }
 }

@@ -209,7 +209,6 @@ test.describe('E. Cerrar sesión', () => {
 test.describe('F. Rutas de otro rol', () => {
   const ADMIN_ONLY = [
     '/app/admin/dashboard',
-    '/app/admin/usuarios',
     '/app/admin/secretarias',
     '/app/admin/auditoria',
     '/app/admin/flota',

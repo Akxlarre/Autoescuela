@@ -74,7 +74,6 @@ const ADMIN: RouteSpec[] = [
   { id: 'B25', path: '/app/admin/tareas', appLike: true },
   { id: 'B26', path: '/app/admin/auditoria', appLike: true },
   { id: 'B27', path: '/app/admin/configuracion-web', appLike: true },
-  { id: 'B28', path: '/app/admin/usuarios', appLike: false },
   { id: 'B29', path: '/app/admin/notificaciones', appLike: false },
 ];
 

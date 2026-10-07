@@ -69,6 +69,22 @@ describe('TarifaInstructoresDrawerComponent', () => {
     expect(component.isDirty(1)).toBe(false);
   });
 
+  it('fix-210-b (S22): decimal o 0 no habilitan guardar y muestran el aviso; vacío no avisa', async () => {
+    const { component, payrollSpy } = create();
+    component.setDraft(1, 5000.5);
+    expect(component.isDirty(1)).toBe(false);
+    expect(component.isInvalidDraft(1)).toBe(true);
+    component.setDraft(1, 0);
+    expect(component.isDirty(1)).toBe(false);
+    expect(component.isInvalidDraft(1)).toBe(true);
+    await component.save(1);
+    expect(payrollSpy.updateRate).not.toHaveBeenCalled();
+    component.setDraft(1, null);
+    expect(component.isInvalidDraft(1)).toBe(false);
+    component.setDraft(1, 6000);
+    expect(component.isInvalidDraft(1)).toBe(false);
+  });
+
   it('save: llama updateRate con el valor y limpia el draft al tener éxito', async () => {
     const { component, payrollSpy } = create();
     component.setDraft(1, 7500);

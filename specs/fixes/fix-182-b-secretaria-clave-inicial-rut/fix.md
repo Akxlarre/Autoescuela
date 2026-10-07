@@ -1,7 +1,8 @@
 # Fix: La clave inicial de una secretaria nueva es su RUT
 > id: fix-182-b-secretaria-clave-inicial-rut
 > refs: ASG-i-044 (punto 3: clave inicial = RUT. Puntos 1 y 2 en fix-180-b y fix-181-b)
-> status: in_progress
+> status: done
+> closed: 2026-10-05
 > created: 2026-10-05
 
 ## Root Cause
@@ -51,7 +52,19 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 ## Progreso
 - [x] Código + tests + build
 - [x] Desplegada `create-secretary` (visto bueno del owner, 2026-10-05). Smoke test: sin usuario → 401, la función arranca con el import de nodemailer
-- [ ] Prueba manual: crear una secretaria de prueba con correo real → llega el correo → crea su
+- [x] **Hallazgo de la 1ª prueba manual (2026-10-05):** el RUT usado (`20.179.020-4`) ya era de un
+      instructor (`users.rut` UNIQUE) → 500 y "error inesperado" en pantalla. La invitación se generó
+      bien y el rollback borró cada cuenta de Auth (sin basura, sin correos). Corregido:
+      `create-secretary` responde 409 "Ese RUT ya está registrado como <rol>" antes de crear la
+      cuenta, y el facade muestra ese mensaje (en producción tras el próximo release del front).
+      Redesplegada `create-secretary`.
+- [x] **2ª prueba (2026-10-05):** secretaria creada; el correo "Activa tu cuenta de secretaria" llegó
+      con nombre y link correctos (cayó en spam: entregabilidad SMTP, SPF/DKIM del remitente —
+      ajeno a este fix). El link redirige a `http://localhost:4200` porque en Supabase Auth la Site
+      URL y la allowlist son localhost y no existe el secret `SITE_URL` (configuración de dominio
+      diferida por el owner, `docs/DEPLOY.md`). Afecta igual a instructores y alumnos.
+- [x] Prueba manual (owner, 2026-10-05): 2ª secretaria de prueba → llegó el correo → con la app en
+      `localhost:4200` (destino actual del link) creó su contraseña y entró. ✅ Cerrado → llega el correo → crea su
       contraseña → entra. (La cuenta de prueba se puede desactivar después con fix-180-b.)
 
 ## Cuenta ya existente

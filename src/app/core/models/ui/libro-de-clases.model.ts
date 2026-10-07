@@ -100,10 +100,26 @@ export interface ResumenAsistenciaLibro {
 
 // ── Calendario de clases ─────────────────────────────────────────────────────
 
+/**
+ * Fila del Calendario de Clases: la malla fija del libro real, fechada con las sesiones del
+ * curso. La arma la función del PDF y la pantalla muestra las mismas filas (fix-350-m).
+ */
 export interface ClaseCalendario {
   numero: number;
-  fecha: string;
+  /** YYYY-MM-DD, o null si al curso le faltan sesiones para ese bloque de la malla. */
+  fecha: string | null;
   asignatura: string;
-  horas: number;
+  materias: string;
+  /** Texto de la malla ("5 horas", "1 hora"). */
+  horas: string;
   profesor: string;
+}
+
+/** Respuesta de `generate-class-book-pdf` con `mode: 'calendar'`. */
+export interface CalendarioLibro {
+  rows: ClaseCalendario[];
+  /** Días de clase de la malla. */
+  blocks: number;
+  /** Fechas activas del curso; si son menos que `blocks`, hay filas sin fecha. */
+  activeDates: number;
 }

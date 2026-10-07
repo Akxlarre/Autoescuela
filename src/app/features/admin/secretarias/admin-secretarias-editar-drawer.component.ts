@@ -17,6 +17,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
 
 @Component({
   selector: 'app-admin-secretarias-editar-drawer',
@@ -169,7 +170,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
               <!-- Apellido Materno -->
               <div class="flex flex-col gap-1.5">
-                <label class="field-label" for="e-materno">Apellido Materno *</label>
+                <label class="field-label" for="e-materno">Apellido Materno</label>
                 <input
                   id="e-materno"
                   type="text"
@@ -183,7 +184,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
 
@@ -225,8 +228,10 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   <span class="field-error">Ingresa un correo electrónico válido.</span>
                 }
                 @if (email() !== currentEmail && emailValido()) {
-                  <span class="text-xs" style="color: var(--state-warning, #f59e0b);">
-                    Se enviará confirmación al nuevo correo. El cambio es inmediato.
+                  <!-- hotfix-068-b (S13): el cambio vía API de admin es directo, sin confirmación. -->
+                  <span class="text-xs text-warning">
+                    El cambio es inmediato: al guardar, la secretaria ingresa con este correo. No se
+                    envía correo de confirmación.
                   </span>
                 }
               </div>
@@ -448,7 +453,8 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
   protected readonly paternoValido = computed(() => this.paterno().trim().length >= 2);
-  protected readonly maternoValido = computed(() => this.materno().trim().length >= 2);
+  // fix-204-b (S12): opcional; si se escribe, ≥ 2 caracteres.
+  protected readonly maternoValido = computed(() => isOptionalSurnameValid(this.materno()));
   protected readonly emailValido = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim()),
   );

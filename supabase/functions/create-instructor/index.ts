@@ -42,6 +42,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import { authorizeInstructorCreate } from '../_shared/user-edit-authz.ts';
+import {
+  duplicateUserMessage,
+  EMAIL_TAKEN_MESSAGE,
+  isEmailTakenError,
+  isUniqueViolation,
+} from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -192,7 +199,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('id, roles ( name )')
+      .select('id, branch_id, can_access_both_branches, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -244,6 +251,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // fix-198-b: la sede del body no se toma tal cual — una secretaria sin grant, solo la suya.
+    const authz = authorizeInstructorCreate(
+      {
+        role: callerRole,
+        branchId: callerRow.branch_id ?? null,
+        bothBranches: !!callerRow.can_access_both_branches,
+      },
+      Number(branchId),
+    );
+    if (!authz.ok) return errorResponse(authz.message, authz.status);
+
     // ── Validar licencia no vencida ─────────────────────────────────────────
     const licenseStatus = computeLicenseStatus(licenseExpiry);
     if (licenseStatus === 'expired') {
@@ -280,9 +298,8 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authError) {
-      if (authError.message?.toLowerCase().includes('already registered')) {
-        return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
-      }
+      // fix-199-b: Supabase hoy responde "…has already been registered" (code email_exists).
+      if (isEmailTakenError(authError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
       return errorResponse(`Error al crear usuario en Auth: ${authError.message}`, 500);
     }
 
@@ -310,6 +327,7 @@ Deno.serve(async (req: Request) => {
 
     if (insertUserError) {
       await supabaseAdmin.auth.admin.deleteUser(supabaseUid);
+      if (isUniqueViolation(insertUserError)) return errorResponse(duplicateUserMessage(insertUserError), 409);
       return errorResponse(`Error al registrar el usuario: ${insertUserError.message}`, 500);
     }
 
