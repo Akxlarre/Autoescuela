@@ -104,9 +104,10 @@ Deno.serve(async (req: Request) => {
       canAccessBothBranches,
     } = await req.json();
 
-    if (!firstNames || !paternalLastName || !maternalLastName || !rut || !email || !branchId) {
+    // fix-204-b (S12): el materno es opcional (como ya decía el encabezado).
+    if (!firstNames || !paternalLastName || !rut || !email || !branchId) {
       return errorResponse(
-        'Faltan campos requeridos: firstNames, paternalLastName, maternalLastName, rut, email, branchId',
+        'Faltan campos requeridos: firstNames, paternalLastName, rut, email, branchId',
       );
     }
 
@@ -177,7 +178,7 @@ Deno.serve(async (req: Request) => {
       rut,
       first_names: firstNames,
       paternal_last_name: paternalLastName,
-      maternal_last_name: maternalLastName,
+      maternal_last_name: maternalLastName?.trim() || null,
       email,
       phone: telefono || null,
       role_id: roleRow.id,

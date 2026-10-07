@@ -28,6 +28,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
 
 @Component({
   selector: 'app-admin-instructor-crear-drawer',
@@ -141,7 +142,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
 
             <!-- Apellido Materno -->
             <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="c-materno">Apellido Materno *</label>
+              <label class="field-label" for="c-materno">Apellido Materno</label>
               <input
                 id="c-materno"
                 type="text"
@@ -155,7 +156,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                 aria-required="true"
               />
               @if (maternoTouched() && !maternoValido()) {
-                <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+                <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
               }
             </div>
 
@@ -483,7 +484,8 @@ export class AdminInstructorCrearDrawerComponent {
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
   protected readonly paternoValido = computed(() => this.paterno().trim().length >= 2);
-  protected readonly maternoValido = computed(() => this.materno().trim().length >= 2);
+  // fix-204-b (S12): opcional; si se escribe, ≥ 2 caracteres.
+  protected readonly maternoValido = computed(() => isOptionalSurnameValid(this.materno()));
   protected readonly rutValido = computed(() => {
     const cleaned = this.rut().replace(/[^0-9kK]/g, '');
     return cleaned.length >= 8 && validateRut(this.rut());
