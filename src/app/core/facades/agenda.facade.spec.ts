@@ -5,6 +5,7 @@ import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 import { addDaysToIso } from '@core/utils/agenda-week.utils';
+import { toISODate } from '@core/utils/date.utils';
 
 /**
  * Builder de cadena Supabase genérico y "thenable": cualquier método
@@ -319,6 +320,35 @@ describe('AgendaFacade', () => {
       await facade.initialize();
 
       expect(facade.selectedInstructorId()).toBeNull();
+    });
+
+    // fix-202-b (S7, opción B): la Agenda sigue ofreciendo al instructor, pero marca la licencia vencida.
+    it('marca licenseExpired con la fecha de vencimiento (no con el license_status guardado)', async () => {
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const manana = new Date();
+      manana.setDate(manana.getDate() + 1);
+      supabaseSpy.setResult('instructors', [
+        {
+          id: 1,
+          license_expiry: toISODate(ayer),
+          users: { first_names: 'Juan', paternal_last_name: 'Pérez' },
+        },
+        {
+          id: 2,
+          license_expiry: toISODate(manana),
+          users: { first_names: 'Ana', paternal_last_name: 'Soto' },
+        },
+        { id: 3, license_expiry: null, users: { first_names: 'Luis', paternal_last_name: 'Mora' } },
+      ]);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+
+      await facade.initialize();
+
+      const byId = (id: number) => facade.instructors().find((i) => i.id === id)!;
+      expect(byId(1)).toMatchObject({ licenseExpired: true, licenseExpiry: toISODate(ayer) });
+      expect(byId(2).licenseExpired).toBe(false);
+      expect(byId(3).licenseExpired).toBe(false);
     });
   });
 

@@ -11,6 +11,8 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { toISODate, todayIso } from '@core/utils/date.utils';
+import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
@@ -466,17 +468,10 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly licenseExpiryValida = computed(() => this.licenseExpiry() !== null);
   protected readonly typeValido = computed(() => this.tipo() !== null);
 
+  // fix-202-b: misma regla que la lista y la Agenda (antes, una copia local).
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
-    if (!d) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiry = new Date(d);
-    expiry.setHours(0, 0, 0, 0);
-    if (expiry < today) return 'expired';
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 30) return 'expiring_soon';
-    return 'valid';
+    return d ? licenseStatusFromExpiry(toISODate(d), todayIso()) : null;
   });
 
   protected readonly sedeValida = computed(() => this.sedeId() !== null);

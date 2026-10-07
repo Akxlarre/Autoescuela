@@ -16,6 +16,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { expiredLicenseNotice } from '@core/utils/license-status.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -225,6 +226,18 @@ interface CellSummary {
             />
           </div>
         </div>
+
+        <!-- fix-202-b (S7, opción B): licencia vencida → se sigue ofreciendo, con aviso -->
+        @if (expiredLicenseNotice(); as notice) {
+          <p
+            class="flex items-center gap-1.5 text-xs text-warning m-0 px-4 py-1.5"
+            role="status"
+            data-llm-description="aviso de instructores con licencia de conducir vencida"
+          >
+            <app-icon name="alert-triangle" [size]="14" class="text-warning shrink-0" />
+            <span>{{ notice }}</span>
+          </p>
+        }
 
         <!-- Grid del calendario -->
         @if (isLoading()) {
@@ -1166,9 +1179,18 @@ export class AgendaSemanalComponent implements AfterViewInit {
   /** Abre con "Todos los instructores" = null, la vista maestra (spec 0022-m). */
   readonly instructorOptions = computed<InstructorOption[]>(() =>
     withAllOption(
-      this.instructors().map((i) => ({ label: i.name, value: i.id })),
+      this.instructors().map((i) => ({
+        // fix-202-b: se sigue ofreciendo, marcado (opción B del owner).
+        label: i.licenseExpired ? `${i.name} · licencia vencida` : i.name,
+        value: i.id,
+      })),
       'Todos los instructores',
     ),
+  );
+
+  /** fix-202-b: aviso de licencias vencidas (elegido o resumen de "Todos"). */
+  readonly expiredLicenseNotice = computed(() =>
+    expiredLicenseNotice(this.instructors(), this.selectedInstructorId()),
   );
 
   // ── CSS Grid template ────────────────────────────────────────────────────────

@@ -4,7 +4,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { toISODate } from '@core/utils/date.utils';
+import { toISODate, todayIso } from '@core/utils/date.utils';
+import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -115,6 +116,16 @@ const LICENSE_STATUS_LABELS: Record<string, string> = {
   expiring_soon: 'Por vencer',
   expired: 'Vencida',
 };
+
+/**
+ * fix-202-b (S7): `license_status` solo se recalcula al editar al instructor, así que se calcula
+ * con la fecha de vencimiento y hoy. El valor guardado queda solo para filas sin fecha.
+ */
+function resolveLicenseStatus(expiry: string | null, stored: string | null): LicenseStatus {
+  const fromExpiry = licenseStatusFromExpiry(expiry, todayIso());
+  if (fromExpiry) return fromExpiry;
+  return ((stored ?? 'valid').trim().toLowerCase() as LicenseStatus) || 'valid';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -737,8 +748,7 @@ export class InstructoresFacade {
 
     const tipoRaw = ((r.type as string) ?? 'practice').trim().toLowerCase();
     const tipo = (tipoRaw as InstructorType) || 'practice';
-    const statusRaw = ((r.license_status as string) ?? 'valid').trim().toLowerCase();
-    const licenseStatus = (statusRaw as LicenseStatus) || 'valid';
+    const licenseStatus = resolveLicenseStatus(r.license_expiry, r.license_status);
 
     return {
       id: r.id,

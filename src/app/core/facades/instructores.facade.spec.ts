@@ -267,6 +267,31 @@ describe('InstructoresFacade', () => {
         `${todayStr}T23:59:59`,
       );
     });
+
+    // fix-202-b (S7): license_status solo se recalcula al editar; el estado se calcula con la fecha.
+    it('licencia vencida ayer pero guardada como "valid" → se muestra vencida y cuenta en "por vencer" solo si corresponde', async () => {
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const en10 = new Date();
+      en10.setDate(en10.getDate() + 10);
+      mockInstructorsAndSessions(
+        [
+          { ...buildInstructorRow(5), license_expiry: toISODate(ayer), license_status: 'valid' },
+          { ...buildInstructorRow(6), license_expiry: toISODate(en10), license_status: 'valid' },
+          { ...buildInstructorRow(7), license_expiry: null, license_status: 'valid' },
+        ],
+        [],
+      );
+
+      await facade.initialize();
+
+      const byId = (id: number) => facade.instructores().find((r) => r.id === id)!;
+      expect(byId(5).licenseStatus).toBe('expired');
+      expect(byId(5).licenseStatusLabel).toBe('Vencida');
+      expect(byId(6).licenseStatus).toBe('expiring_soon');
+      expect(byId(7).licenseStatus).toBe('valid'); // sin fecha: el valor guardado
+      expect(facade.licenciasPorVencer()).toBe(1);
+    });
   });
 
   // ─── spec 0004-m: instructores/vehículos "Ambas sedes" ─────────────────────
