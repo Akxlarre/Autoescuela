@@ -186,18 +186,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Enrollments
-    const enrollments = enrollmentRows.map((e, i) => {
-      const u = e.students.users;
-      return {
-        id: e.id,
-        numero: i + 1,
-        nombre: [u.paternal_last_name, u.maternal_last_name, u.first_names]
-          .filter(Boolean)
-          .join(' '),
-        rut: u.rut ?? '',
-      };
-    });
+    // Enrollments — por apellido paterno, materno y nombres, igual que la pantalla del Libro
+    // (D23, fix-352-m). Antes iban por id de matrícula y el N° no coincidía con la pantalla.
+    const enrollments = enrollmentRows
+      .map((e) => {
+        const u = e.students.users;
+        return {
+          id: e.id,
+          nombre: [u.paternal_last_name, u.maternal_last_name, u.first_names]
+            .filter(Boolean)
+            .join(' '),
+          rut: u.rut ?? '',
+        };
+      })
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+      .map((e, i) => ({ ...e, numero: i + 1 }));
     // Module names based on license class (spec 0018-m: 5 asignaturas en convalidación)
     const moduleNames = convalidation
       ? getConvalidationModuleNames(convalidation)
