@@ -32,3 +32,9 @@ Ninguno de una spec previa. ACs propios (decisión del owner 2026-10-06: cerrar,
 ## Test de Regresión
 - `deno test supabase/functions/_shared/anti-abuse.test.ts`
 - Tras el deploy: POST `load-instructors` y `check-duplicate` con la anon key → 503.
+
+## Progreso
+- [x] `deno test supabase/functions/_shared/anti-abuse.test.ts` → 15/15 (3 nuevos), 2026-10-06.
+- [x] PR #203 abierto.
+- [ ] Deploy de `public-enrollment` (espera aprobación del owner).
+- [ ] POST `load-instructors` / `check-duplicate` con la anon key → 503.
