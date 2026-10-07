@@ -2,9 +2,16 @@
  * Fuente única de verdad de qué módulos están bloqueados durante la fase piloto
  * (fix-255-m). Para levantar la fase de un módulo, sacarlo de `BLOCKED_MODULES` —
  * no repetir esta condición en guards ni en el menú por separado.
+ *
+ * `inscripcion-publica` además está cerrada en el servidor (fix-193-b): la Edge
+ * Function `public-enrollment` responde 503 hasta que se setee el secret
+ * `PUBLIC_ENROLLMENT_ENABLED=true`. Levantar este módulo exige los dos pasos.
  */
 export type PilotBlockedModule =
-  'instructor' | 'alumno' | 'inscripcion-publica' | 'clase-profesional-recorte';
+  | 'instructor'
+  | 'alumno'
+  | 'inscripcion-publica'
+  | 'clase-profesional-recorte';
 
 const BLOCKED_MODULES: ReadonlySet<PilotBlockedModule> = new Set<PilotBlockedModule>([
   'instructor',

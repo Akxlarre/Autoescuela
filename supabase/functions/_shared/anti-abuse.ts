@@ -48,3 +48,13 @@ export function isHoneypotTripped(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   return String(value).trim() !== '';
 }
+
+/**
+ * Interruptor server-side de la inscripción pública (fix-193-b). El bloqueo de la
+ * fase piloto (`pilot-phase.config.ts`) solo esconde la ruta en el frontend; sin
+ * esto la Edge Function seguía respondiendo sin sesión. Falla cerrado: solo el
+ * secret `PUBLIC_ENROLLMENT_ENABLED=true` la abre.
+ */
+export function isPublicEnrollmentOpen(flag: string | null | undefined): boolean {
+  return (flag ?? '').trim().toLowerCase() === 'true';
+}
