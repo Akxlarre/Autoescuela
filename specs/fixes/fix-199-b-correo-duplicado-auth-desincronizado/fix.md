@@ -1,7 +1,7 @@
 # Fix: Cambiar o dar de alta un correo ya usado deja Auth desincronizado y muestra un error 500
 > id: fix-199-b-correo-duplicado-auth-desincronizado
 > refs: ASG-i-034 (sospechas S5 y S6 —parte servidor—, confirmadas en fix-197-b) · fix-029-i
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -49,5 +49,5 @@ arreglo de producción. Primero hay que recuperar esos commits en `main`.
 ## Progreso
 - [x] `deno test` de `_shared/email-errors` + `user-edit-authz` → 34/34; sintaxis de las 4 funciones OK (esbuild).
 - [x] Lo desplegado de `update-instructor`, `update-secretary`, `update-student-profile` es idéntico a `main`, y `create-instructor` a fix-198-b: el deploy solo agrega este fix.
-- [ ] Deploy de las 4 funciones (espera aprobación del owner; requiere fix-198-b, PR #214, en la base).
-- [ ] Verificación en vivo (sin efectos): correo de otro usuario → 409 y nada cambia.
+- [x] Desplegadas (aprobado por el owner, 2026-10-07): `update-instructor` v21 (`verify_jwt:true`, como estaba — un primer deploy lo dejó en false y se corrigió al instante), `update-secretary` v18, `update-student-profile` v9 y `create-instructor` v20 (`verify_jwt:false`, como estaban).
+- [x] En vivo, como admin, correo de otro usuario (`admin@test.com`) a secretaria2, `instructor@test.com` y un alumno del seed: las 3 → **409 "Ya existe un usuario con ese correo electrónico"**; correos en `users` sin cambios y secretaria2 sigue entrando con su correo (Auth intacto).
