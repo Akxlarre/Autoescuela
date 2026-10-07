@@ -34,6 +34,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeInstructorEdit } from '../_shared/user-edit-authz.ts';
+import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -152,7 +153,7 @@ Deno.serve(async (req: Request) => {
     // ── Validar el OBJETIVO (fix-179-b) ──────────────────────────────────────
     const { data: targetInstructor, error: findInstructorError } = await supabaseAdmin
       .from('instructors')
-      .select('id, user_id, both_branches, users!inner ( supabase_uid, branch_id, roles ( name ) )')
+      .select('id, user_id, both_branches, users!inner ( supabase_uid, email, branch_id, roles ( name ) )')
       .eq('id', instructorId)
       .maybeSingle();
 
@@ -182,21 +183,27 @@ Deno.serve(async (req: Request) => {
     // ── Si el email cambió → actualizar en Supabase Auth ─────────────────────
     const emailChanged = email.trim().toLowerCase() !== currentEmail?.trim().toLowerCase();
 
+    const targetUid = targetInstructor.users?.supabase_uid;
     if (emailChanged) {
-      const targetUid = targetInstructor.users?.supabase_uid;
       if (!targetUid) {
         return errorResponse('No se encontró el usuario en la BD', 404);
       }
 
-      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        targetUid,
-        { email: email.trim().toLowerCase() },
-      );
+      // fix-199-b: un correo de otro usuario en public.users se rechaza ANTES de tocar Auth.
+      const { data: emailOwner } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email.trim().toLowerCase())
+        .neq('id', userId)
+        .maybeSingle();
+      if (emailOwner) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
+
+      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(targetUid, {
+        email: email.trim().toLowerCase(),
+      });
 
       if (authUpdateError) {
-        if (authUpdateError.message?.toLowerCase().includes('already registered')) {
-          return errorResponse('Ya existe un usuario con ese correo electrónico', 409);
-        }
+        if (isEmailTakenError(authUpdateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
         return errorResponse(`Error al actualizar email en Auth: ${authUpdateError.message}`, 500);
       }
     }
@@ -226,6 +233,17 @@ Deno.serve(async (req: Request) => {
       .eq('id', userId);
 
     if (updateUserError) {
+      // fix-199-b: Auth ya tiene el correo nuevo → revertirlo para no dejarlos desincronizados.
+      // El correo anterior sale de la BD, no del body (lo manda el navegador).
+      const previousEmail = targetInstructor.users?.email;
+      if (emailChanged && targetUid && previousEmail) {
+        const { error: revertError } = await supabaseAdmin.auth.admin.updateUserById(targetUid, {
+          email: previousEmail.trim().toLowerCase(),
+        });
+        if (revertError)
+          console.error('No se pudo revertir el email en Auth:', revertError.message);
+      }
+      if (isUniqueViolation(updateUserError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
       return errorResponse(`Error al actualizar usuario: ${updateUserError.message}`, 500);
     }
 
@@ -260,9 +278,12 @@ Deno.serve(async (req: Request) => {
     // users.active por sí solo no impedía el login ni la renovación del token. Con ban, la
     // cuenta desactivada no puede entrar; reactivar lo quita. Idempotente ('none' = sin ban).
     if (targetInstructor.users?.supabase_uid) {
-      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(targetInstructor.users?.supabase_uid, {
-        ban_duration: active ? 'none' : '876000h',
-      });
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
+        targetInstructor.users?.supabase_uid,
+        {
+          ban_duration: active ? 'none' : '876000h',
+        },
+      );
       if (banError) {
         return errorResponse(
           `El instructor se guardó, pero no se pudo ${active ? 'reactivar' : 'bloquear'} su acceso: ${banError.message}`,
