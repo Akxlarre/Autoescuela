@@ -13,6 +13,7 @@ import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { toISODate, todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
+import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
@@ -228,8 +229,14 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
               }
             </div>
 
-            <!-- Sede (solo admin: la secretaria pertenece a una única sede, ya implícita) -->
-            @if (authFacade.currentUser()?.role === 'admin') {
+            <!-- Sede: la elige el admin o la secretaria multi-sede; la secretaria anclada usa
+                 la suya (fix-201-b) -->
+            @if (branchRule().missingOwnBranch) {
+              <span class="field-error" data-llm-description="alta de instructor sin sede asignada">
+                Tu usuario no tiene una sede asignada. Pide a un administrador que te asigne una.
+              </span>
+            }
+            @if (branchRule().canPick) {
               <div class="flex flex-col gap-1.5">
                 <app-branch-scope-selector
                   [branches]="branchFacade.branches()"
@@ -451,6 +458,17 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly typeTouched = signal(false);
   protected readonly sedeTouched = signal(false);
 
+  /** fix-201-b: quién elige la sede y con cuál parte el formulario. */
+  protected readonly branchRule = computed(() => {
+    const user = this.authFacade.currentUser();
+    return resolveInstructorCreateBranch(
+      user?.role,
+      user?.branchId,
+      !!user?.canAccessBothBranches,
+      this.branchFacade.selectedBranchId(),
+    );
+  });
+
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
   protected readonly paternoValido = computed(() => this.paterno().trim().length >= 2);
@@ -592,12 +610,15 @@ export class AdminInstructorCrearDrawerComponent {
   }
 
   constructor() {
-    // Sincroniza la sede del formulario con el branch selector del topbar
+    // fix-201-b: quien elige parte con la sede del topbar; la secretaria anclada, con la suya
+    // (antes salía solo del topbar: sin selector nunca había sede, o quedaba la de otro usuario).
     effect(() => {
-      const branchId = this.branchFacade.selectedBranchId();
-      if (branchId !== null) {
-        this.sedeId.set(branchId);
+      const rule = this.branchRule();
+      if (rule.branchId !== null) {
+        this.sedeId.set(rule.branchId);
         this.sedeTouched.set(true);
+      } else if (!rule.canPick) {
+        this.sedeId.set(null);
       }
     });
     this.facade.loadVehicles();
