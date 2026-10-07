@@ -549,4 +549,68 @@ describe('InstructoresFacade', () => {
       expect(toastSpy.success).not.toHaveBeenCalled();
     });
   });
+
+  // fix-200-b (S6 de ASG-i-034): crear/reenviar re-envolvían el error y el toast mostraba un texto
+  // genérico; ahora un 4xx muestra el mensaje de la función y un 5xx el genérico.
+  describe('errores reales de la Edge Function — fix-200-b', () => {
+    const httpError = (status: number, error: string) =>
+      Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+        name: 'FunctionsHttpError',
+        context: { status, json: vi.fn().mockResolvedValue({ error }) },
+      });
+    const payload = {
+      firstNames: 'Juan',
+      paternalLastName: 'Perez',
+      maternalLastName: '',
+      rut: '11111111-1',
+      email: 'juan@test.cl',
+      phone: '',
+      type: 'practice',
+      licenseNumber: '',
+      licenseClass: 'B',
+      licenseExpiry: '2030-01-01',
+      vehicleId: null,
+      branchId: 1,
+      bothBranches: false,
+    } as any;
+
+    it('crearInstructor() con 409 → muestra el mensaje de la función', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: null,
+          error: httpError(409, 'Ya existe un usuario con ese correo electrónico'),
+        }),
+      };
+      expect(await facade.crearInstructor(payload)).toBeNull();
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'Error',
+        'Ya existe un usuario con ese correo electrónico',
+      );
+    });
+
+    it('crearInstructor() con 500 → muestra el genérico, no el texto técnico', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: null,
+          error: httpError(500, 'duplicate key value violates unique constraint'),
+        }),
+      };
+      expect(await facade.crearInstructor(payload)).toBeNull();
+      expect(toastSpy.error).toHaveBeenCalledWith('Error', 'Error al crear instructor');
+    });
+
+    it('enviarInvitacion() con 403 → muestra el mensaje de la función', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: null,
+          error: httpError(403, 'No puedes reenviar invitaciones de instructores de otra sede'),
+        }),
+      };
+      expect(await facade.enviarInvitacion(55, 'x@test.cl')).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'Error',
+        'No puedes reenviar invitaciones de instructores de otra sede',
+      );
+    });
+  });
 });

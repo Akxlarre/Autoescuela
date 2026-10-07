@@ -16,6 +16,7 @@ import type {
 } from '@core/models/ui/instructor-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 
@@ -577,8 +578,14 @@ export class InstructoresFacade {
         body: payload,
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear instructor');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al crear instructor'),
+        );
+        return null;
+      }
 
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
@@ -692,8 +699,14 @@ export class InstructoresFacade {
         'activate-instructor-account',
         { body: { userId, email: email.trim().toLowerCase() } },
       );
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al enviar la invitación');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al enviar la invitación'),
+        );
+        return false;
+      }
       if (data?.error) throw new Error(data.error);
 
       this.toast.success('Invitación enviada correctamente.');

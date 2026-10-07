@@ -5,7 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
-import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 
 export interface CrearSecretariaPayload {
   firstNames: string;
@@ -197,19 +197,14 @@ export class SecretariasFacade {
       const { data, error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
+      // fix-200-b (generaliza lo de fix-182-b): el motivo real de la función (4xx), no un texto
+      // genérico (DG-085).
       if (error) {
-        // DG-085: el mensaje real de la función viaja en error.context. Un 4xx es un rechazo de
-        // negocio redactado para personas (RUT o correo ya registrado); un 5xx queda genérico.
-        const response = await readEdgeFunctionError(error);
-        if (
-          response?.message &&
-          response.status != null &&
-          response.status >= 400 &&
-          response.status < 500
-        ) {
-          throw new Error(response.message);
-        }
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al crear secretaria'),
+        );
+        return false;
       }
       // fix-182-b: la cuenta se crea sin contraseña; la secretaria la crea desde el correo.
       this.toast.success(
@@ -248,8 +243,14 @@ export class SecretariasFacade {
         },
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al actualizar secretaria'),
+        );
+        return false;
+      }
 
       this._initialized = false;
       await this.refreshSilently();

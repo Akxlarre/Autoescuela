@@ -34,3 +34,21 @@ export async function readEdgeFunctionError(err: unknown): Promise<EdgeFunctionE
     return { status, message: null };
   }
 }
+
+/**
+ * Texto para el toast cuando falla una Edge Function (fix-200-b): el mensaje de la función si
+ * respondió 4xx (rechazo de negocio, redactado para personas), si no `fallback` (un 5xx puede
+ * traer texto técnico; sin respuesta = red caída o error del cliente).
+ */
+export async function edgeFunctionUserMessage(err: unknown, fallback: string): Promise<string> {
+  const response = await readEdgeFunctionError(err);
+  if (
+    response?.message &&
+    response.status != null &&
+    response.status >= 400 &&
+    response.status < 500
+  ) {
+    return response.message;
+  }
+  return fallback;
+}
