@@ -26,6 +26,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isValidLicenseNumber } from '@core/utils/license-number.utils';
 import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
 
 @Component({
@@ -198,7 +199,9 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
 
@@ -282,11 +285,16 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   id="e-license-num"
                   type="text"
                   class="field-input"
+                  [class.field-input--error]="licenseNumberTouched() && !licenseNumberValido()"
                   placeholder="15234567"
                   [ngModel]="licenseNumber()"
                   (ngModelChange)="licenseNumber.set($event)"
+                  (blur)="licenseNumberTouched.set(true)"
                   data-llm-description="Número de licencia del instructor"
                 />
+                @if (licenseNumberTouched() && !licenseNumberValido()) {
+                  <span class="field-error">Ingresa el número de licencia.</span>
+                }
               </div>
 
               <!-- Fecha de vencimiento -->
@@ -605,6 +613,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly paternoTouched = signal(false);
   protected readonly maternoTouched = signal(false);
   protected readonly emailTouched = signal(false);
+  protected readonly licenseNumberTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly tipoTouched = signal(false);
 
@@ -615,6 +624,10 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly maternoValido = computed(() => isOptionalSurnameValid(this.materno()));
   protected readonly emailValido = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim()),
+  );
+  // fix-211-b (S20): obligatorio. La licencia vencida SÍ se puede guardar (decisión del owner).
+  protected readonly licenseNumberValido = computed(() =>
+    isValidLicenseNumber(this.licenseNumber()),
   );
   protected readonly licenseExpiryValido = computed(() => !!this.licenseExpiry());
   protected readonly tipoValido = computed(() => !!this.tipo());
@@ -646,6 +659,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       this.paternoValido() &&
       this.maternoValido() &&
       this.emailValido() &&
+      this.licenseNumberValido() &&
       this.licenseExpiryValido() &&
       this.tipoValido(),
   );
@@ -795,6 +809,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.paternoTouched.set(true);
     this.maternoTouched.set(true);
     this.emailTouched.set(true);
+    this.licenseNumberTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.tipoTouched.set(true);
 

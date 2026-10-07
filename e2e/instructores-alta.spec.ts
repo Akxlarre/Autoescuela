@@ -38,6 +38,7 @@ test('D01/D02 (S3): la secretaria crea en SU sede aunque el navegador guarde la 
   await page.locator('#c-rut').fill('11.111.111-1');
   await page.locator('#c-email').fill('e2e.s3@e2e.test');
   await page.locator('#c-telefono').fill('912345678');
+  await page.locator('#c-license-num').fill('11111111'); // obligatorio desde fix-211-b
   const fecha = page.locator(
     '[data-llm-description="Fecha de vencimiento de la licencia del instructor"] input',
   );
@@ -53,6 +54,7 @@ test('D01/D02 (S3): la secretaria crea en SU sede aunque el navegador guarde la 
   await page.locator('[data-llm-action="confirmar-crear-instructor"]').click();
   await expect.poll(() => body, { timeout: 15_000 }).not.toBeNull();
   expect(body!['branchId']).toBe(1); // antes: 2 (la sede guardada)
+  expect(body!['licenseNumber']).toBe('11111111'); // fix-211-b: antes siempre ''
 });
 
 test('C04 (S8): instructor práctico sin vehículo → aviso de que no aparecerá en la Agenda', async ({

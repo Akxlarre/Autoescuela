@@ -29,6 +29,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
 import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isValidLicenseNumber } from '@core/utils/license-number.utils';
 
 @Component({
   selector: 'app-admin-instructor-crear-drawer',
@@ -156,7 +157,9 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                 aria-required="true"
               />
               @if (maternoTouched() && !maternoValido()) {
-                <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
+                <span class="field-error"
+                  >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                >
               }
             </div>
 
@@ -259,6 +262,25 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                Profesional son la tabla lecturers, aparte) — se guarda 'B' fijo al enviar. -->
           <h3 class="section-title">Licencia Clase B</h3>
           <div class="flex flex-col gap-4 mb-6">
+            <!-- Número de licencia (fix-211-b, S20: obligatorio) -->
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label" for="c-license-num">Número de licencia *</label>
+              <input
+                id="c-license-num"
+                type="text"
+                class="field-input"
+                [class.field-input--error]="licenseNumberTouched() && !licenseNumberValido()"
+                placeholder="15234567"
+                [ngModel]="licenseNumber()"
+                (ngModelChange)="licenseNumber.set($event)"
+                (blur)="licenseNumberTouched.set(true)"
+                data-llm-description="Número de licencia de conducir del instructor"
+              />
+              @if (licenseNumberTouched() && !licenseNumberValido()) {
+                <span class="field-error">Ingresa el número de licencia.</span>
+              }
+            </div>
+
             <!-- Fecha de vencimiento -->
             <div class="flex flex-col gap-1.5">
               <app-date-input
@@ -450,6 +472,7 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly telefono = signal('');
   protected readonly sedeId = signal<number | null>(null);
   protected readonly bothBranches = signal(false);
+  protected readonly licenseNumber = signal('');
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
@@ -466,6 +489,7 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly rutTouched = signal(false);
   protected readonly emailTouched = signal(false);
   protected readonly telefonoTouched = signal(false);
+  protected readonly licenseNumberTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly typeTouched = signal(false);
   protected readonly sedeTouched = signal(false);
@@ -496,6 +520,10 @@ export class AdminInstructorCrearDrawerComponent {
   protected readonly telefonoValido = computed(
     () => this.telefono().replace(/\D/g, '').length >= 8,
   );
+  // fix-211-b (S20): obligatorio (antes no se pedía y se guardaba vacío).
+  protected readonly licenseNumberValido = computed(() =>
+    isValidLicenseNumber(this.licenseNumber()),
+  );
   protected readonly licenseExpiryValida = computed(() => this.licenseExpiry() !== null);
   protected readonly typeValido = computed(() => this.tipo() !== null);
 
@@ -522,6 +550,7 @@ export class AdminInstructorCrearDrawerComponent {
       this.emailValido() &&
       this.telefonoValido() &&
       this.sedeValida() &&
+      this.licenseNumberValido() &&
       this.licenseExpiryValida() &&
       this.typeValido() &&
       this.licenseStatusPreview() !== 'expired',
@@ -665,6 +694,7 @@ export class AdminInstructorCrearDrawerComponent {
     this.emailTouched.set(true);
     this.telefonoTouched.set(true);
     this.sedeTouched.set(true);
+    this.licenseNumberTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.typeTouched.set(true);
 
@@ -681,7 +711,7 @@ export class AdminInstructorCrearDrawerComponent {
       email: this.email().trim().toLowerCase(),
       phone: this.telefono().trim(),
       type: this.tipo()!,
-      licenseNumber: '',
+      licenseNumber: this.licenseNumber().trim(),
       licenseClass: 'B', // instructors es exclusivamente Clase B
       licenseExpiry: expiryStr,
       vehicleId: this.vehicleId(),
