@@ -591,8 +591,9 @@ Del bloque 5 (2026-10-07), uno por causa raíz. **Propuestos, aún sin carpeta:*
 | U07 + F05 — Base Prof. en móvil pinta las 65 tarjetas y la animación de entrada monta la lista sobre el hero | `fix-354-m-base-profesional-movil-lista-acotada` | ✅ cerrado 2026-10-07 (tarjetas de a 6 con "Cargar más", revisado en navegador) |
 | Comunicación 375 px — pestañas sin texto ni nombre accesible. Causa: `app-tabs` elegía el modo "solo ícono" aunque las pestañas no tuvieran ícono | `fix-355-m-pestanas-sin-icono-no-quedan-vacias` | ✅ cerrado 2026-10-07 (revisado en navegador) |
 | F01 + D06 + G06 — textos de la Base: paginador "alumnos", chip sin singular, estado vacío de la Papelera | `hotfix-147-m-textos-menores-de-la-base-profesional` | ✅ cerrado 2026-10-07 (revisado en navegador) |
-| U08 — al abrir un panel el foco no entra en él (patrón de todos los drawers); buscador de Promociones sin anillo de foco | sin track: es del host global de drawers, proponer como asignación | ⏳ |
-| U06 — los badges `p-tag` conservan fondo claro en modo oscuro (toda la app, se leen bien) | sin track: design system, proponer como asignación | ⏳ |
+| U08 — al abrir un panel el foco no entra en él (host de todos los paneles) | `fix-357-m-el-foco-entra-al-panel-lateral-al-abrirlo` | ✅ cerrado 2026-10-07 (test E2E + revisión manual) |
+| U08 — los buscadores de las listas no muestran el foco (10 pantallas) | `fix-358-m-los-buscadores-de-las-listas-muestran-el-foco` | ✅ cerrado 2026-10-07 (revisado en navegador) |
+| U06 — los badges `p-tag` conservan fondo claro en modo oscuro (toda la app) | `fix-356-m-etiquetas-de-estado-en-modo-oscuro` | ✅ cerrado 2026-10-07 (revisado en navegador) |
 | U01 + U02 — tiempo real muerto en la Base Prof. | `ASG-i-056` (ya existe; agregar que archivar cambia `students`) | ⏳ |
 
 Descartado al revisar: "Crear promoción" sí tiene `data-llm-action` (`submit-crear-promocion`, en
@@ -612,9 +613,13 @@ Suite E2E completa (362 tests, 16,6 min, 2026-10-07): 348 pasaron y 14 fallaron 
 con todo en paralelo; al reintentar solo los fallidos pasaron 14 más y quedaron 4, ninguno de
 esta spec ni de los cambios de este track:
 
-- `barrido-rutas` B10 (`/matricula`, admin y secretaria): 14 px de scroll horizontal del shell a
-  1440 px. Falla siempre. La pantalla muestra el aviso de "retomar borrador" (hay un borrador de
-  prueba dejado, matrícula 7004) con el nombre cortado; es la causa probable. Sin track.
+- `barrido-rutas` B10 (`/matricula`, admin y secretaria): 14 px de "scroll horizontal" del shell a
+  1440 px. Fallaba siempre y ya estaba anotado como observación en `fix-190-b`. **No es un defecto
+  visual:** el asistente ocupa a propósito el canal reservado para la barra de scroll del shell,
+  para que su barra quede alineada con la de las demás páginas (medido: sin ese margen la barra
+  se corre 14 px y el formulario se angosta). Se corrigió el test: B10 tolera exactamente el ancho
+  de ese canal (`fillsScrollbarGutter`). *(La primera versión de esta nota culpaba al aviso de
+  "retomar borrador"; era un error.)*
 - `auth-sesion` A03: el panel "Credenciales de prueba" en el build de producción (se corre
   contra `ng serve`).
 - `alumnos-b-ficha` F04: compara una fecha de reprogramación contra la hora actual.
