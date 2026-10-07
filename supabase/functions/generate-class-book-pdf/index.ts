@@ -16,11 +16,16 @@
 //   body: { promotion_course_id: <id del curso madre>, convalidation: 'A3' | 'A4' }
 //
 // Respuesta: { pdfUrl: "https://...storage.../class-books/42/LibroDeClases_A2_PROM-2026-01.pdf" }
+//
+// fix-350-m: con `mode: 'calendar'` en el body no genera el PDF ni toca class_book; devuelve las
+// filas del Calendario de Clases para que la pantalla del Libro muestre lo mismo que el PDF:
+//   { calendar: { rows, blocks, activeDates } }   (calendar: null si el libro no tiene malla)
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { buildCalendarRows, type CurriculumRow } from '../_shared/class-book-calendar.ts';
 import {
   escapePdfWinAnsi as esc,
   loadPngForPdf,
@@ -48,7 +53,7 @@ Deno.serve(async (req: Request) => {
     const access = await requireStaff(req, ['admin', 'secretary']);
     if (!access.ok) return authErrorResponse(access, corsHeaders);
 
-    const { promotion_course_id, convalidation = null } = await req.json();
+    const { promotion_course_id, convalidation = null, mode = 'pdf' } = await req.json();
 
     if (!promotion_course_id || typeof promotion_course_id !== 'number') {
       return jsonRes({ error: 'promotion_course_id (number) is required' }, 400);
@@ -184,6 +189,15 @@ Deno.serve(async (req: Request) => {
         courseEndDate = null;
         bookSessions = [];
       }
+    }
+
+    // fix-350-m: la pantalla del Libro pide solo el calendario. Mismas sesiones y misma malla
+    // que el PDF, sin generarlo ni escribir nada.
+    if (mode === 'calendar') {
+      const curriculum = getCurriculum(convalidation ? `CONV_${convalidation}` : licenseClass);
+      return jsonRes({
+        calendar: curriculum ? buildCalendarRows(curriculum, bookSessions) : null,
+      });
     }
 
     // Enrollments — por apellido paterno, materno y nombres, igual que la pantalla del Libro
@@ -411,36 +425,9 @@ function getModuleNames(lc: string): string[] {
 // `promociones.facade.ts crearPromocion()`), una por bloque, en orden. Las filas LIBRE
 // del libro real ya no se imprimen: los días sin sesión real ahora los determina
 // `professional_theory_sessions` (ausencia/cancelación), no una fila fija del libro 2022.
-interface CurriculumRow {
-  fecha: string;
-  asignatura: string;
-  materias: string;
-  horas: string;
-  profesor: string;
-}
-
-/**
- * Agrupa filas consecutivas que comparten la misma `fecha` del libro real en un
- * "bloque de sesión" -- cada bloque representa un día de clase real (puede tener 1-4
- * filas de materias distintas, igual que el libro real). Las filas LIBRE se descartan:
- * los días sin clase ahora los decide `professional_theory_sessions`, no el libro 2022.
- */
-function groupIntoSessionBlocks(rows: CurriculumRow[]): CurriculumRow[][] {
-  const blocks: CurriculumRow[][] = [];
-  let current: CurriculumRow[] = [];
-  let currentFecha: string | null = null;
-  for (const r of rows) {
-    if (r.asignatura === 'LIBRE') continue;
-    if (r.fecha !== currentFecha) {
-      if (current.length) blocks.push(current);
-      current = [];
-      currentFecha = r.fecha;
-    }
-    current.push(r);
-  }
-  if (current.length) blocks.push(current);
-  return blocks;
-}
+//
+// fix-350-m: el tipo `CurriculumRow`, `groupIntoSessionBlocks()` y el reparto de fechas viven en
+// `_shared/class-book-calendar.ts` (`buildCalendarRows()`), compartidos con la pantalla del Libro.
 
 function getA2Curriculum(): CurriculumRow[] {
   const TRANSPORTE_I =
@@ -3850,25 +3837,25 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
     drawCalendarHeader('CALENDARIO DE CLASES');
 
     if (curriculum) {
-      const blocks = groupIntoSessionBlocks(curriculum);
-      const activeDatesSorted = sessions
-        .filter((s) => s.status !== 'cancelled')
-        .map((s) => s.date)
-        .sort();
+      // fix-350-m: mismas filas que entrega `mode: 'calendar'` a la pantalla del Libro.
+      const calendar = buildCalendarRows(curriculum, sessions);
 
-      blocks.forEach((block, bi) => {
-        const fechaLabel = activeDatesSorted[bi] ? fmtDate(activeDatesSorted[bi]) : '\u2014';
-        block.forEach((row) =>
-          drawCalendarRow(fechaLabel, row.asignatura, row.materias, row.horas, row.profesor),
-        );
-      });
+      calendar.rows.forEach((row) =>
+        drawCalendarRow(
+          row.fecha ? fmtDate(row.fecha) : '\u2014',
+          row.asignatura,
+          row.materias,
+          row.horas,
+          row.profesor,
+        ),
+      );
 
-      if (activeDatesSorted.length < blocks.length) {
+      if (calendar.activeDates < calendar.blocks) {
         need(16);
         T(
           ML,
           y - 11,
-          `Aviso: la malla tiene ${blocks.length} bloques de clase pero el curso solo tiene ${activeDatesSorted.length} sesiones activas programadas -- faltan fechas por asignar (marcadas "\u2014").`,
+          `Aviso: la malla tiene ${calendar.blocks} bloques de clase pero el curso solo tiene ${calendar.activeDates} sesiones activas programadas -- faltan fechas por asignar (marcadas "\u2014").`,
           'F1',
           8,
         );

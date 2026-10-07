@@ -298,12 +298,126 @@ describe('LibroDeClasesFacade', () => {
       // No debe leer asistencia práctica/teórica transaccional.
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('professional_practice_attendance');
     });
+  });
 
-    it('calendario excluye sesiones canceladas y renumera', async () => {
-      const { facade } = setup(cursoCompleto());
+  // fix-350-m: el calendario en pantalla son las filas que arma la función del PDF.
+  describe('calendario (fix-350-m)', () => {
+    const fila = (numero: number, fecha: string | null) => ({
+      numero,
+      fecha,
+      asignatura: 'TRANSPORTE DE PASAJEROS',
+      materias: 'I. REGLAMENTACIÓN DEL TRANSPORTE PÚBLICO DE PASAJEROS',
+      horas: '5 horas',
+      profesor: 'ALBERTO ORMEÑO',
+    });
+    const respuesta = (rows: unknown[], blocks: number, activeDates: number) => ({
+      data: { calendar: { rows, blocks, activeDates } },
+      error: null,
+    });
+
+    it('pide el calendario a la función y expone sus filas tal cual', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      const rows = [fila(1, '2026-03-03'), fila(2, '2026-03-04')];
+      mockSupabase.client.functions.invoke.mockResolvedValue(respuesta(rows, 2, 2));
+
       await facade.selectPromocion(1);
-      expect(facade.calendario()).toHaveLength(1);
-      expect(facade.calendario()[0].numero).toBe(1);
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(mockSupabase.client.functions.invoke).toHaveBeenCalledWith('generate-class-book-pdf', {
+        body: { promotion_course_id: 5, convalidation: null, mode: 'calendar' },
+      });
+      expect(facade.calendario()).toEqual(rows);
+      expect(facade.calendarioAviso()).toBeNull();
+      expect(facade.calendarioError()).toBeNull();
+    });
+
+    it('libro de convalidación → pide el calendario de esa convalidación', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      mockSupabase.client.functions.invoke.mockResolvedValue(respuesta([], 0, 0));
+
+      await facade.selectPromocion(1);
+      await facade.selectLibro('5:A4');
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(mockSupabase.client.functions.invoke).toHaveBeenLastCalledWith(
+        'generate-class-book-pdf',
+        { body: { promotion_course_id: 5, convalidation: 'A4', mode: 'calendar' } },
+      );
+    });
+
+    it('faltan sesiones para la malla → aviso con los dos números, igual que el PDF', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      mockSupabase.client.functions.invoke.mockResolvedValue(
+        respuesta([fila(1, '2026-03-03'), fila(2, null)], 2, 1),
+      );
+
+      await facade.selectPromocion(1);
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(facade.calendario()[1].fecha).toBeNull();
+      expect(facade.calendarioAviso()).toBe(
+        'La malla tiene 2 bloques de clase pero el curso solo tiene 1 sesión activa programada: faltan fechas por asignar (marcadas "—").',
+      );
+    });
+
+    it('la función falla → calendarioError, sin filas; el resto del libro carga igual', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      mockSupabase.client.functions.invoke.mockResolvedValue({
+        data: null,
+        error: new Error('boom'),
+      });
+
+      await facade.selectPromocion(1);
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(facade.calendario()).toEqual([]);
+      expect(facade.calendarioError()).toBe('No se pudo cargar el calendario de clases.');
+      expect(facade.hasDatos()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('respuesta sin calendario (función sin actualizar) → calendarioError', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      mockSupabase.client.functions.invoke.mockResolvedValue({
+        data: { pdfUrl: 'https://x/libro.pdf' },
+        error: null,
+      });
+
+      await facade.selectPromocion(1);
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(facade.calendarioError()).toBe('No se pudo cargar el calendario de clases.');
+    });
+
+    it('libro sin malla (calendar: null) → sin filas y sin error', async () => {
+      const { facade, mockSupabase } = setup(cursoCompleto());
+      mockSupabase.client.functions.invoke.mockResolvedValue({
+        data: { calendar: null },
+        error: null,
+      });
+
+      await facade.selectPromocion(1);
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+
+      expect(facade.calendario()).toEqual([]);
+      expect(facade.calendarioError()).toBeNull();
+    });
+
+    it('la respuesta de un libro que ya no es el elegido se descarta', async () => {
+      const { facade, mockSupabase } = setup(promocionConConvalidacion());
+      let resolverPrimera!: (value: unknown) => void;
+      mockSupabase.client.functions.invoke
+        .mockReturnValueOnce(new Promise((resolve) => (resolverPrimera = resolve)))
+        .mockResolvedValue(respuesta([fila(1, '2026-07-08')], 1, 1));
+
+      await facade.selectPromocion(1); // primera petición: queda pendiente
+      await facade.selectLibro('5:A4'); // segunda: responde de inmediato
+      await vi.waitFor(() => expect(facade.isLoadingCalendario()).toBe(false));
+      resolverPrimera(respuesta([fila(1, '2026-01-01'), fila(2, '2026-01-02')], 2, 2));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(facade.calendario()).toEqual([fila(1, '2026-07-08')]);
     });
   });
 
@@ -480,12 +594,11 @@ describe('LibroDeClasesFacade', () => {
       expect(cab.moduleNames).toHaveLength(5);
     });
 
-    it('Conv. A-4: calendario y evaluaciones del tramo (AC5, AC8)', async () => {
+    // El calendario del tramo lo arma la función del PDF (fix-350-m): ver 'calendario (fix-350-m)'.
+    it('Conv. A-4: evaluaciones y profesores del tramo (AC5, AC8)', async () => {
       const { facade } = setup(promocionConConvalidacion());
       await facade.selectPromocion(1);
       await facade.selectLibro('5:A4');
-      expect(facade.calendario()).toHaveLength(13);
-      expect(facade.calendario()[0].fecha).toBe('2026-07-08');
       expect(facade.evaluaciones()[0].notas).toHaveLength(5);
       expect(facade.profesores()).toHaveLength(5);
     });

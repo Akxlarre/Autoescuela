@@ -16,7 +16,9 @@ import type {
   FilaEvaluacionLibro,
   ResumenAsistenciaLibro,
   ClaseCalendario,
+  CalendarioLibro,
 } from '@core/models/ui/libro-de-clases.model';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 import { getModuleNames } from '@core/utils/professional-modules';
 import {
@@ -55,6 +57,10 @@ export class LibroDeClasesFacade {
   private readonly _evaluaciones = signal<FilaEvaluacionLibro[]>([]);
   private readonly _resumenAsistencia = signal<ResumenAsistenciaLibro[]>([]);
   private readonly _calendario = signal<ClaseCalendario[]>([]);
+  private readonly _calendarioAviso = signal<string | null>(null);
+  private readonly _calendarioError = signal<string | null>(null);
+  private readonly _isLoadingCalendario = signal(false);
+  private readonly calendarioGuard = createRequestGuard();
   private readonly _isLoading = signal(false);
   private readonly _isLoadingSections = signal(false);
   private readonly _isSaving = signal(false);
@@ -86,6 +92,10 @@ export class LibroDeClasesFacade {
   readonly evaluaciones = this._evaluaciones.asReadonly();
   readonly resumenAsistencia = this._resumenAsistencia.asReadonly();
   readonly calendario = this._calendario.asReadonly();
+  /** Aviso de bloques de la malla sin fecha, o null. Mismo aviso que imprime el PDF. */
+  readonly calendarioAviso = this._calendarioAviso.asReadonly();
+  readonly calendarioError = this._calendarioError.asReadonly();
+  readonly isLoadingCalendario = this._isLoadingCalendario.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isLoadingSections = this._isLoadingSections.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
@@ -262,7 +272,7 @@ export class LibroDeClasesFacade {
     this.loadResumenAsistencia();
     this.loadAsistenciaSemanal(sesionesLibro);
     await this.loadProfesores(promotionCourseId, conv);
-    this.loadCalendario(sesionesLibro);
+    void this.loadCalendario(promotionCourseId, conv);
   }
 
   private async fetchSesionesTeoricas(promotionCourseId: number): Promise<SesionTeorica[]> {
@@ -569,23 +579,57 @@ export class LibroDeClasesFacade {
 
   // ── Calendario de clases ────────────────────────────────────────────────────
 
-  /** `sesiones`: las del libro (en convalidación, solo las del tramo — spec 0018-m). */
-  private loadCalendario(sesiones: SesionTeorica[]): void {
-    // Los relatores ya están cargados en _profesores
-    const profesores = this._profesores();
-    const defaultProfesor = profesores.length > 0 ? profesores[0].lecturerName : '—';
+  /**
+   * Pide las filas del calendario a la función del PDF (`mode: 'calendar'`): la malla del libro
+   * vive ahí, y así la pantalla muestra exactamente lo que se imprime (fix-350-m). No bloquea la
+   * carga del resto del libro.
+   */
+  private async loadCalendario(
+    promotionCourseId: number,
+    conv: ConvalidationLicense | null,
+  ): Promise<void> {
+    const requestToken = this.calendarioGuard.next();
+    this._calendario.set([]);
+    this._calendarioAviso.set(null);
+    this._calendarioError.set(null);
+    this._isLoadingCalendario.set(true);
 
-    const calendario: ClaseCalendario[] = sesiones
-      .filter((s) => s.status !== 'cancelled')
-      .map((s, i) => ({
-        numero: i + 1,
-        fecha: s.date,
-        asignatura: 'Clase Teórica',
-        horas: 5,
-        profesor: defaultProfesor,
-      }));
+    let calendar: CalendarioLibro | null | undefined;
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-class-book-pdf',
+        { body: { promotion_course_id: promotionCourseId, convalidation: conv, mode: 'calendar' } },
+      );
+      // `calendar: null` = libro sin malla. Sin la clave, respondió una versión de la función
+      // que no conoce este modo.
+      calendar =
+        !error && data && 'calendar' in data
+          ? (data.calendar as CalendarioLibro | null)
+          : undefined;
+    } catch {
+      calendar = undefined;
+    }
 
-    this._calendario.set(calendario);
+    // Si ya se eligió otro libro mientras esta respuesta venía en camino, descartarla.
+    if (!this.calendarioGuard.isCurrent(requestToken)) return;
+
+    this._isLoadingCalendario.set(false);
+    if (calendar === undefined) {
+      this._calendarioError.set('No se pudo cargar el calendario de clases.');
+      return;
+    }
+    if (calendar === null) return;
+
+    this._calendario.set(calendar.rows);
+    if (calendar.activeDates < calendar.blocks) {
+      const sesiones =
+        calendar.activeDates === 1
+          ? '1 sesión activa programada'
+          : `${calendar.activeDates} sesiones activas programadas`;
+      this._calendarioAviso.set(
+        `La malla tiene ${calendar.blocks} bloques de clase pero el curso solo tiene ${sesiones}: faltan fechas por asignar (marcadas "—").`,
+      );
+    }
   }
 
   // ── Campos editables (Código SENCE) ─────────────────────────────────────────
@@ -773,7 +817,12 @@ export class LibroDeClasesFacade {
     this._asistenciaSemanal.set([]);
     this._evaluaciones.set([]);
     this._resumenAsistencia.set([]);
+    // Invalida una petición de calendario en curso: su respuesta ya no corresponde.
+    this.calendarioGuard.next();
     this._calendario.set([]);
+    this._calendarioAviso.set(null);
+    this._calendarioError.set(null);
+    this._isLoadingCalendario.set(false);
     this._error.set(null);
   }
 
