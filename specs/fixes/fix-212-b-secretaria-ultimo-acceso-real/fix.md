@@ -1,7 +1,7 @@
 # Fix: "Último acceso" de la secretaria muestra la fecha de creación de la cuenta
 > id: fix-212-b-secretaria-ultimo-acceso-real
 > refs: ASG-i-034 (sospecha S14, confirmada en fix-197-b) — decisión del owner 2026-10-07: mostrar el login real
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -34,5 +34,6 @@ Ninguno de una spec previa. ACs propios:
 ## Progreso
 - [x] Migración + test SQL escritos; doc en `indices/DATABASE.md`.
 - [x] `secretarias.facade.spec.ts` +4 (login real, nunca ingresó, error, respuesta vieja), rojo → verde; 13/13. Ficha: cargando / fecha / "Nunca ha ingresado" / "No disponible". `ng build` ✓, `lint:arch` 0 errores (182).
-- [ ] Aplicar la migración en producción — **esperando aprobación del owner**.
-- [ ] Test SQL después de aplicar + verificación en vivo de la ficha; abrir el PR.
+- [x] Migración aplicada en producción (aprobada por el owner, 2026-10-07) y registrada en `supabase_migrations.schema_migrations`.
+- [x] Test SQL en producción 5/5: privilegios (anon ✗, authenticated ✓); admin ve el login real de secretaria@test.com; admin no ve logins de otro rol; una secretaria y una sesión sin `sub` no ven nada.
+- [x] En vivo (`e2e/secretarias-ultimo-acceso.spec.ts`, solo lectura): la RPC responde 200 y la ficha de secretaria@test.com muestra la fecha de hoy, no la de creación (03/03/2026). 1/1.
