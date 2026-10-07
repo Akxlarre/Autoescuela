@@ -113,7 +113,7 @@
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
 | `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
-| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier` |
+| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier` (el tier "solo ícono" exige que todas las pestañas tengan ícono) |
 | `src/app/core/utils/table-sort.utils.ts` | `SortDirection`, `TableSort`, `SortKey`, `textSortKey`, `dateSortKey`, `rutSortKey`, `sortRows`, `nextSort`, `toggleSortDirection`, `ariaSortOf`, `sortIconOf` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |

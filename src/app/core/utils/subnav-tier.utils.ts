@@ -12,3 +12,12 @@ export function pickSubnavTier(fitsTier: (tier: 'full' | 'short' | 'icon') => bo
   }
   return 'select';
 }
+
+/**
+ * El tier "solo ícono" solo tiene sentido si TODAS las pestañas tienen ícono. Una barra sin
+ * íconos mide casi nada en ese tier, así que siempre "cabe" y las pestañas quedarían vacías:
+ * quien llama debe descartarlo y dejar que caiga a 'select'.
+ */
+export function canUseIconTier(tabs: readonly { icon?: string }[]): boolean {
+  return tabs.length > 0 && tabs.every((tab) => !!tab.icon);
+}

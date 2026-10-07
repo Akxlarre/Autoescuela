@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { pickSubnavTier, type SubnavTier } from '@core/utils/subnav-tier.utils';
+import { canUseIconTier, pickSubnavTier, type SubnavTier } from '@core/utils/subnav-tier.utils';
 
 export interface TabOption {
   id: string;
@@ -359,7 +359,9 @@ export class TabsComponent {
       icon: icon.scrollWidth,
     };
 
-    const next = pickSubnavTier((t) => widths[t] <= available);
+    // fix-355-m: sin íconos, el tier "icon" siempre cabe y deja las pestañas vacías.
+    const iconTierAllowed = canUseIconTier(this.tabs());
+    const next = pickSubnavTier((t) => (t !== 'icon' || iconTierAllowed) && widths[t] <= available);
     if (next !== this.lineTier()) this.lineTier.set(next);
   }
 }
