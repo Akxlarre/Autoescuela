@@ -46,46 +46,78 @@ export function computePromotionEndDate(startDate: string, holidayDates: Set<str
   return iso;
 }
 
+/** Días corridos que puede llegar a cubrir una promoción: 33 mínimos + margen por feriados. */
+const PROMOTION_MAX_SPAN_DAYS = 60;
+
+/**
+ * Años calendario cuyos feriados hay que consultar para una promoción que parte en `startDate`:
+ * el de inicio y, si es otro, el año en que cae "inicio + 60 días" (fix-343-m: antes solo se
+ * pedía el año siguiente si partía en diciembre, y una del 30 de noviembre perdía el 1 de enero).
+ * Espejo de `promotionHolidayYears` en `promotion-end-date.utils.ts`.
+ */
+export function promotionHolidayYears(startDate: string): number[] {
+  const start = new Date(`${startDate}T12:00:00`);
+  const limit = new Date(start);
+  limit.setDate(limit.getDate() + PROMOTION_MAX_SPAN_DAYS);
+  const startYear = start.getFullYear();
+  const limitYear = limit.getFullYear();
+  return limitYear === startYear ? [startYear] : [startYear, limitYear];
+}
+
 /**
  * Devuelve las fechas (YYYY-MM-DD) de feriados desde `startDate` en adelante, para el/los
  * año(s) calendario que la promoción podría llegar a cubrir (~35-40 días) — no se puede
  * acotar por `endDate` porque ese valor todavía no existe, depende de este resultado (AC6).
- * Intenta `apis.digital.gob.cl` primero; si falla (DNS/red/CORS/5xx), reintenta con
- * `api.boostr.cl` como respaldo (fix-139 — `apis.digital.gob.cl` quedó inalcanzable en
- * producción sin previo aviso). Si AMBAS fuentes fallan para algún año, retorna [] para ese
- * año sin bloquear la creación/actualización de la promoción (0 feriados asumidos).
+ * Intenta `apis.digital.gob.cl` primero; si no entrega ese año (DNS/red/CORS/5xx), sigue con
+ * `api.boostr.cl` y `date.nager.at` (fix-139, fix-343-m). Si NINGUNA fuente entrega un año,
+ * retorna [] para ese año sin bloquear la creación/actualización de la promoción (0 feriados
+ * asumidos).
  */
 export async function fetchHolidaysForYears(startDate: string): Promise<string[]> {
-  const anchor = new Date(`${startDate}T12:00:00`);
-  const startYear = anchor.getFullYear();
-  // Solo cruza a un 2º año calendario si arranca en diciembre (rango ~35-40 días).
-  const years = anchor.getMonth() === 11 ? [startYear, startYear + 1] : [startYear];
+  const years = promotionHolidayYears(startDate);
 
   const perYear = await Promise.all(years.map((year) => fetchHolidaysForYear(year)));
 
   return perYear.flatMap((r) => r ?? []).filter((d) => d >= startDate);
 }
 
+/** Fechas (YYYY-MM-DD) que pertenecen a `year`. Espejo de `holidaysOfYear` del frontend. */
+export function holidaysOfYear(dates: readonly string[], year: number): string[] {
+  return dates.filter((d) => d.startsWith(`${year}-`));
+}
+
+// Consulta las fuentes en orden y se queda con la primera que entregue fechas DEL AÑO PEDIDO.
+// El filtro no es defensivo: `api.boostr.cl` ignora el parámetro `year` y devuelve siempre el
+// año en curso, así que para el año siguiente respondía 200 sin un solo feriado útil (fix-343-m).
 async function fetchHolidaysForYear(year: number): Promise<string[] | null> {
-  try {
-    const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
-    if (resp.ok) {
-      const data = (await resp.json()) as { fecha: string }[];
-      return data.map((f) => f.fecha);
-    }
-  } catch {
-    // sigue al respaldo
-  }
+  const sources: (() => Promise<string[]>)[] = [
+    async () => {
+      const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
+      if (!resp.ok) return [];
+      return ((await resp.json()) as { fecha: string }[]).map((f) => f.fecha);
+    },
+    async () => {
+      const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
+      if (!resp.ok) return [];
+      return ((await resp.json()) as { data: { date: string }[] }).data.map((f) => f.date);
+    },
+    async () => {
+      const resp = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/CL`);
+      if (!resp.ok) return [];
+      // Los que no son globales son feriados regionales de otras zonas del país.
+      return ((await resp.json()) as { date: string; global: boolean }[])
+        .filter((f) => f.global)
+        .map((f) => f.date);
+    },
+  ];
 
-  try {
-    const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
-    if (resp.ok) {
-      const json = (await resp.json()) as { data: { date: string }[] };
-      return json.data.map((f) => f.date);
+  for (const source of sources) {
+    try {
+      const ofYear = holidaysOfYear(await source(), year);
+      if (ofYear.length > 0) return ofYear;
+    } catch {
+      // sigue a la siguiente fuente
     }
-  } catch {
-    // ambas fuentes fallaron
   }
-
   return null;
 }

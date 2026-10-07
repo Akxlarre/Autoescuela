@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { computePromotionEndDate } from './promotion-end-date.utils';
+import {
+  computePromotionEndDate,
+  holidaysOfYear,
+  promotionHolidayYears,
+} from './promotion-end-date.utils';
+
+// fix-343-m — api.boostr.cl ignora el año pedido y responde con el año en curso.
+describe('holidaysOfYear', () => {
+  it('deja solo las fechas del año pedido', () => {
+    expect(holidaysOfYear(['2026-12-25', '2027-01-01', '2027-05-01'], 2027)).toEqual([
+      '2027-01-01',
+      '2027-05-01',
+    ]);
+  });
+
+  it('una fuente que responde con otro año queda vacía', () => {
+    expect(holidaysOfYear(['2026-01-01', '2026-12-25'], 2027)).toEqual([]);
+  });
+});
 
 /**
  * Núcleo funcional del cálculo de `end_date` de una promoción profesional.
@@ -44,5 +62,25 @@ describe('computePromotionEndDate', () => {
   it('feriado en domingo dentro del rango → no afecta el conteo (el domingo ya estaba excluido)', () => {
     const holidays = new Set(['2026-08-09']); // domingo, semana 1
     expect(computePromotionEndDate(START, holidays)).toBe('2026-09-05');
+  });
+});
+
+// fix-343-m — una promoción dura 33+ días corridos: la que parte a fines de noviembre también
+// cruza a enero y necesita los feriados del año siguiente.
+describe('promotionHolidayYears', () => {
+  it('inicio en octubre → solo el año de inicio', () => {
+    expect(promotionHolidayYears('2026-10-12')).toEqual([2026]);
+  });
+
+  it('inicio el 30 de noviembre → año de inicio y el siguiente', () => {
+    expect(promotionHolidayYears('2026-11-30')).toEqual([2026, 2027]);
+  });
+
+  it('inicio en diciembre → año de inicio y el siguiente', () => {
+    expect(promotionHolidayYears('2026-12-14')).toEqual([2026, 2027]);
+  });
+
+  it('inicio en enero → solo ese año', () => {
+    expect(promotionHolidayYears('2027-01-11')).toEqual([2027]);
   });
 });

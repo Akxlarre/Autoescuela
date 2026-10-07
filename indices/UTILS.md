@@ -94,7 +94,7 @@
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `isValidPromotionCode`, `suggestNextPromotionCode`, `isCadenceDate`, `promotionWriteErrorMessage` (fix-323-m: número de promoción y cadencia de 14 días; el ancla debe coincidir con `reserve_next_promotion_slot`) |
-| `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate` |
+| `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate`; `promotionHolidayYears` (años cuyos feriados hay que consultar: el de inicio y el de "inicio + 60 días"), `holidaysOfYear` (descarta fechas de otro año: una fuente que responde con otro año no sirve) — fix-343-m; espejo Deno en `supabase/functions/_shared/holidays.ts` |
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
 | `src/app/core/utils/enrollment-unsaved.utils.ts` | `hasUnsavedPersonalData` (fix-310-m: ¿el Paso 1 de la matrícula tiene texto escrito distinto del último guardado?) |

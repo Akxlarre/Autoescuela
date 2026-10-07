@@ -16,7 +16,11 @@ import type {
   EditarPromocionPayload,
 } from '@core/models/ui/promocion-table.model';
 import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
-import { computePromotionEndDate } from '@core/utils/promotion-end-date.utils';
+import {
+  computePromotionEndDate,
+  holidaysOfYear,
+  promotionHolidayYears,
+} from '@core/utils/promotion-end-date.utils';
 import {
   promotionWriteErrorMessage,
   suggestNextPromotionCode,
@@ -448,10 +452,7 @@ export class PromocionesFacade {
    * rango (fix-139) — en ese caso, retorna [] sin bloquear la creación de la promoción.
    */
   private async fetchHolidaysForYears(startDate: string): Promise<string[]> {
-    const anchor = new Date(`${startDate}T12:00:00`);
-    const startYear = anchor.getFullYear();
-    // Solo cruza a un 2º año calendario si arranca en diciembre (rango ~35-40 días).
-    const years = anchor.getMonth() === 11 ? [startYear, startYear + 1] : [startYear];
+    const years = promotionHolidayYears(startDate);
 
     const perYear = await Promise.all(years.map((year) => this.fetchHolidaysForYear(year)));
     this._holidaysCheckFailed.set(perYear.some((r) => r === null));
@@ -460,31 +461,44 @@ export class PromocionesFacade {
   }
 
   /**
-   * Intenta la API oficial del gobierno (`apis.digital.gob.cl`); si falla (DNS/red/CORS/5xx),
-   * reintenta con `api.boostr.cl` como respaldo. `null` indica que AMBAS fuentes fallaron
-   * para ese año (fix-139 — `apis.digital.gob.cl` quedó inalcanzable en producción).
+   * Consulta las fuentes en orden — `apis.digital.gob.cl` (oficial), `api.boostr.cl` y
+   * `date.nager.at` — y se queda con la primera que entregue fechas **del año pedido**. `null`
+   * indica que ninguna lo hizo (fix-139: la oficial quedó inalcanzable en producción).
+   *
+   * El filtro por año no es defensivo: `api.boostr.cl` ignora el parámetro `year` y devuelve
+   * siempre el año en curso, así que para el año siguiente respondía 200 sin un solo feriado
+   * útil y el 1 de enero se perdía en silencio (fix-343-m).
    */
   private async fetchHolidaysForYear(year: number): Promise<string[] | null> {
-    try {
-      const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
-      if (resp.ok) {
-        const data = (await resp.json()) as { fecha: string }[];
-        return data.map((f) => f.fecha);
-      }
-    } catch {
-      // sigue al respaldo
-    }
+    const sources: (() => Promise<string[]>)[] = [
+      async () => {
+        const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
+        if (!resp.ok) return [];
+        return ((await resp.json()) as { fecha: string }[]).map((f) => f.fecha);
+      },
+      async () => {
+        const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
+        if (!resp.ok) return [];
+        return ((await resp.json()) as { data: { date: string }[] }).data.map((f) => f.date);
+      },
+      async () => {
+        const resp = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/CL`);
+        if (!resp.ok) return [];
+        // Los que no son globales son feriados regionales de otras zonas del país.
+        return ((await resp.json()) as { date: string; global: boolean }[])
+          .filter((f) => f.global)
+          .map((f) => f.date);
+      },
+    ];
 
-    try {
-      const resp = await fetch(`https://api.boostr.cl/holidays.json?year=${year}&country=CL`);
-      if (resp.ok) {
-        const json = (await resp.json()) as { data: { date: string }[] };
-        return json.data.map((f) => f.date);
+    for (const source of sources) {
+      try {
+        const ofYear = holidaysOfYear(await source(), year);
+        if (ofYear.length > 0) return ofYear;
+      } catch {
+        // sigue a la siguiente fuente
       }
-    } catch {
-      // ambas fuentes fallaron
     }
-
     return null;
   }
 

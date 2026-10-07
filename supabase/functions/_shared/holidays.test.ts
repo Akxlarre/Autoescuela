@@ -6,7 +6,12 @@
 //   deno test supabase/functions/_shared/holidays.test.ts
 
 import { assertEquals } from 'jsr:@std/assert';
-import { computePromotionEndDate } from './holidays.ts';
+import { computePromotionEndDate, holidaysOfYear, promotionHolidayYears } from './holidays.ts';
+
+Deno.test('holidaysOfYear: una fuente que responde con otro año queda vacía', () => {
+  assertEquals(holidaysOfYear(['2026-01-01', '2026-12-25'], 2027), []);
+  assertEquals(holidaysOfYear(['2026-12-25', '2027-01-01'], 2027), ['2027-01-01']);
+});
 
 const START = '2026-08-03'; // lunes
 
@@ -43,4 +48,21 @@ Deno.test(
 Deno.test('computePromotionEndDate: feriado en domingo → no afecta el conteo', () => {
   const holidays = new Set(['2026-08-09']); // domingo, semana 1
   assertEquals(computePromotionEndDate(START, holidays), '2026-09-05');
+});
+
+// fix-343-m — espejo de `promotionHolidayYears` en promotion-end-date.utils.spec.ts
+Deno.test('promotionHolidayYears: inicio en octubre → solo el año de inicio', () => {
+  assertEquals(promotionHolidayYears('2026-10-12'), [2026]);
+});
+
+Deno.test('promotionHolidayYears: inicio el 30 de noviembre → año de inicio y el siguiente', () => {
+  assertEquals(promotionHolidayYears('2026-11-30'), [2026, 2027]);
+});
+
+Deno.test('promotionHolidayYears: inicio en diciembre → año de inicio y el siguiente', () => {
+  assertEquals(promotionHolidayYears('2026-12-14'), [2026, 2027]);
+});
+
+Deno.test('promotionHolidayYears: inicio en enero → solo ese año', () => {
+  assertEquals(promotionHolidayYears('2027-01-11'), [2027]);
 });
