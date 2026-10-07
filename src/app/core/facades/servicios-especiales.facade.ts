@@ -119,6 +119,23 @@ export class ServiciosEspecialesFacade {
   public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
 
+  /**
+   * fix-194-b — admin (o secretaria con ambas sedes) elige la sede de la venta en el formulario:
+   * con "Todas" no hay de dónde sacarla (el admin no tiene sede propia) y quedaba con
+   * `branch_id` null, fuera de la Caja y los reportes de toda sede (DG-082).
+   */
+  public readonly requiereElegirSede = computed(() => {
+    const user = this.auth.currentUser();
+    return user?.role === 'admin' || !!user?.canAccessBothBranches;
+  });
+
+  /** Sede con la que se precarga el campo: la del topbar, o la propia del usuario. */
+  public readonly sedePorDefecto = computed(() => this.getActiveBranchId(true));
+
+  public readonly sedeOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
+
   public readonly kpis = computed<ServiciosEspecialesKpis>(() => {
     const ventas = this._ventas();
     const mesActual = new Date().toISOString().slice(0, 7);
@@ -257,6 +274,12 @@ export class ServiciosEspecialesFacade {
   }
 
   async registrarVenta(data: VentaFormData): Promise<boolean> {
+    // fix-194-b: nunca una venta sin sede (DG-082).
+    const branchId = data.branchId ?? this.sedePorDefecto();
+    if (branchId == null) {
+      this._error.set('Selecciona la sede de la venta.');
+      return false;
+    }
     const registeredBy = this.auth.currentUser()?.dbId ?? null;
     // fix-024-i: snapshot del nombre — el Historial lo sigue mostrando aunque el servicio
     // se borre definitivamente del catálogo más tarde (service_id queda en null).
@@ -277,7 +300,7 @@ export class ServiciosEspecialesFacade {
       status: 'completed',
       document_number: data.documentNumber ?? null,
       registered_by: registeredBy,
-      branch_id: this.getActiveBranchId(true),
+      branch_id: branchId,
       metadata: null,
     });
 
