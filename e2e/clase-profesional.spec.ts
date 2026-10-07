@@ -199,8 +199,12 @@ test.describe('A. Acceso y menú', () => {
     test(`A01 · A02: ${role} ve los 4 ítems de Academia Profesional`, async ({ pageAs }) => {
       const page = await pageAs(role);
       await page.goto(`/app/${portal}/dashboard`);
+      // El grupo aparece cuando termina de cargar la sede del usuario: se espera, no se lee al vuelo.
+      await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toContainText(
+        /Academia Profesional/i,
+        CARGA,
+      );
       const text = await sidebarText(page);
-      expect(text).toMatch(/Academia Profesional/i);
       // El cuarto es Archivo, habilitado en el piloto por D3a (fix-326-m).
       for (const item of ['Base Alumnos Prof.', 'Promociones', 'Libro de Clases', 'Archivo'])
         expect(text, item).toContain(item);
