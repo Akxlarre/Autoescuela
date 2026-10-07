@@ -39,6 +39,7 @@ export class SecretariaExAlumnosProfesionalComponent implements OnInit, OnDestro
     const confirmed = await this.confirmModal.confirm({
       title: 'Re-matricular alumno',
       message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${escapeHtml(egresado.nombre)}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
+      allowHtml: true, // hotfix-062-b: el <strong> es intencional y el nombre va por escapeHtml()
       severity: 'info',
       confirmLabel: 'Continuar',
       cancelLabel: 'Cancelar',
