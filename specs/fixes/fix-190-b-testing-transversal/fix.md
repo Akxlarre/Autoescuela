@@ -40,12 +40,12 @@ Ninguno de una spec previa — track de testing (origen ASG-i-037). Criterios pr
 | S4 | ✅ Descartada | Sin sesión → **401**; el código exige admin (`requireStaff(['admin'])`) |
 | S5 | Pendiente — de otra asignación | `audit_log` falsificable = punto 3 de **ASG-i-047** (Matías); nota dejada en esa asignación |
 | S6 | ✅ Descartada | La cerró `fix-178-b` (`website-public` sin subida anónima ni sobrescritura entre sedes) |
-| S7 | ❌ Confirmada → **decisión del owner** | Sin sesión, `public-enrollment` responde `load-instructors` (nombres + patentes) y `check-duplicate` (si un RUT tiene matrícula en curso: enumeración de alumnos). `reserve-slots`/`submit-pre-inscription` siguen en el código (no ejecutadas: escriben). `student-payment` conserva `reserve-slots`/`release-slots` legacy |
+| S7 | ❌ Confirmada → **decisión del owner** | Sin sesión, `public-enrollment` responde `load-instructors` (nombres + patentes) y `check-duplicate` (si un RUT tiene matrícula en curso: enumeración de alumnos). `reserve-slots`/`submit-pre-inscription` siguen en el código (no ejecutadas: escriben). `student-payment` conserva `reserve-slots`/`release-slots` legacy. → **cerrada en `fix-193-b`** (decisión del owner: cerrar; función desplegada v70 responde 503 sin el secret `PUBLIC_ENROLLMENT_ENABLED`; PR #203) |
 | S8 | ✅ Descartada | La cerró `0047-b` (`standalone_*`, `instructor_advances`, `certificates`, `discount_applications`, `absence_evidence`, `school_documents`…) |
-| S9 | ❌ Confirmada por código | `layout-drawer.component.ts` / `layout-drawer.facade.service.ts`: sin listener de Escape, sin cierre en `router.events`, sin `role="dialog"`/`aria-modal` (el único `role="dialog"` del shell es el del modal de confirmación) |
-| S10 | ❌ Confirmada por código | `app-shell.component.ts:118` pinta el mensaje del modal con `[innerHTML]` |
+| S9 | ❌ Confirmada por código | `layout-drawer.component.ts` / `layout-drawer.facade.service.ts`: sin listener de Escape, sin cierre en `router.events`, sin `role="dialog"`/`aria-modal` (el único `role="dialog"` del shell es el del modal de confirmación) → **`hotfix-061-b`** (PR #200) |
+| S10 | ❌ Confirmada por código | `app-shell.component.ts:118` pinta el mensaje del modal con `[innerHTML]` → **`hotfix-062-b`** (PR #201) |
 | S12 | ❌ Confirmada por código | `BranchFacade` no escucha el evento `storage`: la sede elegida no se sincroniza entre pestañas hasta recargar → **decisión** (K03) |
-| S15 | ❌ Confirmada por código | El selector de sede de Ajustes ("Sede activa") no mira `lockReason`/`disabledBranchIds` |
+| S15 | ❌ Confirmada por código | El selector de sede de Ajustes ("Sede activa") no mira `lockReason`/`disabledBranchIds` → **`hotfix-063-b`** (PR #202) |
 
 ## Barrido de rutas (§3.B) — `e2e/barrido-rutas.spec.ts`, build de producción, 2026-10-06
 
@@ -56,9 +56,34 @@ Ninguno de una spec previa — track de testing (origen ASG-i-037). Criterios pr
 | Resultado | Rutas |
 |---|---|
 | ✅ 49/52 limpias en las 3 celdas | C1 consola sin errores · C2 red sin 4xx/5xx · C3 sin scroll horizontal · C4 app-like en 1440 |
-| ❌ **B12 secretaria `/contabilidad/cuadratura`** | 1440/claro y 1440/oscuro: **no app-like**, `.shell-content` sobra **392 px**: "Egresos / Retiros" queda debajo de "Ingresos" y la página scrollea (la spec `0004-i` la dejó con Egresos en la columna derecha). → **track propio (pendiente)** |
+| ❌ **B12 secretaria `/contabilidad/cuadratura`** | 1440/claro y 1440/oscuro: **no app-like**, `.shell-content` sobra **392 px**: "Egresos / Retiros" queda debajo de "Ingresos" y la página scrollea (la spec `0004-i` la dejó con Egresos en la columna derecha). → **`fix-192-b`** (PR #199) |
 | ⚠️ B10 `/matricula` (admin y secretaria) | 1440: `.shell-content` 14 px más ancho que su caja; no se ve (tiene `overflow-x-hidden`) → observación menor, sin track |
 
 **Limitación del barrido:** el admin corre con "Todas las sedes". En las pantallas que exigen elegir
 sede (Caja Diaria, Nueva Matrícula) mide el selector de sede, no la pantalla real — por eso B12 admin
 "pasó". El caso real de Caja quedó cubierto por la secretaria.
+
+## Shell transversal (D, E, K, V, Y) — `e2e/transversal-shell.spec.ts`, build de producción, 2026-10-06
+
+22/22 en 2,3 min (4 workers). Sin escrituras en la BD.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| D01 admin ve "Todas" + cada sede | ✅ | |
+| D02 secretaria sin grant sin selector | ✅ | |
+| D03 secretaria con grant ve ambas sedes | ✅ | |
+| D04 sede sobrevive a F5 desde el primer render | ✅ | el `aria-label` del primer render ya dice la sede |
+| D05 sede persistida inexistente → "Todas" y limpia | ✅ | |
+| D09 Nueva Matrícula con "Todas" bloquea "Todas" | ✅ | en Ajustes también, tras `hotfix-063-b` |
+| E01/E02 botón y Ctrl+K con foco; Escape cierra y limpia | ✅ | |
+| E03 secretaria recién entrada encuentra a su alumno (H-031) | ✅ | búsqueda por RUT sin visitar la Base |
+| E06 secretaria A no encuentra a uno de la sede B | ✅ | |
+| E07 admin con sede A no ve a B; con "Todas", sí | ✅ | |
+| E08 acciones rápidas de secretaria → `/app/secretaria/**` | ✅ | "pago", "agendar", "matrícula" |
+| K01 cerrar sesión en la pestaña 1 → la 2 va a `/login` | ✅ | al navegar por el menú (SPA) |
+| V02 recargar en oscuro sin flash | ✅ | `data-mode="dark"` ya en `DOMContentLoaded` (script anti-FOWT de `index.html`) |
+| V05 `text-primary`/`-secondary`/`-muted` cortas | ✅ | grep en `src/app`: 0 (además lo bloquea ARCH-11) |
+| V08 1440×700 app-like (Alumnos, Pagos, Agenda, Flota) | ✅ | ni el documento ni `.shell-content` scrollean |
+| Y02 al navegar el foco va a `<main>` | ✅ | |
+| Y03 botones de ícono del shell con nombre accesible | ❌→✅ | el de **perfil** tenía el `aria-label` en el host `<p-button>`: el `<button>` real quedaba sin nombre → **`hotfix-064-b`** (PR #204). El test pasa contra un build con ese hotfix |
+| Y07 `data-llm-action` en los botones del shell | ✅ | |
