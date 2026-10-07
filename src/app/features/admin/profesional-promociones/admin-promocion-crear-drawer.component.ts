@@ -307,7 +307,9 @@ function generatePromoName(startIso: string, code: string): string {
                 <strong>30 días de clase</strong> (lun-sáb) — se extiende si hay feriados en el
                 rango
               </li>
-              <li>Inicio solo en <strong>lunes</strong>, cada 2 semanas</li>
+              <li>
+                Inicio solo en <strong>lunes</strong>; la cadencia automática es cada 2 semanas
+              </li>
               <li>Máximo <strong>100 alumnos</strong> por promoción (25 por curso)</li>
               <li>4 cursos: A2, A3, A4, A5</li>
               <li>Un curso puede tener múltiples relatores</li>

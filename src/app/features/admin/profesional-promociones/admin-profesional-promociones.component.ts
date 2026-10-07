@@ -122,7 +122,12 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
           />
 
           <span class="text-xs text-text-muted ml-auto">
-            {{ filteredPromociones().length }} promociones encontradas
+            {{ filteredPromociones().length }}
+            {{
+              filteredPromociones().length === 1
+                ? 'promoción encontrada'
+                : 'promociones encontradas'
+            }}
           </span>
         </div>
 

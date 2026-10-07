@@ -68,6 +68,17 @@ export function promotionNameForCode(name: string, oldCode: string, newCode: str
   return `Promoción ${to} (${name.slice(prefix.length)}`;
 }
 
+/**
+ * Ordena los grupos de promociones del paso 2 de la matrícula por fecha de inicio, de la más
+ * antigua a la más nueva; los que no tienen fecha van al final (hotfix-145-m). No muta la entrada.
+ */
+export function sortPromotionGroupsByStart<
+  T extends { options: readonly { startDate: string | null }[] },
+>(groups: readonly T[]): T[] {
+  const startOf = (g: T): string => g.options[0]?.startDate ?? '9999-12-31';
+  return [...groups].sort((a, b) => startOf(a).localeCompare(startOf(b)));
+}
+
 /** True si la fecha (YYYY-MM-DD) es un lunes de la cadencia automática. */
 export function isCadenceDate(isoDate: string): boolean {
   const days = Math.round(

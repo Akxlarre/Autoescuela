@@ -5,6 +5,7 @@ import {
   promotionCodeError,
   promotionNameForCode,
   promotionWriteErrorMessage,
+  sortPromotionGroupsByStart,
   suggestNextPromotionCode,
 } from './promotion-code.utils';
 
@@ -105,6 +106,29 @@ describe('promotion-code.utils (fix-323-m)', () => {
       expect(promotionNameForCode('Promoción 2801 (5 de Octubre 2026)', '280', '281')).toBe(
         'Promoción 2801 (5 de Octubre 2026)',
       );
+    });
+  });
+
+  // hotfix-145-m: orden de las promociones en el paso 2 de la matrícula.
+  describe('sortPromotionGroupsByStart', () => {
+    const group = (label: string, startDate: string | null) => ({
+      label,
+      options: [{ startDate }],
+    });
+
+    it('ordena por fecha de inicio, de la más antigua a la más nueva, sin mutar la entrada', () => {
+      const input = [
+        group('280', '2026-10-05'),
+        group('282', '2026-11-02'),
+        group('278', '2026-09-07'),
+      ];
+      expect(sortPromotionGroupsByStart(input).map((g) => g.label)).toEqual(['278', '280', '282']);
+      expect(input.map((g) => g.label)).toEqual(['280', '282', '278']);
+    });
+
+    it('un grupo sin fecha va al final', () => {
+      const input = [group('sin fecha', null), group('279', '2026-09-21')];
+      expect(sortPromotionGroupsByStart(input).map((g) => g.label)).toEqual(['279', 'sin fecha']);
     });
   });
 
