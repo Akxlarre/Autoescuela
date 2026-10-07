@@ -40,6 +40,10 @@ export const ENTITY_MODULE_MAP: Record<string, string> = {
   maintenance_records: 'Flota',
   // M10 - Certificación (triggers agregados en 20260323110000)
   certificates: 'Certificación',
+  // fix-206-b: triggers agregados en 20261007150000
+  instructors: 'Instructores',
+  vehicle_assignments: 'Instructores',
+  branch_payroll_config: 'Liquidaciones',
 };
 
 export const ACTION_LABEL_MAP: Record<string, AuditAction> = {
@@ -62,5 +66,7 @@ export const MODULE_OPTIONS = [
   'Flota',
   'Certificación',
   'Libro de Clases',
+  'Instructores',
+  'Liquidaciones',
   'Otros',
 ];
