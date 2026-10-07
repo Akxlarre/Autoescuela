@@ -499,6 +499,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       <p class="text-xs text-text-muted">
                         Cambia rápidamente el filtro global de la autoescuela
                       </p>
+                      <!-- hotfix-063-b: mismos bloqueos que el selector del topbar -->
+                      @if (branchFacade.lockReason(); as reason) {
+                        <p class="text-xs text-text-muted flex items-center gap-1.5">
+                          <app-icon name="lock" [size]="12" />
+                          <span>{{ reason }}</span>
+                        </p>
+                      }
                     </div>
                     <div class="space-y-2">
                       @for (branch of branchFacade.branches(); track branch.id) {
@@ -515,8 +522,18 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                           [class.text-text-secondary]="
                             branchFacade.selectedBranchId() !== branch.id
                           "
+                          [class.opacity-50]="branchFacade.disabledBranchIds().includes(branch.id)"
+                          [class.cursor-not-allowed]="
+                            branchFacade.disabledBranchIds().includes(branch.id)
+                          "
+                          [disabled]="branchFacade.disabledBranchIds().includes(branch.id)"
+                          [attr.title]="
+                            branchFacade.disabledBranchIds().includes(branch.id)
+                              ? branchFacade.lockReason()
+                              : null
+                          "
                           data-llm-action="select-branch"
-                          (click)="branchFacade.selectBranch(branch.id)"
+                          (click)="branchFacade.trySelectBranch(branch.id)"
                         >
                           <span>{{ branch.name }}</span>
                           @if (branchFacade.selectedBranchId() === branch.id) {
@@ -538,8 +555,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                         [class.bg-surface]="branchFacade.selectedBranchId() !== null"
                         [class.border-border-default]="branchFacade.selectedBranchId() !== null"
                         [class.text-text-secondary]="branchFacade.selectedBranchId() !== null"
+                        [class.opacity-50]="branchFacade.requiresSpecificBranch()"
+                        [class.cursor-not-allowed]="branchFacade.requiresSpecificBranch()"
+                        [disabled]="branchFacade.requiresSpecificBranch()"
+                        [attr.title]="
+                          branchFacade.requiresSpecificBranch() ? branchFacade.lockReason() : null
+                        "
                         data-llm-action="select-all-branches"
-                        (click)="branchFacade.selectBranch(null)"
+                        (click)="branchFacade.trySelectBranch(null)"
                       >
                         <span>Todas las escuelas</span>
                         @if (branchFacade.selectedBranchId() === null) {

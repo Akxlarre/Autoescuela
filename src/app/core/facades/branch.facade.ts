@@ -229,6 +229,19 @@ export class BranchFacade {
   }
 
   /**
+   * Elección de sede hecha por el usuario desde un selector que no se deshabilita solo (Ajustes):
+   * respeta los mismos bloqueos que el selector del topbar (hotfix-063-b) — "Todas" cuando la vista
+   * exige una sede, y las sedes de `disabledBranchIds`. Devuelve si la sede cambió.
+   * `selectBranch()` sigue sin validar: lo usan cambios internos (volver a la sede previa, etc.).
+   */
+  trySelectBranch(id: number | null): boolean {
+    if (id === null && this.requiresSpecificBranch()) return false;
+    if (id !== null && this.disabledBranchIds().includes(id)) return false;
+    this.selectBranch(id);
+    return true;
+  }
+
+  /**
    * Cambia la sede activa solo mientras dure una tarea (fix-274-m: re-matricular a un egresado
    * de otra sede) y recuerda la que había, para volver a ella con `restoreTemporaryBranch()`.
    * Si ya hay un cambio temporal en curso, se conserva la sede original.
