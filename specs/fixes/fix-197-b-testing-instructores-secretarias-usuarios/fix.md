@@ -39,6 +39,9 @@ Ninguno de una spec previa — track de testing (origen ASG-i-034). Criterios pr
 | S6 (servidor) | ❌ Confirmada → **`fix-199-b`** | `includes('already registered')` no calzaba con "…already been registered": 409 → 500. Ahora `isEmailTakenError` |
 | S6 (front) | ❌ Confirmada → **corregida en `fix-200-b`** (PR #217) | Crear instructor, crear/editar secretaria y reenviar invitación mostraban un texto genérico (DG-085); ahora un 4xx muestra el motivo real |
 | S11 | ✅ Descartada | La cerró `fix-182-b` (secretaria sin clave inicial = RUT) |
+| S3 | ❌ Confirmada → **corregida en `fix-201-b`** (PR #219) | El alta tomaba la sede solo del topbar y el campo lo veía solo el admin: la secretaria no podía crear, o usaba la sede guardada por otro usuario. E2E: sin el fix manda `branchId: 2`, con el fix `1` |
+| S7 | ❌ Confirmada → **corregida en `fix-202-b`** (PR #220) | `license_status` congelado hasta editar. Estado calculado con la fecha; Agenda marca "· licencia vencida" y avisa (opción B del owner: se sigue ofreciendo) |
+| S8 | ❌ Confirmada → **corregida en `hotfix-065-b`** (PR #221) | Práctico sin vehículo no tiene turnos en la Agenda; el alta ahora lo avisa |
 
 **Hallazgo lateral:** `create-secretary` desplegado tiene código de `fix-182-b` que nunca llegó a
 `main` (5 commits subidos a `fix/182-b-secretaria-invitacion` después de mergear el PR #184, entre
