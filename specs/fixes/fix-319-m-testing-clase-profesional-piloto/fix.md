@@ -272,9 +272,102 @@ queda igual que al empezar (E2E-ProfConB se archivó y se restauró).
 
 ### Bloque 3 — J–N: Promociones
 
-_Pendiente._ Para revisar al ejecutarlo: a 1280×800 la tabla de Promociones tiene scroll
-horizontal y la columna "Acciones" queda fuera de la vista (visto el 2026-10-06 en el `/verify`
-de `fix-334-m`).
+Ejecutado el 2026-10-06 en navegador (Playwright MCP, `ng serve` local, BD de desarrollo) con
+admin y secretariaB (sede 2), sobre las pantallas ya corregidas por `fix-320…342`. Las
+verificaciones de BD son lecturas por API con la sesión del usuario.
+
+**J — Lista, KPIs y filtros**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| J01 | ✅ | Admin y secretariaB: tabla con 5 promociones, consola sin errores, red sin 4xx/5xx. |
+| J02 | ✅ | En curso (280, 279, 278) → cancelada → planificadas (282, 281); fecha descendente dentro de cada grupo. |
+| J03 | ✅ | Nombre + número, fechas dd/MM/yyyy, "3 / 100", badges con tooltip "Taxis y colectivos: 2/25 alumnos", estado. Detalle: la tabla usa `05/10/2026` y el detalle/editor `05-10-2026`. |
+| J04 | ✅ | Total 5 · En curso 3 · Planificadas 2 · Canceladas 0 = tabla (y 6/3/2/1 tras cancelar la de prueba). |
+| J05 | ✅ | Por número ("281") y por nombre ("septiembre", "SEPTIEMBRE"). Detalle: "1 promociones encontradas" sin singular. |
+| J06, J08 | ✅ | El filtro ya no ofrece "Finalizada" (D3a): Todos / Planificada / En curso / Cancelada. Las finalizadas se consultan en Archivo (ver abajo). |
+| J07 | ✅ | "Limpiar filtros" (barra y estado vacío) resetea búsqueda y estado. El select no tiene "x", pero ofrece "Todos los estados". |
+| J09 | ✅ | 280 muestra 3 (E2E-ProfA2, E2E-ProfDoble, E2E-ProfConB) y 281 muestra 1; la consulta cuenta `active` + `completed` y descarta personas archivadas (D9, `fix-327-m`). |
+| J10 | ❌ | 375 / 768 / 1024 px y con un drawer abierto: tarjetas, sin scroll horizontal del documento ✅. **A 1280×800 la tabla sí se muestra pero no cabe:** el contenedor mide 888 px y la tabla 947 → scroll horizontal dentro de la card, la columna "Acciones" queda cortada ("ACC") y el botón **Editar no se ve** sin desplazar. Además los 4 badges de curso se apilan en vertical y cada fila mide ~120 px (se ven 2,5 filas). |
+| J11 | ✅ por regresión | Cubierto por `fix-338-m` (F07). |
+
+**K — Crear promoción** (admin; promoción de prueba Nº 9001, lunes 30-11-2026)
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| K01 | ✅ | 8 lunes desde hoy; los que ya tienen promoción (19-10, 02-11) deshabilitados (D6). Ya no hay "sugeridos". |
+| K02 | ✅ por decisión | D6: cualquier lunes libre. ⚠️ El recuadro "Reglas de negocio" del drawer todavía dice "Inicio solo en lunes, **cada 2 semanas**". |
+| K03 | ✅ | Nombre automático "Promoción 283 (12 de Octubre 2026)"; término "Calculando…" → fecha. |
+| K04 | ❌ | La fecha de término se extiende bien dentro del mismo año (12-10 → 17-11; 26-10 → 30-11; 09-11 → 14-12) y las sesiones de los feriados quedan `cancelled`. **Pero no se consideran los feriados del año siguiente:** la promoción del 30-11-2026 termina el 05-01-2027 (debía ser el 06-01) y su sesión del **01-01-2027 queda `scheduled`**. Causa: `fetchHolidaysForYears` solo pide el año siguiente si la promoción parte en diciembre (`promociones.facade.ts:454`), y la edge function del cron tiene la misma condición (`_shared/holidays.ts:62`) → **le va a pasar a la automática 284 (30-11-2026)**. No se vio el toast "Se marcaron N feriado(s)". |
+| K05 | ✅ parcial | En esta máquina `apis.digital.gob.cl` no resuelve (6 errores en consola): entró el respaldo `api.boostr.cl` y las fechas salieron bien. No se probó con las dos caídas. |
+| K06 | ✅ | 26-10 → 09-11 → 30-11 seguidos: queda la fecha de término del último. |
+| K07 | ✅ | Sin fecha, "Crear promoción" deshabilitado. También con número vacío ("El número es obligatorio"), letras, negativo o decimal ("Debe ser solo números"). ⚠️ Acepta `0`. |
+| K08 | ✅ parcial | A2 ofrece solo sus 2 relatores; se asignaron ambos y quedaron guardados. No se probó quitar con la "x". |
+| K09 | ✅ | Toast "Promoción creada correctamente"; aparece Planificada con número 9001, 4 cursos `9001.2…9001.5` (25 c/u) y 32 sesiones teóricas + 32 prácticas por curso, sin domingos. Un solo INSERT de promoción (el botón se deshabilita al primer clic → K11 ✅). No crea `class_book` (las automáticas sí) → S8, bloque 4. |
+| K10, L08 | ✅ | Número repetido (280) al crear y (281) al editar: toast "El número 280 ya lo usa otra promoción. Elige otro."; no se guarda. El formulario no lo avisa antes de enviar. |
+| K12 | — | No ejecutado (S20, requiere cortar la red a mitad). |
+| K13 | ✅ | Cancelar cierra el drawer y no crea nada. |
+| K14 | ✅ | secretariaB no tiene "Programar Promoción" (D5). |
+
+**L — Ver, editar y cambiar estado**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| L01 | ✅ | 280: datos, "Día de clase 2 de 30", alumnos por categoría (A2 2/25, A3 1/25), cursos con "Sin relator asignado". |
+| L02 | ✅ | Alumnos de A2: nombre, RUT y "Activo"; curso vacío: "Sin alumnos inscritos en este curso". |
+| L03 | ✅ | "Editar promoción" abre el editor apilado con nombre y número precargados. |
+| L04 | ✅ con observaciones | 9001 → 9002: se guarda y los cursos pasan a `9002.2…9002.5`. ⚠️ **El nombre no sigue al número:** queda "Promoción 9001 (30 de Noviembre 2026)" con número 9002. ⚠️ **Doble clic en "Guardar cambios" guarda dos veces** (2 toasts "Promoción actualizada correctamente"); crear sí está protegido. |
+| L05, L06, L07 | ✅ | Número con letras: mensaje + botón deshabilitado, también si además cambió el nombre (S7 corregido). Nombre vacío o solo espacios: botón deshabilitado (sin mensaje). |
+| L09 | ✅ | Planificada futura: solo Planificada / Cancelada + "Podrás cambiarla a En curso a partir del 30-11-2026". |
+| L10 | — | No hay una planificada con inicio hoy o pasado. |
+| L11 | ✅ | En curso → Finalizada (admin): modal "3 alumnos con matrícula activa pasarán a completado… no se puede deshacer desde la app" (D3b, `fix-324-m`). Se canceló; 280 sigue `in_progress`. Probado con las escrituras bloqueadas en el navegador. |
+| L12 | ✅ | 280 con alumnos: "Cancelada (tiene 3 alumnos activos)" deshabilitada (D4, `fix-325-m`). Sin alumnos (la de prueba): se cancela con el aviso "acción irreversible", **sin modal**; los 4 cursos pasan a `cancelled`. |
+| L13 | ✅ | Cancelada: el select solo ofrece "Cancelada". |
+| L14 | ✅ | Fechas no editables. |
+| D5 | ✅ | secretariaB edita nombre y número; su select de estado solo ofrece el estado actual (no finaliza ni cancela). |
+
+**M — Cadencia automática** (la función solo corre con `service_role`: M05–M09 no se ejecutan, se leen)
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| M01 | ✅ | 3 en curso (278–280) y 2 planificadas (281, 282). |
+| M02, M04 | ✅ | 281 = 19-10, 282 = 02-11 (14 días, lunes), números consecutivos, cursos `N.2…N.5`, un `class_book` por curso con sede 2. Nombre "Promoción N (D de Mes AAAA)", igual que las manuales desde `fix-323-m`. |
+| M03, M05, M07, M09 | — | Cubiertos por `fix-322-m` (test SQL); no se re-ejecutan. |
+| M06 | ✅ regresión | `fix-043-i` (bloque 1). |
+| M08 | ❌ por lectura | El cron ya no falla con un lunes ocupado, pero **una manual puesta en un lunes de la cadencia más adelante hace que se salte los intermedios:** la próxima fecha es "la última de la cadencia + 14" (`20261005150000_fix323…sql:57-62`). Con una manual en el 30-11, la siguiente automática sería el 14-12 y el 16-11 no se crea nunca. Contradice D6 ("la cadencia no debe correrse por una manual"). |
+| M08 (número) | ⚠️ decisión | El número de la próxima automática es "el mayor existente + 1" (`:71-74`), y el drawer sugiere lo mismo: tras la 9002 de prueba sugiere **9003**. Un número mal tipeado en una manual corre toda la numeración siguiente. |
+
+**N — Matrícula tardía y convalidaciones**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| N01, N06 | ✅ | Paso 2 del wizard (secretariaB con A5 y admin con A2): ofrece 278, 279, 280, 281 y 282 con su cupo ("280.2 · 2 / 25"); la cancelada de prueba y las finalizadas no salen. Detalle: las promociones salen **sin orden** (280, 282, 281, 278, 279). |
+| N02 | ✅ | Admin, A2 en la 280 (empezó hace 1 día): pasa a Documentos sin aviso. |
+| N03 | ✅ | secretariaB con la 279: modal "Matrícula tardía · Esta promoción comenzó hace 15 días…"; "Cancelar" deja en el paso 2 sin asignar; "Sí, matricular" continúa. Admin con la 278: mismo modal ("hace 29 días"). Al volver atrás y avanzar de nuevo, el aviso se repite. |
+| N04, B09 | ✅ | secretariaB matriculó a E2E-ProfConv en A5 + convalidación A3 (279.5), pago pendiente: Nº **0096** (el correlativo que tocaba), `license_validations` con `convalidated_license = A3`. Aparece primero en la Base ("Promoción 279 · A5", badge "Convalida A3" con tooltip, 65 matrículas) y en "Ver promoción" 279 → A5 1/25 "Activo". El Libro (A5 y Conv. A-3) se revisa en el bloque 4. |
+| B07 | ✅ | E2E-ProfBorrador (admin, wizard dejado en el paso 3): matrícula `draft` sin número, no aparece en la Base ni suma al cupo de 280.2. |
+| N05 | — | No hay un curso con 25 alumnos. Observación: el cupo del wizard cuenta toda matrícula no cancelada ni borrador, también de personas archivadas (`enrollment.facade.ts:937-941`), distinto de "Ver promoción" (D9). |
+
+**Archivo (D3a)**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| Lista | ✅ | Admin y secretariaB: selector con buscador y las 7 finalizadas (275–277, 100–103); "No se encontraron resultados" si no hay coincidencias. |
+| Detalle | ✅ | 277: mismo contenido que "Ver promoción" (información general, alumnos por categoría, cursos, relatores) + aviso "Promoción completada"; el alumno sale "Completado". Sin botón de editar ni enlaces a módulos bloqueados. Sin sección académica (oculta). |
+| Visual | ✅ | 1440 / 1280 / 375 px sin scroll horizontal; el documento no scrollea en escritorio. Detalles: "1 alumnos inscritos" sin singular; placeholder "Buscar promoción (ej. Clase 123...)". |
+| S23 | — | Solo la sede 2 tiene promociones; el filtro por sede lo cubre `fix-326-m`. |
+
+**Datos de prueba que quedaron en la BD:**
+
+- **Promoción de prueba (id 36, número 9002, cancelada, 30-11-2026): ELIMINADA** el 2026-10-06
+  desde la app con "Eliminar promoción" (`fix-348-m`). El lunes 30-11 y la numeración volvieron a
+  la normalidad (próximo número 283). Ya no hay ninguna cancelada en la BD: O02 (una cancelada no
+  sale en el Libro) queda sin dato y sin sentido, porque el estado dejó de usarse.
+- **E2E-ProfConv Prueba Profesional** — user 7639 / student 7353, RUT 99.412.301-7, matrícula 7003
+  · Nº 0096 · A5 + conv. A3 en 279.5, `active`, saldo 180.000, con foto, hoja de vida y contrato de
+  prueba. Sirve para los libros A5 y Conv. A-3 del bloque 4.
+- **E2E-ProfBorrador Prueba Profesional** — user 7640 / student 7354, RUT 99.412.302-5, matrícula
+  7004 `draft` sin número, A2 en 280.2.
 
 ### Bloque 4 — O–R: Libro de clases
 
@@ -323,6 +416,27 @@ Del bloque 2 (2026-10-06), uno por causa raíz. **Por abrir** (aún sin carpeta)
 | Base Profesional 375 px: la lista tapa los KPIs del hero (previo) | sin track — bloque 5 | ⏳ |
 | Comunicación 375 px: pestañas sin texto (previo) | sin track — bloque 5 | ⏳ |
 | D17 — la ficha deja cambiar la sede del topbar (reportado por Matías) | `fix-342-m-ficha-bloquea-sede-del-alumno` | ✅ cerrado 2026-10-06 |
+
+Del bloque 3 (2026-10-06), uno por causa raíz:
+
+| Caso | Track | Estado |
+|---|---|---|
+| K04 — feriados del año siguiente ignorados (drawer y cron; afecta a la 284). Segunda causa: el respaldo `boostr` ignora el año pedido | `fix-343-m-feriados-del-ano-siguiente-en-promociones` | ✅ cerrado 2026-10-06 (función desplegada por Matías) |
+| M08 — una manual en un lunes futuro de la cadencia hace que el cron se salte los intermedios | `fix-344-m-el-cron-no-salta-lunes-de-la-cadencia` | ✅ cerrado 2026-10-06 (migración aplicada por Matías; test SQL TODO OK) |
+| J10 — a 1280 px la tabla de Promociones no cabe y el botón Editar queda fuera de la vista | `fix-345-m-tabla-de-promociones-cabe-en-notebook` | ✅ cerrado 2026-10-06 |
+| L04 + D18 — doble guardado al editar; el nombre no sigue al número | `fix-346-m-editar-promocion-guarda-una-vez-y-el-nombre-sigue-al-numero` | ✅ cerrado 2026-10-06 |
+| M08 (número) + K07 + D19 — número de una manual sin tope; acepta `0` | `fix-347-m-numero-de-promocion-acotado` | ✅ cerrado 2026-10-06 (tope: último usado + 10) |
+| L12 + D20 — cancelar deja ocupados el lunes y el número | `fix-348-m-eliminar-promocion-en-vez-de-cancelar` | ✅ cerrado 2026-10-06 (migración aplicada por Matías; test SQL TODO OK; borrado real probado) |
+| Textos menores y orden de promociones en la matrícula | `hotfix-145-m-textos-menores-de-promociones-y-archivo` | ✅ cerrado 2026-10-06 (el formato de fecha `/` vs `-` quedó fuera: es de toda la app) |
+
+**Decisiones tomadas en el bloque 3 (Matías, 2026-10-06):**
+
+| # | Caso | Pregunta | Decisión |
+|---|---|---|---|
+| D18 | L04 | Al cambiar el número, ¿el nombre "Promoción N (fecha)" se actualiza solo? | ✅ **Sí.** Va junto con el doble guardado en `fix-346-m`. |
+| D19 | M08 (número) | ¿Se limita el número de una manual para que un error de tipeo no corra la numeración automática? | ✅ **Sí, buena idea** (y no aceptar `0`). Track propio: `fix-347-m`. Falta definir el rango exacto al abrirlo. |
+| D20 | L12 | Una cancelada sigue ocupando su lunes y su número: ¿se liberan? | ✅ **"Cancelada" se reemplaza por "Eliminar"** (`fix-348-m`): solo admin, solo promociones planificadas (o canceladas históricas) sin alumnos; se borra de verdad, con confirmación, y libera lunes y número. Desaparecen la opción, el KPI y el filtro "Cancelada". La secretaria ve un aviso para pedírselo al administrador. D5 se reconfirma: la secretaria no crea promociones (se crean solas con el cron). |
+| — | Textos menores | "cada 2 semanas" en las reglas del drawer (K02), singulares ("1 promociones", "1 alumnos"), fecha `/` vs `-`, placeholder de Archivo, promociones sin orden en el paso 2 del wizard (N01) | ✅ **Un hotfix.** |
 
 ## Test de regresión
 
