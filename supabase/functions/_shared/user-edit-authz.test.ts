@@ -5,7 +5,9 @@
 
 import { assertEquals } from 'jsr:@std/assert';
 import {
+  authorizeInstructorCreate,
   authorizeInstructorEdit,
+  authorizeInstructorReinvite,
   authorizeStudentProfileEdit,
   type EditCaller,
 } from './user-edit-authz.ts';
@@ -105,4 +107,57 @@ Deno.test('instructor: admin y multi-sede pueden cambiar la sede', () => {
 
 Deno.test('instructor: branchId omitido (undefined) = no cambia la sede', () => {
   assertEquals(authorizeInstructorEdit(sec1, instr1, 50, undefined).ok, true);
+});
+
+// ── fix-198-b: crear instructor y reenviar invitación respetan la sede ──────────
+
+Deno.test('crear instructor: secretaria en su propia sede → ok', () => {
+  assertEquals(authorizeInstructorCreate(sec1, 1).ok, true);
+});
+
+Deno.test('crear instructor: secretaria sin grant en otra sede → 403', () => {
+  assertEquals(authorizeInstructorCreate(sec1, 2).status, 403);
+});
+
+Deno.test('crear instructor: secretaria sin sede asignada → 403', () => {
+  assertEquals(authorizeInstructorCreate({ ...sec1, branchId: null }, 1).status, 403);
+});
+
+Deno.test('crear instructor: admin y multi-sede en cualquier sede → ok', () => {
+  assertEquals(authorizeInstructorCreate(admin, 2).ok, true);
+  assertEquals(authorizeInstructorCreate(secMulti, 2).ok, true);
+});
+
+Deno.test('crear instructor: otro rol → 403', () => {
+  assertEquals(authorizeInstructorCreate({ ...sec1, role: 'instructor' }, 1).status, 403);
+});
+
+const reinv1 = { role: 'instructor', branchId: 1, bothBranches: false };
+
+Deno.test('reenviar invitación: secretaria, instructor de su sede → ok', () => {
+  assertEquals(authorizeInstructorReinvite(sec1, reinv1).ok, true);
+});
+
+Deno.test('reenviar invitación: secretaria, instructor de otra sede → 403', () => {
+  assertEquals(authorizeInstructorReinvite(sec1, { ...reinv1, branchId: 2 }).status, 403);
+});
+
+Deno.test('reenviar invitación: secretaria, instructor "ambas sedes" de otra sede → ok', () => {
+  assertEquals(
+    authorizeInstructorReinvite(sec1, { ...reinv1, branchId: 2, bothBranches: true }).ok,
+    true,
+  );
+});
+
+Deno.test('reenviar invitación: el objetivo no es instructor → 403', () => {
+  assertEquals(authorizeInstructorReinvite(admin, { ...reinv1, role: 'admin' }).status, 403);
+});
+
+Deno.test('reenviar invitación: admin y multi-sede, cualquier sede → ok', () => {
+  assertEquals(authorizeInstructorReinvite(admin, { ...reinv1, branchId: 2 }).ok, true);
+  assertEquals(authorizeInstructorReinvite(secMulti, { ...reinv1, branchId: 2 }).ok, true);
+});
+
+Deno.test('reenviar invitación: objetivo inexistente → 404', () => {
+  assertEquals(authorizeInstructorReinvite(sec1, null).status, 404);
 });
