@@ -168,12 +168,33 @@ async function leerIndicador(page: Page, re: RegExp): Promise<number | null> {
   return m ? Number(m[1]) : null;
 }
 
+/**
+ * Espera a que no quede ninguna consulta a PostgREST en vuelo durante 1,5 s seguidos. Un tiempo
+ * fijo no sirve: con la suite en paralelo la BD responde en 5–10 s y se leía la pantalla a mitad
+ * de carga (falsos ❌ en pantallas que sí tienen guard).
+ */
+async function esperarRedQuieta(inflight: Set<unknown>): Promise<void> {
+  let quietaDesde = Date.now();
+  const limite = Date.now() + 90_000;
+  while (Date.now() < limite) {
+    if (inflight.size > 0) quietaDesde = Date.now();
+    else if (Date.now() - quietaDesde >= 1_500) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error(`[D06] ${inflight.size} consultas siguen en vuelo tras 90 s`);
+}
+
 test.describe('D06. Cambio rápido de sede', () => {
   for (const { path, indicador } of D06_SCREENS) {
     test(`D06: ${path} — A → B → A rápido termina mostrando A`, async ({ pageAs }) => {
-      test.setTimeout(150_000);
+      test.setTimeout(240_000);
       const page = await pageAs('admin');
       let fase: 'normal' | 'B' | 'A' = 'normal';
+      const inflight = new Set<unknown>();
+      const esRest = (url: string) => url.includes('/rest/v1/');
+      page.on('request', (r) => esRest(r.url()) && inflight.add(r));
+      page.on('requestfinished', (r) => inflight.delete(r));
+      page.on('requestfailed', (r) => inflight.delete(r));
       await page.route('**/rest/v1/**', async (route) => {
         const delay = fase === 'B' ? 4_000 : fase === 'A' ? 300 : 0;
         if (delay) await new Promise((r) => setTimeout(r, delay));
@@ -185,13 +206,12 @@ test.describe('D06. Cambio rápido de sede', () => {
 
       // Referencias estables de A y B, sin carrera.
       await pickBranch(page, OPT_B);
-      await expect.poll(() => leerIndicador(page, indicador), { timeout: 30_000 }).not.toBeNull();
-      await page.waitForTimeout(3_000);
+      await esperarRedQuieta(inflight);
       const valorB = await leerIndicador(page, indicador);
       await pickBranch(page, OPT_A);
-      await expect.poll(() => leerIndicador(page, indicador), { timeout: 30_000 }).not.toBe(valorB);
-      await page.waitForTimeout(3_000);
+      await esperarRedQuieta(inflight);
       const valorA = await leerIndicador(page, indicador);
+      expect(valorA, 'el indicador de A debe verse').not.toBeNull();
       expect(valorA, 'A y B deben diferir para que el caso discrimine').not.toBe(valorB);
 
       // Carrera: B (lenta) e inmediatamente A (rápida).
@@ -201,8 +221,8 @@ test.describe('D06. Cambio rápido de sede', () => {
       fase = 'A';
       await pickBranch(page, OPT_A);
 
-      // Esperar a que lleguen TODAS las respuestas (las de B tardan 4 s) y un margen.
-      await page.waitForTimeout(8_000);
+      // Esperar a que lleguen TODAS las respuestas (las de B, demoradas, al final).
+      await esperarRedQuieta(inflight);
       fase = 'normal';
       expect(await leerIndicador(page, indicador)).toBe(valorA);
       await expect(page.locator(TRIGGER)).toHaveAttribute('aria-label', /Autoescuela Chillán/);

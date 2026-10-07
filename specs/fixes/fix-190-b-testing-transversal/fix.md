@@ -122,3 +122,19 @@ fecha propuesta (sin guardar nada).
 |---|---|---|---|
 | 15:00 (control) | 06/10/2026 | 06/10/2026 | ✅ |
 | 23:30 | 06/10/2026 | **07/10/2026** | ❌ confirma **ASG-i-054** (de Matías, pendiente) en vivo → `knownBug` |
+
+## D06 — Cambio rápido de sede (`transversal-shell.spec.ts`, 2026-10-06)
+
+Carrera forzada: las consultas pedidas con la sede B tardan 4 s y las de la A final 0,3 s; se lee
+la pantalla recién cuando no queda ninguna consulta a PostgREST en vuelo (con un tiempo fijo se
+leía a mitad de carga). `--workers=1 --repeat-each=2`, build de producción.
+
+| Pantalla | Guard (spec 0005-m) | Res. |
+|---|---|---|
+| Dashboard | ✅ `createRequestGuard` | ✅ 2/2 |
+| Ex-Alumnos | ❌ | ❌ queda en "A" mostrando los egresados de B (8 en vez de 9) → **`fix-195-b`** (2/2 con el fix) |
+| Pagos | ❌ | ❌ "con deuda" 43 (B) en vez de 26 (A) → **`fix-195-b`** |
+| Certificación B | ❌ | ❌ "Pendientes" 71 (B) en vez de 76 (A) → **`fix-195-b`** |
+
+Grep: ~19 facades branch-scoped más siguen sin guard (residuo de ASG-b-064 / spec 0005-m, que
+cubrió una primera pasada) → asignación nueva para confirmarlos con este test y corregirlos.
