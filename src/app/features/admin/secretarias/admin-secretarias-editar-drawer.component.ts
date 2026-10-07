@@ -184,7 +184,9 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
 
@@ -226,8 +228,10 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
                   <span class="field-error">Ingresa un correo electrónico válido.</span>
                 }
                 @if (email() !== currentEmail && emailValido()) {
-                  <span class="text-xs" style="color: var(--state-warning, #f59e0b);">
-                    Se enviará confirmación al nuevo correo. El cambio es inmediato.
+                  <!-- hotfix-068-b (S13): el cambio vía API de admin es directo, sin confirmación. -->
+                  <span class="text-xs text-warning">
+                    El cambio es inmediato: al guardar, la secretaria ingresa con este correo. No se
+                    envía correo de confirmación.
                   </span>
                 }
               </div>
