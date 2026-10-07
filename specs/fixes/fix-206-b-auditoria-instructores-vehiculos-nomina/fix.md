@@ -1,7 +1,7 @@
 # Fix: Cambios en instructores, asignación de vehículos y valor hora no quedan en la auditoría
 > id: fix-206-b-auditoria-instructores-vehiculos-nomina
 > refs: ASG-i-034 (sospecha S18, confirmada en fix-197-b) — decisión del owner 2026-10-07: auditar todo
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -39,5 +39,5 @@ Ninguno de una spec previa. ACs propios:
 - [x] Migración escrita; `log_change()`/`audit_humanize_column()` comparadas por diff contra producción: idénticas salvo los cambios declarados.
 - [x] Test SQL corrido ANTES de aplicar: confirma el bug (0 triggers, nada auditado) y que no deja efectos (`audit_log` no creció).
 - [x] vitest `auditoria.facade.spec.ts` + `dashboard.facade.spec.ts` 25/25 (rojo → verde para los módulos nuevos); `ng build` ✓.
-- [ ] Aplicar la migración en producción — **esperando aprobación del owner**.
-- [ ] Correr el test SQL después de aplicar (todo "ok") y abrir el PR.
+- [x] Migración aplicada en producción (aprobada por el owner, 2026-10-07) y registrada en `supabase_migrations.schema_migrations`.
+- [x] Test SQL después de aplicar: 7/7 "ok" (3 triggers; instructor, asignación y valor hora con sede y texto legible; `vehicles` sin cambios; `audit_log` no creció). Datos de prueba intactos (licencia, asignación abierta, 5000/h, modelo).
