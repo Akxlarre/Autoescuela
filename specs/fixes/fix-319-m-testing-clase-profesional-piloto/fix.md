@@ -371,7 +371,87 @@ verificaciones de BD son lecturas por API con la sesión del usuario.
 
 ### Bloque 4 — O–R: Libro de clases
 
-_Pendiente._
+Ejecutado el 2026-10-06 en navegador (Playwright MCP, `ng serve` local, BD de desarrollo) con
+admin y secretariaB. Datos: 280 (A2 con E2E-ProfA2 y E2E-ProfDoble; A3 con E2E-ProfConB), 279
+(A5 + Conv. A-3 con E2E-ProfConv, que ya tenía un código SENCE guardado en Conv. A-3) y 277
+(finalizada, 1 alumno completado). Se exportaron 3 PDF (280 Conv. A-4, 279 Conv. A-3, 280 A2).
+Al terminar el código SENCE de 280 A2 quedó vacío, como estaba.
+
+**O — Carga y selectores**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| O01 | ✅ | Admin y secretariaB: abre en la 280 (la en curso más nueva), curso A2, pestaña Cabecera. Consola sin errores. |
+| O02 | ✅ | 12 promociones: planificadas (282, 281), en curso (280–278) y finalizadas (277–275, 103–100). No hay canceladas en la BD (`fix-348-m`). |
+| O03, R09 | — | Ya no existen promociones sin número (`fix-323-m`). Detalle: el selector muestra el número dos veces, "Promoción 280 (5 de Octubre 2026) (280)". |
+| O04 | ✅ | A2, A3, A4, A5, Conv. A-3 y Conv. A-4. |
+| O05 | ✅ | Cambiar de promoción vuelve al primer curso (A2). Al cambiar de curso la pestaña activa se conserva. |
+| O06 | ✅ | A3 → A4 → A5 seguidos: queda A5 con su ID `279.5` y sus datos. |
+| O07 | — | No aplica: una sola sede con Clase Profesional (S9 queda teórica). |
+| O08 | ✅ | Salir y volver: carga desde cero (280 · A2 · Cabecera). |
+| O09 | — | No hay promociones sin cursos ni sin sesiones. |
+
+**P — Secciones en pantalla**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| P01 | ✅ | Autoescuela, curso, ID (`279.5`), promoción, fechas, dirección y horario. |
+| P02 | ✅ | 7 módulos con "—" (sin relatores); Conv. A-3: módulos 3, 4, 5, 6, 7; Conv. A-4: 2, 4, 5, 6, 7. |
+| P03 | ✅ | 280 A2: E2E-ProfA2 y E2E-ProfDoble en orden, con N°, RUN, teléfono y licencia. Detalle: "Lista de Clase (1 alumnos)" sin singular (también en Resumen). |
+| P04, G09 | ✅ | D9: el completado de la 277 sigue en su libro. E2E-ProfConB **archivado** sigue en el libro de 280 A3, y "Ver promoción" 280 baja a 2/100 (A3 0/25). Se restauró. |
+| P05 | ✅ | 279 A5: 6 semanas lun–sáb, "Semana 1 de 6", celdas "—". |
+| P06, R04 | ⚠️ decisión | Pantalla: 30 filas "Clase Teórica · 5 · —" (salta el feriado 12-10). PDF: la malla real, con asignatura, materias y horas por bloque. Además el PDF trae **nombres de profesor fijos de la malla** (Alberto Ormeño, Jorge Pérez, Pablo Vargas, Horacio Labbé) aunque la promoción no tiene relatores asignados y la pantalla muestra "—". |
+| P07 | ✅ | Mód. 1–7 (Conv. A-3: 3–7; Conv. A-4: 2, 4–7) y notas "—". |
+| P08 | ✅ | Un alumno por fila, "—". |
+| P09, N04 | ✅ | 279 Conv. A-3: solo E2E-ProfConv, licencia A3, ID `279.6`, 16 clases (07-10 → 26-10). Conv. A-4: 13 clases. En la 280 la pantalla y el PDF coinciden (26-10 → 10-11). |
+| P10 | ✅ | Conv. A-4 sin alumnos: "Sin alumnos inscritos" / "Sin datos de asistencia", sin errores. |
+| P11 | — | No hay dos alumnos con el mismo nombre. |
+| P12 | ✅ | 1440 y 1280: el documento no scrollea. 768 y 375: sin scroll horizontal; las pestañas pasan a un desplegable. |
+
+**Q — Código SENCE**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| Q01, Q02, Q03 | ✅ | 280 A2: al escribir se habilita "Guardar"; toast "Datos del libro guardados" y "Última modificación: PEPITO ADMI · 06-10-2026, 11:45 p. m."; persiste tras recargar. |
+| Q04 | ✅ | 279: Conv. A-3 tiene `17466347457` y A5 está vacío. |
+| Q05 | ❌ | 280 Conv. A-4 (libro sin fila): exportar el PDF y, sin recargar, guardar un código → toast **"Error al guardar"**; `POST class_book` responde 409 `class_book_promotion_course_conv_key`. S8 confirmada. En un libro que ya tenía fila (280 A2) no pasa. |
+| Q06 | ⚠️ decisión | Se puede guardar vacío (queda auditado quién y cuándo). |
+| Q07 | — | secretariaB guarda sin problema ("Última modificación: Maria Torres…"). El caso del libro `closed` no aplica: ningún flujo cierra un libro (bloque 1). |
+| Q08 | ❌ | Doble clic en "Guardar": 2 `PATCH class_book`. |
+
+**R — PDF**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| R01 | ✅ | "Generando PDF..." → descarga en ~6 s, toast "PDF generado correctamente"; `LibroDeClases_Promoción 280 5 de Octubre 2026_Curso Convalidación Clase A-4.pdf` (52 KB). También como secretaria. |
+| R02 | ✅ parcial | Estructura revisada en los 3 PDF: portada, reglamento (30 artículos), antecedentes, firma diaria por semana (7 días, domingos y feriados marcados), recuperación de feriados, calendario con la malla. **No se comparó contra el libro físico página por página.** |
+| R03 | ✅ | Portada "CURSO CONVALIDACIÓN CLASE A-3 / A-4", ID `279.6` / `280.7`. |
+| R07 | ✅ | Tildes y ñ correctas. |
+| R08 | ✅ | El código SENCE guardado sale en la portada (279 Conv. A-3); sin código, "—". |
+| R10 | ✅ | Con la función abortada: toast "Error al generar PDF: Ha ocurrido un error inesperado…" y el botón vuelve a "Exportar PDF". |
+| R05, R06, R12 | — | Sin datos (curso con más de 25 alumnos, curso con pocas sesiones, libro cerrado). |
+| R11 | ✅ regresión | Bloque 1 (`fix-043-i`). |
+
+**Segunda pasada del bloque 4 (2026-10-06/07), con datos temporales creados y borrados en la misma
+sesión** (autorizado por Matías): 27 alumnos en 282 A2 —dos con el mismo nombre, apellidos con ñ y
+tilde—, y una promoción 283 primero sin cursos y después con un curso A2 de solo 5 sesiones activas.
+Al terminar no queda nada: los 27 alumnos se borraron por API (la serie Profesional vuelve a dar el
+`0097`) y la 283 se eliminó desde la app.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| R02 | ✅ | PDF de 280 A2 contra `libroclases.pdf` (el libro físico A-2 que entregó el dueño, 28 páginas), comparando el texto extraído de cada página. **Calendario idéntico:** 65 bloques, 150 horas, la misma secuencia de horas bloque a bloque y los mismos conteos de asignatura y de profesor (Ormeño 30, Pérez 17, Labbé 10, Vargas 8) → los nombres de profesor fijos vienen del libro real. Mismas secciones y encabezados en portada, antecedentes, firma diaria, recuperación de feriados, evaluaciones (mismo orden de módulos) y resumen. Diferencias, todas ya previstas en `0017-m`: el libro real lista además los días libres en el calendario (71 filas) y pone fechas sobre las columnas de evaluaciones. Única diferencia no prevista: la portada dice "CURSO PROFESIONAL CLASE **A2**" y el libro real "CLASE **A-2**" (las convalidaciones sí llevan guion). No se comparó la geometría (anchos de columna). |
+| R05 | ✅ | 27 alumnos: las tablas del PDF crecen y caben en una página cada una, sin cortar filas. |
+| R07 | ✅ | "Ñandú", "Zúñiga" se imprimen bien. |
+| P03 (orden) | ❌ | **La pantalla y el PDF ordenan distinto.** Pantalla: por apellido (Ñandú… antes que Zúñiga…). PDF: en el orden en que se matricularon (Zúñiga Tmp01, Ñandú Tmp02, Zúñiga Tmp03…). Por D21 manda el PDF, pero falta saber cuál de los dos órdenes es el del libro real. |
+| P11 | ✅ | Dos alumnos con el mismo nombre: sin errores en consola en Lista, Firma, Evaluaciones ni Resumen. |
+| O09 | ✅ | Promoción sin cursos: el selector de curso queda en "Seleccionar curso" y la pantalla pide elegir uno; sin errores. |
+| R06 | ✅ | Conv. A-4 con 5 sesiones activas (necesita 13): el PDF pone "—" en los bloques sin fecha y cierra con "Aviso: la malla tiene 13 bloques de clase pero el curso solo tiene 5 sesiones activas programadas…". No inventa fechas. La app solo dice "PDF generado correctamente". |
+| N05 | ❌ | **Un curso lleno se puede seguir eligiendo.** Con 27 alumnos en 282.2 (cupo 25), el paso 2 de la matrícula lo muestra "27 / 25 cupos · DISPONIBLE" y deja continuar. Promociones muestra "27 / 25" en el tooltip y en "Ver promoción", sin destacarlo. |
+
+**I06–I08 (pendientes del bloque 2):** ✅ — una promoción se crea con o sin relatores; "Ver
+promoción" muestra "Sin relator asignado" sin enlace a Relatores; Firma Diaria, Evaluaciones y
+Resumen del Libro salen vacías por diseño.
 
 ### Bloque 5 — T–U: sedes, roles, tiempo real, visual
 
@@ -437,6 +517,27 @@ Del bloque 3 (2026-10-06), uno por causa raíz:
 | D19 | M08 (número) | ¿Se limita el número de una manual para que un error de tipeo no corra la numeración automática? | ✅ **Sí, buena idea** (y no aceptar `0`). Track propio: `fix-347-m`. Falta definir el rango exacto al abrirlo. |
 | D20 | L12 | Una cancelada sigue ocupando su lunes y su número: ¿se liberan? | ✅ **"Cancelada" se reemplaza por "Eliminar"** (`fix-348-m`): solo admin, solo promociones planificadas (o canceladas históricas) sin alumnos; se borra de verdad, con confirmación, y libera lunes y número. Desaparecen la opción, el KPI y el filtro "Cancelada". La secretaria ve un aviso para pedírselo al administrador. D5 se reconfirma: la secretaria no crea promociones (se crean solas con el cron). |
 | — | Textos menores | "cada 2 semanas" en las reglas del drawer (K02), singulares ("1 promociones", "1 alumnos"), fecha `/` vs `-`, placeholder de Archivo, promociones sin orden en el paso 2 del wizard (N01) | ✅ **Un hotfix.** |
+
+Del bloque 4 (2026-10-06). Todos cerrados el 2026-10-07, con la función
+`generate-class-book-pdf` desplegada por Matías y revisados en navegador:
+
+| Caso | Track | Estado |
+|---|---|---|
+| Q05 + S8 — guardar el código SENCE falla después de exportar el PDF de un libro sin fila | `fix-349-m` | ✅ cerrado, revisado en navegador |
+| Q08 — doble clic en "Guardar" del código SENCE guarda dos veces | `hotfix-146-m` | ✅ revisado en navegador |
+| Textos: "1 alumnos" en Lista y Resumen; el selector repite el número de la promoción | `hotfix-146-m` | ✅ revisado en navegador |
+| Texto: portada "CLASE A2" en vez de "A-2" | `hotfix-146-m` | ✅ cerrado, revisado en navegador (pantalla = PDF) |
+| P06 + R04 + D21 — el calendario en pantalla no muestra lo mismo que el PDF | `fix-350-m` | ✅ cerrado, revisado en navegador (pantalla = PDF) |
+| N05 — un curso lleno se puede seguir eligiendo en la matrícula | `fix-351-m` | ✅ cerrado, revisado en navegador |
+| P03 + D23 — la lista de alumnos se ordena distinto en pantalla y en el PDF | `fix-352-m` | ✅ cerrado, revisado en navegador (pantalla = PDF) |
+
+**Decisiones tomadas en el bloque 4 (Matías, 2026-10-06):**
+
+| # | Caso | Pregunta | Decisión |
+|---|---|---|---|
+| D21 | P06 / R04 | ¿El calendario en pantalla debe mostrar la malla, como el PDF? | ✅ **Sí: la pantalla muestra lo mismo que el PDF, que es el que manda.** Los nombres de profesor fijos del PDF vienen del libro real (R02). |
+| D22 | Q06 | ¿Se permite dejar vacío el código SENCE? | ✅ **Sí, por el momento.** |
+| D23 | P03 | ¿En qué orden va la lista de alumnos: por apellido (pantalla) o por orden de matrícula (PDF)? | ✅ **Por apellido paterno, en pantalla y en el PDF** (Matías, 2026-10-07). En el libro real van por orden de llegada porque se anotan a mano; siendo un software, se aprovecha para ordenarlos. → `fix-352-m`. |
 
 ## Test de regresión
 

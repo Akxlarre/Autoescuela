@@ -78,7 +78,8 @@ export interface SlotSelection {
 
 // ─── Promotion / Cohort (Professional only) ───
 
-export type PromotionStatus = 'open' | 'finished';
+/** `full`: el curso sigue vigente pero ya no tiene cupo (fix-351-m). */
+export type PromotionStatus = 'open' | 'full' | 'finished';
 
 export interface PromotionOption {
   id: number;

@@ -27,6 +27,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { LibroDeClasesSubnavComponent } from '@shared/components/libro-de-clases-subnav/libro-de-clases-subnav.component';
 import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
+import { promotionLabel } from '@core/utils/promotion-code.utils';
 
 @Component({
   selector: 'app-libro-de-clases',
@@ -222,7 +223,7 @@ import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
                     </p>
                     <p>
                       <span class="font-medium text-text-secondary">Promoción:</span>
-                      {{ cab.promotionName }} ({{ cab.promotionCode }})
+                      {{ promoLabel(cab.promotionName, cab.promotionCode) }}
                     </p>
                   </div>
                   <div class="space-y-2 text-sm">
@@ -338,7 +339,7 @@ import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
                 />
                 Lista de Clase
                 <span class="ml-2 text-sm font-normal text-text-muted"
-                  >({{ facade.totalAlumnos() }} alumnos)</span
+                  >({{ alumnosLabel(facade.totalAlumnos()) }})</span
                 >
               </h2>
             </div>
@@ -498,42 +499,68 @@ import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
               <h2 class="text-lg font-semibold text-text-primary">
                 <app-icon name="calendar" [size]="18" class="mr-2 inline-block align-text-bottom" />
                 Calendario de Clases
-                <span class="section-meta">{{ facade.calendario().length }} clases</span>
+                @if (!facade.isLoadingCalendario() && !facade.calendarioError()) {
+                  <span class="section-meta">{{ facade.calendario().length }} filas</span>
+                }
               </h2>
             </div>
-            <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-              <div class="overflow-x-auto">
-                <table class="ldc-table">
-                  <thead>
-                    <tr>
-                      <th class="w-12">N°</th>
-                      <th>Fecha</th>
-                      <th>Asignatura</th>
-                      <th class="w-20 text-center">Horas</th>
-                      <th>Profesor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (clase of facade.calendario(); track clase.numero) {
-                      <tr>
-                        <td class="text-center">{{ clase.numero }}</td>
-                        <td>{{ formatDate(clase.fecha) }}</td>
-                        <td>{{ clase.asignatura }}</td>
-                        <td class="text-center">{{ clase.horas }}</td>
-                        <td>{{ clase.profesor }}</td>
-                      </tr>
-                    }
-                    @if (facade.calendario().length === 0) {
-                      <tr>
-                        <td colspan="5" class="py-6 text-center text-text-muted">
-                          Sin clases programadas
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
+            <!-- fix-350-m: mismas filas que el Calendario de Clases del PDF -->
+            @if (facade.isLoadingCalendario()) {
+              <div class="flex-1 min-h-0 px-6 pb-6 flex flex-col gap-3">
+                @for (i of skeletonRows; track i) {
+                  <app-skeleton-block variant="text" width="100%" height="20px" />
+                }
               </div>
-            </div>
+            } @else if (facade.calendarioError(); as calendarioError) {
+              <div class="flex-1 flex items-center justify-center px-6 pb-6">
+                <app-empty-state
+                  icon="calendar"
+                  [message]="calendarioError"
+                  subtitle="Recarga la página para intentarlo otra vez"
+                />
+              </div>
+            } @else {
+              <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+                @if (facade.calendarioAviso(); as aviso) {
+                  <p class="mb-3 text-sm text-text-secondary" role="status">{{ aviso }}</p>
+                }
+                <div class="overflow-x-auto">
+                  <table class="ldc-table">
+                    <thead>
+                      <tr>
+                        <th class="w-12">N°</th>
+                        <th class="w-28">Fecha</th>
+                        <th>Asignatura</th>
+                        <th>Materias</th>
+                        <th class="w-20 text-center">Horas</th>
+                        <th>Profesor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (clase of facade.calendario(); track clase.numero) {
+                        <tr>
+                          <td class="text-center">{{ clase.numero }}</td>
+                          <td class="whitespace-nowrap">
+                            {{ clase.fecha ? formatDate(clase.fecha) : '—' }}
+                          </td>
+                          <td>{{ clase.asignatura }}</td>
+                          <td>{{ clase.materias }}</td>
+                          <td class="text-center whitespace-nowrap">{{ clase.horas }}</td>
+                          <td>{{ clase.profesor }}</td>
+                        </tr>
+                      }
+                      @if (facade.calendario().length === 0) {
+                        <tr>
+                          <td colspan="6" class="py-6 text-center text-text-muted">
+                            Sin clases programadas
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
           </section>
         }
 
@@ -617,7 +644,9 @@ import { CONVALIDATION_BOOKS } from '@core/utils/convalidation-book.utils';
                   class="mr-2 inline-block align-text-bottom"
                 />
                 Asistencia Clase Profesional
-                <span class="section-meta">{{ facade.resumenAsistencia().length }} alumnos</span>
+                <span class="section-meta">{{
+                  alumnosLabel(facade.resumenAsistencia().length)
+                }}</span>
               </h2>
             </div>
             <div class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
@@ -873,8 +902,18 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
     },
   ]);
 
+  /** "1 alumno" / "N alumnos" (hotfix-146-m). */
+  protected alumnosLabel(count: number): string {
+    return count === 1 ? '1 alumno' : `${count} alumnos`;
+  }
+
+  /** Nombre de la promoción con su número, sin repetirlo si el nombre ya lo trae. */
+  protected promoLabel(name: string, code: string | null): string {
+    return promotionLabel(name, code);
+  }
+
   readonly promoOptions = computed(() =>
-    this.facade.promociones().map((p) => ({ ...p, name: `${p.name} (${p.code})` })),
+    this.facade.promociones().map((p) => ({ ...p, name: promotionLabel(p.name, p.code) })),
   );
 
   /**
