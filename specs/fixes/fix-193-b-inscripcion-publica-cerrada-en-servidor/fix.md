@@ -1,7 +1,7 @@
 # Fix: La Edge Function de inscripción pública responde aunque el módulo está bloqueado
 > id: fix-193-b-inscripcion-publica-cerrada-en-servidor
 > refs: ASG-i-037 (sospecha S7, confirmada en fix-190-b)
-> status: in_progress
+> status: done
 > created: 2026-10-06
 
 ## Root Cause
@@ -36,5 +36,5 @@ Ninguno de una spec previa. ACs propios (decisión del owner 2026-10-06: cerrar,
 ## Progreso
 - [x] `deno test supabase/functions/_shared/anti-abuse.test.ts` → 15/15 (3 nuevos), 2026-10-06.
 - [x] PR #203 abierto.
-- [ ] Deploy de `public-enrollment` (espera aprobación del owner).
-- [ ] POST `load-instructors` / `check-duplicate` con la anon key → 503.
+- [x] Deploy de `public-enrollment` v70 (aprobado por el owner; Management API, `verify_jwt:false` como antes).
+- [x] POST `load-instructors` / `check-duplicate` con la anon key → 503 "La inscripción en línea no está disponible."; OPTIONS → 200.
