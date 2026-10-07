@@ -6,6 +6,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { isValidHourlyRate } from '@core/utils/hourly-rate.utils';
 
 /**
  * Drawer de edición de la tarifa por hora equivalente de instructores (spec 0014-m).
@@ -143,6 +144,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       <span>Guardar</span>
                     }
                   </button>
+                  <!-- fix-210-b (S22): la columna es entera y 0 deja la liquidación en $0. -->
+                  @if (isInvalidDraft(branch.id)) {
+                    <p
+                      class="basis-full text-right field-error"
+                      data-llm-description="aviso de tarifa por hora inválida"
+                    >
+                      Ingresa un monto entero mayor a 0.
+                    </p>
+                  }
                 </div>
               }
             </div>
@@ -183,8 +193,16 @@ export class TarifaInstructoresDrawerComponent {
     const drafts = this.drafts();
     if (!(branchId in drafts)) return false;
     const value = drafts[branchId];
-    if (value === null || value < 0) return false;
+    if (!isValidHourlyRate(value)) return false;
     return value !== this.payrollConfig.rateForBranch(branchId);
+  }
+
+  /** Escribió algo que no es un entero > 0 (vacío no cuenta: puede estar borrando). */
+  protected isInvalidDraft(branchId: number): boolean {
+    const drafts = this.drafts();
+    if (!(branchId in drafts)) return false;
+    const value = drafts[branchId];
+    return value !== null && !isValidHourlyRate(value);
   }
 
   protected async save(branchId: number): Promise<void> {
