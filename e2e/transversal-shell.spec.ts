@@ -147,6 +147,69 @@ test.describe('D. Selector de sede', () => {
   });
 });
 
+// ── D06. Cambio rápido de sede (respuestas fuera de orden) ────────────────────
+
+/**
+ * D06 (spec 0005-m): se fuerza la carrera en vez de esperar a que ocurra. Las consultas que se
+ * piden mientras está elegida la sede B tardan 4 s; las de la A final, 0,3 s. Sin guard de orden,
+ * la respuesta vieja de B llega DESPUÉS y pisa la pantalla con datos de B.
+ * Solo pantallas donde el indicador de A y el de B difieren (ver tabla D07 en fix-190-b).
+ */
+const D06_SCREENS: { path: string; indicador: RegExp }[] = [
+  { path: '/app/admin/pagos', indicador: /(\d+)\s+con deuda/ },
+  { path: '/app/admin/ex-alumnos', indicador: /(\d+)\s+Egresados/ },
+  { path: '/app/admin/certificacion', indicador: /Pendientes\s*\((\d+)\)/ },
+  { path: '/app/admin/dashboard', indicador: /(\d+)\s+alumnos con/ },
+];
+
+async function leerIndicador(page: Page, re: RegExp): Promise<number | null> {
+  const text = await page.locator('main').innerText();
+  const m = text.match(re);
+  return m ? Number(m[1]) : null;
+}
+
+test.describe('D06. Cambio rápido de sede', () => {
+  for (const { path, indicador } of D06_SCREENS) {
+    test(`D06: ${path} — A → B → A rápido termina mostrando A`, async ({ pageAs }) => {
+      test.setTimeout(150_000);
+      const page = await pageAs('admin');
+      let fase: 'normal' | 'B' | 'A' = 'normal';
+      await page.route('**/rest/v1/**', async (route) => {
+        const delay = fase === 'B' ? 4_000 : fase === 'A' ? 300 : 0;
+        if (delay) await new Promise((r) => setTimeout(r, delay));
+        await route.continue().catch(() => undefined);
+      });
+
+      await page.goto(path);
+      await shellReady(page);
+
+      // Referencias estables de A y B, sin carrera.
+      await pickBranch(page, OPT_B);
+      await expect.poll(() => leerIndicador(page, indicador), { timeout: 30_000 }).not.toBeNull();
+      await page.waitForTimeout(3_000);
+      const valorB = await leerIndicador(page, indicador);
+      await pickBranch(page, OPT_A);
+      await expect.poll(() => leerIndicador(page, indicador), { timeout: 30_000 }).not.toBe(valorB);
+      await page.waitForTimeout(3_000);
+      const valorA = await leerIndicador(page, indicador);
+      expect(valorA, 'A y B deben diferir para que el caso discrimine').not.toBe(valorB);
+
+      // Carrera: B (lenta) e inmediatamente A (rápida).
+      fase = 'B';
+      await pickBranch(page, OPT_B);
+      await page.waitForTimeout(200);
+      fase = 'A';
+      await pickBranch(page, OPT_A);
+
+      // Esperar a que lleguen TODAS las respuestas (las de B tardan 4 s) y un margen.
+      await page.waitForTimeout(8_000);
+      fase = 'normal';
+      expect(await leerIndicador(page, indicador)).toBe(valorA);
+      await expect(page.locator(TRIGGER)).toHaveAttribute('aria-label', /Autoescuela Chillán/);
+    });
+  }
+});
+
 // ── E. Buscador global ────────────────────────────────────────────────────────
 
 test.describe('E. Buscador global', () => {

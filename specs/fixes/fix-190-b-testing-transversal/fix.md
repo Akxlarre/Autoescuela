@@ -107,7 +107,7 @@ Exploración por UI (KPIs/contadores de cada pantalla con sede A, B y "Todas"):
 - ❌ `special_service_sales` #3: venta del admin con "Todas" (2026-08-13) **sin sede** → no la ve la
   Caja ni los reportes de ninguna sede. El código actual la sigue permitiendo
   (`getActiveBranchId(true)` cae en `user.branchId`, que para el admin es `null`; la RLS de INSERT
-  deja pasar al admin) → **`fix-194-b`**. Asignar la sede a la fila #3 = decisión del owner.
+  deja pasar al admin) → **`fix-194-b`** (PR #205). La fila #3 es un dato de QA ("Prueba AC-E1", $5.000) y las dos sedes tienen cerrada la caja del 06-08: asignarla descuadraría una de ellas → **el owner decidió dejarla así** (2026-10-06); solo se ve con "Todas".
 - ⚠️ `cash_closings` #2–#5: cierres de abril del admin, $0, sin sede (anteriores a que la Caja
   exigiera sede, fix-230-m) → datos de prueba, sin efecto.
 - ✅ `discounts` "Descuento Padre Hurtado", `school_documents` #1: globales a propósito.
