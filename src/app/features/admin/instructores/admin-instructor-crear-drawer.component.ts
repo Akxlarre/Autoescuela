@@ -389,6 +389,17 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                 data-llm-description="Vehículo asignado al instructor (opcional)"
               />
               <span class="text-xs text-text-muted"> Solo se muestran vehículos disponibles </span>
+              <!-- hotfix-065-b (S8): sin vehículo, la Agenda no le genera turnos -->
+              @if (sinVehiculoParaAgenda()) {
+                <span
+                  class="flex items-start gap-1.5 text-xs text-warning"
+                  data-llm-description="aviso: instructor práctico sin vehículo no aparece en la Agenda"
+                >
+                  <app-icon name="alert-triangle" [size]="14" class="shrink-0 mt-px" />
+                  Sin vehículo asignado, este instructor no aparecerá en la Agenda para agendar
+                  clases prácticas hasta que se le asigne uno.
+                </span>
+              }
             </div>
           </div>
         </ng-template>
@@ -485,6 +496,12 @@ export class AdminInstructorCrearDrawerComponent {
   );
   protected readonly licenseExpiryValida = computed(() => this.licenseExpiry() !== null);
   protected readonly typeValido = computed(() => this.tipo() !== null);
+
+  /** hotfix-065-b (S8): práctico (o ambos) sin vehículo → no tendrá turnos en la Agenda. */
+  protected readonly sinVehiculoParaAgenda = computed(() => {
+    const tipo = this.tipo();
+    return (tipo === 'practice' || tipo === 'both') && this.vehicleId() === null;
+  });
 
   // fix-202-b: misma regla que la lista y la Agenda (antes, una copia local).
   protected readonly licenseStatusPreview = computed(() => {
