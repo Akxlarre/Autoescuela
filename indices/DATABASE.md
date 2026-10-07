@@ -199,7 +199,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (83 tablas, acumulado de las migraciones)
+## Esquema efectivo (84 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -320,6 +320,27 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
+
+### `branch_absence_penalty_config` — 🔒 RLS
+
+> Spec 0048-b. Por sede: si apply_class_b_absence_penalty() cancela la agenda tras 2 faltas '
+  'consecutivas. enabled_since = desde cuándo cuentan las faltas (lo fija el trigger al activar).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `branch_id` PK | INT | NO | — | → `branches.id` |
+| `auto_cancel_enabled` | BOOLEAN | NO | `false` | — |
+| `enabled_since` | TIMESTAMPTZ | sí | — | — |
+| `updated_at` | TIMESTAMPTZ | NO | `now()` | — |
+| `updated_by` | INT | sí | — | → `users.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_branch_absence_penalty_config | SELECT | `(SELECT public.auth_user_role()) IN ('admin', 'secretary')` | — |
+| insert_branch_absence_penalty_config | INSERT | — | `(SELECT public.auth_user_role()) = 'admin'` |
+| update_branch_absence_penalty_config | UPDATE | `(SELECT public.auth_user_role()) = 'admin'` | `(SELECT public.auth_user_role()) = 'admin'` |
 
 ### `branch_payroll_config` — 🔒 RLS
 
@@ -770,10 +791,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_class_book | INSERT | — | admin, o secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m) |
-| update_class_book | UPDATE | admin, o secretary de la sede si `status <> 'closed'` | — |
 | delete_class_book | DELETE | `auth_user_role() = 'admin'` | — |
-| select_class_book | SELECT | admin, secretary de la sede, o student inscrito en el curso | — |
+| select_class_book | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_class_book | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_class_book | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status <> '…` | — |
 
 ### `consents` — 🔒 RLS
 
@@ -1689,10 +1710,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_professional_promotions | SELECT | admin, secretary de la sede (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
-| insert_professional_promotions | INSERT | — | solo admin (D5, fix-321-m) |
-| update_professional_promotions | UPDATE | admin, o secretary de la sede solo sobre `planned`/`in_progress` | mismo: la secretary no puede dejarla `finished`/`cancelled` (D5) |
-| delete_professional_promotions | DELETE | solo admin (D5, fix-321-m) | — |
+| select_professional_promotions | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_professional_promotions | INSERT | — | `auth_user_role() = 'admin'` |
+| update_professional_promotions | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status IN (…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status IN (…` |
+| delete_professional_promotions | DELETE | `auth_user_role() = 'admin'` | — |
 
 ### `professional_theory_attendance` — 🔒 RLS
 
@@ -1791,9 +1812,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_promotion_course_lecturers | SELECT | `true` | — |
-| insert_promotion_course_lecturers | INSERT | — | admin, o secretary de la sede de la promoción (fix-321-m) |
-| update_promotion_course_lecturers | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
 | delete_promotion_course_lecturers | DELETE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
+| insert_promotion_course_lecturers | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_promotion_course_lecturers | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
 
@@ -1815,10 +1836,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_promotion_courses | SELECT | admin, secretary de la sede de la promoción (sede = branch_visible (grant multi-sede, NULL o la propia), fix-321-m), student | — |
-| insert_promotion_courses | INSERT | — | solo admin (fix-321-m) |
-| update_promotion_courses | UPDATE | admin, o secretary de la sede de la promoción (fix-321-m) | — |
-| delete_promotion_courses | DELETE | solo admin (fix-321-m) | — |
+| select_promotion_courses | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_promotion_courses | INSERT | — | `auth_user_role() = 'admin'` |
+| update_promotion_courses | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_promotion_courses | DELETE | `auth_user_role() = 'admin'` | — |
 
 **Índices:** `idx_promotion_courses_promotion`
 
@@ -2397,7 +2418,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20260917110000_hotfix003_remove_materialized_class_b_schedule_availability.sql` |
+| `v_class_b_schedule_availability` | `20261007120000_fix196_schedule_availability_rls_por_fila.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2429,11 +2450,13 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cascade_promotion_status_to_courses` | `()` |
 | `check_payment_within_pending_balance` | `()` |
 | `check_standalone_course_capacity` | `()` |
+| `class_b_slot_occupied` | `(p_instructor_id integer, p_vehicle_id integer, p_slot_start timestamptz, p_slot_end timestamptz)` |
 | `cleanup_expired_drafts` | `()` |
 | `cleanup_expired_public_enrollment` | `()` |
 | `cleanup_public_enrollment_throttle` | `()` |
-| `confirm_enrollment_with_payment` | `(p_enrollment_id INTEGER, p_payment_method TEXT, p_total_amount INTEGER, p_discount_id INTEGER DEFAULT NULL, p_discount_amount INTEGER DEFAULT 0, p_registered_by INTEGER DEFAULT NULL, p_is_deposit BOOLEAN DEFAULT FALSE)` |
+| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
+| `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
 | `exec_dashboard_assert_admin` | `()` |
 | `exec_dashboard_instructor_hours` | `(p_from DATE, p_to DATE, p_branch_id INT DEFAULT NULL)` |
@@ -2454,20 +2477,21 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `notify_task_completed` | `()` |
 | `notify_task_reply` | `()` |
 | `notify_vehicle_document_expiry` | `()` |
+| `prevent_cancel_promotion_with_active_enrollments` | `()` |
 | `prevent_concurrent_in_progress_class_b_sessions` | `()` |
-| `prevent_cancel_promotion_with_active_enrollments` | `()` — trigger `BEFORE UPDATE OF status` en `professional_promotions`: rechaza pasar a `cancelled` con matrículas `active` (fix-325-m) |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `prevent_double_booking_class_b_sessions` | `()` |
 | `prevent_student_double_booking_class_b_sessions` | `()` |
+| `prevent_vehicle_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
-| `delete_promotion_without_students` | `(p_promotion_id INT)` — elimina una promoción **planificada o cancelada sin matrículas**, con sus cursos, sesiones, relatores y libros, en una sola transacción (esas tablas no tienen `ON DELETE CASCADE`); libera su lunes y su número. Solo admin (`42501` si no). Rechazos con marcador: `promotion_not_found`, `promotion_not_deletable` (en curso o finalizada), `promotion_has_enrollments`. Los borradores del wizard que la tenían elegida quedan con `promotion_course_id = NULL`. EXECUTE: `authenticated` y `service_role` (fix-348-m: reemplaza a "cancelar" en la app) |
-| `reserve_next_promotion_slot` | `(p_branch_id INT)` — reserva el primer lunes **libre** de la cadencia (2026-07-27 + 14k) contado desde la última promoción de la cadencia que **ya partió** (en curso o finalizada), hasta tener 2 planificadas **de la cadencia** por delante; las manuales fuera de ella no cuentan, y una manual o cancelada en un lunes futuro de la cadencia ocupa su lunes sin hacer saltar los intermedios; número = mayor existente + 1; EXECUTE solo `service_role` (fix-322-m, fix-323-m, fix-344-m) |
+| `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
+| `stamp_branch_absence_penalty_config` | `()` |
 | `tasks_set_updated_at` | `()` |
 | `trg_class_b_sessions_update_monthly_hours` | `()` |
 | `trg_consents_append_only_fn` | `()` |

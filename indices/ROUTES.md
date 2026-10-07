@@ -36,11 +36,11 @@
 | `/app/admin` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/admin/dashboard` | `DashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/alumnos` | `AdminAlumnosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/pre-inscritos` | `AdminPreInscritosComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/alumnos` | `AdminAlumnosProfesionalComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/pre-inscritos` | `AdminPreInscritosComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/alumnos/:id` | `AdminAlumnoDetalleComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/ex-alumnos` | `AdminExAlumnosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/ex-alumnos-profesional` | `AdminExAlumnosProfesionalComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/ex-alumnos-profesional` | `AdminExAlumnosProfesionalComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/agenda` | `AdminAgendaComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/asistencia` | `AdminAsistenciaComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/matricula` | `AdminMatriculaComponent` | `enrollmentDraftGuard` | `src/app/app.routes.ts` |
@@ -59,15 +59,15 @@
 | `/app/admin/usuarios` | `AdminUsuariosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/secretarias` | `AdminSecretariasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | — | `src/app/app.routes.ts` |
+| `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/admin/servicios-especiales` | `AdminServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/notificaciones` | `AdminNotificacionesComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/relatores` | `AdminProfesionalRelatoresComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/promociones` | `AdminProfesionalPromocionesComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/asistencia` | `AdminProfesionalAsistenciaComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/certificados` | `AdminProfesionalCertificadosComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/evaluaciones` | `AdminProfesionalEvaluacionesComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
-| `/app/admin/clase-profesional/archivo` | `AdminProfesionalArchivoComponent` | `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/relatores` | `AdminProfesionalRelatoresComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/promociones` | `AdminProfesionalPromocionesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/asistencia` | `AdminProfesionalAsistenciaComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/certificados` | `AdminProfesionalCertificadosComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/evaluaciones` | `AdminProfesionalEvaluacionesComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/admin/clase-profesional/archivo` | `AdminProfesionalArchivoComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/admin/auditoria` | `AdminAuditoriaComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/configuracion-web` | `AdminConfiguracionWebComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria` | — | `hasRoleGuard(['secretaria'])` | `src/app/app.routes.ts` |
@@ -95,7 +95,7 @@
 | `/app/secretaria/profesional/asistencia` | `SecretariaProfesionalAsistenciaComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/evaluaciones` | `SecretariaProfesionalNotasComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/certificados` | `SecretariaProfesionalCertificadosComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
-| `/app/secretaria/profesional/archivo` | `SecretariaProfesionalArchivoComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
+| `/app/secretaria/profesional/archivo` | `SecretariaProfesionalArchivoComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/notificaciones` | `SecretariaNotificacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/ex-alumnos` | `SecretariaExAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/ex-alumnos-profesional` | `SecretariaExAlumnosProfesionalComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |

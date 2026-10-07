@@ -363,14 +363,14 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | Selector | Inputs | Outputs | Archivo |
 |----------|--------|---------|---------|
-| `app-agenda-semanal` | `weekData`, `filteredDays`, `timeRows`, `isLoading`, `isCurrentWeek`, `instructors`, `selectedInstructorId`, `showKpis`, `showHero`, `showVehicleWarnings`, `maxVisibleDateIso`, `maxVisibleDateLabel` | `weekNext`, `weekPrev`, `weekToday`, `weekJump`, `instructorFilterChange`, `slotClick` | `src/app/shared/components/agenda-semanal/agenda-semanal.component.ts` |
+| `app-agenda-semanal` | `weekData`, `filteredDays`, `timeRows`, `isLoading`, `isCurrentWeek`, `instructors`, `selectedInstructorId`, `showKpis`, `showHero`, `showVehicleWarnings`, `maxVisibleDateIso`, `maxVisibleDateLabel`, `error` | `weekNext`, `weekPrev`, `weekToday`, `weekJump`, `instructorFilterChange`, `slotClick`, `retry` | `src/app/shared/components/agenda-semanal/agenda-semanal.component.ts` |
 | `app-agenda-slot` | `slot`, `compact`, `disabled`, `showVehicleWarnings` | `slotClicked` | `src/app/shared/components/agenda-semanal/agenda-slot.component.ts` |
-| `app-ajustes-drawer` | — | Pestaña "Ajustes" agrupada en "Mis preferencias" / "Reglas de la escuela" / "Catálogos" / "Sede activa" (spec 0048-b; cada título solo si el rol ve algún bloque) y tarjetas unificadas a `.card` (ARCH-25). | `src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts` |
+| `app-ajustes-drawer` | — | — | `src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts` |
 | `app-alert-card` | `severity`, `title` | — | `src/app/shared/components/alert-card/alert-card.component.ts` |
 | `app-alumno-card` | `alumno`, `loading`, `trashView`, `showSede`, `basePath`, `isGeneratingFicha` | `restaurarRequested`, `archivarRequested`, `fichaExportRequested` | `src/app/shared/components/alumno-card/alumno-card.component.ts` |
 | `app-alumno-profesional-card` | `alumno`, `loading`, `trashView`, `basePath` | `restaurarRequested`, `archivarRequested` | `src/app/shared/components/alumno-profesional-card/alumno-profesional-card.component.ts` |
-| `app-alumnos-list-content` | `alumnos`, `isLoading`, `isExporting`, `isGeneratingFicha`, `trashView`, `basePath`, `showSedeColumn`, `error`, `initialFilters` | `refreshRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested`, `fichaExportRequested`, `filtersChanged` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
-| `app-alumnos-profesional-list-content` | `alumnos`, `isLoading`, `trashView`, `basePath`, `isExporting` | `refreshRequested`, `preInscritosRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested` | `src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts` |
+| `app-alumnos-list-content` | `alumnos`, `isLoading`, `isExporting`, `generatingFichaIds`, `trashView`, `basePath`, `showSedeColumn`, `error`, `initialFilters` | `refreshRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested`, `fichaExportRequested`, `filtersChanged` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
+| `app-alumnos-profesional-list-content` | `alumnos`, `isLoading`, `error`, `trashView`, `basePath`, `isExporting` | `refreshRequested`, `preInscritosRequested`, `archivarRequested`, `restaurarRequested`, `trashViewToggled`, `exportRequested` | `src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts` |
 | `app-announcements-content` | `announcements`, `loading` | `announcementClicked`, `cancelRequested` | `src/app/shared/components/announcements-content/announcements-content.component.ts` |
 | `app-asistencia-clase-b-content` | `kpis`, `clasesPracticas`, `alertas`, `instructores`, `isLoading`, `isSaving`, `savingAlertaId`, `maxVisible`, `showBranchColumn`, `cycles`, `selectedCycleId`, `clasesCiclo`, `rosterCiclo`, `addableStudents`, `isLoadingCiclos`, `isLoadingCycle`, `isLoadingAddable`, `sendingClassId`, `selectedDate` | `markAttendance`, `justifyAbsence`, `removeSchedule`, `reactivateSchedule`, `sendReminder`, `dateChange`, `refreshRequested`, `iniciarClase`, `finalizarClase`, `selectCycle`, `saveCicloZoomLink`, `updateCicloTopic`, `sendCicloZoom`, `moveCicloStudent`, `requestAddable`, `addCicloStudent` | `src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts` |
 | `app-async-btn` | `label`, `icon`, `loading`, `success`, `error`, `disabled`, `loadingLabel`, `successLabel`, `errorLabel`, `llmAction` | — | `src/app/shared/components/async-btn/async-btn.component.ts` |
@@ -393,7 +393,7 @@
 | `app-drawer-content-loader` | — | — | `src/app/shared/components/drawer-content-loader/drawer-content-loader.component.ts` |
 | `app-drawer-form` | `hasFooter`, `maxWidthRem` | — | `src/app/shared/components/drawer-form/drawer-form.component.ts` |
 | `app-egresado-card` | `egresado`, `loading`, `basePath`, `nroLabel`, `viewQueryParams` | `reEnrollRequested` | `src/app/shared/components/egresado-card/egresado-card.component.ts` |
-| `app-eliminar-alumno-modal` | `visible`, `alumnoNombre`, `hasHistory`, `isDeleting` | `confirmado`, `cancelado` | `src/app/shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component.ts` |
+| `app-eliminar-alumno-modal` | `visible`, `alumnoNombre`, `hasHistory`, `isDeleting`, `extraWarning` | `confirmado`, `cancelado` | `src/app/shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component.ts` |
 | `app-eliminar-servicio-modal` | `visible`, `servicioNombre`, `isDeleting` | `confirmado`, `cancelado` | `src/app/shared/components/eliminar-servicio-modal/eliminar-servicio-modal.component.ts` |
 | `app-email-input` | `value`, `id`, `label`, `required`, `placeholder`, `forceDirty` | `valueChange` | `src/app/shared/components/email-input/email-input.component.ts` |
 | `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
@@ -421,7 +421,7 @@
 | `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
 | `app-logo` | `brandText` | — | `src/app/shared/components/logo/logo.component.ts` |
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode`, `nextLabel` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
-| `app-confirmation-step` | `data` | `finish`, `downloadReceipt`, `downloadContract` | `src/app/shared/components/matricula-steps/confirmation/confirmation.component.ts` |
+| `app-confirmation-step` | `data` | `finish`, `downloadContract` | `src/app/shared/components/matricula-steps/confirmation/confirmation.component.ts` |
 | `app-contract-step` | `data`, `loading`, `stepNumber`, `isPublic`, `file` | `dataChange`, `generateContract`, `next`, `back`, `privacyConsentChange`, `promotionalConsentChange` | `src/app/shared/components/matricula-steps/contract/contract.component.ts` |
 | `app-documents-step` | `data`, `loading`, `stepNumber`, `file` | `fileSelected`, `lightboxOpen`, `confirmPhoto`, `photoRemoved`, `next`, `back` | `src/app/shared/components/matricula-steps/documents/documents.component.ts` |
 | `app-draft-list` | `drafts` | `resume`, `discard`, `startNew` | `src/app/shared/components/matricula-steps/draft-list/draft-list.component.ts` |
@@ -437,6 +437,7 @@
 | `app-pre-inscritos-content` | `preInscritos`, `isLoading`, `heroKpis`, `maxVisible`, `showSede`, `title`, `subtitle`, `backRoute`, `backLabel`, `embedded` | `rowSelected`, `closeRequested` | `src/app/shared/components/pre-inscritos-content/pre-inscritos-content.component.ts` |
 | `app-privacy-notice` | `branchSlug`, `context` | — | `src/app/shared/components/privacy-notice/privacy-notice.component.ts` |
 | `app-promocion-card` | `promocion`, `loading` | `verRequested`, `editarRequested` | `src/app/shared/components/promocion-card/promocion-card.component.ts` |
+| `app-promocion-detalle-content` | `promo`, `studentsByCurso`, `loadingStudents` | — | `src/app/shared/components/promocion-detalle-content/promocion-detalle-content.component.ts` |
 | `app-public-context-banner` | `context` | `editRequested` | `src/app/shared/components/public-enrollment-steps/public-context-banner/public-context-banner.component.ts` |
 | `app-public-contract` | `data` | `contractSigned`, `goBack` | `src/app/shared/components/public-enrollment-steps/public-contract/public-contract.component.ts` |
 | `app-public-documents` | `data`, `isUploading` | `fileSelected`, `clearPhoto`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-documents/public-documents.component.ts` |
