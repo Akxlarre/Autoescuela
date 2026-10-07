@@ -2461,6 +2461,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
+| `delete_promotion_without_students` | `(p_promotion_id INT)` — elimina una promoción **planificada o cancelada sin matrículas**, con sus cursos, sesiones, relatores y libros, en una sola transacción (esas tablas no tienen `ON DELETE CASCADE`); libera su lunes y su número. Solo admin (`42501` si no). Rechazos con marcador: `promotion_not_found`, `promotion_not_deletable` (en curso o finalizada), `promotion_has_enrollments`. Los borradores del wizard que la tenían elegida quedan con `promotion_course_id = NULL`. EXECUTE: `authenticated` y `service_role` (fix-348-m: reemplaza a "cancelar" en la app) |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` — reserva el primer lunes **libre** de la cadencia (2026-07-27 + 14k) contado desde la última promoción de la cadencia que **ya partió** (en curso o finalizada), hasta tener 2 planificadas **de la cadencia** por delante; las manuales fuera de ella no cuentan, y una manual o cancelada en un lunes futuro de la cadencia ocupa su lunes sin hacer saltar los intermedios; número = mayor existente + 1; EXECUTE solo `service_role` (fix-322-m, fix-323-m, fix-344-m) |
 | `restrict_instructor_vehicle_update` | `()` |
 | `set_enrollment_completed_at` | `()` |

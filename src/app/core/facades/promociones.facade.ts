@@ -89,9 +89,6 @@ export class PromocionesFacade {
   readonly enCurso = computed(
     () => this._promociones().filter((p) => p.status === 'in_progress').length,
   );
-  readonly canceladas = computed(
-    () => this._promociones().filter((p) => p.status === 'cancelled').length,
-  );
   readonly totalAlumnos = computed(() =>
     this._promociones().reduce((sum, p) => sum + p.totalEnrolled, 0),
   );
@@ -574,6 +571,36 @@ export class PromocionesFacade {
         (err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al actualizar promoción');
+      this.toast.error(msg);
+      return false;
+    } finally {
+      this._isSubmitting.set(false);
+    }
+  }
+
+  /**
+   * Elimina una promoción creada por error (fix-348-m, D20): planificada o cancelada y sin
+   * alumnos. Lo hace `delete_promotion_without_students` en una sola transacción, porque sus
+   * cursos, sesiones y libros no se borran en cascada; también valida rol, estado y matrículas.
+   * Libera el lunes y el número.
+   */
+  async eliminarPromocion(id: number): Promise<boolean> {
+    this._isSubmitting.set(true);
+    try {
+      const { error } = await this.supabase.client.rpc('delete_promotion_without_students', {
+        p_promotion_id: id,
+      });
+      if (error) throw error;
+
+      this.toast.success('Promoción eliminada');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      const msg =
+        promotionWriteErrorMessage(err, '') ??
+        (err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al eliminar la promoción');
       this.toast.error(msg);
       return false;
     } finally {

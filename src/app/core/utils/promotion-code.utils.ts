@@ -100,6 +100,16 @@ export function promotionWriteErrorMessage(err: unknown, code: string): string |
   if (message.includes('promotion_has_active_enrollments')) {
     return 'No se puede cancelar: la promoción tiene alumnos con matrícula activa.';
   }
+  // Rechazos de delete_promotion_without_students (fix-348-m).
+  if (message.includes('promotion_has_enrollments')) {
+    return 'No se puede eliminar: la promoción tiene alumnos matriculados.';
+  }
+  if (message.includes('promotion_not_deletable')) {
+    return 'No se puede eliminar: la promoción ya partió.';
+  }
+  if (message.includes('promotion_not_found')) {
+    return 'La promoción ya no existe.';
+  }
   if (pgCode !== '23505') return null;
   if (message.includes('professional_promotions_code_key')) {
     return `El número ${code.trim()} ya lo usa otra promoción. Elige otro.`;

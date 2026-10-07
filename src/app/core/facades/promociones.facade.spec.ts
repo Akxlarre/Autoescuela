@@ -582,6 +582,54 @@ describe('PromocionesFacade — ciclo de vida solo admin (fix-321-m, D5)', () =>
   });
 });
 
+// fix-348-m (D20) — eliminar en vez de cancelar
+describe('PromocionesFacade — eliminarPromocion (fix-348-m)', () => {
+  function setup(rpcResult: { error: unknown }) {
+    const rpc = vi.fn().mockResolvedValue(rpcResult);
+    const toast = { error: vi.fn(), success: vi.fn(), info: vi.fn() };
+    const mockSupabase = createTableMock({ professional_promotions: { data: [] } });
+    (mockSupabase.client as any).rpc = rpc;
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ToastService, useValue: toast },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return { facade: TestBed.inject(PromocionesFacade), rpc, toast };
+  }
+
+  it('llama a la función de borrado con el id y avisa que se eliminó', async () => {
+    const { facade, rpc, toast } = setup({ error: null });
+
+    const ok = await facade.eliminarPromocion(36);
+
+    expect(ok).toBe(true);
+    expect(rpc).toHaveBeenCalledWith('delete_promotion_without_students', { p_promotion_id: 36 });
+    expect(toast.success).toHaveBeenCalledWith('Promoción eliminada');
+    expect(facade.isSubmitting()).toBe(false);
+  });
+
+  it('si la promoción tiene alumnos, muestra el motivo y devuelve false', async () => {
+    const { facade, toast } = setup({
+      error: {
+        code: 'P0001',
+        message: 'promotion_has_enrollments: la promoción 20 tiene 3 matrícula(s)',
+      },
+    });
+
+    const ok = await facade.eliminarPromocion(20);
+
+    expect(ok).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith(
+      'No se puede eliminar: la promoción tiene alumnos matriculados.',
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
 describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
   const duplicateCode = {
     code: '23505',

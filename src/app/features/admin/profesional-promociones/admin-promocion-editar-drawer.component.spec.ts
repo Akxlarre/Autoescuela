@@ -57,11 +57,19 @@ describe('AdminPromocionEditarDrawerComponent — opciones de estado por rol (fi
     });
   });
 
-  it('admin, promoción en curso → puede finalizar o cancelar', () => {
-    expect(options('in_progress')).toEqual(['in_progress', 'finished', 'cancelled']);
+  it('admin, promoción en curso → puede finalizar; "Cancelada" ya no es destino (fix-348-m)', () => {
+    expect(options('in_progress')).toEqual(['in_progress', 'finished']);
   });
 
-  it('secretaria, promoción en curso → solo "En curso" (sin Finalizada ni Cancelada)', () => {
+  it('admin, promoción planificada → sin "Cancelada" como destino (fix-348-m)', () => {
+    expect(options('planned')).toEqual(['planned', 'in_progress']);
+  });
+
+  it('una cancelada histórica muestra su estado, sin transiciones', () => {
+    expect(options('cancelled')).toEqual(['cancelled']);
+  });
+
+  it('secretaria, promoción en curso → solo "En curso" (sin Finalizada)', () => {
     canManage.set(false);
     expect(options('in_progress')).toEqual(['in_progress']);
   });
@@ -255,59 +263,102 @@ describe('AdminPromocionEditarDrawerComponent — finalizar pide confirmación (
   });
 });
 
-describe('AdminPromocionEditarDrawerComponent — no cancelar con alumnos (fix-325-m, D4)', () => {
+describe('AdminPromocionEditarDrawerComponent — eliminar en vez de cancelar (fix-348-m, D20)', () => {
   let facadeSpy: any;
+  let confirmSpy: any;
+  let drawerSpy: any;
 
-  async function editorWith(activos: number): Promise<any> {
-    facadeSpy.countActiveEnrollments.mockResolvedValue(activos);
-    const fixture = TestBed.createComponent(AdminPromocionEditarDrawerComponent);
-    TestBed.tick();
-    await fixture.whenStable();
-    const c = fixture.componentInstance as any;
-    c.name.set('Promoción 279');
-    c.code.set('279');
-    return c;
-  }
-
-  function cancelada(c: any): { value: string; disabled?: boolean } {
-    return c.availableStatusOptions().find((o: { value: string }) => o.value === 'cancelled');
+  function editor(overrides: Partial<PromocionTableRow>, admin = true): any {
+    facadeSpy.selectedPromocion.set({ ...makePromo('planned'), ...overrides });
+    facadeSpy.canManageLifecycle.set(admin);
+    return TestBed.createComponent(AdminPromocionEditarDrawerComponent).componentInstance as any;
   }
 
   beforeEach(() => {
     facadeSpy = {
-      selectedPromocion: signal(makePromo('in_progress')),
+      selectedPromocion: signal(makePromo('planned')),
       canManageLifecycle: signal(true),
       isSubmitting: signal(false),
       editarPromocion: vi.fn().mockResolvedValue(true),
-      countActiveEnrollments: vi.fn(),
+      eliminarPromocion: vi.fn().mockResolvedValue(true),
+      countActiveEnrollments: vi.fn().mockResolvedValue(0),
       fetchMaxPromotionCode: vi.fn().mockResolvedValue(282),
       initialize: vi.fn(),
     };
-    // Se prueba la lógica (effect + computed), no el template: en JIT los inputs requeridos de
-    // los hijos (app-async-btn) no reciben valor y TestBed.tick() fallaría al dibujarlos.
-    TestBed.overrideComponent(AdminPromocionEditarDrawerComponent, { set: { template: '' } });
+    confirmSpy = { confirm: vi.fn().mockResolvedValue(true) };
+    drawerSpy = { open: vi.fn(), close: vi.fn() };
     TestBed.configureTestingModule({
       imports: [AdminPromocionEditarDrawerComponent],
       providers: [
         { provide: PromocionesFacade, useValue: facadeSpy },
-        { provide: ConfirmModalService, useValue: { confirm: vi.fn() } },
-        { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), close: vi.fn() } },
+        { provide: ConfirmModalService, useValue: confirmSpy },
+        { provide: LayoutDrawerFacadeService, useValue: drawerSpy },
       ],
     });
   });
 
-  it('con alumnos activos, "Cancelada" aparece deshabilitada y no se puede guardar', async () => {
-    const c = await editorWith(12);
-    expect(facadeSpy.countActiveEnrollments).toHaveBeenCalledWith(1);
-    expect(cancelada(c).disabled).toBe(true);
+  it('admin ve "Eliminar" en una planificada o cancelada sin alumnos', () => {
+    expect(editor({ status: 'planned' }).canDelete()).toBe(true);
+    expect(editor({ status: 'cancelled' }).canDelete()).toBe(true);
+  });
+
+  it('no se ofrece si tiene alumnos, si ya partió o si no es admin', () => {
+    expect(editor({ status: 'planned', totalEnrolled: 2 }).canDelete()).toBe(false);
+    expect(editor({ status: 'in_progress' }).canDelete()).toBe(false);
+    expect(editor({ status: 'finished' }).canDelete()).toBe(false);
+    expect(editor({ status: 'planned' }, false).canDelete()).toBe(false);
+  });
+
+  it('una cancelada no puede guardarse con otro estado: "Cancelada" no es un destino', () => {
+    const c = editor({ status: 'planned' });
     c.status.set('cancelled');
     expect(c.canSave()).toBe(false);
   });
 
-  it('sin alumnos activos, "Cancelada" está disponible', async () => {
-    const c = await editorWith(0);
-    expect(cancelada(c).disabled).toBe(false);
-    c.status.set('cancelled');
-    expect(c.canSave()).toBe(true);
+  it('confirmar elimina la promoción y cierra el panel', async () => {
+    const c = editor({ status: 'planned' });
+
+    await c.deletePromocion();
+
+    expect(confirmSpy.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Eliminar promoción', severity: 'danger' }),
+    );
+    expect(facadeSpy.eliminarPromocion).toHaveBeenCalledWith(1);
+    expect(drawerSpy.close).toHaveBeenCalled();
+  });
+
+  it('si se cancela la confirmación, no elimina', async () => {
+    confirmSpy.confirm.mockResolvedValue(false);
+    const c = editor({ status: 'planned' });
+
+    await c.deletePromocion();
+
+    expect(facadeSpy.eliminarPromocion).not.toHaveBeenCalled();
+    expect(drawerSpy.close).not.toHaveBeenCalled();
+  });
+
+  it('si la base de datos la rechaza, el panel queda abierto', async () => {
+    facadeSpy.eliminarPromocion.mockResolvedValue(false);
+    const c = editor({ status: 'planned' });
+
+    await c.deletePromocion();
+
+    expect(drawerSpy.close).not.toHaveBeenCalled();
+  });
+
+  it('dos clics seguidos en Eliminar → una sola confirmación', async () => {
+    const c = editor({ status: 'planned' });
+
+    await Promise.all([c.deletePromocion(), c.deletePromocion()]);
+
+    expect(confirmSpy.confirm).toHaveBeenCalledTimes(1);
+    expect(facadeSpy.eliminarPromocion).toHaveBeenCalledTimes(1);
+  });
+
+  it('la secretaria ve el aviso de pedirle al administrador solo en una planificada sin alumnos', () => {
+    expect(editor({ status: 'planned' }, false).showAskAdminNotice()).toBe(true);
+    expect(editor({ status: 'planned', totalEnrolled: 1 }, false).showAskAdminNotice()).toBe(false);
+    expect(editor({ status: 'in_progress' }, false).showAskAdminNotice()).toBe(false);
+    expect(editor({ status: 'planned' }).showAskAdminNotice()).toBe(false);
   });
 });

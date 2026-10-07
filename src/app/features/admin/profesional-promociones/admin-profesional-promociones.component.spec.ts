@@ -38,7 +38,6 @@ describe('AdminProfesionalPromocionesComponent', () => {
       totalPromociones: signal(0),
       enCurso: signal(0),
       planificadas: signal(0),
-      canceladas: signal(0),
       canManageLifecycle: canManageSig,
       initialize: vi.fn(),
       selectPromocion: vi.fn(),

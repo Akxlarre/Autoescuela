@@ -177,6 +177,19 @@ describe('promotion-code.utils (fix-323-m)', () => {
       );
     });
 
+    it('rechazos al eliminar (fix-348-m) → mensaje claro', () => {
+      const err = (message: string) => ({ code: 'P0001', message });
+      expect(
+        promotionWriteErrorMessage(err('promotion_has_enrollments: la promoción 7 tiene 2'), ''),
+      ).toBe('No se puede eliminar: la promoción tiene alumnos matriculados.');
+      expect(
+        promotionWriteErrorMessage(err('promotion_not_deletable: la promoción 7 está en…'), ''),
+      ).toBe('No se puede eliminar: la promoción ya partió.');
+      expect(promotionWriteErrorMessage(err('promotion_not_found: la promoción 7'), '')).toBe(
+        'La promoción ya no existe.',
+      );
+    });
+
     it('cualquier otro error → null (lo maneja el sanitizer)', () => {
       expect(promotionWriteErrorMessage(new Error('red caída'), '281')).toBeNull();
       expect(promotionWriteErrorMessage(null, '281')).toBeNull();

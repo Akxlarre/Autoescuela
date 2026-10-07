@@ -455,13 +455,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
       color: 'success',
     },
     { id: 'planificadas', label: 'Planificadas', value: this.facade.planificadas(), icon: 'clock' },
-    {
-      id: 'canceladas',
-      label: 'Canceladas',
-      value: this.facade.canceladas(),
-      icon: 'ban',
-      color: 'warning',
-    },
   ]);
 
   protected handleHeroAction(actionId: string): void {
@@ -481,12 +474,13 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   /**
    * Abre con la opción "todos" = null, en lugar de la "x" de PrimeNG (spec 0022-m).
    * Sin "Finalizada": la lista no trae finalizadas; se consultan en Archivo (fix-326-m, D3a).
+   * Sin "Cancelada": ya no se cancela, se elimina (fix-348-m, D20); una cancelada histórica sigue
+   * en la lista con su etiqueta.
    */
   readonly estadoOptions = withAllOption(
     [
       { label: 'Planificada', value: 'planned' },
       { label: 'En curso', value: 'in_progress' },
-      { label: 'Cancelada', value: 'cancelled' },
     ],
     'Todos los estados',
   );
