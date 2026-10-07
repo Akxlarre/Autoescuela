@@ -42,6 +42,7 @@ import {
   amountsMatch,
   isHoneypotTripped,
   isOriginAllowed,
+  isPublicEnrollmentOpen,
   isRateLimited,
 } from '../_shared/anti-abuse.ts';
 import {
@@ -397,6 +398,11 @@ Deno.serve(async (req: Request) => {
 
     if (!action || typeof action !== 'string') {
       return applyCors(errorResponse('action (string) is required'), origin);
+    }
+
+    // fix-193-b: cerrada mientras la inscripción pública esté bloqueada (fase piloto).
+    if (!isPublicEnrollmentOpen(Deno.env.get('PUBLIC_ENROLLMENT_ENABLED'))) {
+      return applyCors(errorResponse('La inscripción en línea no está disponible.', 503), origin);
     }
 
     // Admin client (SERVICE_ROLE_KEY bypasses RLS)

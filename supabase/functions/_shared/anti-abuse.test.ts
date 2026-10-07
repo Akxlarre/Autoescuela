@@ -7,7 +7,13 @@
 //   deno test supabase/functions/_shared/anti-abuse.test.ts
 
 import { assertEquals } from 'jsr:@std/assert';
-import { amountsMatch, isHoneypotTripped, isOriginAllowed, isRateLimited } from './anti-abuse.ts';
+import {
+  amountsMatch,
+  isHoneypotTripped,
+  isOriginAllowed,
+  isPublicEnrollmentOpen,
+  isRateLimited,
+} from './anti-abuse.ts';
 
 // ── isRateLimited(countInWindow, max) ────────────────────────────────────────
 // count = nº de requests en la ventana INCLUYENDO el actual (post-insert).
@@ -82,4 +88,24 @@ Deno.test('isHoneypotTripped: campo vacío = humano', () => {
 Deno.test('isHoneypotTripped: campo lleno = bot', () => {
   assertEquals(isHoneypotTripped('http://spam.example'), true);
   assertEquals(isHoneypotTripped('a'), true);
+});
+
+// ── isPublicEnrollmentOpen(flag) ─────────────────────────────────────────────
+// fix-193-b: falla cerrado — solo el literal "true" abre la función.
+
+Deno.test('isPublicEnrollmentOpen: secret ausente o vacío = cerrado', () => {
+  assertEquals(isPublicEnrollmentOpen(undefined), false);
+  assertEquals(isPublicEnrollmentOpen(null), false);
+  assertEquals(isPublicEnrollmentOpen(''), false);
+});
+
+Deno.test('isPublicEnrollmentOpen: cualquier valor distinto de "true" = cerrado', () => {
+  assertEquals(isPublicEnrollmentOpen('false'), false);
+  assertEquals(isPublicEnrollmentOpen('1'), false);
+  assertEquals(isPublicEnrollmentOpen('yes'), false);
+});
+
+Deno.test('isPublicEnrollmentOpen: "true" abre (tolera mayúsculas y espacios)', () => {
+  assertEquals(isPublicEnrollmentOpen('true'), true);
+  assertEquals(isPublicEnrollmentOpen(' TRUE '), true);
 });
