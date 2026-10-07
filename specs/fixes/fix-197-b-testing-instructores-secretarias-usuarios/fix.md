@@ -59,4 +59,35 @@ Ninguno de una spec previa — track de testing (origen ASG-i-034). Criterios pr
 **Hallazgo lateral:** `create-secretary` desplegado tiene código de `fix-182-b` que nunca llegó a
 `main` (5 commits subidos a `fix/182-b-secretaria-invitacion` después de mergear el PR #184, entre
 ellos `f68e63b2`: chequeo previo de RUT duplicado). Desplegarla desde `main` hoy lo borraría →
-decisión del owner (recuperarlos en `main`).
+decisión del owner (recuperarlos en `main`). **Resuelto en PR #218.**
+
+## Casos A–V — resultado (2026-10-07, build de producción, sin escribir datos)
+
+**Automatizados y en verde** (`--workers=1`):
+- `e2e/personal-checklist.spec.ts` (15/15): A01–A04, A07, B01–B05, C01, C02, C05, C10, C12, C13,
+  C15, E01, E02, I01, I02, I06, K01, K03, K06, K11, L02, O01, O03, P01, P07, Q01, Q07.
+- Ya cubiertos por los e2e de cada fix: C04/J02 (`instructores-alta`), D01/D02
+  (`instructores-alta`), E08 (`instructores-licencia`), F01/F02 (`instructores-desactivar`), H03
+  (`instructores-invitacion`), I13/I14 (`instructores-horas`), A08/B15/K06 con error
+  (`personal-listas-error`), K12 (`secretarias-ultimo-acceso`), B07/J05 (`agenda-licencia-vencida`).
+- Seguridad R01–R10: tests de BD/edge de fix-179-b, fix-180-b, fix-198-b (en verde en producción).
+
+**Hallazgos nuevos:**
+- **C05 (RUT):** el último carácter siempre se toma como DV y se **recalcula** (ASG-047). Escribir
+  solo el cuerpo `11111111` deja `1.111.111-4`, porque se pierde un dígito. Un dígito mal tecleado
+  también "pasa": el DV se ajusta al RUT equivocado y la validación módulo 11 deja de detectar el
+  error. Decisión del owner pendiente.
+- **V07/V08 (accesibilidad):** las pestañas del drawer Ajustes (Mi Perfil / Ajustes / Seguridad)
+  son botones sin `role="tab"`/`aria-selected`. Menor.
+
+**Decisiones del §5 ya tomadas hoy por el owner:** C04/J02 (avisar, hotfix-065-b), C11/L06/M07
+(materno opcional, fix-204-b), E07/J05 (Agenda ofrece con aviso, fix-202-b; Editar permite vencida,
+fix-211-b), F01 (avisar, fix-205-b), O01 (página eliminada, hotfix-066-b), Q08/T03/T04 (auditar,
+fix-206-b). **Tomada por mí al corregir S22 (a confirmar):** Q05, tarifa 0 rechazada (fix-210-b).
+**Ya resueltas antes:** L10 (fix-182-b: sin clave = RUT), R12 (fix-198-b: 403 a otra sede).
+
+**Siguen abiertas (§5):** B06, B13, C14 (hoy: vence hoy = vigente/por vencer), C29, D04/D05, E13,
+F06, H06, O04, P04, R11, más C05.
+
+**Quedan manuales** (crean cuentas reales, necesitan correo o dos sesiones a la vez): C03, C24,
+C25, C28, E05, E10, E12, H02, H04, H07, L01, M02, M04, M05, N01, N02, N07, P02, T01, T02.
