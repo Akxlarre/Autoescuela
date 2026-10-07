@@ -1,7 +1,7 @@
 # Fix: Una secretaria puede crear instructores en otra sede y reenviar invitaciones de cualquier sede
 > id: fix-198-b-instructor-sede-no-validada
 > refs: ASG-i-034 (sospecha S4, confirmada en fix-197-b) · fix-179-b
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -39,5 +39,5 @@ Ninguno de una spec previa. ACs propios (mismo criterio que `authorizeInstructor
 ## Progreso
 - [x] `deno test supabase/functions/_shared/user-edit-authz.test.ts` → 28/28 (11 nuevos; rojos antes del cambio).
 - [x] Embed `instructors(both_branches)` desde `users` verificado contra PostgREST (devuelve objeto; el código acepta objeto o arreglo).
-- [ ] Deploy de `create-instructor` y `activate-instructor-account` (espera aprobación del owner).
-- [ ] Tras el deploy: secretaria sede 1 → `create-instructor` con `branchId: 2` = 403 y `activate-instructor-account` de un instructor de la sede 2 = 403.
+- [x] Desplegadas `create-instructor` v19 y `activate-instructor-account` v3 (aprobado por el owner, 2026-10-07; `verify_jwt:false` como antes). Antes se verificó que lo desplegado era idéntico a `main` (el deploy solo agrega este fix).
+- [x] En vivo, secretaria sede 1, sin efectos (licencia vencida / email que no coincide): crear en sede 2 → **403**, reenviar instructor de sede 2 → **403**; controles sede 1 → 400 de licencia y de email (pasan la validación de sede).
