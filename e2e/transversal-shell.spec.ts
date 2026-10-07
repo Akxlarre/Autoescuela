@@ -7,10 +7,10 @@
  * Ningún test escribe en la BD: el cambio de sede y el tema viven en localStorage del contexto, y el
  * cierre de sesión es local (fix-184-b) con la llamada al servidor interceptada.
  */
-import { expect, test } from './support/fixtures';
-import { ACCOUNTS } from './support/accounts';
+import { expect, knownBug, test } from './support/fixtures';
+import { ACCOUNTS, storageStatePath } from './support/accounts';
 import { getAdminClient } from './support/supabase-admin';
-import type { Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -262,6 +262,39 @@ test.describe('K. Dos pestañas', () => {
     await expect(tab2).toHaveURL(/\/login$/, { timeout: 15_000 });
   });
 });
+
+// ── T. Hora de Chile ──────────────────────────────────────────────────────────
+
+test.describe('T. Hora de Chile', () => {
+  // Paso 1 de ASG-i-054 (fechas de negocio en UTC), sin escribir: solo se lee la fecha por defecto
+  // del formulario. 23:30 del 6-oct en Chile (UTC-3) = 02:30 UTC del 7-oct. 15:00 es el control:
+  // demuestra que el test mide la fecha y no falla por otra causa.
+  for (const hora of ['15:00', '23:30']) {
+    test(`T02: a las ${hora} hora Chile, el anticipo nuevo propone la fecha de HOY`, async ({
+      browser,
+    }) => {
+      if (hora === '23:30') knownBug('ASG-i-054 (fechas de negocio en UTC)');
+      await anticipoProponeHoy(browser, hora);
+    });
+  }
+});
+
+/** Abre "Registrar anticipo" el 6-oct a `hora` (Chile) y exige que la fecha propuesta sea ese día. */
+async function anticipoProponeHoy(browser: Browser, hora: string): Promise<void> {
+  const context = await browser.newContext({
+    storageState: storageStatePath('admin'),
+    timezoneId: 'America/Santiago',
+  });
+  const page = await context.newPage();
+  await page.clock.install({ time: new Date(`2026-10-06T${hora}:00-03:00`) });
+  await page.goto('/app/admin/contabilidad/anticipos');
+  await shellReady(page);
+  await page.locator('[data-llm-action="registrar-anticipo"]').first().click();
+  const fecha = page.locator('[data-llm-description="Fecha del anticipo"] input');
+  await expect(fecha).toBeVisible({ timeout: 20_000 });
+  await expect(fecha).toHaveValue('06/10/2026');
+  await context.close();
+}
 
 // ── V. Tema y alto de ventana ─────────────────────────────────────────────────
 

@@ -87,3 +87,38 @@ sede (Caja Diaria, Nueva Matrícula) mide el selector de sede, no la pantalla re
 | Y02 al navegar el foco va a `<main>` | ✅ | |
 | Y03 botones de ícono del shell con nombre accesible | ❌→✅ | el de **perfil** tenía el `aria-label` en el host `<p-button>`: el `<button>` real quedaba sin nombre → **`hotfix-064-b`** (PR #204). El test pasa contra un build con ese hotfix |
 | Y07 `data-llm-action` en los botones del shell | ✅ | |
+
+## D07 — "Todas" = A + B (admin, 2026-10-06)
+
+Exploración por UI (KPIs/contadores de cada pantalla con sede A, B y "Todas"):
+
+| Pantalla | A | B | Todas | Res. |
+|---|---|---|---|---|
+| Alumnos (badge) | 66 | 66 | 132 | ✅ |
+| Pagos — con deuda | 26 | 43 | 69 | ✅ |
+| Ex-alumnos — egresados | 9 | 8 | 17 | ✅ |
+| Flota — vehículos | 8 | 8 | 16 | ✅ |
+| Instructores — todos | 8 | 8 | 16 | ✅ |
+| Certificación — pendientes / alumnos | 76 / 76 | 71 / 73 | 147 / 149 | ✅ |
+| Dashboard — alumnos con… | 25 | 22 | 47 | ✅ |
+| Servicios especiales — catálogo | 1 | 1 | 1 | ✅ (catálogo global, sin sede) |
+
+**P22 — filas con `branch_id` NULL** (tablas con esa columna):
+- ❌ `special_service_sales` #3: venta del admin con "Todas" (2026-08-13) **sin sede** → no la ve la
+  Caja ni los reportes de ninguna sede. El código actual la sigue permitiendo
+  (`getActiveBranchId(true)` cae en `user.branchId`, que para el admin es `null`; la RLS de INSERT
+  deja pasar al admin) → **`fix-194-b`**. Asignar la sede a la fila #3 = decisión del owner.
+- ⚠️ `cash_closings` #2–#5: cierres de abril del admin, $0, sin sede (anteriores a que la Caja
+  exigiera sede, fix-230-m) → datos de prueba, sin efecto.
+- ✅ `discounts` "Descuento Padre Hurtado", `school_documents` #1: globales a propósito.
+- ✅ `users` (el admin) y `audit_log` (eventos del admin): esperables.
+
+## T02 — Hora de Chile emulada (`transversal-shell.spec.ts`, 2026-10-06)
+
+`timezoneId: America/Santiago` + `page.clock` el 6-oct; se abre "Registrar anticipo" y se lee la
+fecha propuesta (sin guardar nada).
+
+| Hora | Esperado | Obtenido | Res. |
+|---|---|---|---|
+| 15:00 (control) | 06/10/2026 | 06/10/2026 | ✅ |
+| 23:30 | 06/10/2026 | **07/10/2026** | ❌ confirma **ASG-i-054** (de Matías, pendiente) en vivo → `knownBug` |
