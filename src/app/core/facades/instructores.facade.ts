@@ -6,6 +6,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { toISODate, todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -162,6 +163,10 @@ export class InstructoresFacade {
   private readonly _horario = signal<InstructorHorarioSession[]>([]);
   private readonly _isLoadingHorario = signal<boolean>(false);
 
+  /** Clases futuras del instructor en edición (fix-205-b); `null` = sin cargar o error. */
+  private readonly _clasesFuturasSeleccionado = signal<number | null>(null);
+  private readonly clasesFuturasGuard = createRequestGuard();
+
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly instructores = this._instructores.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
@@ -181,6 +186,7 @@ export class InstructoresFacade {
   });
   readonly horario = this._horario.asReadonly();
   readonly isLoadingHorario = this._isLoadingHorario.asReadonly();
+  readonly clasesFuturasSeleccionado = this._clasesFuturasSeleccionado.asReadonly();
 
   // ── KPIs computed ──────────────────────────────────────────────────────────
   readonly totalInstructores = computed<number>(() => this._instructores().length);
@@ -579,6 +585,24 @@ export class InstructoresFacade {
     } finally {
       this._isLoadingHorario.set(false);
     }
+  }
+
+  /**
+   * Cuenta las clases `scheduled` del instructor desde ahora (fix-205-b, S9 de ASG-i-034), para
+   * avisar al desactivarlo de las clases que quedarán con un instructor inactivo.
+   */
+  async cargarClasesFuturas(instructorId: number): Promise<void> {
+    const requestToken = this.clasesFuturasGuard.next();
+    this._clasesFuturasSeleccionado.set(null);
+    const { count, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('instructor_id', instructorId)
+      .eq('status', 'scheduled')
+      .gte('scheduled_at', new Date().toISOString());
+
+    if (!this.clasesFuturasGuard.isCurrent(requestToken)) return;
+    this._clasesFuturasSeleccionado.set(error ? null : (count ?? 0));
   }
 
   /** Devuelve el `instructorId` recién creado (para subir sus documentos), o `null` si falló. */

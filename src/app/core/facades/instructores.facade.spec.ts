@@ -638,4 +638,56 @@ describe('InstructoresFacade', () => {
       );
     });
   });
+
+  // fix-205-b (S9 de ASG-i-034): al desactivar se avisa cuántas clases futuras quedan colgando.
+  describe('cargarClasesFuturas — fix-205-b', () => {
+    function mockCount(result: { count: number | null; error: unknown }): {
+      eq: any;
+      gte: any;
+      select: any;
+    } {
+      const gte = vi.fn().mockResolvedValue(result);
+      const eq: any = vi.fn();
+      const chain = { eq, gte };
+      eq.mockReturnValue(chain);
+      const select = vi.fn().mockReturnValue(chain);
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ select });
+      return { eq, gte, select };
+    }
+
+    it('cuenta las clases scheduled del instructor desde ahora', async () => {
+      const { eq, gte, select } = mockCount({ count: 3, error: null });
+      await facade.cargarClasesFuturas(7);
+      expect(supabaseSpy.client.from).toHaveBeenCalledWith('class_b_sessions');
+      expect(select).toHaveBeenCalledWith('id', { count: 'exact', head: true });
+      expect(eq).toHaveBeenCalledWith('instructor_id', 7);
+      expect(eq).toHaveBeenCalledWith('status', 'scheduled');
+      expect(gte.mock.calls[0][0]).toBe('scheduled_at');
+      expect(facade.clasesFuturasSeleccionado()).toBe(3);
+    });
+
+    it('con error → null (el aviso no inventa un número)', async () => {
+      mockCount({ count: null, error: { message: 'boom' } });
+      await facade.cargarClasesFuturas(7);
+      expect(facade.clasesFuturasSeleccionado()).toBeNull();
+    });
+
+    it('una respuesta vieja no pisa la del instructor vigente', async () => {
+      let resolveOld!: (v: unknown) => void;
+      const gte = vi
+        .fn()
+        .mockReturnValueOnce(new Promise((r) => (resolveOld = r)))
+        .mockResolvedValueOnce({ count: 5, error: null });
+      const eq: any = vi.fn();
+      const chain = { eq, gte };
+      eq.mockReturnValue(chain);
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue(chain) });
+
+      const old = facade.cargarClasesFuturas(1);
+      await facade.cargarClasesFuturas(2);
+      resolveOld({ count: 9, error: null });
+      await old;
+      expect(facade.clasesFuturasSeleccionado()).toBe(5);
+    });
+  });
 });
