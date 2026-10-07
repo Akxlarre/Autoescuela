@@ -601,3 +601,46 @@ el componente del botón); la revisión del bloque 5 miró el `<button>` interno
 ## Test de regresión
 
 Los casos "Auto ✓" del checklist, automatizados en `e2e/` (suite de `0019-m`).
+
+**`e2e/clase-profesional.spec.ts`** (2026-10-07): 42 tests, 41 en verde y 1 marcado como bug
+conocido (U01, tiempo real → `ASG-i-056`; comprobado que falla por eso con
+`E2E_SHOW_KNOWN_BUGS=1`). Corrida dos veces seguidas sin fallos; no deja datos (0 matrículas con
+Nº `E2E-` al terminar). Los tests siembran su propio alumno `E2E-` con matrícula Profesional A2
+en la promoción en curso más nueva (`createE2eAlumno` ahora acepta `promotionCourseId`).
+
+Suite E2E completa (362 tests, 16,6 min, 2026-10-07): 348 pasaron y 14 fallaron en la corrida
+con todo en paralelo; al reintentar solo los fallidos pasaron 14 más y quedaron 4, ninguno de
+esta spec ni de los cambios de este track:
+
+- `barrido-rutas` B10 (`/matricula`, admin y secretaria): 14 px de scroll horizontal del shell a
+  1440 px. Falla siempre. La pantalla muestra el aviso de "retomar borrador" (hay un borrador de
+  prueba dejado, matrícula 7004) con el nombre cortado; es la causa probable. Sin track.
+- `auth-sesion` A03: el panel "Credenciales de prueba" en el build de producción (se corre
+  contra `ng serve`).
+- `alumnos-b-ficha` F04: compara una fecha de reprogramación contra la hora actual.
+
+Las fallas que sí tocaron a esta spec en la corrida completa (5 tests de la Base, junto con el
+barrido de esa misma ruta) fueron por tiempo de carga con todo en paralelo; la espera de carga de
+la spec se subió a 30 s y junto al barrido de rutas pasa completa.
+
+| Bloque | Casos cubiertos |
+|---|---|
+| Acceso | A01, A02, A04, A06, A08, T01 |
+| Base | B01, B03, B06, B07, B10, C02, C05, C07, C08, C10, D01, D04, E01, E03, E04, E05, E06, E09, E10, F01, F02, F03, F06, I01, I02 |
+| Papelera y ficha | G02, G05, G07, H01, H02, H07, H08 |
+| Promociones | J01, J04, J05, J06, J10, K01, K07, K13, K14, L01, L03, L05, T03 |
+| Libro | O01, O04, P01, P02, P03, P05, P07, P08, P12, I08, Q01, Q02, Q03, R01 |
+| Seguridad (por API) | T05, T06 y las tablas de `fix-353-m` |
+| Tiempo real y visual | U01 (bug conocido), U07 |
+
+Casos "Auto ✓" que **no** se automatizaron, y por qué:
+
+- **K09, L04, L09, L13** (crear, editar y transiciones de una promoción): una promoción de prueba
+  ocupa un lunes y un número reales de la cadencia automática mientras existe; la BD es compartida.
+- **B09, N01** (matricular por el asistente): corresponden al testing de matrícula (`ASG-i-023`).
+- **A03, A12, A13**: ya están en `e2e/auth-sesion.spec.ts` (H01, J01) y `e2e/barrido-rutas.spec.ts`.
+- **A05, B02, C06, C09 (inactivo), D02, D03, E02, E07, G01, J02, J03, J07, K03, L14, O02, O05,
+  P09, Q04**: sin dato estable en una BD compartida (cuenta sin sede, convalidación, alumno con
+  pagos, promoción finalizada concreta) o el caso dejó de existir por una decisión (D2, D20).
+  Quedan cubiertos por la ejecución manual de los bloques 2–4.
+- **U06** (modo oscuro legible): es un juicio visual; se revisó a mano en el bloque 5.
