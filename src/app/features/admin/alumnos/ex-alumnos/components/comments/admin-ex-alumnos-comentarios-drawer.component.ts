@@ -67,7 +67,7 @@ const PAGE_STEP = 12;
               <input
                 type="text"
                 placeholder="Buscar por nombre, comentario o rating..."
-                class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none"
+                class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none"
                 data-llm-description="Search graduate opinions by name, comment or rating"
                 [ngModel]="searchTerm()"
                 (ngModelChange)="onSearchChange($event)"
