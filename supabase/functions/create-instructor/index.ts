@@ -42,6 +42,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import { authorizeInstructorCreate } from '../_shared/user-edit-authz.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -192,7 +193,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('id, roles ( name )')
+      .select('id, branch_id, can_access_both_branches, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -243,6 +244,17 @@ Deno.serve(async (req: Request) => {
         'Faltan campos requeridos: firstNames, paternalLastName, rut, email, type, licenseClass, licenseExpiry, branchId',
       );
     }
+
+    // fix-198-b: la sede del body no se toma tal cual — una secretaria sin grant, solo la suya.
+    const authz = authorizeInstructorCreate(
+      {
+        role: callerRole,
+        branchId: callerRow.branch_id ?? null,
+        bothBranches: !!callerRow.can_access_both_branches,
+      },
+      Number(branchId),
+    );
+    if (!authz.ok) return errorResponse(authz.message, authz.status);
 
     // ── Validar licencia no vencida ─────────────────────────────────────────
     const licenseStatus = computeLicenseStatus(licenseExpiry);

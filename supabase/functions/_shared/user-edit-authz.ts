@@ -94,3 +94,43 @@ export function authorizeInstructorEdit(
   }
   return OK;
 }
+
+/**
+ * fix-198-b — ¿Puede `caller` crear un instructor en la sede `requestedBranchId`?
+ * Una secretaria sin grant solo en su propia sede (el body ya no se toma tal cual).
+ */
+export function authorizeInstructorCreate(
+  caller: EditCaller,
+  requestedBranchId: number | null | undefined,
+): AuthzResult {
+  if (caller.role !== 'admin' && caller.role !== 'secretary') {
+    return deny(403, 'Solo administradores y secretarias pueden crear instructores');
+  }
+  if (seesAllBranches(caller)) return OK;
+  if (caller.branchId === null || requestedBranchId !== caller.branchId) {
+    return deny(403, 'No puedes crear instructores en otra sede');
+  }
+  return OK;
+}
+
+/**
+ * fix-198-b — ¿Puede `caller` reenviar la invitación del usuario `target`?
+ * El objetivo debe ser un instructor; una secretaria sin grant solo los de su sede o "ambas".
+ */
+export function authorizeInstructorReinvite(
+  caller: EditCaller,
+  target: { role: string | null | undefined; branchId: number | null; bothBranches: boolean } | null,
+): AuthzResult {
+  if (caller.role !== 'admin' && caller.role !== 'secretary') {
+    return deny(403, 'Solo administradores y secretarias pueden realizar esta acción');
+  }
+  if (!target) return deny(404, 'Usuario no encontrado');
+  if (target.role !== 'instructor') {
+    return deny(403, 'Esta acción solo aplica a instructores');
+  }
+  if (seesAllBranches(caller)) return OK;
+  const inScope =
+    target.bothBranches || target.branchId === null || target.branchId === caller.branchId;
+  if (!inScope) return deny(403, 'No puedes reenviar invitaciones de instructores de otra sede');
+  return OK;
+}

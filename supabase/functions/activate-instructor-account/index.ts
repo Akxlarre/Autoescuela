@@ -45,6 +45,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import { authorizeInstructorReinvite } from '../_shared/user-edit-authz.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -183,7 +184,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('id, roles(name)')
+      .select('id, branch_id, can_access_both_branches, roles(name)')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -203,7 +204,7 @@ Deno.serve(async (req: Request) => {
     const { data: targetUser, error: findError } = await supabaseAdmin
       .from('users')
       .select(
-        'id, email, first_names, paternal_last_name, maternal_last_name, first_login, supabase_uid, roles(name)',
+        'id, email, first_names, paternal_last_name, maternal_last_name, first_login, supabase_uid, branch_id, roles(name), instructors(both_branches)',
       )
       .eq('id', userId)
       .maybeSingle();
@@ -211,6 +212,24 @@ Deno.serve(async (req: Request) => {
     if (findError || !targetUser) {
       return errorResponse('Usuario no encontrado en la base de datos', 404);
     }
+
+    // fix-198-b: una secretaria sin grant solo reenvía invitaciones de instructores de su sede.
+    const instructorRow = Array.isArray(targetUser.instructors)
+      ? targetUser.instructors[0]
+      : targetUser.instructors;
+    const authz = authorizeInstructorReinvite(
+      {
+        role: callerRole,
+        branchId: callerRow.branch_id ?? null,
+        bothBranches: !!callerRow.can_access_both_branches,
+      },
+      {
+        role: targetUser.roles?.name,
+        branchId: targetUser.branch_id ?? null,
+        bothBranches: !!instructorRow?.both_branches,
+      },
+    );
+    if (!authz.ok) return errorResponse(authz.message, authz.status);
 
     // Verificar que el email coincide (evita reenviar la invitación equivocada)
     if (targetUser.email?.toLowerCase() !== email.toLowerCase()) {
