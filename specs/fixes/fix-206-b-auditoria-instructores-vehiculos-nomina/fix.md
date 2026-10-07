@@ -34,3 +34,10 @@ Ninguno de una spec previa. ACs propios:
 - `supabase/tests/audit/fix-206-b-auditoria-instructores.sql` contra producción (todo dentro de un
   `BEGIN … ROLLBACK`, no deja datos).
 - `npx vitest run src/app/core/facades/auditoria.facade.spec.ts src/app/core/facades/dashboard.facade.spec.ts`
+
+## Progreso
+- [x] Migración escrita; `log_change()`/`audit_humanize_column()` comparadas por diff contra producción: idénticas salvo los cambios declarados.
+- [x] Test SQL corrido ANTES de aplicar: confirma el bug (0 triggers, nada auditado) y que no deja efectos (`audit_log` no creció).
+- [x] vitest `auditoria.facade.spec.ts` + `dashboard.facade.spec.ts` 25/25 (rojo → verde para los módulos nuevos); `ng build` ✓.
+- [ ] Aplicar la migración en producción — **esperando aprobación del owner**.
+- [ ] Correr el test SQL después de aplicar (todo "ok") y abrir el PR.
