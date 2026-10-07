@@ -4,7 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { toISODate } from '@core/utils/date.utils';
+import { getChileDateTimeRange, toISODate } from '@core/utils/date.utils';
 
 describe('InstructoresFacade', () => {
   let facade: InstructoresFacade;
@@ -258,14 +258,12 @@ describe('InstructoresFacade', () => {
 
       await facade.initialize();
 
-      // Mismo cómputo de fecha que usa la facade (toISODate = huso Chile) — comparar
-      // contra new Date().toISOString() (UTC) es flaky en el borde del día UTC/Chile.
-      const todayStr = toISODate(new Date());
-      expect(gte).toHaveBeenCalledWith('scheduled_at', `${todayStr}T00:00:00`);
-      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith(
-        'scheduled_at',
-        `${todayStr}T23:59:59`,
-      );
+      // fix-207-b (S15): el día de Chile con su offset (sin offset, Postgres lo leía en UTC y
+      // perdía las clases en curso de la tarde-noche).
+      const { start, end } = getChileDateTimeRange(toISODate(new Date()));
+      expect(start).toMatch(/T00:00:00[+-]\d\d:00$/);
+      expect(gte).toHaveBeenCalledWith('scheduled_at', start);
+      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith('scheduled_at', end);
     });
 
     // fix-202-b (S7): license_status solo se recalcula al editar; el estado se calcula con la fecha.
@@ -763,6 +761,86 @@ describe('InstructoresFacade', () => {
       resolveOld({ data: [row(1)], error: null });
       await first;
       expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+    });
+  });
+
+  // fix-208-b (S16 de ASG-i-034): horas acotadas a la sede, error visible, mes actual al abrir.
+  describe('horas mensuales — fix-208-b', () => {
+    const inst = (id: number, nombre: string) => ({ id, nombre, initials: 'XX' }) as any;
+
+    function mockHoras(result: { data: unknown[] | null; error: unknown }): { inFn: any; eq: any } {
+      const inFn = vi.fn().mockResolvedValue(result);
+      const eq = vi.fn().mockReturnValue({ in: inFn });
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValue({ select: vi.fn().mockReturnValue({ eq }) });
+      return { inFn, eq };
+    }
+
+    it('acota la query a los instructores de la lista (ya filtrada por sede)', async () => {
+      (facade as any)._instructores.set([inst(1, 'Ana'), inst(2, 'Beto')]);
+      const { inFn } = mockHoras({
+        data: [{ instructor_id: 2, practical_sessions: 3, total_equivalent: 2.25 }],
+        error: null,
+      });
+      await facade.loadHorasMensuales();
+      expect(inFn).toHaveBeenCalledWith('instructor_id', [1, 2]);
+      expect(facade.horasMensuales().map((r) => r.nombre)).toEqual(['Beto']);
+      expect(facade.horasError()).toBeNull();
+    });
+
+    it('sin instructores en la lista → no consulta y queda vacío', async () => {
+      (facade as any)._instructores.set([]);
+      supabaseSpy.client.from = vi.fn();
+      await facade.loadHorasMensuales();
+      expect(supabaseSpy.client.from).not.toHaveBeenCalled();
+      expect(facade.horasMensuales()).toEqual([]);
+    });
+
+    it('con error → horasError con mensaje (no "sin clases")', async () => {
+      (facade as any)._instructores.set([inst(1, 'Ana')]);
+      mockHoras({ data: null, error: { message: 'boom' } });
+      await facade.loadHorasMensuales();
+      expect(facade.horasError()).toBe('No se pudieron cargar las horas. Intenta de nuevo.');
+      expect(facade.horasMensuales()).toEqual([]);
+    });
+
+    it('abrirHorasMensuales() vuelve al mes actual', async () => {
+      (facade as any)._instructores.set([inst(1, 'Ana')]);
+      mockHoras({ data: [], error: null });
+      facade.navHorasAnterior();
+      facade.navHorasAnterior();
+      await facade.abrirHorasMensuales();
+      const now = new Date();
+      expect(facade.horasMonth()).toBe(now.getMonth() + 1);
+      expect(facade.horasYear()).toBe(now.getFullYear());
+      expect(facade.isHorasCurrentMonth()).toBe(true);
+    });
+
+    it('una respuesta vieja no pisa la del mes vigente', async () => {
+      (facade as any)._instructores.set([inst(1, 'Ana'), inst(2, 'Beto')]);
+      let resolveOld!: (v: unknown) => void;
+      const inFn = vi
+        .fn()
+        .mockReturnValueOnce(new Promise((r) => (resolveOld = r)))
+        .mockResolvedValueOnce({
+          data: [{ instructor_id: 1, practical_sessions: 1, total_equivalent: 1 }],
+          error: null,
+        });
+      const eq = vi.fn().mockReturnValue({ in: inFn });
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockReturnValue({ select: vi.fn().mockReturnValue({ eq }) });
+
+      const old = facade.loadHorasMensuales();
+      await facade.loadHorasMensuales();
+      resolveOld({
+        data: [{ instructor_id: 2, practical_sessions: 9, total_equivalent: 9 }],
+        error: null,
+      });
+      await old;
+      expect(facade.horasMensuales().map((r) => r.nombre)).toEqual(['Ana']);
+      expect(facade.isLoadingHoras()).toBe(false);
     });
   });
 });
