@@ -31,7 +31,7 @@ import { AdminInstructorHorasDrawerComponent } from './admin-instructor-horas-dr
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
-type FilterTab = 'all' | 'active' | 'expiring';
+type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
 
 @Component({
   selector: 'app-admin-instructores',
@@ -107,6 +107,24 @@ type FilterTab = 'all' | 'active' | 'expiring';
           >
             <app-icon name="alert-triangle" [size]="13" />
             Licencia por vencer ({{ facade.licenciasPorVencer() }})
+          </button>
+          <!-- hotfix-069-b (B06): las vencidas, aparte de "por vencer". -->
+          <button
+            class="filter-pill whitespace-nowrap"
+            [class.filter-pill--error]="
+              facade.licenciasVencidas() > 0 && activeFilter() === 'expired'
+            "
+            [class.filter-pill--error-idle]="
+              facade.licenciasVencidas() > 0 && activeFilter() !== 'expired'
+            "
+            [class.filter-pill--active]="
+              activeFilter() === 'expired' && facade.licenciasVencidas() === 0
+            "
+            (click)="setFilter('expired')"
+            data-llm-action="filtro-licencia-vencida"
+          >
+            <app-icon name="circle-x" [size]="13" />
+            Licencia vencida ({{ facade.licenciasVencidas() }})
           </button>
         </div>
         <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
@@ -371,6 +389,16 @@ type FilterTab = 'all' | 'active' | 'expiring';
       background: color-mix(in srgb, var(--state-warning) 6%, transparent);
       color: var(--state-warning);
     }
+    .filter-pill--error {
+      border-color: var(--state-error);
+      background: color-mix(in srgb, var(--state-error) 12%, transparent);
+      color: var(--state-error);
+    }
+    .filter-pill--error-idle {
+      border-color: var(--state-error);
+      background: color-mix(in srgb, var(--state-error) 6%, transparent);
+      color: var(--state-error);
+    }
 
     .instructor-table {
       width: 100%;
@@ -601,6 +629,8 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
       results = results.filter((i) => i.estado === 'activo');
     } else if (filter === 'expiring') {
       results = results.filter((i) => i.licenseStatus === 'expiring_soon');
+    } else if (filter === 'expired') {
+      results = results.filter((i) => i.licenseStatus === 'expired');
     }
 
     return results;

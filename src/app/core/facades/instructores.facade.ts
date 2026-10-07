@@ -203,6 +203,10 @@ export class InstructoresFacade {
   readonly licenciasPorVencer = computed<number>(
     () => this._instructores().filter((i) => i.licenseStatus === 'expiring_soon').length,
   );
+  /** hotfix-069-b (B06): las ya vencidas, aparte de "por vencer". */
+  readonly licenciasVencidas = computed<number>(
+    () => this._instructores().filter((i) => i.licenseStatus === 'expired').length,
+  );
 
   // ── Acciones ───────────────────────────────────────────────────────────────
 
