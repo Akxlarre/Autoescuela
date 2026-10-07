@@ -83,7 +83,13 @@ function setup(opts: SetupOpts = {}) {
       { provide: AuthFacade, useValue: { currentUser: vi.fn(() => user) } },
       {
         provide: BranchFacade,
-        useValue: { selectedBranchId: vi.fn(() => opts.selectedBranchId ?? null) },
+        useValue: {
+          selectedBranchId: vi.fn(() => opts.selectedBranchId ?? null),
+          branches: vi.fn(() => [
+            { id: 1, name: 'Autoescuela Chillán', slug: 'a' },
+            { id: 2, name: 'Conductores Chillán', slug: 'b' },
+          ]),
+        },
       },
       { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn() } },
       { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn((e: Error) => e) } },
@@ -270,6 +276,67 @@ describe('ServiciosEspecialesFacade', () => {
       });
       expect(ok).toBe(false);
       expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  // fix-194-b: el admin real no tiene sede propia (branchId null). Con "Todas" la venta no tenía
+  // de dónde sacar la sede y se guardaba con branch_id null (mismo agujero que DG-082).
+  describe('registrarVenta — nunca sin sede (fix-194-b)', () => {
+    const adminSinSede = { role: 'admin', dbId: 2, branchId: null, canAccessBothBranches: false };
+    const secretaria = { role: 'secretaria', dbId: 7, branchId: 1, canAccessBothBranches: false };
+    const datos = {
+      servicioId: 5,
+      esAlumno: false,
+      nombre: 'Juan',
+      rut: '1-9',
+      fecha: '2026-07-01',
+      precio: 25000,
+    };
+
+    it('admin con "Todas" → requiere elegir sede y no propone ninguna', () => {
+      const { facade } = setup({ user: adminSinSede, selectedBranchId: null });
+      expect(facade.requiereElegirSede()).toBe(true);
+      expect(facade.sedePorDefecto()).toBeNull();
+      expect(facade.sedeOptions()).toEqual([
+        { label: 'Autoescuela Chillán', value: 1 },
+        { label: 'Conductores Chillán', value: 2 },
+      ]);
+    });
+
+    it('admin con una sede en el topbar → el campo aparece precargado con ella', () => {
+      const { facade } = setup({ user: adminSinSede, selectedBranchId: 2 });
+      expect(facade.requiereElegirSede()).toBe(true);
+      expect(facade.sedePorDefecto()).toBe(2);
+    });
+
+    it('secretaria de una sede → sin campo de sede', () => {
+      const { facade } = setup({ user: secretaria, selectedBranchId: null });
+      expect(facade.requiereElegirSede()).toBe(false);
+    });
+
+    it('sin sede (admin con "Todas", sin elegir) → false, motivo en error() y sin INSERT', async () => {
+      const { facade, mockSupabase } = setup({ user: adminSinSede, selectedBranchId: null });
+      const ok = await facade.registrarVenta(datos);
+      expect(ok).toBe(false);
+      expect(facade.error()).toBe('Selecciona la sede de la venta.');
+      expect(mockSupabase._builders.get('special_service_sales')).toBeUndefined();
+    });
+
+    it('con la sede elegida en el formulario → se inserta con esa sede', async () => {
+      const { facade, mockSupabase } = setup({ user: adminSinSede, selectedBranchId: null });
+      const ok = await facade.registrarVenta({ ...datos, branchId: 2 });
+      expect(ok).toBe(true);
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ branch_id: 2 }),
+      );
+    });
+
+    it('secretaria sin campo → la venta va a su sede', async () => {
+      const { facade, mockSupabase } = setup({ user: secretaria, selectedBranchId: null });
+      await facade.registrarVenta(datos);
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ branch_id: 1 }),
+      );
     });
   });
 

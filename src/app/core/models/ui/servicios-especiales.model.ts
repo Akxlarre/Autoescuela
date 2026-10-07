@@ -48,6 +48,8 @@ export interface VentaFormData {
   precio: number;
   /** N° de boleta emitida (opcional) — se propaga a Caja Diaria (fix-025-i). */
   documentNumber?: string | null;
+  /** Sede elegida en el formulario (admin / multi-sede). Sin ella, la del topbar o la propia (fix-194-b). */
+  branchId?: number | null;
 }
 
 export interface NuevoServicioFormData {

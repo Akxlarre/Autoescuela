@@ -42,6 +42,23 @@ import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
           />
         </div>
 
+        <!-- Sede (admin / multi-sede): sin ella la venta quedaba fuera de toda Caja (fix-194-b) -->
+        @if (facade.requiereElegirSede()) {
+          <div class="flex flex-col gap-1.5">
+            <label class="micro-label" for="v-sede"> Sede <span class="text-error">*</span> </label>
+            <p-select
+              inputId="v-sede"
+              formControlName="branchId"
+              [options]="facade.sedeOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar sede..."
+              styleClass="w-full"
+              data-llm-description="Sede a la que se imputa la venta (Caja Diaria y reportes)"
+            />
+          </div>
+        }
+
         <!-- Nombre + RUT -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
@@ -186,9 +203,17 @@ export class RegistrarVentaDrawerComponent {
     esAlumno: new FormControl<boolean>(false),
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
     documentNumber: new FormControl<string>(''),
+    branchId: new FormControl<number | null>(null),
   });
 
   constructor() {
+    // fix-194-b: el admin elige la sede (precargada con la del topbar, si hay una).
+    if (this.facade.requiereElegirSede()) {
+      const branchId = this.ventaForm.controls.branchId;
+      branchId.setValidators(Validators.required);
+      branchId.setValue(this.facade.sedePorDefecto());
+    }
+
     this.ventaForm
       .get('servicioId')!
       .valueChanges.pipe(takeUntilDestroyed())
@@ -249,6 +274,7 @@ export class RegistrarVentaDrawerComponent {
       fecha: new Date().toISOString().split('T')[0],
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,
+      branchId: val.branchId ?? null,
     });
 
     this.isSaving.set(false);
