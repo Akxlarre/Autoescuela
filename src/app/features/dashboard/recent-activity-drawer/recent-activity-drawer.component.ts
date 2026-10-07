@@ -180,8 +180,8 @@ export class RecentActivityDrawerComponent implements OnInit {
       case 'standalone_course_enrollments':
       case 'special_service_sales':
         return `/app/${role}/pagos`;
-      case 'users':
-        return role === 'admin' ? `/app/admin/usuarios` : null;
+      // hotfix-066-b: los eventos de `users` no llevan a ningún lado (la página de usuarios era un
+      // placeholder y se eliminó).
       default:
         return null;
     }
