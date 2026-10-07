@@ -198,7 +198,9 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   aria-required="true"
                 />
                 @if (maternoTouched() && !maternoValido()) {
-                  <span class="field-error">Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span>
+                  <span class="field-error"
+                    >Si lo ingresas, el apellido materno debe tener al menos 2 caracteres</span
+                  >
                 }
               </div>
 
@@ -440,11 +442,21 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   <app-icon name="alert-triangle" [size]="16" />
                   Este instructor todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
+                <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
+                @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
+                  <span
+                    class="text-xs"
+                    data-llm-description="nota de que la invitación va al correo guardado"
+                  >
+                    La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla al
+                    correo nuevo.
+                  </span>
+                }
                 <button
                   type="button"
                   class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || !emailValido()"
-                  (click)="onEnviarInvitacion(inst.userId)"
+                  [disabled]="isSendingInvite() || !inst.email"
+                  (click)="onEnviarInvitacion(inst.userId, inst.email)"
                   data-llm-action="enviar-invitacion-instructor"
                 >
                   @if (isSendingInvite()) {
@@ -779,12 +791,12 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
   }
 
-  protected async onEnviarInvitacion(userId: number): Promise<void> {
-    if (!userId || !this.emailValido()) return;
+  protected async onEnviarInvitacion(userId: number, savedEmail: string): Promise<void> {
+    if (!userId || !savedEmail) return;
 
     this.isSendingInvite.set(true);
     try {
-      await this.facade.enviarInvitacion(userId, this.email());
+      await this.facade.enviarInvitacion(userId, savedEmail);
     } finally {
       this.isSendingInvite.set(false);
     }
