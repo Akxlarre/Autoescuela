@@ -33,6 +33,11 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
   standalone: true,
   imports: [CommonModule, FormsModule, SelectModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // hotfix-148-m: quien aloja las pestañas a ras (dentro de una tarjeta) puede darles margen
+    // cuando pasan a desplegable.
+    '[class.tabs-as-select]': "variant() === 'line' && lineTier() === 'select'",
+  },
   template: `
     @if (variant() === 'line') {
       <div class="tabs-line-host" #lineHost>
