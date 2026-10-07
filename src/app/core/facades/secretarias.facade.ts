@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 
 export interface CrearSecretariaPayload {
   firstNames: string;
@@ -196,8 +197,14 @@ export class SecretariasFacade {
       const { data, error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al crear secretaria'),
+        );
+        return false;
+      }
       // fix-182-b: la cuenta se crea sin contraseña; la secretaria la crea desde el correo.
       this.toast.success(
         'Secretaria creada',
@@ -235,8 +242,14 @@ export class SecretariasFacade {
         },
       });
 
-      if (error)
-        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
+      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      if (error) {
+        this.toast.error(
+          'Error',
+          await edgeFunctionUserMessage(error, 'Error al actualizar secretaria'),
+        );
+        return false;
+      }
 
       this._initialized = false;
       await this.refreshSilently();

@@ -19,14 +19,14 @@ describe('SecretariasFacade', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-             order: vi.fn().mockResolvedValue({ data: [], error: null })
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
-          order: vi.fn().mockResolvedValue({ data: [], error: null })
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
         functions: {
-          invoke: vi.fn().mockResolvedValue({ data: null, error: null })
-        }
-      })
+          invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+        },
+      }),
     };
 
     TestBed.configureTestingModule({
@@ -34,8 +34,8 @@ describe('SecretariasFacade', () => {
         SecretariasFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: ToastService, useValue: toastSpy },
-        { provide: BranchFacade, useValue: branchFacadeSpy }
-      ]
+        { provide: BranchFacade, useValue: branchFacadeSpy },
+      ],
     });
 
     facade = TestBed.inject(SecretariasFacade);
@@ -97,6 +97,51 @@ describe('SecretariasFacade', () => {
         'Secretaria creada',
         'No pudimos enviar el correo de activación. Pídele que use "¿Olvidaste tu contraseña?" con ana@test.cl.',
       );
+    });
+  });
+
+  // fix-200-b (S6 de ASG-i-034): el toast mostraba un texto genérico; ahora un 4xx muestra el
+  // mensaje de la función y un 5xx el genérico.
+  describe('errores reales de la Edge Function — fix-200-b', () => {
+    const httpError = (status: number, error: string) =>
+      Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+        name: 'FunctionsHttpError',
+        context: { status, json: vi.fn().mockResolvedValue({ error }) },
+      });
+
+    it('crearSecretaria() con 409 de RUT → muestra el mensaje de la función', async () => {
+      (supabaseSpy.client as any).functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: null,
+          error: httpError(409, 'Ese RUT ya está registrado como instructor.'),
+        }),
+      };
+      expect(await facade.crearSecretaria({ email: 'a@test.cl' } as any)).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'Error',
+        'Ese RUT ya está registrado como instructor.',
+      );
+    });
+
+    it('editarSecretaria() con 409 → muestra el mensaje; con 500 → el genérico', async () => {
+      const edit = { email: 'x@test.cl', currentEmail: 'y@test.cl' } as any;
+      (supabaseSpy.client as any).functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: null,
+          error: httpError(409, 'Ya existe un usuario con ese correo electrónico'),
+        }),
+      };
+      expect(await facade.editarSecretaria(1, edit)).toBe(false);
+      expect(toastSpy.error).toHaveBeenLastCalledWith(
+        'Error',
+        'Ya existe un usuario con ese correo electrónico',
+      );
+
+      (supabaseSpy.client as any).functions = {
+        invoke: vi.fn().mockResolvedValue({ data: null, error: httpError(500, 'boom técnico') }),
+      };
+      expect(await facade.editarSecretaria(1, edit)).toBe(false);
+      expect(toastSpy.error).toHaveBeenLastCalledWith('Error', 'Error al actualizar secretaria');
     });
   });
 });
