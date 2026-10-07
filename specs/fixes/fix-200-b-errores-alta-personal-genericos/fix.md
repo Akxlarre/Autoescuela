@@ -33,3 +33,7 @@ Ninguno de una spec previa. ACs propios (mismo criterio que `admin-alumno-detall
 ## Resultado (2026-10-07)
 - Vitest de los 3 specs: 37/37 (8 nuevos; los 5 de los facades en rojo antes del cambio).
 - `npm run test:ci` 3426 ✓, `ng build` ✓, `lint:arch` 0 errores.
+- **Merge con la recuperación de fix-182-b (PR #218):** `c661b3bf` ya había arreglado el mensaje de
+  Crear secretaria con la misma lógica inline. Conflicto en `secretarias.facade.ts` resuelto con la
+  versión de este fix (`edgeFunctionUserMessage`, equivalente); sus 2 tests se conservan y pasan:
+  39/39 en los 3 specs, `ng build` ✓. Mergear #218 antes que #217.

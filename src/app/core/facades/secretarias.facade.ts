@@ -197,7 +197,8 @@ export class SecretariasFacade {
       const { data, error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
-      // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
+      // fix-200-b (generaliza lo de fix-182-b): el motivo real de la función (4xx), no un texto
+      // genérico (DG-085).
       if (error) {
         this.toast.error(
           'Error',

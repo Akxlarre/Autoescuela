@@ -86,6 +86,36 @@ describe('SecretariasFacade', () => {
       );
     });
 
+    it('RUT ya registrado (409) → muestra el mensaje de la función, no "error inesperado"', async () => {
+      const msg = 'Ya existe un usuario registrado con ese RUT (instructor).';
+      supabaseSpy.client.functions.invoke.mockResolvedValue({
+        data: null,
+        error: {
+          message: 'Edge Function returned a non-2xx status code',
+          context: new Response(JSON.stringify({ error: msg }), { status: 409 }),
+        },
+      });
+
+      expect(await facade.crearSecretaria(payload)).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalledWith('Error', msg);
+    });
+
+    it('error 5xx de la función → mensaje genérico (no expone texto técnico)', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValue({
+        data: null,
+        error: {
+          message: 'Edge Function returned a non-2xx status code',
+          context: new Response(JSON.stringify({ error: 'duplicate key value violates…' }), {
+            status: 500,
+          }),
+        },
+      });
+
+      expect(await facade.crearSecretaria(payload)).toBe(false);
+      const shown = toastSpy.error.mock.calls[0][1] as string;
+      expect(shown).not.toContain('duplicate key');
+    });
+
     it('correo no enviado → indica activar con "recuperar contraseña"', async () => {
       supabaseSpy.client.functions.invoke.mockResolvedValue({
         data: { success: true, inviteSent: false },
