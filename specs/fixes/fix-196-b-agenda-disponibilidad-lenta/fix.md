@@ -1,7 +1,7 @@
 # Fix: La Agenda tarda 5–6 s en cargar (disponibilidad evalúa la RLS fila por fila)
 > id: fix-196-b-agenda-disponibilidad-lenta
 > refs: ASG-i-037 (caso Z01 del checklist 037, encontrado en fix-190-b) · fix-032-i · hotfix-003-i
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -42,5 +42,5 @@ Ninguno de una spec previa. ACs propios:
 - [x] Migración + test ensayados juntos en una transacción revertida: 5/5 (2026-10-07).
 - [x] F2 con la vista actual: FALLA ("available") — el test detecta el bug.
 - [x] PR #212.
-- [ ] Aplicar la migración en producción (espera aprobación del owner).
-- [ ] Correr el test contra producción ya migrada + medir la Agenda en el build de producción.
+- [x] Migración aplicada en producción (aprobada por el owner, 2026-10-07) y registrada en `schema_migrations`.
+- [x] Test contra producción migrada: 5/5 (F3: 99 ms). Agenda en el build de producción (secretaria sede 2, 3 corridas): 0,76–1,07 s (antes 5,5–6,2 s).
