@@ -37,3 +37,10 @@ Ninguno de una spec previa. ACs propios:
 
 ## Test de Regresión
 - `supabase/tests/agenda/fix-196-b-disponibilidad-rls.sql` (como postgres; deja todo como estaba).
+
+## Progreso
+- [x] Migración + test ensayados juntos en una transacción revertida: 5/5 (2026-10-07).
+- [x] F2 con la vista actual: FALLA ("available") — el test detecta el bug.
+- [x] PR #212.
+- [ ] Aplicar la migración en producción (espera aprobación del owner).
+- [ ] Correr el test contra producción ya migrada + medir la Agenda en el build de producción.
