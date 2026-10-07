@@ -334,6 +334,27 @@ describe('LibroDeClasesFacade', () => {
       expect(mockToast.success).toHaveBeenCalled();
     });
 
+    // fix-349-m (S8): exportar el PDF crea la fila en el servidor sin que la pantalla se entere.
+    it('la fila se creó después de abrir el libro (p. ej. al exportar el PDF) → UPDATE, no INSERT', async () => {
+      const tables = cursoCompleto();
+      tables['class_book'] = { maybeSingle: { data: null, error: null } };
+      const { facade, mockSupabase, mockToast } = setup(tables);
+      await facade.selectPromocion(1);
+      expect(facade.cabecera()?.classBookId).toBeNull();
+
+      const cb = mockSupabase._builders.get('class_book');
+      cb.maybeSingle.mockResolvedValue({ data: { id: 88 }, error: null });
+      const ok = await facade.saveClassBookFields('SENCE-TRAS-PDF');
+
+      expect(ok).toBe(true);
+      expect(cb.insert).not.toHaveBeenCalled();
+      expect(cb.update).toHaveBeenCalledWith(
+        expect.objectContaining({ sence_code: 'SENCE-TRAS-PDF', sence_code_updated_by: 42 }),
+      );
+      expect(facade.cabecera()?.classBookId).toBe(88);
+      expect(facade.cabecera()?.senceCode).toBe('SENCE-TRAS-PDF');
+      expect(mockToast.error).not.toHaveBeenCalled();
+    });
     it('con libro existente → UPDATE por id y cabecera local sincronizada', async () => {
       const tables = cursoCompleto();
       tables['class_book'] = {

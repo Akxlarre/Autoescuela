@@ -435,7 +435,9 @@ export class LibroDeClasesFacade {
           rows.map((e) => e.id),
         );
       if (lvError) throw new Error('Error cargando convalidaciones');
-      const convIds = new Set(((lv ?? []) as { enrollment_id: number }[]).map((r) => r.enrollment_id));
+      const convIds = new Set(
+        ((lv ?? []) as { enrollment_id: number }[]).map((r) => r.enrollment_id),
+      );
       rows = rows.filter((e) => convIds.has(e.id));
     }
 
@@ -610,13 +612,22 @@ export class LibroDeClasesFacade {
 
     this._isSaving.set(true);
     try {
-      if (cabecera.classBookId) {
+      // La fila del libro puede haberse creado después de abrirlo: "Exportar PDF" la crea en el
+      // servidor y la pantalla no se entera. Insertar a ciegas chocaba con su unicidad (fix-349-m).
+      const classBookId =
+        cabecera.classBookId ??
+        (await this.findClassBookId(promotionCourseId, cabecera.convalidation));
+
+      if (classBookId) {
         // UPDATE existente
         const { error } = await this.supabase.client
           .from('class_book')
           .update({ sence_code: senceCode, ...auditFields })
-          .eq('id', cabecera.classBookId);
+          .eq('id', classBookId);
         if (error) throw error;
+        this._cabecera.set({ ...cabecera, classBookId, senceCode, ...auditPatch });
+        this.toast.success('Datos del libro guardados');
+        return true;
       } else {
         // INSERT nuevo registro
         const branchId = this.getActiveBranchId();
@@ -646,11 +657,6 @@ export class LibroDeClasesFacade {
         this.toast.success('Datos del libro guardados');
         return true;
       }
-
-      // Actualizar cabecera local
-      this._cabecera.set({ ...cabecera, senceCode, ...auditPatch });
-      this.toast.success('Datos del libro guardados');
-      return true;
     } catch (err) {
       const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar';
       this.toast.error(msg);
@@ -658,6 +664,24 @@ export class LibroDeClasesFacade {
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /** Id de la fila de `class_book` de un libro (curso + convalidación), o null si no existe. */
+  private async findClassBookId(
+    promotionCourseId: number,
+    convalidation: string | null,
+  ): Promise<number | null> {
+    const query = this.supabase.client
+      .from('class_book')
+      .select('id')
+      .eq('promotion_course_id', promotionCourseId);
+    const { data, error } = await (
+      convalidation
+        ? query.eq('convalidation_license', convalidation)
+        : query.is('convalidation_license', null)
+    ).maybeSingle();
+    if (error) throw error;
+    return (data as { id: number } | null)?.id ?? null;
   }
 
   // ── Exportar PDF ─────────────────────────────────────────────────────────────
