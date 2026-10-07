@@ -137,4 +137,5 @@ leía a mitad de carga). `--workers=1 --repeat-each=2`, build de producción.
 | Certificación B | ❌ | ❌ "Pendientes" 71 (B) en vez de 76 (A) → **`fix-195-b`** |
 
 Grep: ~19 facades branch-scoped más siguen sin guard (residuo de ASG-b-064 / spec 0005-m, que
-cubrió una primera pasada) → asignación nueva para confirmarlos con este test y corregirlos.
+cubrió una primera pasada) → **ASG-b-101** (PR #209) para confirmarlos con este test y corregirlos.
+`fix-195-b` (PR #208): con el fix, D06 8/8 (`--workers=1 --repeat-each=2`).
