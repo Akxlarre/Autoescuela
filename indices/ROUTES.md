@@ -56,7 +56,6 @@
 | `/app/admin/instructores` | `AdminInstructoresComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/certificacion` | `AdminCertificacionComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/documentos` | `AdminDocumentosComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/usuarios` | `AdminUsuariosComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/secretarias` | `AdminSecretariasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |

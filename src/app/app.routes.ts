@@ -271,13 +271,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'usuarios',
-            loadComponent: () =>
-              import('./features/admin/usuarios/admin-usuarios.component').then(
-                (m) => m.AdminUsuariosComponent,
-              ),
-          },
-          {
             path: 'secretarias',
             loadComponent: () =>
               import('./features/admin/secretarias/admin-secretarias.component').then(
