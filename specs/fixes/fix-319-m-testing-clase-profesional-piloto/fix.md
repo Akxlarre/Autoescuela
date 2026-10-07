@@ -594,6 +594,8 @@ Del bloque 5 (2026-10-07), uno por causa raíz. **Propuestos, aún sin carpeta:*
 | U08 — al abrir un panel el foco no entra en él (host de todos los paneles) | `fix-357-m-el-foco-entra-al-panel-lateral-al-abrirlo` | ✅ cerrado 2026-10-07 (test E2E + revisión manual) |
 | U08 — los buscadores de las listas no muestran el foco (10 pantallas) | `fix-358-m-los-buscadores-de-las-listas-muestran-el-foco` | ✅ cerrado 2026-10-07 (revisado en navegador) |
 | U06 — los badges `p-tag` conservan fondo claro en modo oscuro (toda la app) | `fix-356-m-etiquetas-de-estado-en-modo-oscuro` | ✅ cerrado 2026-10-07 (revisado en navegador) |
+| Comunicación y Anticipos en móvil/tablet — ~80 px vacíos bajo la barra de pestañas (observación de `fix-355-m`) | `fix-359-m-hueco-bajo-la-barra-de-pestanas-en-movil` | ✅ cerrado 2026-10-07 (medido antes y después; barrido de rutas 56/56) |
+| Comunicación en móvil — el desplegable de pestañas de la lista quedaba pegado a los bordes de la tarjeta | `hotfix-148-m-desplegable-de-pestanas-con-margen-dentro-de-la-tarjeta` | ✅ cerrado 2026-10-07 (revisado en navegador) |
 | U01 + U02 — tiempo real muerto en la Base Prof. | `ASG-i-056` (ya existe; agregar que archivar cambia `students`) | ⏳ |
 
 Descartado al revisar: "Crear promoción" sí tiene `data-llm-action` (`submit-crear-promocion`, en
