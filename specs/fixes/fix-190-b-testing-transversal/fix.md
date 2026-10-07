@@ -181,6 +181,8 @@ la Caja cruza con **ASG-i-048** (escrituras de Cuadratura, de i).
 `cleanup_d6_volumen.sql`). Sede 2: 318 alumnos, 1.104 clases, 537 pagos, 315 documentos. Sin efectos
 en la operación: clases `cancelled` en 2025 (horas de instructores intactas: 798 → 798) y pagos con
 fecha y `created_at` de 2025 (0 pagos con fecha de hoy). Ensayado antes en una transacción revertida.
+**Retirado el 2026-10-07** con `cleanup_d6_volumen.sql` (corrido por el owner): 0 filas D6; sede 2 de vuelta
+en 138 alumnos, 864 clases, 117 pagos; 209 documentos; horas de instructores 798.
 
 | Caso | Res. | Medición |
 |---|---|---|
