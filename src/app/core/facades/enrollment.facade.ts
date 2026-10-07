@@ -15,7 +15,10 @@ import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
-import { sortPromotionGroupsByStart } from '@core/utils/promotion-code.utils';
+import {
+  promotionOptionStatus,
+  sortPromotionGroupsByStart,
+} from '@core/utils/promotion-code.utils';
 import { calcAge } from '@core/utils/age.utils';
 import {
   buildEnrollmentConsents,
@@ -974,7 +977,7 @@ export class EnrollmentFacade {
         courseCode: course.code,
         enrolledCount: enrolledCounts[row.id] ?? 0,
         maxCapacity: row.max_students,
-        status: row.status === 'planned' || row.status === 'in_progress' ? 'open' : 'finished',
+        status: promotionOptionStatus(row.status, enrolledCounts[row.id] ?? 0, row.max_students),
         startDate: promo.start_date ?? null,
         licenseClass: course.license_class ?? null,
       };
@@ -1098,6 +1101,16 @@ export class EnrollmentFacade {
         const selectedOption = this._promotionGroups()
           .flatMap((g) => g.options)
           .find((o) => o.id === promotionCourseId);
+        // El paso 2 ya no deja elegir un curso sin cupo o cerrado; esto cubre un borrador que
+        // lo tenía elegido de antes (fix-351-m).
+        if (selectedOption && selectedOption.status !== 'open') {
+          this._error.set(
+            selectedOption.status === 'full'
+              ? 'El curso de esa promoción ya no tiene cupo. Elige otra promoción.'
+              : 'Esa promoción ya no está disponible. Elige otra.',
+          );
+          return false;
+        }
         if (selectedOption?.startDate) {
           const daysSinceStart = Math.round(
             (new Date(`${todayIso()}T00:00:00`).getTime() -

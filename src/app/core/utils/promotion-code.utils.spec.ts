@@ -5,6 +5,7 @@ import {
   promotionCodeError,
   promotionLabel,
   promotionNameForCode,
+  promotionOptionStatus,
   promotionWriteErrorMessage,
   sortPromotionGroupsByStart,
   suggestNextPromotionCode,
@@ -107,6 +108,25 @@ describe('promotion-code.utils (fix-323-m)', () => {
       expect(promotionNameForCode('Promoción 2801 (5 de Octubre 2026)', '280', '281')).toBe(
         'Promoción 2801 (5 de Octubre 2026)',
       );
+    });
+  });
+
+  // fix-351-m: un curso lleno no se puede elegir en la matrícula.
+  describe('promotionOptionStatus', () => {
+    it('vigente con cupo → abierta', () => {
+      expect(promotionOptionStatus('planned', 0, 25)).toBe('open');
+      expect(promotionOptionStatus('in_progress', 24, 25)).toBe('open');
+    });
+
+    it('vigente con el cupo completo o excedido → llena', () => {
+      expect(promotionOptionStatus('in_progress', 25, 25)).toBe('full');
+      expect(promotionOptionStatus('planned', 27, 25)).toBe('full');
+    });
+
+    it('finalizada, cancelada o sin estado → cerrada, tenga o no cupo', () => {
+      expect(promotionOptionStatus('finished', 3, 25)).toBe('finished');
+      expect(promotionOptionStatus('cancelled', 0, 25)).toBe('finished');
+      expect(promotionOptionStatus(null, 0, 25)).toBe('finished');
     });
   });
 

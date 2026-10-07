@@ -352,6 +352,37 @@ describe('EnrollmentFacade', () => {
       expect(saved).toBe(false);
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('enrollments');
     });
+
+    // fix-351-m: un borrador puede traer elegido un curso que después se llenó o se cerró.
+    function setSelectedStatus(status: 'full' | 'finished') {
+      (facade as any)._promotionGroups.update((groups: any[]) =>
+        groups.map((g) => ({ ...g, options: g.options.map((o: any) => ({ ...o, status })) })),
+      );
+    }
+
+    it('promoción elegida sin cupo → error, no escribe la matrícula', async () => {
+      setupProfessional('2026-08-07');
+      setSelectedStatus('full');
+
+      const saved = await facade.saveAssignment();
+
+      expect(saved).toBe(false);
+      expect(facade.error()).toBe(
+        'El curso de esa promoción ya no tiene cupo. Elige otra promoción.',
+      );
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
+
+    it('promoción elegida cerrada → error, no escribe la matrícula', async () => {
+      setupProfessional('2026-08-07');
+      setSelectedStatus('finished');
+
+      const saved = await facade.saveAssignment();
+
+      expect(saved).toBe(false);
+      expect(facade.error()).toBe('Esa promoción ya no está disponible. Elige otra.');
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
   });
 
   // ── Error Handling ──

@@ -82,6 +82,19 @@ export function promotionLabel(name: string, code: string | null | undefined): s
 }
 
 /**
+ * Estado de un curso de promoción como opción del paso 2 de la matrícula (fix-351-m): cerrado si
+ * no está planificado ni en curso; lleno si los inscritos alcanzan el cupo; si no, abierto.
+ */
+export function promotionOptionStatus(
+  courseStatus: string | null,
+  enrolledCount: number,
+  maxCapacity: number,
+): 'open' | 'full' | 'finished' {
+  if (courseStatus !== 'planned' && courseStatus !== 'in_progress') return 'finished';
+  return enrolledCount >= maxCapacity ? 'full' : 'open';
+}
+
+/**
  * Ordena los grupos de promociones del paso 2 de la matrícula por fecha de inicio, de la más
  * antigua a la más nueva; los que no tienen fecha van al final (hotfix-145-m). No muta la entrada.
  */
