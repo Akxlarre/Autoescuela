@@ -156,15 +156,12 @@ test.describe('D. Selector de sede', () => {
  * la respuesta vieja de B llega DESPUÉS y pisa la pantalla con datos de B.
  * Solo pantallas donde el indicador de A y el de B difieren (ver tabla D07 en fix-190-b).
  */
+// `bug`: pantalla aún sin guard de orden (knownBug). Pagos, Ex-Alumnos y Certificación lo tienen
+// desde fix-195-b; las demás pendientes están en ASG-b-101.
 const D06_SCREENS: { path: string; indicador: RegExp; bug?: string }[] = [
-  // Sin guard de orden hasta fix-195-b (PR #208): quitar `bug` cuando esté mergeado.
-  { path: '/app/admin/pagos', indicador: /(\d+)\s+con deuda/, bug: 'fix-195-b (#208)' },
-  { path: '/app/admin/ex-alumnos', indicador: /(\d+)\s+Egresados/, bug: 'fix-195-b (#208)' },
-  {
-    path: '/app/admin/certificacion',
-    indicador: /Pendientes\s*\((\d+)\)/,
-    bug: 'fix-195-b (#208)',
-  },
+  { path: '/app/admin/pagos', indicador: /(\d+)\s+con deuda/ },
+  { path: '/app/admin/ex-alumnos', indicador: /(\d+)\s+Egresados/ },
+  { path: '/app/admin/certificacion', indicador: /Pendientes\s*\((\d+)\)/ },
   { path: '/app/admin/dashboard', indicador: /(\d+)\s+alumnos con/ },
 ];
 
@@ -496,8 +493,6 @@ test.describe('Y. Accesibilidad', () => {
   test('Y03/Y07: los botones de solo ícono del shell tienen aria-label y data-llm-*', async ({
     pageAs,
   }) => {
-    // El botón de perfil tiene nombre accesible desde hotfix-064-b: quitar al mergear el PR #204.
-    knownBug('hotfix-064-b (#204)');
     const page = await pageAs('admin');
     await page.goto('/app/admin/dashboard');
     await shellReady(page);
