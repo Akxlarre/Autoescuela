@@ -455,7 +455,51 @@ Resumen del Libro salen vacías por diseño.
 
 ### Bloque 5 — T–U: sedes, roles, tiempo real, visual
 
-_Pendiente._
+Ejecutado el 2026-10-07 contra la BD de desarrollo: seguridad por API (supabase-js, las 4 cuentas
++ anónimo) y el resto en navegador (Playwright MCP, `ng serve` local) con admin, secretariaB y
+secretaria multisede, sobre las pantallas ya corregidas por `fix-320…352`. La BD queda igual que
+al empezar (el único cambio, el saldo de la matrícula 6981, se devolvió a 180.000).
+
+**T — Sedes, roles y seguridad**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| T01 | ✅ | Admin: Base Prof. y Promociones abren en Conductores Chillán, la única sede seleccionable (A08). No hay otra sede Profesional a la que cambiar. |
+| T02 | — | No aplica: una sola sede con Clase Profesional. |
+| T03 | ✅ | secretariaB, sin selector de sede: Promociones 5 (3 en curso, 2 planificadas), Base 65 matrículas, Libro abre en 280 · A2. Mismos datos que el admin en la sede 2. |
+| T04 | ✅ | Secretaria multisede en "Todas las sedes" entra por URL a Promociones, Base y Libro: el selector pasa a Conductores Chillán y carga los datos; al volver a la Base B queda otra vez en "Todas las sedes" (D14). El caso con una sede sin Profesional guardada lo cubre `fix-334-m`. |
+| T05 | ✅ | secretariaA (sede 1) y anónimo: 0 promociones, 0 cursos, 0 libros; el `PATCH` a la promoción 282 afecta 0 filas. secretariaB, multisede y admin: 12 / 48 / 39 (`fix-321-m`). |
+| T06 | ✅ | secretariaA y anónimo: 0 de las 7 matrículas Profesional con promoción, 0 matrículas de la sede 2, 0 de sus 6 alumnos. secretariaB y multisede: 7/7, 140 y 6/6. secretariaA sí lee la fila `users` (nombre, RUT) de esos 6 alumnos: es la decisión de DG-014, no se toca. |
+| T05 (resto de tablas) | ❌ | **Las tablas Profesional que `fix-321-m` no cubrió siguen sin sede.** secretariaA (sede 1, sin Profesional) lee lo mismo que el admin: 1.480 `professional_theory_sessions`, 1.480 `professional_practice_sessions`, 7 `lecturers` (con RUT), 26 `promotion_course_lecturers`, 5 `professional_pre_registrations`, 1 `license_validations`, 1 `professional_weekly_signatures`. **Y puede escribir:** un `UPDATE` que reescribe el mismo valor afectó 1 fila en las dos tablas de sesiones, en `lecturers` y en `license_validations` (0 filas en `promotion_course_lecturers`). Las sesiones son el calendario del Libro de Clases y de su PDF: cancelarlas o moverlas desde otra sede cambia un libro ajeno. Asistencia, notas y actas están vacías (módulos bloqueados): no se pudo medir, se asume el mismo patrón. |
+
+**U — Tiempo real, 2 sesiones y visual**
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| U01 | ❌ | S13 confirmada. Al entrar a la Base Prof. el canal `alumnos-profesional-realtime` se une y el servidor responde `"Unable to subscribe to changes with given parameters… table: enrollments"`: la tabla no está publicada. Con la Base abierta se cambió por API el saldo de la matrícula 6981 (0092): pasados 8 s la fila seguía en 180.000 y no llegó ningún evento. → `ASG-i-056` (pendiente), no se abre fix acá. |
+| U02 | ❌ por lectura | El único canal de la pantalla escucha `enrollments`; archivar cambia `students`. Aunque `ASG-i-056` publique `enrollments`, archivar en A no se verá en B. Se le agrega a esa asignación. |
+| U03, U04 | ⚠️ decisión | Promociones, Libro de Clases y Archivo no tienen canal de tiempo real (el único de Clase Profesional es el de la Base). Una promoción creada o un código SENCE guardado en otra sesión se ven al volver a entrar; en el código SENCE el último guardado pisa al anterior sin aviso. |
+| U05 | ✅ | Al salir de la Base por el menú se envía `phx_leave` del canal y el servidor lo cierra (`phx_close`). |
+| U06 | ✅ | Modo oscuro y claro en Base, Promociones, Libro y Archivo, y en los paneles "Ver promoción" y "Editar promoción": todo legible, sin fondos claros sueltos. Detalle: en oscuro los badges "Activo" y "Convalida A3" de la Base conservan fondo claro (se leen bien), a diferencia de "En curso" de Promociones, que sí se adapta. El PDF es blanco y negro por diseño (bloque 4). |
+| U07 | ✅ con una ❌ | 375 / 768 / 1440 px en las 4 pantallas: sin scroll horizontal ni elementos fuera del viewport; en 1440 el documento no scrollea. **❌ Base Prof. a 375 px:** la lista entra desplazada ~800 px y luego se monta ~100 px sobre los KPIs del hero, hasta que termina la animación de entrada (≈15 s en el navegador de prueba). Causa: en móvil la lista pinta las 65 tarjetas sin paginar (22.000 px de alto) y la animación de entrada escala la celda completa desde su centro; un 1 % de escala son ~110 px arriba. Al terminar queda bien (separación de 12 px). La Base B (2.900 px) y Promociones (1.700 px) casi no lo notan. Es el caso F05 que quedó sin ejecutar en el bloque 2. |
+| U08 | ✅ con observaciones | Con Tab se llega a todo en Promociones y en el panel de crear; los 8 lunes son botones nativos, los ocupados se saltan y el foco se ve (anillo de 3 px). ⚠️ Al abrir un panel el foco **no entra** en él: hay que recorrer antes toda la pantalla de atrás (buscador, filtro y los 2 botones de cada promoción). ⚠️ El buscador de Promociones no muestra anillo de foco. |
+| U09 | ✅ | Todos los botones de solo ícono tienen tooltip y nombre accesible: "Ver ficha", "Archivar alumno", "Ver detalle", "Editar promoción" (tabla y tarjetas). Libro y Archivo no tienen botones de solo ícono. |
+
+Consola del navegador sin errores en todo el bloque.
+
+**Hallazgos previos que se habían dejado para este bloque:**
+
+| Hallazgo | Res. | Evidencia |
+|---|---|---|
+| Base Prof. 375 px: la lista tapa los KPIs | ❌ transitorio | Confirmado y explicado en U07. |
+| Comunicación 375 px: pestañas sin texto | ❌ | `/app/secretaria/observaciones` a 375 px: las dos barras de pestañas se ven como rayas, sin texto ni ícono, y los botones no tienen nombre accesible (solo se lee el contador "1"). Fuera de Clase Profesional. |
+
+**Decisiones tomadas en el bloque 5 (Matías, 2026-10-07):**
+
+| # | Caso | Pregunta | Decisión |
+|---|---|---|---|
+| D24 | U03 / U04 | ¿Es aceptable que Promociones y Libro de Clases no se actualicen solos entre dos sesiones? | ✅ **Se acepta como está** (Matías lo dejó a criterio; no se agrega tiempo real): solo la sede 2 los usa y casi siempre una persona a la vez. U03 y U04 quedan ✅ por decisión. |
+| D25 | T05 (resto) | `lecturers` no tiene sede propia: ¿quién ve a los relatores? | ✅ **Solo quien tiene acceso a una sede con Clase Profesional.** "Los relatores son siempre profesionales y hay una sola sede profesional." → `fix-353-m`. |
 
 ## Bugs derivados
 
@@ -538,6 +582,21 @@ Del bloque 4 (2026-10-06). Todos cerrados el 2026-10-07, con la función
 | D21 | P06 / R04 | ¿El calendario en pantalla debe mostrar la malla, como el PDF? | ✅ **Sí: la pantalla muestra lo mismo que el PDF, que es el que manda.** Los nombres de profesor fijos del PDF vienen del libro real (R02). |
 | D22 | Q06 | ¿Se permite dejar vacío el código SENCE? | ✅ **Sí, por el momento.** |
 | D23 | P03 | ¿En qué orden va la lista de alumnos: por apellido (pantalla) o por orden de matrícula (PDF)? | ✅ **Por apellido paterno, en pantalla y en el PDF** (Matías, 2026-10-07). En el libro real van por orden de llegada porque se anotan a mano; siendo un software, se aprovecha para ordenarlos. → `fix-352-m`. |
+
+Del bloque 5 (2026-10-07), uno por causa raíz. **Propuestos, aún sin carpeta:**
+
+| Caso | Track propuesto | Estado |
+|---|---|---|
+| T05 (resto) — sesiones, relatores, convalidaciones, pre-inscripciones y firmas Profesional se leen y editan desde otra sede | `fix-353-m-rls-resto-de-tablas-profesional-por-sede` | ✅ cerrado 2026-10-07 (migración aplicada por Matías; regresión por API 21/21 y revisión en navegador) |
+| U07 + F05 — Base Prof. en móvil pinta las 65 tarjetas y la animación de entrada monta la lista sobre el hero | `fix-354-m-base-profesional-movil-lista-acotada` | ✅ cerrado 2026-10-07 (tarjetas de a 6 con "Cargar más", revisado en navegador) |
+| Comunicación 375 px — pestañas sin texto ni nombre accesible. Causa: `app-tabs` elegía el modo "solo ícono" aunque las pestañas no tuvieran ícono | `fix-355-m-pestanas-sin-icono-no-quedan-vacias` | ✅ cerrado 2026-10-07 (revisado en navegador) |
+| F01 + D06 + G06 — textos de la Base: paginador "alumnos", chip sin singular, estado vacío de la Papelera | `hotfix-147-m-textos-menores-de-la-base-profesional` | ✅ cerrado 2026-10-07 (revisado en navegador) |
+| U08 — al abrir un panel el foco no entra en él (patrón de todos los drawers); buscador de Promociones sin anillo de foco | sin track: es del host global de drawers, proponer como asignación | ⏳ |
+| U06 — los badges `p-tag` conservan fondo claro en modo oscuro (toda la app, se leen bien) | sin track: design system, proponer como asignación | ⏳ |
+| U01 + U02 — tiempo real muerto en la Base Prof. | `ASG-i-056` (ya existe; agregar que archivar cambia `students`) | ⏳ |
+
+Descartado al revisar: "Crear promoción" sí tiene `data-llm-action` (`submit-crear-promocion`, en
+el componente del botón); la revisión del bloque 5 miró el `<button>` interno.
 
 ## Test de regresión
 
