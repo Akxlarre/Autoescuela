@@ -197,4 +197,4 @@ ANALYZE` impersonando a la secretaria: ~5 s; como superusuario, 0,2 s. La vista 
 `security_invoker`: el `NOT EXISTS` de choques evalúa la RLS de `class_b_sessions` fila por fila
 (`auth_user_role()` por fila, 4,7 ms por turno × 520 turnos) y **dos veces** (filtro + `CASE`).
 Además, con RLS la secretaria no ve clases de la otra sede → un instructor/vehículo compartido
-ocupado allá se le muestra **disponible**. → **`fix-196-b`**.
+ocupado allá se le muestra **disponible**. → **`fix-196-b`** (PR #212, migración aplicada el 2026-10-07): Agenda en el build de producción **0,76–1,07 s**; test de BD 5/5 en producción.
