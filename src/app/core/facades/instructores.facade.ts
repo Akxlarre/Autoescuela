@@ -4,7 +4,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { toISODate, todayIso } from '@core/utils/date.utils';
+import { getChileDateTimeRange, toISODate, todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
@@ -329,15 +329,16 @@ export class InstructoresFacade {
     const counts = new Map<number, number>();
     if (instructorIds.length === 0) return counts;
 
-    const todayStr = toISODate(new Date());
+    // fix-207-b (S15): "hoy" en Chile con su offset; sin offset Postgres lo leía en UTC.
+    const { start, end } = getChileDateTimeRange(toISODate(new Date()));
 
     const { data, error } = await this.supabase.client
       .from('class_b_sessions')
       .select('instructor_id')
       .eq('status', 'in_progress')
       .in('instructor_id', instructorIds)
-      .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`);
+      .gte('scheduled_at', start)
+      .lte('scheduled_at', end);
 
     if (error) return counts;
 

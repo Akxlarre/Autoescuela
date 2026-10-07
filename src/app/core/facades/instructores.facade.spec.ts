@@ -4,7 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { toISODate } from '@core/utils/date.utils';
+import { getChileDateTimeRange, toISODate } from '@core/utils/date.utils';
 
 describe('InstructoresFacade', () => {
   let facade: InstructoresFacade;
@@ -258,14 +258,12 @@ describe('InstructoresFacade', () => {
 
       await facade.initialize();
 
-      // Mismo cómputo de fecha que usa la facade (toISODate = huso Chile) — comparar
-      // contra new Date().toISOString() (UTC) es flaky en el borde del día UTC/Chile.
-      const todayStr = toISODate(new Date());
-      expect(gte).toHaveBeenCalledWith('scheduled_at', `${todayStr}T00:00:00`);
-      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith(
-        'scheduled_at',
-        `${todayStr}T23:59:59`,
-      );
+      // fix-207-b (S15): el día de Chile con su offset (sin offset, Postgres lo leía en UTC y
+      // perdía las clases en curso de la tarde-noche).
+      const { start, end } = getChileDateTimeRange(toISODate(new Date()));
+      expect(start).toMatch(/T00:00:00[+-]\d\d:00$/);
+      expect(gte).toHaveBeenCalledWith('scheduled_at', start);
+      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith('scheduled_at', end);
     });
 
     // fix-202-b (S7): license_status solo se recalcula al editar; el estado se calcula con la fecha.
