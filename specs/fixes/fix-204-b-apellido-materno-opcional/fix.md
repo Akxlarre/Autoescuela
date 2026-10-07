@@ -1,7 +1,7 @@
 # Fix: El apellido materno es obligatorio — no se puede registrar a personas sin segundo apellido
 > id: fix-204-b-apellido-materno-opcional
 > refs: ASG-i-034 (sospecha S12, confirmada en fix-197-b) — decisión del owner 2026-10-07: opcional
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -33,5 +33,5 @@ Ninguno de una spec previa. ACs propios:
 ## Progreso
 - [x] `optional-surname.utils.spec.ts` 2/2; 4 formularios sin "*" y con la util; `ng build` ✓, `lint:arch` 0 errores (182, sin nuevas).
 - [x] `create-secretary` y `update-secretary`: materno opcional → NULL (el encabezado de ambas ya decía "opcional"). Sintaxis OK; lo desplegado es idéntico a `main`.
-- [ ] Deploy de `create-secretary` y `update-secretary` (espera aprobación del owner).
-- [ ] Verificación en vivo sin efectos.
+- [x] Desplegadas `create-secretary` v18 y `update-secretary` v19 (aprobado por el owner, 2026-10-07; `verify_jwt:false`, como estaban).
+- [x] En vivo, como admin y SIN materno: `update-secretary` con el correo de otro usuario → 409 de correo (antes 400 "Faltan campos requeridos"); `create-secretary` con un RUT existente → 409 "Ese RUT ya está registrado como secretaria…". secretaria2 sin cambios y no se creó ninguna cuenta.
