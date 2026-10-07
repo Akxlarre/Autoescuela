@@ -139,3 +139,30 @@ leía a mitad de carga). `--workers=1 --repeat-each=2`, build de producción.
 Grep: ~19 facades branch-scoped más siguen sin guard (residuo de ASG-b-064 / spec 0005-m, que
 cubrió una primera pasada) → **ASG-b-101** (PR #209) para confirmarlos con este test y corregirlos.
 `fix-195-b` (PR #208): con el fix, D06 8/8 (`--workers=1 --repeat-each=2`).
+
+## X01 — Pantallas sin red (secretaria sede 2, build de producción, 2026-10-07)
+
+Con el shell ya cargado se cortan `rest/v1` y `functions/v1` (`route.abort('internetdisconnected')`)
+y se navega por el menú lateral (SPA). Se busca un error visible en `<main>` o un toast, 8 s después.
+
+| Pantalla | Res. | Qué muestra |
+|---|---|---|
+| Agenda | ✅ | "No se pudo cargar la agenda… Reintentar" (`fix-189-b`) |
+| Alumnos | ⚠️ | "Error al cargar alumnos…", pero los KPIs del hero dicen 0 |
+| Ex-Alumnos | ⚠️ | "Ha ocurrido un error inesperado…", KPIs en 0 |
+| Libro de Clases | ✅ | "Error cargando promociones" |
+| **Caja Diaria** | ❌ **grave** | Todo en $0 y "Caja Abierta", sin aviso. `fetchPayments()` ignora el `error` (`data ?? []`) y `cerrarCaja()` guarda esos totales: se puede cerrar el día con $0 |
+| Pagos | ❌ | $0 y "0 con deuda", sin aviso |
+| Reportes contables | ❌ | "Sin ingresos en este período" |
+| Liquidaciones | ❌ | Nómina $0, "0 / 0" |
+| Cursos singulares | ❌ | "No hay cursos que coincidan…" |
+| Servicios especiales | ❌ | Ventas 0, $0 |
+| Certificados | ❌ | Totales 0 |
+| Documentos | ❌ | "Sin documentos aún" |
+| Instructores | ❌ | "No hay instructores que coincidan…" |
+| Asistencia | ❌ | Tasa 0%, todo 0 |
+| Comunicación | ❌ | "Sin tareas en esta sección" |
+
+Ninguna pantalla mostró un toast. Historial de cuadraturas y Notificaciones no tienen link directo
+en el menú (no medidas). → **ASG-b-102** (lecturas fallidas que se muestran como "sin datos");
+la Caja cruza con **ASG-i-048** (escrituras de Cuadratura, de i).
