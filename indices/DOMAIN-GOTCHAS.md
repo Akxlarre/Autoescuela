@@ -1644,6 +1644,22 @@
   inventario de las demás en `specs/testing-piloto/037-transversal-multisede-shell.md` §1.4
   (`ASG-i-047`).
 
+### DG-102 — Un envío por lotes que se reanuda por posición (`offset`) no avanza si cada corrida tiene tope de lotes
+
+- **Trampa:** reanudar un proceso por lotes partiendo de `offset = 0` y confiar en que "los ya
+  procesados se saltan". Si cada corrida tiene un tope de lotes (límite de tiempo de la Edge
+  Function), los saltados igual consumen lote y todas las corridas recorren los mismos primeros N.
+- **Realidad:** `dispatch-scheduled-announcements` (8 lotes de 25 por corrida) nunca llegaba al
+  destinatario 201. Además, los conteos finales se grababan con lo sumado en la última corrida.
+- **Regla de aplicabilidad:** todo proceso por lotes que pueda cortarse y reanudarse en otra
+  invocación (cron, reintento, otro cliente) pide **los pendientes** según el estado de cada fila
+  (en comunicados: `email_sent_ok = false AND send_error IS NULL`), no una posición, y calcula sus
+  totales desde las filas, no desde lo que contó la corrida que cierra. Para saber si alguien
+  sigue procesándolo, usar un latido (`announcements.dispatch_heartbeat_at`), no la hora en que
+  debía empezar.
+- **Fuente:** `specs/fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan`,
+  `supabase/functions/_shared/announcement-send.ts` (`sendPendingBatch`, `finalizeAnnouncement`).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

@@ -286,6 +286,15 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `scheduled_for` | TIMESTAMPTZ | sí | — | — |
 | `status` | TEXT | NO | `'enviado'` | — |
 | `template_id` | INT | sí | — | → `notification_templates.id` |
+| `dispatch_heartbeat_at` | TIMESTAMPTZ | sí | — | — |
+
+> **fix-361-m (`20261008120000`):** `dispatch_heartbeat_at` = último lote avanzado. Un `enviando` sin
+> latido en 30 min quedó huérfano y `dispatch-scheduled-announcements` lo retoma desde el primer
+> destinatario **pendiente** (`email_sent_ok = false AND send_error IS NULL`), no desde la posición 0.
+> El envío inmediato nace `enviando` (antes `enviado`) para que el cron lo termine si se cierra la
+> pestaña; el cierre (`status='enviado'` + conteos) lo hace el servidor con los conteos de
+> `announcement_recipients` (`send-announcement` con `finalize: true`). Los alumnos con
+> `students.status = 'archived'` no se materializan como destinatarios.
 
 **Policies:**
 
