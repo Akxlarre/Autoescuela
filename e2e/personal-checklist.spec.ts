@@ -122,22 +122,8 @@ test('C01/C02/C10/C15: el formulario vacío marca errores y no llama a la funci�
   expect(called).toEqual([]);
 });
 
-// C05: el último carácter siempre se toma como DV y se recalcula (ASG-047). Escribir solo el
-// cuerpo ("11111111") lo convierte en 1.111.111-4: ver hallazgo en fix-197-b.
-test('C05: el RUT completo sin puntos se formatea; un DV equivocado se reemplaza', async ({
-  pageAs,
-}) => {
-  const page = await pageAs('admin');
-  await openInstructores(page);
-  await page.locator('[data-llm-action="new"]').first().click();
-  const rut = page.locator('#c-rut');
-  await rut.fill('123456785');
-  await rut.press('Tab');
-  await expect(rut).toHaveValue('12.345.678-5');
-  await rut.fill('123456781');
-  await rut.press('Tab');
-  await expect(rut).toHaveValue('12.345.678-5');
-});
+// C05 (DV del RUT) lo cubre e2e/rut-dv.spec.ts (fix-213-b) y D04/D05 (secretaria multisede)
+// e2e/instructores-alta-multisede.spec.ts (fix-215-b).
 
 test('C12/C13: vencimiento en ≤ 30 días avisa "Por vencer"; pasado avisa "Vencida"', async ({
   pageAs,
