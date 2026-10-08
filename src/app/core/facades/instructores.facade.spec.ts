@@ -289,6 +289,8 @@ describe('InstructoresFacade', () => {
       expect(byId(6).licenseStatus).toBe('expiring_soon');
       expect(byId(7).licenseStatus).toBe('valid'); // sin fecha: el valor guardado
       expect(facade.licenciasPorVencer()).toBe(1);
+      // hotfix-069-b (B06): las vencidas tienen su propio conteo, no entran en "por vencer".
+      expect(facade.licenciasVencidas()).toBe(1);
     });
   });
 
