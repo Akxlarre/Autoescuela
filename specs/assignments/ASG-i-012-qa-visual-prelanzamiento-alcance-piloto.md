@@ -1,6 +1,6 @@
 # Asignación ASG-i-012 — QA visual pre-lanzamiento del alcance piloto
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
