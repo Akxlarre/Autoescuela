@@ -30,3 +30,21 @@ export function instructorDeactivationNotices(
 
   return notices;
 }
+
+/**
+ * Aviso al cambiar de sede a un instructor (hotfix-070-b, E13 de ASG-i-034). Igual que al
+ * desactivar: sus clases ya agendadas no se mueven. Si queda en "Ambas" sigue cubriendo la sede
+ * anterior, así que no hay nada que avisar.
+ */
+export function instructorBranchChangeNotice(
+  futureClasses: number | null,
+  scopeChanged: boolean,
+  nowBothBranches: boolean,
+): string | null {
+  if (!scopeChanged || nowBothBranches || futureClasses === null || futureClasses <= 0) {
+    return null;
+  }
+  return futureClasses === 1
+    ? 'Tiene 1 clase agendada a futuro en su sede actual: no se mueve al cambiarlo de sede. Revísala en la Agenda.'
+    : `Tiene ${futureClasses} clases agendadas a futuro en su sede actual: no se mueven al cambiarlo de sede. Revísalas en la Agenda.`;
+}
