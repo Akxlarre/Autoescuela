@@ -1,7 +1,7 @@
 # Fix: Invitaciones de instructor durante el piloto y cuando el correo falla
 > id: fix-214-b-invitacion-instructor-piloto-y-falla
 > refs: ASG-i-034 (casos H06 y C29, §5) — decisiones del owner 2026-10-07: no mandar invitaciones durante el piloto (ocultar el botón); avisar al admin si el correo no salió
-> status: in_progress
+> status: done
 > created: 2026-10-07
 
 ## Root Cause
@@ -37,5 +37,5 @@ Ninguno de una spec previa. ACs propios:
 - [x] util 4/4 y facade 40/40 (rojo → verde): `sendInvite = !isBlockedInPilot('instructor')`, toast de advertencia si `inviteEmailSent === false`.
 - [x] Editar: en el piloto, nota "Las invitaciones se habilitan cuando termine el piloto…" en vez del botón. e2e: H06 ✓ (H03 se salta mientras dure el piloto). `ng build` ✓, `lint:arch` 0 errores (182).
 - [x] `create-instructor`: `sendInvite` (default true) e `inviteEmailSent`. `deno lint` sin errores de sintaxis (solo reglas de estilo preexistentes). Lo desplegado era idéntico a `main` antes del cambio.
-- [ ] Desplegar `create-instructor` — **esperando aprobación del owner**. ⚠️ Mergear el front **después** del deploy: con la función vieja, `sendInvite:false` se ignora (manda el correo igual) y el toast diría que no se envió.
-- [ ] Verificación en vivo tras el deploy.
+- [x] `create-instructor` desplegada v21 (aprobado por el owner, 2026-10-07; `verify_jwt:false` como estaba). Lo desplegado antes era idéntico a `main`; después, idéntico a la rama.
+- [x] En vivo sin efectos (`e2e/create-instructor-deploy.spec.ts`): alta con un correo ya registrado → la función nueva responde 409 y el front manda `sendInvite` según el piloto; 0 filas creadas.
