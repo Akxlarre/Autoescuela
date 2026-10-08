@@ -1,7 +1,8 @@
 # Fix: seis canales de tiempo real no reciben nada porque escuchan tablas sin publicar
 > id: fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar
 > refs: ASG-i-056 · fix-227-m · fix-031-i · fix-264-m · fix-319-m
-> status: in_progress
+> status: done
+> closed: 2026-10-07
 > created: 2026-10-07
 
 ## Root Cause
@@ -51,7 +52,28 @@ Ninguno — fix autónomo.
 
 ## Progreso
 - [x] Tablas sin publicar confirmadas contra el servidor (13).
-- [ ] Migración escrita.
-- [ ] Función pura + test; ficha y Base Profesional.
-- [ ] Matías aplica la migración.
-- [ ] Publicación comprobada; `knownBug` retirados; casos de dos sesiones.
+- [x] Migración escrita.
+- [x] Función pura + test (7 casos); ficha y Base Profesional. `tsc` sin errores; tests de los dos
+  facades y del util en verde (122).
+- [x] Matías aplicó la migración (2026-10-07).
+- [x] Publicación comprobada: las 22 tablas que escucha algún canal responden "publicada" (antes 9).
+- [x] `knownBug` retirados de `alumnos-b-lista > Q01` y `clase-profesional > U01`: ambos pasan.
+- [x] Casos de dos sesiones, automatizados en `e2e/tiempo-real.spec.ts` (4 tests, en verde):
+  - `024a` Q01 ✅ (matricular → aparece) · Q02 ✅ (archivar y restaurar se reflejan) · Q06 ✅
+    (un alumno de otra sede no aparece: los eventos respetan la RLS).
+  - `025` U01 ✅ · U02 ✅ (archivar y restaurar en la Base Profesional).
+  - `024b` R01 ✅ y R03 ✅: una clase agendada al alumno de la ficha la recarga; una agendada a
+    otro alumno no dispara ninguna consulta en 5 s.
+- Unitarios 3480 en verde, `lint:arch` 0 errores. `alumnos-b-ficha` completo: 83 de 84 en la corrida
+  conjunta; el restante (M01, editar perfil) pasó al repetirlo solo.
+
+**No ejecutados:**
+
+- `024a` Q03 (un pago cambia "Con deuda" en la otra sesión) y `024b` R02 (el instructor marca
+  asistencia y la ficha se actualiza): usan el mismo mecanismo ya probado (canal vivo + filtro por
+  alumno, cubierto por el test unitario para `student_id` y `enrollment_id`), pero no se probaron
+  de punta a punta.
+- `024a` Q04: subir un documento no actualiza el expediente en la otra sesión porque ningún canal
+  escucha documentos. Se deja así: se ve al volver a entrar.
+- Cuadratura y Flota: sus tablas quedaron publicadas y el servidor acepta la suscripción; no se
+  probó un cambio real en esas pantallas.

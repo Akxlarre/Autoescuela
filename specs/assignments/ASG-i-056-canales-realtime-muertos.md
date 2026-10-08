@@ -1,6 +1,6 @@
 # Asignación ASG-i-056 — Canales de tiempo real que escuchan tablas no publicadas
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

@@ -16,7 +16,7 @@ import type { Locator, Page } from '@playwright/test';
 import { ACCOUNTS } from './support/accounts';
 import { createE2eAlumno } from './support/alumnos-seed';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
-import { expect, knownBug, test, watchErrors } from './support/fixtures';
+import { expect, test, watchErrors } from './support/fixtures';
 
 const SEDE_A = 1; // Autoescuela Chillán — sin Clase Profesional
 const SEDE_B = 2; // Conductores Chillán — la única con Clase Profesional
@@ -793,8 +793,6 @@ test.describe('T. Seguridad entre sedes', () => {
 
 test.describe('U. Tiempo real y visual', () => {
   test('U01: una matrícula Profesional nueva aparece sin recargar', async ({ pageAs, cleanup }) => {
-    // La tabla de matrículas no está publicada para tiempo real: el evento nunca llega.
-    knownBug('U01 / S13 (fix-319-m) → ASG-i-056');
     const apellido = `Vivo${String(Date.now()).slice(-7)}`;
     const page = await pageAs('secretariaB');
     await openBase(page, 'secretaria');

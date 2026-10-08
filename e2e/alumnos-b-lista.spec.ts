@@ -16,7 +16,7 @@ import {
 } from './support/alumnos-seed';
 import { getAdminClient } from './support/supabase-admin';
 import { calculateRutDv, formatRut } from '../src/app/core/utils/rut.utils';
-import { expect, knownBug, test, watchErrors, type Cleanup } from './support/fixtures';
+import { expect, test, watchErrors, type Cleanup } from './support/fixtures';
 
 const SEDE_A = 1; // Autoescuela Chillán
 const SEDE_B = 2; // Conductores Chillán
@@ -1167,7 +1167,6 @@ test.describe('tiempo real', () => {
     pageAs,
     cleanup,
   }) => {
-    knownBug('B10 (fix-264-m) → ASG-i-056');
     const page = await pageAs('secretariaA');
     await openLista(page, 'secretaria');
     // Da tiempo a que el canal Realtime termine de suscribirse antes de crear el alumno.
