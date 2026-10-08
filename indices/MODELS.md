@@ -191,7 +191,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
 | `LayoutTier` | `ui` | `src/app/core/models/ui/layout.model.ts` |
 | `LibroClasesSubnavSection` | `ui` | `src/app/core/models/ui/libro-clases-subnav.model.ts` |
-| `ConvalidationLicense`, `LibroOption`, `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
+| `ConvalidationLicense`, `LibroOption`, `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario`, `CalendarioLibro` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
 | `TemplateVariable`, `TemplateVariableValues`, `TemplateDraft`, `TemplateRow` | `ui` | `src/app/core/models/ui/notification-template.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |
@@ -203,7 +203,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
 | `RangoReporte`, `RangoOption`, `RangoEvolucion`, `RangoEvolucionOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `RentabilidadCurso`, `ReporteContable`, `ClassCountsByGroup`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
 | `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
-| `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
+| `SecretariaTableRow`, `UltimoAccesoEstado` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroMenuItem`, `SectionHeroKpi`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
 | `ServicioEspecial`, `VentaServicio`, `VentaFormData`, `NuevoServicioFormData`, `ServiciosEspecialesKpis` | `ui` | `src/app/core/models/ui/servicios-especiales.model.ts` |
 | `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay`, `AlumnoFirmaSemana` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |

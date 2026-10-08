@@ -2432,7 +2432,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `assign_theory_cycle` | `()` |
 | `audit_format_evaluation_checklist` | `(p_value TEXT)` |
 | `audit_format_timestamp_value` | `(p_value TEXT)` |
-| `audit_humanize_column` | `(p_key TEXT)` |
+| `audit_humanize_column` | `(p_key text)` |
 | `audit_humanize_enum_value` | `(p_value TEXT)` |
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
@@ -2489,6 +2489,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `request_client_ip` | `()` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
+| `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |

@@ -18,10 +18,10 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import {
-  formatRut,
+  formatRutTyping,
   validateRut,
   normalizeRutForStorage,
-  autocompleteRutDv,
+  completeRutDv,
 } from '@core/utils/rut.utils';
 import { calcAge } from '@core/utils/age.utils';
 import { formatCLP } from '@core/utils/date.utils';
@@ -630,15 +630,15 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
     this.facade.resetWizard();
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
-    const corrected = autocompleteRutDv(this.rutInput());
+    const corrected = completeRutDv(this.rutInput());
     this.rutInput.set(corrected);
     this.patchForm('rut', normalizeRutForStorage(corrected));
   }
 
   protected onRutChange(raw: string): void {
-    const formatted = formatRut(raw);
+    const formatted = formatRutTyping(raw);
     this.rutInput.set(formatted);
     this.patchForm('rut', normalizeRutForStorage(formatted));
     // Si ya había datos de una búsqueda anterior, limpiarlos para evitar
