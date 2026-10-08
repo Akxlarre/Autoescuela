@@ -172,6 +172,30 @@ describe('SecretariasFacade', () => {
     });
   });
 
+  // fix-217-b (O04 de ASG-i-034): el admin manda el correo de restablecimiento.
+  describe('enviarRestablecimientoClave — fix-217-b', () => {
+    it('manda el correo de "olvidé mi contraseña" a ese correo y avisa', async () => {
+      supabaseSpy.resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
+      expect(await facade.enviarRestablecimientoClave('s2@test.cl')).toBe(true);
+      expect(supabaseSpy.resetPasswordForEmail).toHaveBeenCalledWith(
+        's2@test.cl',
+        `${window.location.origin}/recuperar-contrasena`,
+      );
+      expect(toastSpy.success).toHaveBeenCalledWith(
+        'Correo enviado',
+        expect.stringContaining('s2@test.cl'),
+      );
+    });
+
+    it('si falla → toast de error y false', async () => {
+      supabaseSpy.resetPasswordForEmail = vi
+        .fn()
+        .mockResolvedValue({ error: { message: 'rate limit' } });
+      expect(await facade.enviarRestablecimientoClave('s2@test.cl')).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalled();
+    });
+  });
+
   describe('crearSecretaria — cuenta sin clave RUT (fix-182-b)', () => {
     const payload = {
       firstNames: 'Ana',

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -186,7 +186,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
             <!-- Acciones -->
             <div
-              class="flex items-center gap-3 pt-4"
+              class="flex flex-col gap-3 pt-4"
               style="border-top: 1px solid var(--border-subtle);"
             >
               <button
@@ -197,6 +197,24 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 <app-icon name="edit" [size]="15" />
                 Editar secretaria
               </button>
+              <!-- fix-217-b (O04): el mismo correo de "¿Olvidaste tu contraseña?". -->
+              @if (sec.estado === 'activa') {
+                <button
+                  type="button"
+                  class="btn-secondary w-full flex items-center justify-center gap-2"
+                  [disabled]="enviandoRestablecimiento()"
+                  (click)="enviarRestablecimiento(sec.email)"
+                  data-llm-action="enviar-restablecimiento-clave-secretaria"
+                >
+                  @if (enviandoRestablecimiento()) {
+                    <app-icon name="loader-circle" [size]="15" class="animate-spin" />
+                    Enviando...
+                  } @else {
+                    <app-icon name="lock-keyhole" [size]="15" />
+                    Enviar correo para restablecer contraseña
+                  }
+                </button>
+              }
             </div>
           </ng-template>
         </app-drawer-content-loader>
@@ -257,5 +275,17 @@ export class AdminSecretariasVerDrawerComponent implements OnInit {
 
   protected editar(): void {
     this.layoutDrawer.open(AdminSecretariasEditarDrawerComponent, 'Editar Secretaria', 'edit');
+  }
+
+  protected readonly enviandoRestablecimiento = signal(false);
+
+  /** fix-217-b (O04): el admin manda el correo de restablecimiento; nunca ve la clave. */
+  protected async enviarRestablecimiento(email: string): Promise<void> {
+    this.enviandoRestablecimiento.set(true);
+    try {
+      await this.facade.enviarRestablecimientoClave(email);
+    } finally {
+      this.enviandoRestablecimiento.set(false);
+    }
   }
 }
