@@ -1,14 +1,14 @@
 # Asignación ASG-i-056 — Canales de tiempo real que escuchan tablas no publicadas
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-07
+> **resulting_track:** fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar
 
 ---
 
