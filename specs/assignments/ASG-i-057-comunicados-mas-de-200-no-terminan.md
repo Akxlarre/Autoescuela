@@ -1,14 +1,14 @@
 # Asignación ASG-i-057 — Un comunicado programado a más de 200 alumnos nunca termina
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-08
+> **resulting_track:** fix-361-m-comunicados-de-mas-de-200-no-terminan
 
 ---
 
