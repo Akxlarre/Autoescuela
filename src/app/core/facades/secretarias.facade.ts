@@ -262,6 +262,27 @@ export class SecretariasFacade {
     }
   }
 
+  /**
+   * fix-217-b (O04 de ASG-i-034): el admin le manda a la secretaria el mismo correo de
+   * "¿Olvidaste tu contraseña?" (redirige a /recuperar-contrasena, fix-181-b). El admin nunca ve
+   * ni fija la clave.
+   */
+  async enviarRestablecimientoClave(email: string): Promise<boolean> {
+    const { error } = await this.supabase.resetPasswordForEmail(
+      email,
+      `${window.location.origin}/recuperar-contrasena`,
+    );
+    if (error) {
+      this.toast.error('Error', 'No se pudo enviar el correo. Intenta de nuevo en unos minutos.');
+      return false;
+    }
+    this.toast.success(
+      'Correo enviado',
+      `Se envió a ${email} un enlace para restablecer la contraseña.`,
+    );
+    return true;
+  }
+
   async editarSecretaria(id: number, payload: EditarSecretariaPayload): Promise<boolean> {
     this._isSubmitting.set(true);
     try {
