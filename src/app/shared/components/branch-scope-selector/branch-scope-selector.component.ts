@@ -80,11 +80,14 @@ export class BranchScopeSelectorComponent {
   readonly mode = input.required<'crear' | 'editar'>();
   /** Fuerza el bloqueo del selector de sede más allá de la regla por rol (ej: vehículo con instructor activo asignado). */
   readonly disabledReason = input<string | null>(null);
+  /** fix-215-b: secretaria con grant multisede → puede elegir la sede. */
+  readonly canAccessBothBranches = input(false);
 
   readonly valueChange = output<BranchScopeValue>();
 
   protected readonly sedeDisabled = computed(
-    () => isSedeDisabled(this.role()) || this.disabledReason() !== null,
+    () =>
+      isSedeDisabled(this.role(), this.canAccessBothBranches()) || this.disabledReason() !== null,
   );
   protected readonly bothBranchesVisible = computed(() =>
     isBothBranchesVisible(this.role(), this.mode()),
