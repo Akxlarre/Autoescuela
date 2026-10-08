@@ -1,14 +1,14 @@
 # Asignación ASG-i-054 — Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-08
+> **resulting_track:** 0024-m-fechas-de-negocio-en-hora-de-chile
 
 ---
 
