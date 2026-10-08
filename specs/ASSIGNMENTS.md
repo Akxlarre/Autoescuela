@@ -139,7 +139,6 @@
 | ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 | ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `m` | spec | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `m` | fix | P1 | i | ⏳ Inventario en `037` §1 |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -286,6 +285,7 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
+| ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | `m` | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---

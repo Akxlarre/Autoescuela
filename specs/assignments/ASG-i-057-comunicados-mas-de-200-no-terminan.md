@@ -1,6 +1,6 @@
 # Asignación ASG-i-057 — Un comunicado programado a más de 200 alumnos nunca termina
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

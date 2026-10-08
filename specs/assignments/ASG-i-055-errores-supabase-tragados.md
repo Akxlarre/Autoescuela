@@ -1,14 +1,14 @@
 # Asignación ASG-i-055 — Escrituras a Supabase que no revisan el error y muestran éxito igual
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-08
+> **resulting_track:** fix-362-m-escrituras-sin-revisar-error-muestran-exito
 
 ---
 
