@@ -400,7 +400,7 @@ export class EnrollmentFacade {
 
   /** Carga códigos SENCE vigentes para un curso específico. Transforma DTO → SenceCodeOption. */
   async loadSenceCodes(courseId: number): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
 
     const { data, error } = await this.supabase.client
       .from('sence_codes')

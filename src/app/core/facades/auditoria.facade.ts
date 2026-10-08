@@ -1,4 +1,5 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
@@ -269,7 +270,7 @@ export class AuditoriaFacade {
       });
       if (error) throw error;
 
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const today = todayIso().replace(/-/g, '');
       if (format === 'excel') {
         const { sheetName, rows, filename } = data as {
           sheetName: string;

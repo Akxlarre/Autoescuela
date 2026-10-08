@@ -1,4 +1,5 @@
 import { TooltipModule } from 'primeng/tooltip';
+import { todayIso } from '@core/utils/date.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -438,7 +439,7 @@ export class AdminSesionDrawerComponent implements OnInit {
   readonly isFuture = computed(() => {
     const s = this.facade.selectedSesion();
     if (!s) return false;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIso();
     return s.date > today;
   });
 

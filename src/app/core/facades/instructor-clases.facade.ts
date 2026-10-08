@@ -665,7 +665,7 @@ export class InstructorClasesFacade {
   }
 
   private getMockClasses(): InstructorClassRow[] {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
     return [
       {
         sessionId: 9991,

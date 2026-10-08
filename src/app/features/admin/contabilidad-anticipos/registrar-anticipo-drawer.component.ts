@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AnticiposFacade } from '@core/facades/anticipos.facade';
@@ -157,7 +158,7 @@ export class RegistrarAnticipoDrawerComponent {
     // Precargado si se abrió desde la fila de un instructor (facade.selectInstructor());
     // vacío si se abrió desde el botón "Registrar Anticipo" del hero.
     instructorId: [(this.facade.selectedInstructorId() ?? '') as number | '', Validators.required],
-    date: [new Date().toISOString().slice(0, 10), Validators.required],
+    date: [todayIso(), Validators.required],
     amount: [null as number | null, [Validators.required, Validators.min(1)]],
     reason: [''],
     description: [''],

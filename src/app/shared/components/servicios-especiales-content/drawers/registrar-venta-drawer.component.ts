@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -271,7 +272,7 @@ export class RegistrarVentaDrawerComponent {
       nombre: val.nombre!,
       rut: val.rut!,
       esAlumno: !!val.esAlumno,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: todayIso(),
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,
       branchId: val.branchId ?? null,

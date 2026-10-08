@@ -115,7 +115,7 @@ export class InstructorHorarioComponent implements OnInit {
   protected readonly isDesktopLayout = computed(() => this.layoutService.tier() === 'desktop');
 
   // Mobile day selection
-  public selectedDate = signal<string>(new Date().toISOString().split('T')[0]);
+  public selectedDate = signal<string>(todayIso());
 
   // Desktop day highlighting
   public selectedDayDate = signal<string | null>(null);

@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { todayIso } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 import { PhoneInputComponent } from '@shared/components/phone-input/phone-input.component';
@@ -33,7 +34,7 @@ export { getAgeStatus };
 
 export function canAdvanceFn(data: EnrollmentPersonalData, courseType: string): boolean {
   const age = getAgeStatus(data.birthDate, courseType);
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayIso();
   return (
     validateRut(data.rut) &&
     validateEmail(data.email) &&
@@ -585,7 +586,7 @@ export class PublicPersonalDataComponent {
 
   // Derived from input
   protected readonly formData = computed(() => this.data());
-  protected readonly today = computed(() => new Date().toISOString().split('T')[0]);
+  protected readonly today = computed(() => todayIso());
 
   // Validation computeds
   protected readonly rutValid = computed(() => validateRut(this.formData().rut));

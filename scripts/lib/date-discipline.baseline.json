@@ -1,0 +1,441 @@
+{
+  "total": 566,
+  "kinds": {
+    "format-no-zone": 65,
+    "local-date-parts": 315,
+    "naive-time-suffix": 82,
+    "deprecated-date-api": 47,
+    "utc-slice": 30,
+    "angular-date-pipe": 27
+  },
+  "files": {
+    "src/app/core/facades/admin-alumno-detalle.facade.ts": {
+      "format-no-zone": 2,
+      "local-date-parts": 2,
+      "naive-time-suffix": 2
+    },
+    "src/app/core/facades/agenda.facade.ts": {
+      "deprecated-date-api": 4,
+      "format-no-zone": 2,
+      "local-date-parts": 5,
+      "naive-time-suffix": 4
+    },
+    "src/app/core/facades/asistencia-clase-b.facade.ts": {
+      "local-date-parts": 2,
+      "naive-time-suffix": 2
+    },
+    "src/app/core/facades/asistencia-profesional.facade.ts": {
+      "local-date-parts": 9,
+      "utc-slice": 1
+    },
+    "src/app/core/facades/auditoria.facade.ts": {
+      "naive-time-suffix": 2
+    },
+    "src/app/core/facades/certificacion-clase-b.facade.ts": {
+      "local-date-parts": 1
+    },
+    "src/app/core/facades/certificacion-profesional.facade.ts": {
+      "local-date-parts": 1
+    },
+    "src/app/core/facades/cuadratura.facade.ts": {
+      "deprecated-date-api": 5,
+      "naive-time-suffix": 2
+    },
+    "src/app/core/facades/dashboard-alerts.facade.ts": {
+      "local-date-parts": 6,
+      "utc-slice": 2
+    },
+    "src/app/core/facades/dashboard.facade.ts": {
+      "deprecated-date-api": 5,
+      "format-no-zone": 3,
+      "local-date-parts": 6,
+      "naive-time-suffix": 8
+    },
+    "src/app/core/facades/enrollment.facade.ts": {
+      "deprecated-date-api": 1,
+      "format-no-zone": 2,
+      "local-date-parts": 2,
+      "naive-time-suffix": 4
+    },
+    "src/app/core/facades/ex-alumnos.facade.ts": {
+      "deprecated-date-api": 1,
+      "local-date-parts": 2
+    },
+    "src/app/core/facades/flota.facade.ts": {
+      "deprecated-date-api": 1,
+      "local-date-parts": 3,
+      "naive-time-suffix": 2,
+      "utc-slice": 1
+    },
+    "src/app/core/facades/historial-cuadraturas.facade.ts": {
+      "local-date-parts": 10
+    },
+    "src/app/core/facades/instructor-clases.facade.ts": {
+      "deprecated-date-api": 1,
+      "format-no-zone": 5,
+      "local-date-parts": 14,
+      "naive-time-suffix": 1,
+      "utc-slice": 2
+    },
+    "src/app/core/facades/instructor-horas.facade.ts": {
+      "format-no-zone": 2,
+      "local-date-parts": 28,
+      "utc-slice": 2
+    },
+    "src/app/core/facades/instructores.facade.ts": {
+      "deprecated-date-api": 2,
+      "local-date-parts": 8
+    },
+    "src/app/core/facades/libro-de-clases.facade.ts": {
+      "local-date-parts": 7,
+      "naive-time-suffix": 3,
+      "utc-slice": 1
+    },
+    "src/app/core/facades/liquidaciones.facade.ts": {
+      "local-date-parts": 5
+    },
+    "src/app/core/facades/pagos.facade.ts": {
+      "deprecated-date-api": 2
+    },
+    "src/app/core/facades/promociones.facade.ts": {
+      "local-date-parts": 4,
+      "naive-time-suffix": 1
+    },
+    "src/app/core/facades/reportes-contables.facade.ts": {
+      "naive-time-suffix": 4
+    },
+    "src/app/core/facades/student-clases.facade.ts": {
+      "deprecated-date-api": 1
+    },
+    "src/app/core/facades/student-home.facade.ts": {
+      "format-no-zone": 3,
+      "naive-time-suffix": 1
+    },
+    "src/app/core/facades/student-horario.facade.ts": {
+      "deprecated-date-api": 7,
+      "format-no-zone": 3,
+      "local-date-parts": 5,
+      "naive-time-suffix": 4
+    },
+    "src/app/core/models/ui/reportes-contables.model.ts": {
+      "local-date-parts": 15
+    },
+    "src/app/core/services/ui/agenda-settings.service.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 8
+    },
+    "src/app/core/utils/age.utils.ts": {
+      "local-date-parts": 9
+    },
+    "src/app/core/utils/agenda-week.utils.ts": {
+      "local-date-parts": 5,
+      "naive-time-suffix": 1
+    },
+    "src/app/core/utils/class-b-session-overdue.utils.ts": {
+      "local-date-parts": 6
+    },
+    "src/app/core/utils/executive-dashboard.utils.ts": {
+      "local-date-parts": 3
+    },
+    "src/app/core/utils/license-seniority.utils.ts": {
+      "local-date-parts": 2
+    },
+    "src/app/core/utils/promotion-end-date.utils.ts": {
+      "local-date-parts": 7,
+      "naive-time-suffix": 2,
+      "utc-slice": 1
+    },
+    "src/app/core/utils/reportes-contables.utils.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 11
+    },
+    "src/app/core/utils/theory-cycle.ts": {
+      "deprecated-date-api": 1,
+      "format-no-zone": 3,
+      "local-date-parts": 3
+    },
+    "src/app/features/admin/alumno-detalle/consentimientos-drawer/admin-consentimientos-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/admin/alumno-detalle/reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component.ts": {
+      "local-date-parts": 3,
+      "naive-time-suffix": 1,
+      "utc-slice": 1
+    },
+    "src/app/features/admin/alumnos/pre-inscritos/admin-pre-inscrito-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/admin/asistencia/admin-asistencia.component.ts": {
+      "local-date-parts": 1
+    },
+    "src/app/features/admin/auditoria/admin-auditoria.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/auditoria/audit-log-detail-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/certificacion/drawers/historial-emisiones-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/contabilidad-cuadratura/registrar-egreso-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/admin/flota/vehicle-agenda-drawer/vehicle-agenda-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/flota/vehicle-documents-drawer/vehicle-documents-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/flota/vehicle-form-drawer/vehicle-form-drawer.component.ts": {
+      "local-date-parts": 2
+    },
+    "src/app/features/admin/instructores/admin-instructor-crear-drawer.component.ts": {
+      "deprecated-date-api": 1,
+      "local-date-parts": 3,
+      "utc-slice": 1
+    },
+    "src/app/features/admin/instructores/admin-instructor-editar-drawer.component.ts": {
+      "local-date-parts": 5,
+      "naive-time-suffix": 1,
+      "utc-slice": 1
+    },
+    "src/app/features/admin/instructores/admin-instructor-horario-drawer.component.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 5
+    },
+    "src/app/features/admin/pagos/admin-pagos.component.ts": {
+      "angular-date-pipe": 2,
+      "deprecated-date-api": 5,
+      "local-date-parts": 2
+    },
+    "src/app/features/admin/pagos/pagos-recientes-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/admin/pagos/registrar-pago-drawer.component.ts": {
+      "deprecated-date-api": 2
+    },
+    "src/app/features/admin/profesional-asistencia/admin-profesional-asistencia.component.ts": {
+      "local-date-parts": 3,
+      "naive-time-suffix": 1
+    },
+    "src/app/features/admin/profesional-asistencia/admin-sesion-drawer.component.ts": {
+      "format-no-zone": 1,
+      "naive-time-suffix": 1
+    },
+    "src/app/features/admin/profesional-asistencia/firma-semanal-table.component.ts": {
+      "local-date-parts": 2
+    },
+    "src/app/features/admin/profesional-certificados/drawers/historial-emisiones-prof-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/admin/profesional-promociones/admin-profesional-promociones.component.ts": {
+      "angular-date-pipe": 2
+    },
+    "src/app/features/admin/profesional-promociones/admin-promocion-crear-drawer.component.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 11,
+      "naive-time-suffix": 2,
+      "utc-slice": 1
+    },
+    "src/app/features/admin/profesional-promociones/admin-promocion-editar-drawer.component.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 2,
+      "naive-time-suffix": 3
+    },
+    "src/app/features/admin/secretarias/admin-secretarias-ver-drawer.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/alumno/clases/alumno-clases.component.ts": {
+      "format-no-zone": 1,
+      "naive-time-suffix": 1
+    },
+    "src/app/features/alumno/dashboard/alumno-dashboard.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/alumno/horario/alumno-horario.component.ts": {
+      "format-no-zone": 3,
+      "local-date-parts": 3,
+      "naive-time-suffix": 5
+    },
+    "src/app/features/comunicados/announcement-composer-drawer.component.ts": {
+      "utc-slice": 1
+    },
+    "src/app/features/instructor/alumnos/components/student-drawer-detail.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/instructor/alumnos/instructor-alumnos.component.ts": {
+      "angular-date-pipe": 2
+    },
+    "src/app/features/instructor/ficha/instructor-ficha.component.ts": {
+      "angular-date-pipe": 4
+    },
+    "src/app/features/instructor/horario/instructor-horario.component.ts": {
+      "deprecated-date-api": 2,
+      "local-date-parts": 9,
+      "naive-time-suffix": 2
+    },
+    "src/app/features/instructor/liquidacion/instructor-liquidacion.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/features/instructor/notificaciones/instructor-notificaciones.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/libro-de-clases/libro-de-clases.component.ts": {
+      "format-no-zone": 2,
+      "local-date-parts": 2,
+      "naive-time-suffix": 2
+    },
+    "src/app/features/notificaciones-historial/notifications-history-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/features/secretaria/asistencia/secretaria-asistencia.component.ts": {
+      "local-date-parts": 1
+    },
+    "src/app/features/secretaria/pagos/secretaria-pagos.component.ts": {
+      "angular-date-pipe": 2,
+      "deprecated-date-api": 5,
+      "local-date-parts": 2
+    },
+    "src/app/features/tareas/task-detail-modal.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/agenda-semanal/agenda-semanal.component.ts": {
+      "local-date-parts": 2
+    },
+    "src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/announcements-content/announcements-content.component.ts": {
+      "angular-date-pipe": 2
+    },
+    "src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/cuadratura-content/cuadratura-content.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/date-input/date-input.component.ts": {
+      "deprecated-date-api": 1
+    },
+    "src/app/shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component.ts": {
+      "local-date-parts": 7
+    },
+    "src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts": {
+      "local-date-parts": 2
+    },
+    "src/app/shared/components/live-classes-panel/live-classes-panel.component.ts": {
+      "format-no-zone": 2
+    },
+    "src/app/shared/components/matricula-steps/confirmation/confirmation.component.html": {
+      "angular-date-pipe": 1
+    },
+    "src/app/shared/components/matricula-steps/draft-list/draft-list.component.ts": {
+      "angular-date-pipe": 1
+    },
+    "src/app/shared/components/promocion-card/promocion-card.component.ts": {
+      "angular-date-pipe": 2
+    },
+    "src/app/shared/components/promocion-detalle-content/promocion-detalle-content.component.ts": {
+      "format-no-zone": 1,
+      "naive-time-suffix": 1
+    },
+    "src/app/shared/components/reportes-contables-content/reportes-contables-content.component.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 2
+    },
+    "src/app/shared/components/schedule-grid/schedule-grid.component.ts": {
+      "local-date-parts": 3,
+      "naive-time-suffix": 1,
+      "utc-slice": 1
+    },
+    "src/app/shared/components/schedule-grid/schedule-grid.logic.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 2,
+      "naive-time-suffix": 1
+    },
+    "src/app/shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts": {
+      "format-no-zone": 1
+    },
+    "src/app/shared/components/task-card/task-card.component.ts": {
+      "format-no-zone": 1
+    },
+    "supabase/functions/_shared/contract-pdf.ts": {
+      "format-no-zone": 2
+    },
+    "supabase/functions/_shared/holidays.ts": {
+      "local-date-parts": 7,
+      "naive-time-suffix": 2,
+      "utc-slice": 1
+    },
+    "supabase/functions/auto-create-next-promotions/index.ts": {
+      "local-date-parts": 3,
+      "naive-time-suffix": 1
+    },
+    "supabase/functions/create-instructor/index.ts": {
+      "local-date-parts": 2,
+      "utc-slice": 2
+    },
+    "supabase/functions/export-certificates-zip/index.ts": {
+      "local-date-parts": 2,
+      "utc-slice": 1
+    },
+    "supabase/functions/generate-audit-report/index.ts": {
+      "format-no-zone": 2,
+      "naive-time-suffix": 2,
+      "utc-slice": 2
+    },
+    "supabase/functions/generate-cash-closing-report/index.ts": {
+      "naive-time-suffix": 3,
+      "utc-slice": 1
+    },
+    "supabase/functions/generate-cash-history-report/index.ts": {
+      "local-date-parts": 3,
+      "naive-time-suffix": 1
+    },
+    "supabase/functions/generate-certificate-b-pdf/index.ts": {
+      "local-date-parts": 6,
+      "utc-slice": 1
+    },
+    "supabase/functions/generate-certificate-professional-pdf/index.ts": {
+      "local-date-parts": 6,
+      "utc-slice": 1
+    },
+    "supabase/functions/generate-class-book-pdf/index.ts": {
+      "format-no-zone": 1,
+      "local-date-parts": 7,
+      "naive-time-suffix": 4,
+      "utc-slice": 2
+    },
+    "supabase/functions/generate-contract-pdf/index.ts": {
+      "local-date-parts": 1
+    },
+    "supabase/functions/generate-financial-report/index.ts": {
+      "format-no-zone": 1,
+      "naive-time-suffix": 3,
+      "utc-slice": 1
+    },
+    "supabase/functions/generate-payment-report/index.ts": {
+      "naive-time-suffix": 1
+    },
+    "supabase/functions/generate-payroll-report/index.ts": {
+      "format-no-zone": 3,
+      "local-date-parts": 3
+    },
+    "supabase/functions/generate-student-license-pdf/index.ts": {
+      "local-date-parts": 2
+    },
+    "supabase/functions/public-enrollment/index.ts": {
+      "local-date-parts": 6
+    },
+    "supabase/functions/send-certificate-email/index.ts": {
+      "local-date-parts": 2
+    },
+    "supabase/functions/update-instructor/index.ts": {
+      "local-date-parts": 2,
+      "utc-slice": 2
+    }
+  }
+}

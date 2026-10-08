@@ -2,36 +2,41 @@
  * Centralized date and currency utilities for the project (Target: es-CL).
  */
 
-/** Returns today's date as YYYY-MM-DD string in local time. */
+import {
+  addMonthsIso,
+  calendarDateToIso,
+  chileToday,
+  formatChileDate,
+  formatChileTime,
+  isoToCalendarDate,
+  toChileDate,
+} from './chile-time.utils';
+
+/** Hoy en Chile, 'YYYY-MM-DD'. No depende del reloj ni de la zona del equipo. */
 export function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return chileToday();
 }
 
-/** Returns the ISO date (YYYY-MM-DD) that is `months` months before today, in local time. */
+/** Fecha 'YYYY-MM-DD' que está `months` meses antes de hoy (hoy en Chile). */
 export function monthsAgoIso(months: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - months);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return addMonthsIso(chileToday(), -months);
 }
 
 /**
- * Returns a date string in YYYY-MM-DD format (ISO local).
- * Replaces the 'en-CA' locale trick.
+ * Fecha 'YYYY-MM-DD' de un valor.
+ *  - string → día de Chile (un instante se convierte; una fecha pura se devuelve tal cual).
+ *  - Date   → se lee como FECHA DE CALENDARIO (la que entrega un selector de fechas).
+ *
+ * @deprecated El caso Date es ambiguo: no distingue un instante de un día de calendario.
+ * En código nuevo usar `chileToday()`, `toChileDate(instante)` o `calendarDateToIso(fecha)`
+ * de chile-time.utils.
  */
 export function toISODate(date: Date | string): string {
-  const d =
-    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
-  if (isNaN(d.getTime())) return '';
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  return typeof date === 'string' ? toChileDate(date) : calendarDateToIso(date);
 }
 
 /**
- * Fecha para mostrar como dd-mm-aaaa (hora local). "—" si no hay fecha o no es válida.
+ * Fecha para mostrar como dd-mm-aaaa (día de Chile). "—" si no hay fecha o no es válida.
  */
 export function formatDayMonthYear(date: string | null | undefined): string {
   if (!date) return '—';
@@ -41,27 +46,18 @@ export function formatDayMonthYear(date: string | null | undefined): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-/** Converts an ISO date string ('YYYY-MM-DD') to a local Date. Returns null if empty or invalid. */
+/**
+ * Fecha pura ('YYYY-MM-DD') → Date de calendario para un selector de fechas.
+ * Devuelve null si está vacía o no es válida.
+ */
 export function isoToDate(iso: string): Date | null {
-  if (!iso) return null;
-  const d = new Date(iso + 'T12:00:00');
-  return isNaN(d.getTime()) ? null : d;
+  return isoToCalendarDate(iso);
 }
 
-/**
- * Returns a time string in HH:MM format (24h).
- * Replaces the 'en-GB' locale trick.
- */
+/** Hora de pared de Chile 'HH:MM' (24 horas) de un instante. '' si no es válido. */
 export function to24hTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
-
-  return d.toLocaleTimeString('es-CL', {
-    timeZone: 'America/Santiago',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const time = formatChileTime(date);
+  return time === '—' ? '' : time;
 }
 
 /** Adds `minutes` to a 'HH:MM' time string, wrapping past midnight. */
@@ -81,12 +77,7 @@ export function formatChileanDate(
   date: Date | string | null | undefined,
   options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' },
 ): string {
-  if (!date) return '—';
-  const d =
-    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
-  if (isNaN(d.getTime())) return '—';
-
-  return d.toLocaleDateString('es-CL', options);
+  return formatChileDate(date, options);
 }
 
 /**
@@ -101,12 +92,11 @@ export function capitalize(s: string): string {
  * Returns a human-readable day label (e.g., "Lun 14 Mar").
  */
 export function buildDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  if (isNaN(d.getTime())) return '—';
+  if (!toChileDate(dateStr)) return '—';
 
-  const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' });
-  const dayNum = d.toLocaleDateString('es-CL', { day: 'numeric' });
-  const month = d.toLocaleDateString('es-CL', { month: 'short' });
+  const dayName = formatChileDate(dateStr, { weekday: 'short' });
+  const dayNum = formatChileDate(dateStr, { day: 'numeric' });
+  const month = formatChileDate(dateStr, { month: 'short' });
 
   return `${capitalize(dayName)} ${dayNum} ${capitalize(month).replace('.', '')}`;
 }

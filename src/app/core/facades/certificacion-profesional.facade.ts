@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -363,7 +364,7 @@ export class CertificacionProfesionalFacade {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `certificados-profesional-${new Date().toISOString().split('T')[0]}.zip`;
+      link.download = `certificados-profesional-${todayIso()}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -383,7 +384,7 @@ export class CertificacionProfesionalFacade {
    * Incluye: status='finished' O end_date=hoy (el cron de fin de día aún no ha corrido).
    */
   private async fetchPromociones(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, status, start_date, end_date')

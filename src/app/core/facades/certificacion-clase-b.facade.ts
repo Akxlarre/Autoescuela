@@ -1,4 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { toChileDate } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -431,7 +433,7 @@ export class CertificacionClaseBFacade {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `certificados-clase-b-${new Date().toISOString().split('T')[0]}.zip`;
+      link.download = `certificados-clase-b-${todayIso()}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -571,7 +573,7 @@ export class CertificacionClaseBFacade {
         clasesCompletadas: Math.min(practiceCountMap.get(e.id) ?? 0, clasesTotales),
         clasesTotales,
         fechaTermino: progress?.last_practice_session
-          ? new Date(progress.last_practice_session).toISOString().split('T')[0]
+          ? toChileDate(progress.last_practice_session)
           : null,
         pctAsistenciaTeoria,
         certificadoId: cert?.id ?? null,
