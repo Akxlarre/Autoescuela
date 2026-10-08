@@ -1,6 +1,6 @@
 # Asignación ASG-i-055 — Escrituras a Supabase que no revisan el error y muestran éxito igual
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

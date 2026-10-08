@@ -285,7 +285,6 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
-| ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | `m` | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -436,6 +435,7 @@
 | ASG-i-037 | Testing transversal: multi-sede (RLS), responsive, modo oscuro y app-like | [fix-190-b-testing-transversal](fixes/fix-190-b-testing-transversal/fix.md) | 2026-10-06 |
 | ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-07 |
 | ASG-i-056 | Canales de tiempo real que escuchan tablas no publicadas | [fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar](fixes/fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar/fix.md) | 2026-10-07 |
+| ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
 | ASG-i-057 | Un comunicado programado a más de 200 alumnos nunca termina | [fix-361-m-comunicados-de-mas-de-200-no-terminan](fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan/fix.md) | 2026-10-08 |
 <!-- AUTO-GENERATED:END -->
 

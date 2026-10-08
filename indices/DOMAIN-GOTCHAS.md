@@ -1660,6 +1660,27 @@
 - **Fuente:** `specs/fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan`,
   `supabase/functions/_shared/announcement-send.ts` (`sendPendingBatch`, `finalizeAnnouncement`).
 
+### DG-103 — Una escritura de supabase-js que falla no lanza, y un UPDATE/DELETE filtrado por RLS ni siquiera devuelve error
+
+- **Trampa:** escribir `await this.supabase.client.from('x').update(...).eq('id', id)` dentro de
+  un `try` y asumir que, si algo sale mal, cae al `catch`. O revisar `error` y dar por hecho que
+  "sin error" significa "se guardó".
+- **Realidad:** son dos huecos distintos. (1) supabase-js resuelve `{ error }` en vez de lanzar:
+  un `await` suelto descarta el error y el flujo sigue hasta el toast de éxito. (2) Un
+  UPDATE/DELETE sobre una fila que la policy no deja ver responde 200 con cero filas y
+  `error: null` — solo INSERT/UPSERT devuelven `42501`. Así se "guardaba" el kilometraje de un
+  vehículo de otra sede al cerrar una clase.
+- **Regla de aplicabilidad:** toda escritura de un Facade captura su resultado
+  (`const { error } = await ...`) o va envuelta en `assertWriteOk(...)`
+  (`core/utils/db-error.utils.ts`). Cuando el éxito que se le muestra al usuario depende de que
+  una fila concreta haya cambiado (update/delete por `id`), además se encadena `.select('id')` y
+  se usa `assertWriteOk(..., { requireRows: true })`. Si la escritura es secundaria y la acción
+  principal ya quedó hecha, no se lanza (el `catch` informaría un fallo que no ocurrió y el
+  usuario reintentaría): se avisa con un toast de advertencia qué quedó sin guardar.
+- **Fuente:** `specs/fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito`. Lo vigila
+  `src/app/core/facades/unchecked-writes.guard.spec.ts` (hueco 1; el hueco 2 no es detectable
+  por análisis de texto).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

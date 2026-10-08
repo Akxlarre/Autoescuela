@@ -199,6 +199,7 @@ describe('AsistenciaClaseBFacade', () => {
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
 
     await facade.markAttendance(1, 'ausente');
 
@@ -209,6 +210,7 @@ describe('AsistenciaClaseBFacade', () => {
   it('markAttendance invoca la penalización RF-053 al marcar ausente', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
     mock.setRpcResult('apply_class_b_absence_penalty', 0);
 
     await facade.markAttendance(1, 'ausente');
@@ -222,6 +224,7 @@ describe('AsistenciaClaseBFacade', () => {
   it('markAttendance avisa por toast cuando la penalización cancela clases futuras', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
     mock.setRpcResult('apply_class_b_absence_penalty', 3);
 
     await facade.markAttendance(1, 'ausente');
@@ -249,6 +252,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('AC-E2: la RPC devuelve -1 y el alumno queda con 2 faltas consecutivas → aviso de que no se canceló', async () => {
       (facade as any)._clasesPracticas.set([makeRow()]);
       mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
       mock.setRpcResult('apply_class_b_absence_penalty', -1);
       vi.spyOn(facade as any, 'refreshAlertasSilently').mockImplementation(async () =>
         (facade as any)._alertas.set([alertaPara(10, 2)]),
@@ -266,6 +270,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('AC-E2: la RPC devuelve -1 pero el alumno no tiene 2 faltas seguidas → sin aviso', async () => {
       (facade as any)._clasesPracticas.set([makeRow()]);
       mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
       mock.setRpcResult('apply_class_b_absence_penalty', -1);
       vi.spyOn(facade as any, 'refreshAlertasSilently').mockImplementation(async () =>
         (facade as any)._alertas.set([alertaPara(10, 1)]),
@@ -277,9 +282,134 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-362-m: una escritura que falla no termina en toast de éxito', () => {
+    const rlsError = { code: '42501', message: 'new row violates row-level security policy' };
+
+    it('markAttendance: si el upsert de asistencia falla, avisa el error y no cambia la fila', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.markAttendance(1, 'ausente');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('permisos'));
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+    });
+
+    it('markAttendance: si la RLS filtra la sesión (0 filas, sin error), tampoco da éxito', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', []);
+
+      await facade.markAttendance(1, 'ausente');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    });
+
+    it('markAttendance: si falla la RPC de penalización, avisa que no se pudo revisar', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      mock.setRpcResult('apply_class_b_absence_penalty', null, { message: 'boom' });
+
+      await facade.markAttendance(1, 'ausente');
+
+      expect(toast.warning).toHaveBeenCalledWith(
+        'No se pudo revisar la penalización',
+        expect.stringContaining('Juan Pérez'),
+      );
+    });
+
+    it('justifyAbsence: si no se actualizó ninguna fila, no dice "Justificación registrada"', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', []);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].justificacion).toBeNull();
+    });
+
+    it('justifyAbsence: con la fila actualizada sí registra la justificación', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [{ id: 9 }]);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.success).toHaveBeenCalledWith('Justificación registrada');
+      expect(facade.clasesPracticas()[0].justificacion).toBe('Licencia médica');
+    });
+
+    const finishPayload = {
+      sessionId: 1,
+      studentId: 5,
+      kmEnd: 12050,
+      studentSignature: null,
+      instructorSignature: null,
+    };
+
+    it('finishClass: vehículo de otra sede (RLS filtra el update) → aviso, no éxito', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('vehicles', []);
+
+      await facade.finishClass(finishPayload);
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Clase finalizada, con datos sin guardar',
+        expect.stringContaining('el kilometraje del vehículo'),
+      );
+      // La clase sí quedó finalizada: la fila local refleja eso.
+      expect(facade.clasesPracticas()[0].status).toBe('presente');
+    });
+
+    it('finishClass: si falla la asistencia, también lo avisa', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('vehicles', [{ id: 7 }]);
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.finishClass(finishPayload);
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Clase finalizada, con datos sin guardar',
+        expect.stringContaining('la asistencia del alumno'),
+      );
+    });
+
+    it('finishClass: con todo guardado mantiene el toast de éxito', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('vehicles', [{ id: 7 }]);
+
+      await facade.finishClass(finishPayload);
+
+      expect(toast.warning).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith(
+        'Clase finalizada',
+        'Evaluación y asistencia registradas.',
+      );
+    });
+  });
+
   it('markAttendance guarda recorded_at con la hora actual (spec 0048-b AC4)', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
     mock.setRpcResult('apply_class_b_absence_penalty', 0);
 
     const before = Date.now();
@@ -293,6 +423,7 @@ describe('AsistenciaClaseBFacade', () => {
   it('markAttendance no invoca la penalización al marcar presente', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setResult('class_b_sessions', [{ id: 1 }]); // fix-362-m: el update exige filas
 
     await facade.markAttendance(1, 'presente');
 

@@ -551,15 +551,29 @@ export class AsistenciaProfesionalFacade {
       }
 
       // Auto-completar sesión si estaba programada y se está registrando asistencia
+      let sessionLeftOpen = false;
       if (sesion.status === 'scheduled') {
         const table =
           sesion.tipo === 'theory'
             ? 'professional_theory_sessions'
             : 'professional_practice_sessions';
-        await this.supabase.client.from(table).update({ status: 'completed' }).eq('id', sesion.id);
+        // fix-362-m: la asistencia ya se guardó; no se lanza (reintentar re-insertaría las
+        // filas nuevas). Se avisa que la sesión quedó sin cerrar.
+        const { error: completeError } = await this.supabase.client
+          .from(table)
+          .update({ status: 'completed' })
+          .eq('id', sesion.id);
+        sessionLeftOpen = !!completeError;
       }
 
-      this.toast.success('Asistencia guardada correctamente');
+      if (sessionLeftOpen) {
+        this.toast.warning(
+          'Asistencia guardada',
+          'No se pudo marcar la sesión como realizada. Cámbiale el estado a mano.',
+        );
+      } else {
+        this.toast.success('Asistencia guardada correctamente');
+      }
       const cursoId = this._selectedCursoId()!;
       await Promise.all([this.fetchSesiones(), this.fetchResumenAlumnos(cursoId)]);
       await this.selectSesion(sesion);
@@ -599,16 +613,30 @@ export class AsistenciaProfesionalFacade {
       if (error) throw error;
 
       // Al cancelar, eliminar registros de asistencia para que no distorsionen estadísticas
+      let attendanceLeft = false;
       if (payload.status === 'cancelled') {
         const attTable =
           sesion.tipo === 'theory'
             ? 'professional_theory_attendance'
             : 'professional_practice_attendance';
         const fkCol = sesion.tipo === 'theory' ? 'theory_session_prof_id' : 'session_id';
-        await this.supabase.client.from(attTable).delete().eq(fkCol, sesion.id);
+        // fix-362-m: la sesión ya quedó cancelada; no se lanza. Si la asistencia no se borró,
+        // sigue contando en las estadísticas y hay que decirlo.
+        const { error: cleanupError } = await this.supabase.client
+          .from(attTable)
+          .delete()
+          .eq(fkCol, sesion.id);
+        attendanceLeft = !!cleanupError;
       }
 
-      this.toast.success('Sesión actualizada');
+      if (attendanceLeft) {
+        this.toast.warning(
+          'Sesión cancelada',
+          'No se pudo borrar su asistencia registrada: seguirá contando en las estadísticas. Avisa al administrador.',
+        );
+      } else {
+        this.toast.success('Sesión actualizada');
+      }
       const cursoId = this._selectedCursoId();
       await this.fetchSesiones();
       if (cursoId) await this.fetchResumenAlumnos(cursoId);

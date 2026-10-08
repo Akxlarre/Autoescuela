@@ -1,4 +1,4 @@
-import { toFriendlyDbMessage } from './db-error.utils';
+import { NoRowsAffectedError, assertWriteOk, toFriendlyDbMessage } from './db-error.utils';
 
 /**
  * fix-015 AC2 — Sanitización de errores de BD.
@@ -56,5 +56,53 @@ describe('toFriendlyDbMessage', () => {
     const result = toFriendlyDbMessage({ code: 'P0001', message: 'CUPOS_AGOTADOS' }, FALLBACK);
     expect(result).toContain('cupos');
     expect(result).not.toContain('CUPOS_AGOTADOS');
+  });
+
+  it('fix-362-m: explica un NoRowsAffectedError en vez de caer al fallback', () => {
+    const result = toFriendlyDbMessage(new NoRowsAffectedError(), FALLBACK);
+    expect(result).not.toBe(FALLBACK);
+    expect(result).toContain('permisos');
+  });
+});
+
+/**
+ * fix-362-m — supabase-js no lanza cuando una escritura falla: devuelve `{ error }`.
+ * `assertWriteOk` convierte ese resultado en una excepción para que el `catch` del Facade lo vea.
+ */
+describe('assertWriteOk', () => {
+  it('devuelve el mismo resultado cuando no hay error', () => {
+    const result = { data: [{ id: 1 }], error: null };
+    expect(assertWriteOk(result)).toBe(result);
+  });
+
+  it('lanza el error de la respuesta tal cual (conserva el código de Postgres)', () => {
+    const error = { code: '42501', message: 'new row violates row-level security policy' };
+    let caught: unknown = null;
+    try {
+      assertWriteOk({ data: null, error });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBe(error);
+  });
+
+  it('sin requireRows, una escritura que no tocó filas no es error', () => {
+    expect(() => assertWriteOk({ data: [], error: null })).not.toThrow();
+    expect(() => assertWriteOk({ data: null, error: null })).not.toThrow();
+  });
+
+  it('con requireRows, lanza NoRowsAffectedError si la RLS filtró la fila (0 filas, sin error)', () => {
+    expect(() => assertWriteOk({ data: [], error: null }, { requireRows: true })).toThrow(
+      NoRowsAffectedError,
+    );
+    expect(() => assertWriteOk({ data: null, error: null }, { requireRows: true })).toThrow(
+      NoRowsAffectedError,
+    );
+  });
+
+  it('con requireRows, pasa si la escritura devolvió al menos una fila', () => {
+    expect(() =>
+      assertWriteOk({ data: [{ id: 7 }], error: null }, { requireRows: true }),
+    ).not.toThrow();
   });
 });
