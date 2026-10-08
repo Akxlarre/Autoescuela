@@ -120,6 +120,12 @@ export class AdminAlumnosProfesionalFacade {
         { event: '*', schema: 'public', table: 'enrollments' },
         () => void this.refreshSilently(),
       )
+      // fix-360-m: archivar y restaurar cambian `students`, no la matrícula.
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'students' },
+        () => void this.refreshSilently(),
+      )
       .subscribe();
   }
 

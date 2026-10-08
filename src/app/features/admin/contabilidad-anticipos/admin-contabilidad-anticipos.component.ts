@@ -49,7 +49,7 @@ function clp(n: number): string {
   ],
   template: `
     <div
-      class="bento-grid bento-grid--fill-screen-kpi"
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
       [class.force-compact]="drawer.isOpen()"
       appBentoGridLayout
       #pageRef

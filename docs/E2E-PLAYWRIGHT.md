@@ -134,6 +134,12 @@ Cada matrícula acepta curso, estado, estado de pago, saldo, `docsComplete` y fe
 `enrollments`, el alumno queda "Pre-inscrito" y sin historial. `markCertificateSent()` deja una
 matrícula con el certificado Clase B "ya enviado" (habilita "Marcar como Ex-Alumno").
 
+Para una matrícula de **Clase Profesional**, pásale el curso y su cupo en una promoción:
+`{ courseName: 'Profesional A2', promotionCourseId }`. El cupo se busca por API (la promoción en
+curso más nueva de la sede 2 y su curso A2: ver `cursoVigente()` en
+`e2e/clase-profesional.spec.ts`), nunca con un id fijo. Mientras el test corre, esa promoción
+muestra un inscrito más.
+
 El helper crea solo `users`, `students` y `enrollments`: sin clases, pagos ni documentos. Para
 esos casos, por ahora, se lee un alumno del seed (nombres `AlumnoNN ApellidoNN`) sin modificarlo.
 

@@ -1,14 +1,14 @@
 # Asignación ASG-i-056 — Canales de tiempo real que escuchan tablas no publicadas
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-07
+> **resulting_track:** fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar
 
 ---
 
@@ -63,9 +63,38 @@ asignación. Se ejecutan acá, después de la migración.
 `knownBug('B10')`. Describe el comportamiento correcto y hoy falla a propósito. Cuando el canal
 funcione, Playwright avisa que "pasó inesperadamente": ahí se le quita la marca.
 
+## Traspasado desde ASG-i-025 (Matías, 2026-10-07)
+
+El testing de Clase Profesional (`ASG-i-025`, track `fix-319-m`) confirmó la sospecha en la Base
+de Alumnos Profesional y dejó sus casos de tiempo real para esta asignación.
+
+**Ya confirmado en navegador:**
+
+- **Base de Alumnos Profesional:** al entrar, el canal `alumnos-profesional-realtime` se une y el
+  servidor responde `"Unable to subscribe to changes with given parameters… table: enrollments"`.
+  Con la Base abierta se cambió por API el saldo de una matrícula y la fila no se actualizó en 8 s
+  (`025` U01).
+- El canal solo escucha `enrollments` (`admin-alumnos-profesional.facade.ts`). **Archivar cambia
+  `students`**, no `enrollments`: aunque se publique `enrollments`, archivar o restaurar en una
+  sesión no se verá en la otra si el canal no escucha también `students` (`025` U02).
+- Al salir de la pantalla el canal sí se cierra (`phx_leave` + `phx_close`, `025` U05 ✅).
+- Promociones, Libro de Clases y Archivo no tienen canal: se decidió dejarlos así (D24 de
+  `fix-319-m`); no entran en esta asignación.
+
+**Casos a ejecutar al cerrar esta asignación:**
+
+| Caso | Checklist | Qué comprobar |
+|---|---|---|
+| U01 | `025-clase-profesional-piloto.md` | Dos sesiones: matricular un alumno Profesional en A → aparece en la Base Profesional de B sin recargar |
+| U02 | `025` | Archivar y restaurar en A → se actualiza en B |
+
+**Test E2E que ya existe:** `e2e/clase-profesional.spec.ts > U. Tiempo real y visual > U01`,
+marcado `knownBug('U01 / S13 (fix-319-m) → ASG-i-056')`. Hoy falla a propósito; cuando el canal
+funcione hay que quitarle la marca.
+
 ## Referencias
 
-- `specs/testing-piloto/037-transversal-multisede-shell.md` §1 · `024a-base-alumnos-b.md` S5 · `024b-ficha-ex-alumnos.md` S3
+- `specs/testing-piloto/037-transversal-multisede-shell.md` §1 · `024a-base-alumnos-b.md` S5 · `024b-ficha-ex-alumnos.md` S3 · `025-clase-profesional-piloto.md` S13
 - `specs/fixes/fix-227-m-*` y `fix-031-i-*` (mismo problema, ya visto dos veces)
 
 ## Archivos involucrados (opcional, para detectar solapes)

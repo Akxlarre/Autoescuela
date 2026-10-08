@@ -1316,10 +1316,18 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_lecturers | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_lecturers | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_lecturers | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_lecturers | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_lecturers | SELECT | admin, o secretaria con acceso a ambas sedes o cuya sede tiene `has_professional` | — |
+| insert_lecturers | INSERT | — | igual que SELECT |
+| update_lecturers | UPDATE | igual que SELECT | — |
+| delete_lecturers | DELETE | igual que SELECT | — |
+
+> `20261007130000` (fix-353-m): la secretaria quedó acotada por sede en todas las tablas de Clase
+> Profesional. Por la promoción del curso: `professional_theory_sessions`,
+> `professional_practice_sessions`, `professional_weekly_signatures`, `session_machinery` y la
+> lectura de `promotion_course_lecturers`. Por la matrícula: `professional_theory_attendance`,
+> `professional_practice_attendance`, `professional_module_grades`, `professional_final_records`,
+> `license_validations`. Por `branch_id`: `professional_pre_registrations`. Las tablas de
+> policies de esas secciones muestran la cláusula de rol anterior; la vigente es la de la migración.
 
 ### `license_validations` — 🔒 RLS
 

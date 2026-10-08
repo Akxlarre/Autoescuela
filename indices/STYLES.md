@@ -288,6 +288,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.field-label` | Etiqueta de campo — `text-sm`, weight 500, `text-primary` |
 | `.field-input` | Input/textarea/select base — `bg-base`, `radius-md`, focus ring `--ds-brand`. Usar `.resize-none` extra en textareas |
 | `.field-input--error` / `.field-input--valid` | Borde de estado (rojo / verde) según validación |
+| `.list-search-input` | Buscador de las listas (el `<input>` "Buscar…" compuesto con utilities): agrega **solo** el estado de foco, igual al de `.field-input`. Todo buscador de lista nuevo debe llevarla (fix-358-m) |
 | `.field-hint` | Texto de ayuda contextual — `12px`, muted |
 | `.field-error` / `.field-success` | Mensaje de validación — `12px`, color de estado |
 

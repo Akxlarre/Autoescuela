@@ -17,6 +17,12 @@ const STUDENT_ROLE_ID = 4;
 export interface E2eEnrollmentSpec {
   /** Nombre exacto del curso en `courses` para la sede (por defecto "Clase B"). */
   courseName?: string;
+  /**
+   * Curso de promoción (`promotion_courses.id`) de una matrícula de Clase Profesional. Con él la
+   * matrícula queda como profesional; `courseName` debe ser el curso de ese mismo cupo
+   * (p. ej. "Profesional A2").
+   */
+  promotionCourseId?: number;
   status?: 'active' | 'completed' | 'withdrawn' | 'draft' | 'cancelled' | 'pending_payment';
   paymentStatus?: 'paid' | 'paid_full' | 'partial' | 'pending';
   pendingBalance?: number;
@@ -138,8 +144,13 @@ export async function createE2eAlumno(spec: E2eAlumnoSpec, cleanup: Cleanup): Pr
       docs_complete: e.docsComplete ?? true,
       contract_accepted: true,
       registration_channel: 'in_person',
-      license_group: 'class_b',
+      license_group: e.promotionCourseId ? 'professional' : 'class_b',
     };
+    if (e.promotionCourseId) {
+      row['promotion_course_id'] = e.promotionCourseId;
+      row['current_step'] = 6;
+      row['payment_mode'] = 'total';
+    }
     if (e.createdAt) row['created_at'] = e.createdAt;
     if (e.updatedAt ?? e.createdAt) row['updated_at'] = e.updatedAt ?? e.createdAt;
 

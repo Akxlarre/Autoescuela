@@ -615,6 +615,26 @@ app-main-layout p-toast.p-toast-top-center,
   }
 }
 
+/* ============================================
+   Tag Dark Mode Overrides (fix-356-m)
+   PrimeNG no cambia solo a su paleta oscura (darkModeSelector apunta a una
+   clase que nunca se aplica): sin esto, las etiquetas conservan el fondo
+   pastel del modo claro sobre superficies oscuras. Se usan los mismos
+   tokens de estado que app-badge. El modo claro no se toca.
+   ============================================ */
+[data-mode='dark'] {
+  --p-tag-success-background: var(--state-success-bg);
+  --p-tag-success-color: var(--state-success);
+  --p-tag-info-background: var(--state-info-bg);
+  --p-tag-info-color: var(--state-info);
+  --p-tag-warn-background: var(--state-warning-bg);
+  --p-tag-warn-color: var(--state-warning);
+  --p-tag-danger-background: var(--state-error-bg);
+  --p-tag-danger-color: var(--state-error);
+  --p-tag-secondary-background: var(--bg-subtle);
+  --p-tag-secondary-color: var(--text-secondary);
+}
+
 /* ── Toolbar actions (topbar): neutro / hover / abierto ───────────────────────
    Reglas de estabilidad: los botones del topbar son iconos de navegación,
    NO CTAs. Deben ser completamente estacionarios (sin lift, sin glow, sin

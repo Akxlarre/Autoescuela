@@ -140,7 +140,6 @@
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 | ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `m` | spec | P1 | i | ⏳ Inventario en `037` §1 |
 | ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `m` | fix | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-056 | Canales Realtime que escuchan tablas no publicadas (6) | `m` | fix | P1 | i | ⏳ Una migración |
 | ASG-i-057 | Comunicados a >200 alumnos nunca terminan | `m` | fix | P1 | i | ⏳ |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
@@ -287,7 +286,6 @@
 | ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
-| ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | `m` | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 <!-- AUTO-GENERATED:END -->
 
@@ -437,6 +435,8 @@
 | ASG-i-041 | Edge functions que responden sin sesión | [fix-043-i-edge-functions-sin-sesion](fixes/fix-043-i-edge-functions-sin-sesion/fix.md) | 2026-10-02 |
 | ASG-i-024 | Testing: Base de Alumnos Clase B, ficha del alumno y ex-alumnos | [fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos](fixes/fix-264-m-testing-base-alumnos-b-ficha-ex-alumnos/fix.md) | 2026-10-05 |
 | ASG-i-037 | Testing transversal: multi-sede (RLS), responsive, modo oscuro y app-like | [fix-190-b-testing-transversal](fixes/fix-190-b-testing-transversal/fix.md) | 2026-10-06 |
+| ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-07 |
+| ASG-i-056 | Canales de tiempo real que escuchan tablas no publicadas | [fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar](fixes/fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar/fix.md) | 2026-10-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
