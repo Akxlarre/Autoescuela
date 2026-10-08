@@ -139,8 +139,6 @@
 | ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 | ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `m` | spec | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-055 | Escrituras sin revisar error con toast de éxito (~13) | `m` | fix | P1 | i | ⏳ Inventario en `037` §1 |
-| ASG-i-057 | Comunicados a >200 alumnos nunca terminan | `m` | fix | P1 | i | ⏳ |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -437,6 +435,8 @@
 | ASG-i-037 | Testing transversal: multi-sede (RLS), responsive, modo oscuro y app-like | [fix-190-b-testing-transversal](fixes/fix-190-b-testing-transversal/fix.md) | 2026-10-06 |
 | ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-07 |
 | ASG-i-056 | Canales de tiempo real que escuchan tablas no publicadas | [fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar](fixes/fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar/fix.md) | 2026-10-07 |
+| ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
+| ASG-i-057 | Un comunicado programado a más de 200 alumnos nunca termina | [fix-361-m-comunicados-de-mas-de-200-no-terminan](fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan/fix.md) | 2026-10-08 |
 <!-- AUTO-GENERATED:END -->
 
 ---

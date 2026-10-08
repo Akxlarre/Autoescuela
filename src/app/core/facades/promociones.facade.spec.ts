@@ -791,3 +791,29 @@ describe('PromocionesFacade — número de promoción (fix-323-m)', () => {
     expect(mockSupabase._builders.get('professional_promotions').eq).toHaveBeenCalledWith('id', 14);
   });
 });
+
+// fix-362-m — el aviso de "feriados marcados" dependía de dos updates cuyo error no se revisaba.
+describe('PromocionesFacade — cancelHolidaySessions informa si falló (fix-362-m)', () => {
+  function setup(tables: Record<string, { data?: unknown; error?: unknown }>) {
+    TestBed.configureTestingModule({
+      providers: [
+        PromocionesFacade,
+        { provide: SupabaseService, useValue: createTableMock(tables) },
+        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn(), info: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+      ],
+    });
+    return TestBed.inject(PromocionesFacade) as any;
+  }
+
+  it('devuelve true cuando ambas tablas se actualizan', async () => {
+    const facade = setup({});
+    expect(await facade.cancelHolidaySessions(10, ['2026-08-13'])).toBe(true);
+  });
+
+  it('devuelve false si falla el update de las sesiones prácticas', async () => {
+    const facade = setup({ professional_practice_sessions: { error: { message: 'denied' } } });
+    expect(await facade.cancelHolidaySessions(10, ['2026-08-13'])).toBe(false);
+  });
+});
