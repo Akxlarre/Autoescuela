@@ -18,7 +18,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { BranchScopeSelectorComponent } from '@shared/components/branch-scope-selector/branch-scope-selector.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, validateRut, completeRutDv } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -247,6 +247,7 @@ import { isValidLicenseNumber } from '@core/utils/license-number.utils';
                   [branchId]="sedeId()"
                   [bothBranches]="bothBranches()"
                   [role]="authFacade.currentUser()?.role ?? ''"
+                  [canAccessBothBranches]="!!authFacade.currentUser()?.canAccessBothBranches"
                   mode="crear"
                   (valueChange)="onSedeScopeChange($event)"
                 />
@@ -674,15 +675,15 @@ export class AdminInstructorCrearDrawerComponent {
 
   protected onRutInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const formatted = formatRut(input.value);
+    const formatted = formatRutTyping(input.value);
     this.rut.set(formatted);
     input.value = formatted;
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
     this.rutTouched.set(true);
-    this.rut.set(autocompleteRutDv(this.rut()));
+    this.rut.set(completeRutDv(this.rut()));
   }
 
   protected async submit(): Promise<void> {

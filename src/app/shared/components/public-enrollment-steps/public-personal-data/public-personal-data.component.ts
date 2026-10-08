@@ -23,7 +23,7 @@ import type {
 } from '@core/models/ui/enrollment-personal-data.model';
 
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
-import { validateRut, formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { validateRut, formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { getAgeStatus, isInvalidDate } from '@core/utils/age.utils';
 import { validateName, stripInvalidNameChars } from '@core/utils/name.utils';
@@ -637,26 +637,28 @@ export class PublicPersonalDataComponent {
 
   // RUT handlers
   protected onRutInput(raw: string): void {
-    this.patch('rut', formatRut(raw));
+    this.patch('rut', formatRutTyping(raw));
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
-    this.patch('rut', autocompleteRutDv(this.formData().rut));
+    this.patch('rut', completeRutDv(this.formData().rut));
     this.markDirty('rut');
   }
 
   protected onRutKeydown(event: KeyboardEvent): void {
     const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
     if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
-    if (/^\d$/.test(event.key) || event.key === 'k' || event.key === 'K') return;
+    // fix-213-b: el guion también; con guion, el DV escrito se respeta.
+    if (/^\d$/.test(event.key) || event.key === 'k' || event.key === 'K' || event.key === '-')
+      return;
     event.preventDefault();
   }
 
   protected onRutPaste(event: ClipboardEvent): void {
     event.preventDefault();
     const pasted = event.clipboardData?.getData('text') ?? '';
-    this.patch('rut', formatRut(pasted));
+    this.patch('rut', formatRutTyping(pasted));
   }
 
   // Names handler — auto-strips invalid chars on input

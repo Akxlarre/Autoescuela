@@ -19,7 +19,7 @@ import type {
   LicenseValidation,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
-import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, validateRut, completeRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { calcAge, getAgeStatus } from '@core/utils/age.utils';
 import {
@@ -231,18 +231,19 @@ export class PersonalDataComponent {
     if (event.ctrlKey || event.metaKey) return; // allow Ctrl+A/C/V/X
     if (/^\d$/.test(event.key)) return;
     if (event.key === 'k' || event.key === 'K') return;
+    if (event.key === '-') return; // fix-213-b: con guion, el DV escrito se respeta
     event.preventDefault();
   }
 
   onRutPaste(event: ClipboardEvent): void {
     event.preventDefault();
     const pasted = event.clipboardData?.getData('text') ?? '';
-    const formatted = formatRut(pasted);
+    const formatted = formatRutTyping(pasted);
     this.dataChange.emit({ ...this.data(), rut: formatted });
   }
 
   onRutInput(raw: string): void {
-    const formatted = formatRut(raw);
+    const formatted = formatRutTyping(raw);
     this.dataChange.emit({ ...this.data(), rut: formatted });
 
     clearTimeout(this._rutPrefillTimer);
@@ -257,7 +258,7 @@ export class PersonalDataComponent {
    */
   onRutBlur(): void {
     clearTimeout(this._rutPrefillTimer);
-    const corrected = autocompleteRutDv(this.data().rut);
+    const corrected = completeRutDv(this.data().rut);
     if (corrected !== this.data().rut) {
       this.dataChange.emit({ ...this.data(), rut: corrected });
     }

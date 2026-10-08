@@ -7,7 +7,7 @@ import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.fa
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -249,15 +249,15 @@ export class RegistrarVentaDrawerComponent {
 
   protected onRutInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const formatted = formatRut(input.value);
+    const formatted = formatRutTyping(input.value);
     this.ventaForm.get('rut')!.setValue(formatted, { emitEvent: false });
     input.value = formatted;
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
     const control = this.ventaForm.get('rut')!;
-    control.setValue(autocompleteRutDv(control.value ?? ''));
+    control.setValue(completeRutDv(control.value ?? ''));
   }
 
   protected async submitVenta(): Promise<void> {
