@@ -59,6 +59,7 @@ import type {
 } from '@core/models/ui/alumno-profesional-table-row.model';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -142,7 +143,7 @@ interface SemaforoInfo {
             <input
               type="text"
               placeholder="Buscar por nombre, RUT o Nº Matrícula..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search professional students by name, RUT or enrollment number"
               [(ngModel)]="searchTerm"
               (ngModelChange)="resetPagination()"
@@ -244,7 +245,7 @@ interface SemaforoInfo {
                 scrollHeight="flex"
                 styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
                 [showCurrentPageReport]="true"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} matrículas"
               >
                 <ng-template pTemplate="header">
                   <tr class="micro-label text-left">
@@ -393,10 +394,10 @@ interface SemaforoInfo {
                   <tr>
                     <td colspan="8" class="p-0">
                       <app-empty-state
-                        icon="graduation-cap"
-                        message="No hay alumnos profesionales"
-                        subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
-                        actionLabel="Limpiar filtros"
+                        [icon]="emptyState().icon"
+                        [message]="emptyState().message"
+                        [subtitle]="emptyState().subtitle"
+                        [actionLabel]="emptyState().actionLabel"
                         actionIcon="refresh-cw"
                         (action)="resetFilters()"
                       />
@@ -410,7 +411,7 @@ interface SemaforoInfo {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 <!-- track por matrícula: un alumno con 2 matrículas Profesional sale 2 veces (fix-331-m) -->
-                @for (alumno of sortedAlumnos(); track alumno.enrollmentId) {
+                @for (alumno of visibleCards(); track alumno.enrollmentId) {
                   <div class="bento-wide" data-col-span="4">
                     <app-alumno-profesional-card
                       [alumno]="alumno"
@@ -423,13 +424,28 @@ interface SemaforoInfo {
                 } @empty {
                   <div class="col-span-full py-8">
                     <app-empty-state
-                      icon="graduation-cap"
-                      message="No hay alumnos profesionales"
-                      subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
-                      actionLabel="Limpiar filtros"
+                      [icon]="emptyState().icon"
+                      [message]="emptyState().message"
+                      [subtitle]="emptyState().subtitle"
+                      [actionLabel]="emptyState().actionLabel"
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
+                  </div>
+                }
+
+                <!-- Cargar más: la vista de tarjetas muestra de a 6, igual que la Base B (fix-354-m) -->
+                @if (remainingCards() > 0) {
+                  <div class="col-span-full pt-1">
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                      (click)="loadMoreCards()"
+                      data-llm-action="load-more-professional-students"
+                    >
+                      <app-icon name="chevron-down" [size]="16" />
+                      Cargar más ({{ remainingCards() }} restantes)
+                    </button>
                   </div>
                 }
               </div>
@@ -535,10 +551,35 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
     return ariaSortOf(this.sort(), field);
   }
 
-  /** Un orden nuevo se mira desde la primera página. */
+  /** Un orden nuevo se mira desde el principio: primera página y primeras tarjetas. */
   private applySort(sort: AlumnoProfesionalListSort | null): void {
     this.sort.set(sort);
     this.tableFirst.set(0);
+    this.resetCards();
+  }
+
+  // ── Vista de tarjetas: de a 6 con "Cargar más" (fix-354-m) ──────────────
+  /**
+   * Pintar todas las matrículas dejaba una celda de ~22.000 px y la animación de entrada la
+   * montaba sobre el hero. Mismo paso que la Base B.
+   */
+  private static readonly CARDS_STEP = 6;
+  private readonly mobileShown = signal(AlumnosProfesionalListContentComponent.CARDS_STEP);
+
+  visibleCards(): AlumnoProfesionalTableRow[] {
+    return sliceByBudget(this.sortedAlumnos(), this.mobileShown());
+  }
+
+  remainingCards(): number {
+    return Math.max(0, this.filteredAlumnos().length - this.mobileShown());
+  }
+
+  loadMoreCards(): void {
+    this.mobileShown.update((n) => n + AlumnosProfesionalListContentComponent.CARDS_STEP);
+  }
+
+  private resetCards(): void {
+    this.mobileShown.set(AlumnosProfesionalListContentComponent.CARDS_STEP);
   }
 
   /** Exporta lo que se ve: la lista filtrada (o la Papelera), completa y en el orden elegido. */
@@ -601,9 +642,40 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   // fix-331-m (D10): una fila por matrícula (un alumno con A2 y A4 sale dos veces), así que el
   // conteo es de matrículas.
-  readonly heroChips = computed((): SectionHeroChip[] => [
-    { label: `${this.alumnos().length} matrículas`, icon: 'graduation-cap', style: 'default' },
-  ]);
+  readonly heroChips = computed((): SectionHeroChip[] => {
+    const total = this.alumnos().length;
+    return [
+      {
+        label: `${total} ${total === 1 ? 'matrícula' : 'matrículas'}`,
+        icon: 'graduation-cap',
+        style: 'default',
+      },
+    ];
+  });
+
+  /** Texto de la lista vacía: sin resultados por filtros, Papelera vacía o sin alumnos aún. */
+  emptyState(): { icon: string; message: string; subtitle: string; actionLabel?: string } {
+    if (this.hasActiveFilters()) {
+      return {
+        icon: 'search',
+        message: 'No se encontraron alumnos',
+        subtitle: 'Intenta ajustar los criterios de búsqueda o filtros.',
+        actionLabel: 'Limpiar filtros',
+      };
+    }
+    if (this.trashView()) {
+      return {
+        icon: 'trash-2',
+        message: 'No hay alumnos archivados',
+        subtitle: 'Los alumnos que archives aparecerán aquí y podrás restaurarlos.',
+      };
+    }
+    return {
+      icon: 'graduation-cap',
+      message: 'Aún no hay alumnos profesionales',
+      subtitle: 'Los alumnos aparecerán aquí cuando se matriculen.',
+    };
+  }
 
   readonly heroActions = computed((): SectionHeroAction[] => {
     const isTrash = this.trashView();
@@ -707,6 +779,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
    */
   resetPagination(): void {
     this.tableFirst.set(0);
+    this.resetCards();
   }
 
   /** Vuelve filtros y buscador a su valor inicial. El orden elegido se conserva (spec 0023-m). */
@@ -717,6 +790,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
 
   resetFilters(): void {
     this.tableFirst.set(0);
+    this.resetCards();
     this.searchTerm = '';
     this.selectedClase = '';
   }
@@ -727,6 +801,7 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
         this.preInscritosRequested.emit();
         break;
       case 'papelera':
+        this.resetCards();
         this.trashViewToggled.emit();
         break;
       default:

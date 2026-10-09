@@ -46,7 +46,11 @@ type Canal = 'tareas' | 'comunicados';
     CardHoverDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout>
+    <div
+      #bentoGrid
+      class="bento-grid bento-grid--fill-screen-kpi bento-grid--rows-fit"
+      appBentoGridLayout
+    >
       <!-- Hero -->
       <app-section-hero
         density="slim"

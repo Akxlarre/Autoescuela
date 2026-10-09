@@ -1450,4 +1450,44 @@ describe('EnrollmentFacade', () => {
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('digital_contracts');
     });
   });
+
+  // fix-362-m: los borrados previos al del borrador no revisaban su error.
+  describe('discardDraft — un borrado intermedio que falla corta el descarte (fix-362-m)', () => {
+    function mockTables(failingTable: string | null) {
+      const builders = new Map<string, any>();
+      mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+        if (!builders.has(table)) {
+          builders.set(
+            table,
+            createMockQueryBuilder(null, table === failingTable ? { message: 'denied' } : null),
+          );
+        }
+        return builders.get(table);
+      });
+      (mockSupabase.client.storage as any).from = vi.fn().mockReturnValue({
+        list: vi.fn().mockResolvedValue({ data: [], error: null }),
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      });
+      return builders;
+    }
+
+    it('si no se pueden borrar los pagos, no borra la matrícula y devuelve false', async () => {
+      const builders = mockTables('payments');
+
+      const ok = await facade.discardDraft(77);
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toContain('Error al descartar borrador');
+      expect(builders.get('enrollments').delete).not.toHaveBeenCalled();
+    });
+
+    it('con todos los borrados bien, descarta el borrador', async () => {
+      mockTables(null);
+
+      const ok = await facade.discardDraft(77);
+
+      expect(ok).toBe(true);
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('digital_contracts');
+    });
+  });
 });

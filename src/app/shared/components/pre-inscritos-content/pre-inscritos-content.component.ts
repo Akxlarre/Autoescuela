@@ -116,7 +116,7 @@ const PAGE_SIZE_MOBILE = 6;
             <input
               type="text"
               placeholder="Buscar por nombre o RUT..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="search input for pre-inscribed students by name or RUT"
               [value]="searchQuery()"
               (input)="onSearch($any($event.target).value)"

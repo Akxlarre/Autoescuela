@@ -433,3 +433,31 @@ describe('AdminPreInscritosFacade', () => {
     expect(mockToast.error).toHaveBeenCalled();
   });
 });
+
+// fix-362-m: uploadSignedContract devolvía true aunque el contrato no se hubiera guardado.
+describe('AdminPreInscritosFacade — uploadSignedContract no da éxito si no se guardó (fix-362-m)', () => {
+  const file = new File(['x'], 'contrato.pdf', { type: 'application/pdf' });
+
+  it('devuelve false si falla la subida al storage', async () => {
+    const { facade, mockSupabase } = setup();
+    mockSupabase.client.storage.from = vi.fn().mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: { message: 'storage denied' } }),
+    });
+
+    expect(await facade.uploadSignedContract(50, file)).toBe(false);
+    expect(facade.error()).toContain('No se pudo guardar el contrato firmado');
+  });
+
+  it('devuelve false si falla el registro en digital_contracts', async () => {
+    const { facade } = setup({ digital_contracts: { error: { message: 'denied' } } });
+
+    expect(await facade.uploadSignedContract(50, file)).toBe(false);
+    expect(facade.error()).toContain('No se pudo guardar el contrato firmado');
+  });
+
+  it('devuelve true cuando el contrato se sube y se registra', async () => {
+    const { facade } = setup();
+
+    expect(await facade.uploadSignedContract(50, file)).toBe(true);
+  });
+});

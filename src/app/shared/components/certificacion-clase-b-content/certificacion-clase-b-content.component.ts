@@ -91,7 +91,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             <input
               type="text"
               placeholder="Buscar por nombre o RUT..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
+              class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
               data-llm-description="Search students by name or RUT"
               [value]="searchQuery()"
               (input)="setSearchQuery($any($event.target).value)"

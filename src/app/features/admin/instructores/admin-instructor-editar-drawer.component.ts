@@ -27,6 +27,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
 import { isValidLicenseNumber } from '@core/utils/license-number.utils';
+import { isSameEmail } from '@core/utils/email.utils';
 import {
   instructorBranchChangeNotice,
   instructorDeactivationNotices,
@@ -460,20 +461,10 @@ import {
                   <app-icon name="alert-triangle" [size]="16" />
                   Este instructor todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
-                <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
-                @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
-                  <span
-                    class="text-xs"
-                    data-llm-description="nota de que la invitación va al correo guardado"
-                  >
-                    La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla al
-                    correo nuevo.
-                  </span>
-                }
                 <button
                   type="button"
                   class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || !inst.email"
+                  [disabled]="isSendingInvite() || !inst.email || emailSinGuardar()"
                   (click)="onEnviarInvitacion(inst.userId, inst.email)"
                   data-llm-action="enviar-invitacion-instructor"
                 >
@@ -484,6 +475,12 @@ import {
                     Reenviar invitación
                   }
                 </button>
+                <!-- hotfix-149-m (S10): mismo criterio que el panel del alumno (fix-296-m). -->
+                @if (emailSinGuardar()) {
+                  <span class="text-xs" data-llm-info="invitacion-requiere-guardar">
+                    Guarda los cambios antes de enviar la invitación.
+                  </span>
+                }
               </div>
             }
 
@@ -828,8 +825,16 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
   }
 
+  /**
+   * La invitación solo sale al correo guardado, así que con el correo editado antes hay que
+   * guardar (hotfix-149-m, igual que en el panel del alumno).
+   */
+  protected emailSinGuardar(): boolean {
+    return !isSameEmail(this.email(), this.currentEmail);
+  }
+
   protected async onEnviarInvitacion(userId: number, savedEmail: string): Promise<void> {
-    if (!userId || !savedEmail) return;
+    if (!userId || !savedEmail || this.emailSinGuardar()) return;
 
     this.isSendingInvite.set(true);
     try {

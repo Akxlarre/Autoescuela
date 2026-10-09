@@ -230,16 +230,29 @@ export class EnrollmentPaymentFacade {
       const paymentStatus = isPending ? 'pending' : 'paid';
 
       // 0. Delete previous enrollment payment records (idempotencia: back-button safe)
-      await this.supabase.client
+      // fix-362-m: si la limpieza falla y se sigue, el insert de abajo deja el pago (y el
+      // descuento) duplicados. Se corta acá.
+      const { error: discountCleanupError } = await this.supabase.client
         .from('discount_applications')
         .delete()
         .eq('enrollment_id', enrollmentId);
 
-      await this.supabase.client
-        .from('payments')
-        .delete()
-        .eq('enrollment_id', enrollmentId)
-        .eq('type', 'enrollment');
+      const cleanupError =
+        discountCleanupError ??
+        (
+          await this.supabase.client
+            .from('payments')
+            .delete()
+            .eq('enrollment_id', enrollmentId)
+            .eq('type', 'enrollment')
+        ).error;
+
+      if (cleanupError) {
+        this._error.set(
+          'Error al reemplazar el pago anterior: ' + this.sanitizer.sanitize(cleanupError).message,
+        );
+        return false;
+      }
 
       // 1. Insert payment record
       const paymentRecord = {
