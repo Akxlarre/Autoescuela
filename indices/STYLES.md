@@ -447,7 +447,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **tablist** | `.p-tablist` |
 | **tabpanel** | `.p-tabpanel` |
 | **tabs** | `.p-tabs` |
-| **toast** | `.p-toast` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` · `.p-toast-message` +11 |
+| **toast** | `.p-toast` · `.p-toast-bottom-right` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` +12 |
 | **togglebutton** | `.p-togglebutton` · `.p-togglebutton-checked` |
 | **toggleswitch** | `.p-toggleswitch` · `.p-toggleswitch-checked` · `.p-toggleswitch-handle` · `.p-toggleswitch-input` · `.p-toggleswitch-slider` |
 | **tooltip** | `.p-tooltip` · `.p-tooltip-arrow` · `.p-tooltip-bottom` · `.p-tooltip-left` · `.p-tooltip-right` +2 |
