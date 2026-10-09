@@ -1,14 +1,14 @@
 # Asignación ASG-i-047 — RPC `SECURITY DEFINER` y registro de auditoría abiertos a cualquier usuario logueado
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-09
+> **resulting_track:** fix-363-m-auditoria-falsificable-y-rpc-abiertas
 
 ---
 
