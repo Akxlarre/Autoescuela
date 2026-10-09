@@ -302,7 +302,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                                 </div>
                                 @if (row.topic) {
                                   <span
-                                    class="text-xs text-text-muted max-w-[120px] truncate"
+                                    class="text-xs text-text-muted max-w-30 truncate"
                                     [title]="row.topic"
                                     >{{ row.topic }}</span
                                   >

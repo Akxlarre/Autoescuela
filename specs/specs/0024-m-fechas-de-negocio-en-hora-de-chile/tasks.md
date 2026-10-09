@@ -1,7 +1,7 @@
 # Tasks 0024-m — Fechas de negocio en hora de Chile
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md) · **Inventario:** [inventario.md](./inventario.md)
-> **Status:** in_progress
+> **Status:** done (2026-10-09)
 > **Created:** 2026-10-08
 
 ---
@@ -203,10 +203,10 @@
     - [x] `student-payment`, `public-enrollment`, `_shared/holidays` y `_shared/contract-pdf` reutilizan el módulo. Excepción: `_shared/enrollment-sheet-format` y `_shared/ficha-tecnica-pdf` conservan su formateador propio (ya fija `America/Santiago`, arma el texto por partes por una limitación de la fuente del PDF y tiene tests propios)
     - [x] Cero ocurrencias de ARCH-27 en `supabase/functions` (línea base 92 → 0)
 
-- [ ] **T6.4** — Desplegar las edge functions modificadas
+- [x] **T6.4** — Desplegar las edge functions modificadas
   - **AC ref:** AC7, AC8
   - **DoD:**
-    - [ ] Desplegadas las 19 funciones tocadas (las que importan `_shared/chile-time.ts`, `_shared/holidays.ts` o `_shared/contract-pdf.ts`). El despliegue lo decide Matías: hasta entonces producción y dev siguen con el cálculo en UTC
+    - [x] Desplegadas las 18 funciones tocadas (Matías, 2026-10-09; confirmado con `supabase functions list`). Lista: `auto-create-next-promotions`, `create-instructor`, `update-instructor`, `export-certificates-zip`, `send-certificate-email`, `generate-audit-report`, `generate-cash-closing-report`, `generate-cash-history-report`, `generate-certificate-b-pdf`, `generate-certificate-professional-pdf`, `generate-class-book-pdf`, `generate-contract-pdf`, `generate-financial-report`, `generate-payment-report`, `generate-payroll-report`, `generate-student-license-pdf`, `public-enrollment`, `student-payment`
 
 ---
 
@@ -245,10 +245,10 @@
     - [x] Falla si queda algún `CURRENT_DATE` en un objeto vigente o una columna sin zona
     - [x] Ensayo contra la BD de dev en una transacción revertida (2026-10-09): las tres migraciones aplican, el test pasa y la vista devuelve las mismas 4.368 filas que antes. No quedó nada aplicado
 
-- [ ] **T7.6** — Matías aplica las tres migraciones y corre el test SQL
+- [x] **T7.6** — Matías aplica las tres migraciones y corre el test SQL
   - **AC ref:** AC9, AC10, AC11, AC12
   - **DoD:**
-    - [ ] Test SQL en verde contra la BD de dev
+    - [x] Test SQL en verde contra la BD de dev (2026-10-09, fuera de transacción)
 
 ---
 
@@ -262,7 +262,7 @@
   - **AC ref:** AC6
 - [x] **T8.4** — Actualizar `indices/UTILS.md`, `indices/PIPES.md`, `indices/DATABASE.md`, DG-071 y la regla `.claude/rules/dates.md` (referenciada desde `.claude/CLAUDE.md`)
 - [x] **T8.5** — Evidencia por AC en `acceptance.md` (AC7 a AC12 quedan a la espera de T6.4 y T7.6)
-- [ ] **T8.6** — ROADMAP a Done y `/spec-activate --clear` — **bloqueada por T6.4 y T7.6**
+- [x] **T8.6** — ROADMAP a Done y spec desactivada (2026-10-09)
 
 ---
 
@@ -272,9 +272,9 @@
 > Si está fuera de scope, crear spec nueva.
 
 - [x] **TD.1** — `toISODate()` retirada (fase 5): cero usos en `src/app` y eliminada de `date.utils.ts`; cada uso pasó a `chileToday()`, `toChileDate()` o `calendarDateToIso()`.
-- [ ] **TD.2** — La línea base real es de 593 ocurrencias en 124 archivos (el inventario estimaba menos: no contaba `T12:00:00` sin zona ni las edge functions). Seguimiento con `node scripts/check-date-discipline.mjs --list [tipo]`.
-- [ ] **TD.3** — Estado al cierre de la sesión del 2026-10-08: fases 0 y 1 completas. Fase 2 a medias: reemplazados los 27 `new Date().toISOString()…` directos (21 archivos); línea base 593 → 566. Faltan de la fase 2: los 30 `utc-slice` restantes (fechas derivadas de un `Date`: `dashboard-alerts`, `flota`, `instructor-horas`, `instructor-clases` mock, `formatDateIso` de `asistencia-profesional` y `libro-de-clases`, `promotion-end-date.utils`, drawers de instructor y promoción, `schedule-grid`, `reprogramar-clase`, `announcement-composer`, y 14 en edge functions), los tests a las 23:30 por facade (DoD de T2.1/T2.2) y T2.4 (quitar `knownBug` de `T02` y correrlo contra el build de producción).
-- [ ] **TD.4** — Segunda sesión del 2026-10-08. Hecho: (a) resto de los cortes de `toISOString()` de la app salvo `announcement-composer` (queda 1 en la app; los otros 14 son de edge functions, fase 6); (b) fase 3 casi completa: rangos semiabiertos con `chileDayRange`/`chileRange` en `cuadratura`, `dashboard`, `reportes-contables`, `flota`, `auditoria`, `asistencia-clase-b`, `instructores`, `instructor-clases` e `instructor-horas`; (c) tests nuevos a las 23:30 en `instructor-clases`, `instructores`, `instructor-horas` y `flota`. Línea base 566 → 425. Pendiente de la fase 3: topes `slot_start` en `enrollment.facade` (862, 2122) y `admin-alumno-detalle.facade` (1458), `agenda.facade:317` (semana desde medianoche UTC), eliminar `getChileDateTimeRange` de `date.utils`, y tests de rango propios en `cuadratura`, `dashboard`, `reportes-contables`, `auditoria` y `asistencia-clase-b` (hoy solo se actualizó el mock).
+- [x] **TD.2** — La línea base real es de 593 ocurrencias en 124 archivos (el inventario estimaba menos: no contaba `T12:00:00` sin zona ni las edge functions). Seguimiento con `node scripts/check-date-discipline.mjs --list [tipo]`.
+- [x] **TD.3** — Estado al cierre de la sesión del 2026-10-08: fases 0 y 1 completas. Fase 2 a medias: reemplazados los 27 `new Date().toISOString()…` directos (21 archivos); línea base 593 → 566. Faltan de la fase 2: los 30 `utc-slice` restantes (fechas derivadas de un `Date`: `dashboard-alerts`, `flota`, `instructor-horas`, `instructor-clases` mock, `formatDateIso` de `asistencia-profesional` y `libro-de-clases`, `promotion-end-date.utils`, drawers de instructor y promoción, `schedule-grid`, `reprogramar-clase`, `announcement-composer`, y 14 en edge functions), los tests a las 23:30 por facade (DoD de T2.1/T2.2) y T2.4 (quitar `knownBug` de `T02` y correrlo contra el build de producción).
+- [x] **TD.4** — Segunda sesión del 2026-10-08. Hecho: (a) resto de los cortes de `toISOString()` de la app salvo `announcement-composer` (queda 1 en la app; los otros 14 son de edge functions, fase 6); (b) fase 3 casi completa: rangos semiabiertos con `chileDayRange`/`chileRange` en `cuadratura`, `dashboard`, `reportes-contables`, `flota`, `auditoria`, `asistencia-clase-b`, `instructores`, `instructor-clases` e `instructor-horas`; (c) tests nuevos a las 23:30 en `instructor-clases`, `instructores`, `instructor-horas` y `flota`. Línea base 566 → 425. Pendiente de la fase 3: topes `slot_start` en `enrollment.facade` (862, 2122) y `admin-alumno-detalle.facade` (1458), `agenda.facade:317` (semana desde medianoche UTC), eliminar `getChileDateTimeRange` de `date.utils`, y tests de rango propios en `cuadratura`, `dashboard`, `reportes-contables`, `auditoria` y `asistencia-clase-b` (hoy solo se actualizó el mock).
 - [x] **TD.5** — `instructor-horas.facade.spec.ts` tenía un mock que hacía fallar en silencio `fetchSessionsLog` (`lte().order is not a function`): el test pasaba porque el facade atrapa el error. Resuelto en la fase 5: el mock ahora se puede esperar en cualquier eslabón y hay un test que verifica el resultado.
 - [x] **TD.4b** — Fase 3 cerrada (tercera pasada del 2026-10-08): topes `slot_start` de `enrollment` y `admin-alumno-detalle` y semana de `agenda` con rangos semiabiertos; `getChileDateTimeRange` eliminada; tests a las 23:30 en `cuadratura`, `dashboard`, `auditoria` y `asistencia-clase-b`. Línea base 425 → 422. Excepción al DoD de T3.1: `reportes-contables` no tiene test de rango propio (solo se actualizó el mock); queda para la fase 5 junto con su aritmética de fechas.
 - [x] **TD.6** — Resuelto en la fase 5: `node scripts/test-tz.mjs src/app` (la suite completa, 3.739 tests) pasa en UTC, Asia/Tokyo y America/Santiago. Eran tests que armaban fechas con el reloj del equipo y dos helpers que leían un instante con `new Date()` local.

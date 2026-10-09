@@ -1,6 +1,6 @@
 # Spec 0024-m — Fechas de negocio en hora de Chile
 
-> **Status:** approved
+> **Status:** done (2026-10-09)
 > **Created:** 2026-10-08
 > **Owner:** Matías
 > **Priority:** P1

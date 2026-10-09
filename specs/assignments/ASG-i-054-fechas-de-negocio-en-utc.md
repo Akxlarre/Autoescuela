@@ -1,6 +1,6 @@
 # Asignación ASG-i-054 — Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1

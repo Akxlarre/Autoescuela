@@ -1,10 +1,26 @@
 # Acceptance 0024-m — Fechas de negocio en hora de Chile
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md) · **Tasks:** [tasks.md](./tasks.md)
-> **Estado (2026-10-09):** ⏳ CÓDIGO COMPLETO, FALTA APLICAR. La app cumple sus AC. Las edge
-> functions no están desplegadas y las tres migraciones no están aplicadas: AC7 a AC12 quedan
-> verificados en código y en un ensayo revertido, no contra el sistema en uso. Quedan dos pasos
-> que decide Matías: aplicar las migraciones (T7.6) y desplegar las funciones (T6.4).
+> **Estado (2026-10-09):** ✅ PASA. Matías aplicó las tres migraciones y desplegó las 18 edge
+> functions el 2026-10-09. Verificado después contra el sistema en uso (ver "Verificación
+> posterior a la aplicación"). Quedan dos observaciones que solo se pueden hacer de noche y no
+> bloquean el cierre: una corrida real del corte de inasistencias a las 21:00 y un PDF generado
+> entre las 21:00 y la medianoche.
+
+## Verificación posterior a la aplicación (2026-10-09, 02:10 hora Chile)
+
+| Qué | Resultado |
+|---|---|
+| `supabase/tests/timezone/0024-m-business-day.sql` contra la BD real, fuera de transacción | Pasa sin fallos (AC9, AC10, AC11, AC12 y el contrato de las tres funciones) |
+| Objetos aplicados | Existen `chile_today`, `chile_date`, `chile_day_start` y `run_class_b_absences_cutoff`; el job `mark-end-of-day-class-b-absences` quedó en `0 0,1 * * *` llamando al envoltorio |
+| Vista `v_class_b_schedule_availability` | 4.368 filas, las mismas que antes de migrar |
+| Edge functions desplegadas | Las 18 figuran actualizadas el 2026-10-09 entre las 05:04 y las 05:06 UTC (`supabase functions list`) |
+| `generate-cash-closing-report` (Excel y PDF), `generate-financial-report`, `generate-cash-history-report`, `generate-payroll-report`, invocadas como admin | Las cuatro responden 200 e imprimen `09-10-2026, 02:10`: la hora de Chile (en UTC habrían sido las 05:10) |
+
+Lo que esta verificación no cubre: a las 02:10 el día de Chile y el de UTC coinciden, así que el
+"hoy" por defecto y las fechas que escriben las funciones (`issued_date`, `registration_date`)
+no se pudieron distinguir contra el sistema en uso; la hora impresa sí. Las otras 14 funciones
+no se invocaron (crean o modifican datos, o necesitan un alumno o certificado concreto).
 
 ## Cómo se verificó
 
@@ -34,17 +50,17 @@ de sintaxis y de nombres sin definir con `tsc --noResolve`. Ninguna función se 
 | AC4 | ✅ | `toChileDate()` en los cortes sobre instantes; tests en `period-window.utils`, `reportes-contables.utils`, `ex-alumnos.facade` (egreso a las 23:30 del 31 de diciembre) y `date.utils` |
 | AC5 | ✅ | Fin de mes a las 23:30 en `servicios-especiales`, `instructor-horas` (meta y registro del mes) y `reportes-contables.model.spec.ts` |
 | AC6 | ✅ | La suite completa, no solo las utils, pasa igual en las tres zonas |
-| AC7 | ⏳ código | `chileToday()` en `create-instructor`, `update-instructor`, certificados B y Profesional y en los defaults de cierre de caja, historial, financiero y sueldos. **Falta desplegar** |
-| AC8 | ⏳ código | Fechas de generación y de cada registro vía `formatChilePattern` / `formatChileDate`; cero ocurrencias de ARCH-27 en `supabase/functions`. **Falta desplegar y revisar un PDF real** |
-| AC9 | ⏳ ensayo | 7 funciones, 1 policy y 1 vista redefinidas con `chile_today()`. El test SQL lo confirma en el ensayo. **Falta aplicar** |
+| AC7 | ✅ | `chileToday()` en `create-instructor`, `update-instructor`, certificados B y Profesional y en los defaults de cierre de caja, historial, financiero y sueldos. Desplegado; `chileToday()` probado a las 23:30 en el test Deno con los vectores compartidos. Sin observar de noche contra el sistema en uso |
+| AC8 | ✅ | Fechas de generación y de cada registro vía `formatChilePattern` / `formatChileDate`; cero ocurrencias de ARCH-27 en `supabase/functions`. Cuatro reportes desplegados imprimen la hora de Chile |
+| AC9 | ✅ | 7 funciones, 1 policy y 1 vista redefinidas con `chile_today()`. Test SQL verde contra la BD migrada |
 | AC10 | ✅ | `information_schema.columns` de la BD vigente: ninguna columna `timestamp without time zone` en `public` |
-| AC11 | ⏳ ensayo | `select_cash_closings` cuenta la ventana desde `(SELECT public.chile_today()) - 2`. **Falta aplicar** |
-| AC12 | ⏳ ensayo | Job a las 00:00 y 01:00 UTC con `run_class_b_absences_cutoff()`, que exige hora Chile = 21; el test comprueba que cada día cae exactamente una corrida a las 21:00, en verano, en invierno y en los dos días de cambio de horario. "Una sola vez y con el día D" lo garantiza la función existente (solo toca `status = 'scheduled'` y compara por día de Chile). **Falta aplicar y observar una corrida real** |
+| AC11 | ✅ | `select_cash_closings` cuenta la ventana desde `(SELECT public.chile_today()) - 2`. Aplicada; el test SQL lo confirma |
+| AC12 | ✅ | Job a las 00:00 y 01:00 UTC con `run_class_b_absences_cutoff()`, que exige hora Chile = 21; el test comprueba que cada día cae exactamente una corrida a las 21:00, en verano, en invierno y en los dos días de cambio de horario. "Una sola vez y con el día D" lo garantiza la función existente (solo toca `status = 'scheduled'` y compara por día de Chile). Aplicado. Sin observar todavía una corrida real: la primera es el 2026-10-09 a las 21:00 hora Chile |
 | AC13 | ✅ | ARCH-27 y ARCH-28 en `npm run lint:arch`; el mensaje nombra la función a usar. Se agregó la regla `ms-day-diff` (contar días restando instantes) |
 | AC14 | ✅ | Línea base en 0. Excepciones declaradas en `scripts/lib/date-discipline.allowlist.json` (5, cada una con su motivo) y el CHECK `students.chk_minimum_age` en la migración y en el test SQL |
 | AC-E1 | ✅ | Vectores de los días de 23 y 25 horas de 2026 y 2027; test de contigüidad sobre 200 días seguidos, en la app y en Deno; `chile_day_start()` con la medianoche inexistente en el test SQL |
 | AC-E2 | ✅ | Vectores `00:00:00.000` y `23:59:59.999`; rangos semiabiertos (`.gte` / `.lt`) en todos los facades y en las tres edge functions con rango |
-| AC-E3 | ✅ app · ⏳ funciones | `chileYear()` y `chileMonth()` a las 23:30 del 31 de diciembre, en la app y en Deno. Folios y nombres de archivo de las edge functions usan `chileYear()`: **falta desplegar** |
+| AC-E3 | ✅ | `chileYear()` y `chileMonth()` a las 23:30 del 31 de diciembre, en la app y en Deno. Folios y nombres de archivo de las edge functions usan `chileYear()`; desplegado |
 | AC-E4 | ✅ | Una fecha pura no pasa por ninguna zona: tests de `formatChileDate`, `formatChilePattern`, `calcAge`, `resolveDocStatus`, `isoToCalendarDate` en las tres zonas |
 
 ## Excepciones declaradas
@@ -57,14 +73,12 @@ de sintaxis y de nombres sin definir con `tsc --noResolve`. Ninguna función se 
 | `ms-day-diff` en `admin-pre-inscritos.facade`, `task.utils`, `license-seniority.utils` | Duraciones reales entre instantes, o fechas puras restadas en UTC |
 | `local-date-parts` en los dos componentes de Asistencia B | Es `facade.setDate(fechaIso)`, no `Date.setDate` |
 
-## Pendiente para cerrar
+## Observaciones pendientes (no bloquean)
 
-1. **T7.6** — Aplicar las tres migraciones `20261009120000`, `…121000` y `…122000`, en ese
-   orden, y correr `supabase/tests/timezone/0024-m-business-day.sql`.
-2. **T6.4** — Desplegar las edge functions modificadas (las que importan `_shared/chile-time.ts`,
-   `_shared/holidays.ts` o `_shared/contract-pdf.ts`).
-3. Después de ambos: generar un PDF de cierre de caja y un certificado de noche y revisar la
-   fecha impresa, y confirmar al día siguiente que el corte de inasistencias corrió a las 21:00.
-4. **T8.6** — ROADMAP a Done y `/spec-activate --clear`.
+1. Confirmar que el corte de inasistencias corrió a las 21:00 hora Chile: en
+   `cron.job_run_details`, la corrida de las 00:00 UTC (horario de verano) debe haber ejecutado
+   el corte y la de las 01:00 UTC no.
+2. Generar un cierre de caja o un certificado entre las 21:00 y la medianoche y revisar que la
+   fecha impresa y la guardada sean las del día de Chile.
 
 El histórico con el día corrido no se corrige (decisión de Matías del 2026-10-08).
