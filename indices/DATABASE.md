@@ -439,10 +439,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'd…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| select_cash_closings | SELECT | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
 
 **Índices:** `ux_cash_closings_date_branch`
 
@@ -2427,7 +2427,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261007120000_fix196_schedule_availability_rls_por_fila.sql` |
+| `v_class_b_schedule_availability` | `20261009121000_time_fix_business_day_objects.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2459,11 +2459,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cascade_promotion_status_to_courses` | `()` |
 | `check_payment_within_pending_balance` | `()` |
 | `check_standalone_course_capacity` | `()` |
+| `chile_date` | `(p_instant timestamptz)` |
+| `chile_day_start` | `(p_day date)` |
+| `chile_today` | `()` |
 | `class_b_slot_occupied` | `(p_instructor_id integer, p_vehicle_id integer, p_slot_start timestamptz, p_slot_end timestamptz)` |
 | `cleanup_expired_drafts` | `()` |
 | `cleanup_expired_public_enrollment` | `()` |
 | `cleanup_public_enrollment_throttle` | `()` |
-| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL, p_is_deposit boolean DEFAULT false)` |
+| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL::integer, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL::integer, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
 | `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
@@ -2497,6 +2500,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `request_client_ip` | `()` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
+| `run_class_b_absences_cutoff` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |

@@ -97,6 +97,7 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 @.claude/rules/notifications.md
 @.claude/rules/swr-pattern.md
 @.claude/rules/ai-readability.md
+@.claude/rules/dates.md
 
 ## Referencias
 

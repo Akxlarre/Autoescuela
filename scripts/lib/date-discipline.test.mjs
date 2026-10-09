@@ -86,6 +86,17 @@ check('setDate(getDate() + 1) cuenta dos veces', kinds(`d.setDate(d.getDate() + 
 check('getTime() y Date.now() NO marcados', kinds(`const ms = d.getTime() - Date.now();`).length === 0);
 check('getUTCDay() NO marcado', kinds(`const w = d.getUTCDay();`).length === 0);
 
+// ── ms-day-diff ──────────────────────────────────────────────────────────────
+check(
+  'resta de instantes dividida por un día detectada',
+  kinds(`const dias = Math.ceil((exp.getTime() - Date.now()) / 86_400_000);`).includes('ms-day-diff'),
+);
+check(
+  'división por (1000 * 60 * 60 * 24) detectada',
+  kinds(`const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));`).includes('ms-day-diff'),
+);
+check('multiplicar por un día (sumar una duración) NO marcado', kinds(`const t = Date.now() - 60 * 86_400_000;`).length === 0);
+
 // ── angular-date-pipe ────────────────────────────────────────────────────────
 check(
   'pipe date en template inline detectado',

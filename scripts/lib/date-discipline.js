@@ -49,6 +49,8 @@ export const DATE_KINDS = {
   'local-date-parts':
     'chileParts(instante) para leer, addDaysIso()/addMonthsIso()/mondayOfIso() para calcular, calendarDateToIso() para un selector de fechas',
   'angular-date-pipe': 'el pipe chileDate',
+  'ms-day-diff':
+    'diffDaysIso(desde, hasta) sobre días de Chile (chileToday(), toChileDate(instante)); si de verdad es una duración entre dos instantes, decláralo en el allowlist',
   'deprecated-date-api':
     'chileToday(), toChileDate(instante) o calendarDateToIso(fecha); chileDayRange() en vez de getChileDateTimeRange()',
 };
@@ -96,6 +98,11 @@ const SIMPLE_PATTERNS = [
     /\.(?:getFullYear|getMonth|getDate|getDay|getHours|getMinutes|setFullYear|setMonth|setDate|setHours|setMinutes)\(/g,
   ],
   ['deprecated-date-api', /\b(?:toISODate|getChileDateTimeRange)\(/g],
+  // Milisegundos divididos por un día: contar días restando instantes da el desfase con UTC.
+  [
+    'ms-day-diff',
+    /\/\s*\(?\s*(?:86_?400_?000|1000\s*\*\s*60\s*\*\s*60\s*\*\s*24|MS_PER_DAY|DAY_MS)\b/g,
+  ],
 ];
 
 const FORMAT_CALL = /(\.toLocaleDateString|\.toLocaleTimeString|\.toLocaleString|Intl\.DateTimeFormat)\(/g;

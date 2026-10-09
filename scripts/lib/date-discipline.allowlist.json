@@ -8,5 +8,20 @@
     "file": "src/app/features/secretaria/asistencia/secretaria-asistencia.component.ts",
     "kind": "local-date-parts",
     "reason": "No es Date.setDate: es AsistenciaClaseBFacade.setDate(fechaIso), el método del facade que cambia el día consultado y recibe una fecha pura."
+  },
+  {
+    "file": "src/app/core/facades/admin-pre-inscritos.facade.ts",
+    "kind": "ms-day-diff",
+    "reason": "Duración real entre dos instantes: cuánto falta para expires_at (timestamptz) desde ahora. No compara días de calendario."
+  },
+  {
+    "file": "src/app/core/utils/task.utils.ts",
+    "kind": "ms-day-diff",
+    "reason": "Duración real entre dos instantes: antigüedad de la tarea en períodos de 24 horas desde created_at (timestamptz)."
+  },
+  {
+    "file": "src/app/core/utils/license-seniority.utils.ts",
+    "kind": "ms-day-diff",
+    "reason": "Las dos fechas son fechas puras parseadas como medianoche UTC y la aritmética va en UTC: la diferencia es un número entero de días en cualquier zona."
   }
 ]

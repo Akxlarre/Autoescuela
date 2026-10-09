@@ -1,3 +1,4 @@
+import { diffDaysIso } from './chile-time.utils';
 /**
  * Número de promoción ("ID numérico MTT") y cadencia de Clase Profesional (fix-323-m).
  *
@@ -11,8 +12,6 @@ export const PROMOTION_CADENCE_ANCHOR = '2026-07-27';
 
 /** Número usado si todavía no existe ninguno (mismo fallback que la creación automática). */
 const FIRST_PROMOTION_CODE = 276;
-
-const DAY_MS = 86_400_000;
 
 /**
  * Cuánto puede adelantarse el número de una promoción manual respecto del último usado
@@ -107,10 +106,7 @@ export function sortPromotionGroupsByStart<
 
 /** True si la fecha (YYYY-MM-DD) es un lunes de la cadencia automática. */
 export function isCadenceDate(isoDate: string): boolean {
-  const days = Math.round(
-    (Date.parse(`${isoDate}T00:00:00Z`) - Date.parse(`${PROMOTION_CADENCE_ANCHOR}T00:00:00Z`)) /
-      DAY_MS,
-  );
+  const days = diffDaysIso(PROMOTION_CADENCE_ANCHOR, isoDate);
   return ((days % 14) + 14) % 14 === 0;
 }
 

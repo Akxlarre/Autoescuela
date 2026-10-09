@@ -254,14 +254,15 @@
 
 ## Fase 8 — Validación y cierre
 
-- [ ] **T8.1** — Línea base en cero o solo con excepciones justificadas
+- [x] **T8.1** — Línea base en cero o solo con excepciones justificadas
   - **AC ref:** AC14
-- [ ] **T8.2** — `npm run lint:arch` limpio y `npm run test:ci` sin fallas nuevas
-- [ ] **T8.3** — `node scripts/test-tz.mjs` verde
+  - Línea base 0; 5 excepciones en `date-discipline.allowlist.json`. Regla nueva `ms-day-diff` (TD.9)
+- [x] **T8.2** — `npm run lint:arch` limpio y `npm run test:ci` sin fallas nuevas (0 errores; 3.745 tests, 0 fallas)
+- [x] **T8.3** — `node scripts/test-tz.mjs` verde (`src/app` completo, tres zonas)
   - **AC ref:** AC6
-- [ ] **T8.4** — Actualizar `indices/UTILS.md`, `indices/DATABASE.md`, DG-071 y la regla en `.claude/rules/`
-- [ ] **T8.5** — `/spec-verify` con evidencia por AC en `acceptance.md`
-- [ ] **T8.6** — ROADMAP a Done y `/spec-activate --clear`
+- [x] **T8.4** — Actualizar `indices/UTILS.md`, `indices/PIPES.md`, `indices/DATABASE.md`, DG-071 y la regla `.claude/rules/dates.md` (referenciada desde `.claude/CLAUDE.md`)
+- [x] **T8.5** — Evidencia por AC en `acceptance.md` (AC7 a AC12 quedan a la espera de T6.4 y T7.6)
+- [ ] **T8.6** — ROADMAP a Done y `/spec-activate --clear` — **bloqueada por T6.4 y T7.6**
 
 ---
 
@@ -279,5 +280,5 @@
 - [x] **TD.6** — Resuelto en la fase 5: `node scripts/test-tz.mjs src/app` (la suite completa, 3.739 tests) pasa en UTC, Asia/Tokyo y America/Santiago. Eran tests que armaban fechas con el reloj del equipo y dos helpers que leían un instante con `new Date()` local.
 - [x] **TD.8** — Fase 5 cerrada (2026-10-08). Línea base 421 → 92: `src/app` queda en cero ocurrencias de ARCH-27; las 92 restantes son de `supabase/functions` (fase 6). Util ampliada con `formatChilePattern`, `monthDays`, `startOfMonthIso` y `endOfMonthIso`. Corregidos además tres cálculos de "días hasta" que el guardrail no detecta porque restan instantes (`vehicle-document-status.utils`, `flota-detalle.facade`, `enrollment-documents.facade`) y `calcAge`, que leía la fecha de nacimiento con el reloj del equipo. Verificado: `npm run lint:arch` 0 errores, build de producción, `T02` de Playwright (15:00 y 23:30) y revisión visual de Auditoría, Agenda y Liquidaciones.
 - [x] **TD.10** — Fase 6 cerrada en código (2026-10-09). Además de lo inventariado: los rangos de día de `generate-audit-report`, `generate-cash-closing-report` y `generate-financial-report` pasaron a rangos semiabiertos de instantes de Chile (antes `T00:00:00`/`T23:59:59` sin zona, o sea UTC); `computeLicenseStatus` de alta y edición de instructor y el cálculo de menor de edad de `public-enrollment` usan el hoy de Chile. Verificación: tests Deno puros de `_shared` (35) en verde y chequeo de sintaxis y nombres con `tsc --noResolve`; `deno check` completo no corre en este equipo porque faltan las dependencias npm de Deno (`pdf-lib`, `supabase-js`), igual que antes de esta spec. No se probó ninguna función desplegada.
-- [ ] **TD.9** — El guardrail no ve restas de instantes para contar días (`(a.getTime() - b.getTime()) / 86_400_000` sobre fechas puras) ni `.slice(0, 10)` sobre strings de la BD. Evaluar una regla en la fase 8 (T8.1).
+- [x] **TD.9** — Resuelto en la fase 8: regla `ms-day-diff` en ARCH-27 (milisegundos divididos por un día). Encontró un caso más (`isCadenceDate` en `promotion-code.utils`, ya migrado a `diffDaysIso`) y tres duraciones legítimas, declaradas en el allowlist. `.slice(0, 10)` sobre un string de la BD sigue sin regla: no se puede distinguir de forma estática una columna `date` de una `timestamptz`; queda cubierto por la regla escrita en `.claude/rules/dates.md` y por DG-071.
 - [x] **TD.7** — Fase 4 cerrada (2026-10-08): los cortes de string sobre instantes pasan por `toChileDate()` en `admin-pre-inscritos`, `instructor-horas`, `flota-detalle`, `reportes-contables.utils`, `period-window.utils` (corte y año), `daily-agenda-drawer`, `secretaria-dashboard`, `admin-pagos`, `secretaria-pagos` y `asistencia-clase-b-content`. Seguros y sin cambio (ya son fecha pura): `license-status.utils`, `admin-pre-inscrito-drawer:1174`, `reportes-contables.utils:303,309`. Tests nuevos en `period-window.utils` y `reportes-contables.utils`; el de un facade de lista (fecha de ingreso) no hizo falta: `admin-alumnos` y `ex-alumnos` ya usan `toISODate(string)`, que ahora devuelve el día de Chile. Verificado en vivo a las 21:03 hora Chile: Caja Diaria consulta el día de Chile.
