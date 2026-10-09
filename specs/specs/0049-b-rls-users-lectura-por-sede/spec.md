@@ -1,6 +1,6 @@
 # Spec 0049-b — La secretaria solo lee los datos personales de usuarios de su sede
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-10-07
 > **Owner:** Benjamín
 > **Priority:** P1 (datos personales; no bloquea operar el piloto)
