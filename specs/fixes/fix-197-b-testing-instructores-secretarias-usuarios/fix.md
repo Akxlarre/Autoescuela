@@ -105,4 +105,25 @@ fix-206-b). **Tomada por mí al corregir S22 (a confirmar):** Q05, tarifa 0 rech
 | R11 | La secretaria no lee RUT/teléfono de otras sedes | **Spec `0049-b` (PR #246), migración aplicada.** Opción A: ve su sede y, de otras, solo personal, instructores "Ambas"/con clases de su sede y alumnos/pre-inscritos de su sede (303 → 199 usuarios para la secretaria de la sede 2). AC1–AC6 verificados; pantallas de la secretaria sin filas ni nombres perdidos |
 
 **Quedan manuales** (crean cuentas reales, necesitan correo o dos sesiones a la vez): C03, C24,
-C25, C28, E05, E10, E12, H02, H04, H07, L01, M02, M04, M05, N01, N02, N07, P02, T01, T02.
+C25, C28, E05, H02, H04, H07, L01, M02, M04, M05, N01, N02, P02, T01.
+
+### Manuales — grupo 1 (2026-10-09, en vivo con la sesión de admin del owner, revertido)
+
+Con Instructor2 (id 223, sede 1, ERDF21) y secretaria2 (id 33, sede 2). Foto antes/después por SQL:
+todo quedó igual salvo el historial de vehículos de Instructor2 (asignación 40 cerrada hoy + 54
+nueva, ambas ERDF21; SQL para dejarlo idéntico entregado al owner).
+
+| Caso | Resultado |
+|---|---|
+| E10 quitar vehículo | ✅ Asignación 40 cerrada con fecha de hoy; ERDF21 aparece libre en el picker de un instructor nuevo de la sede 1 |
+| E12 cambiar de sede | ✅ Sede 1 → 2: la secretaria de la sede 1 deja de verlo y la de la sede 2 lo ve. Sin aviso de clases futuras (no tiene: correcto) |
+| T04/T03 auditoría de vehículo/sede | ⚠️ Sede: `users` UPDATE con `user_id` = admin. **Vehículo: `vehicle_assignments` UPDATE/INSERT con `user_id` NULL** ("Sistema"): `update-instructor` escribe asignaciones con `supabaseAdmin` (sin `x-audit-user-id`) |
+| N07 grant en auditoría | ✅ "Acceso a ambas sedes: No -> Sí" (y vuelta) con el admin como autor |
+| T02 antes/después | ✅ Pero la etiqueta sale **"Phone"**: falta `phone` en `audit_humanize_column()` |
+
+**Hallazgos del grupo 1:**
+1. `update-instructor` (y probablemente `create-instructor`) escribe `vehicle_assignments` sin el
+   cliente de auditoría → cambios de vehículo sin autor.
+2. El toast de éxito ("Instructor actualizado") queda encima del botón Guardar del drawer unos
+   segundos: dos clics seguidos en Guardar cayeron en el toast y no guardaron (sin aviso).
+3. `phone` sin traducir en el diccionario de auditoría.
