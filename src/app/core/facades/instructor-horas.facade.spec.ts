@@ -48,6 +48,84 @@ describe('InstructorHorasFacade', () => {
     expect(facade).toBeTruthy();
   });
 
+  describe('hora de Chile — spec 0024-m', () => {
+    function rangeChain(rows: any[]) {
+      const chain: any = {};
+      for (const m of ['select', 'eq', 'gte', 'lt']) chain[m] = vi.fn().mockReturnValue(chain);
+      chain.order = vi.fn().mockResolvedValue({ data: rows, error: null });
+      return chain;
+    }
+
+    const session = (scheduledAt: string) => ({
+      id: 1,
+      scheduled_at: scheduledAt,
+      start_time: null,
+      end_time: null,
+      duration_min: 45,
+      status: 'scheduled',
+      class_number: 3,
+      enrollments: null,
+      vehicles: null,
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it('fetchWeeklySchedule pide la semana de Chile como rango semiabierto, también un lunes', async () => {
+      const chain = rangeChain([]);
+      supabaseMock.client.from.mockReturnValue(chain);
+
+      await facade.fetchWeeklySchedule('2026-10-05'); // lunes
+
+      expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-05T03:00:00.000Z');
+      expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-12T03:00:00.000Z');
+      const schedule = facade.weeklySchedule()!;
+      expect(schedule.days.map((d) => d.date)).toEqual([
+        '2026-10-05',
+        '2026-10-06',
+        '2026-10-07',
+        '2026-10-08',
+        '2026-10-09',
+        '2026-10-10',
+        '2026-10-11',
+      ]);
+      expect(schedule.weekLabel).toBe('5 Oct - 11 Oct 2026');
+    });
+
+    it('una clase a las 21:30 hora Chile cae en su día y hora de Chile, no en los de UTC', async () => {
+      // 23:30 hora Chile del martes 6: en UTC ya es miércoles 7.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+      // 21:30 hora Chile del martes 6 = 00:30 UTC del miércoles 7.
+      supabaseMock.client.from.mockReturnValue(rangeChain([session('2026-10-07T00:30:00+00:00')]));
+
+      await facade.fetchWeeklySchedule('2026-10-06');
+
+      const schedule = facade.weeklySchedule()!;
+      expect(schedule.blocks[0]).toMatchObject({
+        dayOfWeek: 1, // martes
+        hour: 21,
+        minuteStart: 30,
+        startTime: '21:30',
+        endTime: '22:15',
+      });
+      expect(schedule.days[1]).toMatchObject({ date: '2026-10-06', dayNumber: 6, isToday: true });
+      expect(schedule.days[2].isToday).toBe(false);
+      expect(schedule.kpis.clasesHoy).toBe(1);
+    });
+
+    it('fetchSessionDetailsForPeriod pide el mes de Chile y muestra la hora de Chile', async () => {
+      // 23:30 hora Chile del 30 de junio = 03:30 UTC del 1 de julio (invierno, UTC-4).
+      const chain = rangeChain([session('2026-07-01T03:30:00+00:00')]);
+      supabaseMock.client.from.mockReturnValue(chain);
+
+      await facade.fetchSessionDetailsForPeriod('2026-06');
+
+      expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-06-01T04:00:00.000Z');
+      expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-07-01T04:00:00.000Z');
+      expect(facade.sessionDetails()[0].startTime).toBe('23:30');
+    });
+  });
+
   it('should initialize with default state', () => {
     expect(facade.monthlyHours()).toEqual([]);
     expect(facade.isLoading()).toBe(false);

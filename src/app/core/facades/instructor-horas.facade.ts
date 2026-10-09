@@ -1,4 +1,14 @@
 ﻿import { Injectable, signal, computed, inject } from '@angular/core';
+import {
+  addDaysIso,
+  chileMonthRange,
+  chileParts,
+  chileRange,
+  formatChileTime,
+  mondayOfIso,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -229,9 +239,7 @@ export class InstructorHorasFacade {
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      const [year, month] = period.split('-');
-      const start = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString();
-      const end = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59).toISOString();
+      const { start, endExclusive } = chileMonthRange(period.slice(0, 7));
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
@@ -243,21 +251,20 @@ export class InstructorHorasFacade {
         )
         .eq('instructor_id', instructorId)
         .gte('scheduled_at', start)
-        .lte('scheduled_at', end)
+        .lt('scheduled_at', endExclusive)
         .order('scheduled_at', { ascending: false });
 
       if (error) throw error;
 
       const mapped = (data || []).map((row) => {
         const u = (row.enrollments as any)?.students?.users;
-        const dt = new Date(row.scheduled_at);
 
         return {
           sessionId: row.id,
           date: row.scheduled_at,
           type: 'practica' as const,
           typeLabel: 'Práctica',
-          startTime: row.start_time || dt.toISOString().split('T')[1].substring(0, 5),
+          startTime: row.start_time || formatChileTime(row.scheduled_at),
           endTime: row.end_time || '',
           durationMin: row.duration_min,
           studentName: u ? `${u.first_names} ${u.paternal_last_name}` : '',
@@ -286,15 +293,9 @@ export class InstructorHorasFacade {
 
     try {
       // Calcular inicio y fin de la semana (lunes a domingo)
-      const date = new Date(dateInWeek);
-      const day = date.getDay();
-      const diffToMonday = date.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(date.setDate(diffToMonday));
-      monday.setHours(0, 0, 0, 0);
-
-      const sunday = new Date(monday);
-      sunday.setDate(sunday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
+      const monday = mondayOfIso(toChileDate(dateInWeek));
+      const sunday = addDaysIso(monday, 6);
+      const week = chileRange(monday, sunday);
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
@@ -306,8 +307,8 @@ export class InstructorHorasFacade {
         `,
         )
         .eq('instructor_id', instructorId)
-        .gte('scheduled_at', monday.toISOString())
-        .lte('scheduled_at', sunday.toISOString())
+        .gte('scheduled_at', week.start)
+        .lt('scheduled_at', week.endExclusive)
         .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
@@ -317,15 +318,16 @@ export class InstructorHorasFacade {
 
       const blocks: ScheduleBlock[] = (data || []).map((row) => {
         const dt = new Date(row.scheduled_at);
-        const jsDay = dt.getDay(); // 0=Dom, 1=Lun...6=Sáb
+        const parts = chileParts(dt);
+        const jsDay = parts.weekday; // 0=Dom, 1=Lun...6=Sáb
         const dayOfWeek = jsDay === 0 ? 6 : jsDay - 1; // 0=Lun, 6=Dom
-        const hour = dt.getHours();
-        const minuteStart = dt.getMinutes();
+        const hour = parts.hour;
+        const minuteStart = parts.minute;
         const durationMin = row.duration_min || 45;
 
         const startTime = row.start_time || padTime(hour, minuteStart);
         const endDt = new Date(dt.getTime() + durationMin * 60_000);
-        const endTime = row.end_time || padTime(endDt.getHours(), endDt.getMinutes());
+        const endTime = row.end_time || formatChileTime(endDt);
 
         const e = row.enrollments as any;
         const u = e?.students?.users;
@@ -350,15 +352,14 @@ export class InstructorHorasFacade {
 
       // Construir array de días (Lun–Dom)
       const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-      const today = new Date();
+      const today = todayIso();
       const days = dayNames.map((name, i) => {
-        const d = new Date(monday);
-        d.setDate(d.getDate() + i);
+        const date = addDaysIso(monday, i);
         return {
           name,
-          date: d.toISOString().split('T')[0],
-          dayNumber: d.getDate(),
-          isToday: d.toLocaleDateString() === today.toLocaleDateString(),
+          date,
+          dayNumber: Number(date.slice(8, 10)),
+          isToday: date === today,
         };
       });
 
@@ -383,11 +384,13 @@ export class InstructorHorasFacade {
         'Nov',
         'Dic',
       ];
-      const weekLabel = `${monday.getDate()} ${monthNames[monday.getMonth()]} - ${sunday.getDate()} ${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
+      const [, monMonth, monDay] = monday.split('-').map(Number);
+      const [sunYear, sunMonth, sunDay] = sunday.split('-').map(Number);
+      const weekLabel = `${monDay} ${monthNames[monMonth - 1]} - ${sunDay} ${monthNames[sunMonth - 1]} ${sunYear}`;
 
       this._weeklySchedule.set({
         weekLabel,
-        weekStart: monday.toISOString(),
+        weekStart: week.start,
         blocks,
         kpis,
         days,

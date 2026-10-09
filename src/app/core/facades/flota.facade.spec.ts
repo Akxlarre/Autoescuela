@@ -44,6 +44,42 @@ describe('FlotaFacade', () => {
     expect(service.isLoading()).toBe(false);
   });
 
+  it('loadVehicleAgenda consulta el día de Chile como rango semiabierto y ubica la clase en su hora de Chile (spec 0024-m)', async () => {
+    const sessions: any = {};
+    for (const m of ['select', 'eq', 'gte', 'lt']) sessions[m] = vi.fn().mockReturnValue(sessions);
+    // 17:00 hora Chile del 6 de octubre = 20:00 UTC.
+    sessions.order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          scheduled_at: '2026-10-06T20:00:00+00:00',
+          status: 'scheduled',
+          class_number: 4,
+          enrollments: null,
+        },
+      ],
+      error: null,
+    });
+    const maintenances: any = {};
+    maintenances.select = vi.fn().mockReturnValue(maintenances);
+    maintenances.eq = vi
+      .fn()
+      .mockReturnValueOnce(maintenances)
+      .mockResolvedValueOnce({ data: [], error: null });
+    supabaseMock.client.from = vi.fn((table: string) =>
+      table === 'class_b_sessions' ? sessions : maintenances,
+    );
+
+    await service.loadVehicleAgenda(7, '2026-10-06');
+
+    expect(sessions.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+    expect(sessions.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T03:00:00.000Z');
+    expect(maintenances.eq).toHaveBeenCalledWith('scheduled_date', '2026-10-06');
+    const classSlots = service.vehicleAgenda().filter((s) => s.type === 'class');
+    expect(classSlots).toHaveLength(1);
+    expect(classSlots[0]).toMatchObject({ hour: '17:00', classNumber: 4 });
+  });
+
   it('selectVehicle should update selectedVehicleId signal', () => {
     service.selectVehicle(123);
     expect(service.selectedVehicleId()).toBe(123);

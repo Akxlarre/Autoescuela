@@ -25,6 +25,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     gt: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
+    lt: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     like: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
@@ -1071,7 +1072,8 @@ describe('EnrollmentFacade', () => {
 
       await facade.loadScheduleGrid(INSTRUCTOR_ID);
 
-      expect(builder.lte).toHaveBeenCalledWith('slot_start', '2026-09-20T23:59:59');
+      // Tope exclusivo: inicio del día siguiente en Chile (spec 0024-m).
+      expect(builder.lt).toHaveBeenCalledWith('slot_start', '2026-09-21T03:00:00.000Z');
     });
 
     it('should re-derive the upper bound from AgendaSettingsService on every call (no cached/stale limit)', async () => {
@@ -1081,11 +1083,11 @@ describe('EnrollmentFacade', () => {
 
       mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-05-14');
       await facade.loadScheduleGrid(INSTRUCTOR_ID);
-      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
+      expect(builder.lt).toHaveBeenLastCalledWith('slot_start', '2026-05-15T04:00:00.000Z');
 
       mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-11-14');
       await facade.loadScheduleGrid(INSTRUCTOR_ID);
-      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-11-14T23:59:59');
+      expect(builder.lt).toHaveBeenLastCalledWith('slot_start', '2026-11-15T03:00:00.000Z');
     });
 
     it('should create a realtime channel when loadScheduleGrid is called', async () => {
@@ -1145,6 +1147,7 @@ describe('EnrollmentFacade', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockSlots, error: null }),
       });
 
@@ -1223,6 +1226,7 @@ describe('EnrollmentFacade', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: occupiedSlots, error: null }),
       });
 
@@ -1263,6 +1267,7 @@ describe('EnrollmentFacade', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: ownReservationsNowOccupied, error: null }),
       });
 

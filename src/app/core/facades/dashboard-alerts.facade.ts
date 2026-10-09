@@ -1,4 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { addDaysIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -210,8 +212,7 @@ export class DashboardAlertsFacade {
     const advanceDays =
       configs?.find((c: any) => c.alert_type === 'document_expiry')?.advance_days ?? 30;
 
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = todayIso();
 
     let expiredQuery: any = this.supabase.client
       .from('vehicle_documents')
@@ -230,9 +231,7 @@ export class DashboardAlertsFacade {
       });
     }
 
-    const futureDate = new Date(today);
-    futureDate.setDate(futureDate.getDate() + advanceDays);
-    const futureDateStr = futureDate.toISOString().split('T')[0];
+    const futureDateStr = addDaysIso(todayStr, advanceDays);
 
     let soonQuery: any = this.supabase.client
       .from('vehicle_documents')

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { chileToday } from '@core/utils/chile-time.utils';
 import { CommonModule } from '@angular/common';
 
 // Facades & Models
@@ -193,7 +194,7 @@ export class VehicleAgendaDrawerComponent {
     effect(() => {
       const id = this.vehicleId();
       if (id) {
-        this.flotaFacade.loadVehicleAgenda(id, this.today);
+        this.flotaFacade.loadVehicleAgenda(id, chileToday());
       }
     });
   }

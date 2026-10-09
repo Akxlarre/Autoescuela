@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { chileRange } from '@core/utils/chile-time.utils';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
@@ -314,8 +315,11 @@ export class AgendaFacade {
     const branchId = this.getActiveBranchId();
     const weekStart = this._weekStart();
     const weekEnd = addDays(weekStart, 4);
-    const rangeStart = `${weekStart}T00:00:00Z`;
-    const rangeEnd = `${addDays(weekStart, 7)}T06:00:00Z`;
+    // Semana de Chile, lunes a domingo, como rango semiabierto de instantes.
+    const { start: rangeStart, endExclusive: rangeEnd } = chileRange(
+      weekStart,
+      addDays(weekStart, 6),
+    );
 
     const [slotsResult, sessionsResult] = await Promise.all([
       this.fetchAvailableSlots(rangeStart, rangeEnd),

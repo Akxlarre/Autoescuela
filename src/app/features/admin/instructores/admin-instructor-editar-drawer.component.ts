@@ -1,4 +1,5 @@
 import { TooltipModule } from 'primeng/tooltip';
+import { calendarDateToIso } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -750,7 +751,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected get licenseExpiryIso(): string {
     const d = this.licenseExpiry();
     if (!d) return '';
-    return d.toISOString().slice(0, 10);
+    return calendarDateToIso(d);
   }
   protected setLicenseExpiryIso(v: string) {
     if (!v) {

@@ -5,7 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
-import { toISODate } from '@core/utils/date.utils';
+import { addDaysIso, addMonthsIso, chileDayRange, chileToday } from '@core/utils/chile-time.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 
@@ -109,24 +109,14 @@ export class DashboardFacade {
 
   private async fetchRealDashboardData(branchId: number | null): Promise<void> {
     const requestToken = this.dashboardGuard.next();
-    const todayStr = toISODate(new Date());
-    const [year, month] = todayStr.split('-');
-    const firstOfMonth = `${year}-${month}-01`;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = toISODate(yesterday);
-
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = toISODate(sevenDaysAgo);
-
-    const prevMonthDate = new Date(Number(year), Number(month) - 2, 1); // getMonth is 0-indexed, but here month is string "06". 06-2=4 => May
-    const prevMonthYear = prevMonthDate.getFullYear();
-    const prevMonthNum = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
-    const firstOfPrevMonth = `${prevMonthYear}-${prevMonthNum}-01`;
-    const lastOfPrevMonthDate = new Date(Number(year), Number(month) - 1, 0);
-    const lastOfPrevMonthStr = toISODate(lastOfPrevMonthDate);
+    // Todo en días de Chile; los filtros sobre instantes usan rangos semiabiertos.
+    const todayStr = chileToday();
+    const firstOfMonth = `${todayStr.slice(0, 7)}-01`;
+    const todayRange = chileDayRange(todayStr);
+    const yesterdayRange = chileDayRange(addDaysIso(todayStr, -1));
+    const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -7)).start;
+    const firstOfPrevMonth = addMonthsIso(firstOfMonth, -1);
+    const lastOfPrevMonthStr = addDaysIso(firstOfMonth, -1);
 
     let studentsQuery: any = this.supabase.client
       .from('enrollments')
@@ -138,21 +128,21 @@ export class DashboardFacade {
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
-      .gte('created_at', `${sevenDaysAgoStr}T00:00:00`);
+      .gte('created_at', sevenDaysAgoStart);
     if (branchId !== null) recentStudentsQuery = recentStudentsQuery.eq('branch_id', branchId);
 
     let classesQuery: any = this.supabase.client
       .from('class_b_sessions')
       .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
-      .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`);
+      .gte('scheduled_at', todayRange.start)
+      .lt('scheduled_at', todayRange.endExclusive);
     if (branchId !== null) classesQuery = classesQuery.eq('enrollments.branch_id', branchId);
 
     let classesYesterdayQuery: any = this.supabase.client
       .from('class_b_sessions')
       .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
-      .gte('scheduled_at', `${yesterdayStr}T00:00:00`)
-      .lte('scheduled_at', `${yesterdayStr}T23:59:59`);
+      .gte('scheduled_at', yesterdayRange.start)
+      .lt('scheduled_at', yesterdayRange.endExclusive);
     if (branchId !== null)
       classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
 
@@ -385,15 +375,15 @@ export class DashboardFacade {
   }
 
   async fetchLiveClasses(branchId: number | null): Promise<LiveClassModel[]> {
-    const todayStr = toISODate(new Date());
+    const todayRange = chileDayRange(chileToday());
     let liveClasses: LiveClassModel[] = [];
 
     // 1. Clases Prácticas de hoy
     let practicasQuery: any = this.supabase.client
       .from('class_b_sessions')
       .select(DashboardFacade.PRACTICA_SELECT)
-      .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`)
+      .gte('scheduled_at', todayRange.start)
+      .lt('scheduled_at', todayRange.endExclusive)
       .in('status', VALID_CLASS_B_SESSION_STATUSES)
       .eq('enrollments.status', 'active');
 
@@ -408,7 +398,7 @@ export class DashboardFacade {
     let stuckSessionsQuery: any = this.supabase.client
       .from('class_b_sessions')
       .select(DashboardFacade.PRACTICA_SELECT)
-      .lt('scheduled_at', `${todayStr}T00:00:00`)
+      .lt('scheduled_at', todayRange.start)
       .eq('status', 'in_progress')
       .eq('enrollments.status', 'active');
 

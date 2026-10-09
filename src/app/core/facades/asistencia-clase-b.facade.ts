@@ -6,6 +6,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { chileDayRange } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import {
   NoRowsAffectedError,
@@ -22,11 +23,6 @@ import type {
   InstructorOption,
   VehicleOption,
 } from '@core/models/ui/asistencia-clase-b.model';
-
-/** Builds start-of-day and end-of-day ISO strings for a given YYYY-MM-DD. */
-function dayRange(iso: string): { start: string; end: string } {
-  return { start: `${iso}T00:00:00`, end: `${iso}T23:59:59` };
-}
 
 /** Extracts HH:mm from a time string or TIMESTAMPTZ. */
 function toHHmm(val: string | null): string {
@@ -601,14 +597,14 @@ export class AsistenciaClaseBFacade {
   private async fetchData(): Promise<void> {
     const branchId = this._branchFilter();
     const date = this._selectedDate();
-    const { start, end } = dayRange(date);
+    const { start, endExclusive } = chileDayRange(date);
 
     const branchMap = new Map<number, string>();
     for (const b of this.branchFacade.branches()) {
       branchMap.set(b.id, b.name);
     }
 
-    const practicas = await this.fetchPracticas(branchId, start, end, branchMap);
+    const practicas = await this.fetchPracticas(branchId, start, endExclusive, branchMap);
     this._clasesPracticas.set(practicas);
 
     const alertas = await this.fetchAlertas(branchId, branchMap);
@@ -621,7 +617,7 @@ export class AsistenciaClaseBFacade {
   private async fetchPracticas(
     branchId: number | null,
     start: string,
-    end: string,
+    endExclusive: string,
     branchMap: Map<number, string>,
   ): Promise<ClasePracticaRow[]> {
     let query = this.supabase.client
@@ -655,7 +651,7 @@ export class AsistenciaClaseBFacade {
       `,
       )
       .gte('scheduled_at', start)
-      .lte('scheduled_at', end)
+      .lt('scheduled_at', endExclusive)
       .in('status', VALID_CLASS_B_SESSION_STATUSES)
       .eq('enrollments.status', 'active')
       .order('start_time', { ascending: true });

@@ -7,7 +7,7 @@ import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { resolveDocStatus } from '@core/utils/vehicle-document-status.utils';
-import { toISODate } from '@core/utils/date.utils';
+import { chileDayRange, chileMonth, chileParts } from '@core/utils/chile-time.utils';
 import type {
   VehicleTableRow,
   VehicleDocSummary,
@@ -178,8 +178,7 @@ export class FlotaFacade {
   private async fetchCombustibleMesPorVehiculo(
     branchId: number | null,
   ): Promise<Map<number, number>> {
-    const now = new Date();
-    const firstOfMonth = toISODate(new Date(now.getFullYear(), now.getMonth(), 1));
+    const firstOfMonth = `${chileMonth()}-01`;
 
     let query: any = this.supabase.client
       .from('expenses')
@@ -313,10 +312,11 @@ export class FlotaFacade {
     return data.signedUrl;
   }
 
-  async loadVehicleAgenda(vehicleId: number, date: Date): Promise<void> {
+  /** `dateStr`: día de Chile a consultar, 'YYYY-MM-DD'. */
+  async loadVehicleAgenda(vehicleId: number, dateStr: string): Promise<void> {
     this._isLoadingAgenda.set(true);
     try {
-      const dateStr = date.toISOString().split('T')[0];
+      const day = chileDayRange(dateStr);
       const [sessionsResult, maintenancesResult] = await Promise.all([
         this.supabase.client
           .from('class_b_sessions')
@@ -324,8 +324,8 @@ export class FlotaFacade {
             'id, scheduled_at, status, class_number, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
           )
           .eq('vehicle_id', vehicleId)
-          .gte('scheduled_at', `${dateStr}T00:00:00`)
-          .lte('scheduled_at', `${dateStr}T23:59:59`)
+          .gte('scheduled_at', day.start)
+          .lt('scheduled_at', day.endExclusive)
           .order('scheduled_at', { ascending: true }),
         this.supabase.client
           .from('maintenance_records')
@@ -336,7 +336,7 @@ export class FlotaFacade {
 
       const slots: VehicleAgendaSlot[] = [];
       const sessionMap = new Map(
-        (sessionsResult.data ?? []).map((s: any) => [new Date(s.scheduled_at).getHours(), s]),
+        (sessionsResult.data ?? []).map((s: any) => [chileParts(s.scheduled_at).hour, s]),
       );
 
       for (let h = 8; h < 18; h++) {

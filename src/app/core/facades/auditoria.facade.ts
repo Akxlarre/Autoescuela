@@ -1,4 +1,5 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { chileDayRange } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
@@ -182,10 +183,10 @@ export class AuditoriaFacade {
 
       // Filtros opcionales
       if (f.fechaDesde) {
-        query = query.gte('created_at', `${f.fechaDesde}T00:00:00`);
+        query = query.gte('created_at', chileDayRange(f.fechaDesde).start);
       }
       if (f.fechaHasta) {
-        query = query.lte('created_at', `${f.fechaHasta}T23:59:59`);
+        query = query.lt('created_at', chileDayRange(f.fechaHasta).endExclusive);
       }
       if (f.secretariaId) {
         query = query.eq('user_id', f.secretariaId);

@@ -18,6 +18,7 @@ import type {
   ProgresoUI,
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
+import { chileDayRange } from '@core/utils/chile-time.utils';
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
@@ -1455,7 +1456,7 @@ export class AdminAlumnoDetalleFacade {
           .eq('instructor_id', instructorId)
           // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
           // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
           .order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
