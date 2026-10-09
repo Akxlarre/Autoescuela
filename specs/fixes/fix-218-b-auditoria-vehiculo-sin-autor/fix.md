@@ -1,7 +1,7 @@
 # Fix: La auditoría de instructores registra el cambio de vehículo sin autor y deja columnas en inglés
 > id: fix-218-b-auditoria-vehiculo-sin-autor
 > refs: ASG-i-034 (manuales grupo 1, casos E10/E12 y T02) — hallazgos 1 y 3; extiende fix-206-b
-> status: active
+> status: done
 > created: 2026-10-09
 
 ## Root Cause
@@ -47,6 +47,6 @@ Ninguno de una spec previa (fix-206-b auditó instructores, pero no cubrió el a
 - [x] Funciones: `vehicle_assignments` con `supabaseAudit` en las dos.
 - [x] Desplegado (v22) comparado con `main`: `update-instructor` idéntico; `create-instructor` sin fix-214-b (hallazgo adicional).
 - [x] Migración + test SQL: rojo contra producción, verde en transacción con ROLLBACK.
-- [ ] Deploy de las dos funciones (con aprobación).
-- [ ] Aplicar la migración (con aprobación) y correr el test.
-- [ ] F1 verificado en vivo.
+- [x] Deploy (aprobado 2026-10-09): `update-instructor` v23 (verify_jwt=true) y `create-instructor` v23 (verify_jwt=false), ambos idénticos a `main` → fix-214-b repuesto.
+- [x] Migración aplicada y registrada en `schema_migrations`; test SQL `fix-218-b OK`; `phone` → "Teléfono", `email` → "Correo".
+- [x] F1 en vivo (sesión admin del owner, botón Guardar del drawer): quitar y devolver AB1234 a "Instructor Prueba Test" → `audit_log` 100888 (UPDATE, cierra asignación 7) y 100889 (INSERT, asignación 55) con `user_id = 2` (PEPITO ADMI), no "Sistema".
