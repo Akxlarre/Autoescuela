@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { chileWallTimeToInstant, formatChileTime, toChileDate } from '@core/utils/chile-time.utils';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -39,12 +40,11 @@ import type {
 type ComposerSection = 'destinatarios' | 'mensaje' | 'envio' | null;
 
 /**
- * `datetime-local` trabaja en hora local sin zona, así que no sirve `toISOString()`:
- * hay que descontar el offset antes de recortar.
+ * El campo de fecha y hora trabaja con hora de pared, sin zona. En este sistema esa hora es
+ * siempre la de Chile, sin importar la zona del equipo: valor en formato AAAA-MM-DDTHH:MM.
  */
-function toLocalInputValue(date: Date): string {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+function toChileInputValue(date: Date): string {
+  return `${toChileDate(date)}T${formatChileTime(date)}`;
 }
 
 /**
@@ -587,7 +587,7 @@ export class AnnouncementComposerDrawerComponent {
   protected readonly isScheduled = signal(false);
 
   /** El navegador no deja elegir un pasado obvio; la validación real igual corre. */
-  protected readonly minScheduledFor = toLocalInputValue(new Date(Date.now() + 60_000));
+  protected readonly minScheduledFor = toChileInputValue(new Date(Date.now() + 60_000));
 
   protected readonly templateOptions = computed(() =>
     this.templates.activeTemplates().map((t) => ({ label: t.name, value: t.id })),
@@ -809,8 +809,11 @@ export class AnnouncementComposerDrawerComponent {
 
   protected setScheduledLocal(value: string): void {
     this.scheduledLocal.set(value);
-    // El input da hora local; se guarda en ISO para que el servidor no tenga que adivinar.
-    this.scheduledFor.set(value ? new Date(value).toISOString() : null);
+    // El input da hora de pared de Chile; se guarda el instante en ISO para que el servidor
+    // no tenga que adivinar.
+    this.scheduledFor.set(
+      value ? chileWallTimeToInstant(value.slice(0, 10), value.slice(11, 16)) : null,
+    );
   }
 
   /**

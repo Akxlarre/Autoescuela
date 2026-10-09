@@ -415,7 +415,6 @@ test.describe('T. Hora de Chile', () => {
     test(`T02: a las ${hora} hora Chile, el anticipo nuevo propone la fecha de HOY`, async ({
       browser,
     }) => {
-      if (hora === '23:30') knownBug('ASG-i-054 (fechas de negocio en UTC)');
       await anticipoProponeHoy(browser, hora);
     });
   }

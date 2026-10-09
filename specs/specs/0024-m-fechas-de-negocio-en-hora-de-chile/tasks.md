@@ -84,28 +84,31 @@
 
 ## Fase 2 — App: "hoy" que se escribe o filtra (inventario §1)
 
-- [ ] **T2.1** — Fechas que se escriben en la BD
+- [x] **T2.1** — Fechas que se escriben en la BD
   - **AC ref:** AC1, AC2
   - **DoD:**
-    - [ ] Los 9 archivos del primer grupo de §1 usan `chileToday()`
-    - [ ] Test con el reloj a las 23:30 hora Chile en cada facade tocado
+    - [x] Los 9 archivos del primer grupo de §1 usan `chileToday()`
+    - [x] Test con el reloj a las 23:30 hora Chile en cada facade tocado: `core/facades/hora-chile.facades.spec.ts` (pago de matrícula, pago de pre-inscripción, alta de relator). Los drawers que proponen la fecha quedan cubiertos por `T02`
 
-- [ ] **T2.2** — "Hoy" para filtrar o comparar, y "mes actual"
+- [x] **T2.2** — "Hoy" para filtrar o comparar, y "mes actual"
   - **AC ref:** AC5, AC-E3
   - **DoD:**
-    - [ ] Los archivos del segundo grupo de §1 usan `chileToday()` / `chileMonth()`
-    - [ ] Test de fin de mes a las 23:30 en `servicios-especiales.facade`
+    - [x] Los archivos del segundo grupo de §1 usan `chileToday()` / `chileMonth()`
+    - [x] Test de fin de mes a las 23:30 en `servicios-especiales.facade` (mismo spec transversal, que cubre además descuentos, códigos SENCE, alertas de documentos, promociones certificables, próxima práctica del alumno y la semana de asistencia profesional)
+    - [x] Rango de reportes contables con test propio (cierra la excepción anotada en TD.4b)
 
-- [ ] **T2.3** — Fechas derivadas de un `Date` local y nombres de archivo
+- [x] **T2.3** — Fechas derivadas de un `Date` local y nombres de archivo
   - **AC ref:** AC-E3, AC-E4
   - **DoD:**
-    - [ ] Grupos 4 y 5 de §1 pasan por `addDaysIso` / `toChileDate` / `chileToday`
-    - [ ] Cero ocurrencias de la regla 1 en la línea base
+    - [x] Grupos 4 y 5 de §1 pasan por `addDaysIso` / `toChileDate` / `chileToday`
+    - [x] Cero ocurrencias de la regla 1 en `src/app` (las 14 que quedan en la línea base son de edge functions, fase 6)
+    - [x] `announcement-composer`: la hora de envío programado se interpreta como hora de pared de Chile (`chileWallTimeToInstant`)
 
-- [ ] **T2.4** — `T02` sin `knownBug`
+- [x] **T2.4** — `T02` sin `knownBug`
   - **AC ref:** AC1
   - **DoD:**
-    - [ ] `npx playwright test e2e/transversal-shell.spec.ts -g T02` verde en ambos casos, contra el build de producción
+    - [x] Marca `knownBug` quitada; `npx playwright test e2e/transversal-shell.spec.ts -g T02` verde en ambos casos (15:00 y 23:30) contra `ng serve` en localhost:4200 (2026-10-08)
+    - [x] Misma corrida contra el build de producción (`ng build --configuration production` servido en el puerto 4300, 2026-10-08): 15:00 y 23:30 en verde
 
 ---
 

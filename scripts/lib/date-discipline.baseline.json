@@ -1,12 +1,12 @@
 {
-  "total": 422,
+  "total": 421,
   "kinds": {
     "format-no-zone": 60,
     "local-date-parts": 237,
     "naive-time-suffix": 51,
     "deprecated-date-api": 32,
     "angular-date-pipe": 27,
-    "utc-slice": 15
+    "utc-slice": 14
   },
   "files": {
     "src/app/core/facades/admin-alumno-detalle.facade.ts": {
@@ -206,9 +206,6 @@
       "format-no-zone": 3,
       "local-date-parts": 3,
       "naive-time-suffix": 5
-    },
-    "src/app/features/comunicados/announcement-composer-drawer.component.ts": {
-      "utc-slice": 1
     },
     "src/app/features/instructor/alumnos/components/student-drawer-detail.component.ts": {
       "angular-date-pipe": 1
