@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { toChileDate } from '@core/utils/chile-time.utils';
+import { chileYear, toChileDate } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -556,7 +556,7 @@ export class CertificacionClaseBFacade {
 
       // Folio only shown when PDF exists; year derived from issuance date, not today's date
       const hasPdf = !!e.certificate_b_pdf_url;
-      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+      const certYear = cert?.created_at ? chileYear(new Date(cert.created_at)) : null;
 
       // Cantidad de clases requeridas se deriva del curso de la matrícula (spec 0006-m) —
       // ya no asume 12 fijo. `is_reinforcement=false` fue filtrado en la query, así que este

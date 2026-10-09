@@ -703,7 +703,7 @@ export class AdminInstructorCrearDrawerComponent {
     if (!this.formValido()) return;
 
     const expiryDate = this.licenseExpiry()!;
-    const expiryStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
+    const expiryStr = calendarDateToIso(expiryDate);
 
     const instructorId = await this.facade.crearInstructor({
       firstNames: this.nombres().trim(),

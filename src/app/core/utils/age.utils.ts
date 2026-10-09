@@ -1,3 +1,4 @@
+import { chileToday, monthDays, toChileDate } from './chile-time.utils';
 import type { AgeAlertStatus } from '@core/models/ui/enrollment-personal-data.model';
 
 /**
@@ -12,9 +13,8 @@ export function isInvalidDate(dateStr: string): boolean {
   const year = parseInt(match[1], 10);
   const month = parseInt(match[2], 10);
   const day = parseInt(match[3], 10);
-  // Date constructor rolls over impossible dates (e.g. Feb 29 → Mar 1 in non-leap years).
-  const date = new Date(year, month - 1, day);
-  return date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day;
+  // Fechas imposibles (p. ej. 29 de febrero en un año no bisiesto).
+  return month < 1 || month > 12 || day < 1 || day > monthDays(year, month);
 }
 
 /**
@@ -39,12 +39,12 @@ export function getAgeStatus(birthDate: string, courseType: string): AgeAlertSta
  */
 export function calcAge(birthDate: string | null | undefined): number | null {
   if (!birthDate) return null;
-  const birth = new Date(birthDate);
-  if (isNaN(birth.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  // La fecha de nacimiento es una fecha pura: se compara con el día de hoy en Chile.
+  const birth = toChileDate(birthDate);
+  if (!birth || isInvalidDate(birth)) return null;
+  const today = chileToday();
+  let age = Number(today.slice(0, 4)) - Number(birth.slice(0, 4));
+  if (today.slice(5) < birth.slice(5)) age--;
   return age;
 }
 

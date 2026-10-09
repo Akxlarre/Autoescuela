@@ -4,7 +4,6 @@
 
 import {
   addMonthsIso,
-  calendarDateToIso,
   chileToday,
   formatChileDate,
   formatChileTime,
@@ -23,24 +22,11 @@ export function monthsAgoIso(months: number): string {
 }
 
 /**
- * Fecha 'YYYY-MM-DD' de un valor.
- *  - string → día de Chile (un instante se convierte; una fecha pura se devuelve tal cual).
- *  - Date   → se lee como FECHA DE CALENDARIO (la que entrega un selector de fechas).
- *
- * @deprecated El caso Date es ambiguo: no distingue un instante de un día de calendario.
- * En código nuevo usar `chileToday()`, `toChileDate(instante)` o `calendarDateToIso(fecha)`
- * de chile-time.utils.
- */
-export function toISODate(date: Date | string): string {
-  return typeof date === 'string' ? toChileDate(date) : calendarDateToIso(date);
-}
-
-/**
  * Fecha para mostrar como dd-mm-aaaa (día de Chile). "—" si no hay fecha o no es válida.
  */
 export function formatDayMonthYear(date: string | null | undefined): string {
   if (!date) return '—';
-  const iso = toISODate(date);
+  const iso = toChileDate(date);
   if (!iso) return '—';
   const [yyyy, mm, dd] = iso.split('-');
   return `${dd}-${mm}-${yyyy}`;

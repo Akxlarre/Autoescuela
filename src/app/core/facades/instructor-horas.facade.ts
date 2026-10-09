@@ -1,8 +1,10 @@
 ﻿import { Injectable, signal, computed, inject } from '@angular/core';
 import {
   addDaysIso,
+  chileMonth,
   chileMonthRange,
   chileParts,
+  monthDays,
   chileRange,
   formatChileTime,
   mondayOfIso,
@@ -111,17 +113,15 @@ export class InstructorHorasFacade {
 
     try {
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const start = new Date(year, month, 1).toISOString();
-      const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+      const today = chileParts(now);
+      const month = chileMonthRange(chileMonth(now));
 
       const { data: sessions, error: sessionsError } = await this.supabase.client
         .from('class_b_sessions')
         .select('id, status, duration_min')
         .eq('instructor_id', instructorId)
-        .gte('scheduled_at', start)
-        .lte('scheduled_at', end);
+        .gte('scheduled_at', month.start)
+        .lt('scheduled_at', month.endExclusive);
 
       if (sessionsError) throw sessionsError;
 
@@ -133,8 +133,8 @@ export class InstructorHorasFacade {
       const targetHours = nonCancelled.reduce((sum, s) => sum + (s.duration_min || 45) / 60, 0);
 
       // Proyección lineal: (horas completadas / día actual) × días del mes
-      const dayOfMonth = now.getDate();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const dayOfMonth = today.day;
+      const daysInMonth = monthDays(today.year, today.month);
       const projectedHours =
         dayOfMonth > 0 ? Math.round((completedHours / dayOfMonth) * daysInMonth * 10) / 10 : 0;
 
@@ -155,17 +155,15 @@ export class InstructorHorasFacade {
     if (!instructorId) return;
 
     try {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const month = chileMonthRange(chileMonth());
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
         .select('id, scheduled_at, duration_min, status')
         .eq('instructor_id', instructorId)
         .eq('status', 'completed')
-        .gte('scheduled_at', start)
-        .lte('scheduled_at', end)
+        .gte('scheduled_at', month.start)
+        .lt('scheduled_at', month.endExclusive)
         .order('scheduled_at', { ascending: false });
 
       if (error) throw error;

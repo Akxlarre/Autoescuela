@@ -1,3 +1,4 @@
+import { chileYear } from '@core/utils/chile-time.utils';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -604,7 +605,7 @@ export class CertificacionProfesionalFacade {
 
       // Folio only shown when PDF exists; year derived from issuance date, not today's date
       const hasPdf = !!e.certificate_professional_pdf_url;
-      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+      const certYear = cert?.created_at ? chileYear(new Date(cert.created_at)) : null;
 
       return {
         enrollmentId: e.id,

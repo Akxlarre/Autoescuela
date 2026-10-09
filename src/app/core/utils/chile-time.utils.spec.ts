@@ -13,10 +13,14 @@ import {
   chileWallTimeToInstant,
   chileYear,
   diffDaysIso,
+  endOfMonthIso,
   formatChileDate,
+  formatChilePattern,
   formatChileTime,
   isoToCalendarDate,
   mondayOfIso,
+  monthDays,
+  startOfMonthIso,
   toChileDate,
   weekdayOfIso,
 } from './chile-time.utils';
@@ -168,6 +172,23 @@ describe('aritmética de fechas puras (sin zona)', () => {
   });
 });
 
+describe('meses de calendario', () => {
+  it('monthDays cuenta los días del mes, con febrero bisiesto', () => {
+    expect(monthDays(2026, 2)).toBe(28);
+    expect(monthDays(2028, 2)).toBe(29);
+    expect(monthDays(2026, 12)).toBe(31);
+    expect(monthDays(2026, 4)).toBe(30);
+  });
+
+  it('startOfMonthIso y endOfMonthIso aceptan una fecha pura o un mes', () => {
+    expect(startOfMonthIso('2026-10-06')).toBe('2026-10-01');
+    expect(startOfMonthIso('2026-10')).toBe('2026-10-01');
+    expect(endOfMonthIso('2026-10-06')).toBe('2026-10-31');
+    expect(endOfMonthIso('2026-02')).toBe('2026-02-28');
+    expect(endOfMonthIso('2026-12-15')).toBe('2026-12-31');
+  });
+});
+
 describe('fecha de calendario de un selector de fechas', () => {
   it('ida y vuelta sin desplazarse, en cualquier zona del equipo', () => {
     for (const iso of ['2000-03-15', '2026-09-06', '2026-04-05', '1920-01-01', '2026-12-31']) {
@@ -215,5 +236,39 @@ describe('formato', () => {
   it.each([null, undefined, '', 'no-es-fecha'])('%s → "—"', (value) => {
     expect(formatChileDate(value)).toBe('—');
     expect(formatChileTime(value)).toBe('—');
+  });
+});
+
+describe('formatChilePattern — patrón de fecha con la zona de Chile fija', () => {
+  // 23:30:15 del martes 6 de octubre en Chile; ya es día 7 en UTC y en Tokio.
+  const instant = '2026-10-07T02:30:15.000Z';
+
+  it.each([
+    ['dd/MM/yyyy', '06/10/2026'],
+    ['dd/MM/yyyy HH:mm', '06/10/2026 23:30'],
+    ['dd/MM/yyyy HH:mm:ss', '06/10/2026 23:30:15'],
+    ['yyyy-MM-dd HH:mm:ss', '2026-10-06 23:30:15'],
+    ['dd/MM HH:mm', '06/10 23:30'],
+    ['dd/MM', '06/10'],
+    ['HH:mm', '23:30'],
+    ['dd MMM yyyy', '06 oct 2026'],
+    ['dd MMM, HH:mm', '06 oct, 23:30'],
+    ["EEEE d 'de' MMMM 'a las' HH:mm", 'martes 6 de octubre a las 23:30'],
+  ])('%s → %s', (pattern, expected) => {
+    expect(formatChilePattern(instant, pattern)).toBe(expected);
+    expect(formatChilePattern(new Date(instant), pattern)).toBe(expected);
+  });
+
+  it('una fecha pura no se desplaza', () => {
+    expect(formatChilePattern('2026-10-06', 'dd/MM/yyyy')).toBe('06/10/2026');
+    expect(formatChilePattern('2026-01-01', 'EEEE d MMM yyyy')).toBe('jueves 1 ene 2026');
+  });
+
+  it('una comilla doble dentro de un literal escribe una comilla', () => {
+    expect(formatChilePattern('2026-10-06', "d 'o''clock'")).toBe("6 o'clock");
+  });
+
+  it.each([null, undefined, '', 'no-es-fecha'])('%s → null', (value) => {
+    expect(formatChilePattern(value, 'dd/MM/yyyy')).toBeNull();
   });
 });

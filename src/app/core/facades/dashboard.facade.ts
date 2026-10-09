@@ -5,7 +5,15 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
-import { addDaysIso, addMonthsIso, chileDayRange, chileToday } from '@core/utils/chile-time.utils';
+import {
+  addDaysIso,
+  addMonthsIso,
+  chileDayRange,
+  chileToday,
+  formatChileDate,
+  formatChileTime,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 
@@ -212,12 +220,12 @@ export class DashboardFacade {
 
     const user = this.auth.currentUser();
     const today = new Date();
-    const dateStr = new Intl.DateTimeFormat('es', {
+    const dateStr = formatChileDate(today, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
-    }).format(today);
+    });
 
     // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
     if (!this.dashboardGuard.isCurrent(requestToken)) return;
@@ -556,10 +564,10 @@ export class DashboardFacade {
 
     const logTime = new Date(log.created_at);
     // Para historial completo, mostrar fecha si no es de hoy
-    const isToday = new Date().toDateString() === logTime.toDateString();
+    const isToday = chileToday() === toChileDate(logTime);
     const timeStr = isToday
-      ? logTime.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-      : logTime.toLocaleDateString('es-CL', {
+      ? formatChileTime(logTime)
+      : formatChileDate(logTime, {
           day: '2-digit',
           month: 'short',
           hour: '2-digit',

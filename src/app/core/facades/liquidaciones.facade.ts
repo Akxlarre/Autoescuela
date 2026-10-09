@@ -1,4 +1,5 @@
-﻿import { computed, inject, Injectable, signal } from '@angular/core';
+import { chileParts, chileYear, monthDays } from '@core/utils/chile-time.utils';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -51,8 +52,8 @@ export class LiquidacionesFacade {
   private _lastBranchId: number | null = null;
 
   // ── Navegación de mes ─────────────────────────────────────────────────────
-  private readonly _mesActual = signal<number>(new Date().getMonth() + 1);
-  private readonly _anioActual = signal<number>(new Date().getFullYear());
+  private readonly _mesActual = signal<number>(chileParts().month);
+  private readonly _anioActual = signal<number>(chileYear());
 
   // ── Realtime ─────────────────────────────────────────────────────────────
   private _realtimeChannel: any | null = null;
@@ -235,7 +236,7 @@ export class LiquidacionesFacade {
   ): Promise<void> {
     try {
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
       const fechaInicio = `${anio}-${mm}-01`;
       const fechaFin = `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
@@ -352,7 +353,7 @@ export class LiquidacionesFacade {
       const mes = this._mesActual();
       const anio = this._anioActual();
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
 
       const record = {
         instructor_id: row.instructorId,
@@ -448,7 +449,7 @@ export class LiquidacionesFacade {
       const mes = this._mesActual();
       const anio = this._anioActual();
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
 
       const { error: delErr } = await this.supabase.client
         .from('instructor_monthly_payments')

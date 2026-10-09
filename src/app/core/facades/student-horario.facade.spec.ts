@@ -4,7 +4,7 @@ import { StudentHorarioFacade } from './student-horario.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { AuthFacade } from './auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import { toISODate } from '@core/utils/date.utils';
+import { chileToday } from '@core/utils/chile-time.utils';
 
 type TableResponse = { data: unknown; error: unknown };
 
@@ -98,7 +98,7 @@ describe('StudentHorarioFacade', () => {
     });
 
     it('weekDays entrega 7 días y ubica cada sesión en su fecha', async () => {
-      const today = toISODate(new Date());
+      const today = chileToday();
       const { facade } = setup(classBTables([rawSession(1, `${today}T10:00:00`)]));
       await facade.initialize();
       const days = facade.weekDays();

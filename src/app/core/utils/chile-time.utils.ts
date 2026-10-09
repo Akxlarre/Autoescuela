@@ -226,6 +226,21 @@ export function addMonthsIso(iso: string, months: number): string {
   return isoOf(year, month, Math.min(d, lastDay));
 }
 
+/** Cantidad de días de un mes de calendario. `month` de 1 a 12. */
+export function monthDays(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Primer día ('YYYY-MM-DD') del mes de una fecha pura o de un 'YYYY-MM'. */
+export function startOfMonthIso(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+/** Último día ('YYYY-MM-DD') del mes de una fecha pura o de un 'YYYY-MM'. */
+export function endOfMonthIso(iso: string): string {
+  return addDaysIso(addMonthsIso(startOfMonthIso(iso), 1), -1);
+}
+
 /** Días de calendario desde `fromIso` hasta `toIso` (negativo si `toIso` es anterior). */
 export function diffDaysIso(fromIso: string, toIso: string): number {
   return Math.round((isoToUtcMs(toIso) - isoToUtcMs(fromIso)) / DAY_MS);
@@ -290,6 +305,56 @@ export function formatChileDate(
   const d = toFormattable(value);
   if (!d) return '—';
   return new Intl.DateTimeFormat('es-CL', { ...options, timeZone: CHILE_TIME_ZONE }).format(d);
+}
+
+const PATTERN_TOKEN = /'((?:[^']|'')*)'|yyyy|MMMM|MMM|MM|EEEE|EEE|dd|d|HH|mm|ss/g;
+
+/** Nombre en es-CL de una parte de la fecha, sin el punto de las abreviaturas. */
+function chileName(date: Date, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat('es-CL', { ...options, timeZone: CHILE_TIME_ZONE })
+    .format(date)
+    .replace(/\./g, '');
+}
+
+/**
+ * Fecha escrita con un patrón (yyyy, MM, MMM, MMMM, dd, d, EEE, EEEE, HH, mm, ss y texto
+ * entre comillas simples), con la zona de Chile fija. Una fecha pura no se desplaza.
+ * Devuelve null si el valor está vacío o no es una fecha.
+ */
+export function formatChilePattern(
+  value: ChileInstant | null | undefined,
+  pattern: string,
+): string | null {
+  const d = toFormattable(value);
+  if (!d) return null;
+  const p = wallPartsOf(d);
+  return pattern.replace(PATTERN_TOKEN, (token, literal: string | undefined) => {
+    if (literal !== undefined) return literal.replace(/''/g, "'");
+    switch (token) {
+      case 'yyyy':
+        return String(p.year).padStart(4, '0');
+      case 'MMMM':
+        return chileName(d, { month: 'long' });
+      case 'MMM':
+        return chileName(d, { month: 'short' });
+      case 'MM':
+        return pad(p.month);
+      case 'EEEE':
+        return chileName(d, { weekday: 'long' });
+      case 'EEE':
+        return chileName(d, { weekday: 'short' });
+      case 'dd':
+        return pad(p.day);
+      case 'd':
+        return String(p.day);
+      case 'HH':
+        return pad(p.hour);
+      case 'mm':
+        return pad(p.minute);
+      default:
+        return pad(p.second);
+    }
+  });
 }
 
 /** Hora de pared de Chile 'HH:MM' (24 horas). "—" si el valor no es un instante. */

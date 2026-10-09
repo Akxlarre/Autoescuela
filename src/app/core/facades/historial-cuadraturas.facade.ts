@@ -1,3 +1,4 @@
+import { chileParts, chileYear, monthDays } from '@core/utils/chile-time.utils';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -29,12 +30,12 @@ function mapAdjustmentToRow(
     ? `${row.users.first_names} ${row.users.paternal_last_name}`.trim()
     : '—';
 
-  const fecha = new Date(row.created_at);
-  const dd = String(fecha.getDate()).padStart(2, '0');
-  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-  const yyyy = fecha.getFullYear();
-  const hh = String(fecha.getHours()).padStart(2, '0');
-  const min = String(fecha.getMinutes()).padStart(2, '0');
+  const fecha = chileParts(row.created_at);
+  const dd = String(fecha.day).padStart(2, '0');
+  const mm = String(fecha.month).padStart(2, '0');
+  const yyyy = fecha.year;
+  const hh = String(fecha.hour).padStart(2, '0');
+  const min = String(fecha.minute).padStart(2, '0');
 
   return {
     id: row.id,
@@ -174,8 +175,8 @@ export class HistorialCuadraturasFacade {
   private _lastBranchId: number | null = null;
 
   // ── Navegación de mes ─────────────────────────────────────────────────────
-  private readonly _mesActual = signal<number>(new Date().getMonth() + 1);
-  private readonly _anioActual = signal<number>(new Date().getFullYear());
+  private readonly _mesActual = signal<number>(chileParts().month);
+  private readonly _anioActual = signal<number>(chileYear());
 
   // ── Estado público ────────────────────────────────────────────────────────
   readonly historialCierres = this._historialCierres.asReadonly();
@@ -252,9 +253,9 @@ export class HistorialCuadraturasFacade {
   }
 
   volverAHoy(): void {
-    const now = new Date();
-    this._mesActual.set(now.getMonth() + 1);
-    this._anioActual.set(now.getFullYear());
+    const now = chileParts();
+    this._mesActual.set(now.month);
+    this._anioActual.set(now.year);
     this.initialize();
   }
 
@@ -427,7 +428,7 @@ export class HistorialCuadraturasFacade {
       const mm = String(mes).padStart(2, '0');
       const yyyy = String(anio);
       const fechaInicio = `${yyyy}-${mm}-01`;
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
       const fechaFin = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
       let query = this.supabase.client

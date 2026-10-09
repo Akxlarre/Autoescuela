@@ -1,3 +1,4 @@
+import { chileYear, formatChileDate } from '@core/utils/chile-time.utils';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -742,9 +743,9 @@ export class ReportesContablesContentComponent implements AfterViewInit {
       case 'ultimos_12_meses':
         return 'últimos 12 meses';
       case 'anio_actual':
-        return `año ${new Date().getFullYear()}`;
+        return `año ${chileYear()}`;
       case 'anio_anterior':
-        return `año ${new Date().getFullYear() - 1}`;
+        return `año ${chileYear() - 1}`;
     }
   });
 
@@ -802,9 +803,7 @@ export class ReportesContablesContentComponent implements AfterViewInit {
     const [dy, dm] = desde.split('-');
     const [hy, hm] = hasta.split('-');
     if (dy === hy && dm === hm) {
-      const mes = new Date(Number(dy), Number(dm) - 1, 1).toLocaleDateString('es-CL', {
-        month: 'long',
-      });
+      const mes = formatChileDate(`${dy}-${dm}-01`, { month: 'long' });
       return `${mes.charAt(0).toUpperCase() + mes.slice(1)} ${dy}`;
     }
     return `${this.formatDate(desde)} – ${this.formatDate(hasta)}`;

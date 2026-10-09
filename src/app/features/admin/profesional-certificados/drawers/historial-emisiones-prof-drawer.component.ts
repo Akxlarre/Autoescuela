@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -17,7 +17,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     DrawerFormComponent,
     SkeletonBlockComponent,
     IconComponent,
@@ -65,7 +65,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
                       {{ getAccionLabel(entry.accion) }}
                     </app-badge>
                     <span class="text-xs font-mono text-text-muted shrink-0">
-                      {{ entry.fecha | date: 'dd/MM/yyyy HH:mm' }}
+                      {{ entry.fecha | chileDate: 'dd/MM/yyyy HH:mm' }}
                     </span>
                   </div>
                   <p class="m-0 text-sm font-medium text-text-primary truncate">

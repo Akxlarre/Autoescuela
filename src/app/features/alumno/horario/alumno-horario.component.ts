@@ -1,4 +1,10 @@
 import {
+  chileToday,
+  diffDaysIso,
+  formatChileDate,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import {
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -404,31 +410,23 @@ export class AlumnoHorarioComponent {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '—';
-    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' });
+    return formatChileDate(dateStr, { weekday: 'long', day: '2-digit', month: 'long' });
   }
 
   dayAbbr(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '');
+    return formatChileDate(dateStr, { weekday: 'short' }).replace('.', '');
   }
 
   dayNumber(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    return String(d.getDate());
+    return String(Number(dateStr.slice(8, 10)));
   }
 
   monthAbbr(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { month: 'short' }).replace('.', '');
+    return formatChileDate(dateStr, { month: 'short' }).replace('.', '');
   }
 
   daysUntil(dateStr: string): string {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
-    target.setHours(0, 0, 0, 0);
-    const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+    const diff = diffDaysIso(chileToday(), toChileDate(dateStr));
     if (diff === 0) return 'Hoy';
     if (diff === 1) return 'Mañana';
     if (diff < 0) return 'Pasada';

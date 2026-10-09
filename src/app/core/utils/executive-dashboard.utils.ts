@@ -1,3 +1,4 @@
+import { calendarDateToIso } from './chile-time.utils';
 /**
  * Núcleo funcional del Dashboard Ejecutivo de Admin (spec 0044-b).
  *
@@ -123,12 +124,7 @@ export function pickerDatesToRange(
   const start = dates?.[0];
   if (!start) return null;
   const end = dates?.[1] ?? start;
-  return { from: localIso(start), to: localIso(end) };
-}
-
-function localIso(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return { from: calendarDateToIso(start), to: calendarDateToIso(end) };
 }
 
 /**

@@ -13,7 +13,7 @@ import type {
   MetodoPago,
   PagoReciente,
 } from '@core/models/ui/pagos.model';
-import { toISODate } from '@core/utils/date.utils';
+import { chileToday, endOfMonthIso, startOfMonthIso } from '@core/utils/chile-time.utils';
 import { roundPercentagesTo100 } from '@core/utils/percentage.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
@@ -201,10 +201,9 @@ export class PagosFacade {
   }
 
   private async fetchAll(token: number): Promise<void> {
-    const today = toISODate(new Date());
-    const [year, month] = today.split('-');
-    const firstOfMonth = `${year}-${month}-01`;
-    const lastOfMonth = toISODate(new Date(Number(year), Number(month), 0));
+    const today = chileToday();
+    const firstOfMonth = startOfMonthIso(today);
+    const lastOfMonth = endOfMonthIso(today);
     const branchId = this.getActiveBranchId();
 
     await Promise.all([
@@ -220,7 +219,9 @@ export class PagosFacade {
 
   private async fetchIngresosHoy(
     token: number,
-    today: string, branchId: number | null): Promise<void> {
+    today: string,
+    branchId: number | null,
+  ): Promise<void> {
     let q: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
@@ -269,9 +270,7 @@ export class PagosFacade {
     this._boletasMes.set(count ?? 0);
   }
 
-  private async fetchPagosPendientes(
-    token: number,
-    branchId: number | null): Promise<void> {
+  private async fetchPagosPendientes(token: number, branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select('pending_balance')
@@ -285,9 +284,7 @@ export class PagosFacade {
     );
   }
 
-  private async fetchAlumnosConDeuda(
-    token: number,
-    branchId: number | null): Promise<void> {
+  private async fetchAlumnosConDeuda(token: number, branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select(
@@ -325,9 +322,7 @@ export class PagosFacade {
     );
   }
 
-  private async fetchPagosRecientes(
-    token: number,
-    branchId: number | null): Promise<void> {
+  private async fetchPagosRecientes(token: number, branchId: number | null): Promise<void> {
     let q: any = this.supabase.client
       .from('payments')
       .select(

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { toChileDate } from '@core/utils/chile-time.utils';
+import { formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -856,8 +856,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly today = new Date();
   protected readonly todayIsoVal = todayIso();
   protected readonly todayLabel = (() => {
-    const d = new Date();
-    return d.toLocaleDateString('es-CL', {
+    return formatChileDate(new Date(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',

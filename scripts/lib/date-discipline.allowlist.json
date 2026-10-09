@@ -1,0 +1,12 @@
+[
+  {
+    "file": "src/app/features/admin/asistencia/admin-asistencia.component.ts",
+    "kind": "local-date-parts",
+    "reason": "No es Date.setDate: es AsistenciaClaseBFacade.setDate(fechaIso), el método del facade que cambia el día consultado y recibe una fecha pura."
+  },
+  {
+    "file": "src/app/features/secretaria/asistencia/secretaria-asistencia.component.ts",
+    "kind": "local-date-parts",
+    "reason": "No es Date.setDate: es AsistenciaClaseBFacade.setDate(fechaIso), el método del facade que cambia el día consultado y recibe una fecha pura."
+  }
+]

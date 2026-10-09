@@ -33,7 +33,7 @@
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch` |
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
-| `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChileTime` |
+| `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime` |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
@@ -48,7 +48,7 @@
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
-| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
+| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
 | `src/app/core/utils/db-error.utils.ts` | `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |

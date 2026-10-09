@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { TagModule } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
@@ -39,7 +39,7 @@ const PAGE_SIZE = 9;
   imports: [
     FormsModule,
     SelectModule,
-    DatePipe,
+    ChileDatePipe,
     TagModule,
     TableModule,
     SectionHeroComponent,
@@ -250,7 +250,9 @@ const PAGE_SIZE = 9;
                     </td>
                     <td class="text-xs text-text-secondary">
                       {{
-                        s.nextClassDate ? (s.nextClassDate | date: 'dd MMM, HH:mm') : 'Sin agendar'
+                        s.nextClassDate
+                          ? (s.nextClassDate | chileDate: 'dd MMM, HH:mm')
+                          : 'Sin agendar'
                       }}
                     </td>
                     <td class="pr-6">
@@ -356,7 +358,7 @@ const PAGE_SIZE = 9;
                           <app-icon name="calendar" [size]="14" />
                           <span>{{
                             s.nextClassDate
-                              ? (s.nextClassDate | date: 'dd MMM, HH:mm')
+                              ? (s.nextClassDate | chileDate: 'dd MMM, HH:mm')
                               : 'Sin agendar'
                           }}</span>
                         </div>

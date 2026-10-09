@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -16,7 +16,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BadgeComponent,
-    DatePipe,
+    ChileDatePipe,
     IconComponent,
     StatBoxComponent,
     SkeletonBlockComponent,
@@ -162,7 +162,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       }
                       @default {
                         @if (facade.ultimoAccesoSeleccionada().fecha; as fecha) {
-                          {{ fecha | date: 'dd/MM/yyyy HH:mm' }}
+                          {{ fecha | chileDate: 'dd/MM/yyyy HH:mm' }}
                         } @else {
                           Nunca ha ingresado
                         }

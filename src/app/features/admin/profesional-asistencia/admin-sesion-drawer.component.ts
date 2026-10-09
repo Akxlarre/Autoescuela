@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { todayIso } from '@core/utils/date.utils';
 import {
@@ -562,8 +563,7 @@ export class AdminSesionDrawerComponent implements OnInit {
   }
 
   formatDateDisplay(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return formatChileDate(dateStr, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   statusColor(status: string): string {

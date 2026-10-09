@@ -1,3 +1,4 @@
+import { addDaysIso, chileToday, formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import type { InstructorHorarioSession } from '@core/models/ui/instructor-table.model';
@@ -10,25 +11,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 const SAN_TZ = 'America/Santiago';
 
 function toDateKey(isoString: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: SAN_TZ }).format(new Date(isoString));
+  return toChileDate(isoString);
 }
 
 function toDayLabel(dateKey: string): string {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  const sessionDay = new Date(y, m - 1, d);
-  const today = new Date();
-  const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const tomorrowNorm = new Date(todayNorm);
-  tomorrowNorm.setDate(todayNorm.getDate() + 1);
+  const today = chileToday();
+  if (dateKey === today) return 'Hoy';
+  if (dateKey === addDaysIso(today, 1)) return 'Mañana';
 
-  if (sessionDay.getTime() === todayNorm.getTime()) return 'Hoy';
-  if (sessionDay.getTime() === tomorrowNorm.getTime()) return 'Mañana';
-
-  const label = new Intl.DateTimeFormat('es-CL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }).format(sessionDay);
+  const label = formatChileDate(dateKey, { weekday: 'long', day: 'numeric', month: 'long' });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 

@@ -1,5 +1,10 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { calendarDateToIso } from '@core/utils/chile-time.utils';
+import {
+  calendarDateToIso,
+  chileToday,
+  diffDaysIso,
+  isoToCalendarDate,
+} from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -655,12 +660,8 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
     if (!d) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiry = new Date(d);
-    expiry.setHours(0, 0, 0, 0);
-    if (expiry < today) return 'expired';
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = diffDaysIso(chileToday(), calendarDateToIso(d));
+    if (diffDays < 0) return 'expired';
     if (diffDays <= 30) return 'expiring_soon';
     return 'valid';
   });
@@ -804,7 +805,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
 
         // Parse license expiry date
         if (inst.licenseExpiry) {
-          this.licenseExpiry.set(new Date(inst.licenseExpiry + 'T12:00:00'));
+          this.licenseExpiry.set(isoToCalendarDate(inst.licenseExpiry));
         } else {
           this.licenseExpiry.set(null);
         }
@@ -857,9 +858,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     if (!this.formValido()) return;
 
     const expiryDate = this.licenseExpiry();
-    const expiryStr = expiryDate
-      ? `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`
-      : '';
+    const expiryStr = expiryDate ? calendarDateToIso(expiryDate) : '';
 
     const ok = await this.facade.editarInstructor(instructorId, userId, {
       firstNames: this.nombres().trim(),

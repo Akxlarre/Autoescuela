@@ -6,7 +6,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { chileDayRange } from '@core/utils/chile-time.utils';
+import { chileDayRange, formatChileTime } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import {
   NoRowsAffectedError,
@@ -28,8 +28,7 @@ import type {
 function toHHmm(val: string | null): string {
   if (!val) return '--:--';
   if (val.includes('T') || val.length > 8) {
-    const d = new Date(val);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return formatChileTime(val);
   }
   return val.substring(0, 5);
 }

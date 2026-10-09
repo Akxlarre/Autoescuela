@@ -11,7 +11,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
-import { toChileDate } from '@core/utils/chile-time.utils';
+import {
+  calendarDateToIso,
+  chileMonth,
+  chileToday,
+  isoToCalendarDate,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -31,11 +38,11 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { PagosRecientesDrawerComponent } from './pagos-recientes-drawer.component';
-import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
+import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -54,7 +61,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
   imports: [
     ClearFiltersButtonComponent,
     FormsModule,
-    DatePipe,
+    ChileDatePipe,
     DatePickerModule,
     DateInputComponent,
     SelectModule,
@@ -405,12 +412,12 @@ function toCompact(amount: number): { value: number; suffix: string } {
           >
             <span class="text-text-muted">Desde</span>
             <span class="font-semibold text-text-primary">{{
-              reportStartDate | date: 'dd/MM/yyyy'
+              reportStartDateIso | chileDate: 'dd/MM/yyyy'
             }}</span>
             <app-icon name="arrow-right" [size]="13" color="var(--text-muted)" />
             <span class="text-text-muted">Hasta</span>
             <span class="font-semibold text-text-primary">{{
-              reportEndDate | date: 'dd/MM/yyyy'
+              reportEndDateIso | chileDate: 'dd/MM/yyyy'
             }}</span>
           </div>
         </div>
@@ -602,11 +609,11 @@ export class AdminPagosComponent implements AfterViewInit {
 
   // ── Estado modal: reporte ────────────────────────────────────────────────────
   protected readonly showReportModal = signal(false);
-  protected reportStartDate: Date = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  protected reportEndDate: Date = new Date();
+  protected reportStartDate: Date = isoToCalendarDate(`${chileMonth()}-01`)!;
+  protected reportEndDate: Date = isoToCalendarDate(chileToday())!;
 
   protected get reportStartDateIso(): string {
-    return toISODate(this.reportStartDate);
+    return calendarDateToIso(this.reportStartDate);
   }
   protected setReportStartDateIso(v: string) {
     if (!v) return;
@@ -614,7 +621,7 @@ export class AdminPagosComponent implements AfterViewInit {
     this.reportStartDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
   }
   protected get reportEndDateIso(): string {
-    return toISODate(this.reportEndDate);
+    return calendarDateToIso(this.reportEndDate);
   }
   protected setReportEndDateIso(v: string) {
     if (!v) return;
@@ -622,9 +629,8 @@ export class AdminPagosComponent implements AfterViewInit {
     this.reportEndDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
   }
   protected get todayIso(): string {
-    return toISODate(this.today);
+    return chileToday();
   }
-  protected readonly today = new Date();
 
   // ── Filtros de deudores (fix-248-m / ASG-m-005) ──────────────────────────────
   // Client-side sobre alumnosConDeuda() — mismo patrón que
@@ -780,8 +786,8 @@ export class AdminPagosComponent implements AfterViewInit {
 
   protected async onGenerarReporte(): Promise<void> {
     await this.facade.generarReporte({
-      startDate: toISODate(this.reportStartDate),
-      endDate: toISODate(this.reportEndDate),
+      startDate: calendarDateToIso(this.reportStartDate),
+      endDate: calendarDateToIso(this.reportEndDate),
       branchId: this.branchFacade.selectedBranchId(),
     });
     this.showReportModal.set(false);

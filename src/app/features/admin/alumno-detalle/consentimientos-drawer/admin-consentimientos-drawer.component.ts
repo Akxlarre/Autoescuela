@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { ConsentsFacade } from '@core/facades/consents.facade';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
@@ -185,7 +186,7 @@ export class AdminConsentimientosDrawerComponent {
 
   protected formatDate(iso: string | null): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleString('es-CL', {
+    return formatChileDate(iso, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

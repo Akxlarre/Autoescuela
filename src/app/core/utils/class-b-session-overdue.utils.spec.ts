@@ -54,10 +54,8 @@ describe('isSessionOverdue()', () => {
 });
 
 describe('isFromPreviousDay() (fix-131-m)', () => {
-  // Sin sufijo 'Z': se interpretan como hora local, igual que `now` (construido con
-  // el constructor local de Date) — evita falsos negativos/positivos por huso horario
-  // en las fronteras de día calendario.
-  const NOW = new Date(2026, 7, 6, 12, 0, 0); // 06 ago 2026, 12:00 local
+  // `now` es un instante; un scheduledAt sin zona se lee como hora de pared de Chile.
+  const NOW = new Date('2026-08-06T16:00:00.000Z'); // 06 ago 2026, 12:00 hora Chile
 
   it('retorna true para un scheduledAt del día calendario anterior', () => {
     expect(isFromPreviousDay('2026-08-05T18:30:00', NOW)).toBe(true);
@@ -73,6 +71,15 @@ describe('isFromPreviousDay() (fix-131-m)', () => {
 
   it('retorna false para un scheduledAt en el futuro (mismo u otro día)', () => {
     expect(isFromPreviousDay('2026-08-07T09:00:00', NOW)).toBe(false);
+  });
+
+  it('compara días de Chile, no de UTC (spec 0024-m)', () => {
+    // 21:30 hora Chile del 6 de agosto: en UTC ya es día 7.
+    const tonight = '2026-08-07T01:30:00.000Z';
+    // 23:00 hora Chile del mismo 6 de agosto.
+    expect(isFromPreviousDay(tonight, new Date('2026-08-07T03:00:00.000Z'))).toBe(false);
+    // 00:10 hora Chile del 7 de agosto: la clase de anoche ya es de un día anterior.
+    expect(isFromPreviousDay(tonight, new Date('2026-08-07T04:10:00.000Z'))).toBe(true);
   });
 
   it('retorna false con scheduledAt vacío', () => {

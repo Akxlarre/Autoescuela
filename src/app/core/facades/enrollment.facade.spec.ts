@@ -308,7 +308,8 @@ describe('EnrollmentFacade', () => {
 
     beforeEach(() => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date(`${TODAY}T12:00:00`));
+      // Mediodía de Chile (UTC-4 en agosto), sin depender de la zona del equipo.
+      vi.setSystemTime(new Date(`${TODAY}T16:00:00.000Z`));
     });
 
     afterEach(() => {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
 
@@ -8,7 +8,7 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
 @Component({
   selector: 'app-draft-list',
   standalone: true,
-  imports: [DatePipe, IconComponent],
+  imports: [ChileDatePipe, IconComponent],
   styleUrls: ['./draft-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -71,7 +71,7 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
               <p class="draft-status">
                 <app-icon name="clock" [size]="12" />
                 <span>Paso {{ draft.currentStep }}/6 — {{ draft.stepLabel }}</span>
-                <span class="draft-status__date">· {{ draft.createdAt | date: 'dd/MM' }}</span>
+                <span class="draft-status__date">· {{ draft.createdAt | chileDate: 'dd/MM' }}</span>
               </p>
             </div>
 

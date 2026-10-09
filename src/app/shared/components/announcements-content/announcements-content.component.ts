@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -17,7 +17,13 @@ import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announ
   selector: 'app-announcements-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, IconComponent, BadgeComponent, SkeletonBlockComponent, EmptyStateComponent],
+  imports: [
+    ChileDatePipe,
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    EmptyStateComponent,
+  ],
   host: { class: 'flex flex-col min-h-0' },
   template: `
     @if (loading()) {
@@ -82,7 +88,7 @@ import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announ
                 <span>
                   @switch (a.status) {
                     @case ('programado') {
-                      Programado · sale el {{ a.scheduledFor | date: 'dd/MM HH:mm' }}
+                      Programado · sale el {{ a.scheduledFor | chileDate: 'dd/MM HH:mm' }}
                     }
                     @case ('enviando') {
                       Enviando ahora
@@ -91,7 +97,7 @@ import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announ
                       Cancelado
                     }
                     @default {
-                      Enviado el {{ a.sentAt | date: 'dd/MM HH:mm' }}
+                      Enviado el {{ a.sentAt | chileDate: 'dd/MM HH:mm' }}
                     }
                   }
                   ·

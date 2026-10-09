@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -416,8 +417,7 @@ export class AlumnoClasesComponent {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '—';
-    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: 'short' });
+    return formatChileDate(dateStr, { weekday: 'short', day: '2-digit', month: 'short' });
   }
 
   statusColor(status: string): string {

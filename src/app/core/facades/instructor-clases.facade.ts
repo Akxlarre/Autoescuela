@@ -4,6 +4,8 @@ import {
   chileDayRange,
   chileRange,
   formatChileDate,
+  formatChilePattern,
+  formatChileTime,
   toChileDate,
 } from '@core/utils/chile-time.utils';
 
@@ -242,7 +244,7 @@ export class InstructorClasesFacade {
             statusLabel: 'En Curso',
             statusColor: 'warning',
             kmStart: kmStart,
-            startTime: new Date().toLocaleTimeString('es-CL'),
+            startTime: formatChilePattern(new Date(), 'HH:mm:ss')!,
             canStart: false,
             canFinish: true,
           };
@@ -295,7 +297,7 @@ export class InstructorClasesFacade {
             statusColor: 'success',
             kmEnd: kmEnd,
             notes: extra?.notes ?? c.notes,
-            endTime: new Date().toLocaleTimeString('es-CL'),
+            endTime: formatChilePattern(new Date(), 'HH:mm:ss')!,
             canStart: false,
             canFinish: false,
             canEvaluate: true,
@@ -584,15 +586,10 @@ export class InstructorClasesFacade {
     const vehicleLabel = v ? `${v.brand || ''} ${v.model || ''}`.trim() : '';
 
     const dt = new Date(row.scheduled_at);
-    const hourStr = dt.getHours().toString().padStart(2, '0');
-    const minStr = dt.getMinutes().toString().padStart(2, '0');
-
     // Calcular end time aproximado si no tiene
     const endDt = new Date(dt.getTime() + row.duration_min * 60000);
-    const endHourStr = endDt.getHours().toString().padStart(2, '0');
-    const endMinStr = endDt.getMinutes().toString().padStart(2, '0');
 
-    const timeLabel = `${hourStr}:${minStr} - ${endHourStr}:${endMinStr}`;
+    const timeLabel = `${formatChileTime(dt)} - ${formatChileTime(endDt)}`;
 
     // Status color
     const colorMap: Record<string, string> = {

@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { addMonthsIso, chileToday } from './chile-time.utils';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { calcAge, isMinor, getAgeStatus, isInvalidDate } from './age.utils';
 
 function buildBirthDate(yearsAgo: number): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - yearsAgo);
-  return d.toISOString().split('T')[0];
+  // Cumple exactamente hoy, según el día de Chile (no el de UTC ni el del equipo).
+  return addMonthsIso(chileToday(), -12 * yearsAgo);
 }
 
 describe('calcAge()', () => {
@@ -22,6 +22,22 @@ describe('calcAge()', () => {
 
   it('retorna la edad correcta en años completos', () => {
     expect(calcAge(buildBirthDate(20))).toBe(20);
+  });
+
+  describe('hora de Chile — spec 0024-m', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('a las 23:30 hora Chile el cumpleaños de mañana todavía no cuenta', () => {
+      // 23:30 del 6 de octubre en Chile: en UTC ya es día 7.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+      expect(calcAge('2008-10-07')).toBe(17);
+      expect(calcAge('2008-10-06')).toBe(18);
+    });
+
+    it('una fecha imposible no tiene edad', () => {
+      expect(calcAge('2008-02-30')).toBeNull();
+    });
   });
 });
 

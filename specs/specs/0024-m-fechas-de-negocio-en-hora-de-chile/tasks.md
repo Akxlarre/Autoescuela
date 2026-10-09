@@ -146,40 +146,40 @@
 
 ## Fase 5 — App: aritmética y formato (inventario §4)
 
-- [ ] **T5.1** — Pipe `chileDate` + spec; reemplazar los 28 usos del pipe `date`
+- [x] **T5.1** — Pipe `chileDate` + spec; reemplazar los 28 usos del pipe `date`
   - **AC ref:** AC6, AC-E4
   - **DoD:**
-    - [ ] Cero ocurrencias de la regla 5
+    - [x] Cero ocurrencias de la regla 5 (`formatChilePattern` en la util + `shared/pipes/chile-date.pipe.ts`)
 
-- [ ] **T5.2** — Caja y contabilidad
+- [x] **T5.2** — Caja y contabilidad
   - **AC ref:** AC6
   - **DoD:**
-    - [ ] `historial-cuadraturas.*`, `liquidaciones.*`, `reportes-contables.*`, `cuadratura-content`, pagos
-    - [ ] Tests de esos facades verdes en las tres zonas
+    - [x] `historial-cuadraturas.*`, `liquidaciones.*`, `reportes-contables.*`, `cuadratura-content`, pagos
+    - [x] Tests de esos facades verdes en las tres zonas (test nuevo: `reportes-contables.model.spec.ts`)
 
-- [ ] **T5.3** — Agenda y horario
+- [x] **T5.3** — Agenda y horario
   - **AC ref:** AC6
   - **DoD:**
-    - [ ] `agenda.facade`, `agenda-week.utils`, `agenda-settings.service`, `schedule-grid.*`, `student-horario.facade`, `alumno-horario`, `agenda-semanal`
-    - [ ] Tests verdes en las tres zonas
+    - [x] `agenda.facade`, `agenda-week.utils`, `agenda-settings.service`, `schedule-grid.*`, `student-horario.facade`, `alumno-horario`, `agenda-semanal`
+    - [x] Tests verdes en las tres zonas
 
-- [ ] **T5.4** — Instructores y horas
+- [x] **T5.4** — Instructores y horas
   - **AC ref:** AC6
   - **DoD:**
-    - [ ] `instructor-horas.facade`, `instructor-clases.facade`, `instructores.facade`, `instructor-horario.*`, drawers de instructor
-    - [ ] Tests verdes en las tres zonas
+    - [x] `instructor-horas.facade`, `instructor-clases.facade`, `instructores.facade`, `instructor-horario.*`, drawers de instructor
+    - [x] Tests verdes en las tres zonas (test nuevo a las 23:30 de fin de mes en `instructor-horas.facade.spec.ts`)
 
-- [ ] **T5.5** — Promociones y Profesional
+- [x] **T5.5** — Promociones y Profesional
   - **AC ref:** AC6, AC-E4
   - **DoD:**
-    - [ ] `promociones.facade`, drawers de promoción, `asistencia-profesional.facade`, `libro-de-clases.*`, `promotion-end-date.utils`, `theory-cycle`
-    - [ ] Tests verdes en las tres zonas
+    - [x] `promociones.facade`, drawers de promoción, `asistencia-profesional.facade`, `libro-de-clases.*`, `promotion-end-date.utils`, `theory-cycle`
+    - [x] Tests verdes en las tres zonas
 
-- [ ] **T5.6** — Resto y formato
+- [x] **T5.6** — Resto y formato
   - **AC ref:** AC6, AC-E4
   - **DoD:**
-    - [ ] Todo lo que quede de las reglas 3 y 4 migrado o declarado como excepción
-    - [ ] `age.utils`, `license-seniority.utils`, `class-b-session-overdue.utils`, dashboards, flota
+    - [x] Todo lo que quede de las reglas 3 y 4 migrado o declarado como excepción (2 excepciones en `date-discipline.allowlist.json`: `facade.setDate($event)` en los dos smart components de Asistencia B, que no es `Date.setDate`)
+    - [x] `age.utils`, `license-seniority.utils`, `class-b-session-overdue.utils`, dashboards, flota
 
 ---
 
@@ -260,11 +260,13 @@
 > Si surge algo que no estaba planeado pero ES parte del scope de la spec, agrégalo acá.
 > Si está fuera de scope, crear spec nueva.
 
-- [ ] **TD.1** — Retirar `toISODate()` (ambigua: no distingue instante de fecha de calendario). Cada uso pasa a `chileToday()`, `toChileDate()` o `calendarDateToIso()`. El guardrail ya los cuenta como `deprecated-date-api` (47). Se resuelve dentro de las fases 2 a 5.
+- [x] **TD.1** — `toISODate()` retirada (fase 5): cero usos en `src/app` y eliminada de `date.utils.ts`; cada uso pasó a `chileToday()`, `toChileDate()` o `calendarDateToIso()`.
 - [ ] **TD.2** — La línea base real es de 593 ocurrencias en 124 archivos (el inventario estimaba menos: no contaba `T12:00:00` sin zona ni las edge functions). Seguimiento con `node scripts/check-date-discipline.mjs --list [tipo]`.
 - [ ] **TD.3** — Estado al cierre de la sesión del 2026-10-08: fases 0 y 1 completas. Fase 2 a medias: reemplazados los 27 `new Date().toISOString()…` directos (21 archivos); línea base 593 → 566. Faltan de la fase 2: los 30 `utc-slice` restantes (fechas derivadas de un `Date`: `dashboard-alerts`, `flota`, `instructor-horas`, `instructor-clases` mock, `formatDateIso` de `asistencia-profesional` y `libro-de-clases`, `promotion-end-date.utils`, drawers de instructor y promoción, `schedule-grid`, `reprogramar-clase`, `announcement-composer`, y 14 en edge functions), los tests a las 23:30 por facade (DoD de T2.1/T2.2) y T2.4 (quitar `knownBug` de `T02` y correrlo contra el build de producción).
 - [ ] **TD.4** — Segunda sesión del 2026-10-08. Hecho: (a) resto de los cortes de `toISOString()` de la app salvo `announcement-composer` (queda 1 en la app; los otros 14 son de edge functions, fase 6); (b) fase 3 casi completa: rangos semiabiertos con `chileDayRange`/`chileRange` en `cuadratura`, `dashboard`, `reportes-contables`, `flota`, `auditoria`, `asistencia-clase-b`, `instructores`, `instructor-clases` e `instructor-horas`; (c) tests nuevos a las 23:30 en `instructor-clases`, `instructores`, `instructor-horas` y `flota`. Línea base 566 → 425. Pendiente de la fase 3: topes `slot_start` en `enrollment.facade` (862, 2122) y `admin-alumno-detalle.facade` (1458), `agenda.facade:317` (semana desde medianoche UTC), eliminar `getChileDateTimeRange` de `date.utils`, y tests de rango propios en `cuadratura`, `dashboard`, `reportes-contables`, `auditoria` y `asistencia-clase-b` (hoy solo se actualizó el mock).
-- [ ] **TD.5** — `instructor-horas.facade.spec.ts` tiene un mock preexistente que hace fallar en silencio `fetchSessionsLog` (`lte().order is not a function`): el test pasa porque el facade atrapa el error. No es de esta spec; anotado para no perderlo.
+- [x] **TD.5** — `instructor-horas.facade.spec.ts` tenía un mock que hacía fallar en silencio `fetchSessionsLog` (`lte().order is not a function`): el test pasaba porque el facade atrapa el error. Resuelto en la fase 5: el mock ahora se puede esperar en cualquier eslabón y hay un test que verifica el resultado.
 - [x] **TD.4b** — Fase 3 cerrada (tercera pasada del 2026-10-08): topes `slot_start` de `enrollment` y `admin-alumno-detalle` y semana de `agenda` con rangos semiabiertos; `getChileDateTimeRange` eliminada; tests a las 23:30 en `cuadratura`, `dashboard`, `auditoria` y `asistencia-clase-b`. Línea base 425 → 422. Excepción al DoD de T3.1: `reportes-contables` no tiene test de rango propio (solo se actualizó el mock); queda para la fase 5 junto con su aritmética de fechas.
-- [ ] **TD.6** — `node scripts/test-tz.mjs` con los specs de `agenda`, `enrollment` y `admin-alumno-detalle` falla en UTC y Asia/Tokyo (5 tests: `licenseExpired` en agenda, gate de matrícula tardía en enrollment, límite dinámico de reagendamiento en ficha del alumno). En America/Santiago pasan. Son dependencias del reloj del equipo todavía sin migrar (o tests que arman fechas con `new Date()` local): trabajo de la fase 5, bloquea AC6.
+- [x] **TD.6** — Resuelto en la fase 5: `node scripts/test-tz.mjs src/app` (la suite completa, 3.739 tests) pasa en UTC, Asia/Tokyo y America/Santiago. Eran tests que armaban fechas con el reloj del equipo y dos helpers que leían un instante con `new Date()` local.
+- [x] **TD.8** — Fase 5 cerrada (2026-10-08). Línea base 421 → 92: `src/app` queda en cero ocurrencias de ARCH-27; las 92 restantes son de `supabase/functions` (fase 6). Util ampliada con `formatChilePattern`, `monthDays`, `startOfMonthIso` y `endOfMonthIso`. Corregidos además tres cálculos de "días hasta" que el guardrail no detecta porque restan instantes (`vehicle-document-status.utils`, `flota-detalle.facade`, `enrollment-documents.facade`) y `calcAge`, que leía la fecha de nacimiento con el reloj del equipo. Verificado: `npm run lint:arch` 0 errores, build de producción, `T02` de Playwright (15:00 y 23:30) y revisión visual de Auditoría, Agenda y Liquidaciones.
+- [ ] **TD.9** — El guardrail no ve restas de instantes para contar días (`(a.getTime() - b.getTime()) / 86_400_000` sobre fechas puras) ni `.slice(0, 10)` sobre strings de la BD. Evaluar una regla en la fase 8 (T8.1).
 - [x] **TD.7** — Fase 4 cerrada (2026-10-08): los cortes de string sobre instantes pasan por `toChileDate()` en `admin-pre-inscritos`, `instructor-horas`, `flota-detalle`, `reportes-contables.utils`, `period-window.utils` (corte y año), `daily-agenda-drawer`, `secretaria-dashboard`, `admin-pagos`, `secretaria-pagos` y `asistencia-clase-b-content`. Seguros y sin cambio (ya son fecha pura): `license-status.utils`, `admin-pre-inscrito-drawer:1174`, `reportes-contables.utils:303,309`. Tests nuevos en `period-window.utils` y `reportes-contables.utils`; el de un facade de lista (fecha de ingreso) no hizo falta: `admin-alumnos` y `ex-alumnos` ya usan `toISODate(string)`, que ahora devuelve el día de Chile. Verificado en vivo a las 21:03 hora Chile: Caja Diaria consulta el día de Chile.

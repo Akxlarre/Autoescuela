@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { addDaysIso, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { addDaysIso, formatChileDate, weekdayOfIso } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
@@ -35,8 +35,7 @@ function generateAvailableMondays(count: number): { date: string }[] {
 
 function formatMondayLabel(iso: string): string {
   if (!iso) return '';
-  const d = new Date(iso + 'T12:00:00');
-  return d.toLocaleDateString('es-CL', {
+  return formatChileDate(iso, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -45,8 +44,7 @@ function formatMondayLabel(iso: string): string {
 }
 
 function generatePromoName(startIso: string, code: string): string {
-  const d = new Date(startIso + 'T12:00:00');
-  const day = d.getDate();
+  const [year, month, day] = startIso.split('-').map(Number);
   const monthNames = [
     'Enero',
     'Febrero',
@@ -61,7 +59,7 @@ function generatePromoName(startIso: string, code: string): string {
     'Noviembre',
     'Diciembre',
   ];
-  const dateLabel = `${day} de ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  const dateLabel = `${day} de ${monthNames[month - 1]} ${year}`;
   return code ? `Promoción ${code} (${dateLabel})` : `Promoción ${dateLabel}`;
 }
 

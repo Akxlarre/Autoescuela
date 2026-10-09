@@ -6,7 +6,6 @@ import {
   isoToDate,
   monthsAgoIso,
   to24hTime,
-  toISODate,
   todayIso,
 } from './date.utils';
 
@@ -55,24 +54,6 @@ describe('hoy en Chile — spec 0024-m', () => {
   });
 });
 
-describe('toISODate', () => {
-  it('un instante en string da su día de Chile', () => {
-    expect(toISODate('2026-10-07T02:30:00.000Z')).toBe('2026-10-06');
-  });
-
-  it('una fecha pura se devuelve tal cual', () => {
-    expect(toISODate('2026-10-06')).toBe('2026-10-06');
-  });
-
-  it('un Date se lee como fecha de calendario (selector de fechas)', () => {
-    expect(toISODate(new Date(2026, 9, 6, 0, 0, 0))).toBe('2026-10-06');
-  });
-
-  it('un valor inválido da cadena vacía', () => {
-    expect(toISODate('no-es-fecha')).toBe('');
-  });
-});
-
 describe('to24hTime / formatChileanDate / buildDayLabel', () => {
   it('to24hTime da la hora de pared de Chile', () => {
     expect(to24hTime('2026-10-07T02:30:00.000Z')).toBe('23:30');
@@ -107,11 +88,6 @@ describe('isoToDate', () => {
 
   it('returns null for invalid string', () => {
     expect(isoToDate('no-es-fecha')).toBeNull();
-  });
-
-  it('round-trips with toISODate', () => {
-    const iso = '2000-03-15';
-    expect(toISODate(isoToDate(iso)!)).toBe(iso);
   });
 
   it('handles edge date 1920-01-01', () => {

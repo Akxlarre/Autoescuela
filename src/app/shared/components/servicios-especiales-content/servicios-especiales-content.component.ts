@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -379,7 +380,7 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
 
   protected readonly mesActualLabel = computed(() => {
     const fecha = new Date();
-    return fecha.toLocaleString('es-CL', { month: 'long', year: 'numeric' });
+    return formatChileDate(fecha, { month: 'long', year: 'numeric' });
   });
 
   // ── Hero config ─────────────────────────────────────────────────────────────

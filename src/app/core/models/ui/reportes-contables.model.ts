@@ -1,8 +1,19 @@
 // Modelos UI para Reportes Contables (RF-030 / RF-031)
 // Resumen financiero y Total Neto por rango de fechas
 
+import {
+  addMonthsIso,
+  chileToday,
+  endOfMonthIso,
+  startOfMonthIso,
+} from '@core/utils/chile-time.utils';
+
 export type RangoReporte =
-  'mes_actual' | 'mes_anterior' | 'trimestre' | 'anio_actual' | 'personalizado';
+  | 'mes_actual'
+  | 'mes_anterior'
+  | 'trimestre'
+  | 'anio_actual'
+  | 'personalizado';
 
 export interface RangoOption {
   label: string;
@@ -25,7 +36,10 @@ export const RANGOS_REPORTE: RangoOption[] = [
  * activa es "Evolución Mensual", y las de `RANGOS_REPORTE` en las demás.
  */
 export type RangoEvolucion =
-  'ultimos_6_meses' | 'ultimos_12_meses' | 'anio_actual' | 'anio_anterior';
+  | 'ultimos_6_meses'
+  | 'ultimos_12_meses'
+  | 'anio_actual'
+  | 'anio_anterior';
 
 export interface RangoEvolucionOption {
   label: string;
@@ -151,37 +165,31 @@ export interface RegistrarGastoFijoPayload {
 /**
  * Calcula el par [desde, hasta] en formato YYYY-MM-DD para un rango predefinido.
  * Función pura — usada tanto en el Facade como en el componente de filtros.
+ * "Hoy" es el día de Chile; `now` es inyectable para tests.
  */
 export function computeDateRange(
   rango: RangoReporte,
   customDesde?: string,
   customHasta?: string,
+  now: Date = new Date(),
 ): [string, string] {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = chileToday(now);
+  const firstOfMonth = startOfMonthIso(today);
 
   switch (rango) {
-    case 'mes_actual': {
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      return [fmt(from), fmt(to)];
-    }
+    case 'mes_actual':
+      return [firstOfMonth, endOfMonthIso(firstOfMonth)];
     case 'mes_anterior': {
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const to = new Date(now.getFullYear(), now.getMonth(), 0);
-      return [fmt(from), fmt(to)];
+      const from = addMonthsIso(firstOfMonth, -1);
+      return [from, endOfMonthIso(from)];
     }
-    case 'trimestre': {
-      const from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      return [fmt(from), fmt(now)];
-    }
+    case 'trimestre':
+      return [addMonthsIso(firstOfMonth, -2), today];
     case 'anio_actual': {
-      const from = new Date(now.getFullYear(), 0, 1);
-      const to = new Date(now.getFullYear(), 11, 31);
-      return [fmt(from), fmt(to)];
+      const year = today.slice(0, 4);
+      return [`${year}-01-01`, `${year}-12-31`];
     }
     case 'personalizado':
-      return [customDesde ?? fmt(now), customHasta ?? fmt(now)];
+      return [customDesde ?? today, customHasta ?? today];
   }
 }

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -22,7 +22,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BadgeComponent,
-    DatePipe,
+    ChileDatePipe,
     SectionHeroComponent,
     AlertCardComponent,
     SkeletonBlockComponent,
@@ -59,9 +59,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
           <div class="flex flex-col gap-6 h-full min-h-0">
             <!-- Breakdown Chart -->
             <div class="card p-6 shrink-0" appCardHover appScrollReveal>
-              <h3
-                class="font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
-              >
+              <h3 class="font-bold text-text-primary mb-4 border-b border-border-subtle pb-2">
                 Desglose de Horas Realizadas
               </h3>
               <app-horizontal-bar-chart [data]="buildChartData(target.breakdown)" />
@@ -98,7 +96,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                       @for (log of facade.sessionsLog(); track log.date) {
                         <tr class="hover:bg-subtle/50 transition-colors">
                           <td class="p-4 whitespace-nowrap text-text-primary font-medium">
-                            {{ log.date | date: 'dd MMM yyyy' }}
+                            {{ log.date | chileDate: 'dd MMM yyyy' }}
                           </td>
                           <td class="p-4">
                             <div class="flex items-center gap-2">

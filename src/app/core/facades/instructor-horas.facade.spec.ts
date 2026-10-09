@@ -10,13 +10,13 @@ describe('InstructorHorasFacade', () => {
 
   function createChainMock(resolvedValue: any = { data: [], error: null }) {
     const chain: any = {};
-    const methods = ['select', 'eq', 'in', 'gte', 'lte', 'order', 'limit', 'maybeSingle', 'not'];
+    const methods = ['select', 'eq', 'in', 'gte', 'lt', 'lte', 'order', 'limit', 'not'];
     for (const m of methods) {
       chain[m] = vi.fn().mockReturnValue(chain);
     }
-    chain.order = vi.fn().mockResolvedValue(resolvedValue);
     chain.maybeSingle = vi.fn().mockResolvedValue(resolvedValue);
-    chain.lte = vi.fn().mockResolvedValue(resolvedValue);
+    // La consulta se puede esperar en cualquier eslabón, igual que el cliente real.
+    chain.then = (resolve: (value: any) => void) => resolve(resolvedValue);
     return chain;
   }
 
@@ -123,6 +123,33 @@ describe('InstructorHorasFacade', () => {
       expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-06-01T04:00:00.000Z');
       expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-07-01T04:00:00.000Z');
       expect(facade.sessionDetails()[0].startTime).toBe('23:30');
+    });
+
+    it('la meta y el registro del mes usan el mes de Chile a las 23:30 del último día', async () => {
+      // 23:30 hora Chile del 30 de junio = 03:30 UTC del 1 de julio.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-07-01T03:30:00.000Z'));
+      const chain = createChainMock({
+        data: [
+          { id: 1, status: 'completed', duration_min: 60, scheduled_at: '2026-07-01T02:00:00Z' },
+        ],
+        error: null,
+      });
+      supabaseMock.client.from.mockReturnValue(chain);
+
+      await (facade as any).fetchMonthlyTarget();
+
+      expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-06-01T04:00:00.000Z');
+      expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-07-01T04:00:00.000Z');
+      // Día 30 de 30: lo proyectado es igual a lo completado.
+      expect(facade.monthlyTarget()).toMatchObject({ completedHours: 1, projectedHours: 1 });
+
+      await (facade as any).fetchSessionsLog();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.sessionsLog()).toEqual([
+        expect.objectContaining({ date: '2026-06-30', quantity: 1, hours: 1 }),
+      ]);
     });
   });
 
