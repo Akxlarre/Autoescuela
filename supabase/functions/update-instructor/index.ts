@@ -35,7 +35,11 @@ import { chileToday, diffDaysIso, toChileDate } from '../_shared/chile-time.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeInstructorEdit } from '../_shared/user-edit-authz.ts';
-import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
+import {
+  EMAIL_TAKEN_MESSAGE,
+  isEmailTakenError,
+  isUniqueViolation,
+} from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -148,7 +152,9 @@ Deno.serve(async (req: Request) => {
     // ── Validar el OBJETIVO (fix-179-b) ──────────────────────────────────────
     const { data: targetInstructor, error: findInstructorError } = await supabaseAdmin
       .from('instructors')
-      .select('id, user_id, both_branches, users!inner ( supabase_uid, email, branch_id, roles ( name ) )')
+      .select(
+        'id, user_id, both_branches, users!inner ( supabase_uid, email, branch_id, roles ( name ) )',
+      )
       .eq('id', instructorId)
       .maybeSingle();
 
@@ -290,10 +296,11 @@ Deno.serve(async (req: Request) => {
     // ── Gestionar cambio de vehículo ────────────────────────────────────────
     const vehicleChanged = vehicleId !== currentVehicleId;
 
+    // Con supabaseAudit (fix-218-b): con supabaseAdmin el cambio quedaba en la auditoría sin autor.
     if (vehicleChanged) {
       // Cerrar asignación actual (si existe)
       if (currentVehicleId) {
-        await supabaseAdmin
+        await supabaseAudit
           .from('vehicle_assignments')
           .update({ end_date: chileToday() })
           .eq('instructor_id', instructorId)
@@ -303,7 +310,7 @@ Deno.serve(async (req: Request) => {
 
       // Crear nueva asignación (si se seleccionó un vehículo)
       if (vehicleId) {
-        await supabaseAdmin.from('vehicle_assignments').insert({
+        await supabaseAudit.from('vehicle_assignments').insert({
           instructor_id: instructorId,
           vehicle_id: vehicleId,
           start_date: chileToday(),
