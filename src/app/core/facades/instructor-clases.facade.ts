@@ -335,18 +335,24 @@ export class InstructorClasesFacade {
       if (error) throw error;
 
       // 4. Propagar km final al vehículo (fix-189)
+      // fix-362-m: la clase ya quedó finalizada; si falla el KM o la asistencia no se lanza
+      // (el instructor vería un error sobre una clase que sí se cerró): se avisa qué faltó.
+      const pendientes: string[] = [];
       if (session?.vehicle_id) {
-        await this.supabase.client
+        // .select() + filas: un vehículo que la RLS filtra no devuelve error, devuelve 0 filas.
+        const km = await this.supabase.client
           .from('vehicles')
           .update({ current_km: kmEnd })
-          .eq('id', session.vehicle_id);
+          .eq('id', session.vehicle_id)
+          .select('id');
+        if (km.error || !km.data?.length) pendientes.push('el kilometraje del vehículo');
       }
 
       // 5. Register practice attendance
       if (session?.enrollments) {
         const studentId = (session.enrollments as any).student_id;
         if (studentId) {
-          await this.supabase.client.from('class_b_practice_attendance').upsert(
+          const attendance = await this.supabase.client.from('class_b_practice_attendance').upsert(
             {
               class_b_session_id: sessionId,
               student_id: studentId,
@@ -357,7 +363,15 @@ export class InstructorClasesFacade {
             },
             { onConflict: 'class_b_session_id,student_id' },
           );
+          if (attendance.error) pendientes.push('la asistencia del alumno');
         }
+      }
+
+      if (pendientes.length > 0) {
+        this.toast.warning(
+          'Clase finalizada, con datos sin guardar',
+          `No se pudo actualizar ${pendientes.join(' ni ')}. Avisa a secretaría.`,
+        );
       }
 
       await this.refreshSilently();

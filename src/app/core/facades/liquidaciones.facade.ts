@@ -6,6 +6,7 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { assertWriteOk } from '@core/utils/db-error.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
 import { PayrollConfigFacade } from '@core/facades/payroll-config.facade';
@@ -370,12 +371,17 @@ export class LiquidacionesFacade {
 
       if (payErr) throw payErr;
 
-      await this.supabase.client
-        .from('instructor_advances')
-        .update({ status: 'discounted' })
-        .eq('instructor_id', row.instructorId)
-        .gte('date', `${anio}-${mm}-01`)
-        .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
+      // fix-362-m: si esto falla en silencio los anticipos quedan "pendientes" y se descuentan
+      // otra vez el mes siguiente. Lanzar es seguro: el pago de arriba es un upsert, reintentar
+      // no duplica.
+      assertWriteOk(
+        await this.supabase.client
+          .from('instructor_advances')
+          .update({ status: 'discounted' })
+          .eq('instructor_id', row.instructorId)
+          .gte('date', `${anio}-${mm}-01`)
+          .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`),
+      );
 
       this.notifyLiquidacionPagada(row);
 
@@ -452,12 +458,16 @@ export class LiquidacionesFacade {
 
       if (delErr) throw delErr;
 
-      await this.supabase.client
-        .from('instructor_advances')
-        .update({ status: 'pending' })
-        .eq('instructor_id', row.instructorId)
-        .gte('date', `${anio}-${mm}-01`)
-        .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
+      // fix-362-m: sin revisar, un fallo dejaba los anticipos "descontados" de un pago que ya no
+      // existe. Reintentar es seguro (el delete de arriba es idempotente).
+      assertWriteOk(
+        await this.supabase.client
+          .from('instructor_advances')
+          .update({ status: 'pending' })
+          .eq('instructor_id', row.instructorId)
+          .gte('date', `${anio}-${mm}-01`)
+          .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`),
+      );
 
       this.toast.success(`Pago de ${row.nombre} revertido.`);
       await this.refreshSilently();

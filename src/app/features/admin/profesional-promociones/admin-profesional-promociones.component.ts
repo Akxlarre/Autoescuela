@@ -98,7 +98,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
             <input
               type="search"
               placeholder="Buscar por nombre o código..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               [ngModel]="searchTerm()"
               (ngModelChange)="searchTerm.set($event)"
               data-llm-description="Search promotions by name or code"

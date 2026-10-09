@@ -166,8 +166,11 @@ export class AnnouncementsFacade {
       let query = this.supabase.client
         .from('enrollments')
         .select(
-          'students!inner(user_id, users!inner(id, first_names, paternal_last_name, email, active)), courses!inner(type), status, branch_id',
-        );
+          'students!inner(user_id, status, users!inner(id, first_names, paternal_last_name, email, active)), courses!inner(type), status, branch_id',
+        )
+        // Mismo filtro que el envío (`_shared/announcement-send.ts`): a un alumno archivado
+        // no le llega, así que tampoco puede aparecer en la lista (fix-361-m).
+        .neq('students.status', 'archived');
 
       if (branchId !== null) query = query.eq('branch_id', branchId);
       if (filters.courseType) query = query.eq('courses.type', filters.courseType);
@@ -305,6 +308,9 @@ export class AnnouncementsFacade {
       this._progress.set({ total, processed, ok, failed });
 
       if (total === 0) {
+        // Se cierra igual (como enviado a 0): sin esto quedaría `enviando` hasta que el
+        // dispatcher lo rescatara.
+        await this.finalizeAnnouncement(announcementId);
         this.toast.error('El segmento no tiene destinatarios. No se envió el comunicado.');
         return false;
       }
@@ -330,10 +336,17 @@ export class AnnouncementsFacade {
         this._progress.set({ total, processed, ok, failed });
       }
 
-      await this.closeAnnouncement(announcementId, ok, failed);
+      const finalized = await this.finalizeAnnouncement(announcementId);
       await this.refreshSilently();
 
-      if (failed > 0) {
+      if (!finalized) {
+        // Algún lote no salió: el comunicado sigue `enviando` y el dispatcher termina a
+        // los que faltan. Decirlo evita que se reenvíe a mano y le llegue dos veces a
+        // los que sí recibieron.
+        this.toast.warning(
+          'Parte del comunicado no alcanzó a salir. El sistema lo terminará de enviar en los próximos minutos.',
+        );
+      } else if (failed > 0) {
         this.toast.error(`Comunicado enviado con ${failed} destinatario(s) fallido(s).`);
       } else {
         this.toast.success(`Comunicado enviado a ${ok} destinatario(s).`);
@@ -375,10 +388,12 @@ export class AnnouncementsFacade {
         },
         sent_by: user?.dbId,
         template_id: draft.templateId,
-        // `enviado` es el default de la columna, así que un envío inmediato no necesita
-        // decir nada; programar sí.
-        status: draft.scheduledFor ? 'programado' : 'enviado',
+        // El inmediato nace `enviando`, no `enviado`: si la secretaria cierra la pestaña
+        // a mitad, el dispatcher lo encuentra sin latido y lo termina (fix-361-m). Antes
+        // nacía `enviado` y quedaba a medias para siempre.
+        status: draft.scheduledFor ? 'programado' : 'enviando',
         scheduled_for: draft.scheduledFor,
+        dispatch_heartbeat_at: draft.scheduledFor ? null : new Date().toISOString(),
       })
       .select('id')
       .maybeSingle();
@@ -516,15 +531,17 @@ export class AnnouncementsFacade {
     return data;
   }
 
-  private async closeAnnouncement(id: number, ok: number, failed: number): Promise<void> {
-    await this.supabase.client
-      .from('announcements')
-      .update({
-        sent_at: new Date().toISOString(),
-        email_ok_count: ok,
-        email_failed_count: failed,
-      })
-      .eq('id', id);
+  /**
+   * Pide al servidor que cierre el comunicado. Lo cierra él, con los conteos leídos de los
+   * destinatarios: lo que sumó el navegador no sirve si un lote falló o si el dispatcher
+   * terminó parte del envío. Devuelve `false` si todavía quedan pendientes.
+   */
+  private async finalizeAnnouncement(announcementId: number): Promise<boolean> {
+    const { data, error } = await this.supabase.client.functions.invoke('send-announcement', {
+      body: { announcementId, finalize: true },
+    });
+
+    return !error && data?.finalized === true;
   }
 
   private setError(err: unknown, fallback: string): void {

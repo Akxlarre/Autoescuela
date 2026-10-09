@@ -92,6 +92,39 @@ describe('AsistenciaProfesionalFacade', () => {
     expect(facade.selectedSesion()).toBeNull();
     expect(facade.asistenciaAlumnos()).toEqual([]);
   });
+
+  // fix-362-m: al cancelar una sesión se borra su asistencia; ese borrado no se revisaba.
+  describe('editarSesion al cancelar (fix-362-m)', () => {
+    const sesion = { id: 7, tipo: 'theory', status: 'scheduled' } as any;
+
+    beforeEach(() => {
+      toastSpy.warning = vi.fn();
+      vi.spyOn(facade as any, 'fetchSesiones').mockResolvedValue(undefined);
+    });
+
+    it('si no se puede borrar la asistencia, avisa en vez de decir "Sesión actualizada"', async () => {
+      supabaseSpy.client.from().delete.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'denied' } }),
+      });
+
+      const ok = await facade.editarSesion(sesion, { status: 'cancelled' });
+
+      expect(ok).toBe(true);
+      expect(toastSpy.success).not.toHaveBeenCalled();
+      expect(toastSpy.warning).toHaveBeenCalledWith(
+        'Sesión cancelada',
+        expect.stringContaining('asistencia'),
+      );
+    });
+
+    it('con la asistencia borrada mantiene el aviso de éxito', async () => {
+      const ok = await facade.editarSesion(sesion, { status: 'cancelled' });
+
+      expect(ok).toBe(true);
+      expect(toastSpy.warning).not.toHaveBeenCalled();
+      expect(toastSpy.success).toHaveBeenCalledWith('Sesión actualizada');
+    });
+  });
 });
 
 /** Builder encadenable (select/in/order/eq devuelven `this`) y thenable, para `professional_promotions`. */

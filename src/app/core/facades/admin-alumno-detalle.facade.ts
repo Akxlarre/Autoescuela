@@ -25,6 +25,10 @@ import { formatPaymentConcept } from '@core/utils/ficha-pagos.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
+  isRealtimeEventForStudent,
+  type RealtimeRowChange,
+} from '@core/utils/realtime-scope.utils';
+import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
 } from '@core/utils/vehicle-document-status.utils';
@@ -197,6 +201,8 @@ export class AdminAlumnoDetalleFacade {
   // ── SWR & Realtime State ───────────────────────────────────────────────────
   private _initialized = false;
   private _lastStudentId: number | null = null;
+  /** Alumno cuya ficha está abierta, para decidir si un evento de tiempo real es suyo. */
+  private _realtimeStudentId: number | null = null;
   private _realtimeChannel: any | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público, solo lectura) ───────────────────────────────
@@ -259,45 +265,46 @@ export class AdminAlumnoDetalleFacade {
    * Incluye tablas de Clase B y Clase Profesional para cubrir ambos tipos.
    */
   setupRealtime(studentId: number): void {
+    this._realtimeStudentId = studentId;
     if (this._realtimeChannel) return;
+
+    // fix-360-m: el canal escucha las tablas completas. Solo se recarga si el cambio es del
+    // alumno de la ficha; si no, un pago o una asistencia de cualquier otro la recargaría.
+    const onChange = (change: RealtimeRowChange): void => {
+      const openStudentId = this._realtimeStudentId;
+      if (openStudentId === null) return;
+      const scope = {
+        studentId: openStudentId,
+        enrollmentIds: this._enrollmentSummaries().map((e) => e.id),
+      };
+      if (isRealtimeEventForStudent(change, scope)) void this.refreshSilently();
+    };
 
     this._realtimeChannel = this.supabase.client
       .channel(`alumno-detalle-${studentId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'absence_evidence' },
-        () => void this.refreshSilently(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'class_b_sessions' },
-        () => void this.refreshSilently(),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'absence_evidence' }, onChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_b_sessions' }, onChange)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'class_b_practice_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_theory_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_practice_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_module_grades' },
-        () => void this.refreshSilently(),
+        onChange,
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        () => void this.refreshSilently(),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, onChange)
       .subscribe();
   }
 

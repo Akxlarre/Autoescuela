@@ -434,12 +434,21 @@ export class PromocionesFacade {
       // 5. Cancelar sesiones que caen en feriados dentro del rango ya extendido
       const holidaysInRange = holidays.filter((d) => d >= payload.startDate && d <= endDate);
       if (holidaysInRange.length > 0) {
-        await Promise.all(
+        const cancelled = await Promise.all(
           createdPcIds.map((pcId) => this.cancelHolidaySessions(pcId, holidaysInRange)),
         );
-        this.toast.info(
-          `Se marcaron automáticamente ${holidaysInRange.length} feriado(s) como sesiones canceladas.`,
-        );
+        // fix-362-m: la promoción ya existe; si esto falla no se lanza (el catch diría que no
+        // se creó). Antes el aviso de "feriados marcados" salía aunque no se hubiera marcado nada.
+        if (cancelled.every(Boolean)) {
+          this.toast.info(
+            `Se marcaron automáticamente ${holidaysInRange.length} feriado(s) como sesiones canceladas.`,
+          );
+        } else {
+          this.toast.warning(
+            'Feriados sin marcar',
+            'La promoción se creó, pero no se pudieron cancelar las sesiones que caen en feriado. Cancélalas a mano.',
+          );
+        }
       }
 
       this.toast.success('Promoción creada correctamente');
@@ -518,9 +527,10 @@ export class PromocionesFacade {
   /**
    * Marca como 'cancelled' todas las sesiones (teóricas y prácticas) de un
    * promotion_course que coincidan con alguna fecha de la lista de feriados.
+   * Devuelve false si alguna de las dos escrituras falló.
    */
-  private async cancelHolidaySessions(pcId: number, holidays: string[]): Promise<void> {
-    await Promise.all([
+  private async cancelHolidaySessions(pcId: number, holidays: string[]): Promise<boolean> {
+    const results = await Promise.all([
       this.supabase.client
         .from('professional_theory_sessions')
         .update({ status: 'cancelled' })
@@ -532,6 +542,7 @@ export class PromocionesFacade {
         .eq('promotion_course_id', pcId)
         .in('date', holidays),
     ]);
+    return results.every((r) => !r.error);
   }
 
   /**

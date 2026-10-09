@@ -96,6 +96,11 @@ const DUMMY_TASK: TaskRow = {
   `,
   styles: [
     `
+      /* hotfix-148-m: las pestañas de línea van a ras de la tarjeta; el desplegable, no. */
+      app-tabs.tabs-as-select {
+        padding: var(--space-3) var(--space-4) 0;
+        box-sizing: border-box;
+      }
       .custom-scrollbar::-webkit-scrollbar {
         width: 4px;
       }

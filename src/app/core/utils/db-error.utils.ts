@@ -18,6 +18,38 @@ function isPostgrestLike(err: unknown): err is PostgrestLikeError {
 }
 
 /**
+ * Una escritura terminó sin error pero no tocó ninguna fila. Con RLS es el caso normal de un
+ * UPDATE/DELETE rechazado: la policy filtra la fila y PostgREST responde 200 con `[]`.
+ */
+export class NoRowsAffectedError extends Error {
+  constructor() {
+    super('La escritura no afectó ninguna fila');
+    this.name = 'NoRowsAffectedError';
+  }
+}
+
+/**
+ * Convierte el `{ error }` de una escritura de supabase-js en una excepción.
+ *
+ * supabase-js NO lanza cuando un insert/update/delete/upsert/rpc falla: resuelve `{ error }`.
+ * Un `await` suelto descarta ese error y el flujo sigue hasta el toast de éxito. Envolver la
+ * llamada con esto deja que el `catch` del Facade lo vea.
+ *
+ * `requireRows` cubre lo que `error` no ve: un UPDATE/DELETE filtrado por RLS no devuelve error,
+ * devuelve 0 filas. Exige encadenar `.select()` en la query para que `data` traiga las filas.
+ */
+export function assertWriteOk<T extends { error: unknown; data?: unknown }>(
+  result: T,
+  options?: { requireRows?: boolean },
+): T {
+  if (result.error) throw result.error;
+  if (options?.requireRows && !(Array.isArray(result.data) && result.data.length > 0)) {
+    throw new NoRowsAffectedError();
+  }
+  return result;
+}
+
+/**
  * Traduce un error de BD a un mensaje seguro y accionable para el usuario.
  * Nunca incluye el texto original del error.
  *
@@ -25,6 +57,9 @@ function isPostgrestLike(err: unknown): err is PostgrestLikeError {
  * @param fallback Mensaje genérico contextual ("Error al inscribir al alumno").
  */
 export function toFriendlyDbMessage(err: unknown, fallback: string): string {
+  if (err instanceof NoRowsAffectedError) {
+    return 'No se aplicó el cambio: el registro ya no existe o no tienes permisos sobre él en esta sede.';
+  }
   if (!isPostgrestLike(err)) return fallback;
 
   // Tokens estables emitidos por triggers propios (RAISE EXCEPTION 'TOKEN').

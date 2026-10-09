@@ -21,9 +21,11 @@
 //   offset         : number   — desplazamiento dentro de la lista materializada
 //   batchSize      : number   — destinatarios de este lote
 //   dryRun         : boolean? — corre todo menos la entrega SMTP
+//   finalize       : boolean? — en vez de un lote, cierra el comunicado (fix-361-m)
 //
 // Respuestas:
 //   200  { recipientsTotal, processed, sent, failed, done, dryRun }
+//   200  { finalized, total, ok, failed, pending }   — con finalize
 //   400  { error: '...' }
 //   401  { error: 'No autorizado' }
 //   403  { error: '...' }
@@ -37,6 +39,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   buildEmailHtml,
+  finalizeAnnouncement,
   loadAnnouncement,
   renderTemplate,
   sendAnnouncementBatch,
@@ -91,7 +94,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Body ─────────────────────────────────────────────────────────────────
-    const { announcementId, offset, batchSize, dryRun, previewOnly, preview } = await req.json();
+    const { announcementId, offset, batchSize, dryRun, previewOnly, preview, finalize } =
+      await req.json();
 
     // ── Preview: PRIMERA GUARDA, antes de cualquier efecto ───────────────────
     //
@@ -116,12 +120,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const isFinalize = finalize === true;
     if (
       typeof announcementId !== 'number' ||
-      typeof offset !== 'number' ||
-      typeof batchSize !== 'number' ||
-      offset < 0 ||
-      batchSize <= 0
+      (!isFinalize &&
+        (typeof offset !== 'number' ||
+          typeof batchSize !== 'number' ||
+          offset < 0 ||
+          batchSize <= 0))
     ) {
       return jsonResponse({ error: 'Parámetros inválidos' }, 400);
     }
@@ -132,6 +138,14 @@ Deno.serve(async (req: Request) => {
     // La RLS no protege al service_role: la autorización de sede se comprueba acá.
     if (callerRole === 'secretary' && announcement.branch_id !== caller.branch_id) {
       return jsonResponse({ error: 'No puedes enviar comunicados de otra sede' }, 403);
+    }
+
+    // ── Cierre ───────────────────────────────────────────────────────────────
+    // Lo hace el servidor y no el navegador: los conteos salen de los destinatarios, no
+    // de lo que el navegador alcanzó a sumar, y si quedan pendientes (un lote falló) el
+    // comunicado sigue en `enviando` para que el dispatcher lo termine (fix-361-m).
+    if (isFinalize) {
+      return jsonResponse(await finalizeAnnouncement(service, announcementId));
     }
 
     // ── Envío ────────────────────────────────────────────────────────────────

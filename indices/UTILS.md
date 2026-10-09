@@ -48,7 +48,7 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
-| `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
+| `src/app/core/utils/db-error.utils.ts` | `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
@@ -117,7 +117,8 @@
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
 | `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
-| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier` |
+| `src/app/core/utils/realtime-scope.utils.ts` | `isRealtimeEventForStudent` (¿un evento de tiempo real es del alumno de la ficha? por `student_id` / `enrollment_id`; ante la duda, sí), `RealtimeRowChange`, `StudentRealtimeScope` |
+| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier` (el tier "solo ícono" exige que todas las pestañas tengan ícono) |
 | `src/app/core/utils/table-sort.utils.ts` | `SortDirection`, `TableSort`, `SortKey`, `textSortKey`, `dateSortKey`, `rutSortKey`, `sortRows`, `nextSort`, `toggleSortDirection`, `ariaSortOf`, `sortIconOf` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |

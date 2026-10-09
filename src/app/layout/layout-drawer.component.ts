@@ -70,8 +70,9 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
       #panelEl
       data-drawer-panel
       role="dialog"
+      tabindex="-1"
       [attr.aria-label]="title()"
-      class="relative z-10 flex flex-col w-full h-full bg-base rounded-tl-2xl lg:rounded-tr-2xl lg:border-t lg:border-x border-border-subtle overflow-hidden"
+      class="relative z-10 flex flex-col w-full h-full bg-base rounded-tl-2xl lg:rounded-tr-2xl lg:border-t lg:border-x border-border-subtle overflow-hidden outline-none"
       style="min-height: 0; will-change: transform;"
     >
       <!-- Header -->
@@ -186,6 +187,8 @@ export class LayoutDrawerComponent implements OnDestroy {
   readonly width = this.layoutDrawer.width;
 
   private isCurrentlyVisible = false;
+  /** Control que tenía el foco al abrirse el panel (fix-357-m). */
+  private opener: HTMLElement | null = null;
 
   /** Hay una animación de salida corriendo: el contenido todavía no se destruyó. */
   private leaving = false;
@@ -223,6 +226,11 @@ export class LayoutDrawerComponent implements OnDestroy {
 
         this.cdr.markForCheck();
 
+        // fix-357-m: se recuerda quién abrió el panel para devolverle el foco al cerrar.
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && !this.el.nativeElement.contains(active))
+          this.opener = active;
+
         // Un tick para que Angular procese el NgComponentOutlet antes de animar
         setTimeout(() => {
           const backdropEl = this.el.nativeElement.querySelector(
@@ -233,6 +241,7 @@ export class LayoutDrawerComponent implements OnDestroy {
             backdropEl ?? null,
             this.width(),
           );
+          this.focusPanel();
         }, 0);
       } else if (!open && this.isCurrentlyVisible) {
         this.isCurrentlyVisible = false;
@@ -247,10 +256,48 @@ export class LayoutDrawerComponent implements OnDestroy {
           this.leaving = false;
           this.layoutDrawer.clear();
           this.cdr.markForCheck();
+          // fix-357-m: recién ahora, con el panel fuera. Mientras estuvo abierto la pantalla de
+          // atrás pudo mostrar otra vista (tarjetas en vez de tabla) y el control que lo abrió
+          // estar oculto: un elemento oculto no recibe foco.
+          requestAnimationFrame(() => this.restoreFocusToOpener());
         });
       }
     });
   }
+
+  /**
+   * fix-357-m: el foco pasa al panel (al contenedor, no a un campo: no abre el teclado en móvil
+   * ni despliega un selector), para que el siguiente Tab caiga en su primer control y no en la
+   * pantalla de atrás. Si algo del panel ya tomó el foco, se respeta.
+   */
+  private focusPanel(): void {
+    const panel = this.el.nativeElement.querySelector('[data-drawer-panel]') as HTMLElement | null;
+    if (!panel || panel.contains(document.activeElement)) return;
+    panel.focus({ preventScroll: true });
+  }
+
+  /** Al cerrar, el foco vuelve al control que abrió el panel, si sigue en pantalla. */
+  private restoreFocusToOpener(): void {
+    const opener = this.opener;
+    this.opener = null;
+    const active = document.activeElement;
+    // Solo si el foco estaba en el panel (o en ningún lado): no se le quita a otro control.
+    const focusIsFree =
+      !active || active === document.body || this.el.nativeElement.contains(active);
+    if (opener?.isConnected && focusIsFree) opener.focus({ preventScroll: true });
+  }
+
+  /**
+   * fix-357-m: al apilar un panel sobre otro o volver ("Editar" desde el detalle, "Volver"), el
+   * control que tenía el foco se destruye y el foco cae al documento: se devuelve al panel.
+   */
+  private readonly refocusOnContentChange = effect(() => {
+    this.component();
+    if (!this.isCurrentlyVisible) return;
+    setTimeout(() => {
+      if (this.isCurrentlyVisible) this.focusPanel();
+    }, 0);
+  });
 
   ngOnDestroy(): void {
     // Garantizar que el body scroll se restaure si el componente se destruye

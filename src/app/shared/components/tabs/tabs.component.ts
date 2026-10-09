@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { pickSubnavTier, type SubnavTier } from '@core/utils/subnav-tier.utils';
+import { canUseIconTier, pickSubnavTier, type SubnavTier } from '@core/utils/subnav-tier.utils';
 
 export interface TabOption {
   id: string;
@@ -33,6 +33,11 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
   standalone: true,
   imports: [CommonModule, FormsModule, SelectModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // hotfix-148-m: quien aloja las pestañas a ras (dentro de una tarjeta) puede darles margen
+    // cuando pasan a desplegable.
+    '[class.tabs-as-select]': "variant() === 'line' && lineTier() === 'select'",
+  },
   template: `
     @if (variant() === 'line') {
       <div class="tabs-line-host" #lineHost>
@@ -359,7 +364,9 @@ export class TabsComponent {
       icon: icon.scrollWidth,
     };
 
-    const next = pickSubnavTier((t) => widths[t] <= available);
+    // fix-355-m: sin íconos, el tier "icon" siempre cabe y deja las pestañas vacías.
+    const iconTierAllowed = canUseIconTier(this.tabs());
+    const next = pickSubnavTier((t) => (t !== 'icon' || iconTierAllowed) && widths[t] <= available);
     if (next !== this.lineTier()) this.lineTier.set(next);
   }
 }

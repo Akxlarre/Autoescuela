@@ -317,6 +317,26 @@ describe('EnrollmentPaymentFacade', () => {
         );
       });
 
+      // fix-362-m: la limpieza previa (idempotencia del botón Atrás) no se revisaba; si
+      // fallaba, el insert siguiente dejaba el pago duplicado.
+      it('fix-362-m: si no se puede borrar el pago anterior, corta sin insertar otro', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        const failingDelete: any = {
+          eq: vi.fn().mockReturnThis(),
+          then: (resolve: any) => resolve({ data: null, error: { message: 'permission denied' } }),
+        };
+        builder.delete = vi.fn().mockReturnValue(failingDelete);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(false);
+        expect(builder.insert).not.toHaveBeenCalled();
+        expect(facade.error()).toContain('Error al reemplazar el pago anterior');
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
       it('NO notifica al admin en ningún caso (sin ruido, AC7)', async () => {
         const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
         mockSupabase.client.from = vi.fn().mockReturnValue(builder);

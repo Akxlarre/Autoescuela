@@ -124,7 +124,7 @@ export interface EgresadosExportRequest {
             <input
               type="text"
               placeholder="Buscar por nombre, RUT o Nº Expediente..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search graduates by name, RUT or file number"
               [ngModel]="searchTerm()"
               (ngModelChange)="onSearch($event)"

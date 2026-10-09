@@ -460,6 +460,26 @@ describe('TasksFacade', () => {
         }),
       );
     });
+
+    it('fix-362-m: si el UPDATE falla, avisa en vez de fallar en silencio', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'Update error' }),
+      );
+      await facade.markSeen('uuid-1');
+      expect(mockToast.error).toHaveBeenCalledWith('No se pudo marcar la observación como vista');
+    });
+
+    it('fix-362-m: si la RLS filtra la tarea (0 filas, sin error), también avisa', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([]));
+      await facade.markSeen('uuid-1');
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it('fix-362-m: con la fila actualizada no muestra error', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
+      await facade.markSeen('uuid-1');
+      expect(mockToast.error).not.toHaveBeenCalled();
+    });
   });
 
   // ── addReply() — AC8 ────────────────────────────────────────────────────────
@@ -482,6 +502,23 @@ describe('TasksFacade', () => {
       expect(questionBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'in_progress' }),
       );
+    });
+
+    it('fix-362-m: si la respuesta se guarda pero el estado no avanza, avisa sin reportar fallo de envío', async () => {
+      const okBuilder = createMockQueryBuilder([
+        makeRawDbTask({ type: 'question', status: 'pending' }),
+      ]);
+      mockSupabase.client.from.mockReturnValue(okBuilder);
+      await facade.initialize();
+
+      const failingUpdate = createMockQueryBuilder(null, { message: 'Update error' });
+      okBuilder.update.mockReturnValue(failingUpdate);
+
+      const result = await facade.addReply('uuid-1', 'Primera respuesta');
+
+      expect(result).toBe(true);
+      expect(mockToast.error).not.toHaveBeenCalled();
+      expect(mockToast.warning).toHaveBeenCalledWith('Respuesta enviada', expect.any(String));
     });
 
     it('calls refreshSilently after successful insert', async () => {

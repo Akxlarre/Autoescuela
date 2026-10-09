@@ -7,6 +7,11 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { todayIso } from '@core/utils/date.utils';
+import {
+  NoRowsAffectedError,
+  assertWriteOk,
+  toFriendlyDbMessage,
+} from '@core/utils/db-error.utils';
 import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
@@ -156,7 +161,11 @@ export class AsistenciaClaseBFacade {
           .eq('id', row.enrollmentId!)
           .single();
 
-        if (enrollment) {
+        // fix-362-m: sin la matrícula no hay a quién registrarle la asistencia; antes se
+        // saltaba el upsert y el toast decía "marcada" igual.
+        if (!enrollment) throw new NoRowsAffectedError();
+
+        assertWriteOk(
           await this.supabase.client.from('class_b_practice_attendance').upsert(
             {
               class_b_session_id: sessionId,
@@ -172,15 +181,19 @@ export class AsistenciaClaseBFacade {
               recorded_at: new Date().toISOString(),
             },
             { onConflict: 'class_b_session_id,student_id' },
-          );
-        }
+          ),
+        );
       }
 
       if (sessionStatus) {
-        await this.supabase.client
-          .from('class_b_sessions')
-          .update({ status: sessionStatus })
-          .eq('id', sessionId);
+        assertWriteOk(
+          await this.supabase.client
+            .from('class_b_sessions')
+            .update({ status: sessionStatus })
+            .eq('id', sessionId)
+            .select('id'),
+          { requireRows: true },
+        );
       }
 
       this._clasesPracticas.update((rows) =>
@@ -192,8 +205,8 @@ export class AsistenciaClaseBFacade {
       if (dbStatus === 'absent' && row.enrollmentId) {
         await this.applyAbsencePenalty(row.enrollmentId, row.alumnoName);
       }
-    } catch {
-      this.toast.error('Error al registrar la asistencia');
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la asistencia'));
     } finally {
       this._isSaving.set(false);
     }
@@ -212,15 +225,21 @@ export class AsistenciaClaseBFacade {
         .eq('id', row.enrollmentId)
         .single();
 
-      if (enrollment) {
+      if (!enrollment) throw new NoRowsAffectedError();
+
+      // fix-362-m: requireRows — si no hay fila de asistencia vigente (o la RLS la filtra), el
+      // update no toca nada y sin esto el toast decía "Justificación registrada" igual.
+      assertWriteOk(
         await this.supabase.client
           .from('class_b_practice_attendance')
           .update({ justification: reason, status: 'excused' })
           .eq('class_b_session_id', sessionId)
           .eq('student_id', enrollment.student_id)
           // fix-191-m: nunca reescribir el registro histórico de una ocurrencia ya reagendada.
-          .is('archived_at', null);
-      }
+          .is('archived_at', null)
+          .select('id'),
+        { requireRows: true },
+      );
 
       this._clasesPracticas.update((rows) =>
         rows.map((r) =>
@@ -228,8 +247,8 @@ export class AsistenciaClaseBFacade {
         ),
       );
       this.toast.success('Justificación registrada');
-    } catch {
-      this.toast.error('Error al registrar la justificación');
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la justificación'));
     } finally {
       this._isSaving.set(false);
     }
@@ -449,16 +468,24 @@ export class AsistenciaClaseBFacade {
 
       if (error) throw error;
 
+      // fix-362-m: a esta altura la clase YA quedó finalizada. Si falla el KM o la asistencia no
+      // se lanza (el catch diría "Error al finalizar la clase" sobre una clase finalizada): se
+      // avisa qué quedó sin guardar.
+      const pendientes: string[] = [];
+
       const vehicleId = this._selectedPractica()?.vehicleId;
       if (vehicleId) {
-        await this.supabase.client
+        // .select() + filas: un vehículo de otra sede lo filtra la RLS sin devolver error.
+        const km = await this.supabase.client
           .from('vehicles')
           .update({ current_km: payload.kmEnd })
-          .eq('id', vehicleId);
+          .eq('id', vehicleId)
+          .select('id');
+        if (km.error || !km.data?.length) pendientes.push('el kilometraje del vehículo');
       }
 
       if (payload.studentId) {
-        await this.supabase.client.from('class_b_practice_attendance').upsert(
+        const attendance = await this.supabase.client.from('class_b_practice_attendance').upsert(
           {
             class_b_session_id: payload.sessionId,
             student_id: payload.studentId,
@@ -468,6 +495,7 @@ export class AsistenciaClaseBFacade {
           },
           { onConflict: 'class_b_session_id,student_id' },
         );
+        if (attendance.error) pendientes.push('la asistencia del alumno');
       }
 
       const finHHmm = new Date().toTimeString().slice(0, 5);
@@ -479,7 +507,14 @@ export class AsistenciaClaseBFacade {
         ),
       );
       this.computeKpis(this._clasesPracticas(), this._alertas());
-      this.toast.success('Clase finalizada', 'Evaluación y asistencia registradas.');
+      if (pendientes.length > 0) {
+        this.toast.warning(
+          'Clase finalizada, con datos sin guardar',
+          `No se pudo actualizar ${pendientes.join(' ni ')}. Avisa al administrador.`,
+        );
+      } else {
+        this.toast.success('Clase finalizada', 'Evaluación y asistencia registradas.');
+      }
     } catch {
       this.toast.error('Error al finalizar la clase');
       throw new Error('finishClass failed');
@@ -500,12 +535,21 @@ export class AsistenciaClaseBFacade {
     enrollmentId: number,
     alumnoName: string | null,
   ): Promise<void> {
-    const { data: cancelledCount } = await this.supabase.client.rpc(
+    const { data: cancelledCount, error } = await this.supabase.client.rpc(
       'apply_class_b_absence_penalty',
       { p_enrollment_id: enrollmentId },
     );
 
     await this.refreshAlertasSilently();
+
+    // fix-362-m: la falta ya quedó registrada; lo que no se sabe es si se aplicó la regla.
+    if (error) {
+      this.toast.warning(
+        'No se pudo revisar la penalización',
+        `La inasistencia de ${alumnoName ?? 'el alumno'} quedó registrada, pero no se pudo verificar si corresponde cancelar su agenda.`,
+      );
+      return;
+    }
 
     // spec 0048-b: -1 = la cancelación automática está desactivada en la sede. Si el alumno
     // igual quedó con 2 faltas seguidas, se avisa que su agenda NO se canceló (AC-E2).

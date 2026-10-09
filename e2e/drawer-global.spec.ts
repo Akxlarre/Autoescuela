@@ -25,6 +25,28 @@ test('F03/Y05: Escape cierra el drawer, que se anuncia como diálogo', async ({ 
   await expect(page.locator(PANEL)).toBeHidden({ timeout: 10_000 });
 });
 
+test('fix-357-m: el foco entra al panel al abrirlo y vuelve a su botón al cerrarlo', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('/app/admin/clase-profesional/promociones');
+  const ver = page.locator('[data-llm-action="ver-promocion"]').first();
+  await ver.click({ timeout: 30_000 });
+  await expect(page.locator(PANEL)).toBeVisible();
+
+  const focoEnPanel = () => page.evaluate((sel) => !!document.activeElement?.closest(sel), PANEL);
+  await expect.poll(focoEnPanel, { message: 'foco dentro del panel al abrir' }).toBe(true);
+  // El primer Tab cae en un control del panel, no en la pantalla de atrás.
+  await page.keyboard.press('Tab');
+  expect(await focoEnPanel(), 'foco dentro del panel tras Tab').toBe(true);
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('BUTTON');
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator(PANEL)).toBeHidden({ timeout: 10_000 });
+  await expect(ver).toBeFocused();
+});
+
 test('F04: ir a otra pantalla por el menú cierra el drawer', async ({ pageAs }) => {
   const page = await pageAs('admin');
   await page.goto('/app/admin/dashboard');

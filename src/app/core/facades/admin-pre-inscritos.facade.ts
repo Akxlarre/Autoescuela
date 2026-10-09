@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { assertWriteOk } from '@core/utils/db-error.utils';
 import type { ProfessionalPreRegistration } from '@core/models/dto/professional-pre-registration.model';
 import type { ProfessionalPromotion } from '@core/models/dto/professional-promotion.model';
 import type { PromotionCourse } from '@core/models/dto/promotion-course.model';
@@ -241,14 +242,18 @@ export class AdminPreInscritosFacade {
         .eq('name', 'student')
         .single();
 
-      await this.supabase.client
-        .from('users')
-        .update({
-          role_id: roles?.id ?? null,
-          active: true,
-          branch_id: preReg.branchId,
-        })
-        .eq('id', preReg.tempUserId);
+      // fix-362-m: sin revisar, la matrícula se creaba sobre un usuario que seguía inactivo
+      // y sin rol. Va antes de crear la matrícula, así que cortar acá no deja nada a medias.
+      assertWriteOk(
+        await this.supabase.client
+          .from('users')
+          .update({
+            role_id: roles?.id ?? null,
+            active: true,
+            branch_id: preReg.branchId,
+          })
+          .eq('id', preReg.tempUserId),
+      );
 
       // 3. Generar número de matrícula y crear enrollment
       const enrollmentNumber = await this.generateEnrollmentNumber(payload.courseId);
@@ -317,16 +322,29 @@ export class AdminPreInscritosFacade {
       const docsUploaded = await this.uploadEnrollmentDocuments(enrollmentId, payload);
 
       // Si se subieron los obligatorios, marcar docs_complete
+      // fix-362-m: de acá en adelante la matrícula ya existe, así que un fallo no se lanza
+      // (reintentar crearía otra matrícula): se junta lo que no quedó guardado y se avisa.
+      const pendientes = [...docsUploaded.failed];
+
       if (docsUploaded.carnet && docsUploaded.hvc) {
-        await this.supabase.client
+        const { error: docsCompleteError } = await this.supabase.client
           .from('enrollments')
           .update({ docs_complete: true })
           .eq('id', enrollmentId);
+        if (docsCompleteError) pendientes.push('la marca de documentación completa');
       }
 
       // 6. Subir contrato firmado si se proporcionó
       if (payload.contractFile) {
-        await this.uploadContractFile(enrollmentId, payload.contractFile);
+        const contractSaved = await this.uploadContractFile(enrollmentId, payload.contractFile);
+        if (!contractSaved) pendientes.push('el contrato firmado');
+      }
+
+      if (pendientes.length > 0) {
+        this.toast.warning(
+          'Matrícula creada, con datos sin guardar',
+          `No se pudo guardar: ${pendientes.join(', ')}. Súbelos de nuevo desde la ficha.`,
+        );
       }
 
       await this.refreshSilently();
@@ -382,15 +400,22 @@ export class AdminPreInscritosFacade {
     this._isSaving.set(true);
     this._error.set(null);
     try {
-      await this.uploadContractFile(enrollmentId, file);
+      // fix-362-m: antes devolvía true aunque el contrato no se hubiera subido ni registrado.
+      const contractSaved = await this.uploadContractFile(enrollmentId, file);
+      if (!contractSaved) {
+        this._error.set('No se pudo guardar el contrato firmado. Inténtalo de nuevo.');
+        return false;
+      }
 
       // Marcar la pre-inscripción como completamente matriculada
       const preReg = this._preInscritos().find((p) => p.convertedEnrollmentId === enrollmentId);
       if (preReg) {
-        await this.supabase.client
-          .from('professional_pre_registrations')
-          .update({ status: 'enrolled' })
-          .eq('id', preReg.id);
+        assertWriteOk(
+          await this.supabase.client
+            .from('professional_pre_registrations')
+            .update({ status: 'enrolled' })
+            .eq('id', preReg.id),
+        );
       }
 
       // Refrescar lista silenciosamente — el alumno desaparece del listado
@@ -555,8 +580,9 @@ export class AdminPreInscritosFacade {
   private async uploadEnrollmentDocuments(
     enrollmentId: number,
     payload: CompletarMatriculaPayload,
-  ): Promise<{ carnet: boolean; hvc: boolean }> {
-    const result = { carnet: false, hvc: false };
+  ): Promise<{ carnet: boolean; hvc: boolean; failed: string[] }> {
+    // failed (fix-362-m): documentos que no quedaron guardados, para avisarlo en vez de callar.
+    const result = { carnet: false, hvc: false, failed: [] as string[] };
 
     // Foto carnet (obligatoria)
     if (payload.carnetPhotoFile) {
@@ -567,7 +593,7 @@ export class AdminPreInscritosFacade {
           .from('documents')
           .upload(filePath, photoFile, { upsert: true });
         if (!error) {
-          await this.supabase.client.from('student_documents').upsert(
+          const { error: docError } = await this.supabase.client.from('student_documents').upsert(
             {
               enrollment_id: enrollmentId,
               type: 'id_photo',
@@ -578,7 +604,10 @@ export class AdminPreInscritosFacade {
             },
             { onConflict: 'enrollment_id,type' },
           );
-          result.carnet = true;
+          if (docError) result.failed.push('la foto carnet');
+          else result.carnet = true;
+        } else {
+          result.failed.push('la foto carnet');
         }
       } catch {
         /* no-op, carnet opcional en upload pero requerido en UI */
@@ -593,7 +622,7 @@ export class AdminPreInscritosFacade {
           .from('documents')
           .upload(filePath, payload.hvcFile, { upsert: true });
         if (!error) {
-          await this.supabase.client.from('student_documents').upsert(
+          const { error: docError } = await this.supabase.client.from('student_documents').upsert(
             {
               enrollment_id: enrollmentId,
               type: 'hoja_vida_conductor',
@@ -605,7 +634,10 @@ export class AdminPreInscritosFacade {
             },
             { onConflict: 'enrollment_id,type' },
           );
-          result.hvc = true;
+          if (docError) result.failed.push('la hoja de vida del conductor');
+          else result.hvc = true;
+        } else {
+          result.failed.push('la hoja de vida del conductor');
         }
       } catch {
         /* no-op */
@@ -620,7 +652,7 @@ export class AdminPreInscritosFacade {
           .from('documents')
           .upload(filePath, payload.cedulaFile, { upsert: true });
         if (!error) {
-          await this.supabase.client.from('student_documents').upsert(
+          const { error: docError } = await this.supabase.client.from('student_documents').upsert(
             {
               enrollment_id: enrollmentId,
               type: 'cedula_identidad',
@@ -631,6 +663,9 @@ export class AdminPreInscritosFacade {
             },
             { onConflict: 'enrollment_id,type' },
           );
+          if (docError) result.failed.push('la cédula de identidad');
+        } else {
+          result.failed.push('la cédula de identidad');
         }
       } catch {
         /* no-op */
@@ -645,7 +680,7 @@ export class AdminPreInscritosFacade {
           .from('documents')
           .upload(filePath, payload.licenciaFile, { upsert: true });
         if (!error) {
-          await this.supabase.client.from('student_documents').upsert(
+          const { error: docError } = await this.supabase.client.from('student_documents').upsert(
             {
               enrollment_id: enrollmentId,
               type: 'licencia_conducir',
@@ -656,6 +691,9 @@ export class AdminPreInscritosFacade {
             },
             { onConflict: 'enrollment_id,type' },
           );
+          if (docError) result.failed.push('la licencia de conducir');
+        } else {
+          result.failed.push('la licencia de conducir');
         }
       } catch {
         /* no-op */
@@ -668,31 +706,36 @@ export class AdminPreInscritosFacade {
   /**
    * Sube el contrato firmado al storage y registra en digital_contracts.
    */
-  private async uploadContractFile(enrollmentId: number, file: File): Promise<void> {
+  private async uploadContractFile(enrollmentId: number, file: File): Promise<boolean> {
     try {
       const filePath = `contracts/${enrollmentId}/signed_contract`;
       const { error } = await this.supabase.client.storage
         .from('documents')
         .upload(filePath, file, { upsert: true });
-      if (error) return;
+      if (error) return false;
 
       const now = new Date().toISOString();
-      await this.supabase.client.from('digital_contracts').upsert(
-        {
-          enrollment_id: enrollmentId,
-          file_name: file.name,
-          file_url: filePath,
-          accepted_at: now,
-        },
-        { onConflict: 'enrollment_id' },
+      assertWriteOk(
+        await this.supabase.client.from('digital_contracts').upsert(
+          {
+            enrollment_id: enrollmentId,
+            file_name: file.name,
+            file_url: filePath,
+            accepted_at: now,
+          },
+          { onConflict: 'enrollment_id' },
+        ),
       );
 
-      await this.supabase.client
-        .from('enrollments')
-        .update({ contract_accepted: true })
-        .eq('id', enrollmentId);
+      assertWriteOk(
+        await this.supabase.client
+          .from('enrollments')
+          .update({ contract_accepted: true })
+          .eq('id', enrollmentId),
+      );
+      return true;
     } catch {
-      /* no-op */
+      return false;
     }
   }
 
