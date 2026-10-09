@@ -78,6 +78,7 @@
 | `src/app/core/utils/instructor-create-branch.utils.ts` | `InstructorCreateBranch`, `resolveInstructorCreateBranch` |
 | `src/app/core/utils/instructor-deactivation.utils.ts` | `instructorDeactivationNotices`, `instructorBranchChangeNotice` |
 | `src/app/core/utils/instructor-doc-types.util.ts` | `INSTRUCTOR_DOC_TYPES` |
+| `src/app/core/utils/instructor-invite.utils.ts` | `instructorCreatedToast` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |

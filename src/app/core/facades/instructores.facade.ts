@@ -8,6 +8,8 @@ import { chileDayRange, chileParts, chileYear } from '@core/utils/chile-time.uti
 import { todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { instructorCreatedToast } from '@core/utils/instructor-invite.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -658,8 +660,10 @@ export class InstructoresFacade {
   async crearInstructor(payload: CrearInstructorPayload): Promise<number | null> {
     this._isSubmitting.set(true);
     try {
+      // fix-214-b (H06): sin invitación mientras el portal de instructores esté en piloto.
+      const sendInvite = !isBlockedInPilot('instructor');
       const { data, error } = await this.supabase.client.functions.invoke('create-instructor', {
-        body: payload,
+        body: { ...payload, sendInvite },
       });
 
       // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
@@ -674,7 +678,9 @@ export class InstructoresFacade {
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
 
-      this.toast.success('Instructor creado', 'La cuenta ha sido creada correctamente.');
+      // fix-214-b (C29): si el correo de invitación no salió, el admin se entera.
+      const aviso = instructorCreatedToast(sendInvite, data?.inviteEmailSent);
+      this.toast[aviso.kind](aviso.summary, aviso.detail);
       this._vehiclesLoaded = false;
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       return (data?.instructorId as number | undefined) ?? null;
