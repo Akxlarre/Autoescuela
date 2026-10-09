@@ -1,6 +1,6 @@
 # Asignación ASG-i-047 — RPC `SECURITY DEFINER` y registro de auditoría abiertos a cualquier usuario logueado
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
