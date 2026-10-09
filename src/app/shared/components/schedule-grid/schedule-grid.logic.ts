@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 // Núcleo funcional de la grilla de horarios (funciones puras, Data In → Data Out).
 // Testeable sin levantar Angular. Lo consume ScheduleGridComponent.
 
@@ -13,9 +14,9 @@ import type {
  * garantizar el mismo formato en flujo público y admin/secretaria.
  */
 export function formatDayShort(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  const weekday = d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '');
-  return `${weekday} ${d.getDate()}/${d.getMonth() + 1}`;
+  const weekday = formatChileDate(dateStr, { weekday: 'short' }).replace('.', '');
+  const [, month, day] = dateStr.split('-').map(Number);
+  return `${weekday} ${day}/${month}`;
 }
 
 /** Cuántos slots seleccionados pertenecen a una fecha dada. */

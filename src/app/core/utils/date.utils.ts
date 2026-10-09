@@ -2,66 +2,48 @@
  * Centralized date and currency utilities for the project (Target: es-CL).
  */
 
-/** Returns today's date as YYYY-MM-DD string in local time. */
+import {
+  addMonthsIso,
+  chileToday,
+  formatChileDate,
+  formatChileTime,
+  isoToCalendarDate,
+  toChileDate,
+} from './chile-time.utils';
+
+/** Hoy en Chile, 'YYYY-MM-DD'. No depende del reloj ni de la zona del equipo. */
 export function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return chileToday();
 }
 
-/** Returns the ISO date (YYYY-MM-DD) that is `months` months before today, in local time. */
+/** Fecha 'YYYY-MM-DD' que está `months` meses antes de hoy (hoy en Chile). */
 export function monthsAgoIso(months: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - months);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return addMonthsIso(chileToday(), -months);
 }
 
 /**
- * Returns a date string in YYYY-MM-DD format (ISO local).
- * Replaces the 'en-CA' locale trick.
- */
-export function toISODate(date: Date | string): string {
-  const d =
-    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
-  if (isNaN(d.getTime())) return '';
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-/**
- * Fecha para mostrar como dd-mm-aaaa (hora local). "—" si no hay fecha o no es válida.
+ * Fecha para mostrar como dd-mm-aaaa (día de Chile). "—" si no hay fecha o no es válida.
  */
 export function formatDayMonthYear(date: string | null | undefined): string {
   if (!date) return '—';
-  const iso = toISODate(date);
+  const iso = toChileDate(date);
   if (!iso) return '—';
   const [yyyy, mm, dd] = iso.split('-');
   return `${dd}-${mm}-${yyyy}`;
 }
 
-/** Converts an ISO date string ('YYYY-MM-DD') to a local Date. Returns null if empty or invalid. */
+/**
+ * Fecha pura ('YYYY-MM-DD') → Date de calendario para un selector de fechas.
+ * Devuelve null si está vacía o no es válida.
+ */
 export function isoToDate(iso: string): Date | null {
-  if (!iso) return null;
-  const d = new Date(iso + 'T12:00:00');
-  return isNaN(d.getTime()) ? null : d;
+  return isoToCalendarDate(iso);
 }
 
-/**
- * Returns a time string in HH:MM format (24h).
- * Replaces the 'en-GB' locale trick.
- */
+/** Hora de pared de Chile 'HH:MM' (24 horas) de un instante. '' si no es válido. */
 export function to24hTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
-
-  return d.toLocaleTimeString('es-CL', {
-    timeZone: 'America/Santiago',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const time = formatChileTime(date);
+  return time === '—' ? '' : time;
 }
 
 /** Adds `minutes` to a 'HH:MM' time string, wrapping past midnight. */
@@ -81,12 +63,7 @@ export function formatChileanDate(
   date: Date | string | null | undefined,
   options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' },
 ): string {
-  if (!date) return '—';
-  const d =
-    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
-  if (isNaN(d.getTime())) return '—';
-
-  return d.toLocaleDateString('es-CL', options);
+  return formatChileDate(date, options);
 }
 
 /**
@@ -101,12 +78,11 @@ export function capitalize(s: string): string {
  * Returns a human-readable day label (e.g., "Lun 14 Mar").
  */
 export function buildDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  if (isNaN(d.getTime())) return '—';
+  if (!toChileDate(dateStr)) return '—';
 
-  const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' });
-  const dayNum = d.toLocaleDateString('es-CL', { day: 'numeric' });
-  const month = d.toLocaleDateString('es-CL', { month: 'short' });
+  const dayName = formatChileDate(dateStr, { weekday: 'short' });
+  const dayNum = formatChileDate(dateStr, { day: 'numeric' });
+  const month = formatChileDate(dateStr, { month: 'short' });
 
   return `${capitalize(dayName)} ${dayNum} ${capitalize(month).replace('.', '')}`;
 }
@@ -120,31 +96,4 @@ export function formatCLP(amount: number): string {
     currency: 'CLP',
     minimumFractionDigits: 0,
   }).format(amount);
-}
-
-/**
- * Returns UTC-anchored ISO start/end timestamps for a full day in Chile (America/Santiago).
- * Handles CLT (UTC-4) and CLST (UTC-3) automatically.
- *
- * Example (CLT, UTC-4):
- *   getChileDateTimeRange('2026-04-27')
- *   → { start: '2026-04-27T00:00:00-04:00', end: '2026-04-27T23:59:59-04:00' }
- *
- * Use in Supabase .gte/.lte filters so PostgreSQL interprets times in Santiago timezone,
- * not UTC — prevents evening payments being silently excluded.
- */
-export function getChileDateTimeRange(isoDate: string): { start: string; end: string } {
-  // Sample noon UTC on that date to determine the Santiago offset without DST ambiguity.
-  const sampleDate = new Date(`${isoDate}T12:00:00Z`);
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone: 'America/Santiago',
-    timeZoneName: 'shortOffset',
-  }).formatToParts(sampleDate);
-  const raw = parts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-4';
-  const m = raw.match(/GMT([+-])(\d+)/);
-  const offset = m ? `${m[1]}${m[2].padStart(2, '0')}:00` : '-04:00';
-  return {
-    start: `${isoDate}T00:00:00${offset}`,
-    end: `${isoDate}T23:59:59${offset}`,
-  };
 }

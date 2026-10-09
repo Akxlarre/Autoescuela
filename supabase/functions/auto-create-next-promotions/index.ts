@@ -76,8 +76,8 @@ const MONTH_NAMES = [
 
 /** Espejo de `generatePromoName()` en `admin-promocion-crear-drawer.component.ts` (creación manual). */
 function formatStartDateLabel(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return `${d.getDate()} de ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  const [year, month, day] = iso.split('-').map(Number);
+  return `${day} de ${MONTH_NAMES[month - 1]} ${year}`;
 }
 
 async function cancelHolidaySessions(

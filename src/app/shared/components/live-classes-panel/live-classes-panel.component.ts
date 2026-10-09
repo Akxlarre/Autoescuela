@@ -1,3 +1,4 @@
+import { formatChileDate, formatChileTime } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -375,14 +376,12 @@ export class LiveClassesPanelComponent {
 
   formatShortDate(isoString: string): string {
     if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }).replace('.', '');
+    return formatChileDate(isoString, { day: '2-digit', month: 'short' }).replace('.', '');
   }
 
   formatTime(isoString: string): string {
     if (!isoString) return '00:00';
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return formatChileTime(isoString);
   }
 
   getRelativeTime(isoString: string, status: string, overdue = false): string {

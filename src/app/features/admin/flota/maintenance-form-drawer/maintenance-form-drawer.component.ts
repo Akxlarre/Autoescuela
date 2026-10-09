@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { todayIso } from '@core/utils/date.utils';
 import {
   FormsModule,
   NonNullableFormBuilder,
@@ -239,7 +240,7 @@ export class MaintenanceFormDrawerComponent {
     type: ['', Validators.required],
     km_at_time: [0, [Validators.required, Validators.min(0)]],
     workshop: [''],
-    completed_date: [new Date().toISOString().split('T')[0], Validators.required],
+    completed_date: [todayIso(), Validators.required],
     cost: [0, [Validators.required, Validators.min(0)]],
     description: [''],
   });
@@ -265,7 +266,7 @@ export class MaintenanceFormDrawerComponent {
           type: '',
           km_at_time: v?.currentKm ?? 0,
           workshop: '',
-          completed_date: new Date().toISOString().split('T')[0],
+          completed_date: todayIso(),
           cost: 0,
           description: '',
         });

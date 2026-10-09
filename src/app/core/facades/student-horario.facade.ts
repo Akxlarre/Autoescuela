@@ -2,7 +2,14 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import { toISODate, to24hTime, buildDayLabel, capitalize } from '@core/utils/date.utils';
+import {
+  addDaysIso,
+  chileToday,
+  formatChileDate,
+  mondayOfIso,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import { to24hTime, buildDayLabel, capitalize } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   StudentHorarioDay,
@@ -35,25 +42,17 @@ interface RawProfPracticeSession {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getMondayOfWeek(dateStr?: string): string {
-  const ref = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
-  const day = ref.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  ref.setDate(ref.getDate() + diff);
-  return toISODate(ref);
+  return mondayOfIso(dateStr ?? chileToday());
 }
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  return toISODate(d);
+  return addDaysIso(dateStr, days);
 }
 
 function buildWeekLabel(weekStart: string, weekEnd: string): string {
-  const s = new Date(weekStart + 'T12:00:00');
-  const e = new Date(weekEnd + 'T12:00:00');
-  const sDay = s.toLocaleDateString('es-CL', { day: 'numeric' });
-  const eDay = e.toLocaleDateString('es-CL', { day: 'numeric' });
-  const month = capitalize(e.toLocaleDateString('es-CL', { month: 'short' }).replace('.', ''));
+  const sDay = formatChileDate(weekStart, { day: 'numeric' });
+  const eDay = formatChileDate(weekEnd, { day: 'numeric' });
+  const month = capitalize(formatChileDate(weekEnd, { month: 'short' }).replace('.', ''));
   return `${sDay}–${eDay} ${month}`;
 }
 
@@ -114,7 +113,7 @@ export class StudentHorarioFacade {
   });
 
   readonly isCurrentWeek = computed(() => {
-    const today = toISODate(new Date());
+    const today = chileToday();
     const { weekStart, weekEnd } = this.weekMeta();
     return today >= weekStart && today <= weekEnd;
   });
@@ -122,7 +121,7 @@ export class StudentHorarioFacade {
   /** Días de la semana actual con sus sesiones filtradas. */
   readonly weekDays = computed((): StudentHorarioDay[] => {
     const { weekStart } = this.weekMeta();
-    const today = toISODate(new Date());
+    const today = chileToday();
     const all = this._allSessions();
 
     return Array.from({ length: 7 }, (_, i) => {
@@ -254,7 +253,7 @@ export class StudentHorarioFacade {
     if (error) throw error;
 
     const now = new Date();
-    const todayStr = toISODate(now);
+    const todayStr = chileToday(now);
     const rawSessions = (data ?? []) as unknown as RawPracticeSession[];
 
     // Encontrar la primera sesión futura
@@ -265,7 +264,7 @@ export class StudentHorarioFacade {
 
     const items: StudentHorarioSessionItem[] = rawSessions.map((s, i) => {
       const dt = new Date(s.scheduled_at);
-      const dateStr = toISODate(dt);
+      const dateStr = toChileDate(s.scheduled_at);
       return {
         id: String(s.id),
         kind: 'practice' as const,
@@ -315,7 +314,7 @@ export class StudentHorarioFacade {
     if (theoryResult.error) throw theoryResult.error;
     if (practiceResult.error) throw practiceResult.error;
 
-    const todayStr = toISODate(new Date());
+    const todayStr = chileToday();
     const rawTheory = (theoryResult.data ?? []) as RawProfTheorySession[];
     const rawPractice = (practiceResult.data ?? []) as RawProfPracticeSession[];
 

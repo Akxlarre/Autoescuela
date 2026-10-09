@@ -11,7 +11,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
@@ -52,7 +52,7 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     FormsModule,
     SelectModule,
     TableModule,
@@ -231,8 +231,8 @@ const STATUS_ORDER: Record<PromocionStatus, number> = {
                   </td>
                   <!-- Fechas -->
                   <td class="text-xs text-text-muted whitespace-nowrap">
-                    {{ promo.startDate | date: 'dd/MM/yyyy' }} →
-                    {{ promo.endDate | date: 'dd/MM/yyyy' }}
+                    {{ promo.startDate | chileDate: 'dd/MM/yyyy' }} →
+                    {{ promo.endDate | chileDate: 'dd/MM/yyyy' }}
                   </td>
                   <!-- Alumnos -->
                   <td class="text-xs text-text-secondary whitespace-nowrap">

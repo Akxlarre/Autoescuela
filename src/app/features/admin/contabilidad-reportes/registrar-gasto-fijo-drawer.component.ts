@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
@@ -240,7 +241,7 @@ export class RegistrarGastoFijoDrawerComponent {
     category: this.fb.nonNullable.control('', Validators.required),
     description: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3)]),
     amount: this.fb.nonNullable.control(0, [Validators.required, Validators.min(1)]),
-    date: this.fb.nonNullable.control(new Date().toISOString().slice(0, 10), Validators.required),
+    date: this.fb.nonNullable.control(todayIso(), Validators.required),
   });
 
   protected async onGuardar(): Promise<void> {

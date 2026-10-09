@@ -954,11 +954,21 @@
   desaparecer "Mis Clases de Hoy" (incluida una clase recién iniciada) pasadas las 21:00.
   Ya había pasado antes con pagos nocturnos, resuelto con `getChileDateTimeRange()`
   (`core/utils/date.utils.ts`) — este fix repitió el mismo error en un facade distinto.
-- **Regla de aplicabilidad:** todo filtro de "hoy"/"este rango de días" sobre una columna
-  `timestamptz` debe construirse con `todayIso()` + `getChileDateTimeRange()` (o el
-  offset explícito de Santiago), nunca con `toISOString()` crudo — sin excepción, incluso
-  si el bug "solo" se manifiesta de noche.
-- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
+- **Regla de aplicabilidad:** aplica a cualquier código (app, edge function o SQL) que
+  convierta un instante en un día, o un día en un rango de instantes. Hay dos tipos y nada
+  más: **instante** (`timestamptz`, `Date`, ISO con zona) y **fecha pura** (`date`,
+  `'YYYY-MM-DD'`). La conversión entre ambos pasa siempre por el módulo de hora de Chile de
+  su capa: `core/utils/chile-time.utils.ts` en la app, `_shared/chile-time.ts` en edge
+  functions, `public.chile_today()` / `chile_date()` / `chile_day_start()` en SQL. "Hoy" es
+  `chileToday()`; un día sobre una columna `timestamptz` es el rango semiabierto
+  `chileDayRange(dia)` con `.gte(start)` y `.lt(endExclusive)`; una diferencia en días es
+  `diffDaysIso()` entre fechas puras, no una resta de instantes. No aplica a medir una
+  duración entre dos instantes (cuánto falta para `expires_at`), que no es un día de
+  calendario. `getChileDateTimeRange()` ya no existe: tenía el fin en `23:59:59` y tomaba el
+  desfase a mediodía. Lo hace cumplir `npm run lint:arch` (ARCH-27 y ARCH-28); las
+  excepciones van en `scripts/lib/date-discipline.allowlist.json` con su justificación.
+- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone` (el caso
+  original) y `specs/specs/0024-m-fechas-de-negocio-en-hora-de-chile` (la normalización)
 
 ### DG-072 — Un `storage.upload(..., { upsert: true })` necesita policy SELECT además de INSERT/UPDATE, o sigue dando 403 aunque ambas estén bien
 - **Trampa:** dar de alta las policies `FOR INSERT WITH CHECK` y `FOR UPDATE USING/WITH CHECK`

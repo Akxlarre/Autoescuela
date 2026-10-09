@@ -11,7 +11,8 @@ import {
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
@@ -36,7 +37,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     DecimalPipe,
     IconComponent,
     BadgeComponent,
@@ -300,7 +301,11 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                                   {{ row.classNumber }}
                                 </div>
                                 @if (row.topic) {
-                                  <span class="text-xs text-text-muted max-w-[120px] truncate" [title]="row.topic">{{ row.topic }}</span>
+                                  <span
+                                    class="text-xs text-text-muted max-w-30 truncate"
+                                    [title]="row.topic"
+                                    >{{ row.topic }}</span
+                                  >
                                 }
                               </div>
                             </td>
@@ -310,7 +315,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                                   class="font-medium font-mono text-xs"
                                   [style.color]="'var(--text-primary)'"
                                 >
-                                  {{ row.date | date: 'dd/MM/yyyy' }}
+                                  {{ row.date | chileDate: 'dd/MM/yyyy' }}
                                 </span>
                               } @else {
                                 <span class="italic" [style.color]="'var(--text-muted)'">-</span>
@@ -321,7 +326,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                               [style.color]="'var(--text-muted)'"
                             >
                               @if (row.date) {
-                                {{ row.date | date: 'HH:mm' }}
+                                {{ row.date | chileDate: 'HH:mm' }}
                               } @else {
                                 -
                               }
@@ -401,7 +406,9 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                             </div>
                             <div class="min-w-0">
                               @if (row.topic) {
-                                <span class="text-xs font-semibold text-text-primary line-clamp-1 mb-0.5">
+                                <span
+                                  class="text-xs font-semibold text-text-primary line-clamp-1 mb-0.5"
+                                >
                                   {{ row.topic }}
                                 </span>
                               }
@@ -410,12 +417,12 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                                   class="text-sm font-semibold block"
                                   [style.color]="'var(--text-primary)'"
                                 >
-                                  {{ row.date | date: 'dd MMM yyyy' }}
+                                  {{ row.date | chileDate: 'dd MMM yyyy' }}
                                 </span>
                                 <span
                                   class="text-xs font-mono"
                                   [style.color]="'var(--text-muted)'"
-                                  >{{ row.date | date: 'HH:mm' }}</span
+                                  >{{ row.date | chileDate: 'HH:mm' }}</span
                                 >
                               } @else {
                                 <span class="text-sm italic" [style.color]="'var(--text-muted)'"

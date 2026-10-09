@@ -1,3 +1,4 @@
+import { chileYear } from '../_shared/chile-time.ts';
 // supabase/functions/send-certificate-email/index.ts
 //
 // Edge Function: send-certificate-email
@@ -197,8 +198,8 @@ Deno.serve(async (req: Request) => {
     const email = studentUser.email as string;
 
     const certYear = cert.created_at
-      ? new Date(cert.created_at).getFullYear()
-      : new Date().getFullYear();
+      ? chileYear(new Date(cert.created_at))
+      : chileYear();
     const folioPrefix = tipo === 'professional' ? 'CERT-PROF' : 'CERT';
     const folio = `${folioPrefix}-${certYear}-${String(cert.folio).padStart(4, '0')}`;
 

@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -811,7 +812,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   protected readonly fechaHoy = computed(() => {
     const now = new Date();
-    return now.toLocaleDateString('es-CL', {
+    return formatChileDate(now, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

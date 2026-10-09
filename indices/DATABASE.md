@@ -118,8 +118,15 @@
 
 ## Funciones SQL
 
+> **Día de negocio = día de Chile (spec 0024-m, ARCH-28).** La sesión de la base corre en UTC: `CURRENT_DATE` y `now()::date` devuelven el día UTC, que de noche en Chile ya es mañana. Toda migración nueva usa `public.chile_today()` / `public.chile_date(instante)` / `public.chile_day_start(dia)`; `npm run lint:arch` rechaza `CURRENT_DATE`, `now()::date`, `LOCALTIMESTAMP`, `::timestamp` sin zona y columnas `timestamp without time zone`. Única excepción declarada: el CHECK `students.chk_minimum_age`. Test: `supabase/tests/timezone/0024-m-business-day.sql`.
+
 | Función | Migración | Programación | Descripción |
 |---------|-----------|--------------|-------------|
+| `chile_today()` → `date` | `20261009120000_time_fn_chile_today.sql` | — (la usan funciones, la policy `select_cash_closings` y la vista `v_class_b_schedule_availability`) | **Spec 0024-m.** Hoy en Chile (`America/Santiago`). `STABLE`. En policies y vistas se envuelve en `(SELECT public.chile_today())` para que se evalúe una sola vez. `EXECUTE` para `anon`, `authenticated`, `service_role`. |
+| `chile_date(p_instant timestamptz)` → `date` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Día de Chile de un instante. Reemplaza a `x::date` sobre un `timestamptz`. `IMMUTABLE`. |
+| `chile_day_start(p_day date)` → `timestamptz` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Primer instante de un día de Chile (resuelve la medianoche inexistente del cambio a horario de verano). Un día completo es `[chile_day_start(d), chile_day_start(d + 1))`. `IMMUTABLE`. |
+| `run_class_b_absences_cutoff()` → `boolean` | `20261009122000_time_cron_absences_2100_chile.sql` | pg_cron `mark-end-of-day-class-b-absences`: `0 0,1 * * *` (00:00 y 01:00 UTC) | **Spec 0024-m (AC12).** Envoltorio del corte de inasistencias: ejecuta `mark_end_of_day_class_b_absences()` solo en la corrida que cae a las 21 hora Chile (verano: la de las 00:00 UTC; invierno: la de las 01:00 UTC) y devuelve `true`; en la otra no hace nada (`false`). `EXECUTE` solo para `service_role`. |
+| Objetos redefinidos con `chile_today()` | `20261009121000_time_fix_business_day_objects.sql` | — | **Spec 0024-m (AC9, AC11).** `auto_transition_promotion_status()`, `auto_transition_standalone_course_status()`, `auto_transition_theory_cycle_status()`, `calculate_vehicle_document_status()` (trigger `trg_vehicle_doc_status`), `generate_license_alert()` (trigger `trg_license_alert`), `notify_vehicle_document_expiry()`, `confirm_enrollment_with_payment()` (`payment_date`), la policy `select_cash_closings` (ventana de 2 días de la secretaria) y la vista `v_class_b_schedule_availability` (los días parten de hoy en Chile + 0..28). Las descripciones de más abajo que dicen `CURRENT_DATE` se leen como `chile_today()` desde esta migración. |
 | `auto_transition_promotion_status()` | `20260330100000` | pg_cron: `0 6 * * *` (diario 06:00 UTC ≈ 03:00 CLT) | Transiciona `professional_promotions`: `planned→in_progress` cuando `start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`; `in_progress→finished` cuando `end_date < CURRENT_DATE`. Nunca toca `cancelled`. Procesa `finished` primero para cubrir el edge-case `start_date == end_date`. `SECURITY DEFINER`. |
 | `mark_end_of_day_class_b_absences()` | Definida en `20260705000000` → redefinida en `20260707000000` (ambas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | pg_cron: `0 1 * * *` (diario 01:00 UTC ≈ 21:00 CLT invierno, fin de jornada) | RF-053. Recorre `class_b_sessions` en `status='scheduled'` cuya fecha (America/Santiago) sea hoy o anterior (`ORDER BY enrollment_id, class_number` — determinismo, no afecta corrección) y las marca `status='no_show'`, insertando `class_b_practice_attendance(status='absent')` por alumno (`ON CONFLICT DO NOTHING`, idempotente). Por cada matrícula afectada invoca `apply_class_b_absence_penalty()`. Cada fila corre en su propio bloque `BEGIN/EXCEPTION` — una excepción en una fila no aborta el resto del batch. **Fix `20260709120000` (fix-028-m):** el `UPDATE ... status='no_show'` ahora exige `AND status='scheduled'` — el cursor del loop es un snapshot tomado al inicio; sin este guard, una fila cancelada por `apply_class_b_absence_penalty()` en una iteración anterior del mismo run quedaba sobreescrita de vuelta a `no_show` cuando el loop llegaba a su turno. `SECURITY DEFINER`. |
 | `apply_class_b_absence_penalty(p_enrollment_id INT)` | Definida en `20260705000000` → corregida en `20260706000000` → redefinida en `20260707000000` (todas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | Llamada por `mark_end_of_day_class_b_absences()` y por `AsistenciaClaseBFacade.markAttendance()` vía `supabase.rpc()` | RF-053: 2 inasistencias no justificadas **consecutivas** (class_number adyacente N, N+1) = pérdida de agenda. La detección (`EXISTS`) y la cancelación (`UPDATE ... status='cancelled'`) ocurren en **una sola sentencia atómica**; sin filtro de fecha — cualquier sesión `'scheduled'` de la matrícula se cancela, sin importar si su fecha ya pasó. **Fix `20260709120000` (fix-028-m):** la cancelación ahora acota `AND class_number BETWEEN 1 AND 12` — nunca cancela (ni depende de) filas fuera del rango válido de una matrícula Clase B. Retorna `INT` con la cantidad cancelada (`0` si no aplica). `SECURITY DEFINER`. **Spec 0048-b (`20261006140000`):** antes de cancelar lee `branch_absence_penalty_config` de la sede de la matrícula; sin sede, sin fila o desactivada → **`RETURN -1`** sin tocar nada (el cron la llama con `PERFORM` y lo ignora; `AsistenciaClaseBFacade` muestra "Agenda no cancelada"). Activada: solo cuentan faltas con `recorded_at >= enabled_since`. |
@@ -433,10 +440,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'd…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| select_cash_closings | SELECT | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
 
 **Índices:** `ux_cash_closings_date_branch`
 
@@ -2421,7 +2428,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261007120000_fix196_schedule_availability_rls_por_fila.sql` |
+| `v_class_b_schedule_availability` | `20261009121000_time_fix_business_day_objects.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2453,11 +2460,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cascade_promotion_status_to_courses` | `()` |
 | `check_payment_within_pending_balance` | `()` |
 | `check_standalone_course_capacity` | `()` |
+| `chile_date` | `(p_instant timestamptz)` |
+| `chile_day_start` | `(p_day date)` |
+| `chile_today` | `()` |
 | `class_b_slot_occupied` | `(p_instructor_id integer, p_vehicle_id integer, p_slot_start timestamptz, p_slot_end timestamptz)` |
 | `cleanup_expired_drafts` | `()` |
 | `cleanup_expired_public_enrollment` | `()` |
 | `cleanup_public_enrollment_throttle` | `()` |
-| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL, p_is_deposit boolean DEFAULT false)` |
+| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL::integer, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL::integer, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
 | `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
@@ -2491,6 +2501,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `request_client_ip` | `()` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
+| `run_class_b_absences_cutoff` | `()` |
 | `secretary_extra_visible_user_ids` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `set_enrollment_completed_at` | `()` |

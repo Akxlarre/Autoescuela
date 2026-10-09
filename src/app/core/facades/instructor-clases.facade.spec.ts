@@ -3,7 +3,6 @@ import { InstructorClasesFacade } from './instructor-clases.facade';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
-import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
 
 describe('InstructorClasesFacade', () => {
   let facade: InstructorClasesFacade;
@@ -209,12 +208,16 @@ describe('InstructorClasesFacade', () => {
         const chain = makeThenableChain({ data: [], error: null });
         supabaseMock.client.from = vi.fn().mockReturnValue(chain);
 
-        const { start, end } = getChileDateTimeRange(todayIso());
+        // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
 
         await facade.fetchTodayClasses();
+        vi.useRealTimers();
 
-        expect(chain.gte).toHaveBeenCalledWith('scheduled_at', start);
-        expect(chain.lte).toHaveBeenCalledWith('scheduled_at', end);
+        // Rango semiabierto del día 6 en Chile (UTC-3): [06 03:00Z, 07 03:00Z).
+        expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+        expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T03:00:00.000Z');
         // Regresión: NUNCA debe usar el límite crudo en UTC (`+00:00`), que corta
         // las clases de la noche cuando Chile todavía está en "hoy" pero UTC ya
         // avanzó a "mañana".

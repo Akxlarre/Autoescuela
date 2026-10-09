@@ -348,10 +348,9 @@ describe('ExAlumnosFacade', () => {
       await facade.loadEgresados();
 
       const egresado = facade.egresadosClaseBList()[0];
-      const local = new Date('2026-01-01T02:30:00Z');
-      expect(egresado.anio).toBe(local.getFullYear());
-      expect(egresado.fechaEgreso?.slice(0, 4)).toBe(String(local.getFullYear()));
-      expect(Number(egresado.fechaEgreso?.slice(8, 10))).toBe(local.getDate());
+      // 23:30 hora Chile del 31 de diciembre de 2025, en cualquier zona del equipo.
+      expect(egresado.anio).toBe(2025);
+      expect(egresado.fechaEgreso).toBe('2025-12-31');
     });
 
     it('pide completed_at y ordena por ella, del egreso más reciente al más antiguo', async () => {

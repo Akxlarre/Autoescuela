@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -128,7 +129,6 @@ export class TaskCardComponent {
   readonly dueDateLabel = computed(() => {
     const due = this.task().due_date;
     if (!due) return '';
-    const d = new Date(due);
-    return `Vence ${d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}`;
+    return `Vence ${formatChileDate(due, { day: 'numeric', month: 'short' })}`;
   });
 }

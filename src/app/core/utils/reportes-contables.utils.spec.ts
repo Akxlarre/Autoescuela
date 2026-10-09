@@ -493,6 +493,24 @@ describe('cursos singulares (standalone) en el reporte', () => {
 
 // ── fix-237-m: rentabilidad estimada por tipo de curso ────────────────────────
 
+describe('mapSingularSaleToPaymentRow — día de Chile del cobro (spec 0024-m)', () => {
+  it('un cobro a las 23:30 hora Chile queda en ese día, no en el siguiente', () => {
+    // 23:30 hora Chile del 31 de octubre = 02:30 UTC del 1 de noviembre.
+    const row = mapSingularSaleToPaymentRow({
+      amount_paid: 50000,
+      paid_at: '2026-11-01T02:30:00+00:00',
+      branch_id: 1,
+    });
+    expect(row.payment_date).toBe('2026-10-31');
+  });
+
+  it('sin fecha de cobro deja payment_date en null', () => {
+    expect(
+      mapSingularSaleToPaymentRow({ amount_paid: 1, paid_at: null, branch_id: 1 }).payment_date,
+    ).toBeNull();
+  });
+});
+
 describe('computeRentabilidadCursos', () => {
   it('agrupa ingresos por tipo de curso sin desglose por sede', () => {
     const payments = [

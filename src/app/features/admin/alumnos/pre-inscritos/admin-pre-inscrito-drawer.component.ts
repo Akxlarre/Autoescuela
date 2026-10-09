@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -1349,7 +1350,7 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
 
   protected formatConsentDate(iso: string | null): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleString('es-CL', {
+    return formatChileDate(iso, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

@@ -4,7 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { getChileDateTimeRange, toISODate } from '@core/utils/date.utils';
+import { addDaysIso, chileToday } from '@core/utils/chile-time.utils';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 describe('InstructoresFacade', () => {
@@ -177,7 +177,7 @@ describe('InstructoresFacade', () => {
               eq: vi.fn().mockReturnValue({
                 in: vi.fn().mockReturnValue({
                   gte: vi.fn().mockReturnValue({
-                    lte: vi.fn().mockResolvedValue({ data: sessionRows, error: null }),
+                    lt: vi.fn().mockResolvedValue({ data: sessionRows, error: null }),
                   }),
                 }),
               }),
@@ -237,7 +237,7 @@ describe('InstructoresFacade', () => {
     it('no cuenta sesiones in_progress de días anteriores (huérfanas): acota la query al día de hoy', async () => {
       const gte = vi
         .fn()
-        .mockReturnValue({ lte: vi.fn().mockResolvedValue({ data: [], error: null }) });
+        .mockReturnValue({ lt: vi.fn().mockResolvedValue({ data: [], error: null }) });
       const inFn = vi.fn().mockReturnValue({ gte });
       const eq = vi.fn().mockReturnValue({ in: inFn });
 
@@ -257,26 +257,31 @@ describe('InstructoresFacade', () => {
         throw new Error(`Tabla inesperada en el test: ${table}`);
       });
 
-      await facade.initialize();
+      // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
 
-      // fix-207-b (S15): el día de Chile con su offset (sin offset, Postgres lo leía en UTC y
-      // perdía las clases en curso de la tarde-noche).
-      const { start, end } = getChileDateTimeRange(toISODate(new Date()));
-      expect(start).toMatch(/T00:00:00[+-]\d\d:00$/);
-      expect(gte).toHaveBeenCalledWith('scheduled_at', start);
-      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith('scheduled_at', end);
+      await facade.initialize();
+      vi.useRealTimers();
+
+      // fix-207-b (S15) + spec 0024-m: el día de Chile como rango semiabierto de instantes
+      // (con el día UTC se perdían las clases en curso de la tarde-noche).
+      expect(gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+      expect(gte.mock.results[0].value.lt).toHaveBeenCalledWith(
+        'scheduled_at',
+        '2026-10-07T03:00:00.000Z',
+      );
     });
 
     // fix-202-b (S7): license_status solo se recalcula al editar; el estado se calcula con la fecha.
     it('licencia vencida ayer pero guardada como "valid" → se muestra vencida y cuenta en "por vencer" solo si corresponde', async () => {
-      const ayer = new Date();
-      ayer.setDate(ayer.getDate() - 1);
-      const en10 = new Date();
-      en10.setDate(en10.getDate() + 10);
+      // Días de Chile, no del equipo: en otra zona "ayer" local puede ser hoy en Chile.
+      const ayer = addDaysIso(chileToday(), -1);
+      const en10 = addDaysIso(chileToday(), 10);
       mockInstructorsAndSessions(
         [
-          { ...buildInstructorRow(5), license_expiry: toISODate(ayer), license_status: 'valid' },
-          { ...buildInstructorRow(6), license_expiry: toISODate(en10), license_status: 'valid' },
+          { ...buildInstructorRow(5), license_expiry: ayer, license_status: 'valid' },
+          { ...buildInstructorRow(6), license_expiry: en10, license_status: 'valid' },
           { ...buildInstructorRow(7), license_expiry: null, license_status: 'valid' },
         ],
         [],
@@ -343,7 +348,7 @@ describe('InstructoresFacade', () => {
               eq: vi.fn().mockReturnValue({
                 in: vi.fn().mockReturnValue({
                   gte: vi.fn().mockReturnValue({
-                    lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    lt: vi.fn().mockResolvedValue({ data: [], error: null }),
                   }),
                 }),
               }),
@@ -721,7 +726,7 @@ describe('InstructoresFacade', () => {
   describe('carga de la lista — fix-209-b', () => {
     function query(result: Promise<unknown>): any {
       const q: any = {};
-      for (const m of ['select', 'eq', 'order', 'in', 'is', 'gte', 'lte']) {
+      for (const m of ['select', 'eq', 'order', 'in', 'is', 'gte', 'lte', 'lt']) {
         q[m] = vi.fn().mockReturnValue(q);
       }
       q.then = (res: any, rej: any) => result.then(res, rej);

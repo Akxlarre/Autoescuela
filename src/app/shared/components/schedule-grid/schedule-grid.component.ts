@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { mondayOfIso } from '@core/utils/chile-time.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type {
@@ -361,11 +362,7 @@ export class ScheduleGridComponent {
   }
 
   private getMondayKey(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
+    return mondayOfIso(dateStr);
   }
 
   // ── Acciones ────────────────────────────────────────────────────────────────

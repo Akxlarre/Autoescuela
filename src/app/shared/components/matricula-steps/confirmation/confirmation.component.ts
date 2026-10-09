@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EnrollmentConfirmationData } from '@core/models/ui/enrollment-confirmation.model';
 
@@ -9,7 +9,7 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
 @Component({
   selector: 'app-confirmation-step',
   standalone: true,
-  imports: [DatePipe, IconComponent, ScrollRevealDirective, AnimateInDirective],
+  imports: [ChileDatePipe, IconComponent, ScrollRevealDirective, AnimateInDirective],
   templateUrl: './confirmation.component.html',
   styleUrl: './confirmation.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

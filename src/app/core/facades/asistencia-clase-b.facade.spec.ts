@@ -24,6 +24,7 @@ function makeSupabaseMock() {
       eq: vi.fn(() => b),
       gte: vi.fn(() => b),
       lte: vi.fn(() => b),
+      lt: vi.fn(() => b),
       in: vi.fn(() => b),
       is: vi.fn(() => b),
       or: vi.fn(() => b),
@@ -131,6 +132,22 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis).not.toBeNull();
     expect(kpis?.totalClasesHoy).toBe(0);
     expect(kpis?.tasaAsistencia).toBe(100);
+  });
+
+  it('fetchPracticas consulta el día de Chile como rango semiabierto a las 23:30 (spec 0024-m)', async () => {
+    mock.setResult('class_b_sessions', []);
+    mock.setResult('class_b_practice_attendance', []);
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    facade.setDate('2026-10-06');
+
+    await facade.initialize();
+    vi.useRealTimers();
+
+    const sessionsBuilder = mock.builderFor('class_b_sessions');
+    expect(sessionsBuilder.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+    expect(sessionsBuilder.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T03:00:00.000Z');
   });
 
   it('fetchPracticas no incluye sesiones reserved de enrollments draft (fix-110)', async () => {

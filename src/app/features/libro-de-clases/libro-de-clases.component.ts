@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -999,19 +1000,17 @@ export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy 
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '—';
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return formatChileDate(dateStr, { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   formatShortDate(dateStr: string): string {
     if (!dateStr) return '';
-    const d = new Date(dateStr + 'T12:00:00');
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${dateStr.slice(8, 10)}/${dateStr.slice(5, 7)}`;
   }
 
   formatTimestamp(isoStr: string): string {
     if (!isoStr) return '—';
-    return new Date(isoStr).toLocaleString('es-CL', {
+    return formatChileDate(isoStr, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

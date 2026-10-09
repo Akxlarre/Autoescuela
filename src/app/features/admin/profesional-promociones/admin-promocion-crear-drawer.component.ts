@@ -7,6 +7,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { addDaysIso, formatChileDate, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -23,33 +25,17 @@ import { promotionCodeError } from '@core/utils/promotion-code.utils';
 
 /** Genera los próximos N lunes disponibles a partir de hoy. */
 function generateAvailableMondays(count: number): { date: string }[] {
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-
-  const dayOfWeek = today.getDay();
+  const today = todayIso();
+  const dayOfWeek = weekdayOfIso(today);
   const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
-  const nextMonday = new Date(today);
-  nextMonday.setDate(today.getDate() + daysUntilMonday);
+  const firstMonday = addDaysIso(today, daysUntilMonday);
 
-  if (dayOfWeek === 1) {
-    nextMonday.setDate(today.getDate());
-  }
-
-  const mondays: { date: string }[] = [];
-  const current = new Date(nextMonday);
-
-  while (mondays.length < count) {
-    mondays.push({ date: current.toISOString().split('T')[0] });
-    current.setDate(current.getDate() + 7);
-  }
-
-  return mondays;
+  return Array.from({ length: count }, (_, i) => ({ date: addDaysIso(firstMonday, i * 7) }));
 }
 
 function formatMondayLabel(iso: string): string {
   if (!iso) return '';
-  const d = new Date(iso + 'T12:00:00');
-  return d.toLocaleDateString('es-CL', {
+  return formatChileDate(iso, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -58,8 +44,7 @@ function formatMondayLabel(iso: string): string {
 }
 
 function generatePromoName(startIso: string, code: string): string {
-  const d = new Date(startIso + 'T12:00:00');
-  const day = d.getDate();
+  const [year, month, day] = startIso.split('-').map(Number);
   const monthNames = [
     'Enero',
     'Febrero',
@@ -74,7 +59,7 @@ function generatePromoName(startIso: string, code: string): string {
     'Noviembre',
     'Diciembre',
   ];
-  const dateLabel = `${day} de ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  const dateLabel = `${day} de ${monthNames[month - 1]} ${year}`;
   return code ? `Promoción ${code} (${dateLabel})` : `Promoción ${dateLabel}`;
 }
 

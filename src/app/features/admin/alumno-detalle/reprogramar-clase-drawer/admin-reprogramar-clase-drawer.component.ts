@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
+import { mondayOfIso } from '@core/utils/chile-time.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { FormsModule } from '@angular/forms';
@@ -458,10 +459,6 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
   }
 
   private getMondayKey(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
+    return mondayOfIso(dateStr);
   }
 }

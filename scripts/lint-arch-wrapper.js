@@ -16,14 +16,15 @@ const TEMP_DIR = path.join(PROJECT_ROOT, '.claude', 'temp');
 const FAILURE_PATH = path.join(TEMP_DIR, 'arch-last-failure.json');
 const LESSONS_PATH = path.join(TEMP_DIR, 'LESSONS_LEARNED.md');
 const ARCHITECT_PATH = path.join(PROJECT_ROOT, 'scripts', 'architect.js');
+const DATE_DISCIPLINE_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-date-discipline.mjs');
 
 function ensureTempDir() {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
-function runArchitect() {
+function runScript(scriptPath) {
   return new Promise((resolve) => {
-    const proc = spawn(process.execPath, [ARCHITECT_PATH, ...process.argv.slice(2)], {
+    const proc = spawn(process.execPath, [scriptPath, ...process.argv.slice(2)], {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
@@ -73,7 +74,14 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await runArchitect();
+  const result = await runScript(ARCHITECT_PATH);
+
+  // ARCH-27/28 (disciplina de fechas) corre como paso propio: cubre supabase/functions y
+  // supabase/migrations, que architect.js no recorre. Falla el lint igual que cualquier ARCH.
+  const dates = await runScript(DATE_DISCIPLINE_PATH);
+  result.stdout = `${result.stdout}${dates.stdout}`;
+  result.stderr = `${result.stderr}${dates.stderr}`;
+  result.code = result.code === 0 ? dates.code : result.code;
 
   // Reimprimir salidas del linter (conserva UX)
   if (result.stdout) process.stdout.write(result.stdout);

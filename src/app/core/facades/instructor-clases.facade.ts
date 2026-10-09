@@ -1,10 +1,22 @@
 ﻿import { Injectable, signal, computed, inject } from '@angular/core';
+import {
+  addDaysIso,
+  chileDayRange,
+  chileRange,
+  formatChileDate,
+  formatChilePattern,
+  formatChileTime,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+
+/** Etiqueta corta de un día próximo, p. ej. "mar, 6 oct". */
+const UPCOMING_DAY_LABEL = { weekday: 'short', day: 'numeric', month: 'short' } as const;
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
-import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
+import { todayIso } from '@core/utils/date.utils';
 import type {
   InstructorClassRow,
   EvaluationFormData,
@@ -127,7 +139,7 @@ export class InstructorClasesFacade {
 
     this._error.set(null);
     try {
-      const { start, end } = getChileDateTimeRange(todayIso());
+      const { start, endExclusive } = chileDayRange(todayIso());
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
@@ -143,7 +155,7 @@ export class InstructorClasesFacade {
         )
         .eq('instructor_id', instructorId)
         .gte('scheduled_at', start)
-        .lte('scheduled_at', end)
+        .lt('scheduled_at', endExclusive)
         .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
@@ -232,7 +244,7 @@ export class InstructorClasesFacade {
             statusLabel: 'En Curso',
             statusColor: 'warning',
             kmStart: kmStart,
-            startTime: new Date().toLocaleTimeString('es-CL'),
+            startTime: formatChilePattern(new Date(), 'HH:mm:ss')!,
             canStart: false,
             canFinish: true,
           };
@@ -285,7 +297,7 @@ export class InstructorClasesFacade {
             statusColor: 'success',
             kmEnd: kmEnd,
             notes: extra?.notes ?? c.notes,
-            endTime: new Date().toLocaleTimeString('es-CL'),
+            endTime: formatChilePattern(new Date(), 'HH:mm:ss')!,
             canStart: false,
             canFinish: false,
             canEvaluate: true,
@@ -504,32 +516,10 @@ export class InstructorClasesFacade {
 
   async fetchUpcomingDays(): Promise<void> {
     if (this.useMock) {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const afterTomorrow = new Date(today);
-      afterTomorrow.setDate(today.getDate() + 2);
-
-      const mockDays: UpcomingDay[] = [
-        {
-          fecha: tomorrow.toISOString().split('T')[0],
-          fechaLabel: tomorrow.toLocaleDateString('es-CL', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          }),
-          cantidad: 8,
-        },
-        {
-          fecha: afterTomorrow.toISOString().split('T')[0],
-          fechaLabel: afterTomorrow.toLocaleDateString('es-CL', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          }),
-          cantidad: 5,
-        },
-      ];
+      const mockDays: UpcomingDay[] = [8, 5].map((cantidad, i) => {
+        const fecha = addDaysIso(todayIso(), i + 1);
+        return { fecha, fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL), cantidad };
+      });
       this._upcomingDays.set(mockDays);
       return;
     }
@@ -538,42 +528,33 @@ export class InstructorClasesFacade {
     if (!instructorId) return;
 
     try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 4);
-      endDate.setHours(23, 59, 59, 999);
+      const today = todayIso();
+      const upcoming = chileRange(addDaysIso(today, 1), addDaysIso(today, 4));
 
       const { data, error } = await this.supabase.client
         .from('class_b_sessions')
         .select('id, scheduled_at')
         .eq('instructor_id', instructorId)
-        .gte('scheduled_at', tomorrow.toISOString())
-        .lte('scheduled_at', endDate.toISOString())
+        .gte('scheduled_at', upcoming.start)
+        .lt('scheduled_at', upcoming.endExclusive)
         .in('status', ['scheduled', 'in_progress']);
 
       if (error) throw error;
 
       const byDate = new Map<string, number>();
       for (const row of data || []) {
-        const dateKey = (row.scheduled_at as string).split('T')[0];
+        const dateKey = toChileDate(row.scheduled_at as string);
         byDate.set(dateKey, (byDate.get(dateKey) || 0) + 1);
       }
 
       const days: UpcomingDay[] = Array.from(byDate.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .slice(0, 3)
-        .map(([fecha, cantidad]) => {
-          const dt = new Date(`${fecha}T12:00:00`);
-          const fechaLabel = dt.toLocaleDateString('es-CL', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          });
-          return { fecha, fechaLabel, cantidad };
-        });
+        .map(([fecha, cantidad]) => ({
+          fecha,
+          fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL),
+          cantidad,
+        }));
 
       this._upcomingDays.set(days);
     } catch (err: any) {
@@ -605,15 +586,10 @@ export class InstructorClasesFacade {
     const vehicleLabel = v ? `${v.brand || ''} ${v.model || ''}`.trim() : '';
 
     const dt = new Date(row.scheduled_at);
-    const hourStr = dt.getHours().toString().padStart(2, '0');
-    const minStr = dt.getMinutes().toString().padStart(2, '0');
-
     // Calcular end time aproximado si no tiene
     const endDt = new Date(dt.getTime() + row.duration_min * 60000);
-    const endHourStr = endDt.getHours().toString().padStart(2, '0');
-    const endMinStr = endDt.getMinutes().toString().padStart(2, '0');
 
-    const timeLabel = `${hourStr}:${minStr} - ${endHourStr}:${endMinStr}`;
+    const timeLabel = `${formatChileTime(dt)} - ${formatChileTime(endDt)}`;
 
     // Status color
     const colorMap: Record<string, string> = {
@@ -665,7 +641,7 @@ export class InstructorClasesFacade {
   }
 
   private getMockClasses(): InstructorClassRow[] {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
     return [
       {
         sessionId: 9991,

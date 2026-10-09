@@ -1,3 +1,4 @@
+import { toChileDate } from './chile-time.utils';
 import { monthsAgoIso } from './date.utils';
 
 /**
@@ -68,7 +69,7 @@ export function applyPeriodWindow<T>(
     return items.filter((item) => {
       const fecha = dateOf(item);
       if (!fecha) return true;
-      return fecha.slice(0, 4) === year;
+      return toChileDate(fecha).slice(0, 4) === year;
     });
   }
 
@@ -78,6 +79,6 @@ export function applyPeriodWindow<T>(
   return items.filter((item) => {
     const fecha = dateOf(item);
     if (!fecha) return true;
-    return fecha.slice(0, 10) >= cutoff;
+    return toChileDate(fecha) >= cutoff;
   });
 }

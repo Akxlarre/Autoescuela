@@ -1,4 +1,5 @@
-﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { addDaysIso, chileToday, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -675,18 +676,16 @@ export class PromocionesFacade {
    * Retorna 0 si la promoción aún no empieza, max 30.
    */
   private computeClassDays(startDateIso: string): number {
-    const start = new Date(startDateIso + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = chileToday();
 
-    if (today < start) return 0;
+    if (today < startDateIso) return 0;
 
     let count = 0;
-    const cursor = new Date(start);
+    let cursor = startDateIso;
     while (cursor <= today && count < 30) {
-      const dow = cursor.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-      if (dow >= 1 && dow <= 6) count++;
-      cursor.setDate(cursor.getDate() + 1);
+      // 0 = domingo: único día sin clase.
+      if (weekdayOfIso(cursor) !== 0) count++;
+      cursor = addDaysIso(cursor, 1);
     }
     return Math.min(count, 30);
   }

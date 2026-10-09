@@ -1,3 +1,4 @@
+import { addMonthsIso, chileToday, formatChileDate } from '@core/utils/chile-time.utils';
 import { Injectable, inject, signal, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
@@ -26,21 +27,13 @@ export class AgendaSettingsService {
   readonly visibilityMonths = this._visibilityMonths.asReadonly();
 
   /** Fecha límite (ISO YYYY-MM-DD) — hoy + `visibilityMonths` meses. */
-  readonly maxVisibleDateIso = computed(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + this._visibilityMonths());
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  });
+  readonly maxVisibleDateIso = computed(() => addMonthsIso(chileToday(), this._visibilityMonths()));
 
   /** Etiqueta legible: "18 de septiembre, 2026". */
   readonly maxVisibleDateLabel = computed(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + this._visibilityMonths());
-    const dayMonth = d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
-    return `${dayMonth}, ${d.getFullYear()}`;
+    const iso = this.maxVisibleDateIso();
+    const dayMonth = formatChileDate(iso, { day: 'numeric', month: 'long' });
+    return `${dayMonth}, ${iso.slice(0, 4)}`;
   });
 
   setVisibilityMonths(months: AgendaVisibilityMonths): void {

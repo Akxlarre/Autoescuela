@@ -1,15 +1,10 @@
+import { addDaysIso } from './chile-time.utils';
 /**
  * Suma `days` días a una fecha ISO ('YYYY-MM-DD') y devuelve el resultado en
- * el mismo formato. Mediodía fijo al parsear para evitar corrimientos por
- * DST/zona horaria. Función pura.
+ * el mismo formato. Aritmética de calendario, sin zona horaria. Función pura.
  */
 export function addDaysToIso(iso: string, days: number): string {
-  const d = new Date(iso + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  return addDaysIso(iso, days);
 }
 
 /**

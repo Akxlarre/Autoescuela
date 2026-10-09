@@ -1,3 +1,4 @@
+import { chileParts, chileYear, formatChilePattern, monthDays } from '../_shared/chile-time.ts';
 // supabase/functions/generate-cash-history-report/index.ts
 //
 // Edge Function: generate-cash-history-report
@@ -55,8 +56,8 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) return jsonError('No autorizado', 401);
 
     const body = await req.json();
-    const month: number = body.month ?? new Date().getMonth() + 1;
-    const year: number = body.year ?? new Date().getFullYear();
+    const month: number = body.month ?? chileParts().month;
+    const year: number = body.year ?? chileYear();
     const branchId: number | null = body.branch_id ?? null;
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -86,7 +87,7 @@ Deno.serve(async (req: Request) => {
     const mm = String(month).padStart(2, '0');
     const yyyy = String(year);
     const fechaInicio = `${yyyy}-${mm}-01`;
-    const lastDay = new Date(year, month, 0).getDate();
+    const lastDay = monthDays(year, month);
     const fechaFin = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
     // ── Query cash_closings del mes ───────────────────────────────────────────
@@ -559,13 +560,7 @@ function clp(amount: number): string {
 }
 
 function formatDateCL(iso: string): string {
-  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
-  return d.toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    timeZone: 'America/Santiago',
-  });
+  return formatChilePattern(iso, 'dd-MM-yyyy') ?? '—';
 }
 
 function formatDateTimeCL(iso: string): string {

@@ -138,7 +138,6 @@
 | ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
-| ASG-i-054 | Fechas de negocio en UTC (~19 lugares) | `m` | spec | P1 | i | ⏳ Inventario en `037` §1 |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -437,6 +436,7 @@
 | ASG-i-056 | Canales de tiempo real que escuchan tablas no publicadas | [fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar](fixes/fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar/fix.md) | 2026-10-07 |
 | ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
 | ASG-i-057 | Un comunicado programado a más de 200 alumnos nunca termina | [fix-361-m-comunicados-de-mas-de-200-no-terminan](fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan/fix.md) | 2026-10-08 |
+| ASG-i-054 | Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente) | [0024-m-fechas-de-negocio-en-hora-de-chile](specs/0024-m-fechas-de-negocio-en-hora-de-chile/spec.md) | 2026-10-09 |
 <!-- AUTO-GENERATED:END -->
 
 ---

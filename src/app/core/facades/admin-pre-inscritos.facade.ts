@@ -1,4 +1,6 @@
 ﻿import { Injectable, inject, signal, computed } from '@angular/core';
+import { toChileDate } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -298,7 +300,7 @@ export class AdminPreInscritosFacade {
           card_amount: payload.paymentMethod === 'tarjeta' ? payload.totalPaid : 0,
           voucher_amount: 0,
           status: 'paid',
-          payment_date: new Date().toISOString().slice(0, 10),
+          payment_date: todayIso(),
           requires_receipt: true,
           registered_by: currentUser?.dbId ?? null,
         });
@@ -763,8 +765,8 @@ export class AdminPreInscritosFacade {
       sucursal: u.branches?.name ?? '—',
       canal: r.registration_channel,
       convalida: r.convalidates_simultaneously,
-      fechaPreInscripcion: r.registered_at.slice(0, 10),
-      fechaVencimiento: r.expires_at.slice(0, 10),
+      fechaPreInscripcion: toChileDate(r.registered_at),
+      fechaVencimiento: toChileDate(r.expires_at),
       isVencido,
       diasParaVencer: isVencido ? null : diasParaVencer,
       status: r.status,

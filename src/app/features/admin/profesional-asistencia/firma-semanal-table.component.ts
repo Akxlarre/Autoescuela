@@ -1,3 +1,4 @@
+import { chileParts } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -235,8 +236,8 @@ export class FirmaSemanalTableComponent {
 
   formatSignedAt(signedAt: string | null): string {
     if (!signedAt) return '';
-    const d = new Date(signedAt);
+    const d = chileParts(signedAt);
     const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-    return `${dayNames[d.getDay()]} ${d.getDate()}`;
+    return `${dayNames[d.weekday]} ${d.day}`;
   }
 }

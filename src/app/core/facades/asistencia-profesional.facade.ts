@@ -1,4 +1,6 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { addDaysIso, mondayOfIso, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -126,15 +128,14 @@ export class AsistenciaProfesionalFacade {
   // ── Semana actual ───────────────────────────────────────────────────────────
   readonly weekDays = computed<WeekDay[]>(() => {
     const sesiones = this._sesiones();
-    const monday = this.getMondayForOffset(this._weekOffset());
-    const today = this.formatDateIso(new Date());
+    const today = todayIso();
+    const monday = addDaysIso(mondayOfIso(today), this._weekOffset() * 7);
     const days: WeekDay[] = [];
 
     for (let i = 0; i < 6; i++) {
       // Lun-Sáb
-      const d = new Date(monday);
-      d.setDate(d.getDate() + i);
-      const dateStr = this.formatDateIso(d);
+      const dateStr = addDaysIso(monday, i);
+      const [, month, dayOfMonth] = dateStr.split('-').map(Number);
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const monthNames = [
         'Ene',
@@ -153,8 +154,8 @@ export class AsistenciaProfesionalFacade {
 
       days.push({
         date: dateStr,
-        label: `${d.getDate()} ${monthNames[d.getMonth()]}`,
-        dayLabel: dayNames[d.getDay()],
+        label: `${dayOfMonth} ${monthNames[month - 1]}`,
+        dayLabel: dayNames[weekdayOfIso(dateStr)],
         isToday: dateStr === today,
         theory: sesiones.find((s) => s.date === dateStr && s.tipo === 'theory') ?? null,
         practice: sesiones.find((s) => s.date === dateStr && s.tipo === 'practice') ?? null,
@@ -799,20 +800,6 @@ export class AsistenciaProfesionalFacade {
       notes: s.notes ?? null,
       zoomLink: s.zoom_link ?? null,
     };
-  }
-
-  private getMondayForOffset(offset: number): Date {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // adjust to Monday
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diff + offset * 7);
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  }
-
-  private formatDateIso(d: Date): string {
-    return d.toISOString().split('T')[0];
   }
 
   // ── Firma semanal ───────────────────────────────────────────────────────────

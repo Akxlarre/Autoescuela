@@ -14,7 +14,13 @@ import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
-import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
+import {
+  chileDayRange,
+  diffDaysIso,
+  formatChileDate,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import { to24hTime, todayIso } from '@core/utils/date.utils';
 import {
   promotionOptionStatus,
   sortPromotionGroupsByStart,
@@ -400,7 +406,7 @@ export class EnrollmentFacade {
 
   /** Carga códigos SENCE vigentes para un curso específico. Transforma DTO → SenceCodeOption. */
   async loadSenceCodes(courseId: number): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
 
     const { data, error } = await this.supabase.client
       .from('sence_codes')
@@ -859,7 +865,7 @@ export class EnrollmentFacade {
           .eq('instructor_id', instructorId)
           // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
           // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
           .order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
@@ -1138,11 +1144,7 @@ export class EnrollmentFacade {
           return false;
         }
         if (selectedOption?.startDate) {
-          const daysSinceStart = Math.round(
-            (new Date(`${todayIso()}T00:00:00`).getTime() -
-              new Date(`${selectedOption.startDate}T00:00:00`).getTime()) /
-              86_400_000,
-          );
+          const daysSinceStart = diffDaysIso(selectedOption.startDate, todayIso());
           if (daysSinceStart > 3) {
             const confirmed = await this.confirm({
               title: 'Matrícula tardía',
@@ -2119,7 +2121,7 @@ export class EnrollmentFacade {
         .from('v_class_b_schedule_availability')
         .select('*')
         .eq('instructor_id', instructorId)
-        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+        .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
         .order('slot_start', { ascending: true });
 
       if (error || !data || data.length === 0) return;
@@ -2423,9 +2425,7 @@ export class EnrollmentFacade {
   }
 
   private getDraftExpiry(): string {
-    const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 14);
-    return expiry.toISOString();
+    return new Date(Date.now() + 14 * 3_600_000).toISOString();
   }
 
   private mapCourseToOption(course: Course): CourseOption {
@@ -2539,7 +2539,7 @@ export class EnrollmentFacade {
   /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp, en hora local Santiago. */
   private slotDateFromStart(slotStart: string | null | undefined): string {
     if (!slotStart) return '';
-    return toISODate(slotStart);
+    return toChileDate(slotStart);
   }
 
   /** Deriva hora HH:MM desde un timestamp, en hora local Santiago. */
@@ -2552,19 +2552,11 @@ export class EnrollmentFacade {
     // Vista expone slot_start/slot_end (timestamptz); no slot_date
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
-    const days: WeekDay[] = dates.map((d) => {
-      const date = new Date(d + 'T12:00:00Z');
-      const dayFormatter = new Intl.DateTimeFormat('es', { weekday: 'short' });
-      const labelFormatter = new Intl.DateTimeFormat('es', {
-        day: 'numeric',
-        month: 'short',
-      });
-      return {
-        date: d,
-        dayOfWeek: dayFormatter.format(date),
-        label: labelFormatter.format(date),
-      };
-    });
+    const days: WeekDay[] = dates.map((d) => ({
+      date: d,
+      dayOfWeek: formatChileDate(d, { weekday: 'short' }),
+      label: formatChileDate(d, { day: 'numeric', month: 'short' }),
+    }));
 
     const week: WeekRange = {
       startDate: dates[0] ?? '',

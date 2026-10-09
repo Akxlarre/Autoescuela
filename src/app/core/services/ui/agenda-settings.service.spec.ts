@@ -35,11 +35,15 @@ describe('AgendaSettingsService', () => {
   });
 
   it('maxVisibleDateIso calcula hoy + N meses en formato YYYY-MM-DD', () => {
-    service.setVisibilityMonths(2);
-    const expected = new Date();
-    expected.setMonth(expected.getMonth() + 2);
-    const expectedIso = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`;
-    expect(service.maxVisibleDateIso()).toBe(expectedIso);
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es día 7 (spec 0024-m).
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    try {
+      service.setVisibilityMonths(2);
+      expect(service.maxVisibleDateIso()).toBe('2026-12-06');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('maxVisibleDateLabel produce el formato "día de mes, año"', () => {
