@@ -363,8 +363,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Asignar vehículo (opcional) ─────────────────────────────────────────
+    // Con supabaseAudit (fix-218-b): con supabaseAdmin la asignación quedaba en la auditoría sin autor.
     if (vehicleId) {
-      const { error: assignError } = await supabaseAdmin.from('vehicle_assignments').insert({
+      const { error: assignError } = await supabaseAudit.from('vehicle_assignments').insert({
         instructor_id: instructorRow.id,
         vehicle_id: vehicleId,
         start_date: chileToday(),
