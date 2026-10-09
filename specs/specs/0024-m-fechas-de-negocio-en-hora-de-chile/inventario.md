@@ -110,6 +110,38 @@ A confirmar contra `information_schema.columns` en la BD real.
 | `cleanup-expired-enrollment-drafts` | 03:00 | 23:00 / 00:00 | Limpieza por antigüedad, no por día |
 | `cleanup-expired-public-enrollment`, `dispatch-scheduled-announcements` | cada 30 / 15 min | — | Trabajan con instantes, no con días |
 
+### 6.1 Definiciones vigentes leídas de la BD (T7.1, 2026-10-09)
+
+Consultado con `npx supabase db query --linked` sobre `pg_proc`, `pg_policies`, `pg_views`,
+`pg_matviews`, `pg_attrdef`, `pg_constraint`, `pg_index`, `information_schema.columns` y
+`cron.job`. Zona de la sesión: `UTC`.
+
+| Objeto vigente | Usa | Acción |
+|---|---|---|
+| `auto_transition_promotion_status()` | `CURRENT_DATE` ×3 | Redefinida con `chile_today()` |
+| `auto_transition_standalone_course_status()` | `CURRENT_DATE` | Redefinida |
+| `auto_transition_theory_cycle_status()` | `CURRENT_DATE` | Redefinida |
+| `calculate_vehicle_document_status()` (trigger `trg_vehicle_doc_status`) | `CURRENT_DATE` ×2 | Redefinida |
+| `generate_license_alert()` (trigger `trg_license_alert`) | `CURRENT_DATE` ×2 | Redefinida |
+| `notify_vehicle_document_expiry()` | `CURRENT_DATE` ×4 | Redefinida |
+| `confirm_enrollment_with_payment(...)` | `payment_date = CURRENT_DATE` | Redefinida |
+| Policy `cash_closings.select_cash_closings` | `date >= CURRENT_DATE - 2 days` | Recreada |
+| Vista `v_class_b_schedule_availability` (`security_invoker`) | `CURRENT_DATE::timestamp` y `+ 28 days` | Redefinida: hoy (Chile) + 0..28 |
+| CHECK `students.chk_minimum_age` | `CURRENT_DATE - 17 years` | **Excepción declarada** (un CHECK no debe depender de una función no inmutable) |
+| `exec_instructor_accrued_cost(...)` | `p_from::timestamp` sobre un parámetro `date` | Sin cambio: aritmética de fechas puras, no deriva un día de un instante |
+| `ensure_theory_cycle(...)` | — (recibe la fecha por parámetro) | Sin cambio: ya no usa `CURRENT_DATE` |
+
+Ya fijaban `America/Santiago` y quedan como están: `mark_end_of_day_class_b_absences`,
+`assign_theory_cycle`, `audit_format_timestamp_value`, `exec_dashboard_kpis`,
+`exec_dashboard_instructor_hours`, `exec_dashboard_monthly_series`, `exec_dashboard_receivables`,
+`exec_dashboard_today_ops`, `recalc_instructor_monthly_hours` y
+`trg_class_b_sessions_update_monthly_hours`.
+
+**Columnas `timestamp without time zone` en `public`: ninguna** (AC10 se cumple sin migración).
+Tampoco hay defaults ni índices que usen la zona de la sesión.
+
+Cron vigente de inasistencias: `0 1 * * *` → `mark_end_of_day_class_b_absences()`.
+
 ## 7. Tests existentes
 
 - `e2e/transversal-shell.spec.ts` `T02` (15:00 control, 23:30 marcado `knownBug('ASG-i-054 …')`).

@@ -212,33 +212,38 @@
 
 ## Fase 7 — SQL y cron
 
-- [ ] **T7.1** — Leer la definición vigente de cada objeto de `inventario.md` §6
-  - **DoD:**
-    - [ ] Definiciones obtenidas de la BD (no de la historia de migraciones) y anotadas en `inventario.md`
-    - [ ] Resultado de `information_schema.columns` para `timestamp without time zone`
+> Las tres migraciones llevan fecha `20261009…` y no `20261008…` como decía el plan: el sello
+> `20261008120000` ya lo ocupa `fix361_announcements_dispatch_heartbeat` y además es el corte de
+> ARCH-28 (solo se auditan las posteriores).
 
-- [ ] **T7.2** — Migración `20261008120000_time_fn_chile_today.sql`
+- [x] **T7.1** — Leer la definición vigente de cada objeto de `inventario.md` §6
+  - **DoD:**
+    - [x] Definiciones obtenidas de la BD (no de la historia de migraciones) y anotadas en `inventario.md` §6.1
+    - [x] Resultado de `information_schema.columns` para `timestamp without time zone`: ninguna
+
+- [x] **T7.2** — Migración `20261009120000_time_fn_chile_today.sql`
   - **AC ref:** AC9
   - **DoD:**
-    - [ ] `chile_today()`, `chile_date()`, `chile_day_start()`; idempotente
-    - [ ] Documentado en `indices/DATABASE.md`
+    - [x] `chile_today()`, `chile_date()`, `chile_day_start()`; idempotente
+    - [x] Documentado en `indices/DATABASE.md`
 
-- [ ] **T7.3** — Migración `20261008121000_time_fix_business_day_objects.sql`
+- [x] **T7.3** — Migración `20261009121000_time_fix_business_day_objects.sql`
   - **AC ref:** AC9, AC10, AC11
   - **DoD:**
-    - [ ] Todos los objetos vigentes de §6 redefinidos; el CHECK de edad queda como excepción declarada
-    - [ ] Idempotente; pasa ARCH-28
+    - [x] Todos los objetos vigentes de §6.1 redefinidos (7 funciones, 1 policy, 1 vista); el CHECK de edad queda como excepción declarada
+    - [x] Idempotente; pasa ARCH-28
 
-- [ ] **T7.4** — Migración `20261008122000_time_cron_absences_2100_chile.sql`
+- [x] **T7.4** — Migración `20261009122000_time_cron_absences_2100_chile.sql`
   - **AC ref:** AC12
   - **DoD:**
-    - [ ] Job a las 00:00 y 01:00 UTC con función envoltorio que exige hora Chile = 21
-    - [ ] Comentario de la función actualizado
+    - [x] Job a las 00:00 y 01:00 UTC con función envoltorio que exige hora Chile = 21
+    - [x] Comentario de la función actualizado
 
-- [ ] **T7.5** — `supabase/tests/timezone/0024-m-business-day.sql`
+- [x] **T7.5** — `supabase/tests/timezone/0024-m-business-day.sql`
   - **AC ref:** AC9, AC10, AC11, AC12
   - **DoD:**
-    - [ ] Falla si queda algún `CURRENT_DATE` en un objeto vigente o una columna sin zona
+    - [x] Falla si queda algún `CURRENT_DATE` en un objeto vigente o una columna sin zona
+    - [x] Ensayo contra la BD de dev en una transacción revertida (2026-10-09): las tres migraciones aplican, el test pasa y la vista devuelve las mismas 4.368 filas que antes. No quedó nada aplicado
 
 - [ ] **T7.6** — Matías aplica las tres migraciones y corre el test SQL
   - **AC ref:** AC9, AC10, AC11, AC12
