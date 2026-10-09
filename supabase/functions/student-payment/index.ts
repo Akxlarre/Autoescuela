@@ -1,3 +1,4 @@
+import { chileToday, formatChileDate, formatChileTime, toChileDate } from '../_shared/chile-time.ts';
 // supabase/functions/student-payment/index.ts
 //
 // Edge Function: student-payment
@@ -777,14 +778,9 @@ function buildScheduleGrid(rows: any[]) {
   if (rows.length === 0) return null;
 
   // Excluir slots del día presente y anteriores — no es posible coordinar una
-  // clase con tan poca antelación. La fecha de referencia usa America/Santiago.
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
-  const futureRows = rows.filter((row) => {
-    const slotDate = new Date(row.slot_start).toLocaleDateString('en-CA', {
-      timeZone: 'America/Santiago',
-    });
-    return slotDate > todayStr;
-  });
+  // clase con tan poca antelación. La fecha de referencia es el día de Chile.
+  const todayStr = chileToday();
+  const futureRows = rows.filter((row) => toChileDate(new Date(row.slot_start)) > todayStr);
 
   if (futureRows.length === 0) return null;
 
@@ -796,34 +792,15 @@ function buildScheduleGrid(rows: any[]) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end ?? slotStart.getTime() + 45 * 60 * 1000);
 
-    const dateStr = slotStart.toLocaleDateString('en-CA', {
-      timeZone: 'America/Santiago',
-    });
-    const startTime = slotStart.toLocaleTimeString('es-CL', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'America/Santiago',
-    });
-    const endTime = slotEnd.toLocaleTimeString('es-CL', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'America/Santiago',
-    });
+    const dateStr = toChileDate(slotStart);
+    const startTime = formatChileTime(slotStart);
+    const endTime = formatChileTime(slotEnd);
 
     timeRowsSet.add(`${startTime}-${endTime}`);
 
     if (!days.has(dateStr)) {
-      const dayName = slotStart.toLocaleDateString('es-CL', {
-        weekday: 'short',
-        timeZone: 'America/Santiago',
-      });
-      const dayLabel = slotStart.toLocaleDateString('es-CL', {
-        day: '2-digit',
-        month: '2-digit',
-        timeZone: 'America/Santiago',
-      });
+      const dayName = formatChileDate(slotStart, { weekday: 'short' });
+      const dayLabel = formatChileDate(slotStart, { day: '2-digit', month: '2-digit' });
       days.set(dateStr, { date: dateStr, dayOfWeek: dayName, label: `${dayName} ${dayLabel}` });
     }
 

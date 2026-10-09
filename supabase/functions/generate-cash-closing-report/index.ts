@@ -1,3 +1,4 @@
+import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-cash-closing-report/index.ts
 //
 // Edge Function: generate-cash-closing-report
@@ -56,7 +57,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const format: 'excel' | 'pdf' = body.format ?? 'excel';
-    const date: string = body.date ?? new Date().toISOString().slice(0, 10);
+    const date: string = body.date ?? chileToday();
     const branchId: number | null = body.branch_id ?? null;
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -82,8 +83,8 @@ Deno.serve(async (req: Request) => {
       if (branch) branchName = branch.name;
     }
 
-    const dayStart = `${date}T00:00:00`;
-    const dayEnd = `${date}T23:59:59`;
+    // Día de Chile como rango semiabierto de instantes: [dayStart, dayEnd).
+    const { start: dayStart, endExclusive: dayEnd } = chileDayRange(date);
 
     // ── Ingresos del día (payments) ────────────────────────────────────────────
     let paymentsQ = adminClient
@@ -95,7 +96,7 @@ Deno.serve(async (req: Request) => {
       )
       .eq('status', 'paid')
       .gte('created_at', dayStart)
-      .lte('created_at', dayEnd)
+      .lt('created_at', dayEnd)
       .order('created_at', { ascending: true });
 
     if (branchId !== null) {
@@ -116,7 +117,7 @@ Deno.serve(async (req: Request) => {
       )
       .eq('payment_status', 'paid')
       .gte('paid_at', dayStart)
-      .lte('paid_at', dayEnd)
+      .lt('paid_at', dayEnd)
       .order('paid_at', { ascending: true });
 
     if (branchId !== null) {
@@ -961,13 +962,7 @@ function clp(amount: number): string {
 }
 
 function formatDateCL(iso: string): string {
-  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
-  return d.toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    timeZone: 'America/Santiago',
-  });
+  return formatChilePattern(iso, 'dd-MM-yyyy') ?? '—';
 }
 
 function formatTimeCL(iso: string | null): string {

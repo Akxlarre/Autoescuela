@@ -1,3 +1,4 @@
+import { chileToday, chileYear } from '../_shared/chile-time.ts';
 // supabase/functions/export-certificates-zip/index.ts
 //
 // Edge Function: export-certificates-zip
@@ -132,8 +133,8 @@ Deno.serve(async (req: Request) => {
 
       // Nombre de archivo: CERT[-PROF]-YYYY-NNNN_APELLIDOS_NOMBRES.pdf
       const year = cert?.created_at
-        ? new Date(cert.created_at).getFullYear()
-        : new Date().getFullYear();
+        ? chileYear(new Date(cert.created_at))
+        : chileYear();
       const folio = cert?.folio ? String(cert.folio).padStart(4, '0') : '0000';
       const apellidos = sanitizeFilename(
         [studentUser?.paternal_last_name, studentUser?.maternal_last_name]
@@ -175,7 +176,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Generar y retornar ZIP ───────────────────────────────────────────────
     const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = chileToday();
     const tipoSlug = tipo === 'professional' ? 'profesional' : 'clase-b';
     const zipFilename = `certificados-${tipoSlug}-${dateStr}.zip`;
 

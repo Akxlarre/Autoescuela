@@ -185,23 +185,28 @@
 
 ## Fase 6 — Edge functions (inventario §5)
 
-- [ ] **T6.1** — `_shared/chile-time.ts` + `chile-time.test.ts`
+- [x] **T6.1** — `_shared/chile-time.ts` + `chile-time.test.ts`
   - **AC ref:** AC7, AC8
   - **DoD:**
-    - [ ] Misma API que la util de la app
-    - [ ] Corre los vectores de `chile-time.vectors.json` y pasa
+    - [x] Misma API que la util de la app (salvo `calendarDateToIso` / `isoToCalendarDate`, que son de selector de fechas y solo existen en la app)
+    - [x] Corre los vectores de `chile-time.vectors.json` y pasa (`deno test --allow-read supabase/functions/_shared/chile-time.test.ts`, 11 tests)
 
-- [ ] **T6.2** — "Hoy" que se escribe y defaults de reporte
+- [x] **T6.2** — "Hoy" que se escribe y defaults de reporte
   - **AC ref:** AC7
   - **DoD:**
-    - [ ] `create-instructor`, `update-instructor`, certificados B y Profesional, cierre e historial de caja, financiero, sueldos
+    - [x] `create-instructor`, `update-instructor`, certificados B y Profesional, cierre e historial de caja, financiero, sueldos
 
-- [ ] **T6.3** — Fechas y horas impresas, nombres de archivo y folios
+- [x] **T6.3** — Fechas y horas impresas, nombres de archivo y folios
   - **AC ref:** AC8, AC-E3
   - **DoD:**
-    - [ ] Todos los archivos del grupo "impresas sin zona" de §5
-    - [ ] `student-payment`, `public-enrollment` y `_shared/*` reutilizan el módulo
-    - [ ] Cero ocurrencias de ARCH-27 en `supabase/functions`
+    - [x] Todos los archivos del grupo "impresas sin zona" de §5
+    - [x] `student-payment`, `public-enrollment`, `_shared/holidays` y `_shared/contract-pdf` reutilizan el módulo. Excepción: `_shared/enrollment-sheet-format` y `_shared/ficha-tecnica-pdf` conservan su formateador propio (ya fija `America/Santiago`, arma el texto por partes por una limitación de la fuente del PDF y tiene tests propios)
+    - [x] Cero ocurrencias de ARCH-27 en `supabase/functions` (línea base 92 → 0)
+
+- [ ] **T6.4** — Desplegar las edge functions modificadas
+  - **AC ref:** AC7, AC8
+  - **DoD:**
+    - [ ] Desplegadas las 19 funciones tocadas (las que importan `_shared/chile-time.ts`, `_shared/holidays.ts` o `_shared/contract-pdf.ts`). El despliegue lo decide Matías: hasta entonces producción y dev siguen con el cálculo en UTC
 
 ---
 
@@ -268,5 +273,6 @@
 - [x] **TD.4b** — Fase 3 cerrada (tercera pasada del 2026-10-08): topes `slot_start` de `enrollment` y `admin-alumno-detalle` y semana de `agenda` con rangos semiabiertos; `getChileDateTimeRange` eliminada; tests a las 23:30 en `cuadratura`, `dashboard`, `auditoria` y `asistencia-clase-b`. Línea base 425 → 422. Excepción al DoD de T3.1: `reportes-contables` no tiene test de rango propio (solo se actualizó el mock); queda para la fase 5 junto con su aritmética de fechas.
 - [x] **TD.6** — Resuelto en la fase 5: `node scripts/test-tz.mjs src/app` (la suite completa, 3.739 tests) pasa en UTC, Asia/Tokyo y America/Santiago. Eran tests que armaban fechas con el reloj del equipo y dos helpers que leían un instante con `new Date()` local.
 - [x] **TD.8** — Fase 5 cerrada (2026-10-08). Línea base 421 → 92: `src/app` queda en cero ocurrencias de ARCH-27; las 92 restantes son de `supabase/functions` (fase 6). Util ampliada con `formatChilePattern`, `monthDays`, `startOfMonthIso` y `endOfMonthIso`. Corregidos además tres cálculos de "días hasta" que el guardrail no detecta porque restan instantes (`vehicle-document-status.utils`, `flota-detalle.facade`, `enrollment-documents.facade`) y `calcAge`, que leía la fecha de nacimiento con el reloj del equipo. Verificado: `npm run lint:arch` 0 errores, build de producción, `T02` de Playwright (15:00 y 23:30) y revisión visual de Auditoría, Agenda y Liquidaciones.
+- [x] **TD.10** — Fase 6 cerrada en código (2026-10-09). Además de lo inventariado: los rangos de día de `generate-audit-report`, `generate-cash-closing-report` y `generate-financial-report` pasaron a rangos semiabiertos de instantes de Chile (antes `T00:00:00`/`T23:59:59` sin zona, o sea UTC); `computeLicenseStatus` de alta y edición de instructor y el cálculo de menor de edad de `public-enrollment` usan el hoy de Chile. Verificación: tests Deno puros de `_shared` (35) en verde y chequeo de sintaxis y nombres con `tsc --noResolve`; `deno check` completo no corre en este equipo porque faltan las dependencias npm de Deno (`pdf-lib`, `supabase-js`), igual que antes de esta spec. No se probó ninguna función desplegada.
 - [ ] **TD.9** — El guardrail no ve restas de instantes para contar días (`(a.getTime() - b.getTime()) / 86_400_000` sobre fechas puras) ni `.slice(0, 10)` sobre strings de la BD. Evaluar una regla en la fase 8 (T8.1).
 - [x] **TD.7** — Fase 4 cerrada (2026-10-08): los cortes de string sobre instantes pasan por `toChileDate()` en `admin-pre-inscritos`, `instructor-horas`, `flota-detalle`, `reportes-contables.utils`, `period-window.utils` (corte y año), `daily-agenda-drawer`, `secretaria-dashboard`, `admin-pagos`, `secretaria-pagos` y `asistencia-clase-b-content`. Seguros y sin cambio (ya son fecha pura): `license-status.utils`, `admin-pre-inscrito-drawer:1174`, `reportes-contables.utils:303,309`. Tests nuevos en `period-window.utils` y `reportes-contables.utils`; el de un facade de lista (fecha de ingreso) no hizo falta: `admin-alumnos` y `ex-alumnos` ya usan `toISODate(string)`, que ahora devuelve el día de Chile. Verificado en vivo a las 21:03 hora Chile: Caja Diaria consulta el día de Chile.

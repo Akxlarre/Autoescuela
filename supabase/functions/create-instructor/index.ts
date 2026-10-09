@@ -1,3 +1,4 @@
+import { chileToday, diffDaysIso, toChileDate } from '../_shared/chile-time.ts';
 // supabase/functions/create-instructor/index.ts
 //
 // Edge Function: create-instructor
@@ -156,16 +157,10 @@ async function sendInstructorInviteEmail(
 }
 
 function computeLicenseStatus(expiryDateStr: string): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDateStr);
-  expiry.setHours(0, 0, 0, 0);
+  // Días de calendario hasta el vencimiento, contados desde el hoy de Chile.
+  const diffDays = diffDaysIso(chileToday(), toChileDate(expiryDateStr));
 
-  if (expiry < today) return 'expired';
-
-  const diffMs = expiry.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
+  if (diffDays < 0) return 'expired';
   if (diffDays <= 30) return 'expiring_soon';
   return 'valid';
 }
@@ -342,7 +337,7 @@ Deno.serve(async (req: Request) => {
         license_expiry: licenseExpiry,
         license_status: licenseStatus,
         active: true,
-        registration_date: new Date().toISOString().split('T')[0],
+        registration_date: chileToday(),
         both_branches: effectiveBothBranches,
       })
       .select('id')
@@ -363,7 +358,7 @@ Deno.serve(async (req: Request) => {
       const { error: assignError } = await supabaseAdmin.from('vehicle_assignments').insert({
         instructor_id: instructorRow.id,
         vehicle_id: vehicleId,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: chileToday(),
         assigned_by: callerRow.id,
       });
 

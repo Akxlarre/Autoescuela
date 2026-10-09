@@ -1,3 +1,4 @@
+import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-certificate-professional-pdf/index.ts
 //
 // Edge Function: generate-certificate-professional-pdf
@@ -210,7 +211,7 @@ Deno.serve(async (req: Request) => {
           student_id: studentId,
           type: 'professional',
           status: 'issued',
-          issued_date: new Date().toISOString().split('T')[0],
+          issued_date: chileToday(),
           issued_by: callerUserId,
         })
         .select('id')
@@ -325,13 +326,9 @@ function sanitize(name: string): string {
 }
 
 function fmtDateShort(ts: string): string {
-  const d = new Date(ts);
-  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+  return formatChilePattern(ts, 'dd-MM-yyyy') ?? '';
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
 
 function todayInSpanish(): string {
   const meses = [
@@ -348,8 +345,8 @@ function todayInSpanish(): string {
     'NOVIEMBRE',
     'DICIEMBRE',
   ];
-  const d = new Date();
-  return `${SCHOOL.city}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+  const d = chileParts();
+  return `${SCHOOL.city}, ${d.day} de ${meses[d.month - 1]} de ${d.year}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -1,3 +1,4 @@
+import { chileRange, chileToday, formatChileDate, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-financial-report/index.ts
 //
 // Edge Function: generate-financial-report
@@ -75,7 +76,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const format: 'excel' | 'pdf' = body.format ?? 'excel';
-    const desde: string = body.desde ?? new Date().toISOString().slice(0, 10);
+    const desde: string = body.desde ?? chileToday();
     const hasta: string = body.hasta ?? desde;
     const branchId: number | null = body.branch_id ?? null;
 
@@ -132,8 +133,8 @@ Deno.serve(async (req: Request) => {
          students!inner(users!inner(first_names, paternal_last_name, rut))`,
       )
       .eq('payment_status', 'paid')
-      .gte('paid_at', `${desde}T00:00:00`)
-      .lte('paid_at', `${hasta}T23:59:59`)
+      .gte('paid_at', chileRange(desde, hasta).start)
+      .lt('paid_at', chileRange(desde, hasta).endExclusive)
       .order('paid_at', { ascending: true });
 
     if (branchId !== null) {
@@ -1001,13 +1002,7 @@ function clp(amount: number): string {
 }
 
 function formatDateCL(iso: string): string {
-  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
-  return d.toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    timeZone: 'America/Santiago',
-  });
+  return formatChilePattern(iso, 'dd-MM-yyyy') ?? '—';
 }
 
 function formatDateTimeCL(iso: string): string {
@@ -1023,9 +1018,7 @@ function formatDateTimeCL(iso: string): string {
 }
 
 function formatMonthLabel(yyyyMM: string): string {
-  const [y, m] = yyyyMM.split('-');
-  const date = new Date(Number(y), Number(m) - 1, 1);
-  return date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+  return formatChileDate(`${yyyyMM}-01`, { month: 'long', year: 'numeric' });
 }
 
 function sanitize(name: string): string {

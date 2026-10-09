@@ -6,6 +6,8 @@
 //
 //   deno test supabase/functions/_shared/holidays.test.ts
 
+import { addDaysIso, weekdayOfIso } from './chile-time.ts';
+
 /**
  * Calcula la `end_date` de una promoción profesional: camina día a día desde `startDate`
  * (L-S, saltando domingos) contando días hábiles que no sean feriado, hasta acumular 30.
@@ -25,13 +27,11 @@
  *  - Feriado en domingo → no afecta el conteo (ya excluido).
  */
 export function computePromotionEndDate(startDate: string, holidayDates: Set<string>): string {
-  const cursor = new Date(`${startDate}T12:00:00`);
   let validDays = 0;
   let iso = startDate;
 
   while (validDays < 30) {
-    iso = cursor.toISOString().split('T')[0];
-    const isSunday = cursor.getDay() === 0;
+    const isSunday = weekdayOfIso(iso) === 0;
     const isHoliday = holidayDates.has(iso);
 
     if (!isSunday && !isHoliday) {
@@ -39,7 +39,7 @@ export function computePromotionEndDate(startDate: string, holidayDates: Set<str
     }
 
     if (validDays < 30) {
-      cursor.setDate(cursor.getDate() + 1);
+      iso = addDaysIso(iso, 1);
     }
   }
 
@@ -56,11 +56,8 @@ const PROMOTION_MAX_SPAN_DAYS = 60;
  * Espejo de `promotionHolidayYears` en `promotion-end-date.utils.ts`.
  */
 export function promotionHolidayYears(startDate: string): number[] {
-  const start = new Date(`${startDate}T12:00:00`);
-  const limit = new Date(start);
-  limit.setDate(limit.getDate() + PROMOTION_MAX_SPAN_DAYS);
-  const startYear = start.getFullYear();
-  const limitYear = limit.getFullYear();
+  const startYear = Number(startDate.slice(0, 4));
+  const limitYear = Number(addDaysIso(startDate, PROMOTION_MAX_SPAN_DAYS).slice(0, 4));
   return limitYear === startYear ? [startYear] : [startYear, limitYear];
 }
 
