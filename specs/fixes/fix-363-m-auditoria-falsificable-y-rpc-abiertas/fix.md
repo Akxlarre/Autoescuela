@@ -1,7 +1,8 @@
 # Fix: registro de auditoría falsificable y funciones de la BD abiertas de más
 > id: fix-363-m-auditoria-falsificable-y-rpc-abiertas
 > refs: ASG-i-047
-> status: in-progress
+> status: done
+> closed: 2026-10-09
 > created: 2026-10-09
 > priority: P0
 
@@ -68,8 +69,16 @@ Ninguno de una spec previa. ACs propios:
 
 ## Progreso
 - [x] Paso 1 de la asignación: permisos y policies reales consultados en la BD
-- [ ] Migración y prueba escritas
-- [ ] Ensayo de la migración en un envío que se deshace entero
-- [ ] Migración aplicada por Matías
-- [ ] Prueba y regresiones con la migración aplicada
-- [ ] Índices (`DATABASE.md`, `DOMAIN-GOTCHAS.md`)
+- [x] Migración y prueba escritas. `log_change()` y `get_next_enrollment_number()` se armaron
+  desde la definición vigente en la BD (DG-043), cambiando solo el bloque de usuario y la
+  validación de rol
+- [x] Confirmado en vivo contra la BD sin migrar (sub-bloques que se deshacen): la secretaria
+  insertó, modificó y borró filas de `audit_log`; con el header ajeno el cambio quedó a nombre del
+  admin; un alumno obtuvo el número de matrícula. La prueba da 15 fallas de 25
+- [x] Ensayo de la migración en un envío que se deshizo entero: fix-363-m 25/25 · fix-191-b 22/22
+  · fix-206-b 7/7 · fix-212-b 5/5. Verificado después que no quedó nada aplicado
+- [x] Índices: `DATABASE.md` (`audit_log`), `DOMAIN-GOTCHAS.md` (DG-101 actualizada, DG-104, DG-105)
+- [x] Migración aplicada por Matías (2026-10-09)
+- [x] Prueba y regresiones con la migración aplicada: fix-363-m 25/25 · fix-191-b 22/22 ·
+  fix-206-b 7/7 · fix-212-b 5/5
+- [x] Cambio de convención para el equipo documentado en DG-104 (Matías avisa a Benjamín e Ignacio)
