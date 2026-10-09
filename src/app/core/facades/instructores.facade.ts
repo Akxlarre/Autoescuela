@@ -4,9 +4,12 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { getChileDateTimeRange, toISODate, todayIso } from '@core/utils/date.utils';
+import { chileDayRange, chileParts, chileYear } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { instructorCreatedToast } from '@core/utils/instructor-invite.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -155,8 +158,8 @@ export class InstructoresFacade {
   private readonly _selectedInstructor = signal<InstructorTableRow | null>(null);
   private readonly _assignmentHistory = signal<VehicleAssignmentHistory[]>([]);
 
-  private readonly _horasMonth = signal<number>(new Date().getMonth() + 1);
-  private readonly _horasYear = signal<number>(new Date().getFullYear());
+  private readonly _horasMonth = signal<number>(chileParts().month);
+  private readonly _horasYear = signal<number>(chileYear());
   private readonly _horasMensuales = signal<InstructorHoraRow[]>([]);
   private readonly _isLoadingHoras = signal<boolean>(false);
   private readonly _horasError = signal<string | null>(null);
@@ -185,8 +188,8 @@ export class InstructoresFacade {
   readonly isLoadingHoras = this._isLoadingHoras.asReadonly();
   readonly horasError = this._horasError.asReadonly();
   readonly isHorasCurrentMonth = computed(() => {
-    const now = new Date();
-    return this._horasMonth() === now.getMonth() + 1 && this._horasYear() === now.getFullYear();
+    const now = chileParts();
+    return this._horasMonth() === now.month && this._horasYear() === now.year;
   });
   readonly horario = this._horario.asReadonly();
   readonly isLoadingHorario = this._isLoadingHorario.asReadonly();
@@ -202,6 +205,10 @@ export class InstructoresFacade {
   );
   readonly licenciasPorVencer = computed<number>(
     () => this._instructores().filter((i) => i.licenseStatus === 'expiring_soon').length,
+  );
+  /** hotfix-069-b (B06): las ya vencidas, aparte de "por vencer". */
+  readonly licenciasVencidas = computed<number>(
+    () => this._instructores().filter((i) => i.licenseStatus === 'expired').length,
   );
 
   // ── Acciones ───────────────────────────────────────────────────────────────
@@ -346,7 +353,7 @@ export class InstructoresFacade {
     if (instructorIds.length === 0) return counts;
 
     // fix-207-b (S15): "hoy" en Chile con su offset; sin offset Postgres lo leía en UTC.
-    const { start, end } = getChileDateTimeRange(toISODate(new Date()));
+    const { start, endExclusive } = chileDayRange(todayIso());
 
     const { data, error } = await this.supabase.client
       .from('class_b_sessions')
@@ -354,7 +361,7 @@ export class InstructoresFacade {
       .eq('status', 'in_progress')
       .in('instructor_id', instructorIds)
       .gte('scheduled_at', start)
-      .lte('scheduled_at', end);
+      .lt('scheduled_at', endExclusive);
 
     if (error) return counts;
 
@@ -481,9 +488,9 @@ export class InstructoresFacade {
 
   /** Abre el drawer de horas en el mes actual (fix-208-b: antes quedaba el mes de la vez anterior). */
   async abrirHorasMensuales(): Promise<void> {
-    const now = new Date();
-    this._horasMonth.set(now.getMonth() + 1);
-    this._horasYear.set(now.getFullYear());
+    const now = chileParts();
+    this._horasMonth.set(now.month);
+    this._horasYear.set(now.year);
     await this.loadHorasMensuales();
   }
 
@@ -559,8 +566,8 @@ export class InstructoresFacade {
   }
 
   navHorasSiguiente(): void {
-    const now = new Date();
-    if (this._horasYear() === now.getFullYear() && this._horasMonth() >= now.getMonth() + 1) return;
+    const now = chileParts();
+    if (this._horasYear() === now.year && this._horasMonth() >= now.month) return;
     const month = this._horasMonth();
     const year = this._horasYear();
     if (month === 12) {
@@ -653,8 +660,10 @@ export class InstructoresFacade {
   async crearInstructor(payload: CrearInstructorPayload): Promise<number | null> {
     this._isSubmitting.set(true);
     try {
+      // fix-214-b (H06): sin invitación mientras el portal de instructores esté en piloto.
+      const sendInvite = !isBlockedInPilot('instructor');
       const { data, error } = await this.supabase.client.functions.invoke('create-instructor', {
-        body: payload,
+        body: { ...payload, sendInvite },
       });
 
       // fix-200-b: el motivo real de la función (4xx), no un texto genérico (DG-085).
@@ -669,7 +678,9 @@ export class InstructoresFacade {
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
 
-      this.toast.success('Instructor creado', 'La cuenta ha sido creada correctamente.');
+      // fix-214-b (C29): si el correo de invitación no salió, el admin se entera.
+      const aviso = instructorCreatedToast(sendInvite, data?.inviteEmailSent);
+      this.toast[aviso.kind](aviso.summary, aviso.detail);
       this._vehiclesLoaded = false;
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       return (data?.instructorId as number | undefined) ?? null;

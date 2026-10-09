@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -176,6 +177,6 @@ export class InstructorNotificacionesComponent implements OnInit, AfterViewInit 
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays === 1) return 'Ayer';
     if (diffDays < 7) return `Hace ${diffDays} días`;
-    return date.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+    return formatChileDate(date, { day: 'numeric', month: 'short' });
   }
 }

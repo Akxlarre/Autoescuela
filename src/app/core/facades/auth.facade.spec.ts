@@ -397,6 +397,38 @@ describe('AuthFacade', () => {
     });
   });
 
+  // fix-216-b (P04 de ASG-i-034): cambiar la clave desde Ajustes exige la actual.
+  describe('changePassword — fix-216-b', () => {
+    beforeEach(() => {
+      service.setUser({ id: 'u1', email: 'yo@test.cl' } as any);
+    });
+
+    it('verifica la actual con el correo del usuario y recién ahí cambia la clave', async () => {
+      const result = await service.changePassword('Actual123', 'Nueva1234');
+      expect(supabaseSpy.signIn).toHaveBeenCalledWith('yo@test.cl', 'Actual123');
+      expect((service as any).supabase.client.auth.updateUser).toHaveBeenCalledWith({
+        password: 'Nueva1234',
+      });
+      expect(result.error).toBeNull();
+    });
+
+    it('actual incorrecta → error claro y NO cambia la clave', async () => {
+      supabaseSpy.signIn.mockResolvedValue({
+        error: Object.assign(new Error('Invalid login credentials'), { name: 'AuthApiError' }),
+      });
+      const result = await service.changePassword('mala', 'Nueva1234');
+      expect(result.error?.message).toBe('La contraseña actual no es correcta.');
+      expect((service as any).supabase.client.auth.updateUser).not.toHaveBeenCalled();
+    });
+
+    it('sin usuario en sesión → error y no cambia nada', async () => {
+      service.setUser(null);
+      const result = await service.changePassword('Actual123', 'Nueva1234');
+      expect(result.error).toBeInstanceOf(Error);
+      expect(supabaseSpy.signIn).not.toHaveBeenCalled();
+    });
+  });
+
   it('updatePassword() retorna mensaje de error legible cuando la nueva contraseña es igual a la anterior', async () => {
     const authError = Object.assign(
       new Error('New password should be different from the old password.'),

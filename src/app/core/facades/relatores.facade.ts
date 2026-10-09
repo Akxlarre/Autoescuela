@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { Lecturer } from '@core/models/dto/lecturer.model';
@@ -170,7 +171,7 @@ export class RelatoresFacade {
         phone: payload.phone || null,
         specializations: payload.specializations,
         active: true,
-        registration_date: new Date().toISOString().split('T')[0],
+        registration_date: todayIso(),
       });
 
       if (error) throw error;

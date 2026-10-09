@@ -13,20 +13,18 @@
  * - RF-05: matrícula Jue/Vie/Sáb/Dom → ciclo de la semana siguiente.
  */
 
-import { isoToDate, toISODate, capitalize } from './date.utils';
+import { addDaysIso, formatChileDate, weekdayOfIso } from './chile-time.utils';
+import { isoToDate, capitalize } from './date.utils';
 
 /** Día de la semana en formato ISO: 1 = Lunes … 7 = Domingo. */
-function isoDayOfWeek(date: Date): number {
-  const js = date.getDay(); // 0 = Domingo … 6 = Sábado
+function isoDayOfWeek(iso: string): number {
+  const js = weekdayOfIso(iso); // 0 = Domingo … 6 = Sábado
   return js === 0 ? 7 : js;
 }
 
 /** Suma `days` días a una fecha ISO ('YYYY-MM-DD') y devuelve ISO. */
 function addDays(iso: string, days: number): string {
-  const d = isoToDate(iso);
-  if (!d) return iso;
-  d.setDate(d.getDate() + days);
-  return toISODate(d);
+  return isoToDate(iso) ? addDaysIso(iso, days) : iso;
 }
 
 /**
@@ -36,9 +34,8 @@ function addDays(iso: string, days: number): string {
  * - dow ∈ {4,5,6,7} (Jue–Dom) → lunes de la semana siguiente.
  */
 export function cycleStartMonday(enrollDate: string): string {
-  const d = isoToDate(enrollDate);
-  if (!d) return enrollDate;
-  const dow = isoDayOfWeek(d);
+  if (!isoToDate(enrollDate)) return enrollDate;
+  const dow = isoDayOfWeek(enrollDate);
   const mondayThisWeek = addDays(enrollDate, -(dow - 1));
   return dow <= 3 ? mondayThisWeek : addDays(mondayThisWeek, 7);
 }
@@ -63,11 +60,10 @@ export function cycleClassDates(startMonday: string): string[] {
  * (ocurre cuando el filtro activo es "Todas las escuelas").
  */
 export function formatCycleLabel(startMonday: string, branchName?: string): string {
-  const d = isoToDate(startMonday);
-  if (!d) return 'Ciclo';
-  const weekday = capitalize(d.toLocaleDateString('es-CL', { weekday: 'long' }));
-  const day = d.toLocaleDateString('es-CL', { day: 'numeric' });
-  const month = d.toLocaleDateString('es-CL', { month: 'long' });
+  if (!isoToDate(startMonday)) return 'Ciclo';
+  const weekday = capitalize(formatChileDate(startMonday, { weekday: 'long' }));
+  const day = formatChileDate(startMonday, { day: 'numeric' });
+  const month = formatChileDate(startMonday, { month: 'long' });
   const base = `Ciclo — ${weekday} ${day} de ${month}`;
   return branchName ? `${base} · ${branchName}` : base;
 }

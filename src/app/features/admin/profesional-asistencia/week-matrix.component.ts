@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesional.model';
 
@@ -206,7 +207,7 @@ export class WeekMatrixComponent {
   readonly days = input.required<WeekDay[]>();
   readonly selectSession = output<SesionProfesional>();
 
-  private readonly todayIso = new Date().toISOString().slice(0, 10);
+  private readonly todayIso = todayIso();
 
   getStatusColor(session: SesionProfesional): string {
     if (session.date > this.todayIso) return 'var(--text-muted)';

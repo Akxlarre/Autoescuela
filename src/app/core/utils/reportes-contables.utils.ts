@@ -3,6 +3,13 @@
  * Todas las funciones son puras: (Data In → Data Out), sin efectos secundarios.
  * Testeables sin levantar el framework Angular.
  */
+import {
+  addMonthsIso,
+  endOfMonthIso,
+  formatChileDate,
+  startOfMonthIso,
+  toChileDate,
+} from './chile-time.utils';
 
 import type {
   CategoriaGasto,
@@ -83,9 +90,7 @@ const EXPENSE_CATEGORY_ALIAS: Record<string, string> = {
 
 /** Formatea YYYY-MM como "Enero 2026". */
 function monthLabel(yyyyMm: string): string {
-  const [year, month] = yyyyMm.split('-');
-  const date = new Date(Number(year), Number(month) - 1, 1);
-  return date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+  return formatChileDate(`${yyyyMm}-01`, { month: 'long', year: 'numeric' });
 }
 
 /**
@@ -150,7 +155,7 @@ export function mapSingularSaleToPaymentRow(s: SingularSaleReportDto): PaymentRo
   return {
     total_amount: s.amount_paid ?? 0,
     type: 'standalone',
-    payment_date: s.paid_at ? s.paid_at.slice(0, 10) : null,
+    payment_date: s.paid_at ? toChileDate(s.paid_at) : null,
     enrollments: { branch_id: s.branch_id, license_group: 'standalone' },
   };
 }
@@ -342,38 +347,31 @@ export function computeEvolucionRange(
   rango: RangoEvolucion,
   now: Date = new Date(),
 ): { desde: string; hasta: string; meses: string[] } {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const ym = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-  const firstDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
-  const lastDay = (year: number, monthIdx: number) => {
-    const d = new Date(year, monthIdx + 1, 0);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  };
-  const monthList = (startYear: number, startMonthIdx: number, count: number): string[] =>
-    Array.from({ length: count }, (_, i) => ym(new Date(startYear, startMonthIdx + i, 1)));
-
-  const y = now.getFullYear();
-  const m = now.getMonth(); // 0–11
+  // Mes en curso según el día de Chile, no según el reloj del equipo.
+  const currentMonth = startOfMonthIso(toChileDate(now));
+  const year = Number(currentMonth.slice(0, 4));
+  const monthList = (first: string, count: number): string[] =>
+    Array.from({ length: count }, (_, i) => addMonthsIso(first, i).slice(0, 7));
 
   switch (rango) {
     case 'ultimos_6_meses':
     case 'ultimos_12_meses': {
       const count = rango === 'ultimos_6_meses' ? 6 : 12;
-      const start = new Date(y, m - (count - 1), 1);
-      return {
-        desde: firstDay(start),
-        hasta: lastDay(y, m),
-        meses: monthList(start.getFullYear(), start.getMonth(), count),
-      };
+      const start = addMonthsIso(currentMonth, -(count - 1));
+      return { desde: start, hasta: endOfMonthIso(currentMonth), meses: monthList(start, count) };
     }
     case 'anio_actual': {
       // Enero → mes en curso, inclusive (NO ene–dic completo).
-      const count = m + 1;
-      return { desde: `${y}-01-01`, hasta: lastDay(y, m), meses: monthList(y, 0, count) };
+      const count = Number(currentMonth.slice(5, 7));
+      return {
+        desde: `${year}-01-01`,
+        hasta: endOfMonthIso(currentMonth),
+        meses: monthList(`${year}-01-01`, count),
+      };
     }
     case 'anio_anterior': {
-      const py = y - 1;
-      return { desde: `${py}-01-01`, hasta: `${py}-12-31`, meses: monthList(py, 0, 12) };
+      const py = year - 1;
+      return { desde: `${py}-01-01`, hasta: `${py}-12-31`, meses: monthList(`${py}-01-01`, 12) };
     }
   }
 }

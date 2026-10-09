@@ -194,6 +194,26 @@ describe('LiquidacionesFacade', () => {
 
       expect(ok).toBe(true);
     });
+
+    // fix-362-m: el update de anticipos no se revisaba — el pago se daba por bueno y los
+    // anticipos quedaban "pendientes", listos para descontarse otra vez el mes siguiente.
+    it('fix-362-m: si no se pueden marcar los anticipos como descontados, no da éxito', async () => {
+      const advancesError = { code: '42501', message: 'permission denied' };
+      supabaseSpy.client.from().update.mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          gte: vi.fn().mockReturnValue({
+            lte: vi.fn().mockResolvedValue({ error: advancesError }),
+          }),
+        }),
+      });
+
+      const ok = await facade.registrarPago(row, { amountPerHour: 5000 } as any);
+
+      expect(ok).toBe(false);
+      expect(toastSpy.success).not.toHaveBeenCalled();
+      expect(toastSpy.error).toHaveBeenCalled();
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
   });
 
   // ─── spec 0014-m: tarifa por hora resuelta por sede del instructor ─────────

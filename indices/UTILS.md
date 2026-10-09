@@ -33,6 +33,7 @@
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch` |
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
+| `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime` |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES` |
@@ -47,8 +48,8 @@
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
-| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `toISODate`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP`, `getChileDateTimeRange` |
-| `src/app/core/utils/db-error.utils.ts` | `toFriendlyDbMessage` |
+| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
+| `src/app/core/utils/db-error.utils.ts` | `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
@@ -69,17 +70,21 @@
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
+| `src/app/core/utils/hourly-rate.utils.ts` | `isValidHourlyRate` |
 | `src/app/core/utils/html.utils.ts` | `escapeHtml` |
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/inasistencia.utils.ts` | `canJustificarInasistencia` |
 | `src/app/core/utils/instructor-create-branch.utils.ts` | `InstructorCreateBranch`, `resolveInstructorCreateBranch` |
+| `src/app/core/utils/instructor-deactivation.utils.ts` | `instructorDeactivationNotices`, `instructorBranchChangeNotice` |
 | `src/app/core/utils/instructor-doc-types.util.ts` | `INSTRUCTOR_DOC_TYPES` |
+| `src/app/core/utils/instructor-invite.utils.ts` | `instructorCreatedToast` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |
 | `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
+| `src/app/core/utils/license-number.utils.ts` | `isValidLicenseNumber` |
 | `src/app/core/utils/license-seniority.utils.ts` | `requiredPriorLicenseLabel`, `licenseClassFromCourseType`, `calcLicenseSeniority` |
 | `src/app/core/utils/license-status.utils.ts` | `LICENSE_EXPIRING_SOON_DAYS`, `licenseStatusFromExpiry`, `expiredLicenseNotice` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
@@ -89,6 +94,7 @@
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
+| `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/payment-status.utils.ts` | `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
@@ -100,11 +106,12 @@
 | `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `PROMOTION_CODE_MAX_AHEAD`, `isValidPromotionCode`, `maxPromotionCode`, `suggestNextPromotionCode`, `promotionCodeError`, `promotionNameForCode`, `promotionLabel`, `promotionOptionStatus`, `sortPromotionGroupsByStart`, `isCadenceDate`, `promotionWriteErrorMessage` |
 | `src/app/core/utils/promotion-end-date.utils.ts` | `computePromotionEndDate`, `promotionHolidayYears`, `holidaysOfYear` |
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
+| `src/app/core/utils/realtime-scope.utils.ts` | `RealtimeRowChange`, `StudentRealtimeScope`, `isRealtimeEventForStudent` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
-| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
+| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `formatRutTyping`, `completeRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch`, `matchesSearchTokens`, `filterBySearchTokens` |
@@ -113,7 +120,7 @@
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
 | `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
-| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier` |
+| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier` |
 | `src/app/core/utils/table-sort.utils.ts` | `SortDirection`, `TableSort`, `SortKey`, `textSortKey`, `dateSortKey`, `rutSortKey`, `sortRows`, `nextSort`, `toggleSortDirection`, `ariaSortOf`, `sortIconOf` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |

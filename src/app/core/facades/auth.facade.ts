@@ -302,6 +302,21 @@ export class AuthFacade {
     return { error: error ? new Error(mapAuthError(error)) : null };
   }
 
+  /**
+   * Cambio de clave desde Ajustes (fix-216-b, P04 de ASG-i-034): verifica la actual antes de
+   * cambiarla, para que alguien frente a una sesión abierta ajena no pueda dejar afuera al titular.
+   * La verificación es un inicio de sesión con el mismo usuario (renueva la sesión, no la cierra).
+   */
+  async changePassword(current: string, next: string): Promise<{ error: Error | null }> {
+    const email = this._currentUser()?.email;
+    if (!email) return { error: new Error('No hay una sesión activa.') };
+
+    const { error } = await this.supabase.signIn(email, current);
+    if (error) return { error: new Error('La contraseña actual no es correcta.') };
+
+    return this.updatePassword(next);
+  }
+
   /** Fija la clave nueva de una sesión de recuperación y la da por terminada (fix-181-b). */
   async completePasswordRecovery(password: string): Promise<{ error: Error | null }> {
     const result = await this.updatePassword(password);

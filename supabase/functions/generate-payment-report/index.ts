@@ -1,3 +1,4 @@
+import { formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-payment-report/index.ts
 //
 // Edge Function: generate-payment-report
@@ -699,13 +700,7 @@ function truncate(s: string, max: number): string {
 
 function formatDateCL(iso: string | null): string {
   if (!iso) return '-';
-  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
-  return d.toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    timeZone: 'America/Santiago',
-  });
+  return formatChilePattern(iso, 'dd-MM-yyyy') ?? '-';
 }
 
 function formatDateTimeCL(iso: string): string {

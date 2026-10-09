@@ -18,7 +18,7 @@ import {
 } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
-import { formatCLP, toISODate } from '@core/utils/date.utils';
+import { formatCLP, todayIso } from '@core/utils/date.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SelectModule } from 'primeng/select';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -648,7 +648,7 @@ export class RegistrarPagoDrawerComponent {
   protected readonly form = this.fb.group(
     {
       enrollment_id: [null as number | null],
-      payment_date: [toISODate(new Date()), Validators.required],
+      payment_date: [todayIso(), Validators.required],
       type: ['', Validators.required],
       total_amount: [null as number | null, [Validators.required, Validators.min(1)]],
       cash_amount: [null as number | null, Validators.min(0)],
@@ -761,7 +761,7 @@ export class RegistrarPagoDrawerComponent {
     eidCtrl.updateValueAndValidity();
 
     this.form.patchValue({
-      payment_date: toISODate(new Date()),
+      payment_date: todayIso(),
       type: '',
       total_amount: null,
       cash_amount: null,

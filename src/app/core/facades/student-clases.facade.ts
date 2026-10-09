@@ -2,7 +2,8 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import { toISODate, to24hTime } from '@core/utils/date.utils';
+import { toChileDate } from '@core/utils/chile-time.utils';
+import { to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
   StudentClasesData,
@@ -192,7 +193,7 @@ export class StudentClasesFacade {
         id: s.id,
         classNumber: s.class_number ?? i + 1,
         scheduledAt: s.scheduled_at,
-        date: toISODate(dt),
+        date: toChileDate(s.scheduled_at),
         time: to24hTime(s.scheduled_at),
         durationMin: s.duration_min ?? 45,
         status: derivePracticeStatus(s),

@@ -297,7 +297,7 @@
 | `features/admin/instructores` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/instructores` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/instructores` | ❌ | ❌ | ❌ | ✅ |
-| `features/admin/instructores` | ✅ | ❌ | ❌ | ✅ |
+| `features/admin/instructores` | ✅ | ❌ | ✅ | ✅ |
 | `features/admin/matricula` | ❌ | ❌ | ❌ | ❌ |
 | `features/admin/notificaciones` | ❌ | ❌ | ❌ | ❌ |
 | `features/admin/pagos` | ❌ | ❌ | ❌ | ✅ |
@@ -326,7 +326,7 @@
 | `features/admin/secretarias` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/secretarias` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/secretarias` | ❌ | ❌ | ❌ | ✅ |
-| `features/admin/secretarias` | ✅ | ❌ | ❌ | ✅ |
+| `features/admin/secretarias` | ✅ | ❌ | ✅ | ✅ |
 | `features/admin/servicios-especiales` | ✅ | ❌ | ❌ | ❌ |
 | `features/admin/servicios-especiales` | ❌ | ❌ | ❌ | ❌ |
 | `features/admin/servicios-especiales` | ❌ | ❌ | ❌ | ❌ |

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -7,7 +8,7 @@ import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.fa
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -194,7 +195,7 @@ export class RegistrarVentaDrawerComponent {
   protected readonly showTipoCliente = signal(false);
 
   // fix-023-i: la fecha ya no es un campo del formulario — se fija a hoy al enviar.
-  protected readonly hoyLabel = new Date().toLocaleDateString('es-CL');
+  protected readonly hoyLabel = formatDayMonthYear(todayIso());
 
   protected readonly ventaForm = new FormGroup({
     servicioId: new FormControl('', Validators.required),
@@ -249,15 +250,15 @@ export class RegistrarVentaDrawerComponent {
 
   protected onRutInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const formatted = formatRut(input.value);
+    const formatted = formatRutTyping(input.value);
     this.ventaForm.get('rut')!.setValue(formatted, { emitEvent: false });
     input.value = formatted;
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
     const control = this.ventaForm.get('rut')!;
-    control.setValue(autocompleteRutDv(control.value ?? ''));
+    control.setValue(completeRutDv(control.value ?? ''));
   }
 
   protected async submitVenta(): Promise<void> {
@@ -271,7 +272,7 @@ export class RegistrarVentaDrawerComponent {
       nombre: val.nombre!,
       rut: val.rut!,
       esAlumno: !!val.esAlumno,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: todayIso(),
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,
       branchId: val.branchId ?? null,

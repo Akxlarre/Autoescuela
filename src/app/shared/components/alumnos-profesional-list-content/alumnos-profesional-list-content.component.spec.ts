@@ -100,3 +100,115 @@ describe('AlumnosProfesionalListContentComponent — "Ver ficha" (fix-335-m)', (
     expect(c.fichaQueryParams({ id: '7334', enrollmentId: 6983 })).toEqual({ enrollment: 6983 });
   });
 });
+
+/**
+ * fix-354-m: la vista de tarjetas pintaba todas las matrículas (65 → 22.000 px de alto) y la
+ * animación de entrada montaba la lista sobre el hero. Ahora muestra de a 6, como la Base B.
+ */
+describe('AlumnosProfesionalListContentComponent — tarjetas de a 6 (fix-354-m)', () => {
+  function create(total: number): any {
+    TestBed.overrideComponent(AlumnosProfesionalListContentComponent, { set: { template: '' } });
+    const c = TestBed.createComponent(AlumnosProfesionalListContentComponent)
+      .componentInstance as any;
+    const rows = Array.from({ length: total }, (_, i) => ({
+      id: String(i),
+      enrollmentId: i,
+      nombre: `Nombre${i}`,
+      apellido: `Apellido${i}`,
+      rut: `${i}-K`,
+      nroMatricula: String(i).padStart(4, '0'),
+      licenseClass: i % 2 === 0 ? 'A2' : 'A4',
+    }));
+    Object.defineProperty(c, 'alumnos', { value: () => rows });
+    return c;
+  }
+
+  it('muestra las primeras 6 y dice cuántas quedan', () => {
+    const c = create(20);
+    expect(c.visibleCards().length).toBe(6);
+    expect(c.remainingCards()).toBe(14);
+  });
+
+  it('"Cargar más" suma 6 y nunca pasa del total', () => {
+    const c = create(20);
+    c.loadMoreCards();
+    expect(c.visibleCards().length).toBe(12);
+    c.loadMoreCards();
+    c.loadMoreCards();
+    expect(c.visibleCards().length).toBe(20);
+    expect(c.remainingCards()).toBe(0);
+  });
+
+  it('con menos de 6 no queda nada por cargar', () => {
+    const c = create(4);
+    expect(c.visibleCards().length).toBe(4);
+    expect(c.remainingCards()).toBe(0);
+  });
+
+  it('lo que queda se cuenta sobre la lista filtrada', () => {
+    const c = create(20);
+    c.selectedClase = 'A2';
+    c.resetPagination();
+    expect(c.visibleCards().length).toBe(6);
+    expect(c.remainingCards()).toBe(4);
+  });
+
+  it('buscar, ordenar, limpiar filtros y cambiar a la Papelera vuelven a las primeras 6', () => {
+    const c = create(20);
+    const reset = [
+      () => c.resetPagination(),
+      () => c.toggleSort('alumno'),
+      () => c.resetFilters(),
+      () => c.handleHeroAction('papelera'),
+    ];
+    for (const action of reset) {
+      c.loadMoreCards();
+      expect(c.visibleCards().length).toBe(12);
+      action();
+      expect(c.visibleCards().length).toBe(6);
+    }
+  });
+});
+
+/** hotfix-147-m: textos del chip de total y del estado vacío. */
+describe('AlumnosProfesionalListContentComponent — textos (hotfix-147-m)', () => {
+  function create(total: number, trash = false): any {
+    TestBed.overrideComponent(AlumnosProfesionalListContentComponent, { set: { template: '' } });
+    const c = TestBed.createComponent(AlumnosProfesionalListContentComponent)
+      .componentInstance as any;
+    Object.defineProperty(c, 'alumnos', { value: () => Array.from({ length: total }, () => ({})) });
+    Object.defineProperty(c, 'trashView', { value: () => trash });
+    return c;
+  }
+
+  it('el chip de total usa singular con una sola matrícula', () => {
+    expect(create(1).heroChips()[0].label).toBe('1 matrícula');
+  });
+
+  it('el chip de total usa plural con varias', () => {
+    expect(create(2).heroChips()[0].label).toBe('2 matrículas');
+  });
+
+  it('con filtros puestos, la lista vacía ofrece limpiarlos', () => {
+    const c = create(0);
+    c.searchTerm = 'zzz';
+    expect(c.emptyState().message).toBe('No se encontraron alumnos');
+    expect(c.emptyState().actionLabel).toBe('Limpiar filtros');
+  });
+
+  it('la Papelera vacía lo dice y no ofrece limpiar filtros', () => {
+    const c = create(0, true);
+    c.searchTerm = '';
+    c.selectedClase = '';
+    expect(c.emptyState().message).toBe('No hay alumnos archivados');
+    expect(c.emptyState().actionLabel).toBeUndefined();
+  });
+
+  it('la lista vacía sin filtros no ofrece limpiar filtros', () => {
+    const c = create(0);
+    c.searchTerm = '';
+    c.selectedClase = '';
+    expect(c.emptyState().message).toBe('Aún no hay alumnos profesionales');
+    expect(c.emptyState().actionLabel).toBeUndefined();
+  });
+});

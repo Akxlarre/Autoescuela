@@ -1,4 +1,5 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { chileRange } from '@core/utils/chile-time.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
@@ -364,8 +365,8 @@ export class ReportesContablesFacade {
       .from('standalone_course_enrollments')
       .select('amount_paid, paid_at, standalone_courses!inner(branch_id)')
       .eq('payment_status', 'paid')
-      .gte('paid_at', `${desde}T00:00:00`)
-      .lte('paid_at', `${hasta}T23:59:59`);
+      .gte('paid_at', chileRange(desde, hasta).start)
+      .lt('paid_at', chileRange(desde, hasta).endExclusive);
   }
 
   /**
@@ -494,8 +495,8 @@ export class ReportesContablesFacade {
         .from('class_b_sessions')
         .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
         .eq('status', 'completed')
-        .gte('scheduled_at', `${desde}T00:00:00`)
-        .lte('scheduled_at', `${hasta}T23:59:59`);
+        .gte('scheduled_at', chileRange(desde, hasta).start)
+        .lt('scheduled_at', chileRange(desde, hasta).endExclusive);
       if (branchId !== null) {
         classB = classB.eq('enrollments.branch_id', branchId);
       }

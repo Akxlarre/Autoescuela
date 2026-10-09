@@ -230,8 +230,7 @@ function fmtDaySantiago(ts: string | null | undefined): string {
 }
 
 function addMinutes(ts: string, minutes: number): string {
-  const d = new Date(ts);
-  d.setMinutes(d.getMinutes() + minutes);
+  const d = new Date(new Date(ts).getTime() + minutes * 60_000);
   return new Intl.DateTimeFormat('es-CL', {
     timeZone: 'America/Santiago',
     hour: '2-digit',

@@ -19,6 +19,10 @@
 // Si dos corridas del cron se solapan, la segunda no recibe fila y lo saltea. La
 // exclusión mutua la resuelve la base, no la lógica de acá.
 //
+// TAMBIÉN TERMINA LOS ENVÍOS INMEDIATOS A MEDIAS (fix-361-m): el envío inmediato lo
+// avanza el navegador de la secretaria; si cierra la pestaña, el comunicado queda en
+// `enviando` sin latido y el rescate de acá lo retoma desde el primer pendiente.
+//
 // Body: sin parámetros.
 // Respuesta: { dispatched, results: [{ id, sent, failed, done }] }
 //
@@ -26,7 +30,12 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { loadAnnouncement, sendAnnouncementBatch } from '../_shared/announcement-send.ts';
+import {
+  finalizeAnnouncement,
+  loadAnnouncement,
+  sendPendingBatch,
+} from '../_shared/announcement-send.ts';
+import { isDispatchOrphaned, releasedHeartbeat } from '../_shared/announcement-progress.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,20 +54,17 @@ const BATCH_SIZE = 25;
 
 /**
  * Tope de lotes por invocación. Las Edge Functions tienen límite de tiempo: si un
- * comunicado no termina acá, queda en `enviando` y la corrida siguiente lo rescata y lo
- * reanuda. Reanudar es seguro porque los destinatarios ya están materializados y los que
- * recibieron tienen `email_sent_ok`.
+ * comunicado no termina acá, queda en `enviando` con el latido soltado y la corrida
+ * siguiente lo reanuda desde el primer destinatario pendiente. Reanudar es seguro porque
+ * los destinatarios ya están materializados y los procesados tienen su resultado.
  */
 const MAX_BATCHES_PER_RUN = 8;
 
 /** Comunicados por corrida. Más de esto y el tiempo de la función no alcanza. */
 const MAX_ANNOUNCEMENTS_PER_RUN = 3;
 
-/**
- * Un `enviando` más viejo que esto quedó huérfano (la función murió a mitad). Dos ciclos
- * de cron: si sigue ahí, nadie lo está procesando.
- */
-const STUCK_MINUTES = 30;
+// Cuándo un `enviando` quedó huérfano lo decide `isDispatchOrphaned`
+// (`_shared/announcement-progress.ts`), por el último lote avanzado.
 
 /**
  * ¿El token es el de rol de servicio? Solo mira el claim; la firma la verificó el gateway.
@@ -114,28 +120,39 @@ Deno.serve(async (req: Request) => {
     );
 
     // ── Rescate de huérfanos ─────────────────────────────────────────────────
-    // Sin esto, un comunicado cuya función murió a mitad se queda en `enviando` para
+    // Sin esto, un comunicado cuyo envío murió a mitad se queda en `enviando` para
     // siempre: nadie lo vuelve a tomar y los destinatarios que faltaban nunca reciben.
-    const stuckCutoff = new Date(Date.now() - STUCK_MINUTES * 60_000).toISOString();
-    const { data: rescued } = await service
+    // Cubre también el envío inmediato que la secretaria dejó a medias al cerrar la
+    // pestaña (fix-361-m): huérfano = sin un lote avanzado en STUCK_MINUTES.
+    const now = new Date();
+    const { data: sending, error: sendingError } = await service
       .from('announcements')
-      .update({ status: 'programado' })
-      .eq('status', 'enviando')
-      .lt('scheduled_for', stuckCutoff)
-      .select('id');
+      .select('id, dispatch_heartbeat_at, scheduled_for, created_at')
+      .eq('status', 'enviando');
+    if (sendingError) throw sendingError;
 
-    if (rescued?.length) {
-      console.log(`Rescatados ${rescued.length} comunicado(s) trabados en 'enviando'`);
+    const orphans = (sending ?? []).filter((row) => isDispatchOrphaned(row, now));
+    for (const orphan of orphans) {
+      await service
+        .from('announcements')
+        .update({ status: 'programado' })
+        .eq('id', orphan.id)
+        .eq('status', 'enviando');
+    }
+
+    if (orphans.length) {
+      console.log(`Rescatados ${orphans.length} comunicado(s) trabados en 'enviando'`);
     }
 
     // ── Vencidos ─────────────────────────────────────────────────────────────
     // `<= now()` incluye los atrasados: si el dispatcher estuvo caído, igual salen (AC-E2).
+    // `scheduled_for IS NULL` es un envío inmediato rescatado: también le toca ahora.
     const { data: due, error: dueError } = await service
       .from('announcements')
       .select('id')
       .eq('status', 'programado')
-      .lte('scheduled_for', new Date().toISOString())
-      .order('scheduled_for', { ascending: true })
+      .or(`scheduled_for.is.null,scheduled_for.lte.${now.toISOString()}`)
+      .order('scheduled_for', { ascending: true, nullsFirst: true })
       .limit(MAX_ANNOUNCEMENTS_PER_RUN);
     if (dueError) throw dueError;
 
@@ -145,7 +162,7 @@ Deno.serve(async (req: Request) => {
       // ── El candado ─────────────────────────────────────────────────────────
       const { data: locked } = await service
         .from('announcements')
-        .update({ status: 'enviando' })
+        .update({ status: 'enviando', dispatch_heartbeat_at: new Date().toISOString() })
         .eq('id', row.id)
         .eq('status', 'programado')
         .select('id')
@@ -156,42 +173,34 @@ Deno.serve(async (req: Request) => {
 
       try {
         const announcement = await loadAnnouncement(service, row.id);
-        let offset = 0;
         let sent = 0;
         let failed = 0;
         let done = false;
 
+        // Cada lote pide los destinatarios que FALTAN, no una posición: así una corrida
+        // que reanuda sigue donde quedó la anterior en vez de recorrer de nuevo los
+        // primeros (fix-361-m). Un segmento sin nadie devuelve `done` de inmediato y se
+        // cierra como enviado con 0, sin quedar reintentándose (AC-E3).
         for (let i = 0; i < MAX_BATCHES_PER_RUN && !done; i++) {
-          const result = await sendAnnouncementBatch(service, announcement, {
-            offset,
+          const result = await sendPendingBatch(service, announcement, {
             batchSize: BATCH_SIZE,
             dryRun,
           });
           sent += result.sent;
           failed += result.failed;
           done = result.done;
-          offset += result.processed;
-
-          // Segmento que no resuelve a nadie: se cierra como enviado con 0 y no queda
-          // reintentándose para siempre (AC-E3).
-          if (result.recipientsTotal === 0) {
-            done = true;
-            break;
-          }
         }
 
-        if (done) {
+        // Los conteos que quedan en el comunicado salen de sus destinatarios, no de esta
+        // corrida: un envío grande pasa por varias. Si no terminó, queda en `enviando` y
+        // el rescate de la próxima corrida lo reanuda.
+        if (done) done = (await finalizeAnnouncement(service, row.id)).finalized;
+        if (!done) {
           await service
             .from('announcements')
-            .update({
-              status: 'enviado',
-              sent_at: new Date().toISOString(),
-              email_ok_count: sent,
-              email_failed_count: failed,
-            })
+            .update({ dispatch_heartbeat_at: releasedHeartbeat(new Date()) })
             .eq('id', row.id);
         }
-        // Si no terminó, queda en `enviando`: el rescate de la próxima corrida lo reanuda.
 
         results.push({ id: row.id, sent, failed, done });
       } catch (err) {

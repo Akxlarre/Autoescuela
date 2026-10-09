@@ -10,7 +10,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePickerModule } from 'primeng/datepicker';
-import { isoToDate, toISODate } from '@core/utils/date.utils';
+import { calendarDateToIso } from '@core/utils/chile-time.utils';
+import { isoToDate } from '@core/utils/date.utils';
 
 @Component({
   selector: 'app-date-input',
@@ -70,7 +71,7 @@ export class DateInputComponent {
   }
 
   protected onDateChange(date: Date | null): void {
-    this.valueChange.emit(date ? toISODate(date) : '');
+    this.valueChange.emit(date ? calendarDateToIso(date) : '');
   }
 
   /**

@@ -600,6 +600,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           in: vi.fn(() => b),
           order: vi.fn(() => b),
           lte: vi.fn(() => b),
+          lt: vi.fn(() => b),
           limit: vi.fn(() => b),
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
@@ -2191,6 +2192,7 @@ describe('AdminAlumnoDetalleFacade', () => {
         select: vi.fn(() => builder),
         eq: vi.fn(() => builder),
         lte: vi.fn(() => builder),
+        lt: vi.fn(() => builder),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       const mock = {
@@ -2225,13 +2227,14 @@ describe('AdminAlumnoDetalleFacade', () => {
 
       await facade.loadScheduleGrid(9);
 
-      expect(builder.lte).toHaveBeenCalledWith('slot_start', '2026-09-20T23:59:59');
+      // Tope exclusivo: inicio del día siguiente en Chile (spec 0024-m).
+      expect(builder.lt).toHaveBeenCalledWith('slot_start', '2026-09-21T03:00:00.000Z');
     });
 
     it('re-deriva el límite en cada llamada — no queda pegado al primer valor leído', async () => {
       const builder = setupWithAgendaLimit('2026-05-14');
       await facade.loadScheduleGrid(9);
-      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
+      expect(builder.lt).toHaveBeenLastCalledWith('slot_start', '2026-05-15T04:00:00.000Z');
     });
 
     it('puebla vehicleDocWarning por slot desde vehicle_documents (fix-165-m)', async () => {
@@ -2239,6 +2242,7 @@ describe('AdminAlumnoDetalleFacade', () => {
         select: vi.fn(() => slotBuilder),
         eq: vi.fn(() => slotBuilder),
         lte: vi.fn(() => slotBuilder),
+        lt: vi.fn(() => slotBuilder),
         order: vi.fn().mockResolvedValue({
           data: [
             {

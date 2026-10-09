@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 import { ButtonModule } from 'primeng/button';
 
@@ -30,7 +30,7 @@ const STATUS_BADGE_VARIANT: Record<PromocionStatus, BadgeVariant> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     TooltipModule,
     ButtonModule,
     IconComponent,
@@ -85,8 +85,8 @@ const STATUS_BADGE_VARIANT: Record<PromocionStatus, BadgeVariant> = {
           <div class="flex items-center gap-4 flex-wrap">
             <span class="flex items-center gap-1.5 text-xs text-text-muted">
               <app-icon name="calendar" [size]="12" />
-              {{ promocion().startDate | date: 'dd/MM/yyyy' }} →
-              {{ promocion().endDate | date: 'dd/MM/yyyy' }}
+              {{ promocion().startDate | chileDate: 'dd/MM/yyyy' }} →
+              {{ promocion().endDate | chileDate: 'dd/MM/yyyy' }}
             </span>
             <span class="flex items-center gap-1.5 text-xs text-text-secondary">
               <app-icon name="users" [size]="12" />

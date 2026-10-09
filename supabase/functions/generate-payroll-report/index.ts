@@ -1,3 +1,4 @@
+import { chileParts, chileYear, formatChilePattern, monthDays } from '../_shared/chile-time.ts';
 // supabase/functions/generate-payroll-report/index.ts
 //
 // Edge Function: generate-payroll-report
@@ -141,8 +142,8 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const format: 'excel' | 'pdf' = body.format ?? 'excel';
-    const month: number = body.month ?? new Date().getMonth() + 1;
-    const year: number = body.year ?? new Date().getFullYear();
+    const month: number = body.month ?? chileParts().month;
+    const year: number = body.year ?? chileYear();
     const branchId: number | null = body.branch_id ?? null;
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -170,7 +171,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Rango de fechas del mes ───────────────────────────────────────────────
     const mm = padNum(month);
-    const lastDay = new Date(year, month, 0).getDate();
+    const lastDay = monthDays(year, month);
     const fechaInicio = `${year}-${mm}-01`;
     const fechaFin = `${year}-${mm}-${padNum(lastDay)}`;
     const period = `${year}-${mm}`;
@@ -307,7 +308,7 @@ function buildExcelPayload(d: ReportData) {
   rows.push([`Período: ${periodo}`]);
   rows.push([`Sede: ${d.branchName}`]);
   rows.push([`Generado por: ${d.generatedBy}`]);
-  rows.push([`Fecha de generación: ${new Date().toLocaleString('es-CL')}`]);
+  rows.push([`Fecha de generación: ${formatChilePattern(new Date(), 'dd-MM-yyyy, HH:mm:ss')}`]);
   rows.push([]);
 
   rows.push(['RESUMEN']);
@@ -343,7 +344,7 @@ function buildExcelPayload(d: ReportData) {
       r.totalAdvances,
       r.finalPaymentAmount,
       r.status === 'paid' ? 'Pagado' : 'Pendiente',
-      r.paymentDate ? new Date(r.paymentDate).toLocaleDateString('es-CL') : '—',
+      r.paymentDate ? (formatChilePattern(r.paymentDate, 'dd-MM-yyyy') ?? '—') : '—',
     ]);
   }
 
@@ -435,7 +436,7 @@ function buildPdf(data: ReportData): Uint8Array {
   y -= 15;
   T(M, y, `Generado por: ${data.generatedBy}`, 10);
   y -= 15;
-  T(M, y, `Fecha: ${new Date().toLocaleDateString('es-CL')}`, 9);
+  T(M, y, `Fecha: ${formatChilePattern(new Date(), 'dd-MM-yyyy')}`, 9);
   y -= 20;
 
   L(M, y, M + CW, y);

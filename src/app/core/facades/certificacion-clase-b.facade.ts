@@ -1,4 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { chileYear, toChileDate } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -431,7 +433,7 @@ export class CertificacionClaseBFacade {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `certificados-clase-b-${new Date().toISOString().split('T')[0]}.zip`;
+      link.download = `certificados-clase-b-${todayIso()}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -554,7 +556,7 @@ export class CertificacionClaseBFacade {
 
       // Folio only shown when PDF exists; year derived from issuance date, not today's date
       const hasPdf = !!e.certificate_b_pdf_url;
-      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+      const certYear = cert?.created_at ? chileYear(new Date(cert.created_at)) : null;
 
       // Cantidad de clases requeridas se deriva del curso de la matrícula (spec 0006-m) —
       // ya no asume 12 fijo. `is_reinforcement=false` fue filtrado en la query, así que este
@@ -571,7 +573,7 @@ export class CertificacionClaseBFacade {
         clasesCompletadas: Math.min(practiceCountMap.get(e.id) ?? 0, clasesTotales),
         clasesTotales,
         fechaTermino: progress?.last_practice_session
-          ? new Date(progress.last_practice_session).toISOString().split('T')[0]
+          ? toChileDate(progress.last_practice_session)
           : null,
         pctAsistenciaTeoria,
         certificadoId: cert?.id ?? null,

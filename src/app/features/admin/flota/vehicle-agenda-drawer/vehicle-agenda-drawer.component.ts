@@ -1,4 +1,6 @@
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { chileToday } from '@core/utils/chile-time.utils';
 import { CommonModule } from '@angular/common';
 
 // Facades & Models
@@ -18,6 +20,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   standalone: true,
   imports: [
     CommonModule,
+    ChileDatePipe,
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
@@ -73,7 +76,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           <!-- Filtro de Fecha (Simple por ahora) -->
           <div class="flex items-center justify-between pb-4 mb-4 border-b border-border-subtle">
             <h3 class="item-title">Agenda del Día</h3>
-            <span class="text-xs text-text-muted">{{ today | date: 'dd/MM/yyyy' }}</span>
+            <span class="text-xs text-text-muted">{{ today | chileDate: 'dd/MM/yyyy' }}</span>
           </div>
 
           <!-- Lista de Sesiones -->
@@ -193,7 +196,7 @@ export class VehicleAgendaDrawerComponent {
     effect(() => {
       const id = this.vehicleId();
       if (id) {
-        this.flotaFacade.loadVehicleAgenda(id, this.today);
+        this.flotaFacade.loadVehicleAgenda(id, chileToday());
       }
     });
   }

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { AuditoriaFacade } from '@core/facades/auditoria.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
@@ -9,7 +9,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   selector: 'app-audit-log-detail-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, IconComponent, StatBoxComponent, DrawerFormComponent],
+  imports: [ChileDatePipe, IconComponent, StatBoxComponent, DrawerFormComponent],
   template: `
     @if (facade.selectedLog(); as log) {
       <app-drawer-form [hasFooter]="false">
@@ -18,7 +18,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           <div class="grid grid-cols-2 gap-3">
             <app-stat-box
               label="Fecha/Hora"
-              [value]="(log.fechaHora | date: 'dd/MM/yyyy HH:mm:ss') ?? '—'"
+              [value]="(log.fechaHora | chileDate: 'dd/MM/yyyy HH:mm:ss') ?? '—'"
               variant="surface"
               [compact]="true"
               icon="calendar"

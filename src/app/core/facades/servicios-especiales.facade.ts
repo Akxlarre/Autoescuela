@@ -4,6 +4,7 @@
  * Patrón SWR: primera visita con skeleton, re-visitas refrescan en background.
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { chileMonth, chileToday } from '@core/utils/chile-time.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -138,7 +139,7 @@ export class ServiciosEspecialesFacade {
 
   public readonly kpis = computed<ServiciosEspecialesKpis>(() => {
     const ventas = this._ventas();
-    const mesActual = new Date().toISOString().slice(0, 7);
+    const mesActual = chileMonth();
     const cobradas = ventas.filter((v) => v.cobrado);
     const sinCobrar = ventas.filter((v) => !v.cobrado);
     return {
@@ -536,7 +537,7 @@ export class ServiciosEspecialesFacade {
 
       if (error) throw error;
 
-      const fecha = new Date().toISOString().slice(0, 10);
+      const fecha = chileToday();
 
       if (format === 'excel') {
         const { headers, rows } = data as { headers: string[]; rows: (string | number)[][] };

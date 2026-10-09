@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -14,7 +14,7 @@ import { avatarPalette } from '@core/utils/avatar-palette';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     RouterLink,
     TagModule,
     IconComponent,
@@ -153,7 +153,7 @@ import { avatarPalette } from '@core/utils/avatar-palette';
                   <div>
                     <p class="text-xs font-semibold text-brand">Próxima Clase</p>
                     <p class="item-title">
-                      {{ detail.nextClassDate | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}
+                      {{ detail.nextClassDate | chileDate: "EEEE d 'de' MMMM 'a las' HH:mm" }}
                     </p>
                   </div>
                 </div>

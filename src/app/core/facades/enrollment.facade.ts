@@ -14,7 +14,13 @@ import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
-import { toISODate, to24hTime, todayIso } from '@core/utils/date.utils';
+import {
+  chileDayRange,
+  diffDaysIso,
+  formatChileDate,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
+import { to24hTime, todayIso } from '@core/utils/date.utils';
 import {
   promotionOptionStatus,
   sortPromotionGroupsByStart,
@@ -400,7 +406,7 @@ export class EnrollmentFacade {
 
   /** Carga códigos SENCE vigentes para un curso específico. Transforma DTO → SenceCodeOption. */
   async loadSenceCodes(courseId: number): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
 
     const { data, error } = await this.supabase.client
       .from('sence_codes')
@@ -775,10 +781,17 @@ export class EnrollmentFacade {
         } else {
           // El usuario desmarcó la convalidación (o retrocedió y cambió el curso):
           // eliminar cualquier registro previo para este enrollment.
-          await this.supabase.client
+          const { error: lvDeleteError } = await this.supabase.client
             .from('license_validations')
             .delete()
             .eq('enrollment_id', enrollmentId);
+          // fix-362-m: si no se borra, la matrícula sigue convalidando aunque se desmarcó.
+          if (lvDeleteError) {
+            this._error.set(
+              `Error al quitar la convalidación: ${this.sanitizer.sanitize(lvDeleteError).message}`,
+            );
+            return false;
+          }
         }
       }
 
@@ -852,7 +865,7 @@ export class EnrollmentFacade {
           .eq('instructor_id', instructorId)
           // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
           // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
           .order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
@@ -1057,11 +1070,20 @@ export class EnrollmentFacade {
         }));
 
         // Delete previous reserved sessions for this enrollment
-        await this.supabase.client
+        const { error: releaseError } = await this.supabase.client
           .from('class_b_sessions')
           .delete()
           .eq('enrollment_id', draft.enrollmentId)
           .eq('status', 'reserved');
+
+        // fix-362-m: si no se liberan las reservas anteriores, el insert de abajo las duplica.
+        if (releaseError) {
+          this._error.set(
+            'Error al liberar los horarios anteriores: ' +
+              this.sanitizer.sanitize(releaseError).message,
+          );
+          return false;
+        }
 
         // Insert new reserved sessions
         const { error: sessionsError } = await this.supabase.client
@@ -1080,13 +1102,23 @@ export class EnrollmentFacade {
         this._ownReservedSlotIds.set(sortedSlots);
 
         // Persistir modalidad de pago en enrollment para poder rehidratarla en drafts
-        await this.supabase.client
+        const { error: paymentModeError } = await this.supabase.client
           .from('enrollments')
           .update({
             payment_mode: this._paymentMode() ?? 'total',
             updated_at: new Date().toISOString(),
           })
           .eq('id', draft.enrollmentId);
+
+        // fix-362-m: sin esto el paso avanzaba y el borrador se rehidrataba con otra modalidad.
+        // Reintentar es seguro: el paso vuelve a liberar y reservar los mismos horarios.
+        if (paymentModeError) {
+          this._error.set(
+            'Error al guardar la modalidad de pago: ' +
+              this.sanitizer.sanitize(paymentModeError).message,
+          );
+          return false;
+        }
       } else if (pd.courseCategory === 'professional') {
         // Save promotion_course_id for professional
         const promotionCourseId = this._selectedPromotionCourseId();
@@ -1112,11 +1144,7 @@ export class EnrollmentFacade {
           return false;
         }
         if (selectedOption?.startDate) {
-          const daysSinceStart = Math.round(
-            (new Date(`${todayIso()}T00:00:00`).getTime() -
-              new Date(`${selectedOption.startDate}T00:00:00`).getTime()) /
-              86_400_000,
-          );
+          const daysSinceStart = diffDaysIso(selectedOption.startDate, todayIso());
           if (daysSinceStart > 3) {
             const confirmed = await this.confirm({
               title: 'Matrícula tardía',
@@ -1457,11 +1485,21 @@ export class EnrollmentFacade {
       }
 
       // Confirm reserved sessions → scheduled
-      await this.supabase.client
+      const { error: scheduleError } = await this.supabase.client
         .from('class_b_sessions')
         .update({ status: 'scheduled' })
         .eq('enrollment_id', draft.enrollmentId)
         .eq('status', 'reserved');
+
+      // fix-362-m: la matrícula ya está activa, así que no se corta el flujo; pero las clases
+      // siguen "reservadas" (no agendadas) y eso hay que decirlo en vez de dar todo por bueno.
+      if (scheduleError) {
+        console.error('confirm reserved sessions error:', scheduleError);
+        this.toast.warning(
+          'Matrícula confirmada, clases sin agendar',
+          'No se pudieron confirmar los horarios reservados. Revisa la agenda del alumno y vuelve a agendarlos.',
+        );
+      }
 
       // Crear cuenta Auth del alumno y enviarle correo de invitación.
       // Fire-and-forget: no bloquea la confirmación si el correo falla.
@@ -1753,10 +1791,20 @@ export class EnrollmentFacade {
 
       // 1b. Extender expires_at 24h desde ahora para evitar que el draft
       //     expire durante una sesión activa de reanudación.
-      await this.supabase.client
+      const { error: expiryError } = await this.supabase.client
         .from('enrollments')
         .update({ expires_at: this.getDraftExpiry() })
         .eq('id', enrollmentId);
+
+      // fix-362-m: no impide reanudar, pero el borrador conserva su vencimiento original y
+      // puede caducar a mitad del trabajo.
+      if (expiryError) {
+        console.error('extend draft expiry error:', expiryError);
+        this.toast.warning(
+          'No se pudo extender la vigencia del borrador',
+          'Puedes continuar, pero termina la matrícula pronto: el borrador mantiene su vencimiento original.',
+        );
+      }
 
       // 2. Cargar student + user para reconstruir personalData
       const { data: student } = await this.supabase.client
@@ -1932,33 +1980,33 @@ export class EnrollmentFacade {
       }
 
       // Eliminar datos asociados en orden (respetando FKs)
-      await this.supabase.client
-        .from('class_b_sessions')
-        .delete()
-        .eq('enrollment_id', enrollmentId)
-        .eq('status', 'reserved');
-
-      await this.supabase.client
-        .from('license_validations')
-        .delete()
-        .eq('enrollment_id', enrollmentId);
-
-      await this.supabase.client
-        .from('discount_applications')
-        .delete()
-        .eq('enrollment_id', enrollmentId);
-
-      await this.supabase.client.from('payments').delete().eq('enrollment_id', enrollmentId);
-
-      await this.supabase.client
-        .from('student_documents')
-        .delete()
-        .eq('enrollment_id', enrollmentId);
-
-      await this.supabase.client
-        .from('digital_contracts')
-        .delete()
-        .eq('enrollment_id', enrollmentId);
+      // fix-362-m: cada borrado se revisa. Antes un fallo a medias seguía de largo y dejaba
+      // el borrador con parte de sus datos borrados y sin aviso.
+      const dependentDeletes = [
+        this.supabase.client
+          .from('class_b_sessions')
+          .delete()
+          .eq('enrollment_id', enrollmentId)
+          .eq('status', 'reserved'),
+        this.supabase.client.from('license_validations').delete().eq('enrollment_id', enrollmentId),
+        this.supabase.client
+          .from('discount_applications')
+          .delete()
+          .eq('enrollment_id', enrollmentId),
+        this.supabase.client.from('payments').delete().eq('enrollment_id', enrollmentId),
+        this.supabase.client.from('student_documents').delete().eq('enrollment_id', enrollmentId),
+        this.supabase.client.from('digital_contracts').delete().eq('enrollment_id', enrollmentId),
+      ];
+      // En orden, no en paralelo: discount_applications va antes que payments.
+      for (const dependentDelete of dependentDeletes) {
+        const { error: dependentError } = await dependentDelete;
+        if (dependentError) {
+          this._error.set(
+            'Error al descartar borrador: ' + this.sanitizer.sanitize(dependentError).message,
+          );
+          return false;
+        }
+      }
 
       const { error } = await this.supabase.client
         .from('enrollments')
@@ -1980,7 +2028,19 @@ export class EnrollmentFacade {
 
         if (enrollmentsCount === 0) {
           // Sin matrículas activas ni borradores: es seguro eliminar al student
-          await this.supabase.client.from('students').delete().eq('id', studentId);
+          // fix-362-m: el borrador ya se descartó; si falla esta limpieza no se revierte nada,
+          // pero se deja rastro y no se sigue hacia el usuario (su student sigue existiendo).
+          const { error: studentDeleteError } = await this.supabase.client
+            .from('students')
+            .delete()
+            .eq('id', studentId);
+          if (studentDeleteError) {
+            console.error('discardDraft: orphan student not deleted:', studentDeleteError);
+            this._activeDrafts.update((drafts) =>
+              drafts.filter((d) => d.enrollmentId !== enrollmentId),
+            );
+            return true;
+          }
 
           // Verificamos si el usuario base (users) ya no tiene más perfiles student
           const { count: studentsCount } = await this.supabase.client
@@ -1997,7 +2057,13 @@ export class EnrollmentFacade {
               .single();
 
             if (userRow?.role_id === 4) {
-              await this.supabase.client.from('users').delete().eq('id', userId);
+              const { error: userDeleteError } = await this.supabase.client
+                .from('users')
+                .delete()
+                .eq('id', userId);
+              if (userDeleteError) {
+                console.error('discardDraft: orphan user not deleted:', userDeleteError);
+              }
             }
           }
         }
@@ -2055,7 +2121,7 @@ export class EnrollmentFacade {
         .from('v_class_b_schedule_availability')
         .select('*')
         .eq('instructor_id', instructorId)
-        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+        .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
         .order('slot_start', { ascending: true });
 
       if (error || !data || data.length === 0) return;
@@ -2359,9 +2425,7 @@ export class EnrollmentFacade {
   }
 
   private getDraftExpiry(): string {
-    const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 14);
-    return expiry.toISOString();
+    return new Date(Date.now() + 14 * 3_600_000).toISOString();
   }
 
   private mapCourseToOption(course: Course): CourseOption {
@@ -2475,7 +2539,7 @@ export class EnrollmentFacade {
   /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp, en hora local Santiago. */
   private slotDateFromStart(slotStart: string | null | undefined): string {
     if (!slotStart) return '';
-    return toISODate(slotStart);
+    return toChileDate(slotStart);
   }
 
   /** Deriva hora HH:MM desde un timestamp, en hora local Santiago. */
@@ -2488,19 +2552,11 @@ export class EnrollmentFacade {
     // Vista expone slot_start/slot_end (timestamptz); no slot_date
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
-    const days: WeekDay[] = dates.map((d) => {
-      const date = new Date(d + 'T12:00:00Z');
-      const dayFormatter = new Intl.DateTimeFormat('es', { weekday: 'short' });
-      const labelFormatter = new Intl.DateTimeFormat('es', {
-        day: 'numeric',
-        month: 'short',
-      });
-      return {
-        date: d,
-        dayOfWeek: dayFormatter.format(date),
-        label: labelFormatter.format(date),
-      };
-    });
+    const days: WeekDay[] = dates.map((d) => ({
+      date: d,
+      dayOfWeek: formatChileDate(d, { weekday: 'short' }),
+      label: formatChileDate(d, { day: 'numeric', month: 'short' }),
+    }));
 
     const week: WeekRange = {
       startDate: dates[0] ?? '',

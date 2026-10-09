@@ -1,4 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { addDaysIso, chileMonth } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -210,8 +212,7 @@ export class DashboardAlertsFacade {
     const advanceDays =
       configs?.find((c: any) => c.alert_type === 'document_expiry')?.advance_days ?? 30;
 
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = todayIso();
 
     let expiredQuery: any = this.supabase.client
       .from('vehicle_documents')
@@ -230,9 +231,7 @@ export class DashboardAlertsFacade {
       });
     }
 
-    const futureDate = new Date(today);
-    futureDate.setDate(futureDate.getDate() + advanceDays);
-    const futureDateStr = futureDate.toISOString().split('T')[0];
+    const futureDateStr = addDaysIso(todayStr, advanceDays);
 
     let soonQuery: any = this.supabase.client
       .from('vehicle_documents')
@@ -392,9 +391,7 @@ export class DashboardAlertsFacade {
    * (F-3) Caja sin cerrar el día de hoy (zona horaria Chile).
    */
   private async checkUnclosedCash(branchId: number | null): Promise<AlertModel[]> {
-    const todayChile = new Date().toLocaleDateString('en-CA', {
-      timeZone: 'America/Santiago',
-    });
+    const todayChile = todayIso();
 
     let query: any = this.supabase.client
       .from('cash_closings')
@@ -421,8 +418,7 @@ export class DashboardAlertsFacade {
    * (F-4) Alumnos con deuda superior a 2 meses.
    */
   private async checkOldDebts(branchId: number | null): Promise<AlertModel[]> {
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 86_400_000);
 
     let query: any = this.supabase.client
       .from('enrollments')
@@ -452,9 +448,7 @@ export class DashboardAlertsFacade {
    * (F-1) Pagos registrados hoy (date = fecha Chile).
    */
   private async checkRecentPayments(branchId: number | null): Promise<AlertModel[]> {
-    const todayChile = new Date().toLocaleDateString('en-CA', {
-      timeZone: 'America/Santiago',
-    });
+    const todayChile = todayIso();
 
     let query: any = this.supabase.client
       .from('payments')
@@ -515,9 +509,7 @@ export class DashboardAlertsFacade {
    * No aplica filtro de sede — los instructores tienen scope propio vía su branch_id de usuario.
    */
   private async checkPendingInstructorPayments(): Promise<AlertModel[]> {
-    const currentPeriod = new Date()
-      .toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
-      .substring(0, 7); // 'YYYY-MM'
+    const currentPeriod = chileMonth(); // 'YYYY-MM'
 
     const { data: hoursData, error: hoursError } = await this.supabase.client
       .from('instructor_monthly_hours')
@@ -606,8 +598,7 @@ export class DashboardAlertsFacade {
    */
   private async checkExpiringPreRegistrations(branchId: number | null): Promise<AlertModel[]> {
     const now = new Date();
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 86_400_000);
 
     let query: any = this.supabase.client
       .from('professional_pre_registrations')

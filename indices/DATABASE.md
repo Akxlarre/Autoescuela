@@ -118,8 +118,15 @@
 
 ## Funciones SQL
 
+> **Día de negocio = día de Chile (spec 0024-m, ARCH-28).** La sesión de la base corre en UTC: `CURRENT_DATE` y `now()::date` devuelven el día UTC, que de noche en Chile ya es mañana. Toda migración nueva usa `public.chile_today()` / `public.chile_date(instante)` / `public.chile_day_start(dia)`; `npm run lint:arch` rechaza `CURRENT_DATE`, `now()::date`, `LOCALTIMESTAMP`, `::timestamp` sin zona y columnas `timestamp without time zone`. Única excepción declarada: el CHECK `students.chk_minimum_age`. Test: `supabase/tests/timezone/0024-m-business-day.sql`.
+
 | Función | Migración | Programación | Descripción |
 |---------|-----------|--------------|-------------|
+| `chile_today()` → `date` | `20261009120000_time_fn_chile_today.sql` | — (la usan funciones, la policy `select_cash_closings` y la vista `v_class_b_schedule_availability`) | **Spec 0024-m.** Hoy en Chile (`America/Santiago`). `STABLE`. En policies y vistas se envuelve en `(SELECT public.chile_today())` para que se evalúe una sola vez. `EXECUTE` para `anon`, `authenticated`, `service_role`. |
+| `chile_date(p_instant timestamptz)` → `date` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Día de Chile de un instante. Reemplaza a `x::date` sobre un `timestamptz`. `IMMUTABLE`. |
+| `chile_day_start(p_day date)` → `timestamptz` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Primer instante de un día de Chile (resuelve la medianoche inexistente del cambio a horario de verano). Un día completo es `[chile_day_start(d), chile_day_start(d + 1))`. `IMMUTABLE`. |
+| `run_class_b_absences_cutoff()` → `boolean` | `20261009122000_time_cron_absences_2100_chile.sql` | pg_cron `mark-end-of-day-class-b-absences`: `0 0,1 * * *` (00:00 y 01:00 UTC) | **Spec 0024-m (AC12).** Envoltorio del corte de inasistencias: ejecuta `mark_end_of_day_class_b_absences()` solo en la corrida que cae a las 21 hora Chile (verano: la de las 00:00 UTC; invierno: la de las 01:00 UTC) y devuelve `true`; en la otra no hace nada (`false`). `EXECUTE` solo para `service_role`. |
+| Objetos redefinidos con `chile_today()` | `20261009121000_time_fix_business_day_objects.sql` | — | **Spec 0024-m (AC9, AC11).** `auto_transition_promotion_status()`, `auto_transition_standalone_course_status()`, `auto_transition_theory_cycle_status()`, `calculate_vehicle_document_status()` (trigger `trg_vehicle_doc_status`), `generate_license_alert()` (trigger `trg_license_alert`), `notify_vehicle_document_expiry()`, `confirm_enrollment_with_payment()` (`payment_date`), la policy `select_cash_closings` (ventana de 2 días de la secretaria) y la vista `v_class_b_schedule_availability` (los días parten de hoy en Chile + 0..28). Las descripciones de más abajo que dicen `CURRENT_DATE` se leen como `chile_today()` desde esta migración. |
 | `auto_transition_promotion_status()` | `20260330100000` | pg_cron: `0 6 * * *` (diario 06:00 UTC ≈ 03:00 CLT) | Transiciona `professional_promotions`: `planned→in_progress` cuando `start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`; `in_progress→finished` cuando `end_date < CURRENT_DATE`. Nunca toca `cancelled`. Procesa `finished` primero para cubrir el edge-case `start_date == end_date`. `SECURITY DEFINER`. |
 | `mark_end_of_day_class_b_absences()` | Definida en `20260705000000` → redefinida en `20260707000000` (ambas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | pg_cron: `0 1 * * *` (diario 01:00 UTC ≈ 21:00 CLT invierno, fin de jornada) | RF-053. Recorre `class_b_sessions` en `status='scheduled'` cuya fecha (America/Santiago) sea hoy o anterior (`ORDER BY enrollment_id, class_number` — determinismo, no afecta corrección) y las marca `status='no_show'`, insertando `class_b_practice_attendance(status='absent')` por alumno (`ON CONFLICT DO NOTHING`, idempotente). Por cada matrícula afectada invoca `apply_class_b_absence_penalty()`. Cada fila corre en su propio bloque `BEGIN/EXCEPTION` — una excepción en una fila no aborta el resto del batch. **Fix `20260709120000` (fix-028-m):** el `UPDATE ... status='no_show'` ahora exige `AND status='scheduled'` — el cursor del loop es un snapshot tomado al inicio; sin este guard, una fila cancelada por `apply_class_b_absence_penalty()` en una iteración anterior del mismo run quedaba sobreescrita de vuelta a `no_show` cuando el loop llegaba a su turno. `SECURITY DEFINER`. |
 | `apply_class_b_absence_penalty(p_enrollment_id INT)` | Definida en `20260705000000` → corregida en `20260706000000` → redefinida en `20260707000000` (todas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | Llamada por `mark_end_of_day_class_b_absences()` y por `AsistenciaClaseBFacade.markAttendance()` vía `supabase.rpc()` | RF-053: 2 inasistencias no justificadas **consecutivas** (class_number adyacente N, N+1) = pérdida de agenda. La detección (`EXISTS`) y la cancelación (`UPDATE ... status='cancelled'`) ocurren en **una sola sentencia atómica**; sin filtro de fecha — cualquier sesión `'scheduled'` de la matrícula se cancela, sin importar si su fecha ya pasó. **Fix `20260709120000` (fix-028-m):** la cancelación ahora acota `AND class_number BETWEEN 1 AND 12` — nunca cancela (ni depende de) filas fuera del rango válido de una matrícula Clase B. Retorna `INT` con la cantidad cancelada (`0` si no aplica). `SECURITY DEFINER`. **Spec 0048-b (`20261006140000`):** antes de cancelar lee `branch_absence_penalty_config` de la sede de la matrícula; sin sede, sin fila o desactivada → **`RETURN -1`** sin tocar nada (el cron la llama con `PERFORM` y lo ignora; `AsistenciaClaseBFacade` muestra "Agenda no cancelada"). Activada: solo cuentan faltas con `recorded_at >= enabled_since`. |
@@ -144,6 +151,7 @@
 | `prevent_concurrent_in_progress_class_b_sessions()` | `20260804120000` | Trigger `trg_prevent_concurrent_in_progress` — BEFORE UPDATE en `class_b_sessions` (FOR EACH ROW) | **Spec 0001-i (AC1, AC-E1).** Exclusión mutua: cuando `NEW.status='in_progress'` y `OLD.status` no lo era, rechaza el `UPDATE` (`RAISE EXCEPTION ... ERRCODE='P0001'`) si el mismo `instructor_id` ya tiene otra fila `in_progress` (excluyendo la propia). Global por instructor, sin filtro de sede — un instructor es una sola persona física. Cubre los 2 puntos de entrada existentes (`InstructorClasesFacade.startClass()` y `AsistenciaClaseBFacade.startClass()`) sin duplicar la validación en cada Facade — es la única garantía real, ya que un Facade no puede saber si el otro ya inició una clase para el mismo instructor. `SECURITY DEFINER`. |
 | `class_b_slot_occupied(p_instructor_id, p_vehicle_id, p_slot_start, p_slot_end)` | `20261007120000` | La usa `v_class_b_schedule_availability` por turno | **Fix-196-b.** `true` si el instructor o el vehículo tienen una clase no `cancelled` (de matrícula no-borrador o borrador vigente) que se cruza con el turno. `STABLE SECURITY DEFINER`, `search_path=''`: el choque es global entre sedes y evaluar la RLS por fila costaba ~5 s. Solo devuelve un booleano. `EXECUTE`: `authenticated`, `service_role` (sin `anon`/PUBLIC). |
 | `secretary_last_sign_in(p_user_ids integer[])` | `20261007170000` | `SecretariasFacade.cargarUltimoAcceso()` (ficha de la secretaria) | **Fix-212-b.** Devuelve `user_id` + `auth.users.last_sign_in_at` **solo** si quien llama es admin (`auth_user_role()`) y **solo** de usuarios con rol `secretary`. Antes la ficha mostraba `users.updated_at` como "Último acceso" (sin trigger = fecha de creación). `STABLE SECURITY DEFINER`, `search_path=''`. `EXECUTE`: `authenticated`, `service_role` (sin `anon`/PUBLIC). Test: `supabase/tests/rls/fix-212-b-secretary-last-sign-in.sql`. |
+| `secretary_extra_visible_user_ids()` | `20261008100000` | Rama `secretary` de la política `select_users` | **Spec 0049-b.** `SETOF integer`: usuarios de **otra** sede que la secretaria (sin grant) necesita ver para trabajar en la suya: personal (admin/secretary), instructores "Ambas", instructores con clases de matrículas de su sede, alumnos con matrícula o curso singular en su sede, pre-inscritos profesionales de su sede. La política la usa como `id IN (SELECT …)` (se resuelve una vez por consulta) y envuelve los `auth_*()` en `(SELECT …)` (initplan): Base Alumnos ~35→24 ms y Agenda ~16→20 ms impersonando. `STABLE SECURITY DEFINER`, `search_path=''`; `EXECUTE`: `authenticated`, `service_role`. Test: `supabase/tests/rls/0049-b-users-lectura-por-sede.sql`. |
 | `prevent_double_booking_class_b_sessions()` | `20260811110000` | Trigger `trg_prevent_double_booking` — BEFORE INSERT OR UPDATE OF `instructor_id, scheduled_at, duration_min, status` en `class_b_sessions` (FOR EACH ROW) | **Fix 152-m.** Rechaza (`RAISE EXCEPTION ... ERRCODE='P0001'`) un `INSERT`/`UPDATE` si el `instructor_id` de `NEW` ya tiene otra fila no-`cancelled` cuyo rango `[scheduled_at, scheduled_at + duration_min)` se solapa con el de `NEW` (misma fórmula de solape que usa `v_class_b_schedule_availability`). Antes de este fix, la única protección era esa vista filtrando **al leer** — dos secretarias agendando casi simultáneo podían generar una colisión real de instructor a nivel de escritura. Complementa (no reemplaza) a `prevent_concurrent_in_progress_class_b_sessions()`, que cubre la exclusión mutua específica de `in_progress`. `SECURITY DEFINER`. |
 | `prevent_student_double_booking_class_b_sessions()` | `20261004120000` | Trigger `trg_prevent_student_double_booking` — BEFORE INSERT OR UPDATE OF `enrollment_id, scheduled_at, duration_min, status` en `class_b_sessions` (FOR EACH ROW) | **Fix 301-m.** Igual que `prevent_double_booking_class_b_sessions()`, pero por **alumno**: rechaza (`P0001`, "El alumno ya tiene otra clase agendada que se solapa con este horario.") si el alumno dueño de `NEW.enrollment_id` ya tiene, en cualquiera de sus matrículas, otra clase que no esté `cancelled` ni `no_show` y cuyo rango `[scheduled_at, scheduled_at + duration_min)` se solapa. Un `UPDATE` que no cambia matrícula, hora ni duración y cuya fila ya estaba vigente no se valida (no bloquea completar o cancelar filas históricas). `SECURITY DEFINER`. **Fix 188-b (`20261006130000`):** `SET search_path = ''` + tablas con `public.` (DG-063: sin esto fallaba disparado desde una función con `search_path` vacío). |
 | `prevent_vehicle_double_booking_class_b_sessions()` | `20261006120000` | Trigger `trg_prevent_vehicle_double_booking` — BEFORE INSERT OR UPDATE OF `vehicle_id, scheduled_at, duration_min, status` en `class_b_sessions` (FOR EACH ROW) | **Fix 187-b.** Tercera parte del Triple Match en BD, por **vehículo**: rechaza (`P0001`, "El vehículo ya tiene una clase agendada que se solapa con este horario.") si `NEW.vehicle_id` ya tiene otra clase que no esté `cancelled` ni `no_show` con rango solapado, en cualquier sede. Cubre también "Iniciar clase" con cambio de vehículo. Mismo criterio de `UPDATE` sin validar que fix-301-m (hay choques históricos del seed). `pg_advisory_xact_lock(1870, vehicle_id)` contra inserciones simultáneas. `SECURITY DEFINER` + `SET search_path = ''` (DG-063). |
@@ -286,6 +294,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `scheduled_for` | TIMESTAMPTZ | sí | — | — |
 | `status` | TEXT | NO | `'enviado'` | — |
 | `template_id` | INT | sí | — | → `notification_templates.id` |
+| `dispatch_heartbeat_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 
@@ -431,10 +440,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'd…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| select_cash_closings | SELECT | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
 
 **Índices:** `ux_cash_closings_date_branch`
 
@@ -1316,10 +1325,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_lecturers | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_lecturers | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_lecturers | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_lecturers | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_lecturers | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_lecturers | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_lecturers | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_lecturers | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `license_validations` — 🔒 RLS
 
@@ -1342,10 +1351,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_license_validations | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_license_validations | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_license_validations | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_license_validations | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_license_validations | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_license_validations | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_license_validations | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_license_validations | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_license_validations_enrollment`
 
@@ -1562,10 +1571,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_prof_final_records | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_prof_final_records | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_final_records | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_final_records | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_final_records | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_final_records | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_final_records | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_final_records | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `professional_module_grades` — 🔒 RLS
 
@@ -1590,10 +1599,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_prof_module_grades | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_prof_module_grades | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_module_grades | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_module_grades | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_module_grades | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_module_grades | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_module_grades | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_module_grades | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_prof_module_grades_enrollment`
 
@@ -1617,10 +1626,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_prof_practice_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_practice_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_practice_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| select_prof_practice_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
+| select_prof_practice_attendance | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_practice_attendance | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_practice_attendance | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_practice_attendance | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_professional_practice_attendance_enrollment`
 
@@ -1644,10 +1653,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_prof_practice_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
-| insert_prof_practice_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_practice_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_practice_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_practice_sessions | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_practice_sessions | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_practice_sessions | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_practice_sessions | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_professional_sessions_course`
 
@@ -1684,10 +1693,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_pre_registrations | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_pre_registrations | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_pre_registrations | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_pre_registrations | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_pre_registrations | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_pre_registrations | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_pre_registrations | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_pre_registrations | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `professional_promotions` — 🔒 RLS
 
@@ -1735,10 +1744,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_prof_theory_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_theory_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_theory_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| select_prof_theory_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
+| select_prof_theory_attendance | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_theory_attendance | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_theory_attendance | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_theory_attendance | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_professional_theory_attendance_enrollment`
 
@@ -1763,10 +1772,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_prof_theory_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
-| insert_prof_theory_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_prof_theory_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_prof_theory_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_theory_sessions | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_prof_theory_sessions | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_prof_theory_sessions | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_prof_theory_sessions | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_professional_theory_sessions_course`
 
@@ -1791,9 +1800,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | admin_all_weekly_signatures | ALL | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
-| secretary_crud_weekly_signatures | ALL | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` |
 | instructor_read_weekly_signatures | SELECT | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
 | student_read_own_weekly_signatures | SELECT | `EXISTS ( SELECT 1 FROM enrollments e JOIN students s ON s.id = e.student_id J…` | — |
+| secretary_crud_weekly_signatures | ALL | `auth_user_role() = 'secretary' AND ((SELECT auth_can_access_both_branches()) …` | `auth_user_role() = 'secretary' AND ((SELECT auth_can_access_both_branches()) …` |
 
 ### `promotion_course_lecturers` — 🔒 RLS
 
@@ -1812,10 +1821,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_promotion_course_lecturers | SELECT | `true` | — |
 | delete_promotion_course_lecturers | DELETE | `EXISTS ( SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE u.supab…` | — |
 | insert_promotion_course_lecturers | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 | update_promotion_course_lecturers | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| select_promotion_course_lecturers | SELECT | `auth_user_role() IS DISTINCT FROM 'secretary' OR (SELECT auth_can_access_both…` | — |
 
 **Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
 
@@ -2009,10 +2018,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_session_machinery | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_session_machinery | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_session_machinery | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_session_machinery | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_session_machinery | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| insert_session_machinery | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+| update_session_machinery | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| delete_session_machinery | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 ### `sii_receipts` — 🔒 RLS
 
@@ -2310,9 +2319,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | delete_users | DELETE | `auth_user_role() = 'admin'` | — |
 | insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
-| select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
 | select_users_via_class_relationship | SELECT | `auth_user_role() = 'instructor' AND public.auth_instructor_can_view_student_u…` | — |
 | update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
+| select_users | SELECT | `((SELECT public.auth_user_role()) = 'admin') OR ( (SELECT public.auth_user_ro…` | — |
 
 ### `vehicle_assignments` — 🔒 RLS
 
@@ -2419,7 +2428,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261007120000_fix196_schedule_availability_rls_por_fila.sql` |
+| `v_class_b_schedule_availability` | `20261009121000_time_fix_business_day_objects.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2432,7 +2441,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `assign_theory_cycle` | `()` |
 | `audit_format_evaluation_checklist` | `(p_value TEXT)` |
 | `audit_format_timestamp_value` | `(p_value TEXT)` |
-| `audit_humanize_column` | `(p_key TEXT)` |
+| `audit_humanize_column` | `(p_key text)` |
 | `audit_humanize_enum_value` | `(p_value TEXT)` |
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
@@ -2451,11 +2460,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cascade_promotion_status_to_courses` | `()` |
 | `check_payment_within_pending_balance` | `()` |
 | `check_standalone_course_capacity` | `()` |
+| `chile_date` | `(p_instant timestamptz)` |
+| `chile_day_start` | `(p_day date)` |
+| `chile_today` | `()` |
 | `class_b_slot_occupied` | `(p_instructor_id integer, p_vehicle_id integer, p_slot_start timestamptz, p_slot_end timestamptz)` |
 | `cleanup_expired_drafts` | `()` |
 | `cleanup_expired_public_enrollment` | `()` |
 | `cleanup_public_enrollment_throttle` | `()` |
-| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL, p_is_deposit boolean DEFAULT false)` |
+| `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL::integer, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL::integer, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
 | `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
@@ -2489,6 +2501,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `request_client_ip` | `()` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
+| `run_class_b_absences_cutoff` | `()` |
+| `secretary_extra_visible_user_ids` | `()` |
+| `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |

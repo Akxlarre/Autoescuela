@@ -1,3 +1,4 @@
+import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-audit-report/index.ts
 //
 // Edge Function: generate-audit-report
@@ -225,8 +226,9 @@ Deno.serve(async (req: Request) => {
       query = query.eq('user_id', -1);
     }
 
-    if (fechaDesde) query = query.gte('created_at', `${fechaDesde}T00:00:00`);
-    if (fechaHasta) query = query.lte('created_at', `${fechaHasta}T23:59:59`);
+    // Días de Chile como rango semiabierto de instantes.
+    if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
+    if (fechaHasta) query = query.lt('created_at', chileDayRange(fechaHasta).endExclusive);
 
     if (accionLabel) {
       const pgOp = Object.entries(ACTION_LABEL_MAP).find(([, v]) => v === accionLabel)?.[0];
@@ -278,7 +280,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const today = chileToday().replace(/-/g, '');
     const pdfBytes = buildPdf(reportData);
     const safeName = sanitize(`Auditoria_${today}${branchId !== null ? `_sede${branchId}` : ''}`);
     return new Response(pdfBytes, {
@@ -301,7 +303,7 @@ Deno.serve(async (req: Request) => {
 
 function buildExcelPayload(d: ReportData) {
   const rows: (string | number)[][] = [];
-  const today = new Date().toLocaleDateString('es-CL');
+  const today = formatChilePattern(new Date(), 'dd-MM-yyyy');
 
   rows.push(['LOG DE AUDITORÍA']);
   rows.push([`Sede: ${d.branchName}`]);
@@ -329,7 +331,7 @@ function buildExcelPayload(d: ReportData) {
     ]);
   }
 
-  const today2 = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const today2 = chileToday().replace(/-/g, '');
   return {
     sheetName: 'Log de Auditoría',
     headers: [],
@@ -420,7 +422,7 @@ function buildPdf(data: ReportData): Uint8Array {
   T(M + 260, y, `Período: ${periodoStr}`, 9);
   y -= 14;
   T(M, y, `Generado por: ${data.generatedBy}`, 9);
-  T(M + 260, y, `Fecha: ${new Date().toLocaleDateString('es-CL')}`, 9);
+  T(M + 260, y, `Fecha: ${formatChilePattern(new Date(), 'dd-MM-yyyy')}`, 9);
   T(M + 500, y, `Total: ${data.totalRows} registros`, 9, true);
   y -= 16;
 

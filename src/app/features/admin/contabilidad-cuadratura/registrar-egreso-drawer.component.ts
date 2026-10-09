@@ -1,4 +1,6 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { merge } from 'rxjs';
@@ -510,7 +512,7 @@ export class RegistrarEgresoDrawerComponent {
   });
 
   protected readonly fechaHoy = computed(() =>
-    new Date().toLocaleDateString('es-CL', {
+    formatChileDate(new Date(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -593,6 +595,6 @@ export class RegistrarEgresoDrawerComponent {
   }
 
   private fechaHoyISO(): string {
-    return new Date().toISOString().slice(0, 10);
+    return todayIso();
   }
 }

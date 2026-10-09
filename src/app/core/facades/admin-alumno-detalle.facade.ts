@@ -18,12 +18,17 @@ import type {
   ProgresoUI,
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
+import { chileDayRange, formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { formatPaymentConcept } from '@core/utils/ficha-pagos.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
+import {
+  isRealtimeEventForStudent,
+  type RealtimeRowChange,
+} from '@core/utils/realtime-scope.utils';
 import {
   buildVehicleDocWarningMap,
   type VehicleDocWarningInfo,
@@ -197,6 +202,8 @@ export class AdminAlumnoDetalleFacade {
   // ── SWR & Realtime State ───────────────────────────────────────────────────
   private _initialized = false;
   private _lastStudentId: number | null = null;
+  /** Alumno cuya ficha está abierta, para decidir si un evento de tiempo real es suyo. */
+  private _realtimeStudentId: number | null = null;
   private _realtimeChannel: any | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público, solo lectura) ───────────────────────────────
@@ -259,45 +266,46 @@ export class AdminAlumnoDetalleFacade {
    * Incluye tablas de Clase B y Clase Profesional para cubrir ambos tipos.
    */
   setupRealtime(studentId: number): void {
+    this._realtimeStudentId = studentId;
     if (this._realtimeChannel) return;
+
+    // fix-360-m: el canal escucha las tablas completas. Solo se recarga si el cambio es del
+    // alumno de la ficha; si no, un pago o una asistencia de cualquier otro la recargaría.
+    const onChange = (change: RealtimeRowChange): void => {
+      const openStudentId = this._realtimeStudentId;
+      if (openStudentId === null) return;
+      const scope = {
+        studentId: openStudentId,
+        enrollmentIds: this._enrollmentSummaries().map((e) => e.id),
+      };
+      if (isRealtimeEventForStudent(change, scope)) void this.refreshSilently();
+    };
 
     this._realtimeChannel = this.supabase.client
       .channel(`alumno-detalle-${studentId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'absence_evidence' },
-        () => void this.refreshSilently(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'class_b_sessions' },
-        () => void this.refreshSilently(),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'absence_evidence' }, onChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_b_sessions' }, onChange)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'class_b_practice_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_theory_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_practice_attendance' },
-        () => void this.refreshSilently(),
+        onChange,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_module_grades' },
-        () => void this.refreshSilently(),
+        onChange,
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        () => void this.refreshSilently(),
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, onChange)
       .subscribe();
   }
 
@@ -1212,10 +1220,9 @@ export class AdminAlumnoDetalleFacade {
 
   private formatClassDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
-    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${day}-${month}`;
+    const iso = toChileDate(dateStr);
+    if (!iso) return null;
+    return `${iso.slice(8, 10)}-${iso.slice(5, 7)}`;
   }
 
   private formatHour(
@@ -1448,7 +1455,7 @@ export class AdminAlumnoDetalleFacade {
           .eq('instructor_id', instructorId)
           // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
           // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
           .order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
@@ -1811,7 +1818,7 @@ export class AdminAlumnoDetalleFacade {
 
   private slotDateFromStart(ts: string | null | undefined): string {
     if (!ts) return '';
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(ts));
+    return toChileDate(ts);
   }
 
   /**
@@ -1860,14 +1867,11 @@ export class AdminAlumnoDetalleFacade {
   ): ScheduleGrid {
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
-    const days: WeekDay[] = dates.map((d) => {
-      const date = new Date(d + 'T12:00:00Z');
-      return {
-        date: d,
-        dayOfWeek: new Intl.DateTimeFormat('es', { weekday: 'short' }).format(date),
-        label: new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(date),
-      };
-    });
+    const days: WeekDay[] = dates.map((d) => ({
+      date: d,
+      dayOfWeek: formatChileDate(d, { weekday: 'short' }),
+      label: formatChileDate(d, { day: 'numeric', month: 'short' }),
+    }));
 
     const week: WeekRange = {
       startDate: dates[0] ?? '',

@@ -1,4 +1,5 @@
-﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { addDaysIso, chileToday, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -434,12 +435,21 @@ export class PromocionesFacade {
       // 5. Cancelar sesiones que caen en feriados dentro del rango ya extendido
       const holidaysInRange = holidays.filter((d) => d >= payload.startDate && d <= endDate);
       if (holidaysInRange.length > 0) {
-        await Promise.all(
+        const cancelled = await Promise.all(
           createdPcIds.map((pcId) => this.cancelHolidaySessions(pcId, holidaysInRange)),
         );
-        this.toast.info(
-          `Se marcaron automáticamente ${holidaysInRange.length} feriado(s) como sesiones canceladas.`,
-        );
+        // fix-362-m: la promoción ya existe; si esto falla no se lanza (el catch diría que no
+        // se creó). Antes el aviso de "feriados marcados" salía aunque no se hubiera marcado nada.
+        if (cancelled.every(Boolean)) {
+          this.toast.info(
+            `Se marcaron automáticamente ${holidaysInRange.length} feriado(s) como sesiones canceladas.`,
+          );
+        } else {
+          this.toast.warning(
+            'Feriados sin marcar',
+            'La promoción se creó, pero no se pudieron cancelar las sesiones que caen en feriado. Cancélalas a mano.',
+          );
+        }
       }
 
       this.toast.success('Promoción creada correctamente');
@@ -518,9 +528,10 @@ export class PromocionesFacade {
   /**
    * Marca como 'cancelled' todas las sesiones (teóricas y prácticas) de un
    * promotion_course que coincidan con alguna fecha de la lista de feriados.
+   * Devuelve false si alguna de las dos escrituras falló.
    */
-  private async cancelHolidaySessions(pcId: number, holidays: string[]): Promise<void> {
-    await Promise.all([
+  private async cancelHolidaySessions(pcId: number, holidays: string[]): Promise<boolean> {
+    const results = await Promise.all([
       this.supabase.client
         .from('professional_theory_sessions')
         .update({ status: 'cancelled' })
@@ -532,6 +543,7 @@ export class PromocionesFacade {
         .eq('promotion_course_id', pcId)
         .in('date', holidays),
     ]);
+    return results.every((r) => !r.error);
   }
 
   /**
@@ -664,18 +676,16 @@ export class PromocionesFacade {
    * Retorna 0 si la promoción aún no empieza, max 30.
    */
   private computeClassDays(startDateIso: string): number {
-    const start = new Date(startDateIso + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = chileToday();
 
-    if (today < start) return 0;
+    if (today < startDateIso) return 0;
 
     let count = 0;
-    const cursor = new Date(start);
+    let cursor = startDateIso;
     while (cursor <= today && count < 30) {
-      const dow = cursor.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-      if (dow >= 1 && dow <= 6) count++;
-      cursor.setDate(cursor.getDate() + 1);
+      // 0 = domingo: único día sin clase.
+      if (weekdayOfIso(cursor) !== 0) count++;
+      cursor = addDaysIso(cursor, 1);
     }
     return Math.min(count, 30);
   }

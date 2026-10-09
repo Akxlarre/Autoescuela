@@ -1,3 +1,4 @@
+import { addMonthsIso, chileToday } from '@core/utils/chile-time.utils';
 import { describe, it, expect } from 'vitest';
 import { canAdvanceFn, getAgeStatus } from './public-personal-data.component';
 import type { EnrollmentPersonalData } from '@core/models/ui/enrollment-personal-data.model';
@@ -26,9 +27,8 @@ const VALID_DATA: EnrollmentPersonalData = {
 };
 
 function buildBirthDate(yearsAgo: number): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - yearsAgo);
-  return d.toISOString().split('T')[0];
+  // Cumple exactamente hoy, según el día de Chile (no el de UTC ni el del equipo).
+  return addMonthsIso(chileToday(), -12 * yearsAgo);
 }
 
 describe('canAdvanceFn()', () => {

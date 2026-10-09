@@ -1,4 +1,5 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -172,7 +173,7 @@ export class EnrollmentPaymentFacade {
   ): Promise<void> {
     this._error.set(null);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
     const applicableFilter = courseType.startsWith('professional') ? 'professional' : 'class_b';
 
     const { data, error } = await this.supabase.client
@@ -230,16 +231,29 @@ export class EnrollmentPaymentFacade {
       const paymentStatus = isPending ? 'pending' : 'paid';
 
       // 0. Delete previous enrollment payment records (idempotencia: back-button safe)
-      await this.supabase.client
+      // fix-362-m: si la limpieza falla y se sigue, el insert de abajo deja el pago (y el
+      // descuento) duplicados. Se corta acá.
+      const { error: discountCleanupError } = await this.supabase.client
         .from('discount_applications')
         .delete()
         .eq('enrollment_id', enrollmentId);
 
-      await this.supabase.client
-        .from('payments')
-        .delete()
-        .eq('enrollment_id', enrollmentId)
-        .eq('type', 'enrollment');
+      const cleanupError =
+        discountCleanupError ??
+        (
+          await this.supabase.client
+            .from('payments')
+            .delete()
+            .eq('enrollment_id', enrollmentId)
+            .eq('type', 'enrollment')
+        ).error;
+
+      if (cleanupError) {
+        this._error.set(
+          'Error al reemplazar el pago anterior: ' + this.sanitizer.sanitize(cleanupError).message,
+        );
+        return false;
+      }
 
       // 1. Insert payment record
       const paymentRecord = {
@@ -251,7 +265,7 @@ export class EnrollmentPaymentFacade {
         card_amount: method === 'tarjeta' ? total : 0,
         voucher_amount: 0,
         status: paymentStatus,
-        payment_date: isPending ? null : new Date().toISOString().split('T')[0],
+        payment_date: isPending ? null : todayIso(),
         requires_receipt: true,
         registered_by: registeredBy,
         document_number: this._documentNumber() || null,

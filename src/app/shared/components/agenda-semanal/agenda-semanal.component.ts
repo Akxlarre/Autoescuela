@@ -1,3 +1,4 @@
+import { chileParts } from '@core/utils/chile-time.utils';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -1101,8 +1102,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
     if (!this.isCurrentWeek()) return null;
     const rows = this.timeRows();
     if (!rows.length) return null;
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const now = chileParts();
+    const nowMinutes = now.hour * 60 + now.minute;
     for (const row of rows) {
       const [h, m] = row.split(':').map(Number);
       const rowStart = h * 60 + m;

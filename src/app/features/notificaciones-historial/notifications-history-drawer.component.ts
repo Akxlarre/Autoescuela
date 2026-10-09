@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -94,7 +95,7 @@ export class NotificationsHistoryDrawerComponent implements OnInit {
   }
 
   formatDate(date: Date): string {
-    return date.toLocaleString('es-CL', {
+    return formatChileDate(date, {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',

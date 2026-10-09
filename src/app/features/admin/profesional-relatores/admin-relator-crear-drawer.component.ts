@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
+import { formatRutTyping, validateRut, completeRutDv } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -341,14 +341,14 @@ export class AdminRelatorCrearDrawerComponent {
 
   protected onRutInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const formatted = formatRut(input.value);
+    const formatted = formatRutTyping(input.value);
     this.rut.set(formatted);
     input.value = formatted;
   }
 
-  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
   protected onRutBlur(): void {
-    this.rut.set(autocompleteRutDv(this.rut()));
+    this.rut.set(completeRutDv(this.rut()));
   }
 
   protected async submit(): Promise<void> {

@@ -12,6 +12,60 @@ declare const afterEach: any;
 declare const it: any;
 declare const expect: any;
 
+describe('DashboardFacade — día de Chile (spec 0024-m)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('fetchLiveClasses pide las clases del día de Chile como rango semiabierto a las 23:30', async () => {
+    const builders: any[] = [];
+    const client = {
+      from: vi.fn(() => {
+        const b: any = {};
+        for (const m of [
+          'select',
+          'eq',
+          'gte',
+          'lte',
+          'lt',
+          'or',
+          'in',
+          'is',
+          'not',
+          'order',
+          'limit',
+        ]) {
+          b[m] = vi.fn(() => b);
+        }
+        b.then = (resolve: any) => resolve({ data: [], error: null });
+        builders.push(b);
+        return b;
+      }),
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        DashboardFacade,
+        { provide: SupabaseService, useValue: { client } },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+      ],
+    });
+    const facade = TestBed.inject(DashboardFacade);
+
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    await facade.fetchLiveClasses(null);
+
+    const [practicas, colgadas] = builders;
+    expect(practicas.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+    expect(practicas.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T03:00:00.000Z');
+    // Sesiones colgadas: todo lo anterior al inicio del día de Chile.
+    expect(colgadas.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+  });
+});
+
 describe('DashboardFacade', () => {
   let facade: DashboardFacade;
   let httpMock: HttpTestingController;

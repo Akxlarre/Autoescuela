@@ -74,8 +74,9 @@ export function calcLicenseSeniority(
 
   const seniorityYears = (reference.getTime() - license.getTime()) / MS_PER_YEAR;
 
+  // Fechas puras: se parsean como medianoche UTC, así que la aritmética va en UTC.
   const requiredDate = new Date(license);
-  requiredDate.setFullYear(requiredDate.getFullYear() + 2);
+  requiredDate.setUTCFullYear(requiredDate.getUTCFullYear() + 2);
 
   if (reference >= requiredDate) {
     return { valid: true, message: '', seniorityYears };

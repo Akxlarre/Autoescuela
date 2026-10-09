@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PaginatorModule } from 'primeng/paginator';
@@ -40,7 +40,7 @@ const ACTION_OPTIONS = withAllOption(
   selector: 'app-admin-auditoria',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
+    ChileDatePipe,
     FormsModule,
     SelectModule,
     PaginatorModule,
@@ -255,7 +255,7 @@ const ACTION_OPTIONS = withAllOption(
               >
                 <!-- Fecha/Hora -->
                 <span class="text-sm tabular-nums text-text-secondary">
-                  {{ log.fechaHora | date: 'yyyy-MM-dd HH:mm:ss' }}
+                  {{ log.fechaHora | chileDate: 'yyyy-MM-dd HH:mm:ss' }}
                 </span>
 
                 <!-- Usuario -->

@@ -22,7 +22,8 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
-import { todayIso, toISODate } from '@core/utils/date.utils';
+import { addDaysIso, diffDaysIso, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { LayoutService } from '@core/services/ui/layout.service';
 
 @Component({
@@ -95,7 +96,8 @@ export class InstructorHorarioComponent implements OnInit {
   });
   private router = inject(Router);
   private readonly clasesFacade = inject(InstructorClasesFacade);
-  private currentWeekDate: string = new Date().toISOString();
+  /** Un día (fecha pura) de la semana que se está mostrando. */
+  private currentWeekDate: string = todayIso();
 
   constructor() {
     // fix-236-m: evaluar/ver una clase completada abre el Drawer en vez de navegar, así que
@@ -115,7 +117,7 @@ export class InstructorHorarioComponent implements OnInit {
   protected readonly isDesktopLayout = computed(() => this.layoutService.tier() === 'desktop');
 
   // Mobile day selection
-  public selectedDate = signal<string>(new Date().toISOString().split('T')[0]);
+  public selectedDate = signal<string>(todayIso());
 
   // Desktop day highlighting
   public selectedDayDate = signal<string | null>(null);
@@ -140,9 +142,9 @@ export class InstructorHorarioComponent implements OnInit {
     if (!schedule) return null;
 
     // Convert selectedDate string "YYYY-MM-DD" to matching week day
-    const sd = new Date(this.selectedDate() + 'T12:00:00'); // Midday to avoid timezone shifting
-    // 0=Domingo in JS, but UI expects 0=Lunes, 6=Domingo
-    const dayOfWeek = sd.getDay() === 0 ? 6 : sd.getDay() - 1;
+    const [year, month, day] = this.selectedDate().split('-').map(Number);
+    // weekdayOfIso: 0=Domingo, but UI expects 0=Lunes, 6=Domingo
+    const dayOfWeek = (weekdayOfIso(this.selectedDate()) + 6) % 7;
 
     let targetDayLabel = 'Día';
     let targetDateLabel = '';
@@ -170,7 +172,7 @@ export class InstructorHorarioComponent implements OnInit {
       'Noviembre',
       'Diciembre',
     ];
-    targetDateLabel = `${sd.getDate()} de ${monthNames[sd.getMonth()]}, ${sd.getFullYear()}`;
+    targetDateLabel = `${day} de ${monthNames[month - 1]}, ${year}`;
 
     // Blocks for this day
     const blocksForDay = schedule.blocks
@@ -227,13 +229,11 @@ export class InstructorHorarioComponent implements OnInit {
   }
 
   changeWeek(offset: number) {
-    const date = new Date(this.currentWeekDate);
-    date.setDate(date.getDate() + offset * 7);
-    this.currentWeekDate = date.toISOString();
+    this.currentWeekDate = addDaysIso(this.currentWeekDate, offset * 7);
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
 
-    // Also sync the day to the new week's Monday
-    this.selectedDate.set(toISODate(date));
+    // Also sync the day to the new week
+    this.selectedDate.set(this.currentWeekDate);
     this.selectedDayDate.set(null); // Clear desktop selection on week change
   }
 
@@ -241,32 +241,25 @@ export class InstructorHorarioComponent implements OnInit {
     this.selectedDate.set(dateStr);
 
     // Refresh week if we moved outside the current week range
-    const dt = new Date(dateStr + 'T12:00:00');
-    // If the week of dt is different from currentWeekDate, fetch.
+    // If the week of dateStr is different from currentWeekDate, fetch.
     // For now, simplicity: if the date is far from currentWeekDate, fetch.
-    const current = new Date(this.currentWeekDate);
-    const diffTime = Math.abs(dt.getTime() - current.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.abs(diffDaysIso(this.currentWeekDate, dateStr));
 
     if (diffDays > 7) {
-      this.currentWeekDate = dt.toISOString();
+      this.currentWeekDate = dateStr;
       this.facade.fetchWeeklySchedule(this.currentWeekDate);
     }
   }
 
   changeDay(offset: number) {
-    const parts = this.selectedDate().split('-');
-    const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
-    dt.setDate(dt.getDate() + offset);
-    this.onMobileDaySelect(toISODate(dt));
+    this.onMobileDaySelect(addDaysIso(this.selectedDate(), offset));
   }
 
   resetToToday() {
-    const today = new Date();
     const todayStr = todayIso();
     this.selectedDate.set(todayStr);
     this.selectedDayDate.set(todayStr);
-    this.currentWeekDate = today.toISOString();
+    this.currentWeekDate = todayStr;
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
   }
 

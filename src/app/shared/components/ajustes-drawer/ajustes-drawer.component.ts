@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -170,6 +171,19 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </button>
               @if (showPasswordForm()) {
                 <div class="px-4 pt-4 pb-4 space-y-3 border-t border-border-subtle">
+                  <!-- fix-216-b (P04): se verifica la actual antes de cambiarla. -->
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-text-muted">Contraseña actual</label>
+                    <input
+                      type="password"
+                      autocomplete="current-password"
+                      class="w-full rounded-lg border border-border-default bg-base px-3 py-2 text-sm text-text-primary outline-none focus:border-brand"
+                      [(ngModel)]="currentPassword"
+                      (ngModelChange)="markDirty()"
+                      placeholder="Tu contraseña actual"
+                      data-llm-description="input for the current account password"
+                    />
+                  </div>
                   <div class="space-y-1">
                     <label class="text-xs font-semibold text-text-muted">Nueva Contraseña</label>
                     <input
@@ -199,6 +213,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     class="btn-primary w-full py-2 text-sm"
                     [disabled]="
                       isSaving() ||
+                      currentPassword().length === 0 ||
                       newPassword().length < minPasswordLength ||
                       newPassword() !== confirmPassword()
                     "
@@ -707,6 +722,7 @@ export class AjustesDrawerComponent {
     }
   });
 
+  protected readonly currentPassword = signal('');
   protected readonly newPassword = signal('');
   protected readonly confirmPassword = signal('');
 
@@ -734,7 +750,7 @@ export class AjustesDrawerComponent {
 
   formatConsentDate(iso: string | null): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('es-CL', {
+    return formatChileDate(iso, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -829,11 +845,13 @@ export class AjustesDrawerComponent {
     }
     this.isSaving.set(true);
     try {
-      const { error } = await this.auth.updatePassword(this.newPassword());
+      // fix-216-b (P04): verifica la actual antes de cambiarla.
+      const { error } = await this.auth.changePassword(this.currentPassword(), this.newPassword());
       if (error) {
         this.toast.error(error.message || 'Error al actualizar contraseña.');
       } else {
         this.toast.success('Contraseña actualizada correctamente.');
+        this.currentPassword.set('');
         this.newPassword.set('');
         this.confirmPassword.set('');
         this.isDirty.set(false);

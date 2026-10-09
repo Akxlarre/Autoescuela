@@ -69,18 +69,43 @@ export function validateRut(rut: string): boolean {
   return dv === calculateRutDv(body);
 }
 
+/** Puntos de miles sobre el cuerpo numérico ("11111111" → "11.111.111"). */
+function dotBody(body: string): string {
+  return body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 /**
- * Recalcula y reemplaza el dígito verificador de un RUT ya tecleado (formateado o no),
- * usando el mismo criterio que `validateRut`: el último carácter es el DV, todo lo anterior
- * es el cuerpo. Si no hay suficientes caracteres o el cuerpo no es numérico, devuelve el
- * input sin modificar (todavía no hay nada que calcular).
+ * ¿El usuario ya indicó el DV? Sí si escribió un guion o una K (que solo puede ser DV).
+ * Sin eso, lo escrito es solo el número (ASG-b-047: el DV se pone solo).
  */
-export function autocompleteRutDv(rut: string): string {
-  const cleaned = cleanRut(rut);
-  if (cleaned.length < 2) return rut;
+function hasExplicitDv(raw: string): boolean {
+  return raw.includes('-') || /k/i.test(raw);
+}
 
-  const body = cleaned.slice(0, -1);
-  if (!/^\d+$/.test(body)) return rut;
+/**
+ * Formato mientras se escribe (fix-213-b). A diferencia de `formatRut`, no toma el último dígito
+ * como DV: sin guion solo pone puntos al número; con guion (o K) formatea cuerpo-DV.
+ */
+export function formatRutTyping(raw: string): string {
+  const cleaned = cleanRut(raw).toUpperCase();
+  if (cleaned.length === 0) return raw.includes('-') ? '-' : '';
+  if (!hasExplicitDv(raw)) return dotBody(cleaned);
+  if (raw.trimEnd().endsWith('-') && !/K/.test(cleaned)) return `${dotBody(cleaned)}-`;
+  return formatRut(cleaned);
+}
 
-  return formatRut(`${body}${calculateRutDv(body)}`);
+/**
+ * Al salir del campo (fix-213-b, ASG-b-047): completa el DV **solo si falta**.
+ * - Sin guion ni K: el número entero es el cuerpo y se agrega el DV calculado. Con 9+ dígitos no
+ *   puede ser solo cuerpo, así que el último es el DV.
+ * - Con guion o K: se respeta lo escrito. Nunca reemplaza un DV: si está mal, `validateRut` lo marca.
+ * Idempotente. Antes (`autocompleteRutDv`) siempre tomaba el último dígito como DV y lo recalculaba:
+ * se comía un dígito del número y ocultaba los RUT mal tecleados.
+ */
+export function completeRutDv(raw: string): string {
+  const cleaned = cleanRut(raw).toUpperCase();
+  if (cleaned.length === 0) return raw;
+  if (hasExplicitDv(raw) || cleaned.length >= 9) return formatRut(cleaned);
+  if (!/^\d+$/.test(cleaned)) return raw;
+  return formatRut(`${cleaned}${calculateRutDv(cleaned)}`);
 }

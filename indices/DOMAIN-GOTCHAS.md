@@ -83,7 +83,7 @@
 - **Trampa:** asumir que RLS ya protege todo el acceso por sede, o al revés, que basta con leer `branchFacade.selectedBranchId()` para cualquier rol.
 - **Realidad:** decisión de diseño documentada — las RLS de `students`/`instructors`/`select_users` son deliberadamente amplias (para que el selector de destinatarios de Tareas funcione), y el filtro real de sede para la secretaria se hace en PostgREST vía `getActiveBranchId()` (admin → selector del topbar; si no → `user.branchId`). El selector del topbar es **solo-admin** — para la secretaria vale `null`, así que cualquier facade que lea el selector directo se salta el filtro → fuga de PII entre sedes.
 - **Fuente:** `specs/fixes/fix-027-b-aislamiento-sede-secretaria`. **NUNCA tocar la RLS de `users` para "arreglar" esto** — reintroduce la regresión de fix-002.
-- **Actualización (spec 0047-b):** para las tablas operativas de Clase B, pagos, ventas, cursos singulares, anticipos y certificados, la sede **ya la impone también la RLS** (lista en la migración `20261001150000`). El filtro del facade sigue siendo obligatorio (el admin y la secretaria multi-sede ven todo por RLS y dependen de él para el selector); lo que cambió es que dejó de ser la *única* barrera. `users`, `instructors`, flota y Clase Profesional siguen como dice arriba.
+- **Actualización (spec 0047-b):** para las tablas operativas de Clase B, pagos, ventas, cursos singulares, anticipos y certificados, la sede **ya la impone también la RLS** (lista en la migración `20261001150000`). El filtro del facade sigue siendo obligatorio (el admin y la secretaria multi-sede ven todo por RLS y dependen de él para el selector); lo que cambió es que dejó de ser la *única* barrera. `users`, `instructors` y flota siguen como dice arriba. **Clase Profesional ya no:** sus tablas también filtran por sede en la RLS (migraciones `20261005130000` y `20261007130000`); `lecturers`, que no tiene sede, solo la lee quien tiene acceso a una sede con `has_professional`. Aplica al agregar una tabla nueva de Clase Profesional: nace con la cláusula de sede, no con la de solo rol.
 
 ### DG-015 — Una policy de UPDATE más estricta que la de INSERT se expone recién con un upsert
 - **Trampa:** verificar solo la policy INSERT de una tabla y asumir que cubre todo el flujo de escritura.
@@ -954,11 +954,21 @@
   desaparecer "Mis Clases de Hoy" (incluida una clase recién iniciada) pasadas las 21:00.
   Ya había pasado antes con pagos nocturnos, resuelto con `getChileDateTimeRange()`
   (`core/utils/date.utils.ts`) — este fix repitió el mismo error en un facade distinto.
-- **Regla de aplicabilidad:** todo filtro de "hoy"/"este rango de días" sobre una columna
-  `timestamptz` debe construirse con `todayIso()` + `getChileDateTimeRange()` (o el
-  offset explícito de Santiago), nunca con `toISOString()` crudo — sin excepción, incluso
-  si el bug "solo" se manifiesta de noche.
-- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
+- **Regla de aplicabilidad:** aplica a cualquier código (app, edge function o SQL) que
+  convierta un instante en un día, o un día en un rango de instantes. Hay dos tipos y nada
+  más: **instante** (`timestamptz`, `Date`, ISO con zona) y **fecha pura** (`date`,
+  `'YYYY-MM-DD'`). La conversión entre ambos pasa siempre por el módulo de hora de Chile de
+  su capa: `core/utils/chile-time.utils.ts` en la app, `_shared/chile-time.ts` en edge
+  functions, `public.chile_today()` / `chile_date()` / `chile_day_start()` en SQL. "Hoy" es
+  `chileToday()`; un día sobre una columna `timestamptz` es el rango semiabierto
+  `chileDayRange(dia)` con `.gte(start)` y `.lt(endExclusive)`; una diferencia en días es
+  `diffDaysIso()` entre fechas puras, no una resta de instantes. No aplica a medir una
+  duración entre dos instantes (cuánto falta para `expires_at`), que no es un día de
+  calendario. `getChileDateTimeRange()` ya no existe: tenía el fin en `23:59:59` y tomaba el
+  desfase a mediodía. Lo hace cumplir `npm run lint:arch` (ARCH-27 y ARCH-28); las
+  excepciones van en `scripts/lib/date-discipline.allowlist.json` con su justificación.
+- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone` (el caso
+  original) y `specs/specs/0024-m-fechas-de-negocio-en-hora-de-chile` (la normalización)
 
 ### DG-072 — Un `storage.upload(..., { upsert: true })` necesita policy SELECT además de INSERT/UPDATE, o sigue dando 403 aunque ambas estén bien
 - **Trampa:** dar de alta las policies `FOR INSERT WITH CHECK` y `FOR UPDATE USING/WITH CHECK`
@@ -1643,6 +1653,43 @@
   `supabase/migrations/20261005140000_fix322_reserve_promotion_slot_colchon_y_permisos.sql`;
   inventario de las demás en `specs/testing-piloto/037-transversal-multisede-shell.md` §1.4
   (`ASG-i-047`).
+
+### DG-102 — Un envío por lotes que se reanuda por posición (`offset`) no avanza si cada corrida tiene tope de lotes
+
+- **Trampa:** reanudar un proceso por lotes partiendo de `offset = 0` y confiar en que "los ya
+  procesados se saltan". Si cada corrida tiene un tope de lotes (límite de tiempo de la Edge
+  Function), los saltados igual consumen lote y todas las corridas recorren los mismos primeros N.
+- **Realidad:** `dispatch-scheduled-announcements` (8 lotes de 25 por corrida) nunca llegaba al
+  destinatario 201. Además, los conteos finales se grababan con lo sumado en la última corrida.
+- **Regla de aplicabilidad:** todo proceso por lotes que pueda cortarse y reanudarse en otra
+  invocación (cron, reintento, otro cliente) pide **los pendientes** según el estado de cada fila
+  (en comunicados: `email_sent_ok = false AND send_error IS NULL`), no una posición, y calcula sus
+  totales desde las filas, no desde lo que contó la corrida que cierra. Para saber si alguien
+  sigue procesándolo, usar un latido (`announcements.dispatch_heartbeat_at`), no la hora en que
+  debía empezar.
+- **Fuente:** `specs/fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan`,
+  `supabase/functions/_shared/announcement-send.ts` (`sendPendingBatch`, `finalizeAnnouncement`).
+
+### DG-103 — Una escritura de supabase-js que falla no lanza, y un UPDATE/DELETE filtrado por RLS ni siquiera devuelve error
+
+- **Trampa:** escribir `await this.supabase.client.from('x').update(...).eq('id', id)` dentro de
+  un `try` y asumir que, si algo sale mal, cae al `catch`. O revisar `error` y dar por hecho que
+  "sin error" significa "se guardó".
+- **Realidad:** son dos huecos distintos. (1) supabase-js resuelve `{ error }` en vez de lanzar:
+  un `await` suelto descarta el error y el flujo sigue hasta el toast de éxito. (2) Un
+  UPDATE/DELETE sobre una fila que la policy no deja ver responde 200 con cero filas y
+  `error: null` — solo INSERT/UPSERT devuelven `42501`. Así se "guardaba" el kilometraje de un
+  vehículo de otra sede al cerrar una clase.
+- **Regla de aplicabilidad:** toda escritura de un Facade captura su resultado
+  (`const { error } = await ...`) o va envuelta en `assertWriteOk(...)`
+  (`core/utils/db-error.utils.ts`). Cuando el éxito que se le muestra al usuario depende de que
+  una fila concreta haya cambiado (update/delete por `id`), además se encadena `.select('id')` y
+  se usa `assertWriteOk(..., { requireRows: true })`. Si la escritura es secundaria y la acción
+  principal ya quedó hecha, no se lanza (el `catch` informaría un fallo que no ocurrió y el
+  usuario reintentaría): se avisa con un toast de advertencia qué quedó sin guardar.
+- **Fuente:** `specs/fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito`. Lo vigila
+  `src/app/core/facades/unchecked-writes.guard.spec.ts` (hueco 1; el hueco 2 no es detectable
+  por análisis de texto).
 
 ## Convención para agregar una entrada nueva
 

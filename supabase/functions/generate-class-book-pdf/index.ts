@@ -1,3 +1,4 @@
+import { addDaysIso, formatChilePattern, mondayOfIso } from '../_shared/chile-time.ts';
 // supabase/functions/generate-class-book-pdf/index.ts
 //
 // Edge Function: generate-class-book-pdf
@@ -324,21 +325,15 @@ function sanitize(name: string): string {
 
 function fmtDate(d: string | null): string {
   if (!d) return '\u2014';
-  const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return formatChilePattern(d, 'dd-MM-yyyy') ?? '—';
 }
 
 function fmtShort(d: string): string {
-  const dt = new Date(d + 'T12:00:00');
-  return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 }
 
 function getMondayForDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  return mondayOfIso(dateStr);
 }
 
 // spec 0018-m: libros de convalidaci\u00f3n. Espejo de CONVALIDATION_BOOKS en
@@ -3580,9 +3575,7 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
       weekNum++;
       const dias: string[] = [];
       for (let i = 0; i < 7; i++) {
-        const dt = new Date(monday + 'T12:00:00');
-        dt.setDate(dt.getDate() + i);
-        dias.push(dt.toISOString().split('T')[0]);
+        dias.push(addDaysIso(monday, i));
       }
 
       drawGridTable({

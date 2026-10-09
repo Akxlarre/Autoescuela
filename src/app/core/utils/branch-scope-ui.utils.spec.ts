@@ -12,6 +12,10 @@ describe('branch-scope-ui.utils (spec 0004-m)', () => {
     it('secretary: true (nunca elige su propia sede)', () => {
       expect(isSedeDisabled('secretary')).toBe(true);
     });
+    it('fix-215-b (D04/D05): secretaria con grant multisede → false (elige entre sus sedes)', () => {
+      expect(isSedeDisabled('secretary', true)).toBe(false);
+      expect(isSedeDisabled('secretary', false)).toBe(true);
+    });
   });
 
   describe('isBothBranchesVisible', () => {

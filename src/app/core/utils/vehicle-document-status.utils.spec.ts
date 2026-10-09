@@ -32,6 +32,18 @@ describe('resolveDocStatus', () => {
     expect(resolveDocStatus('2026-08-20', null)).toBe('expiring_soon');
   });
 
+  it('cuenta los días desde el hoy de Chile, no desde el de UTC (spec 0024-m)', () => {
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es día 7.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    // Vence hoy en Chile: todavía no está vencido.
+    expect(resolveDocStatus('2026-10-06', null)).toBe('expiring_soon');
+    expect(resolveDocStatus('2026-10-05', null)).toBe('expired');
+    // A 30 días exactos del hoy de Chile entra en "por vencer"; a 31, no.
+    expect(resolveDocStatus('2026-11-05', null)).toBe('expiring_soon');
+    expect(resolveDocStatus('2026-11-06', null)).toBe('valid');
+  });
+
   it('retorna valid si expiryDate está a más de 30 días', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));

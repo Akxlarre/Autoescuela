@@ -1,4 +1,6 @@
+import { formatChileDate, formatChileTime } from '@core/utils/chile-time.utils';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -314,15 +316,12 @@ export class StudentHomeFacade {
       side: {
         nextClass: nextClassResult.data
           ? {
-              date: new Date(nextClassResult.data.scheduled_at).toLocaleDateString('es-CL', {
+              date: formatChileDate(nextClassResult.data.scheduled_at, {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short',
               }),
-              time: new Date(nextClassResult.data.scheduled_at).toLocaleTimeString('es-CL', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
+              time: formatChileTime(nextClassResult.data.scheduled_at),
               instructorName: '',
             }
           : null,
@@ -381,7 +380,7 @@ export class StudentHomeFacade {
             .from('professional_practice_sessions')
             .select('date')
             .eq('promotion_course_id', promotionCourseId)
-            .gt('date', new Date().toISOString().split('T')[0])
+            .gt('date', todayIso())
             .order('date', { ascending: true })
             .limit(1)
             .maybeSingle()
@@ -496,14 +495,11 @@ export class StudentHomeFacade {
       side: {
         nextClass: nextSessionResult.data
           ? {
-              date: new Date(nextSessionResult.data.date + 'T00:00:00').toLocaleDateString(
-                'es-CL',
-                {
-                  weekday: 'short',
-                  day: '2-digit',
-                  month: 'short',
-                },
-              ),
+              date: formatChileDate(nextSessionResult.data.date, {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+              }),
               time: '',
               instructorName: '',
             }

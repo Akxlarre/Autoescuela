@@ -1,5 +1,11 @@
 import { TooltipModule } from 'primeng/tooltip';
 import {
+  calendarDateToIso,
+  chileToday,
+  diffDaysIso,
+  isoToCalendarDate,
+} from '@core/utils/chile-time.utils';
+import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
@@ -26,8 +32,13 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { isValidLicenseNumber } from '@core/utils/license-number.utils';
-import { instructorDeactivationNotices } from '@core/utils/instructor-deactivation.utils';
+import { isSameEmail } from '@core/utils/email.utils';
+import {
+  instructorBranchChangeNotice,
+  instructorDeactivationNotices,
+} from '@core/utils/instructor-deactivation.utils';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -269,6 +280,15 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                     mode="editar"
                     (valueChange)="onSedeScopeChange($event)"
                   />
+                  <!-- hotfix-070-b (E13): las clases ya agendadas no se mueven; solo avisa. -->
+                  @if (avisoCambioSede(); as aviso) {
+                    <p
+                      class="text-xs text-warning"
+                      data-llm-description="aviso de clases futuras al cambiar de sede al instructor"
+                    >
+                      {{ aviso }}
+                    </p>
+                  }
                 </div>
               }
             </div>
@@ -448,30 +468,37 @@ import { instructorDeactivationNotices } from '@core/utils/instructor-deactivati
                   <app-icon name="alert-triangle" [size]="16" />
                   Este instructor todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
-                <!-- hotfix-067-b (S10): la invitación va al correo guardado, no al del formulario. -->
-                @if (email().trim().toLowerCase() !== inst.email.trim().toLowerCase()) {
+                <!-- fix-214-b (H06): sin invitaciones mientras el portal está en piloto. -->
+                @if (invitacionesEnPiloto) {
                   <span
                     class="text-xs"
-                    data-llm-description="nota de que la invitación va al correo guardado"
+                    data-llm-description="nota de invitaciones pausadas durante el piloto"
                   >
-                    La invitación se enviará a {{ inst.email }}. Guarda los cambios para enviarla al
-                    correo nuevo.
+                    Las invitaciones se habilitan cuando termine el piloto del portal de
+                    instructores.
                   </span>
-                }
-                <button
-                  type="button"
-                  class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || !inst.email"
-                  (click)="onEnviarInvitacion(inst.userId, inst.email)"
-                  data-llm-action="enviar-invitacion-instructor"
-                >
-                  @if (isSendingInvite()) {
-                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
-                    Enviando...
-                  } @else {
-                    Reenviar invitación
+                } @else {
+                  <button
+                    type="button"
+                    class="btn-secondary self-start flex items-center gap-2"
+                    [disabled]="isSendingInvite() || !inst.email || emailSinGuardar()"
+                    (click)="onEnviarInvitacion(inst.userId, inst.email)"
+                    data-llm-action="enviar-invitacion-instructor"
+                  >
+                    @if (isSendingInvite()) {
+                      <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                      Enviando...
+                    } @else {
+                      Reenviar invitación
+                    }
+                  </button>
+                  <!-- hotfix-149-m (S10): mismo criterio que el panel del alumno (fix-296-m). -->
+                  @if (emailSinGuardar()) {
+                    <span class="text-xs" data-llm-info="invitacion-requiere-guardar">
+                      Guarda los cambios antes de enviar la invitación.
+                    </span>
                   }
-                </button>
+                }
               </div>
             }
 
@@ -614,6 +641,8 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly bothBranches = signal(false);
   protected readonly activo = signal(true);
   protected readonly isSendingInvite = signal(false);
+  /** fix-214-b (H06): con el portal de instructores en piloto no se ofrece reenviar. */
+  protected readonly invitacionesEnPiloto = isBlockedInPilot('instructor');
 
   protected currentEmail = '';
   protected readonly currentVehicleId = signal<number | null>(null);
@@ -645,12 +674,8 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
     if (!d) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiry = new Date(d);
-    expiry.setHours(0, 0, 0, 0);
-    if (expiry < today) return 'expired';
-    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = diffDaysIso(chileToday(), calendarDateToIso(d));
+    if (diffDays < 0) return 'expired';
     if (diffDays <= 30) return 'expiring_soon';
     return 'valid';
   });
@@ -719,6 +744,19 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     return `Este instructor no podrá dictar clases en ${sedeNoCubierta}: su vehículo asignado es de ${sedeVehiculo} y no está marcado "Ambas". Para que pueda operar en las dos sedes, asígnale un vehículo "Ambas".`;
   });
 
+  /** hotfix-070-b (E13): aviso de clases futuras si cambia de sede (y no queda en "Ambas"). */
+  protected readonly avisoCambioSede = computed(() => {
+    const inst = this.facade.selectedInstructor();
+    if (!inst) return null;
+    const scopeChanged =
+      this.sedeId() !== inst.branchId || this.bothBranches() !== inst.bothBranches;
+    return instructorBranchChangeNotice(
+      this.facade.clasesFuturasSeleccionado(),
+      scopeChanged,
+      this.bothBranches(),
+    );
+  });
+
   protected onSedeScopeChange(value: { branchId: number | null; bothBranches: boolean }): void {
     this.sedeId.set(value.branchId);
     this.bothBranches.set(value.bothBranches);
@@ -728,7 +766,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected get licenseExpiryIso(): string {
     const d = this.licenseExpiry();
     if (!d) return '';
-    return d.toISOString().slice(0, 10);
+    return calendarDateToIso(d);
   }
   protected setLicenseExpiryIso(v: string) {
     if (!v) {
@@ -781,7 +819,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
 
         // Parse license expiry date
         if (inst.licenseExpiry) {
-          this.licenseExpiry.set(new Date(inst.licenseExpiry + 'T12:00:00'));
+          this.licenseExpiry.set(isoToCalendarDate(inst.licenseExpiry));
         } else {
           this.licenseExpiry.set(null);
         }
@@ -803,8 +841,16 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
   }
 
+  /**
+   * La invitación solo sale al correo guardado, así que con el correo editado antes hay que
+   * guardar (hotfix-149-m, igual que en el panel del alumno).
+   */
+  protected emailSinGuardar(): boolean {
+    return !isSameEmail(this.email(), this.currentEmail);
+  }
+
   protected async onEnviarInvitacion(userId: number, savedEmail: string): Promise<void> {
-    if (!userId || !savedEmail) return;
+    if (!userId || !savedEmail || this.emailSinGuardar()) return;
 
     this.isSendingInvite.set(true);
     try {
@@ -826,9 +872,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     if (!this.formValido()) return;
 
     const expiryDate = this.licenseExpiry();
-    const expiryStr = expiryDate
-      ? `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`
-      : '';
+    const expiryStr = expiryDate ? calendarDateToIso(expiryDate) : '';
 
     const ok = await this.facade.editarInstructor(instructorId, userId, {
       firstNames: this.nombres().trim(),

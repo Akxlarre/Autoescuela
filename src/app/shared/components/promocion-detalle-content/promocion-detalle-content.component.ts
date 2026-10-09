@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -397,7 +398,6 @@ export class PromocionDetalleContentComponent {
 
   protected formatDate(iso: string): string {
     if (!iso) return '';
-    const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatChileDate(iso, { year: 'numeric', month: '2-digit', day: '2-digit' });
   }
 }
