@@ -94,15 +94,15 @@ fix-206-b). **Tomada por mí al corregir S22 (a confirmar):** Q05, tarifa 0 rech
 | B06 | Filtro aparte "Vencidas" | `hotfix-069-b` (PR #237) |
 | B13 | Sin buscador por ahora | Sin cambios |
 | C14 | Vence hoy = vigente | Sin cambios (ya es así: `licenseStatusFromExpiry`) |
-| C29 | Avisar si el correo no salió | `fix-214-b` (junto con H06) — **pendiente deploy de `create-instructor`** |
+| C29 | Avisar si el correo no salió | `fix-214-b` (PR #242, `create-instructor` v21 desplegada) |
 | D04/D05 | La secretaria multisede elige la sede | `fix-215-b` (PR #239): el campo estaba visible pero **bloqueado** (bug encontrado al verificarlo) |
 | E13 | Avisar, como al desactivar | `hotfix-070-b` (PR #238) |
 | F06 | La secretaria puede desactivar | Sin cambios |
-| H06 | Sin invitaciones durante el piloto | `fix-214-b` — **pendiente deploy** |
+| H06 | Sin invitaciones durante el piloto | `fix-214-b` (PR #242) |
 | O04 | Botón de correo de restablecimiento en la ficha | `fix-217-b` (PR #241), solo secretarias (portal de instructores en piloto) |
 | P04 | Pedir la contraseña actual | `fix-216-b` (PR #240) |
 | Q05 | Tarifa 0 rechazada | Ya aplicado en `fix-210-b` |
-| R11 | La secretaria no lee RUT/teléfono de otras sedes | **Pendiente: requiere spec.** `select_users` le deja leer todo `users`; 69 consultas de facades hacen join con `users` (instructores "Ambas", quién registró pagos, alumnos con otra sede). Restringir la RLS sin inventario rompe pantallas en silencio |
+| R11 | La secretaria no lee RUT/teléfono de otras sedes | **Spec `0049-b` (PR #246), migración aplicada.** Opción A: ve su sede y, de otras, solo personal, instructores "Ambas"/con clases de su sede y alumnos/pre-inscritos de su sede (303 → 199 usuarios para la secretaria de la sede 2). AC1–AC6 verificados; pantallas de la secretaria sin filas ni nombres perdidos |
 
 **Quedan manuales** (crean cuentas reales, necesitan correo o dos sesiones a la vez): C03, C24,
 C25, C28, E05, E10, E12, H02, H04, H07, L01, M02, M04, M05, N01, N02, N07, P02, T01, T02.
