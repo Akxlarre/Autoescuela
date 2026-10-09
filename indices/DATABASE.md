@@ -11,7 +11,7 @@
 | `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
 | `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false), `max_classes_per_day` (INT, default 1) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. · **`20260513000001`:** `schedule_blocks` cambiado de rangos continuos a **slots exactos** (cada elemento `{"from","to"}` es un slot de 45 min, no un rango). Nuevos horarios L-V: 08:30-09:15 · 09:20-10:05 · 10:10-10:55 · 11:00-11:45 · 11:50-12:35 · 12:40-13:25 · 15:00-15:45 · 15:50-16:35 · 16:40-17:25 · 17:30-18:15 · 18:20-19:05 · 19:10-19:55 · 20:00-20:45. Aplica a ambas sedes. · **`20260613000000`:** `max_classes_per_day` añadido para permitir agendamientos intensivos. |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
-| `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
+| `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: solo el trigger `log_change()` | ✅ Definida |
 | `login_attempts` | M1 - Usuarios | `id`, `email` | `user_id` | Admin: R | ✅ Definida |
 | `notifications` | M2 - Notif. | `id`, `recipient_id` | `recipient_id` | Admin: CRUD, Sec: CRUD, Inst: R (self), Stu: R (self) | ✅ Definida |
 | `notification_templates` | M2 - Notif. | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R | ✅ Definida |
@@ -326,8 +326,12 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| insert_audit_log | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
 | select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
+
+**Escritura:** solo el trigger `log_change()` (`SECURITY DEFINER` del dueño de la tabla). No hay
+policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT` (`authenticated`)
+— fix-363-m. `log_change()` resuelve `user_id` así: sesión (`auth.uid()`); sin sesión, header
+`x-audit-user-id` solo con la service key; si no, `registered_by` de la fila.
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
 

@@ -1653,6 +1653,9 @@
   `supabase/migrations/20261005140000_fix322_reserve_promotion_slot_colchon_y_permisos.sql`;
   inventario de las demás en `specs/testing-piloto/037-transversal-multisede-shell.md` §1.4
   (`ASG-i-047`).
+- **Desde `20261009140000` el default se invirtió:** una función creada por `postgres` nace solo
+  con `EXECUTE` para `postgres` y `service_role`. El `REVOKE` de arriba ya no hace falta en
+  funciones nuevas; lo que hace falta es lo contrario — ver DG-104.
 
 ### DG-102 — Un envío por lotes que se reanuda por posición (`offset`) no avanza si cada corrida tiene tope de lotes
 
@@ -1690,6 +1693,43 @@
 - **Fuente:** `specs/fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito`. Lo vigila
   `src/app/core/facades/unchecked-writes.guard.spec.ts` (hueco 1; el hueco 2 no es detectable
   por análisis de texto).
+
+### DG-104 — Una función nueva nace sin `EXECUTE` para `anon` y `authenticated`: si la usa la app o una policy, la migración debe dar el `GRANT`
+
+- **Trampa:** crear una función en una migración y asumir que la app, una policy RLS, una vista o
+  un `DEFAULT` de columna ya la pueden usar, como pasaba antes. O "arreglar" el
+  `permission denied for function` con un `GRANT … TO PUBLIC` o `TO anon`.
+- **Realidad:** los permisos por defecto de `postgres` ya no dan `EXECUTE` a `PUBLIC`, `anon` ni
+  `authenticated` (salvo en el esquema `extensions`). Las funciones que existían antes conservan
+  sus permisos. Las `RETURNS trigger` no necesitan `GRANT`: Postgres no revisa `EXECUTE` al
+  disparar un trigger.
+- **Regla de aplicabilidad:** al crear una función, decidir quién la llama y escribirlo en la
+  misma migración. La llama la app con sesión, o una policy/vista/default que evalúa un usuario
+  con sesión → `GRANT EXECUTE … TO authenticated`, y si es `SECURITY DEFINER` y escribe o devuelve
+  datos de otros, validar adentro `auth.uid()`, rol y sede. La evalúa una policy `TO public` que
+  también corre sin sesión → además `TO anon`. Solo cron o edge function con service key → nada
+  (ya la tiene `service_role`). Toda `SECURITY DEFINER` lleva `SET search_path`.
+- **Fuente:** `specs/fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas`,
+  `supabase/migrations/20261009140000_fix363_audit_log_infalsificable_y_rpc_cerradas.sql`. Lo
+  vigila `supabase/tests/rls/fix-363-m-auditoria-y-rpc.sql` (F9: ninguna `SECURITY DEFINER` sin
+  `search_path`; F10: una función nueva nace cerrada).
+
+### DG-105 — En un trigger, el autor de un cambio sale de la sesión; un header o una columna que manda el navegador no son prueba de quién fue
+
+- **Trampa:** resolver "quién hizo esto" leyendo primero un header HTTP propio
+  (`x-audit-user-id`) o una columna de la fila (`registered_by`) porque así lo necesitan las edge
+  functions, que escriben con la service key y no tienen sesión.
+- **Realidad:** PostgREST entrega al trigger los headers de cualquier request, también los del
+  navegador. `log_change()` tomaba el header antes que `auth.uid()`: cualquier usuario con sesión
+  dejaba sus cambios a nombre de otro. Y la policy de INSERT de `audit_log`
+  (`auth.uid() IS NOT NULL`) existía "para el trigger", que al ser `SECURITY DEFINER` del dueño
+  de la tabla nunca la necesitó: solo servía para que un usuario insertara filas a mano.
+- **Regla de aplicabilidad:** en cualquier función que atribuya autoría, el orden es sesión
+  primero; un dato que viaja en la request solo se acepta cuando `auth.role() = 'service_role'`
+  (el servidor ya validó a quién representa). Una tabla que solo escribe un trigger
+  `SECURITY DEFINER` no lleva policy de escritura ni `GRANT` de INSERT/UPDATE/DELETE a
+  `anon`/`authenticated`.
+- **Fuente:** `specs/fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas`.
 
 ## Convención para agregar una entrada nueva
 
