@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type {
   MaintenanceRow,
@@ -179,7 +180,7 @@ export class FlotaDetalleFacade {
       const mainRows = ((maintenancesResult.data ?? []) as RawMaintenance[]).map(
         (m): MaintenanceRow => ({
           id: m.id,
-          date: m.completed_date ?? m.scheduled_date ?? m.created_at.slice(0, 10),
+          date: m.completed_date ?? m.scheduled_date ?? toChileDate(m.created_at),
           type: m.type ?? 'Servicio general',
           km: m.km_at_time ?? null,
           cost: m.cost ?? null,

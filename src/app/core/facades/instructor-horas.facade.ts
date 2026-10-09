@@ -172,7 +172,7 @@ export class InstructorHorasFacade {
 
       const byDate = new Map<string, { quantity: number; totalMin: number }>();
       for (const row of data || []) {
-        const dateKey = (row.scheduled_at as string).split('T')[0];
+        const dateKey = toChileDate(row.scheduled_at as string);
         const entry = byDate.get(dateKey) || { quantity: 0, totalMin: 0 };
         entry.quantity++;
         entry.totalMin += row.duration_min || 45;

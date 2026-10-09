@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
@@ -59,7 +60,7 @@ export class DailyAgendaDrawerComponent {
       const startTime = to24hTime(cls.scheduledAt);
       const slot: any = {
         id: cls.id,
-        date: cls.scheduledAt.split('T')[0],
+        date: toChileDate(cls.scheduledAt),
         startTime,
         endTime: addMinutesToTime(startTime, 45),
         status: cls.status,

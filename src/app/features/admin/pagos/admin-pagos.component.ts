@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -651,7 +652,7 @@ export class AdminPagosComponent implements AfterViewInit {
     const curso = this.filtroCurso();
 
     return this.facade.alumnosConDeuda().filter((d) => {
-      const fecha = d.fechaMatricula?.slice(0, 10) ?? null;
+      const fecha = d.fechaMatricula ? toChileDate(d.fechaMatricula) : null;
       const matchDesde = !desde || (fecha !== null && fecha >= desde);
       const matchHasta = !hasta || (fecha !== null && fecha <= hasta);
       const matchCurso = !curso || d.cursoTipo === curso;

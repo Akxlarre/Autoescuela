@@ -132,12 +132,12 @@
 
 ## Fase 4 — App: instantes cortados a día (inventario §2)
 
-- [ ] **T4.1** — Clasificar y corregir los cortes de string
+- [x] **T4.1** — Clasificar y corregir los cortes de string
   - **AC ref:** AC4
   - **DoD:**
-    - [ ] Cada corte sobre un `timestamptz` usa `toChileDate()`; los que ya son `date` quedan anotados como seguros en `inventario.md`
-    - [ ] Tests en `reportes-contables.utils`, `period-window.utils`, `license-status.utils`
-    - [ ] Test en al menos un facade de lista (fecha de ingreso) con instante a las 23:30
+    - [x] Cada corte sobre un `timestamptz` usa `toChileDate()`; los que ya son `date` quedan anotados como seguros en `inventario.md`
+    - [x] Tests en `reportes-contables.utils`, `period-window.utils`, `license-status.utils`
+    - [x] Test en al menos un facade de lista (fecha de ingreso) con instante a las 23:30
 
 ---
 
@@ -264,3 +264,4 @@
 - [ ] **TD.5** — `instructor-horas.facade.spec.ts` tiene un mock preexistente que hace fallar en silencio `fetchSessionsLog` (`lte().order is not a function`): el test pasa porque el facade atrapa el error. No es de esta spec; anotado para no perderlo.
 - [x] **TD.4b** — Fase 3 cerrada (tercera pasada del 2026-10-08): topes `slot_start` de `enrollment` y `admin-alumno-detalle` y semana de `agenda` con rangos semiabiertos; `getChileDateTimeRange` eliminada; tests a las 23:30 en `cuadratura`, `dashboard`, `auditoria` y `asistencia-clase-b`. Línea base 425 → 422. Excepción al DoD de T3.1: `reportes-contables` no tiene test de rango propio (solo se actualizó el mock); queda para la fase 5 junto con su aritmética de fechas.
 - [ ] **TD.6** — `node scripts/test-tz.mjs` con los specs de `agenda`, `enrollment` y `admin-alumno-detalle` falla en UTC y Asia/Tokyo (5 tests: `licenseExpired` en agenda, gate de matrícula tardía en enrollment, límite dinámico de reagendamiento en ficha del alumno). En America/Santiago pasan. Son dependencias del reloj del equipo todavía sin migrar (o tests que arman fechas con `new Date()` local): trabajo de la fase 5, bloquea AC6.
+- [x] **TD.7** — Fase 4 cerrada (2026-10-08): los cortes de string sobre instantes pasan por `toChileDate()` en `admin-pre-inscritos`, `instructor-horas`, `flota-detalle`, `reportes-contables.utils`, `period-window.utils` (corte y año), `daily-agenda-drawer`, `secretaria-dashboard`, `admin-pagos`, `secretaria-pagos` y `asistencia-clase-b-content`. Seguros y sin cambio (ya son fecha pura): `license-status.utils`, `admin-pre-inscrito-drawer:1174`, `reportes-contables.utils:303,309`. Tests nuevos en `period-window.utils` y `reportes-contables.utils`; el de un facade de lista (fecha de ingreso) no hizo falta: `admin-alumnos` y `ex-alumnos` ya usan `toISODate(string)`, que ahora devuelve el día de Chile. Verificado en vivo a las 21:03 hora Chile: Caja Diaria consulta el día de Chile.

@@ -1,4 +1,5 @@
 ﻿import { Injectable, inject, signal, computed } from '@angular/core';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -764,8 +765,8 @@ export class AdminPreInscritosFacade {
       sucursal: u.branches?.name ?? '—',
       canal: r.registration_channel,
       convalida: r.convalidates_simultaneously,
-      fechaPreInscripcion: r.registered_at.slice(0, 10),
-      fechaVencimiento: r.expires_at.slice(0, 10),
+      fechaPreInscripcion: toChileDate(r.registered_at),
+      fechaVencimiento: toChileDate(r.expires_at),
       isVencido,
       diasParaVencer: isVencido ? null : diasParaVencer,
       status: r.status,

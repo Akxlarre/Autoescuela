@@ -3,6 +3,7 @@
  * Todas las funciones son puras: (Data In → Data Out), sin efectos secundarios.
  * Testeables sin levantar el framework Angular.
  */
+import { toChileDate } from './chile-time.utils';
 
 import type {
   CategoriaGasto,
@@ -150,7 +151,7 @@ export function mapSingularSaleToPaymentRow(s: SingularSaleReportDto): PaymentRo
   return {
     total_amount: s.amount_paid ?? 0,
     type: 'standalone',
-    payment_date: s.paid_at ? s.paid_at.slice(0, 10) : null,
+    payment_date: s.paid_at ? toChileDate(s.paid_at) : null,
     enrollments: { branch_id: s.branch_id, license_group: 'standalone' },
   };
 }

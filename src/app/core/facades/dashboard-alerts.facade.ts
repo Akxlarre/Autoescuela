@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { addDaysIso } from '@core/utils/chile-time.utils';
+import { addDaysIso, chileMonth } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -514,9 +514,7 @@ export class DashboardAlertsFacade {
    * No aplica filtro de sede — los instructores tienen scope propio vía su branch_id de usuario.
    */
   private async checkPendingInstructorPayments(): Promise<AlertModel[]> {
-    const currentPeriod = new Date()
-      .toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
-      .substring(0, 7); // 'YYYY-MM'
+    const currentPeriod = chileMonth(); // 'YYYY-MM'
 
     const { data: hoursData, error: hoursError } = await this.supabase.client
       .from('instructor_monthly_hours')
