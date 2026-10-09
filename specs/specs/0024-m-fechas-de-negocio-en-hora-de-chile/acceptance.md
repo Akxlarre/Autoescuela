@@ -17,10 +17,35 @@
 | Edge functions desplegadas | Las 18 figuran actualizadas el 2026-10-09 entre las 05:04 y las 05:06 UTC (`supabase functions list`) |
 | `generate-cash-closing-report` (Excel y PDF), `generate-financial-report`, `generate-cash-history-report`, `generate-payroll-report`, invocadas como admin | Las cuatro responden 200 e imprimen `09-10-2026, 02:10`: la hora de Chile (en UTC habrían sido las 05:10) |
 
-Lo que esta verificación no cubre: a las 02:10 el día de Chile y el de UTC coinciden, así que el
-"hoy" por defecto y las fechas que escriben las funciones (`issued_date`, `registration_date`)
-no se pudieron distinguir contra el sistema en uso; la hora impresa sí. Las otras 14 funciones
-no se invocaron (crean o modifican datos, o necesitan un alumno o certificado concreto).
+### Segunda pasada: el resto de las funciones (02:20 hora Chile)
+
+Invocadas contra dev con datos de prueba (instructor 8, matrícula 6363, curso de promoción 80).
+
+| Función | Cómo | Resultado |
+|---|---|---|
+| `generate-audit-report` | Excel y PDF, filtrando el 07-10-2026 | 200; "Fecha de generación: 09-10-2026"; trae registros del día pedido |
+| `generate-payment-report` | Del 01 al 09 de octubre | 200, PDF; imprime `09-10-2026, 02:20` |
+| `export-certificates-zip` | Clase B | 200, ZIP de 210 KB |
+| `generate-certificate-b-pdf` | Muestra, sede 1 | 200, PDF; fecha de emisión "9 de OCTUBRE de 2026" |
+| `generate-certificate-professional-pdf` | Muestra, sede 2 | 200, PDF; "9 de OCTUBRE de 2026" |
+| `generate-contract-pdf` | Muestra, contrato Clase B | 200, PDF |
+| `generate-class-book-pdf` | Curso de promoción 80 | 200, entrega la URL del PDF |
+| `generate-student-license-pdf` | Matrícula 6363, carnet inicial | 200, entrega la URL del PDF |
+| `update-instructor` | Instructor de prueba, con sus mismos datos | 200, `success` |
+| `student-payment` | `load-instructor-schedule` | 200; la grilla parte el lunes 12-10 (excluye hoy, viernes 9, y el fin de semana) |
+| `auto-create-next-promotions` | Igual que el cron (`net.http_post` con la clave del Vault) | 200, `{"created":0}`: el colchón de promociones ya estaba completo |
+| `public-enrollment` | `load-schedule` | 503 "La inscripción en línea no está disponible": está apagada en dev, no se puede ejercitar |
+
+No se invocaron, a propósito:
+
+- `create-instructor`: crea una cuenta y envía un correo de activación; la suite e2e también la
+  simula en vez de llamarla.
+- `send-certificate-email`: envía un correo real al alumno.
+
+Lo que estas pruebas no cubren: a las 02:10–02:20 el día de Chile y el de UTC coinciden, así que
+el "hoy" por defecto y las fechas que escriben las funciones (`issued_date`, `registration_date`)
+no se pudieron distinguir contra el sistema en uso; la hora impresa sí. Las muestras de
+certificado y contrato no pasan por la rama que guarda el certificado real.
 
 ## Cómo se verificó
 
