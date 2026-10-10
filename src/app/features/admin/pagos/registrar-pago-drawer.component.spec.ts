@@ -70,6 +70,26 @@ describe('RegistrarPagoDrawerComponent', () => {
     expect(layoutDrawerSpy.back).toHaveBeenCalled();
   });
 
+  it('fix-045-i: un segundo onSubmit() mientras el primero guarda (doble Enter) NO registra otro pago', async () => {
+    setup({ alumnosConDeuda: [] });
+    let resolverPrimero!: () => void;
+    facadeSpy.registrarNuevoPago.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (resolverPrimero = resolve)),
+    );
+    (component as any).form.patchValue({
+      type: 'Abono',
+      total_amount: 50000,
+      cash_amount: 50000,
+    });
+
+    const primero = (component as any).onSubmit();
+    const segundo = (component as any).onSubmit(); // segundo Enter antes de que termine el primero
+    resolverPrimero();
+    await Promise.all([primero, segundo]);
+
+    expect(facadeSpy.registrarNuevoPago).toHaveBeenCalledTimes(1);
+  });
+
   it('onSubmit() NO invoca registrarNuevoPago si el formulario es inválido (monto en 0)', async () => {
     setup({ alumnosConDeuda: [] });
 
