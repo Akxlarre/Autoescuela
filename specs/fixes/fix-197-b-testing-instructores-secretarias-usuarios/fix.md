@@ -127,3 +127,21 @@ nueva, ambas ERDF21; SQL para dejarlo idéntico entregado al owner).
 2. El toast de éxito ("Instructor actualizado") queda encima del botón Guardar del drawer unos
    segundos: dos clics seguidos en Guardar cayeron en el toast y no guardaron (sin aviso).
 3. `phone` sin traducir en el diccionario de auditoría.
+
+**Hallazgos del grupo 1 — resueltos (2026-10-09):** 1 y 3 en `fix-218-b` (PR #249 + #251: autor del
+cambio de vehículo en la auditoría, 48 columnas en español; deploy de `update-instructor` y
+`create-instructor` v23, que además repuso fix-214-b en producción); 2 en `hotfix-071-b` (PR #250:
+el toast ya no tapa "Guardar" del drawer).
+
+### Manuales — grupo 2 (2026-10-10, dos sesiones a la vez con `e2e/personal-dos-sesiones.spec.ts`)
+Admin edita a secretaria2 con clics reales desde Admin → Secretarias; ella tiene su portal abierto.
+Todo revertido (sede 2, activa, sin grant, sin ban).
+
+| Caso | Resultado |
+|---|---|
+| N01 | ✅ Al otorgar "Todas las sedes" le aparece el selector de sede sin recargar (AC-E3) |
+| N02 | ✅ Al revocar, el selector desaparece y vuelve a su sede sin recargar |
+| M04 | ✅ Al cambiarle la sede, su pantalla pasa a la sede nueva sin recargar (y de vuelta) |
+| M05 | ❌→✅ Desactivada seguía dentro, viendo todas las listas vacías sin aviso. **`fix-219-b` (PR #253, migración aplicada):** ahora ve "Tu cuenta fue desactivada. Contacta al administrador." y queda en el login |
+
+**Quedan manuales:** C03, C24, C25, C28, E05, H02, H04, H07, L01, M02, P02, T01.
