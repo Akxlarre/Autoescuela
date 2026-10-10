@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -749,7 +750,7 @@ export class AjustesDrawerComponent {
 
   formatConsentDate(iso: string | null): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('es-CL', {
+    return formatChileDate(iso, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

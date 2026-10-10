@@ -1,4 +1,6 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { addDaysIso, mondayOfIso, weekdayOfIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -126,15 +128,14 @@ export class AsistenciaProfesionalFacade {
   // ── Semana actual ───────────────────────────────────────────────────────────
   readonly weekDays = computed<WeekDay[]>(() => {
     const sesiones = this._sesiones();
-    const monday = this.getMondayForOffset(this._weekOffset());
-    const today = this.formatDateIso(new Date());
+    const today = todayIso();
+    const monday = addDaysIso(mondayOfIso(today), this._weekOffset() * 7);
     const days: WeekDay[] = [];
 
     for (let i = 0; i < 6; i++) {
       // Lun-Sáb
-      const d = new Date(monday);
-      d.setDate(d.getDate() + i);
-      const dateStr = this.formatDateIso(d);
+      const dateStr = addDaysIso(monday, i);
+      const [, month, dayOfMonth] = dateStr.split('-').map(Number);
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const monthNames = [
         'Ene',
@@ -153,8 +154,8 @@ export class AsistenciaProfesionalFacade {
 
       days.push({
         date: dateStr,
-        label: `${d.getDate()} ${monthNames[d.getMonth()]}`,
-        dayLabel: dayNames[d.getDay()],
+        label: `${dayOfMonth} ${monthNames[month - 1]}`,
+        dayLabel: dayNames[weekdayOfIso(dateStr)],
         isToday: dateStr === today,
         theory: sesiones.find((s) => s.date === dateStr && s.tipo === 'theory') ?? null,
         practice: sesiones.find((s) => s.date === dateStr && s.tipo === 'practice') ?? null,
@@ -551,15 +552,29 @@ export class AsistenciaProfesionalFacade {
       }
 
       // Auto-completar sesión si estaba programada y se está registrando asistencia
+      let sessionLeftOpen = false;
       if (sesion.status === 'scheduled') {
         const table =
           sesion.tipo === 'theory'
             ? 'professional_theory_sessions'
             : 'professional_practice_sessions';
-        await this.supabase.client.from(table).update({ status: 'completed' }).eq('id', sesion.id);
+        // fix-362-m: la asistencia ya se guardó; no se lanza (reintentar re-insertaría las
+        // filas nuevas). Se avisa que la sesión quedó sin cerrar.
+        const { error: completeError } = await this.supabase.client
+          .from(table)
+          .update({ status: 'completed' })
+          .eq('id', sesion.id);
+        sessionLeftOpen = !!completeError;
       }
 
-      this.toast.success('Asistencia guardada correctamente');
+      if (sessionLeftOpen) {
+        this.toast.warning(
+          'Asistencia guardada',
+          'No se pudo marcar la sesión como realizada. Cámbiale el estado a mano.',
+        );
+      } else {
+        this.toast.success('Asistencia guardada correctamente');
+      }
       const cursoId = this._selectedCursoId()!;
       await Promise.all([this.fetchSesiones(), this.fetchResumenAlumnos(cursoId)]);
       await this.selectSesion(sesion);
@@ -599,16 +614,30 @@ export class AsistenciaProfesionalFacade {
       if (error) throw error;
 
       // Al cancelar, eliminar registros de asistencia para que no distorsionen estadísticas
+      let attendanceLeft = false;
       if (payload.status === 'cancelled') {
         const attTable =
           sesion.tipo === 'theory'
             ? 'professional_theory_attendance'
             : 'professional_practice_attendance';
         const fkCol = sesion.tipo === 'theory' ? 'theory_session_prof_id' : 'session_id';
-        await this.supabase.client.from(attTable).delete().eq(fkCol, sesion.id);
+        // fix-362-m: la sesión ya quedó cancelada; no se lanza. Si la asistencia no se borró,
+        // sigue contando en las estadísticas y hay que decirlo.
+        const { error: cleanupError } = await this.supabase.client
+          .from(attTable)
+          .delete()
+          .eq(fkCol, sesion.id);
+        attendanceLeft = !!cleanupError;
       }
 
-      this.toast.success('Sesión actualizada');
+      if (attendanceLeft) {
+        this.toast.warning(
+          'Sesión cancelada',
+          'No se pudo borrar su asistencia registrada: seguirá contando en las estadísticas. Avisa al administrador.',
+        );
+      } else {
+        this.toast.success('Sesión actualizada');
+      }
       const cursoId = this._selectedCursoId();
       await this.fetchSesiones();
       if (cursoId) await this.fetchResumenAlumnos(cursoId);
@@ -771,20 +800,6 @@ export class AsistenciaProfesionalFacade {
       notes: s.notes ?? null,
       zoomLink: s.zoom_link ?? null,
     };
-  }
-
-  private getMondayForOffset(offset: number): Date {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // adjust to Monday
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diff + offset * 7);
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  }
-
-  private formatDateIso(d: Date): string {
-    return d.toISOString().split('T')[0];
   }
 
   // ── Firma semanal ───────────────────────────────────────────────────────────

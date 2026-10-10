@@ -1,3 +1,4 @@
+import { calendarDateToIso, diffDaysIso } from './chile-time.utils';
 /**
  * Núcleo funcional del Dashboard Ejecutivo de Admin (spec 0044-b).
  *
@@ -78,9 +79,7 @@ function addDays(iso: string, days: number): string {
 }
 
 function diffDays(fromIso: string, toIso_: string): number {
-  const a = parseIso(fromIso);
-  const b = parseIso(toIso_);
-  return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86_400_000);
+  return diffDaysIso(fromIso, toIso_);
 }
 
 function isLastDayOfMonth(date: Ymd): boolean {
@@ -123,12 +122,7 @@ export function pickerDatesToRange(
   const start = dates?.[0];
   if (!start) return null;
   const end = dates?.[1] ?? start;
-  return { from: localIso(start), to: localIso(end) };
-}
-
-function localIso(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return { from: calendarDateToIso(start), to: calendarDateToIso(end) };
 }
 
 /**

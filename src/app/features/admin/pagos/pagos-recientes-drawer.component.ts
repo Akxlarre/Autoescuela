@@ -246,7 +246,7 @@ export class PagosRecientesDrawerComponent {
 
   protected readonly mesActual = computed(() => {
     const now = new Date();
-    const mes = now.toLocaleDateString('es-Cl', { month: 'long' });
+    const mes = formatChileanDate(now, { month: 'long' });
     return mes.charAt(0).toUpperCase() + mes.slice(1);
   });
 

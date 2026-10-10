@@ -68,6 +68,9 @@ function buildSupabaseMock() {
             lte: () => ({
               order: () => Promise.resolve(makeList(table === 'payments' ? mockPayments : [])),
             }),
+            lt: () => ({
+              order: () => Promise.resolve(makeList(table === 'payments' ? mockPayments : [])),
+            }),
           }),
           eq: (col: string) => ({
             eq: () => ({
@@ -297,7 +300,10 @@ describe('CuadraturaFacade.registrarEgreso — gasto/combustible (fix-006-i, fix
             client: {
               from: (table: string) => ({
                 select: () => ({
-                  gte: () => ({ lte: () => ({ order: () => Promise.resolve({ data: [] }) }) }),
+                  gte: () => ({
+                    lte: () => ({ order: () => Promise.resolve({ data: [] }) }),
+                    lt: () => ({ order: () => Promise.resolve({ data: [] }) }),
+                  }),
                 }),
                 insert: (payload: unknown) => insertSpy(table, payload),
               }),
@@ -409,6 +415,7 @@ describe('CuadraturaFacade.fetchExpensesAndAdvances — filtro de sede en antici
         },
         gte: () => obj,
         lte: () => obj,
+        lt: () => obj,
         order: () => Promise.resolve({ data: [], error: null }),
         maybeSingle: () => Promise.resolve({ data: null, error: null }),
         then: (cb: (r: { data: unknown[]; error: null }) => unknown) =>
@@ -446,6 +453,71 @@ describe('CuadraturaFacade.fetchExpensesAndAdvances — filtro de sede en antici
     const { facade, advEqCalls } = setup(null);
     await facade.refresh();
     expect(advEqCalls.some(([col]) => col === 'instructors.users.branch_id')).toBe(false);
+  });
+});
+
+// ─── spec 0024-m: la Caja del día usa el día de Chile ─────────────────────────
+
+describe('CuadraturaFacade — Caja del día en hora de Chile (spec 0024-m)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('a las 23:30 hora Chile la Caja consulta el día de Chile, no el de UTC', async () => {
+    const calls: { table: string; method: string; args: unknown[] }[] = [];
+    const chain = (table: string): any => {
+      const obj: any = {
+        order: () => Promise.resolve({ data: [], error: null }),
+        maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        then: (cb: (r: { data: unknown[]; error: null }) => unknown) =>
+          Promise.resolve(cb({ data: [], error: null })),
+      };
+      for (const method of ['select', 'in', 'eq', 'gte', 'lte', 'lt']) {
+        obj[method] = (...args: unknown[]) => {
+          calls.push({ table, method, args });
+          return obj;
+        };
+      }
+      return obj;
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        CuadraturaFacade,
+        { provide: SupabaseService, useValue: { client: { from: chain } } },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: () => ({ dbId: 1, role: 'admin', branchId: 1 }) },
+        },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: BranchFacade, useValue: { selectedBranchId: () => null, branches: () => [] } },
+      ],
+    });
+    const facade = TestBed.inject(CuadraturaFacade);
+
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    await facade.refresh();
+
+    const has = (table: string, method: string, args: unknown[]) =>
+      calls.some(
+        (c) =>
+          c.table === table &&
+          c.method === method &&
+          JSON.stringify(c.args) === JSON.stringify(args),
+      );
+
+    // Columnas de fecha pura: el día de Chile.
+    expect(has('payments', 'eq', ['payment_date', '2026-10-06'])).toBe(true);
+    expect(has('special_service_sales', 'eq', ['sale_date', '2026-10-06'])).toBe(true);
+    // Columna de instante (cursos singulares): rango semiabierto del día de Chile.
+    expect(
+      has('standalone_course_enrollments', 'gte', ['paid_at', '2026-10-06T03:00:00.000Z']),
+    ).toBe(true);
+    expect(
+      has('standalone_course_enrollments', 'lt', ['paid_at', '2026-10-07T03:00:00.000Z']),
+    ).toBe(true);
+    // Nada se consulta con el día UTC.
+    expect(calls.some((c) => JSON.stringify(c.args).includes('2026-10-07"'))).toBe(false);
   });
 });
 

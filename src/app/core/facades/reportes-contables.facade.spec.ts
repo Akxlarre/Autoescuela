@@ -20,6 +20,7 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
         eq: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
+        lt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         then: (resolve: any, reject: any) => Promise.resolve(res).then(resolve, reject),
       };

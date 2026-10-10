@@ -3,7 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
-import { toISODate, getChileDateTimeRange } from '@core/utils/date.utils';
+import { chileDayRange, chileToday } from '@core/utils/chile-time.utils';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { mapConcepto } from '@core/utils/payment-concept.utils';
@@ -336,7 +336,7 @@ export class CuadraturaFacade {
   }
 
   private async fetchAll(): Promise<void> {
-    const today = toISODate(new Date());
+    const today = chileToday();
     const branchId = this.getActiveBranchId();
     await Promise.all([
       this.fetchPayments(today, branchId),
@@ -346,8 +346,8 @@ export class CuadraturaFacade {
   }
 
   private async fetchPayments(today: string, branchId: number | null): Promise<void> {
-    const start = `${today}T00:00:00`;
-    const end = `${today}T23:59:59`;
+    // Día de Chile como rango semiabierto de instantes: [start, endExclusive).
+    const { start, endExclusive } = chileDayRange(today);
 
     let query: any = this.supabase.client
       .from('payments')
@@ -362,7 +362,7 @@ export class CuadraturaFacade {
     // El ordenamiento y limitación siempre al final de la cadena de filtros
     const [{ data }, singulares, serviciosEspeciales] = await Promise.all([
       query.order('payment_date', { ascending: true }),
-      this.fetchSingularSales(start, end, branchId),
+      this.fetchSingularSales(start, endExclusive, branchId),
       this.fetchSpecialServiceSales(today, branchId),
     ]);
     this._pagosHoy.set([
@@ -428,7 +428,7 @@ export class CuadraturaFacade {
       )
       .eq('payment_status', 'paid')
       .gte('paid_at', start)
-      .lte('paid_at', end);
+      .lt('paid_at', end);
 
     if (branchId) {
       query = query.eq('standalone_courses.branch_id', branchId);
@@ -608,7 +608,7 @@ export class CuadraturaFacade {
 
     this._isSaving.set(true);
     try {
-      const today = toISODate(new Date());
+      const today = chileToday();
       const { error } = await this.supabase.client.from('expenses').insert({
         date: today,
         amount: datos.monto,
@@ -634,7 +634,7 @@ export class CuadraturaFacade {
   async exportar(format: 'excel' | 'pdf'): Promise<void> {
     this._isExporting.set(true);
     try {
-      const today = toISODate(new Date());
+      const today = chileToday();
       const branchId = this.getActiveBranchId();
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-cash-closing-report',
@@ -701,7 +701,7 @@ export class CuadraturaFacade {
   private buildBorradorPayload(): Record<string, unknown> {
     const c = this.cantidades();
     return {
-      date: toISODate(new Date()),
+      date: chileToday(),
       branch_id: this.getActiveBranchId(),
       status: 'draft',
       closed: false,
@@ -769,7 +769,7 @@ export class CuadraturaFacade {
         clearTimeout(this._borradorTimer);
         this._borradorTimer = null;
       }
-      const today = toISODate(new Date());
+      const today = chileToday();
       const pagos = this._pagosHoy();
       const payload = this.buildCierrePayload();
       // upsert (no insert plano, spec 0012-m): si ya existía un borrador para hoy/sede, se

@@ -1,3 +1,4 @@
+import { chileParts, chileYear } from '@core/utils/chile-time.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
@@ -740,8 +741,8 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   kpis = input.required<LiquidacionesKpis>();
   isLoading = input<boolean>(false);
   isExporting = input<boolean>(false);
-  mesActual = input<number>(new Date().getMonth() + 1);
-  anioActual = input<number>(new Date().getFullYear());
+  mesActual = input<number>(chileParts().month);
+  anioActual = input<number>(chileYear());
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
   mesAnterior = output<void>();

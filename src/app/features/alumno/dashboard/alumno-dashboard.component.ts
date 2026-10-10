@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
@@ -686,6 +687,6 @@ export class AlumnoDashboardComponent {
   }
 
   formatShortDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' });
+    return formatChileDate(iso, { day: '2-digit', month: 'short' });
   }
 }

@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
@@ -438,7 +439,7 @@ export class SecretariaDashboardComponent implements OnInit {
       const startTime = to24hTime(cls.scheduledAt);
       const slot: any = {
         id: cls.id,
-        date: cls.scheduledAt.split('T')[0],
+        date: toChileDate(cls.scheduledAt),
         startTime,
         endTime: addMinutesToTime(startTime, 45),
         status: cls.status,

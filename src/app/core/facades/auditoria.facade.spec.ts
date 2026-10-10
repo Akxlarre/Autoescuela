@@ -63,7 +63,7 @@ describe('AuditoriaFacade', () => {
   describe('módulos de las tablas auditadas en fix-206-b', () => {
     function chainableQuery(): any {
       const q: any = {};
-      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lte', 'in', 'not']) {
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lte', 'lt', 'in', 'not']) {
         q[m] = vi.fn().mockReturnValue(q);
       }
       q.then = (resolve: (v: unknown) => unknown) => resolve({ data: [], error: null, count: 0 });
@@ -79,6 +79,16 @@ describe('AuditoriaFacade', () => {
       facade.setFilters({ modulo });
       await facade.initialize();
       expect(q.in).toHaveBeenCalledWith('entity', entities);
+    });
+
+    it('el filtro de fechas usa días de Chile como rango semiabierto (spec 0024-m)', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ fechaDesde: '2026-10-01', fechaHasta: '2026-10-06' });
+      await facade.initialize();
+      // Octubre: Chile en UTC-3. Hasta = inicio del día siguiente, exclusivo.
+      expect(q.gte).toHaveBeenCalledWith('created_at', '2026-10-01T03:00:00.000Z');
+      expect(q.lt).toHaveBeenCalledWith('created_at', '2026-10-07T03:00:00.000Z');
     });
   });
 });

@@ -127,6 +127,27 @@ describe('applyPeriodWindow — ventana de año concreto (fix-147-b, unificació
   });
 });
 
+describe('applyPeriodWindow — instantes en hora de Chile (spec 0024-m)', () => {
+  const rows: Row[] = [
+    // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+    { id: 1, fecha: '2026-10-07T02:30:00+00:00' },
+    // 00:00 hora Chile del 7 de octubre.
+    { id: 2, fecha: '2026-10-07T03:00:00+00:00' },
+    // Fecha pura: no se desplaza.
+    { id: 3, fecha: '2026-10-07' },
+  ];
+
+  it('compara el corte contra el día de Chile del registro, no contra su día UTC', () => {
+    const result = applyPeriodWindow(rows, {
+      window: DEFAULT_PERIOD_WINDOW,
+      hasActiveSearch: false,
+      dateOf: (r) => r.fecha,
+      cutoffIso: '2026-10-07',
+    });
+    expect(result.map((r) => r.id)).toEqual([2, 3]);
+  });
+});
+
 describe('applyPeriodWindow — pureza', () => {
   it('no muta el arreglo original', () => {
     const items = [viejo, reciente];

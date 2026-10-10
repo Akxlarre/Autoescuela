@@ -3,7 +3,6 @@ import { InstructorClasesFacade } from './instructor-clases.facade';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
-import { todayIso, getChileDateTimeRange } from '@core/utils/date.utils';
 
 describe('InstructorClasesFacade', () => {
   let facade: InstructorClasesFacade;
@@ -209,12 +208,16 @@ describe('InstructorClasesFacade', () => {
         const chain = makeThenableChain({ data: [], error: null });
         supabaseMock.client.from = vi.fn().mockReturnValue(chain);
 
-        const { start, end } = getChileDateTimeRange(todayIso());
+        // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
 
         await facade.fetchTodayClasses();
+        vi.useRealTimers();
 
-        expect(chain.gte).toHaveBeenCalledWith('scheduled_at', start);
-        expect(chain.lte).toHaveBeenCalledWith('scheduled_at', end);
+        // Rango semiabierto del día 6 en Chile (UTC-3): [06 03:00Z, 07 03:00Z).
+        expect(chain.gte).toHaveBeenCalledWith('scheduled_at', '2026-10-06T03:00:00.000Z');
+        expect(chain.lt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T03:00:00.000Z');
         // Regresión: NUNCA debe usar el límite crudo en UTC (`+00:00`), que corta
         // las clases de la noche cuando Chile todavía está en "hoy" pero UTC ya
         // avanzó a "mañana".
@@ -463,6 +466,44 @@ describe('InstructorClasesFacade', () => {
 
         expect(updateVehicleChain.update).toHaveBeenCalledWith({ current_km: 12500 });
         expect(updateVehicleChain.eq).toHaveBeenCalledWith('id', 3);
+      });
+
+      // fix-362-m: la clase ya quedó finalizada; lo que no se guardó se avisa, no se calla.
+      function finishWithVehicleResult(vehicleResult: { data?: any; error?: any }) {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValueOnce(
+            makeThenableChain({
+              data: { enrollment_id: 10, vehicle_id: 3, enrollments: { student_id: 40 } },
+              error: null,
+            }),
+          ) // select session
+          .mockReturnValueOnce(makeThenableChain({ error: null })) // update status=completed
+          .mockReturnValueOnce(makeThenableChain(vehicleResult)) // update vehicles.current_km
+          .mockReturnValueOnce(makeThenableChain({ error: null })) // upsert practice attendance
+          .mockReturnValueOnce(makeThenableChain({ data: [], error: null })); // refreshSilently
+        const toast = TestBed.inject(ToastService) as any;
+        toast.warning = vi.fn();
+        return toast;
+      }
+
+      it('fix-362-m: si la RLS filtra el vehículo (0 filas, sin error), avisa que el KM no se guardó', async () => {
+        const toast = finishWithVehicleResult({ data: [], error: null });
+
+        await facade.finishClass(5, 12500);
+
+        expect(toast.warning).toHaveBeenCalledWith(
+          'Clase finalizada, con datos sin guardar',
+          expect.stringContaining('el kilometraje del vehículo'),
+        );
+      });
+
+      it('fix-362-m: con el KM guardado no avisa nada', async () => {
+        const toast = finishWithVehicleResult({ data: [{ id: 3 }], error: null });
+
+        await facade.finishClass(5, 12500);
+
+        expect(toast.warning).not.toHaveBeenCalled();
       });
 
       it('propaga el error si la actualización de la sesión falla', async () => {

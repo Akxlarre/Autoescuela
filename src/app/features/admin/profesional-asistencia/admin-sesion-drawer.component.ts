@@ -1,4 +1,6 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { TooltipModule } from 'primeng/tooltip';
+import { todayIso } from '@core/utils/date.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -438,7 +440,7 @@ export class AdminSesionDrawerComponent implements OnInit {
   readonly isFuture = computed(() => {
     const s = this.facade.selectedSesion();
     if (!s) return false;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIso();
     return s.date > today;
   });
 
@@ -561,8 +563,7 @@ export class AdminSesionDrawerComponent implements OnInit {
   }
 
   formatDateDisplay(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return formatChileDate(dateStr, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   statusColor(status: string): string {

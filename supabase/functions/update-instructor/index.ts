@@ -1,3 +1,4 @@
+import { chileToday, diffDaysIso, toChileDate } from '../_shared/chile-time.ts';
 // supabase/functions/update-instructor/index.ts
 //
 // Edge Function: update-instructor
@@ -34,7 +35,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeInstructorEdit } from '../_shared/user-edit-authz.ts';
-import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
+import {
+  EMAIL_TAKEN_MESSAGE,
+  isEmailTakenError,
+  isUniqueViolation,
+} from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,16 +58,10 @@ function errorResponse(message: string, status = 400) {
 }
 
 function computeLicenseStatus(expiryDateStr: string): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDateStr);
-  expiry.setHours(0, 0, 0, 0);
+  // Días de calendario hasta el vencimiento, contados desde el hoy de Chile.
+  const diffDays = diffDaysIso(chileToday(), toChileDate(expiryDateStr));
 
-  if (expiry < today) return 'expired';
-
-  const diffMs = expiry.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
+  if (diffDays < 0) return 'expired';
   if (diffDays <= 30) return 'expiring_soon';
   return 'valid';
 }
@@ -153,7 +152,9 @@ Deno.serve(async (req: Request) => {
     // ── Validar el OBJETIVO (fix-179-b) ──────────────────────────────────────
     const { data: targetInstructor, error: findInstructorError } = await supabaseAdmin
       .from('instructors')
-      .select('id, user_id, both_branches, users!inner ( supabase_uid, email, branch_id, roles ( name ) )')
+      .select(
+        'id, user_id, both_branches, users!inner ( supabase_uid, email, branch_id, roles ( name ) )',
+      )
       .eq('id', instructorId)
       .maybeSingle();
 
@@ -295,12 +296,13 @@ Deno.serve(async (req: Request) => {
     // ── Gestionar cambio de vehículo ────────────────────────────────────────
     const vehicleChanged = vehicleId !== currentVehicleId;
 
+    // Con supabaseAudit (fix-218-b): con supabaseAdmin el cambio quedaba en la auditoría sin autor.
     if (vehicleChanged) {
       // Cerrar asignación actual (si existe)
       if (currentVehicleId) {
-        await supabaseAdmin
+        await supabaseAudit
           .from('vehicle_assignments')
-          .update({ end_date: new Date().toISOString().split('T')[0] })
+          .update({ end_date: chileToday() })
           .eq('instructor_id', instructorId)
           .eq('vehicle_id', currentVehicleId)
           .is('end_date', null);
@@ -308,10 +310,10 @@ Deno.serve(async (req: Request) => {
 
       // Crear nueva asignación (si se seleccionó un vehículo)
       if (vehicleId) {
-        await supabaseAdmin.from('vehicle_assignments').insert({
+        await supabaseAudit.from('vehicle_assignments').insert({
           instructor_id: instructorId,
           vehicle_id: vehicleId,
-          start_date: new Date().toISOString().split('T')[0],
+          start_date: chileToday(),
           assigned_by: callerRow.id,
         });
       }

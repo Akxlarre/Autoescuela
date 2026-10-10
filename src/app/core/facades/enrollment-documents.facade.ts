@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { chileToday, diffDaysIso, toChileDate } from '@core/utils/chile-time.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
@@ -467,10 +468,7 @@ export class EnrollmentDocumentsFacade {
 
   /** Valida la antigüedad de la Hoja de Vida del Conductor (RF-082.3). */
   validateHvcDate(issueDateStr: string): void {
-    const issueDate = new Date(issueDateStr);
-    const today = new Date();
-    const diffMs = today.getTime() - issueDate.getTime();
-    const daysSinceIssue = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const daysSinceIssue = diffDaysIso(toChileDate(issueDateStr), chileToday());
     const expired = daysSinceIssue > HVC_MAX_DAYS;
 
     this._hvcValidation.set({

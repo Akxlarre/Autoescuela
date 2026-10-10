@@ -954,11 +954,21 @@
   desaparecer "Mis Clases de Hoy" (incluida una clase recién iniciada) pasadas las 21:00.
   Ya había pasado antes con pagos nocturnos, resuelto con `getChileDateTimeRange()`
   (`core/utils/date.utils.ts`) — este fix repitió el mismo error en un facade distinto.
-- **Regla de aplicabilidad:** todo filtro de "hoy"/"este rango de días" sobre una columna
-  `timestamptz` debe construirse con `todayIso()` + `getChileDateTimeRange()` (o el
-  offset explícito de Santiago), nunca con `toISOString()` crudo — sin excepción, incluso
-  si el bug "solo" se manifiesta de noche.
-- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone`
+- **Regla de aplicabilidad:** aplica a cualquier código (app, edge function o SQL) que
+  convierta un instante en un día, o un día en un rango de instantes. Hay dos tipos y nada
+  más: **instante** (`timestamptz`, `Date`, ISO con zona) y **fecha pura** (`date`,
+  `'YYYY-MM-DD'`). La conversión entre ambos pasa siempre por el módulo de hora de Chile de
+  su capa: `core/utils/chile-time.utils.ts` en la app, `_shared/chile-time.ts` en edge
+  functions, `public.chile_today()` / `chile_date()` / `chile_day_start()` en SQL. "Hoy" es
+  `chileToday()`; un día sobre una columna `timestamptz` es el rango semiabierto
+  `chileDayRange(dia)` con `.gte(start)` y `.lt(endExclusive)`; una diferencia en días es
+  `diffDaysIso()` entre fechas puras, no una resta de instantes. No aplica a medir una
+  duración entre dos instantes (cuánto falta para `expires_at`), que no es un día de
+  calendario. `getChileDateTimeRange()` ya no existe: tenía el fin en `23:59:59` y tomaba el
+  desfase a mediodía. Lo hace cumplir `npm run lint:arch` (ARCH-27 y ARCH-28); las
+  excepciones van en `scripts/lib/date-discipline.allowlist.json` con su justificación.
+- **Fuente:** `specs/fixes/fix-176-m-dashboard-instructor-clases-activas-timezone` (el caso
+  original) y `specs/specs/0024-m-fechas-de-negocio-en-hora-de-chile` (la normalización)
 
 ### DG-072 — Un `storage.upload(..., { upsert: true })` necesita policy SELECT además de INSERT/UPDATE, o sigue dando 403 aunque ambas estén bien
 - **Trampa:** dar de alta las policies `FOR INSERT WITH CHECK` y `FOR UPDATE USING/WITH CHECK`
@@ -1643,6 +1653,83 @@
   `supabase/migrations/20261005140000_fix322_reserve_promotion_slot_colchon_y_permisos.sql`;
   inventario de las demás en `specs/testing-piloto/037-transversal-multisede-shell.md` §1.4
   (`ASG-i-047`).
+- **Desde `20261009140000` el default se invirtió:** una función creada por `postgres` nace solo
+  con `EXECUTE` para `postgres` y `service_role`. El `REVOKE` de arriba ya no hace falta en
+  funciones nuevas; lo que hace falta es lo contrario — ver DG-104.
+
+### DG-102 — Un envío por lotes que se reanuda por posición (`offset`) no avanza si cada corrida tiene tope de lotes
+
+- **Trampa:** reanudar un proceso por lotes partiendo de `offset = 0` y confiar en que "los ya
+  procesados se saltan". Si cada corrida tiene un tope de lotes (límite de tiempo de la Edge
+  Function), los saltados igual consumen lote y todas las corridas recorren los mismos primeros N.
+- **Realidad:** `dispatch-scheduled-announcements` (8 lotes de 25 por corrida) nunca llegaba al
+  destinatario 201. Además, los conteos finales se grababan con lo sumado en la última corrida.
+- **Regla de aplicabilidad:** todo proceso por lotes que pueda cortarse y reanudarse en otra
+  invocación (cron, reintento, otro cliente) pide **los pendientes** según el estado de cada fila
+  (en comunicados: `email_sent_ok = false AND send_error IS NULL`), no una posición, y calcula sus
+  totales desde las filas, no desde lo que contó la corrida que cierra. Para saber si alguien
+  sigue procesándolo, usar un latido (`announcements.dispatch_heartbeat_at`), no la hora en que
+  debía empezar.
+- **Fuente:** `specs/fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan`,
+  `supabase/functions/_shared/announcement-send.ts` (`sendPendingBatch`, `finalizeAnnouncement`).
+
+### DG-103 — Una escritura de supabase-js que falla no lanza, y un UPDATE/DELETE filtrado por RLS ni siquiera devuelve error
+
+- **Trampa:** escribir `await this.supabase.client.from('x').update(...).eq('id', id)` dentro de
+  un `try` y asumir que, si algo sale mal, cae al `catch`. O revisar `error` y dar por hecho que
+  "sin error" significa "se guardó".
+- **Realidad:** son dos huecos distintos. (1) supabase-js resuelve `{ error }` en vez de lanzar:
+  un `await` suelto descarta el error y el flujo sigue hasta el toast de éxito. (2) Un
+  UPDATE/DELETE sobre una fila que la policy no deja ver responde 200 con cero filas y
+  `error: null` — solo INSERT/UPSERT devuelven `42501`. Así se "guardaba" el kilometraje de un
+  vehículo de otra sede al cerrar una clase.
+- **Regla de aplicabilidad:** toda escritura de un Facade captura su resultado
+  (`const { error } = await ...`) o va envuelta en `assertWriteOk(...)`
+  (`core/utils/db-error.utils.ts`). Cuando el éxito que se le muestra al usuario depende de que
+  una fila concreta haya cambiado (update/delete por `id`), además se encadena `.select('id')` y
+  se usa `assertWriteOk(..., { requireRows: true })`. Si la escritura es secundaria y la acción
+  principal ya quedó hecha, no se lanza (el `catch` informaría un fallo que no ocurrió y el
+  usuario reintentaría): se avisa con un toast de advertencia qué quedó sin guardar.
+- **Fuente:** `specs/fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito`. Lo vigila
+  `src/app/core/facades/unchecked-writes.guard.spec.ts` (hueco 1; el hueco 2 no es detectable
+  por análisis de texto).
+
+### DG-104 — Una función nueva nace sin `EXECUTE` para `anon` y `authenticated`: si la usa la app o una policy, la migración debe dar el `GRANT`
+
+- **Trampa:** crear una función en una migración y asumir que la app, una policy RLS, una vista o
+  un `DEFAULT` de columna ya la pueden usar, como pasaba antes. O "arreglar" el
+  `permission denied for function` con un `GRANT … TO PUBLIC` o `TO anon`.
+- **Realidad:** los permisos por defecto de `postgres` ya no dan `EXECUTE` a `PUBLIC`, `anon` ni
+  `authenticated` (salvo en el esquema `extensions`). Las funciones que existían antes conservan
+  sus permisos. Las `RETURNS trigger` no necesitan `GRANT`: Postgres no revisa `EXECUTE` al
+  disparar un trigger.
+- **Regla de aplicabilidad:** al crear una función, decidir quién la llama y escribirlo en la
+  misma migración. La llama la app con sesión, o una policy/vista/default que evalúa un usuario
+  con sesión → `GRANT EXECUTE … TO authenticated`, y si es `SECURITY DEFINER` y escribe o devuelve
+  datos de otros, validar adentro `auth.uid()`, rol y sede. La evalúa una policy `TO public` que
+  también corre sin sesión → además `TO anon`. Solo cron o edge function con service key → nada
+  (ya la tiene `service_role`). Toda `SECURITY DEFINER` lleva `SET search_path`.
+- **Fuente:** `specs/fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas`,
+  `supabase/migrations/20261009140000_fix363_audit_log_infalsificable_y_rpc_cerradas.sql`. Lo
+  vigila `supabase/tests/rls/fix-363-m-auditoria-y-rpc.sql` (F9: ninguna `SECURITY DEFINER` sin
+  `search_path`; F10: una función nueva nace cerrada).
+
+### DG-105 — En un trigger, el autor de un cambio sale de la sesión; un header o una columna que manda el navegador no son prueba de quién fue
+
+- **Trampa:** resolver "quién hizo esto" leyendo primero un header HTTP propio
+  (`x-audit-user-id`) o una columna de la fila (`registered_by`) porque así lo necesitan las edge
+  functions, que escriben con la service key y no tienen sesión.
+- **Realidad:** PostgREST entrega al trigger los headers de cualquier request, también los del
+  navegador. `log_change()` tomaba el header antes que `auth.uid()`: cualquier usuario con sesión
+  dejaba sus cambios a nombre de otro. Y la policy de INSERT de `audit_log`
+  (`auth.uid() IS NOT NULL`) existía "para el trigger", que al ser `SECURITY DEFINER` del dueño
+  de la tabla nunca la necesitó: solo servía para que un usuario insertara filas a mano.
+- **Regla de aplicabilidad:** en cualquier función que atribuya autoría, el orden es sesión
+  primero; un dato que viaja en la request solo se acepta cuando `auth.role() = 'service_role'`
+  (el servidor ya validó a quién representa). Una tabla que solo escribe un trigger
+  `SECURITY DEFINER` no lleva policy de escritura ni `GRANT` de INSERT/UPDATE/DELETE a
+  `anon`/`authenticated`.
+- **Fuente:** `specs/fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas`.
 
 ## Convención para agregar una entrada nueva
 

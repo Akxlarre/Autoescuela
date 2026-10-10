@@ -1,3 +1,4 @@
+import { chileYear } from '../_shared/chile-time.ts';
 // supabase/functions/generate-contract-pdf/index.ts
 //
 // Edge Function: generate-contract-pdf
@@ -170,7 +171,7 @@ Deno.serve(async (req: Request) => {
     const studentName = sanitizeFilename(
       `${data.student.user.first_names}_${data.student.user.paternal_last_name}`,
     );
-    const year = new Date().getFullYear();
+    const year = chileYear();
     const fileName = `Contrato_${studentName}_${year}.pdf`;
     const storagePath = `contracts/${enrollment_id}/${fileName}`;
 

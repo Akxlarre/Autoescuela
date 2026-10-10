@@ -49,6 +49,11 @@ export interface Announcement {
   status: AnnouncementStatus;
   /** NULL = envío inmediato. Con valor, el dispatcher lo toma cuando la hora llega. */
   scheduled_for: string | null;
+  /**
+   * Último lote avanzado (fix-361-m). Un `enviando` sin latido reciente quedó huérfano y el
+   * dispatcher lo retoma desde el primer destinatario pendiente.
+   */
+  dispatch_heartbeat_at: string | null;
   /** De qué plantilla salió, si salió de una. `ON DELETE SET NULL` en BD. */
   template_id: number | null;
 

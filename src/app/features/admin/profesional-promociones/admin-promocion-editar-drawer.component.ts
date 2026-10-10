@@ -1,3 +1,4 @@
+import { chileToday, formatChileDate } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -340,15 +341,13 @@ export class AdminPromocionEditarDrawerComponent {
     const p = this.facade.selectedPromocion();
     if (!p) return [];
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(p.startDate + 'T00:00:00');
+    const today = chileToday();
 
     switch (p.status) {
       case 'planned':
         return [
           { label: 'Planificada', value: 'planned' as PromocionStatus },
-          ...(startDate <= today
+          ...(p.startDate <= today
             ? [{ label: 'En curso', value: 'in_progress' as PromocionStatus }]
             : []),
         ];
@@ -370,9 +369,7 @@ export class AdminPromocionEditarDrawerComponent {
   protected readonly plannedButNotStarted = computed(() => {
     const p = this.facade.selectedPromocion();
     if (!p || p.status !== 'planned') return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return new Date(p.startDate + 'T00:00:00') > today;
+    return p.startDate > chileToday();
   });
 
   /** Último número de promoción usado; null mientras carga (sin tope). fix-347-m, D19. */
@@ -443,8 +440,7 @@ export class AdminPromocionEditarDrawerComponent {
 
   protected formatDate(iso: string): string {
     if (!iso) return '';
-    const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatChileDate(iso, { year: 'numeric', month: '2-digit', day: '2-digit' });
   }
 
   protected async submit(): Promise<void> {

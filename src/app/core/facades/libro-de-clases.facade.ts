@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { addDaysIso, mondayOfIso } from '@core/utils/chile-time.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -509,10 +510,8 @@ export class LibroDeClasesFacade {
       // Generate 6 days (Mon-Sat)
       const dias: { date: string; dayLabel: string }[] = [];
       for (let i = 0; i < 6; i++) {
-        const d = new Date(monday + 'T12:00:00');
-        d.setDate(d.getDate() + i);
         dias.push({
-          date: this.formatDateIso(d),
+          date: addDaysIso(monday, i),
           dayLabel: dayLabels[i],
         });
       }
@@ -834,21 +833,11 @@ export class LibroDeClasesFacade {
   }
 
   private getMondayForDate(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return this.formatDateIso(d);
-  }
-
-  private formatDateIso(d: Date): string {
-    return d.toISOString().split('T')[0];
+    return mondayOfIso(dateStr);
   }
 
   private formatShortDate(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const [, mm, dd] = dateStr.split('-');
     return `${dd}/${mm}`;
   }
 }

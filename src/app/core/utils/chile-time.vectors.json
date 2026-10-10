@@ -1,0 +1,52 @@
+{
+  "_comment": "Casos compartidos entre src/app/core/utils/chile-time.utils.ts y supabase/functions/_shared/chile-time.ts. Cambio de horario en Chile: el primer sabado de abril a las 24:00 el reloj vuelve a las 23:00 (ese sabado dura 25 horas); el primer sabado de septiembre a las 24:00 pasa a la 01:00 (ese domingo dura 23 horas y no tiene medianoche).",
+  "instantToDate": [
+    { "instant": "2026-10-06T18:00:00.000Z", "date": "2026-10-06", "note": "15:00 hora Chile, control" },
+    { "instant": "2026-10-07T02:30:00.000Z", "date": "2026-10-06", "note": "23:30 hora Chile en verano" },
+    { "instant": "2026-10-06T23:59:00.000Z", "date": "2026-10-06", "note": "20:59" },
+    { "instant": "2026-10-07T00:00:00.000Z", "date": "2026-10-06", "note": "21:00, UTC ya cambio de dia" },
+    { "instant": "2026-10-07T02:59:59.999Z", "date": "2026-10-06", "note": "23:59:59.999" },
+    { "instant": "2026-10-07T03:00:00.000Z", "date": "2026-10-07", "note": "00:00:00.000" },
+    { "instant": "2026-07-01T03:30:00.000Z", "date": "2026-06-30", "note": "23:30 hora Chile en invierno, fin de mes" },
+    { "instant": "2026-07-01T04:00:00.000Z", "date": "2026-07-01", "note": "medianoche de invierno" },
+    { "instant": "2027-01-01T02:30:00.000Z", "date": "2026-12-31", "note": "23:30 del 31 de diciembre" },
+    { "instant": "2026-04-05T03:30:00.000Z", "date": "2026-04-04", "note": "segunda vuelta de las 23:30 el dia de 25 horas" },
+    { "instant": "2026-09-06T03:59:59.999Z", "date": "2026-09-05", "note": "ultimo instante antes del salto" },
+    { "instant": "2026-09-06T04:00:00.000Z", "date": "2026-09-06", "note": "01:00, primer instante del dia de 23 horas" }
+  ],
+  "dayRange": [
+    { "date": "2026-10-06", "start": "2026-10-06T03:00:00.000Z", "endExclusive": "2026-10-07T03:00:00.000Z", "hours": 24 },
+    { "date": "2026-07-01", "start": "2026-07-01T04:00:00.000Z", "endExclusive": "2026-07-02T04:00:00.000Z", "hours": 24 },
+    { "date": "2026-04-03", "start": "2026-04-03T03:00:00.000Z", "endExclusive": "2026-04-04T03:00:00.000Z", "hours": 24 },
+    { "date": "2026-04-04", "start": "2026-04-04T03:00:00.000Z", "endExclusive": "2026-04-05T04:00:00.000Z", "hours": 25 },
+    { "date": "2026-04-05", "start": "2026-04-05T04:00:00.000Z", "endExclusive": "2026-04-06T04:00:00.000Z", "hours": 24 },
+    { "date": "2026-09-05", "start": "2026-09-05T04:00:00.000Z", "endExclusive": "2026-09-06T04:00:00.000Z", "hours": 24 },
+    { "date": "2026-09-06", "start": "2026-09-06T04:00:00.000Z", "endExclusive": "2026-09-07T03:00:00.000Z", "hours": 23 },
+    { "date": "2026-09-07", "start": "2026-09-07T03:00:00.000Z", "endExclusive": "2026-09-08T03:00:00.000Z", "hours": 24 },
+    { "date": "2027-04-03", "start": "2027-04-03T03:00:00.000Z", "endExclusive": "2027-04-04T04:00:00.000Z", "hours": 25 },
+    { "date": "2027-09-05", "start": "2027-09-05T04:00:00.000Z", "endExclusive": "2027-09-06T03:00:00.000Z", "hours": 23 },
+    { "date": "2026-12-31", "start": "2026-12-31T03:00:00.000Z", "endExclusive": "2027-01-01T03:00:00.000Z", "hours": 24 }
+  ],
+  "wallTimeToInstant": [
+    { "date": "2026-10-06", "time": "15:00", "instant": "2026-10-06T18:00:00.000Z" },
+    { "date": "2026-07-01", "time": "08:30", "instant": "2026-07-01T12:30:00.000Z" },
+    { "date": "2026-09-06", "time": "01:00", "instant": "2026-09-06T04:00:00.000Z" },
+    { "date": "2026-09-06", "time": "00:30", "instant": "2026-09-06T04:30:00.000Z", "note": "hora inexistente: se corre al otro lado del salto" },
+    { "date": "2026-04-04", "time": "23:30", "instant": "2026-04-05T02:30:00.000Z", "note": "hora repetida: gana la primera vuelta" }
+  ],
+  "addDays": [
+    { "date": "2026-10-06", "days": 1, "result": "2026-10-07" },
+    { "date": "2026-12-31", "days": 1, "result": "2027-01-01" },
+    { "date": "2026-03-01", "days": -1, "result": "2026-02-28" },
+    { "date": "2028-02-28", "days": 1, "result": "2028-02-29" },
+    { "date": "2026-04-04", "days": 1, "result": "2026-04-05" },
+    { "date": "2026-09-05", "days": 1, "result": "2026-09-06" },
+    { "date": "2026-09-06", "days": 7, "result": "2026-09-13" }
+  ],
+  "weekday": [
+    { "date": "2026-10-05", "weekday": 1, "monday": "2026-10-05" },
+    { "date": "2026-10-08", "weekday": 4, "monday": "2026-10-05" },
+    { "date": "2026-10-11", "weekday": 0, "monday": "2026-10-05" },
+    { "date": "2026-09-06", "weekday": 0, "monday": "2026-08-31" }
+  ]
+}

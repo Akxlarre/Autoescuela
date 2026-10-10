@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -194,7 +195,7 @@ export class RegistrarVentaDrawerComponent {
   protected readonly showTipoCliente = signal(false);
 
   // fix-023-i: la fecha ya no es un campo del formulario — se fija a hoy al enviar.
-  protected readonly hoyLabel = new Date().toLocaleDateString('es-CL');
+  protected readonly hoyLabel = formatDayMonthYear(todayIso());
 
   protected readonly ventaForm = new FormGroup({
     servicioId: new FormControl('', Validators.required),
@@ -271,7 +272,7 @@ export class RegistrarVentaDrawerComponent {
       nombre: val.nombre!,
       rut: val.rut!,
       esAlumno: !!val.esAlumno,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: todayIso(),
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,
       branchId: val.branchId ?? null,

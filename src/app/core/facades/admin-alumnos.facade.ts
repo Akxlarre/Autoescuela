@@ -320,7 +320,7 @@ export class AdminAlumnosFacade {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Ficha_Matricula_${enrollmentId}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download = `Ficha_Matricula_${enrollmentId}_${todayIso()}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

@@ -1,3 +1,4 @@
+import { chileToday, toChileDate } from './chile-time.utils';
 /** Minutos de retraso desde la hora de fin agendada a partir de los cuales una
  * sesión `in_progress` se considera atrasada (spec 0001-i, AC3). */
 const OVERDUE_THRESHOLD_MIN = 15;
@@ -23,7 +24,7 @@ export function isSessionOverdue(
 }
 
 /**
- * Determina si `scheduledAt` cae en un día calendario (local) anterior a `now`.
+ * Determina si `scheduledAt` cae en un día de Chile anterior al de `now`.
  * Usado para distinguir, en el panel de "clases actuales", una sesión `in_progress`
  * que quedó colgada de un día anterior de una clase agendada hoy a la misma hora
  * con el mismo alumno — sin esta marca ambas se ven idénticas (fix-131-m).
@@ -31,15 +32,8 @@ export function isSessionOverdue(
 export function isFromPreviousDay(scheduledAt: string, now: Date = new Date()): boolean {
   if (!scheduledAt) return false;
 
-  const scheduledDate = new Date(scheduledAt);
-  if (isNaN(scheduledDate.getTime())) return false;
+  const scheduledDay = toChileDate(scheduledAt);
+  if (!scheduledDay) return false;
 
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfScheduledDay = new Date(
-    scheduledDate.getFullYear(),
-    scheduledDate.getMonth(),
-    scheduledDate.getDate(),
-  );
-
-  return startOfScheduledDay.getTime() < startOfToday.getTime();
+  return scheduledDay < chileToday(now);
 }

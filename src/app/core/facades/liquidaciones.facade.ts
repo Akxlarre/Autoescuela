@@ -1,4 +1,5 @@
-﻿import { computed, inject, Injectable, signal } from '@angular/core';
+import { chileParts, chileYear, monthDays } from '@core/utils/chile-time.utils';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -6,6 +7,7 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { assertWriteOk } from '@core/utils/db-error.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
 import { PayrollConfigFacade } from '@core/facades/payroll-config.facade';
@@ -50,8 +52,8 @@ export class LiquidacionesFacade {
   private _lastBranchId: number | null = null;
 
   // ── Navegación de mes ─────────────────────────────────────────────────────
-  private readonly _mesActual = signal<number>(new Date().getMonth() + 1);
-  private readonly _anioActual = signal<number>(new Date().getFullYear());
+  private readonly _mesActual = signal<number>(chileParts().month);
+  private readonly _anioActual = signal<number>(chileYear());
 
   // ── Realtime ─────────────────────────────────────────────────────────────
   private _realtimeChannel: any | null = null;
@@ -234,7 +236,7 @@ export class LiquidacionesFacade {
   ): Promise<void> {
     try {
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
       const fechaInicio = `${anio}-${mm}-01`;
       const fechaFin = `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
@@ -351,7 +353,7 @@ export class LiquidacionesFacade {
       const mes = this._mesActual();
       const anio = this._anioActual();
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
 
       const record = {
         instructor_id: row.instructorId,
@@ -370,12 +372,17 @@ export class LiquidacionesFacade {
 
       if (payErr) throw payErr;
 
-      await this.supabase.client
-        .from('instructor_advances')
-        .update({ status: 'discounted' })
-        .eq('instructor_id', row.instructorId)
-        .gte('date', `${anio}-${mm}-01`)
-        .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
+      // fix-362-m: si esto falla en silencio los anticipos quedan "pendientes" y se descuentan
+      // otra vez el mes siguiente. Lanzar es seguro: el pago de arriba es un upsert, reintentar
+      // no duplica.
+      assertWriteOk(
+        await this.supabase.client
+          .from('instructor_advances')
+          .update({ status: 'discounted' })
+          .eq('instructor_id', row.instructorId)
+          .gte('date', `${anio}-${mm}-01`)
+          .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`),
+      );
 
       this.notifyLiquidacionPagada(row);
 
@@ -442,7 +449,7 @@ export class LiquidacionesFacade {
       const mes = this._mesActual();
       const anio = this._anioActual();
       const mm = String(mes).padStart(2, '0');
-      const lastDay = new Date(anio, mes, 0).getDate();
+      const lastDay = monthDays(anio, mes);
 
       const { error: delErr } = await this.supabase.client
         .from('instructor_monthly_payments')
@@ -452,12 +459,16 @@ export class LiquidacionesFacade {
 
       if (delErr) throw delErr;
 
-      await this.supabase.client
-        .from('instructor_advances')
-        .update({ status: 'pending' })
-        .eq('instructor_id', row.instructorId)
-        .gte('date', `${anio}-${mm}-01`)
-        .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
+      // fix-362-m: sin revisar, un fallo dejaba los anticipos "descontados" de un pago que ya no
+      // existe. Reintentar es seguro (el delete de arriba es idempotente).
+      assertWriteOk(
+        await this.supabase.client
+          .from('instructor_advances')
+          .update({ status: 'pending' })
+          .eq('instructor_id', row.instructorId)
+          .gte('date', `${anio}-${mm}-01`)
+          .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`),
+      );
 
       this.toast.success(`Pago de ${row.nombre} revertido.`);
       await this.refreshSilently();

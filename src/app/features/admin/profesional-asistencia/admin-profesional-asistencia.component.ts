@@ -1,3 +1,4 @@
+import { weekdayOfIso } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -384,7 +385,7 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
   }
 
   private formatDate(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
+    const [, month, day] = dateStr.split('-').map(Number);
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const monthNames = [
       'Ene',
@@ -400,6 +401,6 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
       'Nov',
       'Dic',
     ];
-    return `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
+    return `${dayNames[weekdayOfIso(dateStr)]} ${day} ${monthNames[month - 1]}`;
   }
 }

@@ -15,6 +15,11 @@
 // @ts-nocheck
 
 import nodemailer from 'npm:nodemailer@6';
+import {
+  CONSENT_REVOKED_MARK,
+  DRY_RUN_MARK,
+  summarizeRecipients,
+} from './announcement-progress.ts';
 
 /** `{{variable}}` con espacios opcionales. Espeja `core/utils/announcement-template.utils.ts`. */
 const PLACEHOLDER = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
@@ -141,9 +146,12 @@ export async function filterByPromotionalConsent(service, userIds: number[]): Pr
 export async function materializeRecipients(service, announcement): Promise<number> {
   const filters = announcement.segment_filters ?? {};
 
+  // `students.status <> 'archived'`: archivar es el soft-delete del alumno, y un comunicado
+  // no puede seguir llegándole a quien la escuela ya sacó de su base (fix-361-m).
   let query = service
     .from('enrollments')
-    .select('student_id, branch_id, status, courses!inner(type), students!inner(user_id)');
+    .select('student_id, branch_id, status, courses!inner(type), students!inner(user_id, status)')
+    .neq('students.status', 'archived');
 
   // La sede del comunicado manda; `NULL` = multi-sede (solo admin) y ahí vale el filtro
   // que se haya pedido al segmentar.
@@ -221,9 +229,74 @@ export interface SendBatchResult {
   dryRun: boolean;
 }
 
+const RECIPIENT_BATCH_COLUMNS =
+  'id, user_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name, branches:branch_id(name))';
+
 /**
- * Procesa UN lote de destinatarios de un comunicado ya cargado. Sin autenticación: quien
- * llama ya decidió que este envío corresponde.
+ * Materializa los destinatarios solo si todavía no existen, y devuelve cuántos hay.
+ *
+ * Re-materializar al reanudar (lo que pasaba antes de fix-361-m cada vez que una corrida
+ * partía de cero) no duplicaba filas, pero sí podía sumar alumnos que entraron al segmento
+ * a mitad del envío: la lista tiene que ser la del momento en que el envío empezó.
+ */
+export async function ensureRecipients(service, announcement): Promise<number> {
+  const { count, error } = await service
+    .from('announcement_recipients')
+    .select('id', { count: 'exact', head: true })
+    .eq('announcement_id', announcement.id);
+  if (error) throw error;
+
+  if ((count ?? 0) > 0) return count;
+  return materializeRecipients(service, announcement);
+}
+
+/**
+ * Deja constancia de que alguien sigue avanzando este envío. El dispatcher solo rescata
+ * un `enviando` sin latido reciente (`announcement-progress.ts` → `isDispatchOrphaned`).
+ */
+export async function touchDispatchHeartbeat(service, announcementId: number): Promise<void> {
+  await service
+    .from('announcements')
+    .update({ dispatch_heartbeat_at: new Date().toISOString() })
+    .eq('id', announcementId);
+}
+
+/**
+ * Cierra el comunicado como `enviado` si ya no le quedan destinatarios pendientes, con los
+ * conteos del comunicado ENTERO (leídos de `announcement_recipients`, no de la corrida).
+ *
+ * Devuelve `false` si todavía quedan pendientes: el comunicado sigue en `enviando` y el
+ * dispatcher lo termina. El `eq('status', 'enviando')` evita cerrar dos veces si el
+ * navegador y el cron terminan casi a la vez.
+ */
+export async function finalizeAnnouncement(service, announcementId: number) {
+  const { data, error } = await service
+    .from('announcement_recipients')
+    .select('email_sent_ok, send_error')
+    .eq('announcement_id', announcementId);
+  if (error) throw error;
+
+  const summary = summarizeRecipients(data ?? []);
+  if (summary.pending > 0) return { finalized: false, ...summary };
+
+  await service
+    .from('announcements')
+    .update({
+      status: 'enviado',
+      sent_at: new Date().toISOString(),
+      email_ok_count: summary.ok,
+      email_failed_count: summary.failed,
+    })
+    .eq('id', announcementId)
+    .eq('status', 'enviando');
+
+  return { finalized: true, ...summary };
+}
+
+/**
+ * Procesa UN lote de destinatarios por posición. Lo usa el navegador, que necesita el
+ * total y el avance para la barra de progreso. Sin autenticación: quien llama ya decidió
+ * que este envío corresponde.
  */
 export async function sendAnnouncementBatch(
   service,
@@ -232,29 +305,88 @@ export async function sendAnnouncementBatch(
 ): Promise<SendBatchResult> {
   let recipientsTotal = announcement.recipients_total;
   if (offset === 0) {
-    recipientsTotal = await materializeRecipients(service, announcement);
+    recipientsTotal = await ensureRecipients(service, announcement);
   }
   if (recipientsTotal === 0) {
     return { recipientsTotal: 0, processed: 0, sent: 0, failed: 0, done: true, dryRun };
   }
 
+  await touchDispatchHeartbeat(service, announcement.id);
+
   const { data: batch, error: batchError } = await service
     .from('announcement_recipients')
-    .select(
-      'id, user_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name, branches:branch_id(name))',
-    )
+    .select(RECIPIENT_BATCH_COLUMNS)
     .eq('announcement_id', announcement.id)
     .order('id', { ascending: true })
     .range(offset, offset + batchSize - 1);
   if (batchError) throw batchError;
 
+  const { sent, failed } = await processRecipients(service, announcement, batch ?? [], dryRun);
+
+  const processed = (batch ?? []).length;
+  return {
+    recipientsTotal,
+    processed,
+    sent,
+    failed,
+    done: offset + processed >= recipientsTotal,
+    dryRun,
+  };
+}
+
+/**
+ * Procesa el siguiente lote de destinatarios PENDIENTES. Lo usa el dispatcher.
+ *
+ * POR QUÉ NO POR POSICIÓN (fix-361-m): el dispatcher partía cada corrida en `offset = 0`
+ * con un tope de 8 lotes. Los ya enviados se saltaban pero igual consumían lote, así que
+ * cada corrida recorría los mismos 200 y del 201 en adelante nunca recibían. Pedir "los
+ * que faltan" hace que cada lote avance, venga de la corrida que venga.
+ */
+export async function sendPendingBatch(
+  service,
+  announcement,
+  { batchSize, dryRun = false }: Omit<SendBatchOptions, 'offset'>,
+): Promise<SendBatchResult> {
+  const recipientsTotal = await ensureRecipients(service, announcement);
+  if (recipientsTotal === 0) {
+    return { recipientsTotal: 0, processed: 0, sent: 0, failed: 0, done: true, dryRun };
+  }
+
+  await touchDispatchHeartbeat(service, announcement.id);
+
+  const { data: batch, error: batchError } = await service
+    .from('announcement_recipients')
+    .select(RECIPIENT_BATCH_COLUMNS)
+    .eq('announcement_id', announcement.id)
+    .eq('email_sent_ok', false)
+    .is('send_error', null)
+    .order('id', { ascending: true })
+    .limit(batchSize);
+  if (batchError) throw batchError;
+
+  const { sent, failed } = await processRecipients(service, announcement, batch ?? [], dryRun);
+
+  const processed = (batch ?? []).length;
+  return {
+    recipientsTotal,
+    processed,
+    sent,
+    failed,
+    // Un lote incompleto es el último: no quedaban más pendientes que esos.
+    done: processed < batchSize,
+    dryRun,
+  };
+}
+
+/** Entrega el comunicado a un lote ya leído y deja el resultado en cada fila. */
+async function processRecipients(service, announcement, batch, dryRun: boolean) {
   // Re-chequeo por lote: si alguien revocó mientras el envío avanzaba, no le llega el
   // resto del comunicado.
   let allowedIds: Set<number> | null = null;
   if (announcement.kind === 'promocional') {
     const stillEligible = await filterByPromotionalConsent(
       service,
-      (batch ?? []).map((r) => r.user_id),
+      batch.map((r) => r.user_id),
     );
     allowedIds = new Set(stillEligible);
   }
@@ -272,7 +404,7 @@ export async function sendAnnouncementBatch(
   let sent = 0;
   let failed = 0;
 
-  for (const recipient of batch ?? []) {
+  for (const recipient of batch) {
     // Un lote reintentado (timeout de red, corte a mitad del envío) NO vuelve a
     // entregarle a quien ya recibió: reintentar tiene que reanudar, no reenviar.
     if (recipient.email_sent_ok) {
@@ -283,7 +415,7 @@ export async function sendAnnouncementBatch(
     if (allowedIds && !allowedIds.has(recipient.user_id)) {
       await service
         .from('announcement_recipients')
-        .update({ send_error: 'consentimiento_revocado_durante_envio' })
+        .update({ send_error: CONSENT_REVOKED_MARK })
         .eq('id', recipient.id);
       continue;
     }
@@ -337,7 +469,11 @@ export async function sendAnnouncementBatch(
         sent++;
         await service
           .from('announcement_recipients')
-          .update({ email_sent_ok: false, send_error: 'dry_run', notification_id: notificationId })
+          .update({
+            email_sent_ok: false,
+            send_error: DRY_RUN_MARK,
+            notification_id: notificationId,
+          })
           .eq('id', recipient.id);
         continue;
       }
@@ -362,13 +498,5 @@ export async function sendAnnouncementBatch(
     }
   }
 
-  const processed = (batch ?? []).length;
-  return {
-    recipientsTotal,
-    processed,
-    sent,
-    failed,
-    done: offset + processed >= recipientsTotal,
-    dryRun,
-  };
+  return { sent, failed };
 }

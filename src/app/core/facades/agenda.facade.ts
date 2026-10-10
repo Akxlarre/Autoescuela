@@ -1,4 +1,12 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import {
+  addDaysIso,
+  chileRange,
+  chileToday,
+  formatChileDate,
+  mondayOfIso,
+  toChileDate,
+} from '@core/utils/chile-time.utils';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
@@ -20,13 +28,7 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
-import {
-  toISODate,
-  todayIso,
-  to24hTime,
-  buildDayLabel,
-  addMinutesToTime,
-} from '@core/utils/date.utils';
+import { todayIso, to24hTime, buildDayLabel, addMinutesToTime } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -62,12 +64,7 @@ const BASE_TIME_ROWS = [
 
 /** Lunes de la semana que contiene `baseDate` (ISO 'YYYY-MM-DD', default hoy). */
 function getMondayOfWeek(baseDate?: string): string {
-  const base = baseDate ? new Date(baseDate + 'T12:00:00') : new Date();
-  const day = base.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(base);
-  monday.setDate(base.getDate() + diff);
-  return toISODate(monday);
+  return mondayOfIso(baseDate ?? chileToday());
 }
 
 function getMondayOfCurrentWeek(): string {
@@ -75,9 +72,7 @@ function getMondayOfCurrentWeek(): string {
 }
 
 function addDays(dateStr: string, days: number): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  date.setDate(date.getDate() + days);
-  return toISODate(date);
+  return addDaysIso(dateStr, days);
 }
 
 function tsToTime(ts: string): string {
@@ -85,11 +80,11 @@ function tsToTime(ts: string): string {
 }
 
 function tsToDate(ts: string): string {
-  return toISODate(ts);
+  return toChileDate(ts);
 }
 
 function isToday(dateStr: string): boolean {
-  return dateStr === toISODate(new Date());
+  return dateStr === chileToday();
 }
 
 // ─── Tipos internos crudos (respuesta de Supabase) ──────────────────────────
@@ -314,8 +309,11 @@ export class AgendaFacade {
     const branchId = this.getActiveBranchId();
     const weekStart = this._weekStart();
     const weekEnd = addDays(weekStart, 4);
-    const rangeStart = `${weekStart}T00:00:00Z`;
-    const rangeEnd = `${addDays(weekStart, 7)}T06:00:00Z`;
+    // Semana de Chile, lunes a domingo, como rango semiabierto de instantes.
+    const { start: rangeStart, endExclusive: rangeEnd } = chileRange(
+      weekStart,
+      addDays(weekStart, 6),
+    );
 
     const [slotsResult, sessionsResult] = await Promise.all([
       this.fetchAvailableSlots(rangeStart, rangeEnd),
@@ -631,14 +629,8 @@ export class AgendaFacade {
     const kpis = this.computeKpis(allSlots, availableSlots);
 
     // Week label
-    const startDay = new Date(weekStart + 'T12:00:00').toLocaleDateString('es', {
-      day: 'numeric',
-      month: 'short',
-    });
-    const endDay = new Date(weekEnd + 'T12:00:00').toLocaleDateString('es', {
-      day: 'numeric',
-      month: 'short',
-    });
+    const startDay = formatChileDate(weekStart, { day: 'numeric', month: 'short' });
+    const endDay = formatChileDate(weekEnd, { day: 'numeric', month: 'short' });
     const weekLabel = `${startDay} – ${endDay}`;
 
     return { weekStart, weekEnd, weekLabel, days, timeRows, kpis };

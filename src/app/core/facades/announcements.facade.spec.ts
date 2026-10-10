@@ -21,6 +21,9 @@ describe('AnnouncementsFacade', () => {
   let facade: AnnouncementsFacade;
   let supabaseSpy: any;
   let invokeSpy: any;
+  /** Cierre del comunicado (`finalize: true`), aparte de los lotes (fix-361-m). */
+  let finalizeSpy: any;
+  let toastSpy: any;
   let insertSelectSingle: any;
   let historialRows: any[];
   /** Lo que la facade manda al INSERT de `announcements`, para poder afirmarlo. */
@@ -35,6 +38,7 @@ describe('AnnouncementsFacade', () => {
   function buildClient() {
     insertSelectSingle = vi.fn().mockResolvedValue({ data: { id: 77 }, error: null });
     invokeSpy = vi.fn();
+    finalizeSpy = vi.fn().mockResolvedValue({ data: { finalized: true }, error: null });
 
     return {
       from: vi.fn().mockImplementation((table: string) => {
@@ -80,7 +84,12 @@ describe('AnnouncementsFacade', () => {
           }),
         };
       }),
-      functions: { invoke: (...args: unknown[]) => invokeSpy(...args) },
+      functions: {
+        invoke: (name: string, options: any) =>
+          options?.body?.finalize === true
+            ? finalizeSpy(name, options)
+            : invokeSpy(name, options),
+      },
     };
   }
 
@@ -90,6 +99,7 @@ describe('AnnouncementsFacade', () => {
     updateFilters = [];
     historialFilters = [];
     supabaseSpy = { client: buildClient() };
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -102,7 +112,7 @@ describe('AnnouncementsFacade', () => {
             currentUser: vi.fn().mockReturnValue({ role: 'admin', dbId: 2, branchId: null }),
           },
         },
-        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: ToastService, useValue: toastSpy },
         {
           provide: ErrorSanitizerService,
           useValue: { sanitize: (e: Error) => ({ message: e.message }) },
@@ -255,9 +265,70 @@ describe('AnnouncementsFacade', () => {
       expect(insertPayload.segment_filters.excludedUserIds).toEqual([5, 9]);
       expect(insertPayload.kind).toBe('operativo');
     });
+
+    // fix-361-m — si nacía `enviado` y se cerraba la pestaña a mitad, quedaba a medias
+    // para siempre: nadie sabía que faltaban destinatarios.
+    it('fix-361-m · el envío inmediato nace enviando y con latido, para que el cron lo pueda terminar', async () => {
+      invokeSpy.mockResolvedValue({
+        data: { recipientsTotal: 1, processed: 1, sent: 1, failed: 0, done: true },
+        error: null,
+      });
+
+      await facade.send(DRAFT);
+
+      expect(insertPayload.status).toBe('enviando');
+      expect(insertPayload.scheduled_for).toBeNull();
+      expect(insertPayload.dispatch_heartbeat_at).toEqual(expect.any(String));
+    });
+
+    it('fix-361-m · al terminar los lotes pide al servidor que cierre, no escribe conteos', async () => {
+      invokeSpy.mockResolvedValue({
+        data: { recipientsTotal: 10, processed: 10, sent: 10, failed: 0, done: true },
+        error: null,
+      });
+
+      await facade.send(DRAFT);
+
+      expect(finalizeSpy).toHaveBeenCalledWith('send-announcement', {
+        body: { announcementId: 77, finalize: true },
+      });
+      // Los conteos los calcula el servidor con los destinatarios reales.
+      expect(updatePayload).toBeUndefined();
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('fix-361-m · si quedaron pendientes avisa que el sistema lo termina, sin dar éxito', async () => {
+      invokeSpy
+        .mockResolvedValueOnce({
+          data: { recipientsTotal: 50, processed: 25, sent: 25, failed: 0, done: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: { message: 'timeout' } });
+      finalizeSpy.mockResolvedValue({ data: { finalized: false, pending: 25 }, error: null });
+
+      await facade.send(DRAFT);
+
+      expect(toastSpy.warning).toHaveBeenCalled();
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+
+    it('un segmento sin destinatarios se cierra de inmediato, sin esperar al cron', async () => {
+      invokeSpy.mockResolvedValue({
+        data: { recipientsTotal: 0, processed: 0, sent: 0, failed: 0, done: true },
+        error: null,
+      });
+
+      await facade.send(DRAFT);
+
+      expect(finalizeSpy).toHaveBeenCalledTimes(1);
+      expect(invokeSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('loadPreview()', () => {
+    let segmentNeqFilters: string[];
+    beforeEach(() => (segmentNeqFilters = []));
+
     /** Reemplaza el mock de `from` por uno que responde el segmento y los consentimientos. */
     function mockSegmento(enrollmentRows: any[], consentRows: any[] = []) {
       supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
@@ -268,6 +339,10 @@ describe('AnnouncementsFacade', () => {
           function chainable() {
             const c: any = {
               eq: vi.fn().mockImplementation(() => c),
+              neq: vi.fn().mockImplementation((col: string, val: unknown) => {
+                segmentNeqFilters.push(`${col}<>${val}`);
+                return c;
+              }),
               then: (resolve: any) => resolve({ data: enrollmentRows, error: null }),
             };
             return c;
@@ -308,6 +383,14 @@ describe('AnnouncementsFacade', () => {
     }
 
     const FILTROS = DRAFT.filters;
+
+    it('fix-361-m · no lista alumnos archivados, igual que el envío', async () => {
+      mockSegmento([]);
+
+      await facade.loadPreview(FILTROS, 'operativo');
+
+      expect(segmentNeqFilters).toContain('students.status<>archived');
+    });
 
     it('AC1 · resuelve el segmento con nombre y email', async () => {
       mockSegmento([alumno(1, 'Ana'), alumno(2, 'Beto')]);

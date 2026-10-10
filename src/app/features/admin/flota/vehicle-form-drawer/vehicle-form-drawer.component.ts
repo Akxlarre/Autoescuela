@@ -1,3 +1,4 @@
+import { chileYear } from '@core/utils/chile-time.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -374,7 +375,7 @@ export class VehicleFormDrawerComponent {
     ],
     brand: ['', Validators.required],
     model: ['', Validators.required],
-    year: [new Date().getFullYear(), [Validators.required, Validators.min(1900)]],
+    year: [chileYear(), [Validators.required, Validators.min(1900)]],
     current_km: [0, [Validators.required, Validators.min(0)]],
     status: ['available', Validators.required],
     branch_id: [null as number | null, Validators.required],
@@ -457,7 +458,7 @@ export class VehicleFormDrawerComponent {
         }
       } else {
         this.vehicleForm.reset({
-          year: new Date().getFullYear(),
+          year: chileYear(),
           status: 'available',
           both_branches: false,
         });

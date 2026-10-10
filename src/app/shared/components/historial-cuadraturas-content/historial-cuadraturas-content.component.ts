@@ -1,4 +1,11 @@
 import {
+  chileParts,
+  chileToday,
+  chileYear,
+  monthDays,
+  weekdayOfIso,
+} from '@core/utils/chile-time.utils';
+import {
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -465,8 +472,8 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
   // ── Inputs ────────────────────────────────────────────────────────────────
   cierres = input<HistorialCierre[]>([]);
   isLoading = input(false);
-  mesActual = input<number>(new Date().getMonth() + 1);
-  anioActual = input<number>(new Date().getFullYear());
+  mesActual = input<number>(chileParts().month);
+  anioActual = input<number>(chileYear());
   backRoute = input<string | null>(null);
   backLabel = input<string>('Volver');
   isExporting = input(false);
@@ -503,12 +510,10 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     const anio = this.anioActual();
     const cierresMap = new Map(this.cierres().map((c) => [c.fecha, c]));
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = chileToday();
 
-    const firstDay = new Date(anio, mes - 1, 1);
-    const daysInMonth = new Date(anio, mes, 0).getDate();
-    const offset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = monthDays(anio, mes);
+    const offset = (weekdayOfIso(`${anio}-${String(mes).padStart(2, '0')}-01`) + 6) % 7;
 
     const days: CalendarDay[] = [];
 

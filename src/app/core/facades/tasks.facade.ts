@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { assertWriteOk } from '@core/utils/db-error.utils';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -278,18 +279,23 @@ export class TasksFacade {
 
     const now = new Date().toISOString();
     try {
-      await this.supabase.client
-        .from('tasks')
-        .update({
-          status: 'completed',
-          completed_at: now,
-          seen_at: now,
-          seen_by: currentUser.dbId,
-        })
-        .eq('id', taskId);
+      assertWriteOk(
+        await this.supabase.client
+          .from('tasks')
+          .update({
+            status: 'completed',
+            completed_at: now,
+            seen_at: now,
+            seen_by: currentUser.dbId,
+          })
+          .eq('id', taskId)
+          .select('id'),
+        { requireRows: true },
+      );
       await this.refreshSilently();
     } catch {
-      // Non-critical — fail silently
+      // fix-362-m: antes fallaba en silencio y la observación seguía "sin ver" sin explicación.
+      this.toast.error('No se pudo marcar la observación como vista');
     }
   }
 
@@ -308,7 +314,18 @@ export class TasksFacade {
       // Auto-advance question from pending → in_progress on first reply
       const task = this._tasks().find((t) => t.id === taskId);
       if (task?.type === 'question' && task.status === 'pending') {
-        await this.supabase.client.from('tasks').update({ status: 'in_progress' }).eq('id', taskId);
+        // fix-362-m: la respuesta ya se guardó; no se lanza (el catch diría que no se envió y
+        // el usuario la mandaría dos veces). Se avisa que el estado no avanzó.
+        const { error: advanceError } = await this.supabase.client
+          .from('tasks')
+          .update({ status: 'in_progress' })
+          .eq('id', taskId);
+        if (advanceError) {
+          this.toast.warning(
+            'Respuesta enviada',
+            'No se pudo pasar la consulta a "en curso". Cámbiale el estado a mano.',
+          );
+        }
       }
 
       await this.refreshSilently();

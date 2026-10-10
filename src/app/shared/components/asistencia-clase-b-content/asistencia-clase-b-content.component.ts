@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -855,8 +856,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly today = new Date();
   protected readonly todayIsoVal = todayIso();
   protected readonly todayLabel = (() => {
-    const d = new Date();
-    return d.toLocaleDateString('es-CL', {
+    return formatChileDate(new Date(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -1097,7 +1097,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   /** Fecha compacta DD-MM para la línea 2 de la fila de alerta (fix-047). */
   protected formatIsoDateShort(iso: string): string {
-    const [, m, d] = iso.slice(0, 10).split('-');
+    const [, m, d] = toChileDate(iso).split('-');
     return `${d}-${m}`;
   }
 

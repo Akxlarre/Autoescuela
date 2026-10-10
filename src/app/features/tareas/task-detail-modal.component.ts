@@ -1,3 +1,4 @@
+import { formatChileDate } from '@core/utils/chile-time.utils';
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { TaskStatusBadgeComponent } from '@shared/components/task-status-badge/task-status-badge.component';
@@ -166,7 +167,7 @@ export class TaskDetailModalComponent {
   protected readonly dueDateLabel = () => {
     const due = this.task()?.due_date;
     if (!due) return '';
-    return new Date(due).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+    return formatChileDate(due, { day: 'numeric', month: 'short' });
   };
 
   constructor() {

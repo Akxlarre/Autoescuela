@@ -7,6 +7,7 @@ import {
   effect,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { todayIso } from '@core/utils/date.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DiscountsFacade } from '@core/facades/discounts.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -367,7 +368,7 @@ export class DescuentosDrawerComponent {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return todayIso();
   }
 
   protected scopeLabel(d: DiscountUi): string {

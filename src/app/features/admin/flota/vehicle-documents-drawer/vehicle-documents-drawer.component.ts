@@ -1,3 +1,4 @@
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -46,6 +47,7 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
   standalone: true,
   imports: [
     CommonModule,
+    ChileDatePipe,
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
@@ -168,7 +170,7 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
                           </h4>
                           <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
                             @if (doc.expiryDate) {
-                              Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
+                              Vence: {{ doc.expiryDate | chileDate: 'dd MMM yyyy' }}
                             } @else {
                               Sin fecha de vencimiento registrada
                             }

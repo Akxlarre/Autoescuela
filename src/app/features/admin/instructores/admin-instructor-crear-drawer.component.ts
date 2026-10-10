@@ -11,7 +11,8 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import { toISODate, todayIso } from '@core/utils/date.utils';
+import { calendarDateToIso } from '@core/utils/chile-time.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { licenseStatusFromExpiry } from '@core/utils/license-status.utils';
 import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -537,7 +538,7 @@ export class AdminInstructorCrearDrawerComponent {
   // fix-202-b: misma regla que la lista y la Agenda (antes, una copia local).
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
-    return d ? licenseStatusFromExpiry(toISODate(d), todayIso()) : null;
+    return d ? licenseStatusFromExpiry(calendarDateToIso(d), todayIso()) : null;
   });
 
   protected readonly sedeValida = computed(() => this.sedeId() !== null);
@@ -624,7 +625,7 @@ export class AdminInstructorCrearDrawerComponent {
   protected get licenseExpiryIso(): string {
     const d = this.licenseExpiry();
     if (!d) return '';
-    return d.toISOString().slice(0, 10);
+    return calendarDateToIso(d);
   }
   protected setLicenseExpiryIso(v: string) {
     if (!v) {
@@ -702,7 +703,7 @@ export class AdminInstructorCrearDrawerComponent {
     if (!this.formValido()) return;
 
     const expiryDate = this.licenseExpiry()!;
-    const expiryStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
+    const expiryStr = calendarDateToIso(expiryDate);
 
     const instructorId = await this.facade.crearInstructor({
       firstNames: this.nombres().trim(),

@@ -1,3 +1,4 @@
+import { formatChileDate } from './chile-time.ts';
 // supabase/functions/_shared/contract-pdf.ts
 //
 // Shared PDF generation utilities for contract documents.
@@ -104,15 +105,13 @@ function branchLegal(slug: string | null | undefined) {
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+  return formatChileDate(dateStr, { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 /** "viernes, 24 de julio de 2026" — formato usado en la identificación de partes del contrato real. */
 export function formatDateWeekday(dateStr: string | null): string {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  const weekday = d.toLocaleDateString('es-CL', { weekday: 'long' });
+  const weekday = formatChileDate(dateStr, { weekday: 'long' });
   return `${weekday}, ${formatDate(dateStr)}`;
 }
 

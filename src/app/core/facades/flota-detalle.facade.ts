@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { chileToday, diffDaysIso, toChileDate } from '@core/utils/chile-time.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type {
   MaintenanceRow,
@@ -179,7 +180,7 @@ export class FlotaDetalleFacade {
       const mainRows = ((maintenancesResult.data ?? []) as RawMaintenance[]).map(
         (m): MaintenanceRow => ({
           id: m.id,
-          date: m.completed_date ?? m.scheduled_date ?? m.created_at.slice(0, 10),
+          date: m.completed_date ?? m.scheduled_date ?? toChileDate(m.created_at),
           type: m.type ?? 'Servicio general',
           km: m.km_at_time ?? null,
           cost: m.cost ?? null,
@@ -293,9 +294,7 @@ export class FlotaDetalleFacade {
 
   private resolveScheduledStatus(expiryDate: string | null): 'ok' | 'soon' | 'overdue' {
     if (!expiryDate) return 'ok';
-    const today = new Date();
-    const exp = new Date(expiryDate);
-    const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = diffDaysIso(chileToday(), toChileDate(expiryDate));
     if (diff < 0) return 'overdue';
     if (diff <= SOON_DAYS) return 'soon';
     return 'ok';

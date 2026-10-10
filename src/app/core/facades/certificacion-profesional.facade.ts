@@ -1,4 +1,6 @@
+import { chileYear } from '@core/utils/chile-time.utils';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { todayIso } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -363,7 +365,7 @@ export class CertificacionProfesionalFacade {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `certificados-profesional-${new Date().toISOString().split('T')[0]}.zip`;
+      link.download = `certificados-profesional-${todayIso()}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -383,7 +385,7 @@ export class CertificacionProfesionalFacade {
    * Incluye: status='finished' O end_date=hoy (el cron de fin de día aún no ha corrido).
    */
   private async fetchPromociones(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIso();
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, status, start_date, end_date')
@@ -603,7 +605,7 @@ export class CertificacionProfesionalFacade {
 
       // Folio only shown when PDF exists; year derived from issuance date, not today's date
       const hasPdf = !!e.certificate_professional_pdf_url;
-      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+      const certYear = cert?.created_at ? chileYear(new Date(cert.created_at)) : null;
 
       return {
         enrollmentId: e.id,

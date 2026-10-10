@@ -18,6 +18,7 @@ import type {
   ProgresoUI,
   ReagendamientoHistorialUI,
 } from '@core/models/ui/alumno-detalle.model';
+import { chileDayRange, formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
@@ -1219,10 +1220,9 @@ export class AdminAlumnoDetalleFacade {
 
   private formatClassDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
-    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${day}-${month}`;
+    const iso = toChileDate(dateStr);
+    if (!iso) return null;
+    return `${iso.slice(8, 10)}-${iso.slice(5, 7)}`;
   }
 
   private formatHour(
@@ -1455,7 +1455,7 @@ export class AdminAlumnoDetalleFacade {
           .eq('instructor_id', instructorId)
           // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
           // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
+          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
           .order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
@@ -1818,7 +1818,7 @@ export class AdminAlumnoDetalleFacade {
 
   private slotDateFromStart(ts: string | null | undefined): string {
     if (!ts) return '';
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(ts));
+    return toChileDate(ts);
   }
 
   /**
@@ -1867,14 +1867,11 @@ export class AdminAlumnoDetalleFacade {
   ): ScheduleGrid {
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
-    const days: WeekDay[] = dates.map((d) => {
-      const date = new Date(d + 'T12:00:00Z');
-      return {
-        date: d,
-        dayOfWeek: new Intl.DateTimeFormat('es', { weekday: 'short' }).format(date),
-        label: new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(date),
-      };
-    });
+    const days: WeekDay[] = dates.map((d) => ({
+      date: d,
+      dayOfWeek: formatChileDate(d, { weekday: 'short' }),
+      label: formatChileDate(d, { day: 'numeric', month: 'short' }),
+    }));
 
     const week: WeekRange = {
       startDate: dates[0] ?? '',
