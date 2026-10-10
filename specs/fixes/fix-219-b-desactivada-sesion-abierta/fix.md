@@ -1,7 +1,7 @@
 # Fix: Una secretaria desactivada con la sesión abierta sigue dentro, viendo todo vacío
 > id: fix-219-b-desactivada-sesion-abierta
 > refs: ASG-i-034 (checklist 034, caso M05) — completa fix-180-b (F4)
-> status: active
+> status: done
 > created: 2026-10-10
 
 ## Root Cause
@@ -46,5 +46,6 @@ ACs propios:
 ## Progreso
 - [x] vitest rojo → verde: `auth.facade.spec.ts` 34/34 (+2). `ToastService` se resuelve al usarlo (inyectarlo de entrada rompía 32 tests que arman el facade sin `MessageService`).
 - [x] Migración + test SQL en transacción con ROLLBACK: `fix-180-b-usuario-inactivo.sql` (actualizado: la inactiva lee 1 usuario, el propio, y 0 ajenos) rojo contra producción → verde; `0049-b` verde; admin, 3 secretarias, instructor y alumno leen las mismas filas antes y después (302/114/198/302/1/1).
-- [ ] Aplicar la migración (con aprobación).
-- [ ] e2e M05 en verde.
+- [x] Migración aplicada (aprobada 2026-10-10) y registrada en `schema_migrations`. `fix-180-b-usuario-inactivo.sql` verde contra producción; `0049-b`: 9 casos ok (la fila "info … antes → después" marca FALLA porque compara contra el estado previo a 0049-b y hoy da 198 = 198: es informativa, no una regresión).
+- [x] `e2e/personal-dos-sesiones.spec.ts` 3/3 (N01+N02, M04, M05): a la secretaria desactivada le aparece el aviso y queda en `/login` sin tocar nada. secretaria2 restaurada (sede 2, activa, sin grant, sin ban).
+- Nota: `npm run test:ci` 3788/3789; el que falla (`instructor-clases.facade.spec.ts` › openEvaluacionDrawer, timeout 5 s) falla igual sin este cambio.
