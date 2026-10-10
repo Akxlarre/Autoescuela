@@ -2529,7 +2529,6 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `users_guard_secretary_write` | `()` |
 | `validate_website_config_courses_fk` | `()` |
 | `verify_class_b_certificate_enablement` | `()` |
-| `verify_class_b_dropout_rule` | `()` |
 | `verify_professional_certificate_enablement` | `()` |
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)

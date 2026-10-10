@@ -136,7 +136,6 @@
 | ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
 | ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
-| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -282,6 +281,7 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | `m` | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---
