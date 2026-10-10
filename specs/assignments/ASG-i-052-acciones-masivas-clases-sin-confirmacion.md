@@ -1,6 +1,6 @@
 # Asignación ASG-i-052 — "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0

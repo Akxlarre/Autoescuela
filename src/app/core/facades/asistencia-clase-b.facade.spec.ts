@@ -5,6 +5,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type {
   AlertaFaltaConsecutiva,
   ClasePracticaRow,
@@ -25,6 +26,7 @@ function makeSupabaseMock() {
       gte: vi.fn(() => b),
       lte: vi.fn(() => b),
       lt: vi.fn(() => b),
+      gt: vi.fn(() => b),
       in: vi.fn(() => b),
       is: vi.fn(() => b),
       or: vi.fn(() => b),
@@ -98,8 +100,10 @@ describe('AsistenciaClaseBFacade', () => {
   let mock: ReturnType<typeof makeSupabaseMock>;
   let toast: any;
   let notifications: any;
+  let confirmModal: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    confirmModal = { confirm: vi.fn().mockResolvedValue(true) };
     mock = makeSupabaseMock();
     toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
     notifications = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
@@ -112,6 +116,7 @@ describe('AsistenciaClaseBFacade', () => {
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 99 }) } },
         { provide: BranchFacade, useValue: { branches: vi.fn().mockReturnValue([]) } },
         { provide: NotificationsFacade, useValue: notifications },
+        { provide: ConfirmModalService, useValue: confirmModal },
       ],
     });
 
@@ -211,6 +216,64 @@ describe('AsistenciaClaseBFacade', () => {
 
     const attendanceBuilder = mock.builderFor('class_b_practice_attendance');
     expect(attendanceBuilder.is).toHaveBeenCalledWith('archived_at', null);
+  });
+
+  describe('fix-365-m: horarioActivo sale de las clases futuras, no de la clase de la falta', () => {
+    const falta = {
+      id: 1,
+      student_id: 5,
+      status: 'absent',
+      recorded_at: '2026-10-01T15:00:00.000Z',
+      class_b_sessions: {
+        id: 100,
+        enrollment_id: 10,
+        status: 'no_show',
+        scheduled_at: '2026-10-01T12:00:00.000Z',
+        enrollments: {
+          id: 10,
+          branch_id: 1,
+          status: 'active',
+          students: { id: 5, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+        },
+      },
+    };
+
+    it('horario eliminado (solo canceladas futuras) → sigue en false tras recargar', async () => {
+      mock.setResult('class_b_practice_attendance', [falta, { ...falta, id: 2 }]);
+      mock.setResult('class_b_sessions', [
+        { enrollment_id: 10, status: 'cancelled' },
+        { enrollment_id: 10, status: 'cancelled' },
+      ]);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+      const b = mock.builderFor('class_b_sessions');
+      expect(b.in).toHaveBeenCalledWith('enrollment_id', [10]);
+      expect(b.in).toHaveBeenCalledWith('status', ['scheduled', 'cancelled']);
+      expect(b.gt).toHaveBeenCalledWith('scheduled_at', expect.any(String));
+    });
+
+    it('con clases futuras agendadas → horario activo', async () => {
+      mock.setResult('class_b_practice_attendance', [falta]);
+      mock.setResult('class_b_sessions', [
+        { enrollment_id: 10, status: 'cancelled' },
+        { enrollment_id: 10, status: 'scheduled' },
+      ]);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
+    });
+
+    it('sin clases futuras → horario activo (no hay nada que reactivar)', async () => {
+      mock.setResult('class_b_practice_attendance', [falta]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
+    });
   });
 
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {
@@ -420,6 +483,113 @@ describe('AsistenciaClaseBFacade', () => {
         'Clase finalizada',
         'Evaluación y asistencia registradas.',
       );
+    });
+  });
+
+  describe('fix-364-m: acciones sobre el horario', () => {
+    const NOW = '2026-10-07T15:00:00.000Z';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(NOW));
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: false })]);
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    /** Respuestas sucesivas de class_b_sessions: 1ª = búsqueda, 2ª = escritura. */
+    const mockSessionResponses = (...responses: Array<{ data: any; error: any }>) => {
+      let call = 0;
+      mock.builderFor('class_b_sessions').then = (resolve: any) =>
+        resolve(responses[Math.min(call++, responses.length - 1)]);
+    };
+
+    it('reactivateSchedule busca solo las clases canceladas futuras', async () => {
+      mock.setResult('class_b_sessions', []);
+
+      await facade.reactivateSchedule(10);
+
+      const b = mock.builderFor('class_b_sessions');
+      expect(b.eq).toHaveBeenCalledWith('enrollment_id', 10);
+      expect(b.eq).toHaveBeenCalledWith('status', 'cancelled');
+      expect(b.gt).toHaveBeenCalledWith('scheduled_at', NOW);
+    });
+
+    it('reactivateSchedule sin clases futuras avisa y no reactiva nada', async () => {
+      mock.setResult('class_b_sessions', []);
+
+      await facade.reactivateSchedule(10);
+
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
+      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    it('reactivateSchedule pide confirmación con la cantidad y el alumno', async () => {
+      confirmModal.confirm.mockResolvedValue(false);
+      mock.setResult('class_b_sessions', [{ id: 7 }, { id: 8 }]);
+
+      await facade.reactivateSchedule(10);
+
+      const config = confirmModal.confirm.mock.calls[0][0];
+      expect(config.message).toContain('2 clases futuras');
+      expect(config.message).toContain('Juan Pérez');
+      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('reactivateSchedule al confirmar reactiva por id y marca el horario activo', async () => {
+      mock.setResult('class_b_sessions', [{ id: 7 }, { id: 8 }]);
+
+      await facade.reactivateSchedule(10);
+
+      const b = mock.builderFor('class_b_sessions');
+      expect(b.update).toHaveBeenCalledWith({ status: 'scheduled', cancelled_at: null });
+      expect(b.in).toHaveBeenCalledWith('id', [7, 8]);
+      expect(toast.success).toHaveBeenCalledWith('Horario reactivado');
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
+      expect(facade.savingAlertaId()).toBeNull();
+    });
+
+    it('reactivateSchedule muestra el mensaje del trigger si un horario ya está ocupado', async () => {
+      const mensaje = 'El instructor ya tiene una clase agendada que se solapa con este horario.';
+      mockSessionResponses(
+        { data: [{ id: 7 }], error: null },
+        { data: null, error: { code: 'P0001', message: mensaje } },
+      );
+
+      await facade.reactivateSchedule(10);
+
+      expect(toast.error).toHaveBeenCalledWith('No se pudo reactivar el horario', mensaje);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    it('removeSchedule cancela solo clases agendadas futuras', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', [{ id: 7 }]);
+
+      await facade.removeSchedule(10);
+
+      const b = mock.builderFor('class_b_sessions');
+      expect(confirmModal.confirm).toHaveBeenCalled();
+      expect(b.eq).toHaveBeenCalledWith('status', 'scheduled');
+      expect(b.gt).toHaveBeenCalledWith('scheduled_at', NOW);
+      expect(toast.success).toHaveBeenCalledWith('Horario eliminado');
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    it('removeSchedule sin clases futuras no dice "Horario eliminado"', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.removeSchedule(10);
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalled();
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
     });
   });
 

@@ -1,7 +1,8 @@
 # Fix: "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación
 > id: fix-364-m-acciones-masivas-clases-sin-confirmacion
 > refs: ASG-i-052
-> status: in_progress
+> status: done
+> closed: 2026-10-10
 > created: 2026-10-10
 > priority: P0
 
@@ -33,8 +34,9 @@ Ninguno — fix autónomo. Casos del checklist del piloto que corrige: `027` H09
 
 ## Cambio
 - **Archivo:** `src/app/core/facades/dashboard-alerts.facade.ts`
-- **Qué cambia:** la alerta B-3 cuenta inasistencias registradas vigentes (`absent`/`no_show`, no
-  archivadas) en vez de clases agendadas con hora pasada. `clearScheduleForEnrollment()` se
+- **Qué cambia:** la alerta B-3 se arma con inasistencias registradas vigentes (`absent`/`no_show`,
+  no archivadas) en dos clases seguidas, la misma regla de RF-053, en vez de clases agendadas con
+  hora pasada. Pasa a llamarse "N alumnos con 2 inasistencias seguidas". `clearScheduleForEnrollment()` se
   reemplaza por `clearSchedules(enrollmentIds)`: busca las clases **futuras** agendadas, pide
   confirmación diciendo cuántas clases y de qué alumnos, las cancela por id con `cancelled_at` y
   avisa el resultado. Sin clases futuras, avisa y no cancela nada.
@@ -43,9 +45,11 @@ Ninguno — fix autónomo. Casos del checklist del piloto que corrige: `027` H09
 - **Archivo:** `src/app/core/facades/asistencia-clase-b.facade.ts`
 - **Qué cambia:** `reactivateSchedule()` solo reactiva clases canceladas **futuras**, pide
   confirmación con la cantidad y muestra el mensaje del trigger si un horario ya está ocupado.
-  `removeSchedule()` solo cancela clases futuras.
+  `removeSchedule()` solo cancela clases futuras y, si no hay ninguna, lo dice en vez de avisar
+  "Horario eliminado".
 - **Archivo:** `src/app/core/utils/class-b-session.utils.ts`
-- **Qué cambia:** función pura que arma el texto de confirmación (clases por alumno).
+- **Qué cambia:** funciones puras `enrollmentsWithConsecutiveAbsences()` (matrículas con faltas en
+  dos clases seguidas) y `buildClearScheduleMessage()` (texto de confirmación, clases por alumno).
 
 Decisiones:
 - **Disponibilidad al reactivar:** la revisan los triggers de la BD (instructor, alumno y
@@ -61,7 +65,25 @@ Decisiones:
 - `src/app/core/facades/dashboard-alerts.facade.spec.ts > clearSchedules`
 - `src/app/features/dashboard/alerts-drawer/alerts-drawer.component.spec.ts > handleAction`
 - `src/app/core/facades/asistencia-clase-b.facade.spec.ts > fix-364-m: acciones sobre el horario`
-- `src/app/core/utils/class-b-session.utils.spec.ts > buildClearScheduleMessage`
+- `src/app/core/utils/class-b-session.utils.spec.ts > enrollmentsWithConsecutiveAbsences`,
+  `buildClearScheduleMessage`
+- `e2e/acciones-masivas-clases.spec.ts` (navegador real, alumno `E2E-` propio que se borra al
+  terminar)
+
+## Verificación (2026-10-10)
+- `npm run test:ci`: 3810 tests en verde. `npm run lint:arch`: sin errores.
+- E2E en verde contra la BD de desarrollo. "Borrar horarios" se probó hasta el diálogo y se
+  volvió atrás sin confirmar, porque la alerta incluye alumnos reales; la cancelación en sí
+  quedó cubierta por los tests del Facade. "Eliminar" y "Reactivar" se ejecutaron completos
+  sobre el alumno de prueba: la clase cancelada de fecha pasada no revivió.
+- En la BD de desarrollo la alerta nueva lista 128 alumnos con 2 inasistencias seguidas (el
+  cierre nocturno marca como falta toda clase sin registrar). De esos, solo los que tienen
+  clases futuras aparecen en el diálogo.
+
+## Hallazgo derivado
+- `027` S9: tras recargar Asistencia B, la alerta volvía a mostrar "Eliminar" aunque el horario
+  estuviera eliminado. Es otra causa: corregido en
+  `fix-365-m-reactivar-se-pierde-al-recargar-asistencia-b`.
 
 ## Notas
 - Originado de Asignación ASG-i-052
