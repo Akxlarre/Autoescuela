@@ -21,6 +21,8 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
+| ASG-i-060 | ¿Los reportes suman pagos que no están pagados? | `cualquiera` | fix | P1 | i | ⏳ Paso 1: una consulta de solo lectura por `payments.status`. Salió de `fix-044-i`. Coordinar con 059 (mismo inventario) |
+| ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -131,9 +133,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-047 | RPC `SECURITY DEFINER` y auditoría abiertas a cualquier logueado | `m` | fix | P0 | i | ⏳ Paso 1: consulta de permisos |
-| ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | `i` | fix | P0 | i | ⏳ |
-| ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago concurrente | `i` | fix | P0 | i | ⏳ |
 | ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
 | ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
@@ -280,7 +279,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | `i` | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-09-22 |
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
@@ -435,9 +433,13 @@
 | ASG-i-037 | Testing transversal: multi-sede (RLS), responsive, modo oscuro y app-like | [fix-190-b-testing-transversal](fixes/fix-190-b-testing-transversal/fix.md) | 2026-10-06 |
 | ASG-i-025 | Testing: Clase Profesional en el piloto (Alumnos, Promociones, Libro de clases) | [fix-319-m-testing-clase-profesional-piloto](fixes/fix-319-m-testing-clase-profesional-piloto/fix.md) | 2026-10-07 |
 | ASG-i-056 | Canales de tiempo real que escuchan tablas no publicadas | [fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar](fixes/fix-360-m-canales-de-tiempo-real-con-tablas-sin-publicar/fix.md) | 2026-10-07 |
+| ASG-i-012 | QA visual pre-lanzamiento del alcance piloto | [fix-037-i-qa-visual-piloto](fixes/fix-037-i-qa-visual-piloto/fix.md) | 2026-10-08 |
 | ASG-i-055 | Escrituras a Supabase que no revisan el error y muestran éxito igual | [fix-362-m-escrituras-sin-revisar-error-muestran-exito](fixes/fix-362-m-escrituras-sin-revisar-error-muestran-exito/fix.md) | 2026-10-08 |
 | ASG-i-057 | Un comunicado programado a más de 200 alumnos nunca termina | [fix-361-m-comunicados-de-mas-de-200-no-terminan](fixes/fix-361-m-comunicados-de-mas-de-200-no-terminan/fix.md) | 2026-10-08 |
+| ASG-i-047 | RPC `SECURITY DEFINER` y registro de auditoría abiertos a cualquier usuario logueado | [fix-363-m-auditoria-falsificable-y-rpc-abiertas](fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas/fix.md) | 2026-10-09 |
 | ASG-i-054 | Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente) | [0024-m-fechas-de-negocio-en-hora-de-chile](specs/0024-m-fechas-de-negocio-en-hora-de-chile/spec.md) | 2026-10-09 |
+| ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | [fix-044-i-cuadratura-operaciones-fallan-en-silencio](fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio/fix.md) | 2026-10-10 |
+| ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---

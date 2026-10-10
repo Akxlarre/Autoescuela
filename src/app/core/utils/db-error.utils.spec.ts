@@ -58,6 +58,18 @@ describe('toFriendlyDbMessage', () => {
     expect(result).not.toContain('CUPOS_AGOTADOS');
   });
 
+  it('fix-044-i: token CAJA_CERRADA explica que se corrige con un ajuste en el historial', () => {
+    const result = toFriendlyDbMessage({ code: 'P0001', message: 'CAJA_CERRADA' }, FALLBACK);
+    expect(result).toContain('Historial de Cuadraturas');
+    expect(result).not.toContain('CAJA_CERRADA');
+  });
+
+  it('fix-044-i: token CIERRE_DEFINITIVO explica que la caja ya se cerró', () => {
+    const result = toFriendlyDbMessage({ code: 'P0001', message: 'CIERRE_DEFINITIVO' }, FALLBACK);
+    expect(result).toContain('ya se cerró');
+    expect(result).not.toContain('CIERRE_DEFINITIVO');
+  });
+
   it('fix-362-m: explica un NoRowsAffectedError en vez de caer al fallback', () => {
     const result = toFriendlyDbMessage(new NoRowsAffectedError(), FALLBACK);
     expect(result).not.toBe(FALLBACK);

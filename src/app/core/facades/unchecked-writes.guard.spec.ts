@@ -103,9 +103,7 @@ describe('Facades: ninguna escritura a Supabase descarta su error', () => {
    * Pendientes conocidos, con dueño. Vaciar esta lista es el objetivo: cada entrada debe salir
    * cuando se cierre el trabajo que la cubre. No agregar archivos nuevos acá para pasar el test.
    */
-  const PENDING: Record<string, string> = {
-    'cuadratura.facade.ts': 'ASG-i-048 (Cuadratura: operaciones que fallan en silencio)',
-  };
+  const PENDING: Record<string, string> = {};
 
   const facadesDir = resolve(__dirname);
   const facadeFiles = readdirSync(facadesDir).filter(

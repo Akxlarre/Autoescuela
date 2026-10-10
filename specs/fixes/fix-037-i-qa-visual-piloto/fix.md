@@ -1,7 +1,8 @@
 # Fix: QA visual pre-lanzamiento del alcance piloto
 > id: fix-037-i-qa-visual-piloto
 > refs: ASG-i-012
-> status: draft
+> status: done
+> closed: 2026-10-08
 > created: 2026-09-22
 
 ## Root Cause

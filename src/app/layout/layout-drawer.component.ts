@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -169,7 +170,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     </div>
   `,
 })
-export class LayoutDrawerComponent implements OnDestroy {
+export class LayoutDrawerComponent implements AfterViewInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerService);
   private readonly gsapService = inject(GsapAnimationsService);
   private readonly el = inject(ElementRef<HTMLElement>);
@@ -299,9 +300,31 @@ export class LayoutDrawerComponent implements OnDestroy {
     }, 0);
   });
 
+  /**
+   * hotfix-071-b: los toasts salen abajo a la derecha, justo sobre el pie del panel con "Guardar".
+   * Se publica en <html> cuánto tapa el panel del borde derecho (durante la animación también) para
+   * que los estilos del toast lo esquiven (_primeng-overrides.scss).
+   */
+  private readonly toastOffsetObserver = new ResizeObserver(() => this.syncToastOffset());
+
+  ngAfterViewInit(): void {
+    this.toastOffsetObserver.observe(this.el.nativeElement);
+  }
+
+  private syncToastOffset(): void {
+    const rect = (this.el.nativeElement as HTMLElement).getBoundingClientRect();
+    const cover = rect.width > 0 ? Math.max(0, Math.round(window.innerWidth - rect.left)) : 0;
+    const root = document.documentElement;
+    root.style.setProperty('--layout-drawer-cover', `${cover}px`);
+    root.toggleAttribute('data-layout-drawer-open', cover > 0);
+  }
+
   ngOnDestroy(): void {
     // Garantizar que el body scroll se restaure si el componente se destruye
     document.body.style.overflow = '';
+    this.toastOffsetObserver.disconnect();
+    document.documentElement.style.removeProperty('--layout-drawer-cover');
+    document.documentElement.removeAttribute('data-layout-drawer-open');
   }
 
   /**
@@ -316,6 +339,7 @@ export class LayoutDrawerComponent implements OnDestroy {
       '[data-drawer-backdrop]',
     ) as HTMLElement | null;
     this.gsapService.syncLayoutDrawerToViewport(this.el.nativeElement, backdropEl, this.width());
+    this.syncToastOffset();
   }
 
   back(): void {

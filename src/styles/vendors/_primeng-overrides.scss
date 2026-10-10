@@ -514,6 +514,23 @@ app-main-layout p-toast.p-toast-top-center,
   top: 4rem !important;
 }
 
+/* hotfix-071-b: con el drawer lateral abierto, el toast no se pone encima de su pie ("Guardar").
+   --layout-drawer-cover y data-layout-drawer-open los publica LayoutDrawerComponent.
+   Escritorio: el toast se corre a la izquierda del panel. Móvil: el panel ocupa toda la
+   pantalla, así que el toast sale arriba. */
+@media (min-width: 768px) {
+  .p-toast.p-toast-bottom-right {
+    right: calc(var(--layout-drawer-cover, 0px) + 1.25rem) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  html[data-layout-drawer-open] .p-toast.p-toast-bottom-right {
+    top: 1rem !important;
+    bottom: auto !important;
+  }
+}
+
 /* ============================================
    Skeleton — Design System Tokens
    ============================================ */

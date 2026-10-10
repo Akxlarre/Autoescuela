@@ -4,6 +4,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { formatCLP } from '@core/utils/date.utils';
 
 const BILLETES = [
@@ -38,13 +39,23 @@ const MONEDAS = [
   selector: 'app-arqueo-cierre-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, DrawerFormComponent],
+  imports: [IconComponent, DrawerFormComponent, AlertCardComponent],
   template: `
     <app-drawer-form>
       <div class="flex flex-col gap-5">
         <p class="text-compact text-text-muted">
           Conciliación entre lo esperado por el sistema y el efectivo declarado.
         </p>
+
+        <!-- fix-044-i: explica por qué "Cerrar Caja" está deshabilitado -->
+        @if (facade.cargaFallida()) {
+          <app-alert-card severity="error" title="No se puede cerrar la caja todavía">
+            <span class="text-compact text-text-secondary">
+              Los movimientos del día no cargaron, así que los totales pueden estar incompletos. Usa
+              "Reintentar" en la pantalla de Caja.
+            </span>
+          </app-alert-card>
+        }
 
         <!-- Fondo de Apertura -->
         <div class="flex flex-col gap-1.5">

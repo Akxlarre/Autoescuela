@@ -246,7 +246,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Archivo | Responsabilidad | Ubicación | Estado |
 |---------|----------------|-----------|--------|
-| `_primeng-overrides.scss` | Mapeo de tokens PrimeNG a Design System. Overrides de toast, buttons, tables, stepper (`.stepper-premium`), datepicker, skeleton, dark mode fixes y **Tooltips Premium** (Glassmorphic dark charcoal, backdrop blur y alineación de flechas). | `styles/vendors/_primeng-overrides.scss` | ✅ Estable |
+| `_primeng-overrides.scss` | Mapeo de tokens PrimeNG a Design System. Overrides de toast (posición: bajo el topbar; con el drawer abierto esquiva su pie vía `--layout-drawer-cover`, hotfix-071-b), buttons, tables, stepper (`.stepper-premium`), datepicker, skeleton, dark mode fixes y **Tooltips Premium** (Glassmorphic dark charcoal, backdrop blur y alineación de flechas). | `styles/vendors/_primeng-overrides.scss` | ✅ Estable |
 | `_flag-icons.scss` | Subconjunto de flag-icons para el dropdown de teléfono. Define `.fi`, `.fi.fis` (1em×1em, background-size:contain) y `.fi-{cc}.fis` para 8 países: `cl ar pe bo co ve es us`. SVGs servidos como assets estáticos desde `/flags/` (angular.json assets config → `node_modules/flag-icons/flags/1x1/*.svg`). No usar la CSS completa de flag-icons (conflicto 4x3 vs 1x1 en esbuild dev mode). | `styles/vendors/_flag-icons.scss` | ✅ Estable |
 
 ## Estilos Globales (`styles.scss`)
@@ -447,7 +447,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **tablist** | `.p-tablist` |
 | **tabpanel** | `.p-tabpanel` |
 | **tabs** | `.p-tabs` |
-| **toast** | `.p-toast` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` · `.p-toast-message` +11 |
+| **toast** | `.p-toast` · `.p-toast-bottom-right` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` +12 |
 | **togglebutton** | `.p-togglebutton` · `.p-togglebutton-checked` |
 | **toggleswitch** | `.p-toggleswitch` · `.p-toggleswitch-checked` · `.p-toggleswitch-handle` · `.p-toggleswitch-input` · `.p-toggleswitch-slider` |
 | **tooltip** | `.p-tooltip` · `.p-tooltip-arrow` · `.p-tooltip-bottom` · `.p-tooltip-left` · `.p-tooltip-right` +2 |

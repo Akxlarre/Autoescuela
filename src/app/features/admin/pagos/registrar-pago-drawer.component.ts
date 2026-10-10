@@ -700,6 +700,9 @@ export class RegistrarPagoDrawerComponent {
   }
 
   protected async onSubmit(): Promise<void> {
+    // fix-045-i: un Enter en un campo dispara (ngSubmit) aunque el botón esté deshabilitado;
+    // sin esto, dos Enter rápidos registraban el mismo abono dos veces.
+    if (this.isSaving()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

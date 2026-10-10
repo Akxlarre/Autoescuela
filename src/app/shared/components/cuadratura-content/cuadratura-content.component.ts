@@ -19,6 +19,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -37,12 +38,18 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
     BentoGridLayoutDirective,
     CardHoverDirective,
     EmptyStateComponent,
+    AlertCardComponent,
   ],
   template: `
+    <!-- fix-044-i: con el aviso de carga fallida hay una fila fija más entre el hero y las listas.
+         --fill-screen reparte "auto 1fr" y el aviso se quedaba con el 1fr; --fill-screen-kpi es
+         "auto auto 1fr" (hero, aviso, listas). -->
     <div
-      class="bento-grid bento-grid--fill-screen bento-grid--rows-fit"
+      class="bento-grid bento-grid--rows-fit"
       appBentoGridLayout
       #bentoGrid
+      [class.bento-grid--fill-screen]="!cargaFallida()"
+      [class.bento-grid--fill-screen-kpi]="cargaFallida()"
       [class.force-compact]="isDrawerOpen()"
     >
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
@@ -84,6 +91,31 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
           </div>
         }
       </div>
+
+      <!-- fix-044-i: si la carga del día falló, los montos de abajo pueden ser $0 o viejos.
+           Se avisa (sin esconder lo que ya estaba) y el cierre queda bloqueado en el Facade. -->
+      @if (cargaFallida()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudieron cargar los movimientos del día">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los montos pueden estar incompletos. No se puede cerrar la caja hasta que carguen
+                bien.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-carga-cuadratura"
+                [disabled]="isLoading()"
+                (click)="reintentar.emit()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
 
       <!-- ── Contenido: Ingresos + Egresos como DOS columnas (fix-230-m) — los dos
            términos de la resta de caja, visibles juntos. "flex, no grid, para las
@@ -251,14 +283,21 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               >
                                 {{ clp(fila.total) }}
                               </span>
-                              <button
-                                class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto cursor-pointer"
-                                [disabled]="cajaYaCerrada()"
-                                [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
-                                (click)="onEliminarIngreso(fila, $event)"
-                              >
-                                <app-icon name="trash-2" [size]="15" />
-                              </button>
+                              @if (puedeEliminarIngreso(fila)) {
+                                <button
+                                  class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto cursor-pointer"
+                                  data-llm-action="eliminar-ingreso-cuadratura"
+                                  [disabled]="cajaYaCerrada()"
+                                  [attr.aria-label]="
+                                    'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)
+                                  "
+                                  (click)="onEliminarIngreso(fila, $event)"
+                                >
+                                  <app-icon name="trash-2" [size]="15" />
+                                </button>
+                              } @else {
+                                <span></span>
+                              }
                             </div>
                           }
                         </div>
@@ -290,14 +329,17 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                                 >
                                 <span class="item-title">{{ fila.glosa }}</span>
                               </div>
-                              <button
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer"
-                                [disabled]="cajaYaCerrada()"
-                                aria-label="Eliminar ingreso"
-                                (click)="onEliminarIngreso(fila, $event)"
-                              >
-                                <app-icon name="trash-2" [size]="14" />
-                              </button>
+                              @if (puedeEliminarIngreso(fila)) {
+                                <button
+                                  class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer"
+                                  data-llm-action="eliminar-ingreso-cuadratura"
+                                  [disabled]="cajaYaCerrada()"
+                                  aria-label="Eliminar ingreso"
+                                  (click)="onEliminarIngreso(fila, $event)"
+                                >
+                                  <app-icon name="trash-2" [size]="14" />
+                                </button>
+                              }
                             </div>
                             <div
                               class="grid grid-cols-2 gap-y-2 mt-2 pt-2 border-t border-border-muted/30"
@@ -491,14 +533,19 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                             >
                               {{ clp(egreso.monto) }}
                             </span>
-                            <button
-                              class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
-                              [disabled]="cajaYaCerrada()"
-                              aria-label="Eliminar egreso"
-                              (click)="onEliminarEgreso(egreso)"
-                            >
-                              <app-icon name="x" [size]="14" />
-                            </button>
+                            @if (puedeEliminarEgreso(egreso)) {
+                              <button
+                                class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
+                                data-llm-action="eliminar-egreso-cuadratura"
+                                [disabled]="cajaYaCerrada()"
+                                aria-label="Eliminar egreso"
+                                (click)="onEliminarEgreso(egreso)"
+                              >
+                                <app-icon name="x" [size]="14" />
+                              </button>
+                            } @else {
+                              <span></span>
+                            }
                           </div>
                         }
                       </div>
@@ -540,14 +587,17 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               }
                               <span class="item-title">{{ egreso.descripcion }}</span>
                             </span>
-                            <button
-                              class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer shrink-0"
-                              [disabled]="cajaYaCerrada()"
-                              aria-label="Eliminar egreso"
-                              (click)="onEliminarEgreso(egreso)"
-                            >
-                              <app-icon name="x" [size]="14" />
-                            </button>
+                            @if (puedeEliminarEgreso(egreso)) {
+                              <button
+                                class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer shrink-0"
+                                data-llm-action="eliminar-egreso-cuadratura"
+                                [disabled]="cajaYaCerrada()"
+                                aria-label="Eliminar egreso"
+                                (click)="onEliminarEgreso(egreso)"
+                              >
+                                <app-icon name="x" [size]="14" />
+                              </button>
+                            }
                           </div>
                           <div
                             class="flex items-center justify-between mt-2 pt-2 border-t border-border-muted/30"
@@ -798,6 +848,13 @@ export class CuadraturaContentComponent implements AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   readonly isDrawerOpen = input<boolean>(false);
+  /** La última carga del día falló (fix-044-i): muestra el aviso con "Reintentar". */
+  readonly cargaFallida = input<boolean>(false);
+  /**
+   * Puede quitar pagos de matrícula y anticipos (fix-044-i): solo admin. Sin esto esas filas no
+   * muestran el botón; gastos, cursos singulares y servicios especiales sí.
+   */
+  readonly puedeEliminarRestringidos = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   /** Abre el Drawer de Arqueo y Cierre Operativo (spec 0004-i). "Cerrar Caja" ya no vive en
@@ -809,6 +866,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly eliminarIngreso = output<IngresoRow>();
   readonly eliminarEgreso = output<EgresoRow>();
   readonly exportRequested = output<'excel' | 'pdf'>();
+  readonly reintentar = output<void>();
 
   protected readonly fechaHoy = computed(() => {
     const now = new Date();
@@ -927,6 +985,16 @@ export class CuadraturaContentComponent implements AfterViewInit {
   protected requestExport(format: 'excel' | 'pdf'): void {
     this.exportMenuOpen.set(false);
     this.exportRequested.emit(format);
+  }
+
+  /** Un pago de matrícula solo lo quita el admin (fix-044-i); el resto de ingresos, ambos roles. */
+  protected puedeEliminarIngreso(fila: IngresoRow): boolean {
+    return fila.source !== 'payment' || this.puedeEliminarRestringidos();
+  }
+
+  /** Un anticipo solo lo quita el admin (la RLS de instructor_advances); un gasto, ambos roles. */
+  protected puedeEliminarEgreso(egreso: EgresoRow): boolean {
+    return egreso.tipo !== 'advance' || this.puedeEliminarRestringidos();
   }
 
   protected onEliminarIngreso(fila: IngresoRow, event: Event): void {

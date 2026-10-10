@@ -1,14 +1,14 @@
 # Asignación ASG-i-049 — Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-10
+> **resulting_track:** fix-045-i-pagos-duplicados-y-sobrepago
 
 ---
 

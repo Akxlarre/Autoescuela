@@ -1,14 +1,14 @@
 # Asignación ASG-i-048 — Cuadratura: operaciones que fallan en silencio y corrompen saldos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-08
+> **resulting_track:** fix-044-i-cuadratura-operaciones-fallan-en-silencio
 
 ---
 
