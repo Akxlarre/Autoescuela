@@ -4,6 +4,7 @@ import type { User } from '@core/models/dto/user.model';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('AuthFacade', () => {
   let service: AuthFacade;
@@ -448,5 +449,102 @@ describe('AuthFacade', () => {
     // resolvería whenReady, empatando con el timeout de vitest (test flaky).
     authCallback!('INITIAL_SESSION', null);
     await expect(service.whenReady).resolves.toBeUndefined();
+  });
+});
+
+describe('AuthFacade — cuenta desactivada con la sesión abierta (fix-219-b)', () => {
+  let service: AuthFacade;
+  let supabaseSpy: any;
+  let toast: { error: ReturnType<typeof vi.fn> };
+  let profileRow: Record<string, unknown>;
+  let onUserRowChange: (() => void) | null;
+
+  const SECRETARIA: User = {
+    id: 'uid-33',
+    dbId: 33,
+    name: 'Maria Torres',
+    email: 'secretaria2@test.com',
+    role: 'secretaria',
+    initials: 'MT',
+    branchId: 2,
+    isActive: true,
+  };
+
+  beforeEach(() => {
+    onUserRowChange = null;
+    profileRow = {
+      id: 33,
+      first_names: 'Maria',
+      paternal_last_name: 'Torres',
+      branch_id: 2,
+      can_access_both_branches: false,
+      first_login: false,
+      active: true,
+      role_id: 2,
+      roles: { name: 'secretary' },
+    };
+    const channel: any = {
+      on: vi.fn().mockImplementation((_type: string, _filter: unknown, cb: () => void) => {
+        onUserRowChange = cb;
+        return channel;
+      }),
+      subscribe: vi.fn().mockImplementation(() => channel),
+    };
+    supabaseSpy = {
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      client: {
+        auth: {
+          onAuthStateChange: vi
+            .fn()
+            .mockReturnValue({ data: { subscription: { unsubscribe: () => {} } } }),
+        },
+        channel: vi.fn().mockReturnValue(channel),
+        removeChannel: vi.fn(),
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({ data: profileRow, error: null }),
+            }),
+          }),
+        }),
+      },
+    };
+    toast = { error: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: SupabaseService, useValue: supabaseSpy },
+        { provide: ToastService, useValue: toast },
+      ],
+    });
+    service = TestBed.inject(AuthFacade);
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    service.setUser(SECRETARIA);
+    service.initializeRealtime();
+  });
+
+  it('al desactivarla el admin: avisa, cierra la sesión y la lleva al login', async () => {
+    profileRow = { ...profileRow, active: false, roles: null };
+
+    onUserRowChange!();
+    await vi.waitFor(() => expect(service.currentUser()).toBeNull());
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'Cuenta desactivada',
+      'Tu cuenta fue desactivada. Contacta al administrador.',
+    );
+    expect(supabaseSpy.signOut).toHaveBeenCalled();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('un cambio que no la desactiva (otra sede) no cierra la sesión', async () => {
+    profileRow = { ...profileRow, branch_id: 1 };
+
+    onUserRowChange!();
+    await vi.waitFor(() => expect(service.currentUser()?.branchId).toBe(1));
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(supabaseSpy.signOut).not.toHaveBeenCalled();
   });
 });
