@@ -281,7 +281,6 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
-| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | `m` | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -439,6 +438,7 @@
 | ASG-i-054 | Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente) | [0024-m-fechas-de-negocio-en-hora-de-chile](specs/0024-m-fechas-de-negocio-en-hora-de-chile/spec.md) | 2026-10-09 |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | [fix-044-i-cuadratura-operaciones-fallan-en-silencio](fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio/fix.md) | 2026-10-10 |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---

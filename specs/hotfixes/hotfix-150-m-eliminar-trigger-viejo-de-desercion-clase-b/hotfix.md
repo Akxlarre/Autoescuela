@@ -1,7 +1,8 @@
 # Hotfix: eliminar el trigger viejo de deserción Clase B (2 faltas cancelaban la matrícula)
 > id: hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b
 > refs: ASG-i-053 — `specs/testing-piloto/027-asistencia-clase-b.md` S1; ajusta hotfix-044-m
-> status: in-progress
+> status: done
+> closed: 2026-10-10
 > created: 2026-10-10
 
 ## Problema
@@ -26,6 +27,6 @@ El riesgo real es el desfase: el repo lo crea habilitado, así que un entorno nu
   verify_class_b_dropout_rule()`. La columna `consecutive_absences` se conserva.
 - **Archivo:** `indices/DATABASE.md` — quita `verify_class_b_dropout_rule` del listado de funciones.
 
-## Pendiente de aplicar
-La migración la aplica Matías. Verificación posterior: la consulta de `pg_trigger` por
-`trg_class_b_dropout` debe devolver 0 filas.
+## Verificación
+Migración aplicada por Matías el 2026-10-10. Después, la consulta de `pg_trigger` por
+`trg_class_b_dropout` / `%dropout%` sobre `class_b_practice_attendance` devuelve 0 filas.
