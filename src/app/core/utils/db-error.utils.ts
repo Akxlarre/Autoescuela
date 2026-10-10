@@ -67,6 +67,14 @@ export function toFriendlyDbMessage(err: unknown, fallback: string): string {
   if (err.message?.includes('CUPOS_AGOTADOS')) {
     return 'No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.';
   }
+  // fix-044-i: triggers de Caja. Un movimiento de un día con caja cerrada no se borra (el cierre
+  // guarda totales congelados, DG-065) y un cierre definitivo no se sobrescribe.
+  if (err.message?.includes('CAJA_CERRADA')) {
+    return 'La caja de ese día ya está cerrada. Registra la corrección como ajuste en Historial de Cuadraturas.';
+  }
+  if (err.message?.includes('CIERRE_DEFINITIVO')) {
+    return 'Esta caja ya se cerró (en otra pestaña o por otra persona). La pantalla se actualizó con el cierre guardado.';
+  }
 
   switch (err.code) {
     // unique_violation — registro duplicado

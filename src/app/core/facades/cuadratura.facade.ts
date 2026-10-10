@@ -3,10 +3,11 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
-import { chileDayRange, chileToday } from '@core/utils/chile-time.utils';
+import { chileDayRange, chileToday, formatChileTime } from '@core/utils/chile-time.utils';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { mapConcepto } from '@core/utils/payment-concept.utils';
+import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type {
   IngresoRow,
   EgresoRow,
@@ -182,6 +183,12 @@ export class CuadraturaFacade {
   private readonly _isSaving = signal<boolean>(false);
   private readonly _isExporting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  /**
+   * La última carga del día falló (fix-044-i). Con datos incompletos o viejos en pantalla, el
+   * cierre guardaría totales falsos (podía cerrarse en $0 habiendo cobrado): bloquea el cierre
+   * hasta que una carga termine bien.
+   */
+  private readonly _cargaFallida = signal<boolean>(false);
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -197,6 +204,14 @@ export class CuadraturaFacade {
   readonly isSaving = this._isSaving.asReadonly();
   readonly isExporting = this._isExporting.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly cargaFallida = this._cargaFallida.asReadonly();
+
+  /**
+   * Quitar un pago de matrícula o un anticipo es solo del admin (fix-044-i): la RLS ya solo le
+   * permite a él borrar `payments` e `instructor_advances`. La UI de la secretaria no muestra esos
+   * botones; gastos, cursos singulares y servicios especiales siguen abiertos a ambos roles.
+   */
+  readonly puedeEliminarRestringidos = computed(() => this.auth.currentUser()?.role === 'admin');
 
   readonly ingresosEfectivoHoy = computed(() =>
     this._pagosHoy().reduce((sum, p) => sum + p.claseB, 0),
@@ -233,7 +248,7 @@ export class CuadraturaFacade {
   readonly diferenciaArqueo = computed(() => this.totalArqueo() - this.saldoTeoricoEfectivo());
 
   readonly puedeCerrarCaja = computed(() => {
-    if (this._cajaYaCerrada() || this._isSaving()) return false;
+    if (this._cajaYaCerrada() || this._isSaving() || this._cargaFallida()) return false;
     if (!this.realizarArqueo()) return true;
     if (this.diferenciaArqueo() === 0) return true;
     return this.notasArqueo().trim().length > 0;
@@ -312,21 +327,41 @@ export class CuadraturaFacade {
 
     this._isLoading.set(true);
     try {
-      await this.fetchAll();
+      await this.cargarDia();
       this._initialized = true;
       this._lastBranchId = branchId;
-    } catch {
-      this._error.set('Error al cargar datos de cuadratura.');
     } finally {
       this._isLoading.set(false);
     }
   }
 
+  /**
+   * Refresco SWR/Realtime sin skeleton. No lanza: los datos anteriores siguen visibles, pero si
+   * falla queda marcada la carga fallida y el cierre bloqueado — pueden estar viejos (fix-044-i).
+   */
   async refreshSilently(): Promise<void> {
+    await this.cargarDia();
+  }
+
+  /** "Reintentar" del aviso de carga fallida (fix-044-i): vuelve a cargar el día con skeleton. */
+  async reintentar(): Promise<void> {
+    this._isLoading.set(true);
+    try {
+      await this.cargarDia();
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /** Carga el día y deja `_error`/`_cargaFallida` según el resultado. Nunca lanza. */
+  private async cargarDia(): Promise<void> {
     try {
       await this.fetchAll();
+      this._error.set(null);
+      this._cargaFallida.set(false);
     } catch {
-      // Swallowed
+      this._error.set('No se pudieron cargar los movimientos del día.');
+      this._cargaFallida.set(true);
     }
   }
 
@@ -360,11 +395,13 @@ export class CuadraturaFacade {
     }
 
     // El ordenamiento y limitación siempre al final de la cadena de filtros
-    const [{ data }, singulares, serviciosEspeciales] = await Promise.all([
+    const [{ data, error }, singulares, serviciosEspeciales] = await Promise.all([
       query.order('payment_date', { ascending: true }),
       this.fetchSingularSales(start, endExclusive, branchId),
       this.fetchSpecialServiceSales(today, branchId),
     ]);
+    // fix-044-i: una lectura fallida lanza (antes caía a `[]` y la Caja mostraba $0 sin aviso).
+    if (error) throw error;
     this._pagosHoy.set([
       ...(data ?? []).map(mapPaymentToIngreso),
       ...singulares,
@@ -391,7 +428,7 @@ export class CuadraturaFacade {
     }
 
     const { data, error } = await query;
-    if (error) return [];
+    if (error) throw error;
 
     return (data ?? []).map((row: any) =>
       mapSpecialServiceSaleToIngreso({
@@ -435,7 +472,7 @@ export class CuadraturaFacade {
     }
 
     const { data, error } = await query.order('paid_at', { ascending: true });
-    if (error) return [];
+    if (error) throw error;
 
     return (data ?? []).map((row: any) =>
       mapSingularSaleToIngreso({
@@ -467,6 +504,8 @@ export class CuadraturaFacade {
     }
 
     const [expRes, advRes] = await Promise.all([expQuery, advQuery]);
+    if (expRes.error) throw expRes.error;
+    if (advRes.error) throw advRes.error;
     const gastos = (expRes.data ?? []).map(mapExpenseToEgreso);
     const anticipos = (advRes.data ?? []).map(mapAdvanceToEgreso);
     this._gastosHoy.set([...gastos, ...anticipos]);
@@ -481,7 +520,8 @@ export class CuadraturaFacade {
   private async checkCajaStatus(today: string, branchId: number | null): Promise<void> {
     let query: any = this.supabase.client.from('cash_closings').select('*').eq('date', today);
     if (branchId) query = query.eq('branch_id', branchId);
-    const { data } = await query.maybeSingle();
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
 
     const cerrada = data?.status === 'closed';
     this._cajaYaCerrada.set(cerrada);
@@ -505,72 +545,86 @@ export class CuadraturaFacade {
     }
   }
 
+  /**
+   * Quita un ingreso del día. Toda escritura pasa por `assertWriteOk` con `requireRows`: un
+   * UPDATE/DELETE que la RLS filtra no devuelve error, devuelve 0 filas (fix-044-i). Si el día ya
+   * tiene caja cerrada, un trigger rechaza la escritura con `CAJA_CERRADA`.
+   */
   async eliminarIngreso(row: IngresoRow): Promise<boolean> {
+    if (row.source === 'payment' && !this.puedeEliminarRestringidos()) {
+      this.toast.error('Solo un administrador puede quitar un pago de matrícula.');
+      return false;
+    }
+
     this._isSaving.set(true);
     try {
       if (row.source === 'singular') {
         // Cobro de curso singular: no se borra la inscripción, se revierte
         // el pago a pendiente (la inscripción sigue vigente).
-        await this.supabase.client
-          .from('standalone_course_enrollments')
-          .update({ payment_status: 'pending', amount_paid: 0, paid_at: null })
-          .eq('id', row.id);
+        await this.revertirCobro('standalone_course_enrollments', row.id, {
+          payment_status: 'pending',
+          amount_paid: 0,
+          paid_at: null,
+        });
         this.toast.success('Cobro revertido: la inscripción quedó pendiente de pago.');
-        void this.refreshSilently();
-        return true;
-      }
-
-      if (row.source === 'special_service') {
+      } else if (row.source === 'special_service') {
         // fix-024-i: venta de Servicio Especial — no se borra, se revierte el cobro
         // (misma filosofía que 'singular': la venta sigue existiendo, solo deja de
         // contar como ingreso cobrado hoy).
-        await this.supabase.client
-          .from('special_service_sales')
-          .update({ paid: false, status: 'pending' })
-          .eq('id', row.id);
+        await this.revertirCobro('special_service_sales', row.id, {
+          paid: false,
+          status: 'pending',
+        });
         this.toast.success('Cobro revertido: la venta quedó pendiente de pago.');
-        void this.refreshSilently();
-        return true;
+      } else {
+        // Pago de matrícula: un solo DELETE. El saldo del alumno lo recalcula el trigger
+        // `trg_update_balance` en la misma transacción — antes el cliente restaba el saldo y
+        // después borraba, y si el borrado fallaba el saldo quedaba inflado (fix-044-i).
+        assertWriteOk(
+          await this.supabase.client.from('payments').delete().eq('id', row.id).select('id'),
+          { requireRows: true },
+        );
+        this.toast.success('Pago eliminado. El saldo del alumno se recalculó.');
       }
-
-      if (row.enrollmentId !== null) {
-        const { data: enr } = await this.supabase.client
-          .from('enrollments')
-          .select('total_paid, pending_balance')
-          .eq('id', row.enrollmentId)
-          .maybeSingle();
-        if (enr) {
-          await this.supabase.client
-            .from('enrollments')
-            .update({
-              total_paid: Math.max(0, (enr.total_paid ?? 0) - row.total),
-              pending_balance: (enr.pending_balance ?? 0) + row.total,
-            })
-            .eq('id', row.enrollmentId);
-        }
-      }
-      await this.supabase.client.from('payments').delete().eq('id', row.id);
-      this.toast.success('Movimiento eliminado y saldos revertidos.');
       void this.refreshSilently();
       return true;
-    } catch {
-      this.toast.error('Error al eliminar el ingreso.');
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'No se pudo eliminar el ingreso.'));
       return false;
     } finally {
       this._isSaving.set(false);
     }
   }
 
+  /** Revierte un cobro a pendiente; lanza si falla o si la RLS no dejó tocar la fila. */
+  private async revertirCobro(
+    tabla: 'standalone_course_enrollments' | 'special_service_sales',
+    id: number,
+    cambios: Record<string, unknown>,
+  ): Promise<void> {
+    assertWriteOk(
+      await this.supabase.client.from(tabla).update(cambios).eq('id', id).select('id'),
+      { requireRows: true },
+    );
+  }
+
   async eliminarEgreso(row: EgresoRow): Promise<boolean> {
+    if (row.tipo === 'advance' && !this.puedeEliminarRestringidos()) {
+      this.toast.error('Solo un administrador puede quitar un anticipo.');
+      return false;
+    }
+
     this._isSaving.set(true);
     try {
       const tabla = row.tipo === 'expense' ? 'expenses' : 'instructor_advances';
-      await this.supabase.client.from(tabla).delete().eq('id', row.id);
+      assertWriteOk(await this.supabase.client.from(tabla).delete().eq('id', row.id).select('id'), {
+        requireRows: true,
+      });
       this.toast.success('Egreso eliminado correctamente.');
       void this.refreshSilently();
       return true;
-    } catch {
-      this.toast.error('Error al eliminar el egreso.');
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'No se pudo eliminar el egreso.'));
       return false;
     } finally {
       this._isSaving.set(false);
@@ -692,6 +746,46 @@ export class CuadraturaFacade {
     };
   }
 
+  /** Fila completa de `cash_closings` para el cierre definitivo del día (status `closed`). */
+  private buildCierreRow(closedBy: number | undefined): Record<string, unknown> {
+    const pagos = this._pagosHoy();
+    const payload = this.buildCierrePayload();
+    return {
+      date: chileToday(),
+      branch_id: this.getActiveBranchId(),
+      closed_by: closedBy,
+      closed_at: new Date().toISOString(),
+      status: 'closed',
+      closed: true,
+      opening_amount: this.fondoInicial(),
+      arqueo_enabled: this.realizarArqueo(),
+      cash_amount: pagos.reduce((s, p) => s + p.claseB, 0),
+      transfer_amount: pagos.reduce((s, p) => s + p.claseA, 0),
+      card_amount: pagos.reduce((s, p) => s + p.otros, 0),
+      voucher_amount: pagos.reduce((s, p) => s + p.sence, 0),
+      total_income: this.totalIngresosHoy(),
+      total_expenses: this.totalEgresosHoy(),
+      // Snapshot del egreso pagado en efectivo — lo único que baja el saldo físico
+      // (fix-211-m). El historial lo usa para separar egreso-efectivo de egreso-tarjeta
+      // sin depender de una identidad algebraica sobre `balance` (fix-226-m).
+      cash_expenses: this.totalEgresosEfectivoHoy(),
+      balance: this.saldoTeoricoEfectivo(),
+      payments_count: pagos.length,
+      arqueo_amount: payload.arqueoTotal,
+      difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
+      qty_bill_20000: payload.bill20000,
+      qty_bill_10000: payload.bill10000,
+      qty_bill_5000: payload.bill5000,
+      qty_bill_2000: payload.bill2000,
+      qty_bill_1000: payload.bill1000,
+      qty_coin_500: payload.coin500,
+      qty_coin_100: payload.coin100,
+      qty_coin_50: payload.coin50,
+      qty_coin_10: payload.coin10,
+      notes: payload.notes || null,
+    };
+  }
+
   /**
    * Arma el payload de borrador a partir del estado crudo de los signals de arqueo — a
    * diferencia de `buildCierrePayload()`, NO zerea las cantidades cuando `realizarArqueo` está
@@ -734,13 +828,13 @@ export class CuadraturaFacade {
 
   private async persistirBorrador(): Promise<void> {
     if (!this.auth.currentUser()) return;
-    try {
-      await this.supabase.client
-        .from('cash_closings')
-        .upsert(this.buildBorradorPayload(), { onConflict: 'date,branch_id_key' });
-    } catch {
-      // Fallo silencioso — el próximo cambio reintenta (mismo criterio que refreshSilently()).
-    }
+    const { error } = await this.supabase.client
+      .from('cash_closings')
+      .upsert(this.buildBorradorPayload(), { onConflict: 'date,branch_id_key' });
+    // Sin aviso — el próximo cambio reintenta (mismo criterio que refreshSilently()). Pero si
+    // falló porque otra pestaña ya cerró la caja (CIERRE_DEFINITIVO), recargar hace que esta
+    // pestaña se entere y deje de ofrecer el cierre (fix-044-i).
+    if (error) void this.refreshSilently();
   }
 
   /** Limpia el estado de arqueo tras cerrar caja exitosamente — no debe arrastrarse al día siguiente. */
@@ -763,60 +857,42 @@ export class CuadraturaFacade {
   async cerrarCaja(): Promise<boolean> {
     const user = this.auth.currentUser();
     if (!user) return false;
+    // Con la carga del día fallida, los totales en pantalla pueden ser $0 o viejos: el cierre los
+    // guardaría tal cual (fix-044-i). El botón ya está deshabilitado; esto es la red de seguridad.
+    if (this._cargaFallida()) {
+      this.toast.error(
+        'No se puede cerrar la caja: los movimientos del día no cargaron. Reintenta.',
+      );
+      return false;
+    }
     this._isSaving.set(true);
     try {
       if (this._borradorTimer) {
         clearTimeout(this._borradorTimer);
         this._borradorTimer = null;
       }
-      const today = chileToday();
-      const pagos = this._pagosHoy();
-      const payload = this.buildCierrePayload();
       // upsert (no insert plano, spec 0012-m): si ya existía un borrador para hoy/sede, se
-      // actualiza la MISMA fila (mismo id) en vez de crear una duplicada.
-      await this.supabase.client.from('cash_closings').upsert(
-        {
-          date: today,
-          branch_id: this.getActiveBranchId(),
-          closed_by: user.dbId,
-          closed_at: new Date().toISOString(),
-          status: 'closed',
-          closed: true,
-          opening_amount: this.fondoInicial(),
-          arqueo_enabled: this.realizarArqueo(),
-          cash_amount: pagos.reduce((s, p) => s + p.claseB, 0),
-          transfer_amount: pagos.reduce((s, p) => s + p.claseA, 0),
-          card_amount: pagos.reduce((s, p) => s + p.otros, 0),
-          voucher_amount: pagos.reduce((s, p) => s + p.sence, 0),
-          total_income: this.totalIngresosHoy(),
-          total_expenses: this.totalEgresosHoy(),
-          // Snapshot del egreso pagado en efectivo — lo único que baja el saldo físico
-          // (fix-211-m). El historial lo usa para separar egreso-efectivo de egreso-tarjeta
-          // sin depender de una identidad algebraica sobre `balance` (fix-226-m).
-          cash_expenses: this.totalEgresosEfectivoHoy(),
-          balance: this.saldoTeoricoEfectivo(),
-          payments_count: pagos.length,
-          arqueo_amount: payload.arqueoTotal,
-          difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
-          qty_bill_20000: payload.bill20000,
-          qty_bill_10000: payload.bill10000,
-          qty_bill_5000: payload.bill5000,
-          qty_bill_2000: payload.bill2000,
-          qty_bill_1000: payload.bill1000,
-          qty_coin_500: payload.coin500,
-          qty_coin_100: payload.coin100,
-          qty_coin_50: payload.coin50,
-          qty_coin_10: payload.coin10,
-          notes: payload.notes || null,
-        },
-        { onConflict: 'date,branch_id_key' },
+      // actualiza la MISMA fila (mismo id) en vez de crear una duplicada. Sobre un cierre ya
+      // `closed` la BD lo rechaza (trigger CIERRE_DEFINITIVO, o la RLS para la secretaria).
+      assertWriteOk(
+        await this.supabase.client
+          .from('cash_closings')
+          .upsert(this.buildCierreRow(user.dbId), { onConflict: 'date,branch_id_key' }),
       );
       this.toast.success('Caja cerrada correctamente.');
       this.resetArqueoState();
       void this.refreshSilently();
       return true;
-    } catch {
-      this.toast.error('Error al cerrar la caja.');
+    } catch (err) {
+      // No se toca el arqueo: si no se guardó, lo contado tiene que seguir ahí para reintentar.
+      // Se recarga para saber si el rechazo fue porque otra pestaña/persona ya cerró la caja.
+      await this.refreshSilently();
+      const cierre = this._cierreHoy();
+      this.toast.error(
+        cierre?.closed_at
+          ? `Esta caja ya se cerró a las ${formatChileTime(cierre.closed_at)} (en otra pestaña o por otra persona). La pantalla se actualizó con ese cierre.`
+          : toFriendlyDbMessage(err, 'No se pudo cerrar la caja. Inténtalo de nuevo.'),
+      );
       return false;
     } finally {
       this._isSaving.set(false);

@@ -1,6 +1,6 @@
 # Asignación ASG-i-048 — Cuadratura: operaciones que fallan en silencio y corrompen saldos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0

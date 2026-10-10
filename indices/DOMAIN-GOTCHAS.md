@@ -1731,6 +1731,36 @@
   `anon`/`authenticated`.
 - **Fuente:** `specs/fixes/fix-363-m-auditoria-falsificable-y-rpc-abiertas`.
 
+### DG-106 — Un trigger que bloquea borrados también frena a los procesos automáticos que limpian esa tabla
+
+- **Trampa:** agregar un `BEFORE DELETE` que rechaza el borrado bajo cierta condición (por ejemplo,
+  "el día ya tiene caja cerrada") pensando solo en el usuario que aprieta un botón.
+- **Realidad:** el trigger corre igual para un cron o una función de limpieza. `cleanup_expired_drafts`
+  borra los pagos de las matrículas en borrador vencidas, y desde que el pago va antes de la firma un
+  borrador puede tener un pago `paid`: con el bloqueo, una sola fila rechazada aborta la limpieza
+  completa (todo el `DELETE ... WHERE enrollment_id = ANY(...)` es una sentencia).
+- **Regla de aplicabilidad:** antes de un trigger que rechaza `DELETE`/`UPDATE`, buscar en las
+  migraciones quién más escribe esa tabla (`grep -l "DELETE FROM public.<tabla>"`, crons, RPC) y
+  decidir explícitamente qué caso queda exento, por un dato de la fila (aquí: matrícula `draft`), no
+  por el rol de quien llama.
+- **Fuente:** `specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio`
+  (`guard_movimiento_caja_cerrada()`).
+
+### DG-107 — Aplicar en el SQL Editor una migración que crea triggers en tablas con tráfico puede abortar por deadlock
+
+- **Trampa:** pegar la migración en el SQL Editor del piloto con la app abierta y asumir que, si
+  falla, quedó a medias.
+- **Realidad:** `DROP/CREATE TRIGGER` pide un lock exclusivo por tabla, una tras otra; una lectura de
+  la app que toca dos de esas tablas en el orden contrario cierra el ciclo y Postgres aborta la
+  migración (`40P01 deadlock detected`). El SQL Editor manda todo el texto como un solo bloque, así
+  que el aborto deshace todo: no queda a medias.
+- **Regla de aplicabilidad:** en una migración que crea o reemplaza triggers sobre tablas que la app
+  lee todo el tiempo (`payments`, `enrollments`, `cash_closings`, …), anteponer
+  `SET lock_timeout = '5s';` al aplicarla a mano y reintentar si sale "lock timeout"; confirmar con
+  `pg_trigger` qué quedó instalado antes de reintentar.
+- **Fuente:** `specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio` (aplicación de
+  `20261010120000`).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

@@ -927,3 +927,359 @@ describe('mapSpecialServiceSaleToIngreso', () => {
     expect(row.nBoleta).toBeNull();
   });
 });
+
+// ─── fix-044-i: operaciones de Caja que fallaban en silencio (ASG-i-048) ──────
+
+type DbResult = { data: unknown; error: unknown };
+type DbCall = { table: string; op: string; args: unknown[] };
+
+/**
+ * Mock encadenable de supabase-js: cada método devuelve el mismo builder, y al hacer `await`
+ * resuelve la respuesta configurada para `tabla:operación` (operación = la escritura de la
+ * cadena, o `select` si es solo lectura). Registra cada escritura para poder afirmar qué se tocó.
+ */
+function buildChainableSupabase(responses: Record<string, DbResult> = {}) {
+  const calls: DbCall[] = [];
+  const WRITES = ['insert', 'update', 'delete', 'upsert'];
+  const CHAIN = [
+    'select',
+    'insert',
+    'update',
+    'delete',
+    'upsert',
+    'eq',
+    'in',
+    'gte',
+    'lt',
+    'lte',
+    'order',
+    'maybeSingle',
+    'single',
+  ];
+
+  const from = (table: string) => {
+    let op = 'select';
+    const builder: Record<string, unknown> = {};
+    for (const name of CHAIN) {
+      builder[name] = (...args: unknown[]) => {
+        if (WRITES.includes(name)) {
+          op = name;
+          calls.push({ table, op: name, args });
+        }
+        return builder;
+      };
+    }
+    builder['then'] = (resolve: (r: DbResult) => unknown, reject?: (e: unknown) => unknown) =>
+      Promise.resolve(
+        responses[`${table}:${op}`] ?? { data: op === 'select' ? [] : [{ id: 1 }], error: null },
+      ).then(resolve, reject);
+    return builder;
+  };
+
+  const channel = {
+    on: () => channel,
+    subscribe: () => channel,
+  };
+
+  return { calls, service: { client: { from, channel: () => channel } } };
+}
+
+function setupFix044(
+  responses: Record<string, DbResult> = {},
+  role: 'admin' | 'secretary' = 'admin',
+) {
+  const db = buildChainableSupabase(responses);
+  const toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
+  const user = {
+    id: 'user-uuid',
+    dbId: 1,
+    name: 'Test',
+    initials: 'T',
+    role,
+    branchId: 1,
+    firstLogin: false,
+  };
+
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [
+      CuadraturaFacade,
+      { provide: SupabaseService, useValue: db.service },
+      { provide: AuthFacade, useValue: { currentUser: () => user } },
+      { provide: BranchFacade, useValue: { selectedBranchId: () => 1 } },
+      { provide: ToastService, useValue: toast },
+    ],
+  });
+  const facade = TestBed.inject(CuadraturaFacade);
+  return { facade, db, toast };
+}
+
+type IngresoRowFixture = Parameters<CuadraturaFacade['eliminarIngreso']>[0];
+
+const ingresoPago: IngresoRowFixture = {
+  id: 10,
+  source: 'payment',
+  enrollmentId: 77,
+  nBoleta: '123',
+  glosa: 'Matrícula',
+  claseB: 50_000,
+  claseA: 0,
+  sence: 0,
+  otros: 0,
+  total: 50_000,
+};
+
+const writesTo = (calls: DbCall[], table: string) => calls.filter((c) => c.table === table);
+
+describe('CuadraturaFacade.eliminarIngreso — pago de matrícula (fix-044-i AC-1, AC-2, AC-6)', () => {
+  it('el admin borra solo el pago: no escribe saldos en enrollments (los recalcula el trigger)', async () => {
+    const { facade, db, toast } = setupFix044();
+
+    const ok = await facade.eliminarIngreso(ingresoPago);
+
+    expect(ok).toBe(true);
+    expect(writesTo(db.calls, 'payments')).toEqual([expect.objectContaining({ op: 'delete' })]);
+    expect(writesTo(db.calls, 'enrollments')).toEqual([]);
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('si la RLS no deja borrar (0 filas, sin error) avisa error, no éxito', async () => {
+    const { facade, toast } = setupFix044({ 'payments:delete': { data: [], error: null } });
+
+    const ok = await facade.eliminarIngreso(ingresoPago);
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('día con caja cerrada: el aviso apunta a Historial de Cuadraturas', async () => {
+    const { facade, toast } = setupFix044({
+      'payments:delete': { data: null, error: { code: 'P0001', message: 'CAJA_CERRADA' } },
+    });
+
+    const ok = await facade.eliminarIngreso(ingresoPago);
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error.mock.calls[0].join(' ')).toContain('Historial de Cuadraturas');
+  });
+
+  it('la secretaria no puede quitar un pago de matrícula: ni siquiera intenta escribir', async () => {
+    const { facade, db, toast } = setupFix044({}, 'secretary');
+
+    const ok = await facade.eliminarIngreso(ingresoPago);
+
+    expect(ok).toBe(false);
+    expect(db.calls).toEqual([]);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('puedeEliminarRestringidos es true para admin y false para secretaria', () => {
+    expect(setupFix044({}, 'admin').facade.puedeEliminarRestringidos()).toBe(true);
+    expect(setupFix044({}, 'secretary').facade.puedeEliminarRestringidos()).toBe(false);
+  });
+});
+
+describe('CuadraturaFacade — revertir cobros y quitar egresos (fix-044-i AC-2)', () => {
+  it('revertir un curso singular que falla no muestra éxito', async () => {
+    const { facade, toast } = setupFix044({
+      'standalone_course_enrollments:update': { data: null, error: { code: '42501' } },
+    });
+
+    const ok = await facade.eliminarIngreso({
+      ...ingresoPago,
+      source: 'singular',
+      enrollmentId: null,
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('revertir un servicio especial que no toca filas no muestra éxito', async () => {
+    const { facade, toast } = setupFix044({
+      'special_service_sales:update': { data: [], error: null },
+    });
+
+    const ok = await facade.eliminarIngreso({
+      ...ingresoPago,
+      source: 'special_service',
+      enrollmentId: null,
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('la secretaria no puede quitar un anticipo: ni siquiera intenta escribir', async () => {
+    const { facade, db, toast } = setupFix044({}, 'secretary');
+
+    const ok = await facade.eliminarEgreso({
+      id: 5,
+      tipo: 'advance',
+      category: null,
+      descripcion: 'Anticipo',
+      monto: 10_000,
+      paymentMethod: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(db.calls).toEqual([]);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('quitar un anticipo que la RLS bloquea (0 filas) no dice "eliminado"', async () => {
+    const { facade, toast } = setupFix044({
+      'instructor_advances:delete': { data: [], error: null },
+    });
+
+    const ok = await facade.eliminarEgreso({
+      id: 5,
+      tipo: 'advance',
+      category: null,
+      descripcion: 'Anticipo',
+      monto: 10_000,
+      paymentMethod: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('quitar un gasto de un día cerrado no dice "eliminado"', async () => {
+    const { facade, toast } = setupFix044({
+      'expenses:delete': { data: null, error: { code: 'P0001', message: 'CAJA_CERRADA' } },
+    });
+
+    const ok = await facade.eliminarEgreso({
+      id: 6,
+      tipo: 'expense',
+      category: null,
+      descripcion: 'Insumos',
+      monto: 5_000,
+      paymentMethod: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error.mock.calls[0].join(' ')).toContain('Historial de Cuadraturas');
+  });
+});
+
+describe('CuadraturaFacade.cerrarCaja — solo avisa éxito si el cierre quedó guardado (fix-044-i AC-3, AC-4)', () => {
+  it('si el upsert falla no avisa éxito y NO borra el arqueo contado', async () => {
+    const { facade, toast } = setupFix044({
+      'cash_closings:upsert': { data: null, error: { code: '08006', message: 'network' } },
+    });
+    facade.realizarArqueo.set(true);
+    facade.cantidades.set({ ...facade.cantidades(), bill10000: 7 });
+
+    const ok = await facade.cerrarCaja();
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+    expect(facade.cantidades()['bill10000']).toBe(7);
+    expect(facade.realizarArqueo()).toBe(true);
+  });
+
+  it('si la caja ya estaba cerrada (CIERRE_DEFINITIVO) avisa que ya se cerró', async () => {
+    const { facade, db, toast } = setupFix044({
+      'cash_closings:upsert': {
+        data: null,
+        error: { code: 'P0001', message: 'CIERRE_DEFINITIVO' },
+      },
+    });
+
+    const ok = await facade.cerrarCaja();
+
+    expect(ok).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error.mock.calls[0].join(' ')).toContain('ya se cerró');
+    expect(writesTo(db.calls, 'cash_closings')).toHaveLength(1);
+  });
+
+  it('con el cierre guardado avisa éxito y limpia el arqueo (sin regresión)', async () => {
+    const { facade, toast } = setupFix044();
+    facade.cantidades.set({ ...facade.cantidades(), bill10000: 3 });
+
+    const ok = await facade.cerrarCaja();
+
+    expect(ok).toBe(true);
+    expect(toast.success).toHaveBeenCalled();
+    expect(facade.cantidades()['bill10000']).toBe(0);
+  });
+});
+
+describe('CuadraturaFacade — lecturas que fallan (fix-044-i AC-5)', () => {
+  it.each([
+    ['payments:select'],
+    ['standalone_course_enrollments:select'],
+    ['special_service_sales:select'],
+    ['expenses:select'],
+    ['instructor_advances:select'],
+    ['cash_closings:select'],
+  ])('si falla %s, la carga queda marcada como fallida y no se puede cerrar', async (key) => {
+    const { facade } = setupFix044({ [key]: { data: null, error: { message: 'network' } } });
+
+    await facade.initialize();
+
+    expect(facade.cargaFallida()).toBe(true);
+    expect(facade.error()).not.toBeNull();
+    expect(facade.puedeCerrarCaja()).toBe(false);
+  });
+
+  it('cerrarCaja con la carga fallida no escribe nada', async () => {
+    const { facade, db, toast } = setupFix044({
+      'payments:select': { data: null, error: { message: 'network' } },
+    });
+    await facade.initialize();
+
+    const ok = await facade.cerrarCaja();
+
+    expect(ok).toBe(false);
+    expect(writesTo(db.calls, 'cash_closings')).toEqual([]);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('carga correcta: no hay carga fallida y se puede cerrar', async () => {
+    const { facade } = setupFix044();
+
+    await facade.initialize();
+
+    expect(facade.cargaFallida()).toBe(false);
+    expect(facade.error()).toBeNull();
+    expect(facade.puedeCerrarCaja()).toBe(true);
+  });
+
+  it('un refresco silencioso que falla también bloquea el cierre (los datos pueden estar viejos)', async () => {
+    const responses: Record<string, DbResult> = {};
+    const { facade } = setupFix044(responses);
+    await facade.initialize();
+    expect(facade.cargaFallida()).toBe(false);
+
+    responses['expenses:select'] = { data: null, error: { message: 'network' } };
+    await facade.refreshSilently();
+
+    expect(facade.cargaFallida()).toBe(true);
+    expect(facade.puedeCerrarCaja()).toBe(false);
+  });
+
+  it('reintentar() con éxito limpia el error y vuelve a permitir el cierre', async () => {
+    const responses: Record<string, DbResult> = {
+      'payments:select': { data: null, error: { message: 'network' } },
+    };
+    const { facade } = setupFix044(responses);
+    await facade.initialize();
+    expect(facade.cargaFallida()).toBe(true);
+
+    delete responses['payments:select'];
+    await facade.reintentar();
+
+    expect(facade.cargaFallida()).toBe(false);
+    expect(facade.error()).toBeNull();
+    expect(facade.puedeCerrarCaja()).toBe(true);
+  });
+});
