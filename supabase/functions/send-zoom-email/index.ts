@@ -5,16 +5,19 @@
 // Envía el enlace Zoom de una clase teórica por correo a los alumnos indicados.
 // Usa el mismo servidor SMTP configurado en Supabase, cargado via Secrets.
 //
+// fix-367-m: solo admin/secretaria, y el navegador ya NO manda enlace, tema, fecha ni correos.
+// Todo sale de la BD leída con la sesión del usuario (la RLS por sede aplica): la sesión teórica
+// aporta enlace/tema/fecha y los destinatarios son matrículas activas del mismo ciclo.
+//
 // Body esperado:
-//   zoomLink    : string                         — URL del enlace Zoom
-//   sessionTopic: string                         — Tema de la clase
-//   sessionDate : string                         — Fecha y hora formateada (ej: "28/04/2026 · 18:00 – 19:30")
-//   recipients  : { name: string; email: string }[] — Lista de destinatarios
+//   classId      : number    — id de class_b_theory_sessions
+//   enrollmentIds: number[]  — matrículas seleccionadas (se cruzan con el ciclo de la sesión)
 //
 // Respuestas:
 //   200  { sent: number; errors: string[] }
-//   400  { error: '...' }
-//   401  { error: 'No autorizado' }
+//   400  { error: '...' }   — body inválido, enlace no https o sin destinatarios válidos
+//   401 / 403  { error: '...' }
+//   404  { error: '...' }   — la sesión no existe o no es de una sede visible
 //   500  { error: '...' }
 //
 // Secrets requeridos (Supabase Dashboard → Edge Functions → Secrets):
@@ -25,6 +28,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  buildZoomEmailContent,
+  escapeHtml,
+  parseEnrollmentIds,
+  selectZoomRecipients,
+} from '../_shared/zoom-email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +48,12 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
-function buildEmailHtml(name: string, topic: string, date: string, zoomLink: string): string {
+/** Todos los argumentos se escapan aquí: ninguno se interpola crudo en el HTML (fix-367-m). */
+function buildEmailHtml(rawName: string, rawTopic: string, rawDate: string, rawLink: string): string {
+  const name = escapeHtml(rawName);
+  const topic = escapeHtml(rawTopic);
+  const date = escapeHtml(rawDate);
+  const zoomLink = escapeHtml(rawLink);
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -116,25 +131,46 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ── Validar autenticación ────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return jsonResponse({ error: 'No autorizado' }, 401);
+    // ── Validar rol (admin / secretaria) ─────────────────────────────────────
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
 
+    // ── Validar body: solo ids ───────────────────────────────────────────────
+    const body = await req.json().catch(() => null);
+    const classId = body?.classId;
+    const enrollmentIds = parseEnrollmentIds(body?.enrollmentIds);
+    if (!Number.isInteger(classId) || classId <= 0 || !enrollmentIds) {
+      return jsonResponse({ error: 'Parámetros inválidos' }, 400);
+    }
+
+    // ── Leer sesión y destinatarios con la sesión del usuario (RLS por sede) ─
     const supabaseUser = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } },
     );
-    const {
-      data: { user },
-    } = await supabaseUser.auth.getUser();
-    if (!user) return jsonResponse({ error: 'No autorizado' }, 401);
 
-    // ── Validar body ─────────────────────────────────────────────────────────
-    const { zoomLink, sessionTopic, sessionDate, recipients } = await req.json();
+    const { data: session, error: sessionError } = await supabaseUser
+      .from('class_b_theory_sessions')
+      .select('id, cycle_id, class_number, class_date, topic, zoom_link')
+      .eq('id', classId)
+      .maybeSingle();
+    if (sessionError) throw sessionError;
+    if (!session) return jsonResponse({ error: 'Clase no encontrada' }, 404);
 
-    if (!zoomLink || !sessionTopic || !Array.isArray(recipients) || recipients.length === 0) {
-      return jsonResponse({ error: 'Parámetros inválidos' }, 400);
+    const content = buildZoomEmailContent(session);
+    if (!content) return jsonResponse({ error: 'La clase no tiene un enlace Zoom válido (https)' }, 400);
+
+    const { data: rows, error: rowsError } = await supabaseUser
+      .from('enrollments')
+      .select('id, theory_cycle_id, status, students!inner(users!inner(first_names, paternal_last_name, email))')
+      .in('id', enrollmentIds)
+      .eq('theory_cycle_id', session.cycle_id);
+    if (rowsError) throw rowsError;
+
+    const recipients = selectZoomRecipients(rows ?? [], session.cycle_id, enrollmentIds);
+    if (recipients.length === 0) {
+      return jsonResponse({ error: 'Sin destinatarios con correo en este ciclo' }, 400);
     }
 
     // ── Configurar transporte SMTP ───────────────────────────────────────────
@@ -154,13 +190,12 @@ Deno.serve(async (req: Request) => {
     const result = { sent: 0, errors: [] as string[] };
 
     for (const recipient of recipients) {
-      if (!recipient.email) continue;
       try {
         await transporter.sendMail({
           from,
           to: recipient.email,
-          subject: `Enlace Zoom · ${sessionTopic}`,
-          html: buildEmailHtml(recipient.name || 'Alumno', sessionTopic, sessionDate, zoomLink),
+          subject: content.subject,
+          html: buildEmailHtml(recipient.name, content.topic, content.date, content.zoomLink),
         });
         result.sent++;
       } catch (err) {

@@ -3,7 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { formatCycleLabel } from '@core/utils/theory-cycle';
-import { buildDayLabel, formatChileanDate, monthsAgoIso } from '@core/utils/date.utils';
+import { buildDayLabel, monthsAgoIso } from '@core/utils/date.utils';
 import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
 import type {
   CicloAlumno,
@@ -29,6 +29,9 @@ const MAX_QUERY_ROWS = 1000;
  * Branch-scoped (facades.md §7): el Smart Component fija el filtro de sede vía
  * `setBranchFilter()` y dispara `loadCycles()`. No usa `effect()` interno.
  */
+/** Enlace Zoom aceptado: https y sin espacios (mismo criterio que send-zoom-email, fix-367-m). */
+const ZOOM_LINK_PATTERN = /^https:\/\/\S+$/i;
+
 @Injectable({ providedIn: 'root' })
 export class CiclosTeoricosFacade {
   private readonly supabase = inject(SupabaseService);
@@ -156,9 +159,15 @@ export class CiclosTeoricosFacade {
 
   /** Guarda el enlace Zoom de una clase (RF-14). */
   async saveZoomLink(classId: number, zoomLink: string): Promise<void> {
+    const link = zoomLink.trim() || null;
+    // fix-367-m: send-zoom-email rechaza todo lo que no sea https; no guardar algo que no se
+    // podrá enviar.
+    if (link !== null && !ZOOM_LINK_PATTERN.test(link)) {
+      this.toast.error('El enlace Zoom debe empezar con https://');
+      return;
+    }
     this._isSaving.set(true);
     try {
-      const link = zoomLink.trim() || null;
       const { error } = await this.supabase.client
         .from('class_b_theory_sessions')
         .update({ zoom_link: link })
@@ -209,6 +218,11 @@ export class CiclosTeoricosFacade {
       this.toast.error('Agrega un enlace Zoom antes de enviar');
       return;
     }
+    // fix-367-m: la función rechaza todo lo que no sea https; avisar aquí con un mensaje claro.
+    if (!ZOOM_LINK_PATTERN.test(clase.zoomLink.trim())) {
+      this.toast.error('El enlace Zoom debe empezar con https://');
+      return;
+    }
 
     const idSet = new Set(recipientEnrollmentIds);
     const recipients = this._roster()
@@ -224,17 +238,10 @@ export class CiclosTeoricosFacade {
     this._sendingClassId.set(classId);
     this._emailResult.set(null);
     try {
-      const sessionTopic = clase.tema?.trim()
-        ? `Clase ${clase.claseNumero} — ${clase.tema.trim()}`
-        : `Clase Teórica ${clase.claseNumero}`;
-      const sessionDate = formatChileanDate(clase.fecha, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      });
-
+      // fix-367-m: solo viajan ids. La función lee enlace, tema, fecha y correos de la BD con la
+      // RLS de quien envía; nunca confía en lo que mande el navegador.
       const { data, error } = await this.supabase.client.functions.invoke('send-zoom-email', {
-        body: { zoomLink: clase.zoomLink, sessionTopic, sessionDate, recipients },
+        body: { classId, enrollmentIds: [...idSet] },
       });
       if (error) throw error;
 
