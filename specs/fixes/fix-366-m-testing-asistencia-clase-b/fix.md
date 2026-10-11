@@ -77,7 +77,21 @@ código: el panel solo ofrece Iniciar/Finalizar (`core/utils/live-class-action.u
 
 ## Resultados
 
-_(se completa al ejecutar cada bloque)_
+### Bloque 1 — Seguridad (2026-10-11)
+
+Ejecutado por API con las cuentas E2E (`b1-seguridad.cjs`, `b1-instr.cjs` en el scratchpad de la
+sesión) y lectura de políticas y funciones en la BD de dev. Solo operaciones sin efecto aunque la
+protección fallara: `PATCH` con el mismo valor, penalización sobre una matrícula sin clases
+agendadas, correo con un destinatario sin dirección.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| M06 / S12 — RLS por sede | ✅ | Secretaria A y B: leen 0 sesiones y 0 asistencias de la otra sede, `PATCH` cruzado afecta 0 filas; cada una lee la suya. Las políticas de `class_b_sessions` y `class_b_practice_attendance` filtran por `auth_user_branch_id()` / `auth_can_access_both_branches()`. Multi-sede lee ambas. **S12 queda reducida a la parte de pantalla** (M04/M05: la secretaria multi-sede no puede cambiar de sede en la UI), que se ejecuta en el bloque 4 |
+| I07 / S2 — cron y penalización | ✅ | `mark_end_of_day_class_b_absences`: solo `service_role` (alumno y secretaria → `42501 permission denied`). `apply_class_b_absence_penalty`: alumno y secretaria de otra sede → `42501 No tienes permiso…` (chequeo de `fix-191-b`) |
+| L09 / S13 — `send-zoom-email` | ❌ | Alumno e instructor la invocan y reciben `200 {"sent":0}`: la función solo exige sesión. Destinatarios, enlace, tema y fecha vienen del navegador y se insertan sin escapar en el HTML (`index.ts:120-138`). Cualquier cuenta puede mandar correos con la marca de la escuela a cualquier dirección → `fix-367-m` (cerrado: alumno/instructor 403, otra sede 404) |
+| **S19 (nueva)** — asistencia Clase B abierta a cualquier instructor | ❌ | `instructor@test.com` (id 8) cuenta 261 asistencias, las mismas que el admin: todas las sedes y todos los instructores. Lee la fila 338 (de una clase del instructor 226) y su `UPDATE` afecta 1 fila. Las políticas SELECT/INSERT/UPDATE dan acceso por rol `instructor` sin mirar la sesión. Un instructor podría pasar una falta ajena a `excused` (evita la penalización) o un presente a ausente. El portal Instructor está bloqueado en el piloto, pero la API no → `fix-368-m` (cerrado: 0 ajenas) |
+| L05 — enlace inválido ("hola") | ❌→✅ | Se guardaba sin aviso. Corregido dentro de `fix-367-m`: no se guarda y avisa |
+| L07 (parcial) — envío real | ✅ | Ciclo 27, 1 destinatario de prueba: toast "Correo enviado a 1 alumno" y badge "Enviado el…" |
 
 ## Decisiones de negocio pendientes
 
@@ -90,3 +104,8 @@ _(se completa al ejecutar)_
 ## Tracks generados
 
 _(cada bug encontrado → su propio fix/hotfix)_
+
+| Track | Causa | Estado |
+|---|---|---|
+| `fix-367-m` | S13: `send-zoom-email` envía a cualquier dirección para cualquier sesión (+ L05: guardar enlace no https) | ✅ cerrado 2026-10-11 |
+| `fix-368-m` | S19: instructor lee y modifica la asistencia de cualquier clase | ✅ cerrado 2026-10-11 |
