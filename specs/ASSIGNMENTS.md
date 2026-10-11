@@ -85,7 +85,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
-| ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `m` | fix | P1 | i | Integración · Alta |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-030 | Testing: Dashboards | `i` | fix | P1 | i | Integración · Media · correr al final |
@@ -280,6 +279,7 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
+| ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | `m` | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-11 |
 <!-- AUTO-GENERATED:END -->
 
 ---
