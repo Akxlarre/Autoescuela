@@ -33,11 +33,12 @@ Las 3 capas de la ASG entran en este track:
 
 **Ajuste de Matías al reclamar — el Dashboard es el camino real de la secretaria.** En la práctica
 la secretaria monitorea la asistencia desde "Clases Actuales" del Dashboard, no desde la vista
-Asistencia. Se agrega la sección **P** al checklist: el flujo de asistencia completo visto desde
-el Dashboard (iniciar, finalizar, inasistencias, penalización, clases colgadas, alertas). La
-checklist `030` prueba la UI del panel; acá se prueba el **efecto de asistencia**. Dato de
-partida, leído en código: el panel solo ofrece Iniciar/Finalizar
-(`core/utils/live-class-action.utils.ts`), no "Ausente".
+Asistencia. Se agrega la sección **P** al checklist, acotada a lo propio
+de las reglas de asistencia vistas desde el Dashboard (inasistencia sin "Ausente" en el panel,
+penalización, justificadas, reagendadas, alertas). **La mecánica del panel (iniciar, finalizar,
+etiquetas, clase colgada) es de `ASG-i-030` §M y no se duplica acá.** Dato de partida, leído en
+código: el panel solo ofrece Iniciar/Finalizar (`core/utils/live-class-action.utils.ts`), no
+"Ausente".
 
 **Sospechas ya resueltas por otros tracks** — se ejecutan como regresión, no como sospecha:
 

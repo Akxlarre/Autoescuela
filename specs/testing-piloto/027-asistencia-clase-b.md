@@ -364,23 +364,18 @@ secretaria sin sede; una cuenta alumno o instructor (solo para S2, en entorno de
 ### P. Asistencia desde el Dashboard de secretaria (agregado al reclamar, 2026-10-11)
 
 > En la práctica la secretaria monitorea la asistencia desde "Clases Actuales" del Dashboard, no
-> desde la vista Asistencia. Acá se prueba el **efecto de asistencia** de ese camino; la UI del
-> panel en sí (orden, etiquetas, scroll) es de `030-dashboards.md` §M. Dato de partida: el panel
+> desde la vista Asistencia. **La mecánica del panel la prueba `030-dashboards.md` §M** (iniciar
+> M07, finalizar M11/M14, etiquetas M03, clase colgada de ayer M06/M13) — no se repite acá. Acá
+> solo va lo propio de las reglas de asistencia vistas desde ese camino. Dato de partida: el panel
 > solo ofrece Iniciar/Finalizar (`core/utils/live-class-action.utils.ts`), no "Ausente".
 
 | ID | Caso | Resultado esperado | Auto | Res. |
 |---|---|---|---|---|
 | P01 | Clase de hoy con hora pasada y sin iniciar, vista desde el Dashboard | ¿Cómo registra la secretaria la inasistencia sin salir del Dashboard? Hoy no hay "Ausente" → queda hasta el cron — anotar (§5) | — | |
-| P02 | Iniciar desde "Clases Actuales" | Mismo drawer que Asistencia; la fila de Asistencia queda "En curso" (ex C11, DG-055) | ✓ | |
-| P03 | Finalizar desde "Clases Actuales" | Asistencia "Presente", `current_km` del vehículo actualizado, ficha +1 | ✓ | |
-| P04 | Clase marcada ausente en Asistencia | El Dashboard la muestra "No Asistió" (al actualizar) | ✓ | |
-| P05 | Alumno penalizado (2 consecutivas) | Sus clases canceladas salen de "Clases Actuales" y del KPI "Clases Hoy" | — | |
-| P06 | Clase justificada | Etiqueta en el Dashboard coherente con Asistencia | — | |
-| P07 | Clase `in_progress` de ayer (D8) | Aparece colgada en "Clases Actuales" y se puede finalizar desde ahí (contraste con S14 en Asistencia) | — | |
-| P08 | Clase reagendada (J06) en su nueva fecha | Aparece "Por Iniciar", no "No Asistió" (DG-075) | — | |
-| P09 | Alertas de asistencia del Dashboard (1 falta / 2 consecutivas) | Coinciden con el rail de Asistencia y llevan a una acción útil | — | |
-| P10 | Secretaria con el Dashboard abierto y otra sesión marca ausente / inicia | ¿Se actualiza solo? Anotar | — | |
-| P11 | Secretaria de sede A | "Clases Actuales" nunca muestra clases de B, también tras F5 | ✓ | |
+| P02 | Alumno penalizado (2 consecutivas) | Sus clases canceladas salen de "Clases Actuales" y del KPI "Clases Hoy" | — | |
+| P03 | Clase justificada | Etiqueta en el Dashboard coherente con Asistencia (¿"No Asistió" o "Justificada"?) | — | |
+| P04 | Clase reagendada (J06) en su nueva fecha | Aparece "Por Iniciar", no "No Asistió" (DG-075) | — | |
+| P05 | Alertas de asistencia del Dashboard (1 falta / 2 consecutivas) | Coinciden con el rail de Asistencia y llevan a una acción útil | — | |
 
 ---
 
