@@ -617,6 +617,18 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               >
                                 Justificar
                               </button>
+                              <!-- fix-377-m: falta marcada por error -->
+                              <button
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+                                [disabled]="isSaving()"
+                                pTooltip="Deshacer la inasistencia (marcada por error)"
+                                tooltipPosition="top"
+                                data-llm-action="deshacer-inasistencia"
+                                (click)="undoAbsence.emit(row.id)"
+                              >
+                                <app-icon name="rotate-ccw" [size]="12" />
+                                Deshacer
+                              </button>
                             }
                             @if (row.justificacion) {
                               <button
@@ -831,6 +843,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   readonly markAttendance = output<{ sessionId: number; status: ClasePracticaStatus }>();
   readonly justifyAbsence = output<{ sessionId: number; reason: string }>();
+  /** fix-377-m: deshacer una inasistencia sin justificar (id de la sesión). */
+  readonly undoAbsence = output<number>();
   readonly removeSchedule = output<number>();
   readonly reactivateSchedule = output<number>();
   readonly sendReminder = output<number>();

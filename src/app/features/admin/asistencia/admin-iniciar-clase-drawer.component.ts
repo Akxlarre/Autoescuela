@@ -9,7 +9,8 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { odometerFontTier } from '@core/utils/odometer.utils';
+import { kmWarning, odometerFontTier } from '@core/utils/odometer.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -159,8 +160,38 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 Verifique el panel del vehículo antes de arrancar.
               </p>
             }
+            <!-- fix-375-m: aviso, no bloquea (el odómetro real manda) -->
+            @if (startKmWarning(); as warning) {
+              <div
+                class="mt-3 flex items-start gap-1.5 px-3 py-1.5 rounded-md bg-warning/10 text-warning text-xs font-medium"
+                role="status"
+                data-llm-description="Aviso de kilometraje de salida sospechoso"
+              >
+                <app-icon name="alert-triangle" [size]="13" class="shrink-0 mt-px" />
+                <span>{{ warning }}</span>
+              </div>
+            }
           </div>
         </form>
+
+        <!-- fix-374-m: registrar la inasistencia sin salir del Dashboard -->
+        @if (canMarkAbsent()) {
+          <div
+            class="mt-6 flex items-center justify-between gap-3 rounded-xl border border-border-default p-4"
+          >
+            <p class="text-xs text-text-secondary m-0">¿El alumno no llegó?</p>
+            <button
+              type="button"
+              class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-error border-error bg-error/10"
+              [disabled]="isSubmitting()"
+              (click)="onMarkAbsent(cls)"
+              data-llm-action="mark-ausente-desde-iniciar"
+            >
+              <app-icon name="x-circle" [size]="12" />
+              Marcar ausente
+            </button>
+          </div>
+        }
 
         <ng-container ngProjectAs="[drawer-form-footer]">
           <button
@@ -197,6 +228,7 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly isSubmitting = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -224,6 +256,43 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
       label: `${v.plate}${v.brand ? ' · ' + v.brand : ''}${v.model ? ' ' + v.model : ''}`,
     })),
   );
+
+  /** fix-375-m: km de salida contra el registrado del vehículo elegido (o el de la sesión). */
+  protected readonly startKmWarning = computed(() =>
+    kmWarning(
+      'start',
+      this.kmValue(),
+      this.selectedVehicle()?.currentKm ?? this.facade.selectedPractica()?.vehicleCurrentKm ?? null,
+    ),
+  );
+
+  /** fix-374-m: la hora de la clase ya pasó → se puede registrar la inasistencia desde aquí. */
+  protected canMarkAbsent(): boolean {
+    const at = this.facade.selectedPractica()?.scheduledAt;
+    return !!at && new Date(at) < new Date();
+  }
+
+  protected async onMarkAbsent(cls: { id: number }): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Marcar inasistencia',
+      message:
+        '¿Confirmas que el alumno no asistió a esta clase? Esta acción queda registrada en su historial de asistencia.',
+      confirmLabel: 'Marcar ausente',
+      cancelLabel: 'Cancelar',
+      severity: 'danger',
+    });
+    if (!confirmed) return;
+    this.isSubmitting.set(true);
+    try {
+      const done = await this.facade.markAttendance(cls.id, 'ausente');
+      if (done) {
+        void this.dashboardFacade.refreshLiveClassesOnly();
+        this.layoutDrawer.close();
+      }
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
 
   form!: FormGroup;
 

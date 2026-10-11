@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AgendaFacade } from '@core/facades/agenda.facade';
+import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -156,6 +158,18 @@ type StatusConfig = {
         </app-drawer-content-loader>
 
         <ng-container ngProjectAs="[drawer-form-footer]">
+          <!-- fix-377-m: inasistencia marcada por error -->
+          @if (s.status === 'no_show' && s.sessionId) {
+            <button
+              class="btn-secondary flex items-center justify-center gap-2"
+              [disabled]="asistencia.isSaving()"
+              (click)="undoAbsence(s.sessionId)"
+              data-llm-action="deshacer-inasistencia-detalle"
+            >
+              <app-icon name="rotate-ccw" [size]="14" />
+              Deshacer inasistencia
+            </button>
+          }
           <button class="btn-secondary" (click)="close()" data-llm-action="close-slot-detail">
             Cerrar detalle
           </button>
@@ -187,7 +201,18 @@ type StatusConfig = {
 })
 export class AgendaSlotDetailDrawerComponent {
   readonly facade = inject(AgendaFacade);
+  protected readonly asistencia = inject(AsistenciaClaseBFacade);
+  private readonly dashboardFacade = inject(DashboardFacade);
   private readonly drawer = inject(LayoutDrawerFacadeService);
+
+  /** fix-377-m: deshace la falta (confirmación en el facade) y refresca "Clases Actuales". */
+  protected async undoAbsence(sessionId: number): Promise<void> {
+    const done = await this.asistencia.undoAbsence(sessionId);
+    if (done) {
+      void this.dashboardFacade.refreshLiveClassesOnly();
+      this.close();
+    }
+  }
 
   readonly slot = this.facade.selectedSlot;
 

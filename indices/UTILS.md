@@ -93,7 +93,7 @@
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
-| `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
+| `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier`, `kmWarning`, `KM_SUSPICIOUS_DELTA` (fix-375-m: avisos de km de salida/recorrido) |
 | `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/payment-status.utils.ts` | `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |

@@ -154,15 +154,21 @@ No ejecutados en este bloque: A07 y D11/E09 (fallas de red: cubiertos por `fix-3
 clic en "Comenzar": la 2ª actualización es idempotente), C11 → `030` §M. P02–P05 pasan al bloque 3
 (dependen de faltas, penalización y reagendamiento).
 
-## Decisiones de negocio pendientes
+## Decisiones de negocio
 
-| Caso | Pregunta |
+Tomadas por Matías el 2026-10-11:
+
+| Caso | Decisión |
 |---|---|
-| P01 | ¿La secretaria debe poder marcar "Ausente" desde "Clases Actuales" del Dashboard? |
-| C04 / D03 | ¿Advertir km de salida menor al actual del vehículo o un recorrido absurdo (+5.000 km)? |
-| C06 | ¿Se puede iniciar con un vehículo que figura en otra clase en curso? |
-| C08 | ¿Se puede iniciar una clase antes de su hora? |
-| E07 / E08 | ¿Cómo se corrige una ausencia marcada por error? ¿Se puede marcar ausente una clase ya iniciada? |
+| P01 | **Sí:** la secretaria puede marcar "Ausente" desde "Clases Actuales" del Dashboard |
+| C04 / D03 | **Sí, avisar:** km de salida menor al actual del vehículo y recorrido absurdo (+5.000 km) |
+| C08 | **Se permite** iniciar antes de la hora (el alumno llega antes y lo acuerdan con el instructor) |
+| Bloque 3 | La cancelación automática se activa **solo dentro de transacciones que se revierten**; ninguna sede de dev queda con la regla prendida |
+
+| C06 | **Bloquear** iniciar con un vehículo que tiene otra clase en curso, igual que con el instructor → `fix-376-m` |
+| E07 | **"Deshacer"** en una falta sin justificar: se archiva y la clase vuelve a "Pendiente"; las canceladas por penalización no vuelven solas (se avisa) → `fix-377-m` |
+| E08 | **"Cancelar inicio"** en una clase en curso: vuelve a "Pendiente" sin hora ni km de inicio → `fix-378-m` |
+| Todas | Aplican igual desde Asistencia y desde "Clases Actuales" del Dashboard |
 
 ## Regression Test
 
@@ -181,3 +187,8 @@ _(cada bug encontrado → su propio fix/hotfix)_
 | `fix-371-m` | E06/S10 inasistencia antes de la hora (BD + facade) | ✅ cerrado 2026-10-11 |
 | `fix-372-m` | A08/O04 columnas de la tabla se montan | ✅ cerrado 2026-10-11 |
 | `fix-373-m` | S18: subtítulo, tasa, contadores, "hoy" congelado; D08 toast | ✅ cerrado 2026-10-11 |
+| `fix-374-m` | P01: "Marcar ausente" desde "Clases Actuales" (drawer de Iniciar) | ✅ cerrado 2026-10-11 |
+| `fix-375-m` | C04/D03: avisos de kilometraje al iniciar y finalizar | ✅ cerrado 2026-10-11 |
+| `fix-376-m` | C06: un vehículo en dos clases en curso | implementado; ensayo TODO OK; falta aplicar la migración |
+| `fix-377-m` | E07: "Deshacer" una inasistencia sin justificar (Asistencia y Dashboard) | ✅ cerrado 2026-10-11 |
+| `fix-378-m` | E08: "Cancelar inicio" de una clase iniciada por error | ✅ cerrado 2026-10-11 |

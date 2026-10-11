@@ -16,6 +16,8 @@ export interface ClasePracticaActionRow {
   vehicleId?: number | null;
   vehicleCurrentKm?: number | null;
   branchId?: number | null;
+  /** fix-374-m: el drawer de Iniciar ofrece "Marcar ausente" cuando la hora ya pasó. */
+  scheduledAt?: string;
 }
 
 export type LiveClassActionPlan =
@@ -43,6 +45,7 @@ export function resolveLiveClassActionPlan(cls: LiveClassModel): LiveClassAction
     vehicleId: cls.vehicleId,
     vehicleCurrentKm: cls.vehicleCurrentKm,
     branchId: cls.branchId,
+    scheduledAt: cls.scheduledAt,
   };
 
   if (cls.status === 'pending') {

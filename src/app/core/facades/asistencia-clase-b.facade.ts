@@ -141,13 +141,49 @@ export class AsistenciaClaseBFacade {
     await this.initialize();
   }
 
-  /** Marca una clase práctica como ausente. */
-  async markAttendance(sessionId: number, status: ClasePracticaStatus): Promise<void> {
+  /**
+   * Datos de una clase por id (fix-374-m): la tabla del día, la práctica seleccionada (drawer
+   * abierto desde el Dashboard) o, si ninguna la tiene completa, la BD. Así las acciones funcionan
+   * igual desde Asistencia, "Clases Actuales" o la Agenda.
+   */
+  private async resolvePractica(
+    sessionId: number,
+  ): Promise<{ enrollmentId: number; scheduledAt: string; alumnoName: string | null } | null> {
+    const selected = this._selectedPractica();
+    const local =
+      this._clasesPracticas().find((r) => r.id === sessionId) ??
+      (selected?.id === sessionId ? selected : null);
+    if (local?.enrollmentId && local.scheduledAt) {
+      return {
+        enrollmentId: local.enrollmentId,
+        scheduledAt: local.scheduledAt,
+        alumnoName: local.alumnoName,
+      };
+    }
+    const { data } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(
+        'enrollment_id, scheduled_at, enrollments(students(users(first_names, paternal_last_name)))',
+      )
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (!data) return null;
+    const u = (data as any).enrollments?.students?.users;
+    const nombre = u ? `${u.first_names ?? ''} ${u.paternal_last_name ?? ''}`.trim() : '';
+    return {
+      enrollmentId: data.enrollment_id,
+      scheduledAt: data.scheduled_at,
+      alumnoName: local?.alumnoName ?? (nombre || null),
+    };
+  }
+
+  /** Marca una clase práctica como ausente. Devuelve si quedó registrada (fix-374-m). */
+  async markAttendance(sessionId: number, status: ClasePracticaStatus): Promise<boolean> {
     this._isSaving.set(true);
     try {
       const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
-      const row = this._clasesPracticas().find((r) => r.id === sessionId);
-      if (!row) return;
+      const row = await this.resolvePractica(sessionId);
+      if (!row) return false;
 
       // fix-371-m: la BD también lo rechaza; aquí se avisa sin escribir nada.
       if (status === 'ausente' && row.scheduledAt && new Date(row.scheduledAt) > new Date()) {
@@ -155,7 +191,7 @@ export class AsistenciaClaseBFacade {
           'La clase todavía no empieza',
           'La inasistencia se registra después de la hora agendada.',
         );
-        return;
+        return false;
       }
 
       const dbStatus = status === 'presente' ? 'present' : status === 'ausente' ? 'absent' : null;
@@ -212,8 +248,142 @@ export class AsistenciaClaseBFacade {
       if (dbStatus === 'absent' && row.enrollmentId) {
         await this.applyAbsencePenalty(row.enrollmentId, row.alumnoName);
       }
+      return true;
     } catch (err) {
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la asistencia'));
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. Archiva la falta (queda
+   * en el historial, como al reagendar — fix-191-m) y la clase vuelve a 'scheduled' ("Pendiente").
+   * Las clases que esa falta haya cancelado por penalización NO vuelven solas: se avisa.
+   */
+  async undoAbsence(sessionId: number): Promise<boolean> {
+    const target = await this.resolvePractica(sessionId);
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Deshacer inasistencia',
+      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente y la falta pasa al historial. Si esa falta ya canceló clases por penalización, esas clases no vuelven solas: se reagendan desde la ficha del alumno.`,
+      confirmLabel: 'Deshacer',
+      cancelLabel: 'Cancelar',
+      severity: 'warn',
+    });
+    if (!confirmed) return false;
+
+    this._isSaving.set(true);
+    try {
+      const recordedAt = await this.archiveCurrentAbsence(sessionId);
+      if (recordedAt === null) return false;
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'scheduled' })
+          .eq('id', sessionId)
+          .eq('status', 'no_show')
+          .select('id'),
+        { requireRows: true },
+      );
+
+      const canceladas = target?.enrollmentId
+        ? await this.countCancelledSince(target.enrollmentId, recordedAt)
+        : 0;
+
+      this.toast.success('Inasistencia deshecha', 'La clase quedó pendiente.');
+      if (canceladas > 0) {
+        this.toast.warning(
+          'Clases canceladas por la penalización',
+          `${canceladas} clase(s) se cancelaron después de esta falta y siguen canceladas. Reagéndalas desde la ficha del alumno.`,
+        );
+      }
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al deshacer la inasistencia'));
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * fix-377-m: archiva la falta vigente (sin justificar) de una sesión. Devuelve su `recorded_at`,
+   * o `null` si no hay una falta que deshacer (ya avisado al usuario).
+   */
+  private async archiveCurrentAbsence(sessionId: number): Promise<string | null> {
+    const { data: att, error } = await this.supabase.client
+      .from('class_b_practice_attendance')
+      .select('id, status, recorded_at')
+      .eq('class_b_session_id', sessionId)
+      .is('archived_at', null)
+      .maybeSingle();
+    if (error) throw error;
+    if (!att || (att.status !== 'absent' && att.status !== 'no_show')) {
+      this.toast.error(
+        'No se puede deshacer',
+        att?.status === 'excused'
+          ? 'La inasistencia está justificada.'
+          : 'La clase no tiene una inasistencia vigente.',
+      );
+      return null;
+    }
+    assertWriteOk(
+      await this.supabase.client
+        .from('class_b_practice_attendance')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', att.id)
+        .select('id'),
+      { requireRows: true },
+    );
+    return att.recorded_at ?? '';
+  }
+
+  /** fix-377-m: clases de la matrícula canceladas desde un instante (¿la falta disparó la penalización?). */
+  private async countCancelledSince(enrollmentId: number, since: string): Promise<number> {
+    if (!since) return 0;
+    const { count } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('enrollment_id', enrollmentId)
+      .eq('status', 'cancelled')
+      .gte('cancelled_at', since);
+    return count ?? 0;
+  }
+
+  /**
+   * fix-378-m: cancela el inicio de una clase iniciada por error. Vuelve a 'scheduled'
+   * ("Pendiente") sin hora ni km de inicio; desde ahí se marca ausente o se inicia de nuevo.
+   */
+  async cancelStart(sessionId: number): Promise<boolean> {
+    const target = await this.resolvePractica(sessionId);
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cancelar inicio',
+      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente, sin hora ni kilometraje de inicio. Úsalo si la clase se inició por error.`,
+      confirmLabel: 'Cancelar inicio',
+      cancelLabel: 'Volver',
+      severity: 'warn',
+    });
+    if (!confirmed) return false;
+
+    this._isSaving.set(true);
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'scheduled', start_time: null, km_start: null })
+          .eq('id', sessionId)
+          .eq('status', 'in_progress')
+          .select('id'),
+        { requireRows: true },
+      );
+      this.toast.success('Inicio cancelado', 'La clase quedó pendiente.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al cancelar el inicio'));
+      return false;
     } finally {
       this._isSaving.set(false);
     }
