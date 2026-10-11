@@ -93,9 +93,76 @@ agendadas, correo con un destinatario sin dirección.
 | L05 — enlace inválido ("hola") | ❌→✅ | Se guardaba sin aviso. Corregido dentro de `fix-367-m`: no se guarda y avisa |
 | L07 (parcial) — envío real | ✅ | Ciclo 27, 1 destinatario de prueba: toast "Correo enviado a 1 alumno" y badge "Enviado el…" |
 
+### Bloque 2 — Carga, tabla del día, iniciar, finalizar, ausente y Dashboard (2026-10-11)
+
+Datos sembrados (`b2-seed.cjs` / `b2-seed-g.cjs`, ids en `b2-seed.json` del scratchpad): 7 alumnos
+`E2E-Asis*` con clases hoy a las 11:00 (A1), 12:00 (B1), 13:30 vencida (G1), 18:00 (A2), 21:30
+(C1), 11:30 en sede B (D1), una cancelada (A3), una de matrícula retirada (F1) y una `in_progress`
+de ayer (E1). Penalización automática **desactivada en ambas sedes** (`branch_absence_penalty_config`,
+spec 0048-b): el checklist la daba por activa; se trata en el bloque 3. Hora de la prueba ≈ 14:30.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| A01 admin carga | ✅ | Tabla + rail, consola sin errores |
+| A02 secretaria | ✅ | Solo sede 1, sin columna Sede |
+| A03 secretaria en ruta admin | ✅ | Redirige a su Dashboard |
+| A04 volver | ✅ | 5 filas al instante, 0 skeletons |
+| A05 F5 secretaria | ✅ | Nunca aparece sede B (además la RLS lo impide) |
+| A06 menú | ✅ | |
+| A08 1440×900 | ❌ | Página no scrollea, tabla con scroll interno y `thead` sticky ✅. Pero en admin "Todas" la tabla tiene 672 px para 9 columnas y los textos se montan: "Agendada" se sale, sede pisa instructor, el badge de estado pisa "Finalizada". Con el drawer abierto empeora (O04) → `fix-372-m` |
+| A09 tabs | ✅ | Posición idéntica al alternar |
+| B01 columnas | ✅ | |
+| B03 orden | ❌ | `.order('start_time')` (hora real de inicio): la de 11:30 sede B y la de 13:30 quedan al final → `fix-369-m` |
+| B04 canceladas | ✅ | |
+| B05 matrícula retirada | ❌ | Admin "Todas": la clase de F1 (13:00) aparece como "Sin sede · Sin agendar" sin acciones. El embed `enrollments(...)` no es `!inner`, así que `.eq('enrollments.status','active')` deja la fila con matrícula nula; con sede elegida el filtro del cliente la descarta → `fix-369-m` |
+| B06 clase 21:30 | ✅ | Aparece hoy (S11 resuelta por `0024-m`) |
+| B07 ayer / mañana | ✅ | Ayer muestra la colgada con "Finalizar"; el 13 dice "Solo lectura" sin botones |
+| B08 subtítulo | ❌ | Siempre "domingo, 11 de octubre" aunque se mire otra fecha (S18) → `fix-373-m` |
+| B09 escribir la fecha | — | Escribir `10/10/2026` + Enter no cambia la fecha (vuelve a hoy); solo funciona el calendario. Anotado |
+| B11 volver a todos | ✅ | Opción "Todos los instructores" |
+| B12 instructor + estado | ❌ | Con un instructor la tabla muestra 1 fila y los chips siguen "Todos (6) / Pendiente (6)" (S18) → `fix-373-m` |
+| B15 medianoche | ❌ (código) | `todayIsoVal = todayIso()` se calcula una vez (S18) → `fix-373-m` |
+| B16 / S14 colgada de ayer | ❌ | No se ve en "hoy" de Asistencia; sí en el Dashboard ("Día anterior · Cierre atrasado") y mirando ayer. Se cierra desde ahí |
+| C01 iniciar | ✅ | Drawer con alumno, clase, hora, instructor, vehículo y km precargado |
+| C02 KPIs tras iniciar | ❌ | La fila pasa a "En curso" pero los KPIs siguen "En Curso 0 / Pendientes 3" hasta recargar → `fix-370-m` |
+| C03 km inválido | ✅ | Vacío, negativo y > 999.999 deshabilitan |
+| C04 km menor al actual | decisión | Acepta 1.000 con el vehículo en 300.015, sin advertir |
+| C05 cambiar vehículo | ❌ | Precarga el km del nuevo (2.070) ✅ y la BD guarda el vehículo nuevo ✅, pero la fila y el drawer de Finalizar siguen mostrando la patente vieja hasta recargar. Además `start_time` sale del reloj del navegador (`new Date().toTimeString()`), no de la hora de Chile → `fix-370-m` |
+| C06 vehículo en uso | decisión | Deja iniciar con BBCD12 mientras la clase colgada de ayer lo tiene en curso: 2 `in_progress` con el mismo vehículo |
+| C07 2ª clase del instructor | ✅ | "El instructor ya tiene una clase en curso…" y el drawer queda abierto |
+| C08 iniciar antes de la hora | decisión | Permitido (18:00 y 21:30 ofrecen "Iniciar") |
+| C10 cancelar | ✅ | |
+| D01/D02 km de retorno | ✅ | "Debe ser mayor al inicial (2070 km)" con 2.000 y 2.070 |
+| D03 +5.000 km | decisión | Lo acepta sin advertir |
+| D04 cerrar | ✅ | "Presente · Finalizada", 14:30–14:32 |
+| D05 firmas | ❌ (código) | Solo se guarda `true/false` (S15) |
+| D06 km del vehículo | ✅ | BBCD12 `current_km` = 2.085 |
+| D08 toast | ❌ | "Evaluación y asistencia registradas" sin evaluación → `fix-373-m` |
+| D09 asistencia | ✅ | `present`, `recorded_by` = admin |
+| D10 notificación | ✅ | "Clase completada — Clase 1/12 completada." |
+| E01 hora futura | ✅ | 18:00 y 21:30 sin "Ausente" |
+| E02 al cumplirse la hora | anotado | Aparece al actualizar, no solo (OnPush) |
+| E03/E04 modal | ✅ | Cancelar deja "Pendiente" |
+| E05 1ª falta | ✅ | Toast, "Ausente", Inasistencias 1, alerta amarilla "1 falta · últ. 11-10" con "Recordar"; clase 2 sigue agendada |
+| E06 / S10 antes de la hora | ❌ | Por API como secretaria: upsert `absent` y sesión a `no_show` de la clase de las 21:30 → ambos OK. La BD no valida la hora (revertido) → `fix-371-m` |
+| E10 secretaria | ✅ | Clase vencida 13:30 → "Ausente" |
+| E11 doble clic | ✅ | Una sola fila de asistencia |
+| P01 inasistencia desde el Dashboard | decisión | La clase vencida dice "Debía iniciar hace 1 h"; al tocarla solo hay "Comenzar Clase". No hay forma de registrar la falta sin ir a Asistencia; si nadie va, la marca el cron |
+| S18 tasa | ❌ | "Tasa Asistencia" = presentes / todas las clases con alumno: 0% sin nada registrado, 20% con 1 presente y 4 pendientes → `fix-373-m` |
+
+No ejecutados en este bloque: A07 y D11/E09 (fallas de red: cubiertos por `fix-362-m`), C09 (doble
+clic en "Comenzar": la 2ª actualización es idempotente), C11 → `030` §M. P02–P05 pasan al bloque 3
+(dependen de faltas, penalización y reagendamiento).
+
 ## Decisiones de negocio pendientes
 
-_(se completa al ejecutar)_
+| Caso | Pregunta |
+|---|---|
+| P01 | ¿La secretaria debe poder marcar "Ausente" desde "Clases Actuales" del Dashboard? |
+| C04 / D03 | ¿Advertir km de salida menor al actual del vehículo o un recorrido absurdo (+5.000 km)? |
+| C06 | ¿Se puede iniciar con un vehículo que figura en otra clase en curso? |
+| C08 | ¿Se puede iniciar una clase antes de su hora? |
+| E07 / E08 | ¿Cómo se corrige una ausencia marcada por error? ¿Se puede marcar ausente una clase ya iniciada? |
 
 ## Regression Test
 
@@ -109,3 +176,8 @@ _(cada bug encontrado → su propio fix/hotfix)_
 |---|---|---|
 | `fix-367-m` | S13: `send-zoom-email` envía a cualquier dirección para cualquier sesión (+ L05: guardar enlace no https) | ✅ cerrado 2026-10-11 |
 | `fix-368-m` | S19: instructor lee y modifica la asistencia de cualquier clase | ✅ cerrado 2026-10-11 |
+| `fix-369-m` | B03 orden por hora real + B05 clases de matrículas no activas | ✅ cerrado 2026-10-11 |
+| `fix-370-m` | C02/C05 estado local tras iniciar + hora del navegador (y ARCH-27 `toTimeString`) | ✅ cerrado 2026-10-11 |
+| `fix-371-m` | E06/S10 inasistencia antes de la hora (BD + facade) | ✅ cerrado 2026-10-11 |
+| `fix-372-m` | A08/O04 columnas de la tabla se montan | ✅ cerrado 2026-10-11 |
+| `fix-373-m` | S18: subtítulo, tasa, contadores, "hoy" congelado; D08 toast | ✅ cerrado 2026-10-11 |

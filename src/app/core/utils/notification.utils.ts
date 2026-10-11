@@ -5,6 +5,7 @@ import type {
   NotificationPanelEntry,
   NotificationReferenceType,
 } from '@core/models/ui/notification.model';
+import { toChileDate } from '@core/utils/chile-time.utils';
 
 /**
  * Mapea el `reference_type` de BD a un `NotificationType` de UI.
@@ -71,10 +72,13 @@ const GROUP_LABELS: Partial<Record<NotificationReferenceType, string>> = {
   task: 'tareas',
 };
 
-/** Clave de agrupación: mismo `referenceType` + mismo día calendario, solo para no leídas. */
+/**
+ * Clave de agrupación: mismo `referenceType` + mismo día de Chile, solo para no leídas.
+ * fix-370-m: antes usaba `toDateString()`, el día de la zona del equipo.
+ */
 function groupKeyOf(n: NotificationUi): string | null {
   if (n.read || !n.referenceType) return null;
-  return `${n.referenceType}__${n.createdAt.toDateString()}`;
+  return `${n.referenceType}__${toChileDate(n.createdAt)}`;
 }
 
 /**

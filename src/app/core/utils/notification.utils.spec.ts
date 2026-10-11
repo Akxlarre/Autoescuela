@@ -183,6 +183,18 @@ describe('notification.utils', () => {
       expect(result.every((e) => e.kind === 'single')).toBe(true);
     });
 
+    it('agrupa por día de Chile, no por el del equipo (fix-370-m)', () => {
+      // 22:30 y 23:30 del 6 en Chile = 01:30 y 02:30 UTC del 7; 10:00 del 6 en Chile = 13:00 UTC.
+      const list = [
+        makeNotif({ id: '1', createdAt: new Date('2026-07-07T02:30:00Z') }),
+        makeNotif({ id: '2', createdAt: new Date('2026-07-07T01:30:00Z') }),
+        makeNotif({ id: '3', createdAt: new Date('2026-07-06T13:00:00Z') }),
+      ];
+      const result = groupNotifications(list);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ kind: 'group', count: 3 });
+    });
+
     it('does not group read notifications', () => {
       const list = [
         makeNotif({ id: '1', read: true }),

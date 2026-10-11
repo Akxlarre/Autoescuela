@@ -139,6 +139,32 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis?.tasaAsistencia).toBe(100);
   });
 
+  it('fix-373-m: la tasa solo considera clases registradas (las pendientes no cuentan)', () => {
+    (facade as any).computeKpis(
+      [
+        makeRow({ id: 1, status: 'presente' }),
+        makeRow({ id: 2, status: 'pendiente' }),
+        makeRow({ id: 3, status: 'pendiente' }),
+        makeRow({ id: 4, status: 'ausente' }),
+      ],
+      [],
+    );
+    expect(facade.kpis()?.tasaAsistencia).toBe(50);
+    (facade as any).computeKpis([makeRow({ status: 'pendiente' })], []);
+    expect(facade.kpis()?.tasaAsistencia).toBe(100);
+  });
+
+  it('fix-369-m: la tabla del día filtra la matrícula en la BD (!inner) y ordena por hora agendada', async () => {
+    mock.setResult('class_b_sessions', []);
+    await facade.initialize();
+    const b = mock.builderFor('class_b_sessions');
+    const selects = b.select.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(selects.some((s: string) => s.includes('enrollments!inner('))).toBe(true);
+    const orders = b.order.mock.calls.map((c: unknown[]) => c[0]);
+    expect(orders).toContain('scheduled_at');
+    expect(orders).not.toContain('start_time');
+  });
+
   it('fetchPracticas consulta el día de Chile como rango semiabierto a las 23:30 (spec 0024-m)', async () => {
     mock.setResult('class_b_sessions', []);
     mock.setResult('class_b_practice_attendance', []);
@@ -365,6 +391,18 @@ describe('AsistenciaClaseBFacade', () => {
   describe('fix-362-m: una escritura que falla no termina en toast de éxito', () => {
     const rlsError = { code: '42501', message: 'new row violates row-level security policy' };
 
+    it('fix-371-m: markAttendance no registra ausente una clase cuya hora no llegó', async () => {
+      const enUnaHora = new Date(Date.now() + 3_600_000).toISOString();
+      (facade as any)._clasesPracticas.set([makeRow({ scheduledAt: enUnaHora })]);
+      await facade.markAttendance(1, 'ausente');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        'La clase todavía no empieza',
+        'La inasistencia se registra después de la hora agendada.',
+      );
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    });
+
     it('markAttendance: si el upsert de asistencia falla, avisa el error y no cambia la fila', async () => {
       (facade as any)._clasesPracticas.set([makeRow()]);
       mock.setResult('enrollments:single', { student_id: 5 });
@@ -479,10 +517,7 @@ describe('AsistenciaClaseBFacade', () => {
       await facade.finishClass(finishPayload);
 
       expect(toast.warning).not.toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith(
-        'Clase finalizada',
-        'Evaluación y asistencia registradas.',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Clase finalizada', 'Asistencia registrada.');
     });
   });
 
@@ -698,6 +733,24 @@ describe('AsistenciaClaseBFacade', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Clase iniciada');
       expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('fix-370-m: guarda la hora de Chile y recarga la tabla (vehículo y KPIs desde la BD)', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-11T17:30:44.000Z')); // 14:30:44 en Chile
+      mock.setResult('class_b_sessions', []);
+      const b = mock.builderFor('class_b_sessions');
+      b.select.mockClear();
+
+      await facade.startClass(1, 12000, 5);
+      vi.useRealTimers();
+
+      const payload = b.update.mock.calls.at(-1)[0];
+      expect(payload.start_time).toBe('14:30:44');
+      expect(payload.vehicle_id).toBe(5);
+      // refreshSilently → vuelve a leer la tabla del día
+      expect(b.select).toHaveBeenCalled();
+      expect(facade.kpis()).not.toBeNull();
     });
 
     it('propaga el mensaje legible del trigger de exclusión mutua (P0001, spec 0001-i)', async () => {

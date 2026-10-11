@@ -11,10 +11,8 @@ export type NivelAlerta = 'warning' | 'danger';
 
 /** KPIs superiores de la vista de asistencia. */
 export interface AsistenciaClaseBKpis {
-  /** Porcentaje de asistencia del día (0–100). */
+  /** Presentes / (presentes + ausentes) del día, 0–100; 100 si aún no hay registros (fix-373-m). */
   tasaAsistencia: number;
-  /** Delta vs mes anterior (puede ser negativo). */
-  tasaAsistenciaTrend: number;
   /** Cantidad de inasistencias confirmadas hoy. */
   inasistenciasHoy: number;
   /** Total de clases programadas para hoy. */
