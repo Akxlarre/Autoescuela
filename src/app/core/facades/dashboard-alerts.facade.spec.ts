@@ -3,10 +3,14 @@ import { DashboardAlertsFacade } from './dashboard-alerts.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('DashboardAlertsFacade', () => {
   let facade: DashboardAlertsFacade;
   let fromSpy: ReturnType<typeof vi.fn>;
+  let confirmSpy: ReturnType<typeof vi.fn>;
+  let toast: { success: any; error: any; info: any; warning: any };
 
   /**
    * Builds a query chain that resolves with the provided result.
@@ -34,6 +38,8 @@ describe('DashboardAlertsFacade', () => {
 
   beforeEach(() => {
     fromSpy = vi.fn();
+    confirmSpy = vi.fn().mockResolvedValue(true);
+    toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
 
     const supabaseMock = {
       client: { from: fromSpy },
@@ -54,6 +60,8 @@ describe('DashboardAlertsFacade', () => {
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: AuthFacade, useValue: authMock },
         { provide: BranchFacade, useValue: branchMock },
+        { provide: ConfirmModalService, useValue: { confirm: confirmSpy } },
+        { provide: ToastService, useValue: toast },
       ],
     });
 
@@ -159,7 +167,7 @@ describe('DashboardAlertsFacade', () => {
               ],
             });
           }
-          // checkConsecutiveAbsences + checkOverdueSecondInstallment — no data
+          // checkOverdueSecondInstallment — no data
           return buildChain({ data: [] });
         }
 
@@ -257,40 +265,33 @@ describe('DashboardAlertsFacade', () => {
 
   // ── B-3: Consecutive absences ─────────────────────────────────────────────────
   describe('B-3: checkConsecutiveAbsences', () => {
-    it('should generate an error alert with action when students have 2+ overdue sessions', async () => {
-      const callCounters: Record<string, number> = {};
+    /** Una inasistencia vigente tal como la devuelve la query (fix-364-m). */
+    const absence = (enrollmentId: number, classNumber: number) => ({
+      class_b_sessions: {
+        enrollment_id: enrollmentId,
+        class_number: classNumber,
+        status: 'no_show',
+        enrollments: { branch_id: 1, status: 'active' },
+      },
+    });
+
+    const mockAbsences = (rows: unknown[]) => {
       fromSpy.mockImplementation((table: string) => {
-        callCounters[table] = (callCounters[table] ?? 0) + 1;
-
         if (table === 'alert_config') return buildChain({ data: [] });
-        if (table === 'vehicle_documents') return buildChain({ count: 0 });
-        if (table === 'enrollments') return buildChain({ count: 0 });
         if (table === 'cash_closings') return buildChain({ count: 1 });
-
-        if (table === 'class_b_sessions') {
-          const n = callCounters[table];
-          if (n === 1) {
-            // checkSixthClassWithDebt — empty
-            return buildChain({ data: [] });
-          }
-          if (n === 2) {
-            // checkConsecutiveAbsences — 2 enrollments with 2 overdue sessions each
-            return buildChain({
-              data: [
-                { enrollment_id: 301, enrollments: { branch_id: 1 } },
-                { enrollment_id: 301, enrollments: { branch_id: 1 } },
-                { enrollment_id: 302, enrollments: { branch_id: 1 } },
-                { enrollment_id: 302, enrollments: { branch_id: 1 } },
-                { enrollment_id: 303, enrollments: { branch_id: 1 } }, // only 1 — excluded
-              ],
-            });
-          }
-          // checkOverdueSecondInstallment (F-2) — empty
-          return buildChain({ data: [] });
-        }
-
+        if (table === 'class_b_practice_attendance') return buildChain({ data: rows });
         return buildChain({ data: [], count: 0 });
       });
+    };
+
+    it('alerta con acción cuando hay inasistencias en dos clases seguidas', async () => {
+      mockAbsences([
+        absence(301, 3),
+        absence(301, 4),
+        absence(302, 7),
+        absence(302, 8),
+        absence(303, 5), // una sola falta — excluida
+      ]);
 
       await facade.loadAlerts();
 
@@ -302,7 +303,30 @@ describe('DashboardAlertsFacade', () => {
       expect(b3?.action?.enrollmentIds).toEqual([301, 302]);
     });
 
-    it('should not generate B-3 alert when no students have 2+ overdue sessions', async () => {
+    it('se arma con inasistencias registradas, no con clases agendadas de hora pasada (fix-364-m)', async () => {
+      // Dos clases 'scheduled' de esta mañana que nadie inició: antes disparaban la alerta.
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'class_b_sessions')
+          return buildChain({
+            data: [
+              { enrollment_id: 301, enrollments: { branch_id: 1 } },
+              { enrollment_id: 301, enrollments: { branch_id: 1 } },
+            ],
+          });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.loadAlerts();
+
+      expect(fromSpy).toHaveBeenCalledWith('class_b_practice_attendance');
+      expect(
+        facade.activeAlerts().find((a) => a.id === 'alert-consecutive-absences'),
+      ).toBeUndefined();
+    });
+
+    it('no alerta sin inasistencias', async () => {
       buildCleanMock(fromSpy);
 
       await facade.loadAlerts();
@@ -312,33 +336,8 @@ describe('DashboardAlertsFacade', () => {
       ).toBeUndefined();
     });
 
-    it('should exclude enrollments with only 1 overdue session', async () => {
-      const callCounters: Record<string, number> = {};
-      fromSpy.mockImplementation((table: string) => {
-        callCounters[table] = (callCounters[table] ?? 0) + 1;
-
-        if (table === 'alert_config') return buildChain({ data: [] });
-        if (table === 'vehicle_documents') return buildChain({ count: 0 });
-        if (table === 'enrollments') return buildChain({ count: 0 });
-        if (table === 'cash_closings') return buildChain({ count: 1 });
-
-        if (table === 'class_b_sessions') {
-          const n = callCounters[table];
-          if (n === 1) return buildChain({ data: [] }); // B-1
-          if (n === 2) {
-            // All enrollments have only 1 overdue session — below the threshold
-            return buildChain({
-              data: [
-                { enrollment_id: 401, enrollments: { branch_id: 1 } },
-                { enrollment_id: 402, enrollments: { branch_id: 1 } },
-              ],
-            });
-          }
-          return buildChain({ data: [] }); // F-2 — empty
-        }
-
-        return buildChain({ data: [], count: 0 });
-      });
+    it('no alerta con dos faltas que no son seguidas', async () => {
+      mockAbsences([absence(401, 2), absence(401, 7), absence(402, 1)]);
 
       await facade.loadAlerts();
 
@@ -462,7 +461,6 @@ describe('DashboardAlertsFacade', () => {
         if (table === 'class_b_sessions') {
           const n = callCounters[table];
           if (n === 1) return buildChain({ data: [] }); // B-1
-          if (n === 2) return buildChain({ data: [] }); // B-3
           // F-2: 2 deposit students with sessions beyond class 6 (501 duplicated)
           return buildChain({
             data: [
@@ -854,25 +852,127 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
-  // ── clearScheduleForEnrollment ───────────────────────────────────────────────
-  describe('clearScheduleForEnrollment', () => {
-    it('should update sessions to cancelled and return true on success', async () => {
-      fromSpy.mockImplementation(() => buildChain({ error: null }));
-
-      const result = await facade.clearScheduleForEnrollment(301);
-
-      expect(result).toBe(true);
-      expect(fromSpy).toHaveBeenCalledWith('class_b_sessions');
+  // ── clearSchedules (fix-364-m) ───────────────────────────────────────────────
+  describe('clearSchedules', () => {
+    const futureSession = (id: number, enrollmentId: number, first: string, last: string) => ({
+      id,
+      enrollment_id: enrollmentId,
+      enrollments: { students: { users: { first_names: first, paternal_last_name: last } } },
     });
 
-    it('should return false when the update fails', async () => {
-      fromSpy.mockImplementation(() =>
-        buildChain({ error: { message: 'RLS violation', code: '42501' } }),
-      );
+    const SESSIONS = [
+      futureSession(1, 301, 'Juan', 'Pérez'),
+      futureSession(2, 301, 'Juan', 'Pérez'),
+      futureSession(3, 302, 'Ana', 'Soto'),
+    ];
 
-      const result = await facade.clearScheduleForEnrollment(999);
+    /** 1ª llamada = búsqueda de clases futuras; 2ª = cancelación. */
+    const mockLookupThenUpdate = (lookup: object, update: object = { data: [], error: null }) => {
+      const chains = [buildChain(lookup), buildChain(update)];
+      let call = 0;
+      fromSpy.mockImplementation(() => chains[Math.min(call++, chains.length - 1)]);
+      return chains;
+    };
+
+    it('busca solo clases agendadas futuras de las matrículas de la alerta', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-07T15:00:00.000Z'));
+      try {
+        const [lookup] = mockLookupThenUpdate({ data: [], error: null });
+
+        await facade.clearSchedules([301, 302]);
+
+        expect(lookup.in).toHaveBeenCalledWith('enrollment_id', [301, 302]);
+        expect(lookup.eq).toHaveBeenCalledWith('status', 'scheduled');
+        expect(lookup.gt).toHaveBeenCalledWith('scheduled_at', '2026-10-07T15:00:00.000Z');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('pide confirmación diciendo cuántas clases y de qué alumnos', async () => {
+      confirmSpy.mockResolvedValue(false);
+      mockLookupThenUpdate({ data: SESSIONS, error: null });
+
+      await facade.clearSchedules([301, 302]);
+
+      const config = confirmSpy.mock.calls[0][0];
+      expect(config.severity).toBe('danger');
+      expect(config.message).toContain('Se cancelarán 3 clases futuras de 2 alumnos');
+      expect(config.message).toContain('Juan Pérez: 2 clases');
+      expect(config.message).toContain('Ana Soto: 1 clase');
+    });
+
+    it('si el usuario no confirma, no cancela nada', async () => {
+      confirmSpy.mockResolvedValue(false);
+      const [, update] = mockLookupThenUpdate({ data: SESSIONS, error: null });
+
+      const result = await facade.clearSchedules([301, 302]);
 
       expect(result).toBe(false);
+      expect(fromSpy).toHaveBeenCalledTimes(1);
+      expect(update.update).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('al confirmar cancela por id, deja cancelled_at y avisa el resultado', async () => {
+      const [, update] = mockLookupThenUpdate(
+        { data: SESSIONS, error: null },
+        { data: [{ id: 1 }, { id: 2 }, { id: 3 }], error: null },
+      );
+
+      const result = await facade.clearSchedules([301, 302]);
+
+      expect(result).toBe(true);
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'cancelled', cancelled_at: expect.any(String) }),
+      );
+      expect(update.in).toHaveBeenCalledWith('id', [1, 2, 3]);
+      expect(update.eq).toHaveBeenCalledWith('status', 'scheduled');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Horarios borrados',
+        'Se cancelaron 3 clases de 2 alumnos.',
+      );
+    });
+
+    it('sin clases futuras avisa y no pide confirmación', async () => {
+      mockLookupThenUpdate({ data: [], error: null });
+
+      const result = await facade.clearSchedules([301]);
+
+      expect(result).toBe(false);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalled();
+    });
+
+    it('si la cancelación falla avisa el error y no da éxito', async () => {
+      mockLookupThenUpdate(
+        { data: SESSIONS, error: null },
+        { data: null, error: { message: 'RLS violation', code: '42501' } },
+      );
+
+      const result = await facade.clearSchedules([301, 302]);
+
+      expect(result).toBe(false);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('si la RLS filtra todas las clases (0 filas, sin error) tampoco da éxito', async () => {
+      mockLookupThenUpdate({ data: SESSIONS, error: null }, { data: [], error: null });
+
+      const result = await facade.clearSchedules([301, 302]);
+
+      expect(result).toBe(false);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('sin matrículas no consulta nada', async () => {
+      const result = await facade.clearSchedules([]);
+
+      expect(result).toBe(false);
+      expect(fromSpy).not.toHaveBeenCalled();
     });
   });
 

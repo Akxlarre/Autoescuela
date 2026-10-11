@@ -13,7 +13,10 @@ import {
   assertWriteOk,
   toFriendlyDbMessage,
 } from '@core/utils/db-error.utils';
-import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
+import {
+  VALID_CLASS_B_SESSION_STATUSES,
+  enrollmentsWithRemovedSchedule,
+} from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
   AlertaFaltaConsecutiva,
@@ -252,14 +255,15 @@ export class AsistenciaClaseBFacade {
   /**
    * Elimina (cancela) el horario de un alumno.
    *
-   * Pide confirmación: cancela TODAS las clases agendadas de esa matrícula de un solo
-   * clic y hasta fix-093-b no había forma de deshacerlo por error.
+   * Pide confirmación: cancela las clases agendadas de esa matrícula de un solo clic y hasta
+   * fix-093-b no había forma de deshacerlo por error. Solo toca clases FUTURAS (fix-364-m): una
+   * clase de una hora ya pasada queda para registrarse como asistencia o inasistencia.
    */
   async removeSchedule(enrollmentId: number): Promise<void> {
     const alerta = this._alertas().find((a) => a.enrollmentId === enrollmentId);
     const confirmed = await this.confirmModal.confirm({
       title: 'Eliminar horario',
-      message: `Se cancelarán todas las clases prácticas agendadas de ${
+      message: `Se cancelarán todas las clases prácticas futuras de ${
         alerta?.alumnoName ?? 'este alumno'
       }. Puedes reactivarlas después desde la misma alerta.`,
       confirmLabel: 'Eliminar horario',
@@ -271,13 +275,20 @@ export class AsistenciaClaseBFacade {
     this._isSaving.set(true);
     this._savingAlertaId.set(enrollmentId);
     try {
-      const { error } = await this.supabase.client
+      const { data, error } = await this.supabase.client
         .from('class_b_sessions')
         .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
         .eq('enrollment_id', enrollmentId)
-        .eq('status', 'scheduled');
+        .eq('status', 'scheduled')
+        .gt('scheduled_at', new Date().toISOString())
+        .select('id');
 
       if (error) throw error;
+
+      if (!data?.length) {
+        this.toast.info('Este alumno no tiene clases futuras agendadas');
+        return;
+      }
 
       this._alertas.update((rows) =>
         rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: false } : r)),
@@ -291,25 +302,68 @@ export class AsistenciaClaseBFacade {
     }
   }
 
-  /** Reactiva el horario previamente eliminado de un alumno. */
+  /**
+   * Reactiva el horario previamente eliminado de un alumno.
+   *
+   * fix-364-m: solo las clases canceladas FUTURAS y con confirmación. Antes revivía también las
+   * de fechas pasadas, que el cierre nocturno convertía en inasistencias esa misma noche. La
+   * disponibilidad la revisan los triggers de doble agendamiento de la BD (instructor, alumno y
+   * vehículo); como es un solo UPDATE, si un horario ya está ocupado no se reactiva ninguna.
+   */
   async reactivateSchedule(enrollmentId: number): Promise<void> {
+    const alerta = this._alertas().find((a) => a.enrollmentId === enrollmentId);
+
     this._isSaving.set(true);
     this._savingAlertaId.set(enrollmentId);
     try {
-      const { error } = await this.supabase.client
+      const { data: futuras, error: lookupError } = await this.supabase.client
         .from('class_b_sessions')
-        .update({ status: 'scheduled', cancelled_at: null })
+        .select('id')
         .eq('enrollment_id', enrollmentId)
-        .eq('status', 'cancelled');
+        .eq('status', 'cancelled')
+        .gt('scheduled_at', new Date().toISOString());
 
-      if (error) throw error;
+      if (lookupError) throw lookupError;
+
+      const ids = (futuras ?? []).map((s: { id: number }) => s.id);
+      if (ids.length === 0) {
+        this.toast.info(
+          'No hay clases futuras para reactivar',
+          'Para darle nuevas horas usa "Reagendar Clases" en la ficha del alumno.',
+        );
+        return;
+      }
+
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Reactivar horario',
+        message: `${
+          ids.length === 1
+            ? 'Se volverá a agendar 1 clase futura'
+            : `Se volverán a agendar ${ids.length} clases futuras`
+        } de ${alerta?.alumnoName ?? 'este alumno'}, en su horario original. Las clases de fechas pasadas quedan canceladas.`,
+        confirmLabel: 'Reactivar',
+        cancelLabel: 'Cancelar',
+        severity: 'warn',
+      });
+      if (!confirmed) return;
+
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'scheduled', cancelled_at: null })
+          .in('id', ids)
+          .eq('status', 'cancelled')
+          .select('id'),
+        { requireRows: true },
+      );
 
       this._alertas.update((rows) =>
         rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: true } : r)),
       );
       this.toast.success('Horario reactivado');
-    } catch {
-      this.toast.error('Error al reactivar el horario');
+    } catch (err) {
+      // P0001 = mensaje del trigger de doble agendamiento, ya redactado para el usuario.
+      this.toast.error('No se pudo reactivar el horario', this.sanitizer.sanitize(err).message);
     } finally {
       this._isSaving.set(false);
       this._savingAlertaId.set(null);
@@ -797,6 +851,10 @@ export class AsistenciaClaseBFacade {
       enrollmentAbsences.get(enrollId)!.dates.push(row.recorded_at ?? session.scheduled_at);
     }
 
+    const sinHorario = await this.fetchEnrollmentsWithRemovedSchedule([
+      ...enrollmentAbsences.keys(),
+    ]);
+
     const alertas: AlertaFaltaConsecutiva[] = [];
     for (const [, info] of enrollmentAbsences) {
       if (info.dates.length >= 1) {
@@ -807,7 +865,7 @@ export class AsistenciaClaseBFacade {
           faltasConsecutivas: info.dates.length,
           nivel: info.dates.length >= 2 ? 'danger' : 'warning',
           ultimaFechaFalta: info.dates[0] ?? '',
-          horarioActivo: info.sessionStatus !== 'cancelled',
+          horarioActivo: !sinHorario.has(info.enrollmentId),
           branchId: info.branchId,
           branchName: branchMap.get(info.branchId) ?? 'Sin sede',
         });
@@ -815,6 +873,32 @@ export class AsistenciaClaseBFacade {
     }
 
     return alertas;
+  }
+
+  /**
+   * Matrículas cuyo horario está eliminado, mirando sus clases FUTURAS.
+   *
+   * fix-365-m: antes se deducía del estado de la clase de la falta, que está en no_show y nunca
+   * en cancelled, así que tras recargar la alerta volvía a ofrecer "Eliminar" y "Reactivar"
+   * quedaba inalcanzable. Si la consulta falla se asume horario activo.
+   */
+  private async fetchEnrollmentsWithRemovedSchedule(enrollmentIds: number[]): Promise<Set<number>> {
+    if (enrollmentIds.length === 0) return new Set();
+
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('enrollment_id, status')
+      .in('enrollment_id', enrollmentIds)
+      .in('status', ['scheduled', 'cancelled'])
+      .gt('scheduled_at', new Date().toISOString());
+    if (error) return new Set();
+
+    return enrollmentsWithRemovedSchedule(
+      (data ?? []).map((s: { enrollment_id: number; status: string }) => ({
+        enrollmentId: s.enrollment_id,
+        status: s.status,
+      })),
+    );
   }
 
   /** Compute KPIs from loaded practice data. */

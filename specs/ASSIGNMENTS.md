@@ -135,8 +135,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
 | ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
-| ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
-| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -439,6 +437,8 @@
 | ASG-i-054 | Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente) | [0024-m-fechas-de-negocio-en-hora-de-chile](specs/0024-m-fechas-de-negocio-en-hora-de-chile/spec.md) | 2026-10-09 |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | [fix-044-i-cuadratura-operaciones-fallan-en-silencio](fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio/fix.md) | 2026-10-10 |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
+| ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---

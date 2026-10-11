@@ -94,7 +94,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `CoursesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/courses.facade.ts` |
 | `CuadraturaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/cuadratura.facade.ts` |
 | `CursosSingularesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/cursos-singulares.facade.ts` |
-| `DashboardAlertsFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard-alerts.facade.ts` |
+| `DashboardAlertsFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ConfirmModalService`, `ToastService` | — | `src/app/core/facades/dashboard-alerts.facade.ts` |
 | `DashboardFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard.facade.ts` |
 | `DiscountsFacade` | `SupabaseService`, `ToastService` | — | `src/app/core/facades/discounts.facade.ts` |
 | `DmsFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerService`, `ConfirmModalService`, `ToastService`, `DmsViewerService` | — | `src/app/core/facades/dms.facade.ts` |
