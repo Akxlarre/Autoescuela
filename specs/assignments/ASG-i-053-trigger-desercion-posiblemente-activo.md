@@ -1,6 +1,6 @@
 # Asignación ASG-i-053 — Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** hotfix
 > **priority:** P0

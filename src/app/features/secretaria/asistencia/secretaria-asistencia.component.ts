@@ -48,6 +48,7 @@ import type {
       [sendingClassId]="ciclos.sendingClassId()"
       (markAttendance)="onMarkAttendance($event)"
       (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
+      (undoAbsence)="facade.undoAbsence($event)"
       (removeSchedule)="facade.removeSchedule($event)"
       (reactivateSchedule)="facade.reactivateSchedule($event)"
       (sendReminder)="facade.sendReminder($event)"

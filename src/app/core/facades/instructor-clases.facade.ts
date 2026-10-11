@@ -17,6 +17,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { todayIso } from '@core/utils/date.utils';
+import { chileTimeOfDay } from '@core/utils/chile-time.utils';
 import type {
   InstructorClassRow,
   EvaluationFormData,
@@ -263,7 +264,7 @@ export class InstructorClasesFacade {
         .from('class_b_sessions')
         .update({
           status: 'in_progress',
-          start_time: new Date().toTimeString().split(' ')[0],
+          start_time: chileTimeOfDay(),
           km_start: kmStart,
         })
         .eq('id', sessionId);
@@ -330,7 +331,7 @@ export class InstructorClasesFacade {
         .from('class_b_sessions')
         .update({
           status: 'completed',
-          end_time: new Date().toTimeString().split(' ')[0],
+          end_time: chileTimeOfDay(),
           km_end: kmEnd,
           completed_at: new Date().toISOString(),
           ...(extra?.notes ? { notes: extra.notes } : {}),

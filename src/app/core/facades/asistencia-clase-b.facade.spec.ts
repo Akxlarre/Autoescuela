@@ -34,6 +34,8 @@ function makeSupabaseMock() {
       update: vi.fn(() => b),
       upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
       single: () => Promise.resolve(results.get(`${table}:single`) ?? { data: null, error: null }),
+      maybeSingle: () =>
+        Promise.resolve(results.get(`${table}:maybeSingle`) ?? { data: null, error: null }),
       then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
     };
     builders.set(table, b);
@@ -47,7 +49,8 @@ function makeSupabaseMock() {
       from: vi.fn((t: string) => builder(t)),
       rpc: vi.fn((fn: string) => Promise.resolve(rpcResults.get(fn) ?? { data: 0, error: null })),
     },
-    setResult: (table: string, data: any, error: any = null) => results.set(table, { data, error }),
+    setResult: (table: string, data: any, error: any = null, count?: number) =>
+      results.set(table, { data, error, count } as any),
     setRpcResult: (fn: string, data: any, error: any = null) => rpcResults.set(fn, { data, error }),
     builderFor: (table: string) => builder(table),
   };
@@ -137,6 +140,32 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis).not.toBeNull();
     expect(kpis?.totalClasesHoy).toBe(0);
     expect(kpis?.tasaAsistencia).toBe(100);
+  });
+
+  it('fix-373-m: la tasa solo considera clases registradas (las pendientes no cuentan)', () => {
+    (facade as any).computeKpis(
+      [
+        makeRow({ id: 1, status: 'presente' }),
+        makeRow({ id: 2, status: 'pendiente' }),
+        makeRow({ id: 3, status: 'pendiente' }),
+        makeRow({ id: 4, status: 'ausente' }),
+      ],
+      [],
+    );
+    expect(facade.kpis()?.tasaAsistencia).toBe(50);
+    (facade as any).computeKpis([makeRow({ status: 'pendiente' })], []);
+    expect(facade.kpis()?.tasaAsistencia).toBe(100);
+  });
+
+  it('fix-369-m: la tabla del día filtra la matrícula en la BD (!inner) y ordena por hora agendada', async () => {
+    mock.setResult('class_b_sessions', []);
+    await facade.initialize();
+    const b = mock.builderFor('class_b_sessions');
+    const selects = b.select.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(selects.some((s: string) => s.includes('enrollments!inner('))).toBe(true);
+    const orders = b.order.mock.calls.map((c: unknown[]) => c[0]);
+    expect(orders).toContain('scheduled_at');
+    expect(orders).not.toContain('start_time');
   });
 
   it('fetchPracticas consulta el día de Chile como rango semiabierto a las 23:30 (spec 0024-m)', async () => {
@@ -365,6 +394,18 @@ describe('AsistenciaClaseBFacade', () => {
   describe('fix-362-m: una escritura que falla no termina en toast de éxito', () => {
     const rlsError = { code: '42501', message: 'new row violates row-level security policy' };
 
+    it('fix-371-m: markAttendance no registra ausente una clase cuya hora no llegó', async () => {
+      const enUnaHora = new Date(Date.now() + 3_600_000).toISOString();
+      (facade as any)._clasesPracticas.set([makeRow({ scheduledAt: enUnaHora })]);
+      await facade.markAttendance(1, 'ausente');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        'La clase todavía no empieza',
+        'La inasistencia se registra después de la hora agendada.',
+      );
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    });
+
     it('markAttendance: si el upsert de asistencia falla, avisa el error y no cambia la fila', async () => {
       (facade as any)._clasesPracticas.set([makeRow()]);
       mock.setResult('enrollments:single', { student_id: 5 });
@@ -479,10 +520,7 @@ describe('AsistenciaClaseBFacade', () => {
       await facade.finishClass(finishPayload);
 
       expect(toast.warning).not.toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith(
-        'Clase finalizada',
-        'Evaluación y asistencia registradas.',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Clase finalizada', 'Asistencia registrada.');
     });
   });
 
@@ -690,6 +728,125 @@ describe('AsistenciaClaseBFacade', () => {
 
   // ── startClass (spec 0001-i) ──────────────────────────────────────────────
 
+  describe('fix-374-m: markAttendance sin la clase en la tabla del día (desde el Dashboard)', () => {
+    it('lee la clase de la BD y registra la falta', async () => {
+      (facade as any)._clasesPracticas.set([]);
+      mock.setResult('class_b_sessions:maybeSingle', {
+        enrollment_id: 10,
+        scheduled_at: '2026-06-30T13:00:00.000Z',
+      });
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 77 }]);
+
+      const ok = await facade.markAttendance(77, 'ausente');
+
+      expect(ok).toBe(true);
+      expect(mock.builderFor('class_b_practice_attendance').upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ class_b_session_id: 77, student_id: 5, status: 'absent' }),
+        expect.anything(),
+      );
+    });
+
+    it('si la clase no existe, no escribe y devuelve false', async () => {
+      (facade as any)._clasesPracticas.set([]);
+      expect(await facade.markAttendance(77, 'ausente')).toBe(false);
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fix-377-m: undoAbsence', () => {
+    beforeEach(() => {
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, status: 'ausente' })]);
+    });
+
+    it('archiva la falta y devuelve la clase a scheduled', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+
+      expect(await facade.undoAbsence(1)).toBe(true);
+
+      const att = mock.builderFor('class_b_practice_attendance');
+      expect(att.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+      const ses = mock.builderFor('class_b_sessions');
+      expect(ses.update).toHaveBeenCalledWith({ status: 'scheduled' });
+      expect(ses.eq).toHaveBeenCalledWith('status', 'no_show');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Inasistencia deshecha',
+        'La clase quedó pendiente.',
+      );
+    });
+
+    it('si la falta ya canceló clases por penalización, lo avisa (no vuelven solas)', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }], null, 8);
+
+      expect(await facade.undoAbsence(1)).toBe(true);
+      expect(mock.builderFor('class_b_sessions').gte).toHaveBeenCalledWith(
+        'cancelled_at',
+        '2026-06-30T15:00:00.000Z',
+      );
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Clases canceladas por la penalización',
+        expect.stringContaining('8 clase(s)'),
+      );
+    });
+
+    it('una falta justificada no se deshace', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'excused',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      expect(await facade.undoAbsence(1)).toBe(false);
+      expect(mock.builderFor('class_b_practice_attendance').update).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se puede deshacer',
+        'La inasistencia está justificada.',
+      );
+    });
+
+    it('sin confirmar no hace nada', async () => {
+      confirmModal.confirm.mockResolvedValueOnce(false);
+      expect(await facade.undoAbsence(1)).toBe(false);
+      expect(mock.builderFor('class_b_practice_attendance').update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fix-378-m: cancelStart', () => {
+    it('vuelve la clase en curso a scheduled sin hora ni km de inicio', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, status: 'en_curso' })]);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+
+      expect(await facade.cancelStart(1)).toBe(true);
+
+      const ses = mock.builderFor('class_b_sessions');
+      expect(ses.update).toHaveBeenCalledWith({
+        status: 'scheduled',
+        start_time: null,
+        km_start: null,
+      });
+      expect(ses.eq).toHaveBeenCalledWith('status', 'in_progress');
+      expect(toast.success).toHaveBeenCalledWith('Inicio cancelado', 'La clase quedó pendiente.');
+    });
+
+    it('si la clase ya no está en curso (0 filas), avisa el error', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, status: 'en_curso' })]);
+      mock.setResult('class_b_sessions', []);
+      expect(await facade.cancelStart(1)).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
   describe('startClass', () => {
     it('actualiza la sesión y muestra toast de éxito', async () => {
       mock.setResult('class_b_sessions', null, null);
@@ -698,6 +855,24 @@ describe('AsistenciaClaseBFacade', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Clase iniciada');
       expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('fix-370-m: guarda la hora de Chile y recarga la tabla (vehículo y KPIs desde la BD)', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-11T17:30:44.000Z')); // 14:30:44 en Chile
+      mock.setResult('class_b_sessions', []);
+      const b = mock.builderFor('class_b_sessions');
+      b.select.mockClear();
+
+      await facade.startClass(1, 12000, 5);
+      vi.useRealTimers();
+
+      const payload = b.update.mock.calls.at(-1)[0];
+      expect(payload.start_time).toBe('14:30:44');
+      expect(payload.vehicle_id).toBe(5);
+      // refreshSilently → vuelve a leer la tabla del día
+      expect(b.select).toHaveBeenCalled();
+      expect(facade.kpis()).not.toBeNull();
     });
 
     it('propaga el mensaje legible del trigger de exclusión mutua (P0001, spec 0001-i)', async () => {

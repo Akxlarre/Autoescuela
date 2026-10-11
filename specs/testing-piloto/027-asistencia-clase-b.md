@@ -89,7 +89,7 @@ H07, S03, F04 · F11 · F13 · E09 y N06 · N07.
 | S2 | 🔴 Alta | **Cualquier usuario logueado puede ejecutar el cierre nocturno.** `mark_end_of_day_class_b_absences()` y `apply_class_b_absence_penalty()` son `SECURITY DEFINER`, sin chequeo de rol, y hay `GRANT EXECUTE ON ALL FUNCTIONS … TO authenticated`. Un alumno/instructor (o una secretaria por error) llamando la RPC a las 10:00 marcaría como inasistencia **todas las clases de hoy** (incluso las de la tarde) de todas las sedes y penalizaría. | `20260817120000…:109-165`; `20260513000002…:56,69-70` |
 | S3 | 🔴 Alta | **"Reactivar" revive clases canceladas de cualquier fecha y por cualquier motivo.** Pasa a `scheduled` TODAS las `cancelled` de la matrícula (incluidas las de días pasados y las canceladas por la penalización) sin archivar la falta ni revisar disponibilidad. Las de fechas pasadas se vuelven inasistencias esa misma noche con el cron; el par de faltas sigue vigente, así que la próxima falta vuelve a cancelar todo. | `asistencia-clase-b.facade.ts:277-299`; cron `20260817120000…:123-156` |
 | S4 | 🔴 Alta | **Dashboard "Borrar horarios": un clic, sin confirmación, cancela todas las clases futuras de N alumnos.** La alerta "N alumnos con 2+ clases sin asistir" cuenta clases `scheduled` cuya hora ya pasó (no faltas reales): un alumno con 2 clases hoy en la mañana que nadie "Inició" todavía cae ahí. Además no deja `cancelled_at`. | `dashboard-alerts.facade.ts:126-131,347-370`; `alerts-drawer.component.ts:203-213` |
-| S5 | 🔴 Alta | **En el piloto nadie puede poner la nota de evaluación → nadie llega a certificación.** "Finalizar" desde Asistencia no escribe `evaluation_grade` (a propósito, fix-115-m: es del instructor), pero el portal Instructor está bloqueado. Certificación cuenta clases con `evaluation_grade` no nulo. El toast dice "Evaluación y asistencia registradas" aunque no hay evaluación. | `asistencia-clase-b.facade.ts:420-478`; `certificacion-clase-b.facade.ts:459-464`; `pilot-phase.config.ts:7-11` |
+| S5 | ✅ Resuelta (`fix-262-m`) | ~~La nota ya no condiciona la certificación (decisión del dueño); ejecutar K04 como regresión.~~ **En el piloto nadie puede poner la nota de evaluación → nadie llega a certificación.** "Finalizar" desde Asistencia no escribe `evaluation_grade` (a propósito, fix-115-m: es del instructor), pero el portal Instructor está bloqueado. Certificación cuenta clases con `evaluation_grade` no nulo. El toast dice "Evaluación y asistencia registradas" aunque no hay evaluación. | `asistencia-clase-b.facade.ts:420-478`; `certificacion-clase-b.facade.ts:459-464`; `pilot-phase.config.ts:7-11` |
 | S6 | 🟠 Media | **Marcar ausente / justificar no revisan errores de BD.** El `upsert`/`update` no mira `error` (Supabase no lanza excepción): si RLS o la red fallan, igual sale "Asistencia marcada" / "Justificación registrada" y la fila cambia en pantalla. Error de la RPC de penalización también se ignora. | `asistencia-clase-b.facade.ts:153-186,205-226,499-502` |
 | S7 | 🟠 Media | **Justificar no revierte la penalización ni refresca las alertas.** La falta pasa a `excused` (deja de contar para el futuro), pero las clases ya canceladas siguen canceladas y el alumno sigue en el rail de alertas hasta recargar. | `asistencia-clase-b.facade.ts:199-232`; RPC `20260817120000…:69-94` |
 | S8 | 🟠 Media | **Alerta "faltas consecutivas" cuenta todas las faltas, no consecutivas.** 2 faltas separadas (clase 2 y 7) salen como "2 faltas" en rojo con "Eliminar" y el tooltip "2 inasistencias consecutivas". "Última falta" usa `recorded_at` en UTC (fecha en que se marcó, no la de la clase). | `asistencia-clase-b.facade.ts:739-755`; `asistencia-clase-b-content.component.ts:1076-1079,1097-1101` |
@@ -361,6 +361,22 @@ secretaria sin sede; una cuenta alumno o instructor (solo para S2, en entorno de
 | O04 | Drawer abierto en desktop | Rail se apila y densidad baja (AC7) | — | |
 | O05 | Solo teclado | Tabs, botones y modales accesibles | — | |
 
+### P. Asistencia desde el Dashboard de secretaria (agregado al reclamar, 2026-10-11)
+
+> En la práctica la secretaria monitorea la asistencia desde "Clases Actuales" del Dashboard, no
+> desde la vista Asistencia. **La mecánica del panel la prueba `030-dashboards.md` §M** (iniciar
+> M07, finalizar M11/M14, etiquetas M03, clase colgada de ayer M06/M13) — no se repite acá. Acá
+> solo va lo propio de las reglas de asistencia vistas desde ese camino. Dato de partida: el panel
+> solo ofrece Iniciar/Finalizar (`core/utils/live-class-action.utils.ts`), no "Ausente".
+
+| ID | Caso | Resultado esperado | Auto | Res. |
+|---|---|---|---|---|
+| P01 | Clase de hoy con hora pasada y sin iniciar, vista desde el Dashboard | ¿Cómo registra la secretaria la inasistencia sin salir del Dashboard? Hoy no hay "Ausente" → queda hasta el cron — anotar (§5) | — | |
+| P02 | Alumno penalizado (2 consecutivas) | Sus clases canceladas salen de "Clases Actuales" y del KPI "Clases Hoy" | — | |
+| P03 | Clase justificada | Etiqueta en el Dashboard coherente con Asistencia (¿"No Asistió" o "Justificada"?) | — | |
+| P04 | Clase reagendada (J06) en su nueva fecha | Aparece "Por Iniciar", no "No Asistió" (DG-075) | — | |
+| P05 | Alertas de asistencia del Dashboard (1 falta / 2 consecutivas) | Coinciden con el rail de Asistencia y llevan a una acción útil | — | |
+
 ---
 
 ## 4. Casos con pasos numerados
@@ -597,8 +613,9 @@ confirmación. Si cancela todo sin preguntar, S4 confirmada.
 | H07 / H09 | ¿Qué debe hacer "Eliminar"/"Reactivar" si la penalización ya canceló todo? ¿Siguen siendo necesarios? |
 | J07 | ¿Reagendar solo las canceladas debe "perdonar" las faltas que causaron la penalización? |
 | I04 | ¿El cron debe marcar faltas en matrículas retiradas/finalizadas? |
-| S5 / K04 | ¿Quién pone la nota de cada clase mientras el portal Instructor está bloqueado? |
+| S5 / K04 | ~~¿Quién pone la nota…?~~ Resuelto: la nota no condiciona la certificación (`fix-262-m`) |
 | K01 | ¿Qué debe medir la alerta del Dashboard: faltas reales o clases no registradas? |
 | C04 / C06 | ¿Se valida km menor al actual o vehículo en mantención? |
 | N01 | ¿Hace falta tiempo real en Asistencia B? |
 | L14 | ¿Las clases teóricas necesitan registro de asistencia? |
+| P01 | ¿La secretaria debe poder marcar "Ausente" desde "Clases Actuales" del Dashboard? |

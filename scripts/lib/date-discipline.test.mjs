@@ -85,6 +85,8 @@ check('getFullYear() detectado', kinds(`const y = d.getFullYear();`).includes('l
 check('setDate(getDate() + 1) cuenta dos veces', kinds(`d.setDate(d.getDate() + 1);`).length === 2);
 check('getTime() y Date.now() NO marcados', kinds(`const ms = d.getTime() - Date.now();`).length === 0);
 check('getUTCDay() NO marcado', kinds(`const w = d.getUTCDay();`).length === 0);
+check('toTimeString() detectado (fix-370-m)', kinds(`const t = new Date().toTimeString();`).includes('local-date-parts'));
+check('toDateString() detectado (fix-370-m)', kinds(`const t = d.toDateString();`).includes('local-date-parts'));
 
 // ── ms-day-diff ──────────────────────────────────────────────────────────────
 check(

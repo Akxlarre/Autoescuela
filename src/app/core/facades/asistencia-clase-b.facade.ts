@@ -6,7 +6,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { chileDayRange, formatChileTime } from '@core/utils/chile-time.utils';
+import { chileDayRange, chileTimeOfDay, formatChileTime } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import {
   NoRowsAffectedError,
@@ -141,13 +141,58 @@ export class AsistenciaClaseBFacade {
     await this.initialize();
   }
 
-  /** Marca una clase práctica como ausente. */
-  async markAttendance(sessionId: number, status: ClasePracticaStatus): Promise<void> {
+  /**
+   * Datos de una clase por id (fix-374-m): la tabla del día, la práctica seleccionada (drawer
+   * abierto desde el Dashboard) o, si ninguna la tiene completa, la BD. Así las acciones funcionan
+   * igual desde Asistencia, "Clases Actuales" o la Agenda.
+   */
+  private async resolvePractica(
+    sessionId: number,
+  ): Promise<{ enrollmentId: number; scheduledAt: string; alumnoName: string | null } | null> {
+    const selected = this._selectedPractica();
+    const local =
+      this._clasesPracticas().find((r) => r.id === sessionId) ??
+      (selected?.id === sessionId ? selected : null);
+    if (local?.enrollmentId && local.scheduledAt) {
+      return {
+        enrollmentId: local.enrollmentId,
+        scheduledAt: local.scheduledAt,
+        alumnoName: local.alumnoName,
+      };
+    }
+    const { data } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(
+        'enrollment_id, scheduled_at, enrollments(students(users(first_names, paternal_last_name)))',
+      )
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (!data) return null;
+    const u = (data as any).enrollments?.students?.users;
+    const nombre = u ? `${u.first_names ?? ''} ${u.paternal_last_name ?? ''}`.trim() : '';
+    return {
+      enrollmentId: data.enrollment_id,
+      scheduledAt: data.scheduled_at,
+      alumnoName: local?.alumnoName ?? (nombre || null),
+    };
+  }
+
+  /** Marca una clase práctica como ausente. Devuelve si quedó registrada (fix-374-m). */
+  async markAttendance(sessionId: number, status: ClasePracticaStatus): Promise<boolean> {
     this._isSaving.set(true);
     try {
       const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
-      const row = this._clasesPracticas().find((r) => r.id === sessionId);
-      if (!row) return;
+      const row = await this.resolvePractica(sessionId);
+      if (!row) return false;
+
+      // fix-371-m: la BD también lo rechaza; aquí se avisa sin escribir nada.
+      if (status === 'ausente' && row.scheduledAt && new Date(row.scheduledAt) > new Date()) {
+        this.toast.error(
+          'La clase todavía no empieza',
+          'La inasistencia se registra después de la hora agendada.',
+        );
+        return false;
+      }
 
       const dbStatus = status === 'presente' ? 'present' : status === 'ausente' ? 'absent' : null;
       const sessionStatus = status === 'ausente' ? 'no_show' : undefined;
@@ -203,8 +248,142 @@ export class AsistenciaClaseBFacade {
       if (dbStatus === 'absent' && row.enrollmentId) {
         await this.applyAbsencePenalty(row.enrollmentId, row.alumnoName);
       }
+      return true;
     } catch (err) {
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la asistencia'));
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. Archiva la falta (queda
+   * en el historial, como al reagendar — fix-191-m) y la clase vuelve a 'scheduled' ("Pendiente").
+   * Las clases que esa falta haya cancelado por penalización NO vuelven solas: se avisa.
+   */
+  async undoAbsence(sessionId: number): Promise<boolean> {
+    const target = await this.resolvePractica(sessionId);
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Deshacer inasistencia',
+      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente y la falta pasa al historial. Si esa falta ya canceló clases por penalización, esas clases no vuelven solas: se reagendan desde la ficha del alumno.`,
+      confirmLabel: 'Deshacer',
+      cancelLabel: 'Cancelar',
+      severity: 'warn',
+    });
+    if (!confirmed) return false;
+
+    this._isSaving.set(true);
+    try {
+      const recordedAt = await this.archiveCurrentAbsence(sessionId);
+      if (recordedAt === null) return false;
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'scheduled' })
+          .eq('id', sessionId)
+          .eq('status', 'no_show')
+          .select('id'),
+        { requireRows: true },
+      );
+
+      const canceladas = target?.enrollmentId
+        ? await this.countCancelledSince(target.enrollmentId, recordedAt)
+        : 0;
+
+      this.toast.success('Inasistencia deshecha', 'La clase quedó pendiente.');
+      if (canceladas > 0) {
+        this.toast.warning(
+          'Clases canceladas por la penalización',
+          `${canceladas} clase(s) se cancelaron después de esta falta y siguen canceladas. Reagéndalas desde la ficha del alumno.`,
+        );
+      }
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al deshacer la inasistencia'));
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * fix-377-m: archiva la falta vigente (sin justificar) de una sesión. Devuelve su `recorded_at`,
+   * o `null` si no hay una falta que deshacer (ya avisado al usuario).
+   */
+  private async archiveCurrentAbsence(sessionId: number): Promise<string | null> {
+    const { data: att, error } = await this.supabase.client
+      .from('class_b_practice_attendance')
+      .select('id, status, recorded_at')
+      .eq('class_b_session_id', sessionId)
+      .is('archived_at', null)
+      .maybeSingle();
+    if (error) throw error;
+    if (!att || (att.status !== 'absent' && att.status !== 'no_show')) {
+      this.toast.error(
+        'No se puede deshacer',
+        att?.status === 'excused'
+          ? 'La inasistencia está justificada.'
+          : 'La clase no tiene una inasistencia vigente.',
+      );
+      return null;
+    }
+    assertWriteOk(
+      await this.supabase.client
+        .from('class_b_practice_attendance')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', att.id)
+        .select('id'),
+      { requireRows: true },
+    );
+    return att.recorded_at ?? '';
+  }
+
+  /** fix-377-m: clases de la matrícula canceladas desde un instante (¿la falta disparó la penalización?). */
+  private async countCancelledSince(enrollmentId: number, since: string): Promise<number> {
+    if (!since) return 0;
+    const { count } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('enrollment_id', enrollmentId)
+      .eq('status', 'cancelled')
+      .gte('cancelled_at', since);
+    return count ?? 0;
+  }
+
+  /**
+   * fix-378-m: cancela el inicio de una clase iniciada por error. Vuelve a 'scheduled'
+   * ("Pendiente") sin hora ni km de inicio; desde ahí se marca ausente o se inicia de nuevo.
+   */
+  async cancelStart(sessionId: number): Promise<boolean> {
+    const target = await this.resolvePractica(sessionId);
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cancelar inicio',
+      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente, sin hora ni kilometraje de inicio. Úsalo si la clase se inició por error.`,
+      confirmLabel: 'Cancelar inicio',
+      cancelLabel: 'Volver',
+      severity: 'warn',
+    });
+    if (!confirmed) return false;
+
+    this._isSaving.set(true);
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'scheduled', start_time: null, km_start: null })
+          .eq('id', sessionId)
+          .eq('status', 'in_progress')
+          .select('id'),
+        { requireRows: true },
+      );
+      this.toast.success('Inicio cancelado', 'La clase quedó pendiente.');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al cancelar el inicio'));
+      return false;
     } finally {
       this._isSaving.set(false);
     }
@@ -448,7 +627,7 @@ export class AsistenciaClaseBFacade {
   async startClass(sessionId: number, kmStart: number, vehicleId?: number): Promise<void> {
     this._isSaving.set(true);
     try {
-      const startTime = new Date().toTimeString().split(' ')[0]; // "HH:MM:SS"
+      const startTime = chileTimeOfDay(); // "HH:MM:SS" de Chile (fix-370-m)
       const horaInicioReal = startTime.slice(0, 5); // "HH:MM"
       const payload: Record<string, unknown> = {
         status: 'in_progress',
@@ -480,6 +659,9 @@ export class AsistenciaClaseBFacade {
         });
       }
       this.toast.success('Clase iniciada');
+      // fix-370-m: la fila, el vehículo elegido y los KPIs salen de la BD (antes quedaban con el
+      // vehículo anterior y los KPIs sin recalcular hasta recargar).
+      await this.refreshSilently();
     } catch (err) {
       const sanitized = this.sanitizer.sanitize(err);
       this.toast.error('Error al iniciar la clase', sanitized.message);
@@ -503,7 +685,7 @@ export class AsistenciaClaseBFacade {
         .from('class_b_sessions')
         .update({
           status: 'completed',
-          end_time: new Date().toTimeString().split(' ')[0],
+          end_time: chileTimeOfDay(),
           km_end: payload.kmEnd,
           completed_at: new Date().toISOString(),
           signature_timestamp:
@@ -547,7 +729,7 @@ export class AsistenciaClaseBFacade {
         if (attendance.error) pendientes.push('la asistencia del alumno');
       }
 
-      const finHHmm = new Date().toTimeString().slice(0, 5);
+      const finHHmm = chileTimeOfDay().slice(0, 5);
       this._clasesPracticas.update((rows) =>
         rows.map((r) =>
           r.id === payload.sessionId
@@ -562,7 +744,8 @@ export class AsistenciaClaseBFacade {
           `No se pudo actualizar ${pendientes.join(' ni ')}. Avisa al administrador.`,
         );
       } else {
-        this.toast.success('Clase finalizada', 'Evaluación y asistencia registradas.');
+        // fix-373-m: desde Asistencia no se evalúa (fix-115-m); solo se registra la asistencia.
+        this.toast.success('Clase finalizada', 'Asistencia registrada.');
       }
     } catch {
       this.toast.error('Error al finalizar la clase');
@@ -691,7 +874,7 @@ export class AsistenciaClaseBFacade {
           id,
           users!inner(first_names, paternal_last_name)
         ),
-        enrollments(
+        enrollments!inner(
           id,
           branch_id,
           branches(name),
@@ -707,7 +890,8 @@ export class AsistenciaClaseBFacade {
       .lt('scheduled_at', endExclusive)
       .in('status', VALID_CLASS_B_SESSION_STATUSES)
       .eq('enrollments.status', 'active')
-      .order('start_time', { ascending: true });
+      // fix-369-m: por hora agendada; start_time es la hora real y es nula hasta iniciar.
+      .order('scheduled_at', { ascending: true });
 
     if (branchId !== null) {
       query = query.eq('enrollments.branch_id', branchId);
@@ -716,58 +900,55 @@ export class AsistenciaClaseBFacade {
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data ?? [])
-      .filter((row: any) => {
-        if (branchId !== null && !row.enrollments) return false;
-        return true;
-      })
-      .map((row: any) => {
-        const instRel = row['instructors!class_b_sessions_instructor_id_fkey'] ?? row.instructors;
-        const inst = instRel?.users;
-        const instName = inst
-          ? `${inst.first_names ?? ''} ${inst.paternal_last_name ?? ''}`.trim()
-          : 'Sin asignar';
+    // fix-369-m: enrollments!inner descarta en la BD las sesiones de matrículas no activas;
+    // antes llegaban con enrollments = null cuando no había sede elegida.
+    return (data ?? []).map((row: any) => {
+      const instRel = row['instructors!class_b_sessions_instructor_id_fkey'] ?? row.instructors;
+      const inst = instRel?.users;
+      const instName = inst
+        ? `${inst.first_names ?? ''} ${inst.paternal_last_name ?? ''}`.trim()
+        : 'Sin asignar';
 
-        const student = row.enrollments?.students?.users;
-        const alumnoName = student
-          ? `${student.first_names ?? ''} ${student.paternal_last_name ?? ''}`.trim()
-          : null;
+      const student = row.enrollments?.students?.users;
+      const alumnoName = student
+        ? `${student.first_names ?? ''} ${student.paternal_last_name ?? ''}`.trim()
+        : null;
 
-        // fix-191-m: solo la asistencia VIGENTE describe el estado de la sesión. Una fila
-        // archivada es el registro histórico de una ocurrencia anterior de esa misma sesión
-        // (reagendamiento RF-053, que recicla la fila en vez de crear una nueva); tomarla
-        // pintaba "Ausente" una clase que está agendada.
-        const attendance = (row.class_b_practice_attendance ?? []).find(
-          (a: any) => a.archived_at == null,
-        );
-        const sessionBranchId = row.enrollments?.branch_id ?? 0;
-        const branchName =
-          row.enrollments?.branches?.name ?? branchMap.get(sessionBranchId) ?? 'Sin sede';
+      // fix-191-m: solo la asistencia VIGENTE describe el estado de la sesión. Una fila
+      // archivada es el registro histórico de una ocurrencia anterior de esa misma sesión
+      // (reagendamiento RF-053, que recicla la fila en vez de crear una nueva); tomarla
+      // pintaba "Ausente" una clase que está agendada.
+      const attendance = (row.class_b_practice_attendance ?? []).find(
+        (a: any) => a.archived_at == null,
+      );
+      const sessionBranchId = row.enrollments?.branch_id ?? 0;
+      const branchName =
+        row.enrollments?.branches?.name ?? branchMap.get(sessionBranchId) ?? 'Sin sede';
 
-        return {
-          id: row.id,
-          enrollmentId: row.enrollment_id,
-          studentId: row.enrollments?.students?.id ?? null,
-          classNumber: row.class_number ?? null,
-          horaInicio: toHHmm(row.scheduled_at),
-          horaInicioReal: row.start_time ? toHHmm(row.start_time) : null,
-          horaFinReal: row.end_time ? toHHmm(row.end_time) : null,
-          instructorId: row.instructor_id,
-          instructorName: instName,
-          alumnoName,
-          status: mapPracticaStatus(row.status, attendance?.status),
-          justificacion: attendance?.justification ?? null,
-          branchId: sessionBranchId,
-          branchName,
-          scheduledAt: row.scheduled_at ?? '',
-          kmStart: row.km_start ?? null,
-          vehiclePlate: row.vehicles?.license_plate ?? null,
-          vehicleBrand: row.vehicles?.brand ?? null,
-          vehicleModel: row.vehicles?.model ?? null,
-          vehicleId: row.vehicles?.id ?? null,
-          vehicleCurrentKm: row.vehicles?.current_km ?? null,
-        };
-      });
+      return {
+        id: row.id,
+        enrollmentId: row.enrollment_id,
+        studentId: row.enrollments?.students?.id ?? null,
+        classNumber: row.class_number ?? null,
+        horaInicio: toHHmm(row.scheduled_at),
+        horaInicioReal: row.start_time ? toHHmm(row.start_time) : null,
+        horaFinReal: row.end_time ? toHHmm(row.end_time) : null,
+        instructorId: row.instructor_id,
+        instructorName: instName,
+        alumnoName,
+        status: mapPracticaStatus(row.status, attendance?.status),
+        justificacion: attendance?.justification ?? null,
+        branchId: sessionBranchId,
+        branchName,
+        scheduledAt: row.scheduled_at ?? '',
+        kmStart: row.km_start ?? null,
+        vehiclePlate: row.vehicles?.license_plate ?? null,
+        vehicleBrand: row.vehicles?.brand ?? null,
+        vehicleModel: row.vehicles?.model ?? null,
+        vehicleId: row.vehicles?.id ?? null,
+        vehicleCurrentKm: row.vehicles?.current_km ?? null,
+      };
+    });
   }
 
   /** Fetch consecutive absence alerts. */
@@ -905,9 +1086,9 @@ export class AsistenciaClaseBFacade {
   private computeKpis(practicas: ClasePracticaRow[], _alertas: AlertaFaltaConsecutiva[]): void {
     const presentes = practicas.filter((p) => p.status === 'presente').length;
     const ausentes = practicas.filter((p) => p.status === 'ausente').length;
-    const clasesConAlumno = practicas.filter((p) => p.alumnoName !== null).length;
-
-    const tasaAsistencia = clasesConAlumno > 0 ? (presentes / clasesConAlumno) * 100 : 100;
+    // fix-373-m: solo cuentan las clases ya registradas; una pendiente no es una inasistencia.
+    const registradas = presentes + ausentes;
+    const tasaAsistencia = registradas > 0 ? (presentes / registradas) * 100 : 100;
     const clasesEnCurso = practicas.filter((p) => p.status === 'en_curso').length;
     const now = new Date().toISOString();
     const pendientesPorIniciar = practicas.filter(
@@ -916,7 +1097,6 @@ export class AsistenciaClaseBFacade {
 
     this._kpis.set({
       tasaAsistencia: Math.round(tasaAsistencia * 10) / 10,
-      tasaAsistenciaTrend: 0,
       inasistenciasHoy: ausentes,
       totalClasesHoy: practicas.length,
       clasesEnCurso,

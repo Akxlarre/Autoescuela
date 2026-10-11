@@ -47,7 +47,7 @@ export const DATE_KINDS = {
     'chileDayRange()/chileRange() para rangos, chileWallTimeToInstant() para una hora de Chile, addDaysIso()/diffDaysIso() para aritmética',
   'format-no-zone': 'formatChileDate()/formatChileTime()',
   'local-date-parts':
-    'chileParts(instante) para leer, addDaysIso()/addMonthsIso()/mondayOfIso() para calcular, calendarDateToIso() para un selector de fechas',
+    'chileParts(instante) para leer, chileTimeOfDay() para una hora HH:MM:SS, addDaysIso()/addMonthsIso()/mondayOfIso() para calcular, calendarDateToIso() para un selector de fechas',
   'angular-date-pipe': 'el pipe chileDate',
   'ms-day-diff':
     'diffDaysIso(desde, hasta) sobre días de Chile (chileToday(), toChileDate(instante)); si de verdad es una duración entre dos instantes, decláralo en el allowlist',
@@ -95,7 +95,7 @@ const SIMPLE_PATTERNS = [
   ['naive-time-suffix', /T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?=['"`])/g],
   [
     'local-date-parts',
-    /\.(?:getFullYear|getMonth|getDate|getDay|getHours|getMinutes|setFullYear|setMonth|setDate|setHours|setMinutes)\(/g,
+    /\.(?:getFullYear|getMonth|getDate|getDay|getHours|getMinutes|setFullYear|setMonth|setDate|setHours|setMinutes|toTimeString|toDateString)\(/g,
   ],
   ['deprecated-date-api', /\b(?:toISODate|getChileDateTimeRange)\(/g],
   // Milisegundos divididos por un día: contar días restando instantes da el desfase con UTC.

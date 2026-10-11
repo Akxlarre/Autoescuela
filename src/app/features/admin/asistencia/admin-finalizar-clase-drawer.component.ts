@@ -1,5 +1,14 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { kmWarning } from '@core/utils/odometer.utils';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
@@ -125,6 +134,17 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 Verifique el odómetro del tablero central.
               </p>
             }
+            <!-- fix-375-m: aviso, no bloquea (el odómetro real manda) -->
+            @if (endKmWarning(); as warning) {
+              <div
+                class="mt-3 flex items-start gap-1.5 px-3 py-1.5 rounded-md bg-warning/10 text-warning text-xs font-medium"
+                role="status"
+                data-llm-description="Aviso de recorrido sospechoso en la clase"
+              >
+                <app-icon name="alert-triangle" [size]="13" class="shrink-0 mt-px" />
+                <span>{{ warning }}</span>
+              </div>
+            }
           </div>
 
           <!-- Firmas (opcionales) -->
@@ -159,6 +179,23 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
           </div>
+        </div>
+
+        <!-- fix-378-m: clase iniciada por error (el alumno nunca llegó) -->
+        <div
+          class="mt-6 flex items-center justify-between gap-3 rounded-xl border border-border-default p-4"
+        >
+          <p class="text-xs text-text-secondary m-0">¿Se inició por error?</p>
+          <button
+            type="button"
+            class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+            [disabled]="isSubmitting()"
+            (click)="onCancelStart(cls)"
+            data-llm-action="cancelar-inicio-clase"
+          >
+            <app-icon name="rotate-ccw" [size]="12" />
+            Cancelar inicio
+          </button>
         </div>
 
         <ng-container ngProjectAs="[drawer-form-footer]">
@@ -207,6 +244,28 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
       Validators.max(999999),
     ]),
   });
+
+  /** fix-375-m: recorrido de la clase (km de retorno − km de salida). */
+  private readonly kmEndValue = toSignal(this.form.controls.kmEnd.valueChanges, {
+    initialValue: null,
+  });
+  protected readonly endKmWarning = computed(() =>
+    kmWarning('end', this.kmEndValue(), this.facade.selectedPractica()?.kmStart ?? null),
+  );
+
+  /** fix-378-m: devuelve la clase a "Pendiente" (con confirmación en el facade). */
+  protected async onCancelStart(cls: { id: number }): Promise<void> {
+    this.isSubmitting.set(true);
+    try {
+      const done = await this.facade.cancelStart(cls.id);
+      if (done) {
+        void this.dashboardFacade.refreshLiveClassesOnly();
+        this.layoutDrawer.close();
+      }
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
 
   private studentSignature: string | null = null;
   private instructorSignature: string | null = null;

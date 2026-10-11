@@ -154,6 +154,49 @@ describe('AsistenciaClaseBContentComponent — columna Sede (fix-158)', () => {
     Object.defineProperty(component, 'showBranchColumn', { value: s });
     expect(component.showBranchColumn()).toBe(false);
   });
+
+  it('fix-373-m: el subtítulo sigue a la fecha elegida', () => {
+    Object.defineProperty(component, 'selectedDate', { value: signal('2026-10-10') });
+    expect((component as any).todayLabel()).toBe('sábado, 10 de octubre de 2026');
+  });
+
+  it('fix-373-m: isFutureDate compara contra el hoy de Chile de cada evaluación', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    Object.defineProperty(component, 'selectedDate', { value: signal('2026-10-12') });
+    vi.setSystemTime(new Date('2026-10-12T02:30:00.000Z')); // 23:30 del 11 en Chile
+    expect((component as any).isFutureDate()).toBe(true);
+    vi.setSystemTime(new Date('2026-10-12T03:30:00.000Z')); // 00:30 del 12 en Chile
+    expect((component as any).isFutureDate()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('fix-373-m: los chips cuentan dentro del instructor elegido', () => {
+    const rows = [
+      { id: 1, instructorId: 3, status: 'pendiente' },
+      { id: 2, instructorId: 3, status: 'presente' },
+      { id: 3, instructorId: 4, status: 'pendiente' },
+    ];
+    Object.defineProperty(component, 'clasesPracticas', { value: signal(rows) });
+    expect((component as any).countByStatus('pendiente')).toBe(2);
+    (component as any).selectedInstructorId.set(3);
+    expect((component as any).countByStatus('todos')).toBe(2);
+    expect((component as any).countByStatus('pendiente')).toBe(1);
+  });
+
+  // fix-372-m: mínimos medidos en navegador (1440×900): cabecera "Agendada" y badge de Estado.
+  const MIN_PX = { agendada: 75, inicio: 49, fin: 48, estado: 120, acciones: 106 } as const;
+  it.each([true, false])(
+    'con Sede=%s los anchos suman 100 y cada columna alcanza su mínimo',
+    (conSede) => {
+      Object.defineProperty(component, 'showBranchColumn', { value: signal(conSede) });
+      const w = (component as any).columnWidths() as Record<string, number>;
+      const minTable = (component as any).tableMinWidthPx() as number;
+      expect(Object.values(w).reduce((a, b) => a + b, 0)).toBe(100);
+      for (const [col, px] of Object.entries(MIN_PX)) {
+        expect((minTable * w[col]) / 100).toBeGreaterThanOrEqual(px);
+      }
+    },
+  );
 });
 
 describe('AsistenciaClaseBContentComponent — presupuesto de densidad (spec 0030)', () => {

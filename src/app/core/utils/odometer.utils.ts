@@ -32,3 +32,43 @@ export function odometerFontTier(value: number | string | null | undefined): Odo
   if (digits === 6) return '4xl';
   return '5xl';
 }
+
+/**
+ * Diferencia de km que ya no es creíble en una clase práctica de 45 min (fix-375-m). Por encima
+ * se avisa; nunca se bloquea: el odómetro real manda.
+ */
+export const KM_SUSPICIOUS_DELTA = 300;
+
+const kmFmt = (n: number): string => n.toLocaleString('es-CL');
+
+/**
+ * Aviso de kilometraje sospechoso (fix-375-m), o `null` si no hay nada que avisar.
+ *  - `start`: km de salida vs `current_km` del vehículo (menor, o muy por encima).
+ *  - `end`: km de retorno vs km de salida (recorrido demasiado largo).
+ * Los valores vacíos o inválidos no avisan: de eso se encargan los validadores del formulario.
+ */
+export function kmWarning(
+  kind: 'start' | 'end',
+  value: number | string | null | undefined,
+  reference: number | null | undefined,
+): string | null {
+  if (value === null || value === undefined || value === '' || reference == null) return null;
+  const km = Number(value);
+  if (!Number.isFinite(km) || km < 0) return null;
+
+  if (kind === 'start') {
+    if (km < reference) {
+      return `Es menor al kilometraje registrado del vehículo (${kmFmt(reference)} km). Revisa el odómetro.`;
+    }
+    if (km - reference > KM_SUSPICIOUS_DELTA) {
+      return `Supera por ${kmFmt(km - reference)} km al kilometraje registrado del vehículo (${kmFmt(reference)} km). Revisa el odómetro.`;
+    }
+    return null;
+  }
+
+  const recorrido = km - reference;
+  if (recorrido > KM_SUSPICIOUS_DELTA) {
+    return `Son ${kmFmt(recorrido)} km en una clase. Revisa el odómetro.`;
+  }
+  return null;
+}

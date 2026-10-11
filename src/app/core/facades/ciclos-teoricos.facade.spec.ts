@@ -273,19 +273,35 @@ describe('CiclosTeoricosFacade', () => {
       expect(toast.error).toHaveBeenCalled();
     });
 
+    it('bloquea el envío si el enlace guardado no es https (fix-367-m)', async () => {
+      mock.setResult('class_b_theory_sessions', [
+        {
+          id: 13,
+          class_number: 3,
+          class_date: '2026-03-13',
+          topic: null,
+          zoom_link: 'hola',
+          zoom_sent_at: null,
+        },
+      ]);
+      await facade.selectCycle(5);
+      await facade.sendZoomEmail(13, [100]);
+      expect(mock.invoke).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith('El enlace Zoom debe empezar con https://');
+    });
+
     it('bloquea si no hay destinatarios seleccionados', async () => {
       await facade.sendZoomEmail(11, []);
       expect(mock.invoke).not.toHaveBeenCalled();
     });
 
-    it('envía solo a los destinatarios seleccionados e incluye el tema en el asunto', async () => {
+    it('manda solo ids: la función saca enlace, tema, fecha y correos de la BD (fix-367-m)', async () => {
       mock.invoke.mockResolvedValueOnce({ data: { sent: 1, errors: [] }, error: null });
-      await facade.sendZoomEmail(11, [100]);
+      await facade.sendZoomEmail(11, [100, 100]);
 
       expect(mock.invoke).toHaveBeenCalledTimes(1);
       const body = mock.invoke.mock.calls[0][1].body;
-      expect(body.recipients).toEqual([{ name: 'Pérez Juan', email: 'j@x.cl' }]);
-      expect(body.sessionTopic).toContain('Reglamento');
+      expect(body).toEqual({ classId: 11, enrollmentIds: [100] });
       // Marca zoom_sent_at en la clase
       expect(facade.clases()[0].zoomSentAt).not.toBeNull();
     });
@@ -325,6 +341,18 @@ describe('CiclosTeoricosFacade', () => {
 
       await facade.saveZoomLink(11, '  https://zoom.us/j/9  ');
       expect(facade.clases()[0].zoomLink).toBe('https://zoom.us/j/9');
+      expect(mock.updateCalls.some((c) => c.table === 'class_b_theory_sessions')).toBe(true);
+    });
+
+    it('no guarda un enlace que no es https (fix-367-m)', async () => {
+      mock.setResult('enrollments', []);
+      await facade.saveZoomLink(11, 'hola');
+      expect(mock.updateCalls.some((c) => c.table === 'class_b_theory_sessions')).toBe(false);
+      expect(toast.error).toHaveBeenCalledWith('El enlace Zoom debe empezar con https://');
+    });
+
+    it('permite borrar el enlace (vacío → null)', async () => {
+      await facade.saveZoomLink(11, '   ');
       expect(mock.updateCalls.some((c) => c.table === 'class_b_theory_sessions')).toBe(true);
     });
   });
