@@ -189,6 +189,6 @@ _(cada bug encontrado → su propio fix/hotfix)_
 | `fix-373-m` | S18: subtítulo, tasa, contadores, "hoy" congelado; D08 toast | ✅ cerrado 2026-10-11 |
 | `fix-374-m` | P01: "Marcar ausente" desde "Clases Actuales" (drawer de Iniciar) | ✅ cerrado 2026-10-11 |
 | `fix-375-m` | C04/D03: avisos de kilometraje al iniciar y finalizar | ✅ cerrado 2026-10-11 |
-| `fix-376-m` | C06: un vehículo en dos clases en curso | implementado; ensayo TODO OK; falta aplicar la migración |
+| `fix-376-m` | C06: un vehículo en dos clases en curso | ✅ cerrado 2026-10-11 |
 | `fix-377-m` | E07: "Deshacer" una inasistencia sin justificar (Asistencia y Dashboard) | ✅ cerrado 2026-10-11 |
 | `fix-378-m` | E08: "Cancelar inicio" de una clase iniciada por error | ✅ cerrado 2026-10-11 |
