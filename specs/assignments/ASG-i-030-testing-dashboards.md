@@ -1,7 +1,7 @@
 # Asignación ASG-i-030 — Testing: Dashboards (admin, ejecutivo y secretaria)
 
 > **status:** pendiente
-> **owner:** i
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29
