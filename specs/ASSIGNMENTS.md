@@ -279,6 +279,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | `m` | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-11 |
+| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | `b` | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---
