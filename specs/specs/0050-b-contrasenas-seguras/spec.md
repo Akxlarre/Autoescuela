@@ -1,6 +1,6 @@
 # Spec 0050-b — Contraseñas seguras: una sola regla, visible mientras se escribe y exigida por el servidor
 
-> **Status:** draft
+> **Status:** approved (decisiones del owner el 2026-10-12, ver §6)
 > **Created:** 2026-10-12
 > **Owner:** Benjamín
 > **Priority:** P2 (seguridad de cuentas con acceso a datos personales; no bloquea el piloto)
@@ -79,6 +79,9 @@ Que quien crea o cambia su contraseña **sepa qué se le pide mientras escribe**
   mensaje en español que dice qué falta, no un error genérico.
 - **AC8 — Cuentas existentes intactas:** un usuario con una clave anterior que no cumple la regla
   nueva sigue pudiendo iniciar sesión.
+- **AC9 — Claves filtradas (si el plan lo permite):** se intenta activar `password_hibp_enabled`; si
+  queda activo, una clave conocida en brechas se rechaza con un mensaje claro; si el plan no lo
+  permite, se documenta el motivo y el AC se cierra como "no disponible en el plan actual".
 - **AC-E1 — Accesible:** la lista de requisitos se anuncia a lectores de pantalla (`aria-live`) y el
   estado no depende solo del color (ícono + texto).
 - **AC-E2 — Pegar y gestores de contraseñas:** se puede pegar la clave y los gestores la rellenan;
@@ -87,18 +90,18 @@ Que quien crea o cambia su contraseña **sepa qué se le pide mientras escribe**
 ## 5. Fuera de alcance
 
 - Segundo factor (MFA), bloqueo por intentos fallidos y caducidad periódica de claves.
-- Rechazo de contraseñas filtradas en brechas conocidas ("leaked password protection" de Supabase
-  Auth): es una opción de configuración aparte y, por confirmar, puede depender del plan contratado.
-  Si está disponible sin costo, se activa en esta spec (ver §6); si no, queda como pendiente.
+- Contratar un plan de pago de Supabase solo para el rechazo de claves filtradas (ver AC9).
 - Forzar el cambio de clave a las cuentas existentes.
 
-## 6. Preguntas abiertas (decisión del owner)
+## 6. Decisiones del owner (2026-10-12)
 
-1. **¿Qué tan exigente?** Recomendado: 10 caracteres + letras y números + sin datos propios.
-   Alternativas: (a) dejar 8 y solo agregar letras y números; (b) exigir además mayúscula y símbolo
-   (más fricción para personal no técnico, más claves anotadas en papel).
-2. **¿Se activa el rechazo de claves filtradas** si el plan de Supabase lo permite?
-3. **¿Aplica igual a los alumnos?** Recomendado: sí, misma regla (una sola pantalla para todos).
+1. **Exigencia:** la recomendada — mínimo **10 caracteres**, con **letras y números**, y que **no
+   contenga** el nombre, el correo ni el RUT de la persona. Sin símbolos ni mayúsculas obligatorias,
+   sin caducidad.
+2. **Claves filtradas:** intentarlo. El proyecto está en el plan **gratuito** de Supabase
+   (`password_hibp_enabled = false` hoy); se intenta activar al implementar y, si el plan no lo
+   permite, queda documentado como pendiente sin bloquear la spec (AC9).
+3. **Alumnos:** misma regla que el personal.
 
 ## 7. Notas técnicas preliminares (para el plan)
 
