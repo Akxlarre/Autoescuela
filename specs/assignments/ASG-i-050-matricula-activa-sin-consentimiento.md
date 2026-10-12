@@ -1,14 +1,14 @@
 # Asignación ASG-i-050 — Matrícula queda activa aunque el mensaje dice "no se confirmó"
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-11
+> **resulting_track:** fix-046-i-matricula-activa-sin-consentimiento
 
 ---
 

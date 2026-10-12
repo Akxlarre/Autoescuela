@@ -20,4 +20,6 @@ export interface SpecialServiceSale {
   branch_id: number | null;
   /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
   document_number: string | null;
+  /** Medio de pago de la venta (fix-047-i). Las ventas anteriores quedaron en 'efectivo'. */
+  payment_method: 'efectivo' | 'transferencia' | 'tarjeta';
 }

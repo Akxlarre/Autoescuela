@@ -160,6 +160,28 @@ export function mapSingularSaleToPaymentRow(s: SingularSaleReportDto): PaymentRo
   };
 }
 
+/** Venta cobrada de Servicio Especial tal como llega de special_service_sales (fix-047-i). */
+export interface SpecialServiceSaleReportDto {
+  price: number | null;
+  sale_date: string | null;
+  branch_id: number | null;
+}
+
+/**
+ * Normaliza una venta cobrada de Servicio Especial a `PaymentRow` (fix-047-i), igual que los
+ * cursos singulares: así suma en KPIs, categorías (`type: 'special_service'` → "Psicotécnico /
+ * Servicios") y evolución sin ramas especiales. Hasta fix-047-i estas ventas solo existían en la
+ * Caja Diaria y Reportes no cuadraba con ella.
+ */
+export function mapSpecialServiceSaleToPaymentRow(s: SpecialServiceSaleReportDto): PaymentRow {
+  return {
+    total_amount: s.price ?? 0,
+    type: 'special_service',
+    payment_date: s.sale_date,
+    enrollments: { branch_id: s.branch_id ?? 0, license_group: null },
+  };
+}
+
 /**
  * Filtra los pagos según la sede efectiva.
  * Si `branchId` es null, devuelve todos (admin multi-sede).

@@ -448,6 +448,8 @@ export class SecretariaDashboardComponent implements OnInit {
         vehicleId: 0,
         vehiclePlate: cls.vehicle || '',
         studentName: cls.studentName,
+        // fix-377-m: con la sesión, el detalle de una clase "No asistió" ofrece deshacer la falta.
+        sessionId: cls.type === 'practical' ? cls.originalId : undefined,
         classNumber: 0,
         kmStart: cls.kmStart,
         kmEnd: cls.kmEnd,

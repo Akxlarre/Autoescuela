@@ -208,9 +208,7 @@ export class AlertsDrawerComponent {
     if (type === 'clear-schedule') {
       this._processing.update((s) => new Set([...s, alert.id]));
       try {
-        await Promise.all(
-          (enrollmentIds ?? []).map((id) => this.facade.clearScheduleForEnrollment(id)),
-        );
+        await this.facade.clearSchedules(enrollmentIds ?? []);
       } finally {
         this._processing.update((s) => {
           const next = new Set(s);

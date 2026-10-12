@@ -21,6 +21,7 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
+| ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Mejor después de 060 |
 | ASG-i-060 | ¿Los reportes suman pagos que no están pagados? | `cualquiera` | fix | P1 | i | ⏳ Paso 1: una consulta de solo lectura por `payments.status`. Salió de `fix-044-i`. Coordinar con 059 (mismo inventario) |
 | ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
@@ -85,7 +86,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
-| ASG-i-027 | Testing: Asistencia B, inasistencias y penalización | `m` | fix | P1 | i | Integración · Alta |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-030 | Testing: Dashboards | `i` | fix | P1 | i | Integración · Media · correr al final |
@@ -133,10 +133,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
-| ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
-| ASG-i-052 | "Borrar horarios" y "Reactivar" en masa sin confirmación | `m` | fix | P0 | i | ⏳ Relacionada con 038; probar solo con alumno de prueba |
-| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo | `m` | hotfix | P0 | i | ⏳ Una consulta SQL decide |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -283,6 +279,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
+| ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | `m` | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-11 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -440,6 +437,10 @@
 | ASG-i-054 | Fechas de negocio calculadas en UTC (lo hecho de noche cae al día siguiente) | [0024-m-fechas-de-negocio-en-hora-de-chile](specs/0024-m-fechas-de-negocio-en-hora-de-chile/spec.md) | 2026-10-09 |
 | ASG-i-048 | Cuadratura: operaciones que fallan en silencio y corrompen saldos | [fix-044-i-cuadratura-operaciones-fallan-en-silencio](fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio/fix.md) | 2026-10-10 |
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
+| ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
+| ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
+| ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
+| ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---

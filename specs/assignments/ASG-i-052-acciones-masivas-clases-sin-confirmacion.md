@@ -1,14 +1,14 @@
 # Asignación ASG-i-052 — "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-30
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-10
+> **resulting_track:** fix-364-m-acciones-masivas-clases-sin-confirmacion
 
 ---
 

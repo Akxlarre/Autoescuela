@@ -37,7 +37,7 @@ describe('AlertsDrawerComponent', () => {
     alertCount: alertCount$.asReadonly(),
     activeAlerts: activeAlerts$.asReadonly(),
     dismissAlert: vi.fn(),
-    clearScheduleForEnrollment: vi.fn().mockResolvedValue(true),
+    clearSchedules: vi.fn().mockResolvedValue(true),
   };
 
   const routerMock = { navigate: vi.fn().mockResolvedValue(true) };
@@ -124,7 +124,7 @@ describe('AlertsDrawerComponent', () => {
   // ── handleAction ────────────────────────────────────────────────────────────
 
   describe('handleAction', () => {
-    it('should call clearScheduleForEnrollment for each enrollmentId', async () => {
+    it('delega en una sola llamada a clearSchedules con todas las matrículas (fix-364-m)', async () => {
       const alert = makeAlert({
         id: 'b-3',
         action: { type: 'clear-schedule', label: 'Limpiar', enrollmentIds: [10, 20, 30] },
@@ -132,15 +132,13 @@ describe('AlertsDrawerComponent', () => {
 
       await component.handleAction(alert);
 
-      expect(facadeMock.clearScheduleForEnrollment).toHaveBeenCalledTimes(3);
-      expect(facadeMock.clearScheduleForEnrollment).toHaveBeenCalledWith(10);
-      expect(facadeMock.clearScheduleForEnrollment).toHaveBeenCalledWith(20);
-      expect(facadeMock.clearScheduleForEnrollment).toHaveBeenCalledWith(30);
+      expect(facadeMock.clearSchedules).toHaveBeenCalledTimes(1);
+      expect(facadeMock.clearSchedules).toHaveBeenCalledWith([10, 20, 30]);
     });
 
     it('should mark alert as processing during clear-schedule and clear after', async () => {
       let processingDuring = false;
-      facadeMock.clearScheduleForEnrollment.mockImplementation(async () => {
+      facadeMock.clearSchedules.mockImplementation(async () => {
         processingDuring = component.isProcessing('b-3');
         return true;
       });
@@ -156,8 +154,8 @@ describe('AlertsDrawerComponent', () => {
       expect(component.isProcessing('b-3')).toBe(false);
     });
 
-    it('should clear processing state even if clearScheduleForEnrollment throws', async () => {
-      facadeMock.clearScheduleForEnrollment.mockRejectedValue(new Error('network'));
+    it('should clear processing state even if clearSchedules throws', async () => {
+      facadeMock.clearSchedules.mockRejectedValue(new Error('network'));
 
       const alert = makeAlert({
         id: 'b-3',
@@ -170,7 +168,7 @@ describe('AlertsDrawerComponent', () => {
 
     it('should skip a second call while the first is in flight', async () => {
       let resolveFirst!: () => void;
-      facadeMock.clearScheduleForEnrollment.mockReturnValue(
+      facadeMock.clearSchedules.mockReturnValue(
         new Promise<boolean>((res) => {
           resolveFirst = () => res(true);
         }),
@@ -183,7 +181,7 @@ describe('AlertsDrawerComponent', () => {
 
       const first = component.handleAction(alert);
       await component.handleAction(alert); // second call while first is running
-      expect(facadeMock.clearScheduleForEnrollment).toHaveBeenCalledTimes(1);
+      expect(facadeMock.clearSchedules).toHaveBeenCalledTimes(1);
 
       resolveFirst();
       await first;
@@ -196,7 +194,7 @@ describe('AlertsDrawerComponent', () => {
       });
 
       await component.handleAction(alert);
-      expect(facadeMock.clearScheduleForEnrollment).not.toHaveBeenCalled();
+      expect(facadeMock.clearSchedules).not.toHaveBeenCalled();
       expect(routerMock.navigate).toHaveBeenCalledWith(['/app/admin/contabilidad/cuadratura']);
     });
 
@@ -212,7 +210,7 @@ describe('AlertsDrawerComponent', () => {
 
     it('should do nothing when alert has no action', async () => {
       await component.handleAction(makeAlert({ id: 'no-action' }));
-      expect(facadeMock.clearScheduleForEnrollment).not.toHaveBeenCalled();
+      expect(facadeMock.clearSchedules).not.toHaveBeenCalled();
       expect(routerMock.navigate).not.toHaveBeenCalled();
     });
   });

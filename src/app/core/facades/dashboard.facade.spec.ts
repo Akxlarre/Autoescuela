@@ -66,6 +66,59 @@ describe('DashboardFacade — día de Chile (spec 0024-m)', () => {
   });
 });
 
+describe('DashboardFacade — KPI "Ingresos Mes" incluye servicios especiales (fix-047-i)', () => {
+  it('suma las ventas cobradas de servicios especiales a los pagos del mes', async () => {
+    const porTabla: Record<string, unknown[]> = {
+      payments: [{ total_amount: 1_000_000 }],
+      special_service_sales: [{ price: 500_000 }],
+    };
+    const builders: Record<string, any[]> = {};
+    const client = {
+      from: vi.fn((tabla: string) => {
+        const b: any = {};
+        for (const m of [
+          'select',
+          'eq',
+          'gte',
+          'lte',
+          'lt',
+          'or',
+          'in',
+          'is',
+          'not',
+          'order',
+          'limit',
+        ]) {
+          b[m] = vi.fn(() => b);
+        }
+        b.then = (resolve: any) => resolve({ data: porTabla[tabla] ?? [], count: 0, error: null });
+        (builders[tabla] ??= []).push(b);
+        return b;
+      }),
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        DashboardFacade,
+        { provide: SupabaseService, useValue: { client } },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+      ],
+    });
+    const facade = TestBed.inject(DashboardFacade);
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Mes actual y mes anterior: dos consultas a special_service_sales, solo ventas cobradas.
+    expect(builders['special_service_sales']?.length).toBe(2);
+    expect(builders['special_service_sales'][0].eq).toHaveBeenCalledWith('paid', true);
+    const revenue = (facade as any).data().kpis.find((k: { id: string }) => k.id === 'revenue');
+    expect(revenue.value).toBe(1.5); // (1.000.000 + 500.000) / 1.000.000
+  });
+});
+
 describe('DashboardFacade', () => {
   let facade: DashboardFacade;
   let httpMock: HttpTestingController;
@@ -107,16 +160,20 @@ describe('DashboardFacade', () => {
 
   describe('Request guard — respuestas stale (spec 0005-m, AC1, AC4, AC-E1)', () => {
     /**
-     * fetchRealDashboardData() dispara exactamente 8 queries `.from(...)` por invocación
-     * (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así que
-     * cada tanda de 8 llamadas a `.from()` pertenece a una sola invocación del método —
-     * agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
-     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * 8` es una query
+     * fetchRealDashboardData() dispara exactamente QUERIES_POR_CARGA queries `.from(...)` por
+     * invocación (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así
+     * que cada tanda de QUERIES_POR_CARGA llamadas a `.from()` pertenece a una sola invocación del
+     * método — agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
+     * Eran 8; fix-047-i sumó 2 (ventas de servicios especiales del mes y del mes anterior). Si
+     * agregas una query al método, actualiza la constante o estos tests se cuelgan esperando.
+     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * QUERIES_POR_CARGA` es una query
      * auxiliar (ej. `fetchLiveClasses()`, que se dispara después de aplicar los datos
      * principales) — se resuelve sola de inmediato, no la necesitamos controlada.
      */
+    const QUERIES_POR_CARGA = 10;
+
     function makeRaceableSupabaseMock(expectedInitializeCalls: number) {
-      const mainCallsTotal = expectedInitializeCalls * 8;
+      const mainCallsTotal = expectedInitializeCalls * QUERIES_POR_CARGA;
       const deferreds: {
         promise: Promise<any>;
         resolve: (v: any) => void;
@@ -144,7 +201,7 @@ describe('DashboardFacade', () => {
           const then = isAuxiliaryQuery
             ? (resolve: any) => resolve({ data: [], error: null })
             : (resolve: any, reject: any) =>
-                deferredForBatch(Math.floor(idx / 8)).promise.then(resolve, reject);
+                deferredForBatch(Math.floor(idx / QUERIES_POR_CARGA)).promise.then(resolve, reject);
           const builder: any = {
             select: vi.fn(() => builder),
             eq: vi.fn(() => builder),

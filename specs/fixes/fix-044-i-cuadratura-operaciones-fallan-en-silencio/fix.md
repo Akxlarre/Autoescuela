@@ -144,7 +144,7 @@ aviso está visible; es un estado de error transitorio.
 - [x] Decisión de diseño del punto 1 (ver Decisiones)
 - [x] Tests primero (TDD): 24 tests nuevos en rojo antes del código, en verde después
 - [x] Código (facade, `db-error.utils`, UI de Caja, drawer de arqueo)
-- [x] Migración escrita y aprobada (`20261010120000_fix044_caja_saldo_y_cierre_definitivo.sql`) + test
+- [x] Migración escrita y aprobada (`20261010121000_fix044_caja_saldo_y_cierre_definitivo.sql`) + test
   `supabase/tests/rls/fix-044-i-caja-saldo-y-cierre.sql`
 - [x] Migración aplicada en el piloto (2026-10-10, Ignacio, SQL Editor). El primer intento abortó por
   deadlock con tráfico de la app (sin efectos: un solo bloque); el reintento con `SET lock_timeout = '5s'` pasó.
@@ -156,6 +156,9 @@ aviso está visible; es un estado de error transitorio.
 
 ## Notes
 
+- **2026-10-12:** la migración se renombró de `20261010120000_…` a `20261010121000_…` porque compartía
+  versión con `20261010120000_fix219_users_lectura_fila_propia.sql` (Benjamín). Ya estaba aplicada en el
+  piloto: el cambio es solo de nombre de archivo.
 - Originado de Asignación ASG-i-048 (`specs/assignments/ASG-i-048-cuadratura-operaciones-fallan-en-silencio.md`).
 - Archivos: `src/app/core/facades/cuadratura.facade.ts`, `core/utils/db-error.utils.ts`
   (tokens `CAJA_CERRADA`/`CIERRE_DEFINITIVO`), `shared/components/cuadratura-content`,

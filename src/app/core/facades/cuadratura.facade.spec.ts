@@ -895,15 +895,33 @@ describe('mapSpecialServiceSaleToIngreso', () => {
     documentNumber: null,
   };
 
-  it('marca source special_service y bucket "otros" (fix-025-i — no es una clase de manejo)', () => {
-    const row = mapSpecialServiceSaleToIngreso(base);
+  // fix-047-i: desde fix-230-m las columnas de la Caja son por medio de pago (claseB = Efectivo,
+  // claseA = Transferencia, otros = Tarjeta). El bucket fijo "otros" de fix-025-i mostraba toda
+  // venta como pagada con tarjeta y la sacaba del arqueo de efectivo.
+  it('marca source special_service y va a la columna de su medio de pago (efectivo)', () => {
+    const row = mapSpecialServiceSaleToIngreso({ ...base, paymentMethod: 'efectivo' });
     expect(row.source).toBe('special_service');
-    expect(row.claseB).toBe(0);
+    expect(row.claseB).toBe(40_000);
     expect(row.claseA).toBe(0);
-    expect(row.otros).toBe(40_000);
+    expect(row.otros).toBe(0);
     expect(row.sence).toBe(0);
     expect(row.total).toBe(40_000);
     expect(row.enrollmentId).toBeNull();
+  });
+
+  it('fix-047-i: transferencia va a claseA y tarjeta a otros', () => {
+    expect(mapSpecialServiceSaleToIngreso({ ...base, paymentMethod: 'transferencia' }).claseA).toBe(
+      40_000,
+    );
+    expect(mapSpecialServiceSaleToIngreso({ ...base, paymentMethod: 'tarjeta' }).otros).toBe(
+      40_000,
+    );
+  });
+
+  it('fix-047-i: sin medio de pago (dato viejo) cae a efectivo', () => {
+    const row = mapSpecialServiceSaleToIngreso({ ...base, paymentMethod: null });
+    expect(row.claseB).toBe(40_000);
+    expect(row.otros).toBe(0);
   });
 
   it('glosa incluye el nombre del servicio y del cliente', () => {

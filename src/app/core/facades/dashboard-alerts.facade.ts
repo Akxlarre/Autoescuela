@@ -5,7 +5,15 @@ import { todayIso } from '@core/utils/date.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import {
+  VALID_CLASS_B_SESSION_STATUSES,
+  buildClearScheduleMessage,
+  enrollmentsWithConsecutiveAbsences,
+} from '@core/utils/class-b-session.utils';
+import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
 /**
@@ -21,7 +29,7 @@ import type { AlertModel } from '@core/models/ui/dashboard.model';
  *  2. Pagos pendientes de matrículas activas
  *  3. (B-1) Alumnos en 6ª clase con saldo pendiente
  *  4. (B-2) Alumnos con 12ª clase completada pendientes de certificado
- *  5. (B-3) Alumnos con 2+ sesiones pasadas sin asistencia
+ *  5. (B-3) Alumnos con inasistencias en 2 clases seguidas
  *  6. (F-3) Caja sin cerrar el día de hoy
  *  7. (F-4) Alumnos con deuda superior a 2 meses
  * Fase 3 — Pagos y Finanzas:
@@ -43,6 +51,8 @@ export class DashboardAlertsFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly toast = inject(ToastService);
 
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
@@ -121,24 +131,86 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (B-3) Cancela todas las sesiones 'scheduled' de una matrícula.
-   * Usar cuando el alumno tiene 2+ inasistencias consecutivas y se decide
-   * limpiar su horario actual para re-agendarlo.
+   * (B-3) Cancela las clases prácticas FUTURAS agendadas de las matrículas de la alerta.
+   *
+   * Pide confirmación diciendo cuántas clases y de qué alumnos (fix-364-m: antes cancelaba todo,
+   * pasado y futuro, con un clic). Las clases de horas ya pasadas no se tocan: quedan para
+   * registrarse como asistencia o inasistencia.
+   *
+   * @returns `true` solo si se cancelaron clases.
    */
-  async clearScheduleForEnrollment(enrollmentId: number): Promise<boolean> {
-    const { error } = await this.supabase.client
-      .from('class_b_sessions')
-      .update({ status: 'cancelled' })
-      .eq('enrollment_id', enrollmentId)
-      .eq('status', 'scheduled');
+  async clearSchedules(enrollmentIds: number[]): Promise<boolean> {
+    if (enrollmentIds.length === 0) return false;
 
-    if (error) {
-      console.error('[DashboardAlertsFacade] clearScheduleForEnrollment error:', error);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('class_b_sessions')
+        .select(
+          'id, enrollment_id, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
+        )
+        .in('enrollment_id', enrollmentIds)
+        .eq('status', 'scheduled')
+        .gt('scheduled_at', new Date().toISOString());
+      if (error) throw error;
+
+      const sessions = (data ?? []) as any[];
+      if (sessions.length === 0) {
+        this.toast.info(
+          'No hay clases futuras que cancelar',
+          'Estos alumnos ya no tienen clases prácticas agendadas.',
+        );
+        return false;
+      }
+
+      const groups = new Map<number, { alumnoName: string; clases: number }>();
+      for (const session of sessions) {
+        const user = session.enrollments?.students?.users;
+        const group = groups.get(session.enrollment_id) ?? {
+          alumnoName:
+            `${user?.first_names ?? ''} ${user?.paternal_last_name ?? ''}`.trim() || 'Alumno',
+          clases: 0,
+        };
+        group.clases += 1;
+        groups.set(session.enrollment_id, group);
+      }
+
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Borrar horarios',
+        message: buildClearScheduleMessage([...groups.values()]),
+        confirmLabel: 'Cancelar clases',
+        cancelLabel: 'Volver',
+        severity: 'danger',
+      });
+      if (!confirmed) return false;
+
+      // Por id y todavía 'scheduled': solo lo que el usuario vio en el diálogo.
+      const result = assertWriteOk(
+        await this.supabase.client
+          .from('class_b_sessions')
+          .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+          .in(
+            'id',
+            sessions.map((s) => s.id),
+          )
+          .eq('status', 'scheduled')
+          .select('id'),
+        { requireRows: true },
+      );
+
+      const cancelled = (result.data as unknown[]).length;
+      this.toast.success(
+        'Horarios borrados',
+        `Se ${cancelled === 1 ? 'canceló 1 clase' : `cancelaron ${cancelled} clases`} de ${
+          groups.size
+        } ${groups.size === 1 ? 'alumno' : 'alumnos'}.`,
+      );
+      void this.refreshSilently();
+      return true;
+    } catch (err) {
+      console.error('[DashboardAlertsFacade] clearSchedules error:', err);
+      this.toast.error(toFriendlyDbMessage(err, 'No se pudieron borrar los horarios'));
       return false;
     }
-
-    void this.refreshSilently();
-    return true;
   }
 
   // ── Coordinador de queries ──────────────────────────────────────────────────
@@ -339,34 +411,38 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (B-3) Alumnos con 2 o más sesiones presenciales pasadas sin asistencia.
-   * La alerta incluye los `enrollmentIds` afectados para invocar
-   * `clearScheduleForEnrollment()` desde la UI.
+   * (B-3) Alumnos con inasistencias vigentes en 2 clases prácticas seguidas (regla RF-053).
+   *
+   * fix-364-m: antes contaba clases 'scheduled' con hora pasada, es decir clases de hoy que
+   * nadie había registrado todavía, no faltas. La alerta incluye los `enrollmentIds` afectados
+   * para invocar `clearSchedules()` desde la UI.
    */
   private async checkConsecutiveAbsences(branchId: number | null): Promise<AlertModel[]> {
     let query: any = this.supabase.client
-      .from('class_b_sessions')
-      .select('enrollment_id, enrollments!inner(branch_id)')
-      .eq('status', 'scheduled')
-      .lt('scheduled_at', new Date().toISOString())
-      .eq('enrollments.status', 'active')
-      .limit(500);
-    if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
+      .from('class_b_practice_attendance')
+      .select(
+        'class_b_sessions!inner(enrollment_id, class_number, status, enrollments!inner(branch_id, status))',
+      )
+      .in('status', ['absent', 'no_show'])
+      // Una falta ya reagendada quedó archivada: es historial, no una falta viva (fix-191-m).
+      .is('archived_at', null)
+      .in('class_b_sessions.status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('class_b_sessions.enrollments.status', 'active');
+    if (branchId !== null) {
+      query = query.eq('class_b_sessions.enrollments.branch_id', branchId);
+    }
 
     const { data, error } = await query;
     if (error || !data) return [];
 
-    const countByEnrollment = new Map<number, number>();
-    for (const session of data as Array<{ enrollment_id: number }>) {
-      countByEnrollment.set(
-        session.enrollment_id,
-        (countByEnrollment.get(session.enrollment_id) ?? 0) + 1,
-      );
-    }
-
-    const affectedIds = [...countByEnrollment.entries()]
-      .filter(([, c]) => c >= 2)
-      .map(([id]) => id);
+    const affectedIds = enrollmentsWithConsecutiveAbsences(
+      (data as any[])
+        .filter((row) => row.class_b_sessions)
+        .map((row) => ({
+          enrollmentId: row.class_b_sessions.enrollment_id,
+          classNumber: row.class_b_sessions.class_number ?? null,
+        })),
+    );
 
     const affectedCount = affectedIds.length;
     if (affectedCount === 0) return [];
@@ -374,8 +450,8 @@ export class DashboardAlertsFacade {
     return [
       {
         id: 'alert-consecutive-absences',
-        title: `${affectedCount} alumno${affectedCount > 1 ? 's' : ''} con 2+ clases sin asistir`,
-        description: 'Tienen sesiones agendadas pasadas sin registrar asistencia',
+        title: `${affectedCount} alumno${affectedCount > 1 ? 's' : ''} con 2 inasistencias seguidas`,
+        description: 'Faltaron a dos clases prácticas consecutivas sin justificar',
         severity: 'error',
         count: affectedCount,
         action: {

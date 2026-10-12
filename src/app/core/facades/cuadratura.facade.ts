@@ -93,26 +93,30 @@ export interface SpecialServiceSaleIngresoDto {
   clientName: string;
   /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
   documentNumber: string | null;
+  /** Medio de pago de la venta (fix-047-i). Sin dato → efectivo. */
+  paymentMethod?: 'efectivo' | 'transferencia' | 'tarjeta' | null;
 }
 
 /**
- * Mapea una venta de Servicio Especial cobrada a la fila de cuadratura.
- * La tabla no registra método de pago (a diferencia de payments/singular) — un servicio
- * especial no es una clase de manejo, así que se bucketea completo a "otros" (fix-025-i;
- * antes iba a "efectivo"/claseB, decisión revertida a pedido del usuario).
+ * Mapea una venta de Servicio Especial cobrada a la fila de cuadratura, en la columna de su
+ * medio de pago (fix-047-i), igual que `mapSingularSaleToIngreso`: efectivo → claseB (caja),
+ * transferencia → claseA, tarjeta → otros. Hasta fix-047-i iba siempre a "otros" (fix-025-i, de
+ * cuando las columnas eran por tipo de clase); desde fix-230-m "otros" se muestra como Tarjeta y
+ * una venta en efectivo quedaba fuera del arqueo.
  */
 export function mapSpecialServiceSaleToIngreso(s: SpecialServiceSaleIngresoDto): IngresoRow {
   const monto = s.price ?? 0;
+  const method = s.paymentMethod ?? 'efectivo';
   return {
     id: s.id,
     source: 'special_service',
     enrollmentId: null,
     nBoleta: s.documentNumber ?? null,
     glosa: `Servicio especial: ${s.serviceName ?? '—'} — ${s.clientName}`,
-    claseB: 0,
-    claseA: 0,
+    claseB: method === 'efectivo' ? monto : 0,
+    claseA: method === 'transferencia' ? monto : 0,
     sence: 0,
-    otros: monto,
+    otros: method === 'tarjeta' ? monto : 0,
     total: monto,
   };
 }
@@ -419,7 +423,7 @@ export class CuadraturaFacade {
   ): Promise<IngresoRow[]> {
     let query: any = this.supabase.client
       .from('special_service_sales')
-      .select('id, price, service_name, client_name, document_number')
+      .select('id, price, service_name, client_name, document_number, payment_method')
       .eq('sale_date', today)
       .eq('paid', true);
 
@@ -437,6 +441,7 @@ export class CuadraturaFacade {
         serviceName: row.service_name,
         clientName: row.client_name ?? '—',
         documentNumber: row.document_number ?? null,
+        paymentMethod: row.payment_method ?? null,
       }),
     );
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import vectors from './chile-time.vectors.json';
 import {
   addDaysIso,
@@ -9,6 +9,7 @@ import {
   chileMonthRange,
   chileParts,
   chileRange,
+  chileTimeOfDay,
   chileToday,
   chileWallTimeToInstant,
   chileYear,
@@ -89,6 +90,20 @@ describe('chileParts', () => {
 
   it('la medianoche es la hora 0, no la 24', () => {
     expect(chileParts('2026-10-07T03:00:00.000Z').hour).toBe(0);
+  });
+});
+
+describe('chileTimeOfDay — hora de pared HH:MM:SS (fix-370-m)', () => {
+  it('convierte el instante a la hora de Chile, no a la del equipo', () => {
+    expect(chileTimeOfDay('2026-10-11T17:30:44.000Z')).toBe('14:30:44');
+    expect(chileTimeOfDay('2026-07-01T00:05:09.000Z')).toBe('20:05:09');
+  });
+
+  it('sin argumento usa el reloj actual', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:15.000Z'));
+    expect(chileTimeOfDay()).toBe('23:30:15');
+    vi.useRealTimers();
   });
 });
 

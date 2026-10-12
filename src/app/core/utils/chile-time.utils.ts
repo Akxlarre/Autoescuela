@@ -364,3 +364,13 @@ export function formatChileTime(value: ChileInstant | null | undefined): string 
   const p = wallPartsOf(d);
   return `${pad(p.hour)}:${pad(p.minute)}`;
 }
+
+/**
+ * Hora de pared de Chile 'HH:MM:SS' de un instante (por defecto, ahora), para columnas `time`
+ * como `start_time`/`end_time`. Reemplaza a `new Date().toTimeString()`, que usa la zona del
+ * equipo (fix-370-m).
+ */
+export function chileTimeOfDay(instant: ChileInstant = new Date()): string {
+  const p = chileParts(instant);
+  return `${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+}

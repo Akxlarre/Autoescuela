@@ -1759,7 +1759,40 @@
   `SET lock_timeout = '5s';` al aplicarla a mano y reintentar si sale "lock timeout"; confirmar con
   `pg_trigger` qué quedó instalado antes de reintentar.
 - **Fuente:** `specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio` (aplicación de
-  `20261010120000`).
+  `20261010121000`).
+
+### DG-108 — El Facade de un wizard es singleton: lo que `reset()` no limpia pasa a la matrícula siguiente, y un paso con efecto legal va antes de activar
+
+- **Trampa:** agregar un `signal()` nuevo al Facade del wizard de matrícula (por ejemplo, una casilla
+  de consentimiento) y confiar en que el componente del paso arranca de cero; o confirmar la
+  matrícula (número + `active`) y recién después registrar algo que la ley exige que exista.
+- **Realidad:** `EnrollmentFacade` es `providedIn: 'root'`. El componente del paso 5 se recrea con la
+  casilla desmarcada, pero el Facade conservaba el "sí" de la matrícula anterior y lo registraba en la
+  siguiente: una matrícula quedó con `comunicaciones_promocionales = true` sin que nadie la marcara.
+  Y como el consentimiento iba después de activar, un fallo dejaba una matrícula `active` y numerada
+  sin consentimiento mientras la pantalla decía "no se confirmó".
+- **Regla de aplicabilidad:** todo `signal()` de estado de un wizard que vive en un Facade singleton
+  se limpia en su `reset()`, en el mismo cambio que lo agrega. En una confirmación con varios pasos,
+  lo que tiene requisito legal o no se puede deshacer va **antes** del cambio de estado, y cada paso
+  previo es idempotente para que el reintento no duplique (reusar el número asignado, no reinsertar).
+- **Fuente:** `specs/fixes/fix-046-i-matricula-activa-sin-consentimiento` (reproducido en vivo).
+
+### DG-109 — Cambiar qué significa una columna de la Caja reclasifica en silencio todo lo que ya se mandaba ahí
+
+- **Trampa:** renombrar o redefinir las columnas de un desglose (en la Caja Diaria pasaron de "tipo de
+  clase" a "medio de pago") revisando solo los ingresos que motivaron el cambio.
+- **Realidad:** `IngresoRow` conserva los mismos campos (`claseB`, `claseA`, `sence`, `otros`); solo
+  cambió lo que la pantalla dice de ellos. Las ventas de servicios especiales iban fijas a `otros`
+  por una decisión tomada cuando "otros" era "no es una clase de manejo"; con las columnas por medio
+  de pago, `otros` pasó a mostrarse como **Tarjeta** y toda venta en efectivo quedó fuera del arqueo
+  físico, sin error ni test que lo marcara.
+- **Regla de aplicabilidad:** al cambiar el significado de una columna o bucket de un desglose
+  financiero, buscar **todos** los mapeadores que escriben en ese campo (`grep` del nombre del campo en
+  los `map*ToIngreso` / `map*ToPaymentRow`) y revisar si su regla sigue siendo verdad con el
+  significado nuevo. Si una fuente no tiene el dato que la columna ahora exige (aquí, el medio de
+  pago), hay que agregarlo, no asumirlo.
+- **Fuente:** `specs/fixes/fix-047-i-servicios-especiales-como-ingreso` (columnas renombradas en
+  fix-230-m; bucket fijo de fix-025-i).
 
 ## Convención para agregar una entrada nueva
 

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
+import { chileToday, formatChileDate, toChileDate } from '@core/utils/chile-time.utils';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -99,7 +99,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         [loading]="isLoading()"
         title="Control de Asistencia"
         icon="clipboard-check"
-        [subtitle]="todayLabel"
+        [subtitle]="todayLabel()"
         [kpis]="heroKpis()"
         [actions]="heroActions"
         (actionClick)="onHeroAction($event)"
@@ -434,7 +434,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                    desktop fill, donde la celda tiene alto fijo). thead sticky
                    se ancla a este scrollport. -->
               <div class="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
-                <table class="w-full text-sm table-fixed">
+                <table class="w-full text-sm table-fixed" [style.min-width.px]="tableMinWidthPx()">
                   <!-- Anchos fijos por columna (fix-159): sin esto, table-layout:auto
                        concentra TODO el ancho sobrante en la última columna sin ancho
                        propio (Acciones), dejando un hueco en blanco entre los botones y
@@ -517,7 +517,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           </td>
                         }
                         <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
-                        <td class="py-3 pr-4">
+                        <td class="py-3 pr-4 wrap-anywhere">
                           @if (row.alumnoName) {
                             <span
                               class="text-text-secondary"
@@ -558,8 +558,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                                aparecía por table-layout:auto sin ancho propio, no por la
                                alineación). Mantiene el contenido pegado a la columna Estado en
                                vez de flotar lejos de su cabecera, para botones y para el texto
-                               "Finalizada" por igual. -->
-                          <div class="flex items-center gap-2">
+                               "Finalizada" por igual. fix-372-m: flex-wrap, con dos botones
+                               (Iniciar + Ausente) bajan a una segunda línea en vez de salirse. -->
+                          <div class="flex flex-wrap items-center gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
@@ -615,6 +616,18 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                                 (click)="openJustifyModal(row.id)"
                               >
                                 Justificar
+                              </button>
+                              <!-- fix-377-m: falta marcada por error -->
+                              <button
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+                                [disabled]="isSaving()"
+                                pTooltip="Deshacer la inasistencia (marcada por error)"
+                                tooltipPosition="top"
+                                data-llm-action="deshacer-inasistencia"
+                                (click)="undoAbsence.emit(row.id)"
+                              >
+                                <app-icon name="rotate-ccw" [size]="12" />
+                                Deshacer
                               </button>
                             }
                             @if (row.justificacion) {
@@ -830,6 +843,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   readonly markAttendance = output<{ sessionId: number; status: ClasePracticaStatus }>();
   readonly justifyAbsence = output<{ sessionId: number; reason: string }>();
+  /** fix-377-m: deshacer una inasistencia sin justificar (id de la sesión). */
+  readonly undoAbsence = output<number>();
   readonly removeSchedule = output<number>();
   readonly reactivateSchedule = output<number>();
   readonly sendReminder = output<number>();
@@ -854,15 +869,15 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   // ── Local state ─────────────────────────────────────────────────────────────
   protected readonly today = new Date();
-  protected readonly todayIsoVal = todayIso();
-  protected readonly todayLabel = (() => {
-    return formatChileDate(new Date(), {
+  /** fix-373-m: la fecha que se está mirando, no siempre la de hoy. */
+  protected readonly todayLabel = computed(() =>
+    formatChileDate(this.selectedDate(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
-    });
-  })();
+    }),
+  );
   protected readonly statusFilters = STATUS_FILTERS;
 
   // Skeletons (fix-046): anchos de columnas del header de tabla + nº de filas del rail.
@@ -924,8 +939,6 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
         suffix: '%',
         icon: 'trending-up',
         color: (k?.tasaAsistencia ?? 100) >= 90 ? 'success' : 'warning',
-        trend: k?.tasaAsistenciaTrend,
-        trendLabel: 'vs mes anterior',
       },
       {
         id: 'inasistencias',
@@ -966,7 +979,13 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly isDesktopLayout = computed(() => this.maxVisible() === null);
 
   /** true cuando la fecha seleccionada es posterior a hoy → modo solo lectura */
-  protected readonly isFutureDate = computed(() => this.selectedDate() > this.todayIsoVal);
+  /**
+   * fix-373-m: compara contra el "hoy" de cada evaluación. Antes era un computed contra una
+   * constante tomada al abrir la pantalla: pasada la medianoche seguía con el día anterior.
+   */
+  protected isFutureDate(): boolean {
+    return this.selectedDate() > chileToday();
+  }
 
   /**
    * Anchos de columna en % (fix-159), sujetos a `<colgroup>` con `table-layout: fixed`.
@@ -978,28 +997,36 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly columnWidths = computed(() =>
     this.showBranchColumn()
       ? {
-          agendada: 8,
-          inicio: 6,
-          fin: 6,
-          sede: 10,
-          instructor: 14,
-          alumno: 15,
-          vehiculo: 13,
-          estado: 10,
-          acciones: 18,
-        }
-      : {
-          agendada: 9,
+          agendada: 10,
           inicio: 7,
           fin: 7,
+          sede: 10,
+          instructor: 11,
+          alumno: 13,
+          vehiculo: 9,
+          estado: 17,
+          acciones: 16,
+        }
+      : {
+          agendada: 12,
+          inicio: 8,
+          fin: 8,
           sede: 0,
-          instructor: 16,
-          alumno: 17,
-          vehiculo: 15,
-          estado: 11,
-          acciones: 18,
+          instructor: 13,
+          alumno: 15,
+          vehiculo: 10,
+          estado: 18,
+          acciones: 16,
         },
   );
+
+  /**
+   * Ancho mínimo de la tabla (fix-372-m). Con `table-fixed` y % las columnas se encogían por
+   * debajo de su contenido `nowrap` ("Agendada" ~75 px, badge de Estado ~115 px) y se montaban
+   * sobre la vecina. Por debajo de este ancho la card scrollea en horizontal. Instructor, alumno y
+   * vehículo pueden bajar de línea; los botones de Acciones también (flex-wrap).
+   */
+  protected readonly tableMinWidthPx = computed(() => (this.showBranchColumn() ? 760 : 670));
 
   protected readonly filteredPracticas = computed(() => {
     let rows = this.clasesPracticas();
@@ -1084,9 +1111,15 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     if (id === 'refresh') this.refreshRequested.emit();
   }
 
+  /** fix-373-m: los chips cuentan dentro del instructor elegido, igual que la tabla. */
   protected countByStatus(filter: StatusFilter): number {
-    if (filter === 'todos') return this.clasesPracticas().length;
-    return this.clasesPracticas().filter((r) => r.status === filter).length;
+    const instructorId = this.selectedInstructorId();
+    const rows =
+      instructorId === null
+        ? this.clasesPracticas()
+        : this.clasesPracticas().filter((r) => r.instructorId === instructorId);
+    if (filter === 'todos') return rows.length;
+    return rows.filter((r) => r.status === filter).length;
   }
 
   /** Returns true if the scheduled start time is in the past (can mark absent). */

@@ -198,6 +198,57 @@ describe('ReportesContablesFacade', () => {
     });
   });
 
+  describe('servicios especiales como ingreso (fix-047-i, ASG-i-051)', () => {
+    const tablas = {
+      payments: {
+        data: [
+          {
+            total_amount: 100_000,
+            type: 'enrollment',
+            payment_date: '2026-04-01',
+            enrollments: { branch_id: 1, license_group: 'class_b' },
+          },
+        ],
+        error: null,
+      },
+      special_service_sales: {
+        data: [
+          { price: 25_000, sale_date: '2026-04-02', branch_id: 1 },
+          { price: 40_000, sale_date: '2026-04-03', branch_id: 2 },
+        ],
+        error: null,
+      },
+    };
+
+    it('suma las ventas cobradas de servicios especiales al total de ingresos', async () => {
+      const { facade, mockSupabase } = setup({ tables: tablas });
+      await facade.initialize();
+
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('special_service_sales');
+      expect(mockSupabase._builders.get('special_service_sales').eq).toHaveBeenCalledWith(
+        'paid',
+        true,
+      );
+      expect(facade.kpis()?.totalIngresos).toBe(165_000);
+      expect(facade.kpis()?.operacionesIngresos).toBe(3);
+    });
+
+    it('aparecen como categoría "Psicotécnico / Servicios"', async () => {
+      const { facade } = setup({ tables: tablas });
+      await facade.initialize();
+
+      const cat = facade.ingresosCategoria().find((c) => /Servicios/.test(c.nombre));
+      expect(cat?.monto).toBe(65_000);
+    });
+
+    it('respetan la sede: con sede 1 solo cuenta la venta de esa sede', async () => {
+      const { facade } = setup({ tables: tablas, selectedBranchId: 1 });
+      await facade.initialize();
+
+      expect(facade.kpis()?.totalIngresos).toBe(125_000);
+    });
+  });
+
   describe('rentabilidad por tipo de curso (fix-237-m)', () => {
     it('expone rentabilidadCursos derivado de payments + expenses del rango', async () => {
       const { facade } = setup({

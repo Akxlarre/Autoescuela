@@ -1,14 +1,14 @@
 # Asignación ASG-i-027 — Testing: Asistencia Clase B, inasistencias y penalización
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-11
+> **resulting_track:** fix-366-m-testing-asistencia-clase-b
 
 ---
 

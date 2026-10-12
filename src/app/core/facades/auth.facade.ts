@@ -1,10 +1,11 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, Injector, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { User } from '@core/models/ui/user.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 import { mapAuthError } from '@core/utils/auth-errors.utils';
 
 /**
@@ -27,6 +28,9 @@ export class AuthFacade {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
   private branchFacade = inject(BranchFacade);
+  // El toast se resuelve recién al usarlo (fix-219-b): AuthFacade se construye en toda la app y
+  // en decenas de tests, y solo necesita avisar en un caso.
+  private injector = inject(Injector);
 
   private _currentUser = signal<User | null>(null);
 
@@ -238,6 +242,15 @@ export class AuthFacade {
       updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
     } catch {
       return; // sin red: se conserva el perfil vigente (fix-185-b)
+    }
+    // fix-219-b: el admin la desactivó con la app abierta. Sin esto seguía dentro viendo todas
+    // las listas vacías (el servidor ya no le entrega datos) hasta que venciera su token.
+    if (updated.isActive === false) {
+      this.injector
+        .get(ToastService)
+        .error('Cuenta desactivada', 'Tu cuenta fue desactivada. Contacta al administrador.');
+      this.logout();
+      return;
     }
     this._currentUser.set(updated);
     if (wasGranted && !(updated.canAccessBothBranches ?? false)) {

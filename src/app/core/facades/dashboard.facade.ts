@@ -168,6 +168,24 @@ export class DashboardFacade {
     if (branchId !== null)
       prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
 
+    // fix-047-i: las ventas cobradas de Servicios Especiales también son ingreso del mes (antes
+    // solo las sumaba la Caja Diaria y el KPI no cuadraba con ella).
+    let specialRevenueQuery: any = this.supabase.client
+      .from('special_service_sales')
+      .select('price')
+      .eq('paid', true)
+      .gte('sale_date', firstOfMonth);
+    if (branchId !== null) specialRevenueQuery = specialRevenueQuery.eq('branch_id', branchId);
+
+    let prevSpecialRevenueQuery: any = this.supabase.client
+      .from('special_service_sales')
+      .select('price')
+      .eq('paid', true)
+      .gte('sale_date', firstOfPrevMonth)
+      .lte('sale_date', lastOfPrevMonthStr);
+    if (branchId !== null)
+      prevSpecialRevenueQuery = prevSpecialRevenueQuery.eq('branch_id', branchId);
+
     let vehiclesQuery: any = this.supabase.client.from('vehicles').select('id, status');
     if (branchId !== null) vehiclesQuery = vehiclesQuery.eq('branch_id', branchId);
 
@@ -189,6 +207,8 @@ export class DashboardFacade {
       classesYesterday,
       monthlyRevenue,
       prevMonthlyRevenue,
+      monthlySpecialRevenue,
+      prevMonthlySpecialRevenue,
       vehiclesStatus,
       auditLogsResponse,
     ] = await Promise.all([
@@ -198,18 +218,19 @@ export class DashboardFacade {
       classesYesterdayQuery,
       revenueQuery,
       prevRevenueQuery,
+      specialRevenueQuery,
+      prevSpecialRevenueQuery,
       vehiclesQuery,
       auditLogQuery,
     ]);
 
-    const revenue = (monthlyRevenue.data ?? []).reduce(
-      (acc: number, r: any) => acc + (r.total_amount ?? 0),
-      0,
-    );
-    const prevRevenue = (prevMonthlyRevenue.data ?? []).reduce(
-      (acc: number, r: any) => acc + (r.total_amount ?? 0),
-      0,
-    );
+    const sumPayments = (rows: any[] | null) =>
+      (rows ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0);
+    const sumSales = (rows: any[] | null) =>
+      (rows ?? []).reduce((acc: number, r: any) => acc + (r.price ?? 0), 0);
+    const revenue = sumPayments(monthlyRevenue.data) + sumSales(monthlySpecialRevenue.data);
+    const prevRevenue =
+      sumPayments(prevMonthlyRevenue.data) + sumSales(prevMonthlySpecialRevenue.data);
     let revenueTrend = 0;
     if (prevRevenue > 0) {
       revenueTrend = Math.round(((revenue - prevRevenue) / prevRevenue) * 100);

@@ -11,7 +11,11 @@ describe('AdminFinalizarClaseDrawerComponent', () => {
   let dashboardFacadeSpy: any;
 
   beforeEach(() => {
-    facadeSpy = { finishClass: vi.fn().mockResolvedValue(undefined) };
+    facadeSpy = {
+      finishClass: vi.fn().mockResolvedValue(undefined),
+      cancelStart: vi.fn().mockResolvedValue(true),
+      selectedPractica: vi.fn().mockReturnValue({ id: 1, kmStart: 1000 }),
+    };
     layoutDrawerSpy = { close: vi.fn(), open: vi.fn() };
     dashboardFacadeSpy = { refreshLiveClassesOnly: vi.fn().mockResolvedValue(undefined) };
 
@@ -39,6 +43,30 @@ describe('AdminFinalizarClaseDrawerComponent', () => {
       expect(facadeSpy.finishClass).toHaveBeenCalled();
       expect(dashboardFacadeSpy.refreshLiveClassesOnly).toHaveBeenCalled();
       expect(layoutDrawerSpy.close).toHaveBeenCalled();
+    });
+  });
+
+  describe('fix-375-m / fix-378-m', () => {
+    it('avisa un recorrido de más de 300 km, no uno normal', () => {
+      component.form.patchValue({ kmEnd: 1015 });
+      expect((component as any).endKmWarning()).toBeNull();
+      component.form.patchValue({ kmEnd: 6000 });
+      expect((component as any).endKmWarning()).toBe(
+        'Son 5.000 km en una clase. Revisa el odómetro.',
+      );
+    });
+
+    it('Cancelar inicio: si el facade confirma, refresca Clases Actuales y cierra', async () => {
+      await (component as any).onCancelStart({ id: 1 });
+      expect(facadeSpy.cancelStart).toHaveBeenCalledWith(1);
+      expect(dashboardFacadeSpy.refreshLiveClassesOnly).toHaveBeenCalled();
+      expect(layoutDrawerSpy.close).toHaveBeenCalled();
+    });
+
+    it('Cancelar inicio: si se cancela el diálogo, el drawer queda abierto', async () => {
+      facadeSpy.cancelStart.mockResolvedValueOnce(false);
+      await (component as any).onCancelStart({ id: 1 });
+      expect(layoutDrawerSpy.close).not.toHaveBeenCalled();
     });
   });
 

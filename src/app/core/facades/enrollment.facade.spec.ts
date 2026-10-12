@@ -755,6 +755,99 @@ describe('EnrollmentFacade', () => {
       expect(mockNotifications.notifyUsers).not.toHaveBeenCalled();
     });
 
+    // ── fix-046-i (ASG-i-050): el consentimiento va ANTES de activar ───────────
+    // Reproducido en vivo: con el consentimiento fallando, la matrícula quedaba `active`, con
+    // número y con las clases en `reserved`, mientras la pantalla decía "no se confirmó".
+
+    /** `from()` por tabla: cada tabla devuelve su propio builder para poder afirmar qué se tocó. */
+    function buildersPorTabla(datos: Record<string, unknown> = {}) {
+      const builders: Record<string, any> = {};
+      mockSupabase.client.from = vi.fn().mockImplementation((tabla: string) => {
+        builders[tabla] ??= createMockQueryBuilder(datos[tabla] ?? null);
+        return builders[tabla];
+      });
+      return builders;
+    }
+
+    const activaciones = (builders: Record<string, any>) =>
+      (builders['enrollments']?.update.mock.calls ?? []).filter(
+        ([payload]: [Record<string, unknown>]) => payload?.['status'] === 'active',
+      );
+
+    it('fix-046-i: si el consentimiento falla, la matrícula NO se activa ni se le pide número', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      const builders = buildersPorTabla();
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '0086', error: null });
+      mockConsents.recordMany.mockResolvedValue(false);
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBeNull();
+      expect(activaciones(builders)).toEqual([]);
+      expect(mockSupabase.client.rpc).not.toHaveBeenCalledWith(
+        'get_next_enrollment_number',
+        expect.anything(),
+      );
+      // Las clases siguen sin tocar (no se pasan de reserved a scheduled).
+      expect(builders['class_b_sessions']).toBeUndefined();
+    });
+
+    it('fix-046-i: un reintento sobre una matrícula que ya tiene número reusa ese número', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1, number: '0086' });
+      const builders = buildersPorTabla();
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '0087', error: null });
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBe('0086');
+      expect(mockSupabase.client.rpc).not.toHaveBeenCalledWith(
+        'get_next_enrollment_number',
+        expect.anything(),
+      );
+      expect(activaciones(builders)[0][0]).toMatchObject({ number: '0086', status: 'active' });
+    });
+
+    it('fix-046-i: si la matrícula ya tiene sus consentimientos, el reintento no los duplica', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      buildersPorTabla({ consents: [{ id: 1 }] });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '0086', error: null });
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBe('0086');
+      expect(mockConsents.recordMany).not.toHaveBeenCalled();
+    });
+
+    it('fix-046-i: reset() desmarca las dos casillas de consentimiento', () => {
+      facade.setPrivacyConsent(true);
+      facade.setPromotionalConsent(true);
+
+      facade.reset();
+
+      expect(facade.privacyConsentAccepted()).toBe(false);
+      expect(facade.promotionalConsentAccepted()).toBe(false);
+    });
+
+    it('fix-046-i: tras reset(), una matrícula nueva sin marcar promociones registra granted=false', async () => {
+      facade.setPromotionalConsent(true); // matrícula anterior marcó promociones
+      facade.reset();
+      (facade as any)._draft.set({ enrollmentId: 11, studentId: 21, userId: 31 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      buildersPorTabla();
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '0085', error: null });
+
+      await facade.confirmEnrollment();
+
+      const drafts = mockConsents.recordMany.mock.calls[0][0];
+      const promocional = drafts.find(
+        (d: { consentType: string }) => d.consentType === 'comunicaciones_promocionales',
+      );
+      expect(promocional.granted).toBe(false);
+    });
+
     it('propaga la negativa: si no marcó la casilla, se registra granted=false', async () => {
       (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
       (facade as any)._enrollment.set({ course_id: 1 });

@@ -2,7 +2,7 @@
 -- Prueba de BD — fix-044-i: saldo al borrar un pago, días cerrados y cierre definitivo
 -- ============================================================================
 -- ACs en specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio/fix.md.
--- Migración: 20261010120000_fix044_caja_saldo_y_cierre_definitivo.sql.
+-- Migración: 20261010121000_fix044_caja_saldo_y_cierre_definitivo.sql.
 -- Todo lo que escribe corre en sub-bloques que SIEMPRE abortan (ZZ001): no deja pagos, gastos
 -- ni cierres de prueba. Las fechas de prueba (2099-01-0X) no chocan con cierres reales.
 -- Los resultados se acumulan en una variable (v_rows) y se escriben en r044 al final: una fila

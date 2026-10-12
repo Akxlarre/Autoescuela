@@ -134,6 +134,22 @@ import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
           </div>
         </div>
 
+        <!-- Medio de pago (fix-047-i): decide la columna en la Caja Diaria; efectivo entra al arqueo -->
+        <div class="flex flex-col gap-1.5">
+          <label class="micro-label" for="v-medio-pago">
+            Medio de pago <span class="text-error">*</span>
+          </label>
+          <p-select
+            inputId="v-medio-pago"
+            formControlName="paymentMethod"
+            [options]="medioPagoOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+            data-llm-description="Medio con el que el cliente pagó la venta: decide la columna en Caja Diaria y si entra al arqueo de efectivo"
+          />
+        </div>
+
         <!-- N° de boleta (fix-025-i, opcional) -->
         <div class="flex flex-col gap-1.5">
           <label class="micro-label" for="v-boleta">N° de boleta</label>
@@ -179,6 +195,13 @@ export class RegistrarVentaDrawerComponent {
     { label: 'Alumno de la escuela', value: true },
   ];
 
+  /** Mismas opciones que el egreso de Caja (registrar-egreso-drawer), fix-047-i. */
+  readonly medioPagoOptions = [
+    { label: 'Efectivo', value: 'efectivo' },
+    { label: 'Transferencia', value: 'transferencia' },
+    { label: 'Tarjeta', value: 'tarjeta' },
+  ];
+
   readonly catalogoOptions = computed(() =>
     this.facade
       .catalogo()
@@ -205,6 +228,10 @@ export class RegistrarVentaDrawerComponent {
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
     documentNumber: new FormControl<string>(''),
     branchId: new FormControl<number | null>(null),
+    paymentMethod: new FormControl<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo', {
+      nonNullable: true,
+      validators: Validators.required,
+    }),
   });
 
   constructor() {
@@ -276,6 +303,7 @@ export class RegistrarVentaDrawerComponent {
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,
       branchId: val.branchId ?? null,
+      paymentMethod: val.paymentMethod ?? 'efectivo',
     });
 
     this.isSaving.set(false);

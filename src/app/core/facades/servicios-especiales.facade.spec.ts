@@ -374,6 +374,39 @@ describe('ServiciosEspecialesFacade', () => {
       );
     });
 
+    it('fix-047-i: propaga el medio de pago elegido al INSERT', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: null });
+      await facade.registrarVenta({
+        servicioId: 5,
+        esAlumno: false,
+        nombre: 'Juan',
+        rut: '1-9',
+        fecha: '2026-07-01',
+        precio: 25000,
+        paymentMethod: 'transferencia',
+      });
+      const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ payment_method: 'transferencia' }),
+      );
+    });
+
+    it('fix-047-i: sin medio de pago informado → inserta efectivo', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: null });
+      await facade.registrarVenta({
+        servicioId: 5,
+        esAlumno: false,
+        nombre: 'Juan',
+        rut: '1-9',
+        fecha: '2026-07-01',
+        precio: 25000,
+      });
+      const insertMock = mockSupabase._builders.get('special_service_sales').insert;
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ payment_method: 'efectivo' }),
+      );
+    });
+
     it('documentNumber ausente → inserta document_number=null', async () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
