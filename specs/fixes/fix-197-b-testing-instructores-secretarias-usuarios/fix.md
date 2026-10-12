@@ -159,8 +159,24 @@ Sin interceptar `create-instructor` ni Auth. No corren con la suite (`E2E_ALTA_R
 238 (`users` 8426 y 8427, correos `e2e.alta.*@e2e.test`, con cuenta de Auth), vehículo 36
 (`ZZ4103`), asignación 56, documentos 3 y 4 (2 archivos en `instructor-docs/237/`).
 
-**Quedan manuales — todos necesitan una bandeja de correo real o el fin del piloto:**
-- Correo: C28 (invitación de instructor), L01 (la secretaria nace sin clave y entra por el enlace
-  del correo, fix-182-b; incluye la parte de secretaria de T01), M02 y E05 (cambio de correo).
-- Bloqueados por el piloto del portal de instructores (reenviar invitación está oculto, fix-214-b):
-  H02, H04, H07.
+### Manuales — grupo 4 (2026-10-12, correo real con el owner)
+`e2e/secretarias-alta-real.spec.ts` (`E2E_L01_EMAIL=<bandeja>`) crea la secretaria; el owner abre el
+correo y activa la cuenta.
+
+| Caso | Resultado |
+|---|---|
+| L01 | ✅ Alta en la sede A, "Solo su sede": toast "Secretaria creada · Le enviamos un correo a … para que active su cuenta y cree su contraseña", aparece como "Activa". El correo "Activa tu cuenta de secretaria" llegó (remitente `no-reply@autoescuelachillan.cl`); el enlace abre la pantalla de crear contraseña; tras fijarla entra y ve solo Autoescuela Chillán (sin selector de sede, 72 alumnos de 155). En la BD: `first_login = false`, con clave y con ingreso registrado. **Cambió respecto del checklist:** ya no hay clave inicial = RUT (fix-182-b); el paso 7 no aplica |
+| T01 | ✅ (secretaria) `audit_log`: INSERT de `users` a nombre del admin |
+
+**Hallazgos de L01:**
+1. El encabezado del correo decía "Conductores Chillán" para una secretaria de Autoescuela Chillán → `hotfix-072-b` (PR #256, falta el deploy de `create-secretary`).
+2. La pantalla de primer ingreso pedía "actualizar tu contraseña temporal", que ya no existe → `hotfix-072-b`.
+3. No hay reglas de seguridad de la contraseña más allá de 8 caracteres, ni confirmación al activar → spec `0050-b` (borrador, PR #257).
+
+**Datos de prueba que quedaron:** secretaria "Zzprueba Secretaria" (`users` 8428, cuenta de Auth
+`117f7de0-…`), se usa para M02 antes de limpiarla.
+
+**Quedan manuales:**
+- Correo: M02 y E05 (cambio de correo de una secretaria y de un instructor).
+- Bloqueados por el piloto del portal de instructores (no se envían ni reenvían invitaciones,
+  fix-214-b): C28, H02, H04, H07.
