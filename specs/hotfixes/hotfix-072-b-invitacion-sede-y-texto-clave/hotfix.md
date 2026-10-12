@@ -1,7 +1,7 @@
 # Hotfix: La invitación de secretaria dice "Conductores Chillán" para cualquier sede y la pantalla habla de una "contraseña temporal" que no existe
 > id: hotfix-072-b-invitacion-sede-y-texto-clave
 > refs: ASG-i-034 (checklist 034, caso L01) — visto por el owner al activar la cuenta de prueba
-> status: active
+> status: closed
 > created: 2026-10-12
 
 ## Problema
@@ -27,4 +27,4 @@
 - `ng build` OK, `lint:arch` 0 errores (182).
 - Pantalla: el texto es estático (título "Crea tu contraseña", botón "Guardar y entrar"); no se pudo abrir
   en el navegador porque la única cuenta en primer ingreso ya se activó.
-- Pendiente: deploy de `create-secretary` (con aprobación) para que el correo salga con el nombre de la sede.
+- Deploy (aprobado 2026-10-12): `create-secretary` v20, idéntico a esta rama. Los primeros 5 intentos fallaron con 500 "internal error": los archivos del checkout tenían fin de línea CRLF; con LF subió (v19 fue un redeploy de diagnóstico con el código de `main`).
