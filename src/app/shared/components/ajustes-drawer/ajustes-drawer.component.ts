@@ -26,7 +26,8 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { FormsModule } from '@angular/forms';
-import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
+import { evaluatePassword, PASSWORD_MIN_LENGTH } from '@core/utils/password-policy.utils';
+import { PasswordRequirementsComponent } from '@shared/components/password-requirements/password-requirements.component';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
 import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
 import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-precios/precios-cursos-drawer.component';
@@ -45,6 +46,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     BadgeComponent,
     SkeletonBlockComponent,
     DrawerFormComponent,
+    PasswordRequirementsComponent,
   ],
   template: `
     <div class="ajustes-container flex h-full flex-col">
@@ -192,7 +194,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       [(ngModel)]="newPassword"
                       (ngModelChange)="markDirty()"
                       [placeholder]="'Mínimo ' + minPasswordLength + ' caracteres'"
+                      autocomplete="new-password"
                       data-llm-description="input for the new account password"
+                    />
+                    <!-- spec 0050-b: misma regla y mismos requisitos que al crear la contraseña -->
+                    <app-password-requirements
+                      class="block pt-1"
+                      [requirements]="passwordEvaluation().requirements"
+                      [strength]="passwordEvaluation().strength"
                     />
                   </div>
                   <div class="space-y-1">
@@ -214,7 +223,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     [disabled]="
                       isSaving() ||
                       currentPassword().length === 0 ||
-                      newPassword().length < minPasswordLength ||
+                      !passwordEvaluation().valid ||
                       newPassword() !== confirmPassword()
                     "
                     data-llm-action="update-password"
@@ -725,6 +734,15 @@ export class AjustesDrawerComponent {
   protected readonly currentPassword = signal('');
   protected readonly newPassword = signal('');
   protected readonly confirmPassword = signal('');
+  /** La regla única de contraseñas (spec 0050-b), con los datos propios como contexto. */
+  protected readonly passwordEvaluation = computed(() => {
+    const user = this.currentUser();
+    return evaluatePassword(this.newPassword(), {
+      name: user?.name,
+      email: user?.email,
+      rut: user?.rut,
+    });
+  });
 
   protected readonly branchLabel = computed(() => {
     const branchId = this.currentUser()?.branchId;
@@ -839,6 +857,7 @@ export class AjustesDrawerComponent {
   }
 
   async updatePassword(): Promise<void> {
+    if (!this.passwordEvaluation().valid) return;
     if (this.newPassword() !== this.confirmPassword()) {
       this.toast.error('Las contraseñas no coinciden.');
       return;

@@ -12,6 +12,8 @@ export interface User {
   /** RF-013 / spec 0017: grant que permite a una secretaria ver todas las sedes (como admin). */
   canAccessBothBranches?: boolean;
   isActive?: boolean;
+  /** RUT propio. Solo para que la contraseña no lo contenga (spec 0050-b). */
+  rut?: string | null;
   avatarUrl?: string;
 }
 
