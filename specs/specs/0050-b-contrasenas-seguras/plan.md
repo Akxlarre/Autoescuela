@@ -1,6 +1,6 @@
 # Plan 0050-b — Contraseñas seguras
 
-> **Status:** propuesto (pendiente de aprobación del owner)
+> **Status:** aprobado (owner, 2026-10-12)
 
 ## Diseño
 
