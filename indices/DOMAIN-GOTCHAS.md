@@ -1759,7 +1759,7 @@
   `SET lock_timeout = '5s';` al aplicarla a mano y reintentar si sale "lock timeout"; confirmar con
   `pg_trigger` qué quedó instalado antes de reintentar.
 - **Fuente:** `specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio` (aplicación de
-  `20261010120000`).
+  `20261010121000`).
 
 ### DG-108 — El Facade de un wizard es singleton: lo que `reset()` no limpia pasa a la matrícula siguiente, y un paso con efecto legal va antes de activar
 
