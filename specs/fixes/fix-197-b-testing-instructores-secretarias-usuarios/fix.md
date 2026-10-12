@@ -167,10 +167,10 @@ correo y activa la cuenta.
 |---|---|
 | L01 | ✅ Alta en la sede A, "Solo su sede": toast "Secretaria creada · Le enviamos un correo a … para que active su cuenta y cree su contraseña", aparece como "Activa". El correo "Activa tu cuenta de secretaria" llegó (remitente `no-reply@autoescuelachillan.cl`); el enlace abre la pantalla de crear contraseña; tras fijarla entra y ve solo Autoescuela Chillán (sin selector de sede, 72 alumnos de 155). En la BD: `first_login = false`, con clave y con ingreso registrado. **Cambió respecto del checklist:** ya no hay clave inicial = RUT (fix-182-b); el paso 7 no aplica |
 | T01 | ✅ (secretaria) `audit_log`: INSERT de `users` a nombre del admin |
-| M02 | ✅ (`e2e/secretarias-cambio-correo-real.spec.ts`) El admin cambia el correo de la secretaria de prueba: el aviso dice "El cambio es inmediato… No se envía correo de confirmación" (S13, cierto: no sale ningún correo), toast "Secretaria actualizada", la lista muestra el nuevo. En Auth: misma cuenta, correo nuevo, confirmado y con su clave; el correo viejo ya no existe (no puede entrar con él). `audit_log`: "Correo: viejo -> nuevo" a nombre del admin. Falta solo que una persona entre con el correo nuevo y su clave |
+| M02 | ✅ (`e2e/secretarias-cambio-correo-real.spec.ts`) El admin cambia el correo de la secretaria de prueba: el aviso dice "El cambio es inmediato… No se envía correo de confirmación" (S13, cierto: no sale ningún correo), toast "Secretaria actualizada", la lista muestra el nuevo. En Auth: misma cuenta, correo nuevo, confirmado y con su clave; el correo viejo ya no existe (no puede entrar con él). `audit_log`: "Correo: viejo -> nuevo" a nombre del admin. El owner confirmó (2026-10-12) que entra con el correo nuevo y su clave |
 
 **Hallazgos de L01:**
-1. El encabezado del correo decía "Conductores Chillán" para una secretaria de Autoescuela Chillán → `hotfix-072-b` (PR #256, falta el deploy de `create-secretary`).
+1. El encabezado del correo decía "Conductores Chillán" para una secretaria de Autoescuela Chillán → `hotfix-072-b` (PR #256, `create-secretary` v20 desplegada).
 2. La pantalla de primer ingreso pedía "actualizar tu contraseña temporal", que ya no existe → `hotfix-072-b`.
 3. No hay reglas de seguridad de la contraseña más allá de 8 caracteres, ni confirmación al activar → spec `0050-b` (borrador, PR #257).
 
