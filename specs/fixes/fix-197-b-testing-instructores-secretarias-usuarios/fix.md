@@ -167,6 +167,7 @@ correo y activa la cuenta.
 |---|---|
 | L01 | ✅ Alta en la sede A, "Solo su sede": toast "Secretaria creada · Le enviamos un correo a … para que active su cuenta y cree su contraseña", aparece como "Activa". El correo "Activa tu cuenta de secretaria" llegó (remitente `no-reply@autoescuelachillan.cl`); el enlace abre la pantalla de crear contraseña; tras fijarla entra y ve solo Autoescuela Chillán (sin selector de sede, 72 alumnos de 155). En la BD: `first_login = false`, con clave y con ingreso registrado. **Cambió respecto del checklist:** ya no hay clave inicial = RUT (fix-182-b); el paso 7 no aplica |
 | T01 | ✅ (secretaria) `audit_log`: INSERT de `users` a nombre del admin |
+| M02 | ✅ (`e2e/secretarias-cambio-correo-real.spec.ts`) El admin cambia el correo de la secretaria de prueba: el aviso dice "El cambio es inmediato… No se envía correo de confirmación" (S13, cierto: no sale ningún correo), toast "Secretaria actualizada", la lista muestra el nuevo. En Auth: misma cuenta, correo nuevo, confirmado y con su clave; el correo viejo ya no existe (no puede entrar con él). `audit_log`: "Correo: viejo -> nuevo" a nombre del admin. Falta solo que una persona entre con el correo nuevo y su clave |
 
 **Hallazgos de L01:**
 1. El encabezado del correo decía "Conductores Chillán" para una secretaria de Autoescuela Chillán → `hotfix-072-b` (PR #256, falta el deploy de `create-secretary`).
@@ -177,6 +178,6 @@ correo y activa la cuenta.
 `117f7de0-…`), se usa para M02 antes de limpiarla.
 
 **Quedan manuales:**
-- Correo: M02 y E05 (cambio de correo de una secretaria y de un instructor).
+- E05 (cambio de correo de un instructor): el cambio se puede probar igual que M02, pero "entra con el correo nuevo" exige que el instructor pueda iniciar sesión, y su portal está en piloto.
 - Bloqueados por el piloto del portal de instructores (no se envían ni reenvían invitaciones,
   fix-214-b): C28, H02, H04, H07.
