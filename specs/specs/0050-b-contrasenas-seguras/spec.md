@@ -1,6 +1,6 @@
 # Spec 0050-b — Contraseñas seguras: una sola regla, visible mientras se escribe y exigida por el servidor
 
-> **Status:** approved (decisiones del owner el 2026-10-12, ver §6)
+> **Status:** done (2026-10-12; AC9 no disponible en el plan gratuito, ver acceptance.md)
 > **Created:** 2026-10-12
 > **Owner:** Benjamín
 > **Priority:** P2 (seguridad de cuentas con acceso a datos personales; no bloquea el piloto)
