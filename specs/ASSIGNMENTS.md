@@ -24,6 +24,7 @@
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Mejor después de 060 |
 | ASG-i-060 | ¿Los reportes suman pagos que no están pagados? | `cualquiera` | fix | P1 | i | ⏳ Paso 1: una consulta de solo lectura por `payments.status`. Salió de `fix-044-i`. Coordinar con 059 (mismo inventario) |
 | ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
+| ASG-m-010 | El correo al alumno menciona el portal, que está deshabilitado en el piloto | `m` | fix | P1 | m | Botón "Activar mi cuenta" incluido. Recomendado: igual que `fix-214-b` (instructores), no invitar mientras `isBlockedInPilot('alumno')` |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -88,8 +89,8 @@
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-030 | Testing: Dashboards | `i` | fix | P1 | i | Integración · Media · correr al final |
-| ASG-i-031 | Testing: Servicios especiales | `i` | fix | P2 | i | Funcional · Baja |
+| ASG-i-030 | Testing: Dashboards | `m` | fix | P1 | i | Integración · Media · correr al final |
+| ASG-i-031 | Testing: Servicios especiales | `m` | fix | P2 | i | Funcional · Baja |
 | ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
 | ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
 | ASG-i-034 | Testing: Instructores, secretarias y usuarios | `b` | fix | P1 | i | Integración · Media |
