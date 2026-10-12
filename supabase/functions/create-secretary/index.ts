@@ -201,10 +201,17 @@ Deno.serve(async (req: Request) => {
     // Un fallo acá no deshace la cuenta: puede activarse con "recuperar contraseña".
     let inviteSent = true;
     try {
+      // hotfix-072-b: el encabezado lleva el nombre de SU sede (antes "Conductores Chillán" fijo).
+      const { data: branchRow } = await supabaseAdmin
+        .from('branches')
+        .select('name')
+        .eq('id', branchId)
+        .maybeSingle();
       const { subject, html } = buildStaffInviteEmail({
         name: fullName,
         roleLabel: 'secretaria',
         actionLink: authData.properties.action_link,
+        schoolName: branchRow?.name,
       });
       const port = Number(Deno.env.get('SMTP_PORT') ?? 465);
       const transporter = nodemailer.createTransport({

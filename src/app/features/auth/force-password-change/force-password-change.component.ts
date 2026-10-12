@@ -150,7 +150,7 @@ export class ForcePasswordChangeComponent {
   private readonly route = inject(ActivatedRoute);
 
   /**
-   * Misma pantalla para dos flujos: el primer login (clave temporal) y el link de "recuperar
+   * Misma pantalla para dos flujos: el primer ingreso (activación por enlace) y el link de "recuperar
    * contraseña" (fix-181-b, ruta /recuperar-contrasena con data.mode = 'recovery').
    */
   readonly isRecovery = this.route.snapshot.data['mode'] === 'recovery';
@@ -164,10 +164,12 @@ export class ForcePasswordChangeComponent {
       }
     : {
         icon: 'shield-alert',
-        title: 'Actualiza tu contraseña',
+        // hotfix-072-b: decía "actualizar tu contraseña temporal". Desde fix-182-b las cuentas
+        // nacen sin contraseña y se activan por enlace: nadie tiene una temporal.
+        title: 'Crea tu contraseña',
         subtitle:
-          'Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio de sesión.',
-        submit: 'Actualizar y Continuar',
+          'Es tu primer ingreso. Crea la contraseña que usarás de ahora en adelante para entrar.',
+        submit: 'Guardar y entrar',
         llmAction: 'actualizar-contrasena-forzada',
       };
   private readonly gsap = inject(GsapAnimationsService);
