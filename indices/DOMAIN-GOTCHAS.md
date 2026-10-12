@@ -1777,6 +1777,23 @@
   previo es idempotente para que el reintento no duplique (reusar el número asignado, no reinsertar).
 - **Fuente:** `specs/fixes/fix-046-i-matricula-activa-sin-consentimiento` (reproducido en vivo).
 
+### DG-109 — Cambiar qué significa una columna de la Caja reclasifica en silencio todo lo que ya se mandaba ahí
+
+- **Trampa:** renombrar o redefinir las columnas de un desglose (en la Caja Diaria pasaron de "tipo de
+  clase" a "medio de pago") revisando solo los ingresos que motivaron el cambio.
+- **Realidad:** `IngresoRow` conserva los mismos campos (`claseB`, `claseA`, `sence`, `otros`); solo
+  cambió lo que la pantalla dice de ellos. Las ventas de servicios especiales iban fijas a `otros`
+  por una decisión tomada cuando "otros" era "no es una clase de manejo"; con las columnas por medio
+  de pago, `otros` pasó a mostrarse como **Tarjeta** y toda venta en efectivo quedó fuera del arqueo
+  físico, sin error ni test que lo marcara.
+- **Regla de aplicabilidad:** al cambiar el significado de una columna o bucket de un desglose
+  financiero, buscar **todos** los mapeadores que escriben en ese campo (`grep` del nombre del campo en
+  los `map*ToIngreso` / `map*ToPaymentRow`) y revisar si su regla sigue siendo verdad con el
+  significado nuevo. Si una fuente no tiene el dato que la columna ahora exige (aquí, el medio de
+  pago), hay que agregarlo, no asumirlo.
+- **Fuente:** `specs/fixes/fix-047-i-servicios-especiales-como-ingreso` (columnas renombradas en
+  fix-230-m; bucket fijo de fix-025-i).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

@@ -1,4 +1,9 @@
-import { chileRange, chileToday, formatChileDate, formatChilePattern } from '../_shared/chile-time.ts';
+import {
+  chileRange,
+  chileToday,
+  formatChileDate,
+  formatChilePattern,
+} from '../_shared/chile-time.ts';
 // supabase/functions/generate-financial-report/index.ts
 //
 // Edge Function: generate-financial-report
@@ -144,6 +149,24 @@ Deno.serve(async (req: Request) => {
     const { data: rawSingulars, error: singErr } = await singularsQ;
     if (singErr) throw singErr;
 
+    // ── Ventas cobradas de Servicios Especiales en el rango (fix-047-i) ────────
+    // Tampoco existen en `payments`: hasta fix-047-i solo las sumaba la Caja Diaria y este
+    // reporte no cuadraba con ella. sale_date es DATE (día de Chile): se compara directo.
+    let specialQ = adminClient
+      .from('special_service_sales')
+      .select('price, sale_date, service_name, client_name, client_rut, branch_id')
+      .eq('paid', true)
+      .gte('sale_date', desde)
+      .lte('sale_date', hasta)
+      .order('sale_date', { ascending: true });
+
+    if (branchId !== null) {
+      specialQ = specialQ.eq('branch_id', branchId);
+    }
+
+    const { data: rawSpecials, error: specialErr } = await specialQ;
+    if (specialErr) throw specialErr;
+
     // ── Gastos en el rango ────────────────────────────────────────────────────
     let expQ = adminClient
       .from('expenses')
@@ -182,9 +205,13 @@ Deno.serve(async (req: Request) => {
         type: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
       }));
 
-    const payments: PaymentRow[] = [...paymentsFromTable, ...singularPayments].sort((a, b) =>
-      a.date.localeCompare(b.date),
-    );
+    const specialPayments: PaymentRow[] = (rawSpecials ?? []).map(mapSpecialServiceSaleRow);
+
+    const payments: PaymentRow[] = [
+      ...paymentsFromTable,
+      ...singularPayments,
+      ...specialPayments,
+    ].sort((a, b) => a.date.localeCompare(b.date));
 
     const expenses: ExpenseRow[] = (rawExpenses ?? []).map((e: any) => ({
       date: e.date ?? '',
@@ -995,6 +1022,22 @@ function pdfStr(s: string): string {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[()\\]/g, (c) => '\\' + c)
     .replace(/[^\x20-\x7E]/g, '?');
+}
+
+/**
+ * Venta cobrada de Servicio Especial → fila de ingreso del reporte (fix-047-i). Cae en la
+ * categoría `special_service` ("Servicio Especial"), igual que en la pantalla de Reportes.
+ * El cliente puede no ser alumno: se usa el nombre/RUT guardados en la venta.
+ */
+function mapSpecialServiceSaleRow(s: any): PaymentRow {
+  return {
+    date: s.sale_date ?? '',
+    licenseGroup: 'special_service',
+    amount: s.price ?? 0,
+    alumno: s.client_name ?? '—',
+    rut: s.client_rut ?? '—',
+    type: `Servicio: ${s.service_name ?? 'especial'}`,
+  };
 }
 
 function clp(amount: number): string {

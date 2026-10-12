@@ -2098,6 +2098,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `branch_id` | INT | sí | — | → `branches.id` |
 | `service_name` | TEXT | sí | — | — |
 | `document_number` | TEXT | sí | — | — |
+| `payment_method` | TEXT | NO | `'efectivo'` | — |  CHECK `efectivo`/`transferencia`/`tarjeta`. Medio de pago de la venta; decide la columna en Caja Diaria (`20261012120000`, fix-047-i). Las ventas anteriores quedaron `efectivo`. |
 
 **Policies:**
 

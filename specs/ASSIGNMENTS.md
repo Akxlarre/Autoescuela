@@ -21,6 +21,7 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
+| ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Mejor después de 060 |
 | ASG-i-060 | ¿Los reportes suman pagos que no están pagados? | `cualquiera` | fix | P1 | i | ⏳ Paso 1: una consulta de solo lectura por `payments.status`. Salió de `fix-044-i`. Coordinar con 059 (mismo inventario) |
 | ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
@@ -132,7 +133,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
 
@@ -439,6 +439,7 @@
 | ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 | ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
+| ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---

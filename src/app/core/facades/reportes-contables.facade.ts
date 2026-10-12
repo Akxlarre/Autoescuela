@@ -29,6 +29,7 @@ import {
   computeEvolucionRange,
   filterPaymentsByBranch,
   mapSingularSaleToPaymentRow,
+  mapSpecialServiceSaleToPaymentRow,
   type ExpenseRow,
   type PaymentRow,
 } from '@core/utils/reportes-contables.utils';
@@ -260,38 +261,17 @@ export class ReportesContablesFacade {
     try {
       // La serie de Evolución se refresca por su propio camino (self-guarded): un solo
       // lugar escribe `_evolucionSerie` y usa siempre la ventana de `_rangoEvolucion()`.
-      const [paymentsResult, singularsResult, expensesResult, fixedResult, classCounts] =
-        await Promise.all([
-          this.queryPayments(desde, hasta),
-          this.querySingularSales(desde, hasta),
-          this.queryExpenses(desde, hasta, branchId),
-          this.queryFixedExpenses(desde, hasta, branchId),
-          this.queryClassCounts(desde, hasta, branchId),
-          this.refreshEvolucionSerie(),
-        ]);
+      const [payments, expensesResult, fixedResult, classCounts] = await Promise.all([
+        this.fetchIngresos(desde, hasta, branchId),
+        this.queryExpenses(desde, hasta, branchId),
+        this.queryFixedExpenses(desde, hasta, branchId),
+        this.queryClassCounts(desde, hasta, branchId),
+        this.refreshEvolucionSerie(),
+      ]);
 
-      if (paymentsResult.error) throw paymentsResult.error;
-      if (singularsResult.error) throw singularsResult.error;
       if (expensesResult.error) throw expensesResult.error;
       if (fixedResult.error) throw fixedResult.error;
 
-      // Cobros de cursos singulares normalizados a PaymentRow (fix-016):
-      // participan de KPIs, categorías y evolución como categoría 'standalone'.
-      const singularRows: PaymentRow[] = ((singularsResult.data ?? []) as any[]).map((s) =>
-        mapSingularSaleToPaymentRow({
-          amount_paid: s.amount_paid,
-          paid_at: s.paid_at,
-          branch_id: s.standalone_courses?.branch_id ?? 0,
-        }),
-      );
-
-      // El tipado de supabase-js infiere `enrollments` como array porque el cliente
-      // no usa el `Database` generado (sin codegen no puede saber la cardinalidad real
-      // de la FK) — en runtime es un objeto (fix-056). Se castea vía `unknown` a propósito.
-      const payments = filterPaymentsByBranch(
-        [...((paymentsResult.data ?? []) as unknown as PaymentRow[]), ...singularRows],
-        branchId,
-      );
       const operationalExpenses = (expensesResult.data ?? []) as ExpenseRow[];
 
       const fixedRaw = (fixedResult.data ?? []) as Pick<
@@ -370,6 +350,68 @@ export class ReportesContablesFacade {
   }
 
   /**
+   * Ventas cobradas de Servicios Especiales en el rango (fix-047-i). Hasta fix-047-i solo las
+   * sumaba la Caja Diaria y Reportes no cuadraba con ella. El filtro de sede se aplica
+   * client-side junto al resto (filterPaymentsByBranch) usando special_service_sales.branch_id.
+   */
+  private querySpecialServiceSales(desde: string, hasta: string) {
+    return this.supabase.client
+      .from('special_service_sales')
+      .select('price, sale_date, branch_id')
+      .eq('paid', true)
+      .gte('sale_date', desde)
+      .lte('sale_date', hasta);
+  }
+
+  /**
+   * Todos los ingresos del rango como `PaymentRow`, ya filtrados por sede: pagos de matrícula,
+   * cobros de cursos singulares (fix-016) y ventas de servicios especiales (fix-047-i). Lo usan el
+   * reporte del período y la serie de Evolución, para que los dos sumen lo mismo. Lanza si
+   * alguna lectura falla.
+   */
+  private async fetchIngresos(
+    desde: string,
+    hasta: string,
+    branchId: number | null,
+  ): Promise<PaymentRow[]> {
+    const [paymentsResult, singularsResult, specialResult] = await Promise.all([
+      this.queryPayments(desde, hasta),
+      this.querySingularSales(desde, hasta),
+      this.querySpecialServiceSales(desde, hasta),
+    ]);
+    if (paymentsResult.error) throw paymentsResult.error;
+    if (singularsResult.error) throw singularsResult.error;
+    if (specialResult.error) throw specialResult.error;
+
+    const singularRows: PaymentRow[] = ((singularsResult.data ?? []) as any[]).map((s) =>
+      mapSingularSaleToPaymentRow({
+        amount_paid: s.amount_paid,
+        paid_at: s.paid_at,
+        branch_id: s.standalone_courses?.branch_id ?? 0,
+      }),
+    );
+    const specialRows: PaymentRow[] = ((specialResult.data ?? []) as any[]).map((s) =>
+      mapSpecialServiceSaleToPaymentRow({
+        price: s.price,
+        sale_date: s.sale_date,
+        branch_id: s.branch_id,
+      }),
+    );
+
+    // El tipado de supabase-js infiere `enrollments` como array porque el cliente
+    // no usa el `Database` generado (sin codegen no puede saber la cardinalidad real
+    // de la FK) — en runtime es un objeto (fix-056). Se castea vía `unknown` a propósito.
+    return filterPaymentsByBranch(
+      [
+        ...((paymentsResult.data ?? []) as unknown as PaymentRow[]),
+        ...singularRows,
+        ...specialRows,
+      ],
+      branchId,
+    );
+  }
+
+  /**
    * Consulta gastos en el rango de fechas.
    * Aplica filtro directo de branch_id cuando la sede está determinada.
    */
@@ -445,27 +487,14 @@ export class ReportesContablesFacade {
     meses: string[],
   ): Promise<EvolucionMensual[]> {
     try {
-      const [paymentsResult, singularsResult, expensesResult, fixedResult] = await Promise.all([
-        this.queryPayments(desde, hasta),
-        this.querySingularSales(desde, hasta),
+      const [payments, expensesResult, fixedResult] = await Promise.all([
+        this.fetchIngresos(desde, hasta, branchId),
         this.queryExpenses(desde, hasta, branchId),
         this.queryFixedExpenses(desde, hasta, branchId),
       ]);
-      if (paymentsResult.error) throw paymentsResult.error;
       if (expensesResult.error) throw expensesResult.error;
       if (fixedResult.error) throw fixedResult.error;
 
-      const singularRows: PaymentRow[] = ((singularsResult.data ?? []) as any[]).map((s) =>
-        mapSingularSaleToPaymentRow({
-          amount_paid: s.amount_paid,
-          paid_at: s.paid_at,
-          branch_id: s.standalone_courses?.branch_id ?? 0,
-        }),
-      );
-      const payments = filterPaymentsByBranch(
-        [...((paymentsResult.data ?? []) as unknown as PaymentRow[]), ...singularRows],
-        branchId,
-      );
       const expenses: ExpenseRow[] = [
         ...((expensesResult.data ?? []) as ExpenseRow[]),
         ...((fixedResult.data ?? []) as { amount: number; category: string; date: string }[]).map(

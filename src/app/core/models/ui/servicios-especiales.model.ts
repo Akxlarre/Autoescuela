@@ -50,6 +50,8 @@ export interface VentaFormData {
   documentNumber?: string | null;
   /** Sede elegida en el formulario (admin / multi-sede). Sin ella, la del topbar o la propia (fix-194-b). */
   branchId?: number | null;
+  /** Medio de pago (fix-047-i). Sin informar → efectivo. Decide la columna en la Caja Diaria. */
+  paymentMethod?: 'efectivo' | 'transferencia' | 'tarjeta';
 }
 
 export interface NuevoServicioFormData {

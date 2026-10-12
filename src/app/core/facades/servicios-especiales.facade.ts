@@ -295,6 +295,8 @@ export class ServiciosEspecialesFacade {
       client_rut: data.rut,
       sale_date: data.fecha,
       price: data.precio,
+      // fix-047-i: con qué se pagó — la Caja Diaria lo pone en esa columna (efectivo entra al arqueo).
+      payment_method: data.paymentMethod ?? 'efectivo',
       // fix-025-i: toda venta se cobra al momento de registrarse — ya no existe un flujo de
       // "pendiente de cobro" para servicios especiales (decisión de negocio 2026-08-13).
       paid: true,
