@@ -132,7 +132,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-050 | Matrícula activa aunque dice "no se confirmó" | `i` | fix | P0 | i | ⏳ Consentimiento Ley 21.719 |
 | ASG-i-051 | Servicios especiales fuera de Reportes/Dashboard; efectivo como tarjeta | `i` | fix | P0 | i | ⏳ |
 
 ### Tanda hallazgos de QA visual del piloto — 2026-09-22
@@ -439,6 +438,7 @@
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
+| ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---

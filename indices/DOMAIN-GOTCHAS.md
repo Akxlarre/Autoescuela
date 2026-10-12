@@ -1761,6 +1761,22 @@
 - **Fuente:** `specs/fixes/fix-044-i-cuadratura-operaciones-fallan-en-silencio` (aplicación de
   `20261010120000`).
 
+### DG-108 — El Facade de un wizard es singleton: lo que `reset()` no limpia pasa a la matrícula siguiente, y un paso con efecto legal va antes de activar
+
+- **Trampa:** agregar un `signal()` nuevo al Facade del wizard de matrícula (por ejemplo, una casilla
+  de consentimiento) y confiar en que el componente del paso arranca de cero; o confirmar la
+  matrícula (número + `active`) y recién después registrar algo que la ley exige que exista.
+- **Realidad:** `EnrollmentFacade` es `providedIn: 'root'`. El componente del paso 5 se recrea con la
+  casilla desmarcada, pero el Facade conservaba el "sí" de la matrícula anterior y lo registraba en la
+  siguiente: una matrícula quedó con `comunicaciones_promocionales = true` sin que nadie la marcara.
+  Y como el consentimiento iba después de activar, un fallo dejaba una matrícula `active` y numerada
+  sin consentimiento mientras la pantalla decía "no se confirmó".
+- **Regla de aplicabilidad:** todo `signal()` de estado de un wizard que vive en un Facade singleton
+  se limpia en su `reset()`, en el mismo cambio que lo agrega. En una confirmación con varios pasos,
+  lo que tiene requisito legal o no se puede deshacer va **antes** del cambio de estado, y cada paso
+  previo es idempotente para que el reintento no duplique (reusar el número asignado, no reinsertar).
+- **Fuente:** `specs/fixes/fix-046-i-matricula-activa-sin-consentimiento` (reproducido en vivo).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

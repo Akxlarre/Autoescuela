@@ -1354,6 +1354,24 @@ export class EnrollmentFacade {
     return this.consentsFacade.recordMany([...drafts, ...commsDrafts]);
   }
 
+  /**
+   * Registra el consentimiento de la matrícula salvo que ya esté registrado (fix-046-i): en un
+   * reintento de confirmación los consentimientos pueden haber quedado guardados aunque después
+   * fallara la activación. `recordMany()` es un solo INSERT de todas las filas, así que "hay al
+   * menos una fila de esta matrícula" equivale a "quedaron todas". Si no se puede leer, no se
+   * confirma: la secretaria reintenta.
+   */
+  private async ensureEnrollmentConsent(enrollmentId: number): Promise<boolean> {
+    const { data, error } = await this.supabase.client
+      .from('consents')
+      .select('id')
+      .eq('enrollment_id', enrollmentId)
+      .limit(1);
+    if (error) return false;
+    if (Array.isArray(data) && data.length > 0) return true;
+    return this.recordEnrollmentConsent(enrollmentId);
+  }
+
   /** Declaración de lectura de la Política de Privacidad (spec 0009-m, AC3/AC5). */
   private readonly _privacyConsentAccepted = signal<boolean>(false);
   readonly privacyConsentAccepted = this._privacyConsentAccepted.asReadonly();
@@ -1452,8 +1470,22 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
-      // Generate enrollment number (YYYY-NNNN)
-      const enrollmentNumber = await this.generateEnrollmentNumber();
+      // Consentimiento (AC5) PRIMERO (fix-046-i): si falla, la matrícula sigue en borrador, sin
+      // número y con sus clases intactas — antes se activaba y numeraba primero, y un fallo acá
+      // dejaba una matrícula activa sin respaldo legal mientras la pantalla decía "no se confirmó".
+      // En un reintento, si los consentimientos ya quedaron registrados no se duplican.
+      const consentOk = await this.ensureEnrollmentConsent(draft.enrollmentId);
+      if (!consentOk) {
+        this._error.set(
+          'No se pudo registrar el consentimiento del alumno. La matrícula no se confirmó.',
+        );
+        return null;
+      }
+
+      // Número: si un intento anterior ya se lo asignó, se reusa (fix-046-i). Pedir otro dejaba
+      // un hueco en la numeración: la función devuelve "último numerado + 1".
+      const enrollmentNumber =
+        this._enrollment()?.number ?? (await this.generateEnrollmentNumber());
       if (!enrollmentNumber) return null;
 
       // Update enrollment to active
@@ -1471,16 +1503,6 @@ export class EnrollmentFacade {
 
       if (error) {
         this._error.set('Error al confirmar matrícula: ' + this.sanitizer.sanitize(error).message);
-        return null;
-      }
-
-      // Consentimiento (AC5). Va antes de confirmar las sesiones y de invitar al alumno:
-      // si falla, se corta acá en vez de dejar una matrícula activa sin respaldo legal.
-      const consentOk = await this.recordEnrollmentConsent(draft.enrollmentId);
-      if (!consentOk) {
-        this._error.set(
-          'No se pudo registrar el consentimiento del alumno. La matrícula no se confirmó.',
-        );
         return null;
       }
 
@@ -2175,6 +2197,10 @@ export class EnrollmentFacade {
     this._selectedPromotionCourseId.set(null);
     this._enrollment.set(null);
     this._contractFileUrl.set(null);
+    // fix-046-i: sin esto la casilla de la matrícula anterior se registraba en la siguiente
+    // (el paso 5 arranca desmarcado en pantalla, pero el Facade conservaba el "sí").
+    this._privacyConsentAccepted.set(false);
+    this._promotionalConsentAccepted.set(false);
     this._isLoading.set(false);
     this._error.set(null);
   }
