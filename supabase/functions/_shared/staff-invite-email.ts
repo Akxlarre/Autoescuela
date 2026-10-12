@@ -13,6 +13,11 @@ export interface StaffInviteEmailInput {
   roleLabel: string;
   /** action_link de generateLink. Debe ser https. */
   actionLink: string;
+  /**
+   * Nombre de la sede de la persona, para el encabezado (hotfix-072-b: antes decía "Conductores
+   * Chillán" fijo, también para la otra sede). Sin sede conocida, marca genérica.
+   */
+  schoolName?: string | null;
 }
 
 function escapeHtml(value: string): string {
@@ -24,7 +29,12 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-export function buildStaffInviteEmail({ name, roleLabel, actionLink }: StaffInviteEmailInput): {
+export function buildStaffInviteEmail({
+  name,
+  roleLabel,
+  actionLink,
+  schoolName,
+}: StaffInviteEmailInput): {
   subject: string;
   html: string;
 } {
@@ -34,6 +44,7 @@ export function buildStaffInviteEmail({ name, roleLabel, actionLink }: StaffInvi
   const safeName = escapeHtml(name);
   const safeRole = escapeHtml(roleLabel);
   const safeLink = escapeHtml(actionLink);
+  const safeSchool = escapeHtml(schoolName?.trim() || 'Autoescuela');
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -61,7 +72,7 @@ export function buildStaffInviteEmail({ name, roleLabel, actionLink }: StaffInvi
 </head>
 <body>
 <div class="wrapper">
-  <div class="header"><p class="company">Conductores Chillán</p></div>
+  <div class="header"><p class="company">${safeSchool}</p></div>
   <div class="body">
     <p class="greeting">Cuenta de ${safeRole}</p>
     <h1 class="title">Tu cuenta está lista para activar</h1>

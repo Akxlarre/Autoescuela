@@ -24,6 +24,36 @@ Deno.test('secretaria: asunto, nombre, rol y link de activación', () => {
   );
 });
 
+Deno.test('el encabezado lleva el nombre de la sede de la persona (hotfix-072-b)', () => {
+  const { html } = buildStaffInviteEmail({
+    name: 'Ana',
+    roleLabel: 'secretaria',
+    actionLink: LINK,
+    schoolName: 'Autoescuela Chillán',
+  });
+  assertStringIncludes(html, '<p class="company">Autoescuela Chillán</p>');
+  assert(!html.includes('Conductores Chillán'));
+});
+
+Deno.test('sin sede conocida no se nombra ninguna: marca genérica', () => {
+  const { html } = buildStaffInviteEmail({
+    name: 'Ana',
+    roleLabel: 'secretaria',
+    actionLink: LINK,
+  });
+  assertStringIncludes(html, '<p class="company">Autoescuela</p>');
+});
+
+Deno.test('escapa el nombre de la sede', () => {
+  const { html } = buildStaffInviteEmail({
+    name: 'Ana',
+    roleLabel: 'secretaria',
+    actionLink: LINK,
+    schoolName: '<b>X</b>',
+  });
+  assert(!html.includes('<b>X</b>'));
+});
+
 Deno.test('no menciona el RUT ni una contraseña temporal', () => {
   const { html } = buildStaffInviteEmail({
     name: 'Ana',

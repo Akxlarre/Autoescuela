@@ -1,9 +1,17 @@
+import { PASSWORD_MIN_LENGTH } from './password-policy.utils';
+
 /**
- * Largo mínimo de contraseña. Debe coincidir con `password_min_length` de Supabase Auth del
- * proyecto (8): si el front pide menos, el usuario escribe una clave que el servidor rechaza
- * (hotfix-059-b).
+ * Largo mínimo de contraseña. Vive en la regla única de `password-policy.utils.ts` (spec 0050-b);
+ * se re-exporta acá porque este era su lugar desde hotfix-059-b.
  */
-export const PASSWORD_MIN_LENGTH = 8;
+export { PASSWORD_MIN_LENGTH };
+
+/** Motivos con los que Supabase Auth rechaza una clave débil (`AuthWeakPasswordError.reasons`). */
+const WEAK_PASSWORD_REASONS: Record<string, string> = {
+  length: `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`,
+  characters: 'La contraseña debe tener letras y números.',
+  pwned: 'Esa contraseña apareció en filtraciones de datos conocidas. Elige otra.',
+};
 
 /**
  * Mapea errores de Supabase (GoTrue) a mensajes amigables en español.
@@ -50,6 +58,15 @@ export function mapAuthError(error: any): string {
 
   if (message.includes('User already registered')) {
     return 'Este correo ya está registrado.';
+  }
+
+  // Clave débil rechazada por el servidor (spec 0050-b, AC7): se dice qué le falta.
+  if (error.code === 'weak_password' || error.name === 'AuthWeakPasswordError') {
+    const reasons: string[] = Array.isArray(error.reasons) ? error.reasons : [];
+    const known = reasons.map((r) => WEAK_PASSWORD_REASONS[r]).filter(Boolean);
+    return known.length > 0
+      ? known.join(' ')
+      : `Esa contraseña es demasiado débil. Usa al menos ${PASSWORD_MIN_LENGTH} caracteres, con letras y números.`;
   }
 
   // Supabase informa el mínimo configurado en el proyecto ("at least 8 characters").

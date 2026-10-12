@@ -32,8 +32,45 @@ describe('mapAuthError', () => {
     );
   });
 
-  it('PASSWORD_MIN_LENGTH = 8, igual que password_min_length de Supabase Auth (hotfix-059-b)', () => {
-    expect(PASSWORD_MIN_LENGTH).toBe(8);
+  it('PASSWORD_MIN_LENGTH = 10, igual que password_min_length de Supabase Auth (spec 0050-b)', () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(10);
+  });
+
+  describe('clave débil rechazada por Auth (spec 0050-b, AC7)', () => {
+    const weak = (reasons: string[], message = 'Password is too weak') => ({
+      name: 'AuthWeakPasswordError',
+      code: 'weak_password',
+      message,
+      reasons,
+    });
+
+    it('filtrada en brechas conocidas', () => {
+      expect(mapAuthError(weak(['pwned']))).toBe(
+        'Esa contraseña apareció en filtraciones de datos conocidas. Elige otra.',
+      );
+    });
+
+    it('le faltan letras o números', () => {
+      expect(mapAuthError(weak(['characters']))).toBe('La contraseña debe tener letras y números.');
+    });
+
+    it('muy corta: usa el mínimo de la app', () => {
+      expect(mapAuthError(weak(['length']))).toBe(
+        'La contraseña debe tener al menos 10 caracteres.',
+      );
+    });
+
+    it('varios motivos: se nombran todos', () => {
+      expect(mapAuthError(weak(['length', 'characters']))).toBe(
+        'La contraseña debe tener al menos 10 caracteres. La contraseña debe tener letras y números.',
+      );
+    });
+
+    it('sin motivos reconocibles: mensaje general de clave débil', () => {
+      expect(mapAuthError(weak([]))).toBe(
+        'Esa contraseña es demasiado débil. Usa al menos 10 caracteres, con letras y números.',
+      );
+    });
   });
 
   it('"at least 8 characters" de Supabase → mensaje en español con el número real', () => {
