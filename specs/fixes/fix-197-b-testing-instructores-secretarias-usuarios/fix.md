@@ -144,4 +144,23 @@ Todo revertido (sede 2, activa, sin grant, sin ban).
 | M04 | ✅ Al cambiarle la sede, su pantalla pasa a la sede nueva sin recargar (y de vuelta) |
 | M05 | ❌→✅ Desactivada seguía dentro, viendo todas las listas vacías sin aviso. **`fix-219-b` (PR #253, migración aplicada):** ahora ve "Tu cuenta fue desactivada. Contacta al administrador." y queda en el login |
 
-**Quedan manuales:** C03, C24, C25, C28, E05, H02, H04, H07, L01, M02, P02, T01.
+### Manuales — grupo 3 (2026-10-12, altas reales con `e2e/instructores-alta-real.spec.ts` y `e2e/cambiar-clave-real.spec.ts`)
+Sin interceptar `create-instructor` ni Auth. No corren con la suite (`E2E_ALTA_REAL=1`, `E2E_CLAVE_REAL=1`).
+
+| Caso | Resultado |
+|---|---|
+| C03 | ✅ Alta completa en la sede A con vehículo: "Vigente" a más de 30 días, toast "Instructor creado" (con el aviso de piloto: la invitación queda pendiente, no sale correo), aparece en la lista con su patente y "Activo", el vehículo deja de ofrecerse y el instructor aparece en el filtro de la Agenda. Cuenta de Auth creada y vinculada. *En el seed no quedaba ningún vehículo libre (16/16 asignados): el test siembra uno.* No se revisó que tenga horarios disponibles (paso 8, segunda parte) |
+| C24 | ✅ Los 2 documentos quedan en `instructor_documents` del instructor, estado `pending`. El segundo tipo ofrecido ya no repite el primero |
+| C25 | ✅ Con la subida cortada: toast "No se pudo subir un documento", el instructor queda creado, sin documentos |
+| T01 | ✅ (instructor) `audit_log`: INSERT de `users`, `instructors` y `vehicle_assignments` a nombre del admin. La parte de secretaria queda con L01 |
+| P02 | ✅ Con 5 caracteres o confirmación distinta el botón queda deshabilitado; con todo correcto, toast "Contraseña actualizada correctamente."; la clave vieja deja de servir y la nueva sirve (comprobado por API). Clave repuesta |
+
+**Datos de prueba que quedaron en la BD** (limpieza por SQL a cargo del owner): instructores 237 y
+238 (`users` 8426 y 8427, correos `e2e.alta.*@e2e.test`, con cuenta de Auth), vehículo 36
+(`ZZ4103`), asignación 56, documentos 3 y 4 (2 archivos en `instructor-docs/237/`).
+
+**Quedan manuales — todos necesitan una bandeja de correo real o el fin del piloto:**
+- Correo: C28 (invitación de instructor), L01 (la secretaria nace sin clave y entra por el enlace
+  del correo, fix-182-b; incluye la parte de secretaria de T01), M02 y E05 (cambio de correo).
+- Bloqueados por el piloto del portal de instructores (reenviar invitación está oculto, fix-214-b):
+  H02, H04, H07.
