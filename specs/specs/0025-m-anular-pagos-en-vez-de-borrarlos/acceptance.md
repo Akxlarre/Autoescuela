@@ -1,10 +1,10 @@
 # Acceptance 0025-m — Anular pagos en vez de borrarlos
 
 > **Spec:** [spec.md](./spec.md) · **Plan:** [plan.md](./plan.md) · **Tasks:** [tasks.md](./tasks.md)
-> **Estado (2026-10-13):** ✅ PASA con dos reservas. Matías aplicó la migración y desplegó las dos
-> edge functions el 2026-10-13. Falta su visto bueno visual de las capturas. Reservas: AC7 (PDF del
-> reporte de pagos y ficha de matrícula impresa) y AC-E3 / AC-E5 (paso de pago del wizard y portal
-> del alumno) quedaron cubiertos por código y tests, sin abrirlos en el navegador.
+> **Estado (2026-10-13):** ✅ PASA, 16/16 AC. Matías aplicó la migración y desplegó las dos edge
+> functions el 2026-10-13. Falta su visto bueno visual de las capturas. Dos AC se verificaron con
+> test y no en pantalla: AC-E3 (paso de pago del wizard) y AC-E5 (portal del alumno, oculto en el
+> piloto).
 
 ## Evidencia
 
@@ -40,6 +40,13 @@ en la BD como pago anulado.
 | Modo oscuro (con el selector de tema real) y móvil 375 px | ✅ |
 | Consola | 0 errores; un aviso NG0956 de Angular ajeno a este cambio |
 
+### Edge functions desplegadas — invocadas como secretaria, 2026-10-13 (AC7)
+
+| Función | Cómo | Resultado |
+|---|---|---|
+| `generate-payment-report` | PDF del 13-10-2026 | 200, PDF de 13,7 KB. La fila de Alumno67 dice "ANULADO" con $1.000; "Total Recaudado" $0 y "Total recaudado en el periodo: $0" |
+| `generate-enrollment-sheet` | Matrícula 2737 | 200, PDF. Sin sección "Historial de pagos" (su único pago está anulado); "Total pagado" $0, "Saldo pendiente" $180.000 |
+
 **Hallazgo corregido durante /verify:** la etiqueta "Anulado" iba dentro de la columna de glosa y
 se montaba sobre la columna "Medio". El detalle pasó a una línea propia de ancho completo bajo la
 fila.
@@ -57,13 +64,13 @@ lista de ingresos 50 px de alto (ya era así antes de este cambio).
 | AC4 | ✅ | /verify (ficha Clase B). Profesional usa el mismo método `mapHistorialPagos` |
 | AC5 | ✅ | /verify |
 | AC6 | ✅ | Filtro de estado en las tres lecturas + test guardián; no se abrió Reportes Contables ni el dashboard con el pago anulado |
-| AC7 | ⚠️ | Código desplegado por Matías; no se generó el PDF ni la ficha impresa |
+| AC7 | ✅ | PDF reales de las dos funciones desplegadas (tabla de arriba) |
 | AC8 | ✅ | /verify + test SQL 13–14 |
 | AC9 | ✅ | test SQL 19 + `cuadratura.facade.spec.ts` (aviso a Historial de Cuadraturas) |
 | AC10 | ✅ | `payments-status-filter.guard.spec.ts` |
 | AC-E1 | ✅ | test SQL 11–12 |
 | AC-E2 | ✅ | test SQL 7, 8, 15, 16, 18 |
-| AC-E3 | ⚠️ | Filtro `.neq('status', 'anulado')` antes del `maybeSingle()`; sin test propio ni prueba en el wizard |
+| AC-E3 | ✅ | `enrollment-payment.facade.spec.ts` › `rehydrateFromEnrollment` (filtra el anulado y carga el vigente). No se recorrió el wizard en pantalla |
 | AC-E4 | ✅ | test SQL 20; el trigger no corre en `DELETE` |
-| AC-E5 | ⚠️ | Etiqueta y tachado en `alumno-pagos.component.ts`; el portal del alumno está oculto en el piloto y no se abrió |
+| AC-E5 | ✅ | `alumno-pagos.component.spec.ts` (anulado → "Anulado", nunca "Pendiente"). El portal del alumno está oculto en el piloto y no se abrió |
 | AC-E6 | ✅ | `cuadratura.facade.spec.ts` y spec del smart del admin (curso singular sin motivo) |
