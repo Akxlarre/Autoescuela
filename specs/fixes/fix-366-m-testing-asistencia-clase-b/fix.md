@@ -209,6 +209,65 @@ No ejecutados: G08 (falla de BD, cubierto por `fix-362-m`), H06/H08 (regresión 
 **Observación:** `class_b_reschedule_history` existía en la BD (con RLS admin/secretaria) sin
 ninguna migración que la creara → `hotfix-151-m` la versiona (migración idempotente, sin efecto en dev).
 
+### Bloque 4 — Dashboard y otros módulos, Ciclos Teóricos, sedes y roles, 2 sesiones, visual (2026-10-12)
+
+Datos sembrados (`b4-seed.cjs`, ids en `b4-seed.json` del scratchpad de la sesión `af19f3b0`): 9
+alumnos `E2E-AsisB4*` con una clase el 12-10 (8 en sede 1 con Instructor1/Instructor2, 1 en sede 2);
+`E2E-AsisB4Doce` con 11 clases cerradas antes; `E2E-AsisB4Dos1` con faltas en las clases 1 y 2 y la
+3 a futuro. Ejecutado con scripts de Playwright (`b4-*.cjs`): admin, secretaria de sede 1 y
+secretaria multi-sede; los casos de 2 sesiones con dos contextos de navegador.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| K01 alerta del Dashboard | ✅ | "N alumnos con 2 inasistencias seguidas": sube de 63 a 64 al sembrar las faltas 1-2 de `Dos1`; las 8 clases de hoy sin registrar no cuentan (regresión de `fix-364-m`) |
+| K02 "Borrar horarios" | ✅ | Pide confirmación con el detalle ("Se cancelará 1 clase futura de 1 alumno: E2E-AsisB4Dos1…"); "Volver" no cancela nada (24 agendadas antes y después). Sin clases futuras avisa "No hay clases futuras que cancelar" |
+| K03 Dashboard Ejecutivo vs Asistencia | ✅ (código) | El ejecutivo cuenta filas `absent` (incluidas las archivadas por reagendar, DG-075) y no cuenta las justificadas. Anotado: las fecha por el día en que se registraron, no por el día de la clase |
+| K04 12/12 cerradas desde Asistencia | ✅ | `E2E-AsisB4Doce`: iniciar y finalizar la clase 12 → `certificate_enabled = true` y aparece en Certificación "12/12 · Pendiente · Generar" (regresión de `fix-262-m`) |
+| K05 horas del instructor | ✅ | `instructor_monthly_hours` de Instructor1 en 2026-10 = 8 prácticas = las 8 `completed` del mes, incluida la cerrada desde Asistencia (trigger `trg_class_b_sessions_monthly_hours`) |
+| L01 abrir el tab | ✅ | Autoselecciona el ciclo activo; grupos "Activos" / "Finalizados" |
+| L02 sin ciclos | ✅ (código) | "No hay ciclos en esta sede todavía." |
+| L03 cambiar de ciclo | ✅ | Clases 1-6 y roster del ciclo elegido; el buscador se limpia |
+| L04 tema y enlace | ✅ | Toasts "Tema guardado" y "Enlace Zoom guardado"; persisten al recargar |
+| L06 enviar sin enlace | ✅ | Botón deshabilitado |
+| L07 destinatarios | ✅ | "Enviar a 15" → desmarcar uno → "Enviar a 14"; viajan solo los ids marcados. Envío real ya probado en el bloque 1 |
+| L08 parcial / falla | ✅ | Respuestas simuladas: "Envío parcial — 14 enviado(s), 1 fallido(s)" y "Error al enviar los correos" |
+| L10 mover a otro ciclo | ✅ | Sale del roster (15 → 14) y la BD queda con el ciclo nuevo |
+| L11 mover a un ciclo de otra sede | ❌ | Admin en "Todas": el selector de destino ofrece los ciclos de las dos sedes; un alumno de Autoescuela Chillán queda en un ciclo de Conductores Chillán ("Alumno reasignado de ciclo") y la BD lo acepta (S18) → `fix-387-m` (cerrado: solo ofrece ciclos de la misma sede) |
+| L12 incorporar | ✅ | 68 candidatos, ninguno de la otra sede; entra al roster |
+| L13 "Actualizar" | ❌ | Tras mover un alumno y cambiar un tema desde otra sesión, "Actualizar" deja el roster (15) y el tema como estaban: `loadCycles()` no vuelve a leer el ciclo que sigue elegido (S18) → `fix-387-m` (cerrado) |
+| L14 asistencia a teóricas | decisión | No existe registro de asistencia a las clases teóricas |
+| M01 admin "Todas" | ✅ | Columna Sede y clases de las dos sedes |
+| M02 admin cambia de sede | ✅ | Tabla, alertas (133 → 65) y ciclos recargan solos |
+| M03 cambio rápido A→B→A | ✅ | Termina en A con sus 8 clases y su ciclo. Anotado: `CiclosTeoricosFacade` no tiene guard contra respuestas fuera de orden → `fix-387-m` (cerrado) |
+| M04 secretaria multi-sede | ❌ | Tiene selector de sede en la barra; elige "Conductores Chillán" y Asistencia sigue mostrando las 8 clases y el ciclo de Autoescuela Chillán. La pantalla lee la sede del usuario una sola vez (S12, parte de pantalla) → `fix-385-m` (cerrado) |
+| M05 secretaria sin sede | N/A | No existe en el negocio (decisión de Matías en `ASG-i-024`) |
+| M07 admin → cerrar sesión → secretaria | ❌ | Sin recargar la pestaña, la secretaria ve las 9 clases del admin (incluida la de la otra sede) hasta que llega su propia respuesta: el facade conserva los datos del usuario anterior. También conserva la fecha elegida → `fix-386-m` (cerrado: skeleton hasta que llega lo suyo, y la pantalla abre en hoy) |
+| N01 sin tiempo real | decisión | B no se entera de lo que hizo A hasta "Actualizar" |
+| N02 A y B marcan ausente la misma clase | ✅ | Una sola fila de asistencia, sin error. Desde `fix-388-m` B recibe "La inasistencia ya estaba registrada" |
+| N03 A inicia, B (sin actualizar) inicia | ❌ | B recibe "Clase iniciada" y pisa la hora y el km de A (22:28:45 / 2.085 → 22:29:49 / 2.090) → `fix-388-m` (cerrado) |
+| N03-b A marca ausente, B inicia | ❌ | La clase queda "En curso" con su inasistencia vigente: el alumno sale en el rail de alertas con 1 falta mientras está en clase → `fix-388-m` (cerrado) |
+| N03-c clase en curso, B la marca ausente | ❌ | Queda "Ausente" con hora y km de inicio (probado por API con la sesión de la secretaria) → `fix-388-m` (cerrado) |
+| O01 claro / oscuro | ✅ | Badges, rail y modales legibles en los dos modos |
+| O02 375 px | ✅ | La página no scrollea en horizontal; la tabla sí, dentro de la card; 6 filas + "Cargar más (2 restantes)"; rail debajo |
+| O03 "Cargar más" | ✅ | Vuelve a 6 al cambiar filtro, tab o fecha |
+| O04 drawer abierto | ✅ | Rail apilado debajo, 6 filas + "Cargar más", tabla con scroll horizontal |
+| O05 solo teclado | ❌ | (a) Desde las pestañas, Tab recorre todas las alertas del rail (70) antes de llegar a la fecha, los filtros y la tabla: el HTML tiene el rail primero y lo reordena con CSS → `fix-389-m`. (b) Los modales no toman el foco: en "Marcar inasistencia" (confirmación global) el foco queda en el botón de atrás, Escape no lo cierra y sus botones no se alcanzan con Tab; en "Justificar" Escape sí cierra, pero Tab sale del modal → `fix-390-m` (cerrado). `fix-389-m` también cerrado |
+
+No ejecutados: L05 y L09 (hechos en el bloque 1), M06 (bloque 1).
+
+**Observaciones sin track:**
+- El selector de destino de "Cambiar de ciclo" también ofrece ciclos finalizados de la sede.
+- `enrollments.theory_cycle_id` no tiene candado en la BD: acepta un ciclo de otra sede si se
+  escribe por fuera de la pantalla (`fix-387-m` lo cierra en la pantalla y en el facade).
+- Los modales de eliminar alumno, eliminar servicio y el panel de notificaciones no usan todavía
+  `appModalFocus` (`fix-390-m` cubrió la confirmación global y los de Asistencia B).
+- Las pestañas "Prácticas / Ciclos Teóricos" no se recorren con las flechas; las dos se alcanzan
+  con Tab.
+
+**Datos dejados:** los 9 alumnos `E2E-AsisB4*` y sus clases siguen en la BD de dev (se borran
+junto con los demás `E2E-Asis*` al cerrar el track). `E2E-AsisB4Dos1` tiene una clase agendada
+el 2026-11-20 a las 06:00 con Instructor1.
+
 ## Decisiones de negocio
 
 Tomadas por Matías el 2026-10-11:
@@ -235,12 +294,26 @@ Tomadas por Matías el 2026-10-12 (bloque 3):
 | H03 / F09 | Durante el piloto **se oculta "Recordar"** (el alumno no ve notificaciones); la secretaria lo contacta por teléfono |
 | F05 | Se mantiene "consecutivas" por número de clase (sin cambios) |
 
+Tomadas por Matías el 2026-10-12 (bloque 4):
+
+| Caso | Decisión |
+|---|---|
+| N01 | Asistencia B queda **sin tiempo real**: cada persona ve los cambios de la otra al actualizar (desde `fix-388-m` una pestaña vieja solo avisa) |
+| L14 | Las clases teóricas **no llevan registro de asistencia** (ya documentado en `indices/DATABASE.md`, `class_b_theory_sessions`: "sin asistencia") |
+| G09 | **No se exige certificado médico** para justificar en Clase B: basta el motivo |
+
+Pendiente de Matías:
+
+| Caso | Pregunta |
+|---|---|
+| H07 / H09 | Con la penalización ya aplicada, ¿siguen haciendo falta "Eliminar" y "Reactivar" en las alertas? |
+
 ## Progreso
 
 - [x] Bloque 1 — Seguridad (2026-10-11)
 - [x] Bloque 2 — Carga, tabla del día, iniciar/finalizar/ausente y Dashboard (2026-10-11)
 - [x] Bloque 3 — Penalización, justificar, rail, cron, ficha y reagendar (2026-10-12)
-- [ ] Bloque 4 — K–O: Dashboard y otros módulos, Ciclos Teóricos, sedes y roles, 2 sesiones, visual
+- [x] Bloque 4 — K–O: Dashboard y otros módulos, Ciclos Teóricos, sedes y roles, 2 sesiones, visual (2026-10-12)
 - [ ] Casos "Auto ✓" en `e2e/` y borrar los datos `E2E-Asis*` al cerrar
 
 ## Regression Test
@@ -272,3 +345,9 @@ _(cada bug encontrado → su propio fix/hotfix)_
 | `fix-383-m` | J08/S16: reagendamiento masivo todo o nada (RPC `reschedule_class_b_sessions`) | ✅ cerrado 2026-10-12 |
 | `fix-384-m` | J07/I04: un par ya penalizado no vuelve a contar; el cron solo toca matrículas activas | ✅ cerrado 2026-10-12 |
 | `hotfix-151-m` | `class_b_reschedule_history` sin migración: se versiona (idempotente) | ✅ cerrado 2026-10-12 |
+| `fix-385-m` | M04/S12: Asistencia de la secretaria multi-sede ignoraba el selector de sede | ✅ cerrado 2026-10-12 |
+| `fix-386-m` | M07/S18: datos y fecha del usuario anterior en Asistencia; guard de respuestas viejas | ✅ cerrado 2026-10-12 |
+| `fix-387-m` | L11/L13/M03: mover a un ciclo de otra sede, "Actualizar" no releía el ciclo, guard en Ciclos | ✅ cerrado 2026-10-12 |
+| `fix-388-m` | N03: una pestaña sin actualizar pisaba el inicio, la inasistencia o el cierre de una clase | ✅ cerrado 2026-10-12 |
+| `fix-389-m` | O05: el teclado recorría todas las alertas antes de llegar a la tabla | ✅ cerrado 2026-10-12 |
+| `fix-390-m` | O05: los modales no tomaban el foco (confirmación global y modales de Asistencia B) | ✅ cerrado 2026-10-12 |
