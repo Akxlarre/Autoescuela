@@ -180,9 +180,14 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
 
                       <div class="flex items-center gap-2">
                         @if (doc.status) {
-                          <app-badge [variant]="doc.status === 'expired' ? 'error' : 'success'">
-                            {{ doc.status === 'expired' ? 'Vencido' : 'Vigente' }}
-                          </app-badge>
+                          <!-- hotfix-074-b (S8): por vencer en ámbar, igual que el listado -->
+                          @if (doc.status === 'expired') {
+                            <app-badge variant="error">Vencido</app-badge>
+                          } @else if (doc.status === 'expiring_soon') {
+                            <app-badge variant="warning">Por vencer</app-badge>
+                          } @else {
+                            <app-badge variant="success">Vigente</app-badge>
+                          }
                         } @else {
                           <app-badge variant="warning">Sin cargar</app-badge>
                         }
