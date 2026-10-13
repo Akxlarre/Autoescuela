@@ -159,10 +159,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
            protagonista y ocupa el ancho principal; las alertas van a un rail
            lateral angosto (contexto, no bloqueo) — antes apiladas verticalmente
            invertían la jerarquía (secundario arriba comía 45% del alto).
-           Las utilidades order-1/order-2 dejan la tabla primera en AMBOS ejes:
-           arriba en móvil (flex-col → trabajo principal inmediato), izquierda
-           en desktop (flex-row). El DOM mantiene [alertas, tabla] para no
-           mover el bloque grande de la tabla. El switch col/row usa
+           La tabla va primera en el HTML (fix-389-m): queda arriba en móvil
+           (flex-col → trabajo principal inmediato), a la izquierda en desktop
+           (flex-row) y también primera al recorrer con Tab. Antes el HTML
+           tenía las alertas primero y se invertía con utilidades de orden: el
+           teclado pasaba por todas las alertas antes de llegar a la tabla. El
+           switch col/row usa
            isDesktopLayout() (= maxVisible()===null = tier desktop por
            contenedor), NO el breakpoint de viewport lg: de Tailwind. -->
       @if (activeTab() === 'practicas') {
@@ -175,148 +177,8 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           [class.flex-col]="!isDesktopLayout()"
           [class.flex-row]="isDesktopLayout()"
         >
-          <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
-               de 1 línea; el detalle completo (última falta, política) va en el
-               atributo title (tooltip nativo). order-2 = a la derecha en
-               desktop / debajo de la tabla en móvil. En desktop el rail llena
-               el alto de la fila (min-h-0) y el listado scrollea internamente;
-               en móvil altura natural y la página scrollea (dual). -->
-          <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
-               real para que la tabla NO cambie de ancho entre carga y datos
-               (antes el aside solo existía tras cargar → la tabla saltaba de
-               904→568px). Sin appCardHover: es un placeholder, no interactivo. -->
-          @if (isLoading()) {
-            <aside
-              class="card p-3 flex flex-col gap-1.5 order-2 min-h-0 overflow-hidden"
-              [class.w-80]="isDesktopLayout()"
-              [class.shrink-0]="isDesktopLayout()"
-            >
-              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                <app-skeleton-block variant="circle" width="14px" height="14px" />
-                <app-skeleton-block variant="text" width="80px" height="12px" />
-              </div>
-              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
-                @for (i of alertSkeletonIndexes; track i) {
-                  <app-skeleton-block variant="rect" width="100%" height="48px" />
-                }
-              </div>
-            </aside>
-          } @else if (alertas().length > 0) {
-            <aside
-              class="card p-3 flex flex-col gap-1.5 order-2 min-h-0 overflow-hidden"
-              [class.w-80]="isDesktopLayout()"
-              [class.shrink-0]="isDesktopLayout()"
-              appCardHover
-            >
-              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                <app-icon
-                  name="alert-triangle"
-                  [size]="14"
-                  [style.color]="'var(--state-warning)'"
-                />
-                <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  Alertas ({{ alertas().length }})
-                </h2>
-              </div>
-
-              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
-                @for (alerta of alertas(); track alerta.enrollmentId) {
-                  <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
-                       (el rail scrollea). Línea 1 = avatar + nombre completo (sin
-                       truncar); línea 2 = conteo + última falta + acción. El title
-                       conserva la política como enriquecimiento en hover. -->
-                  <div
-                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
-                    [style.border-left-color]="
-                      alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                    "
-                    [pTooltip]="alertaTooltip(alerta)"
-                    tooltipPosition="left"
-                  >
-                    <!-- Línea 1: avatar + nombre completo -->
-                    <div class="flex items-center gap-2">
-                      <div
-                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
-                        [class.bg-error]="alerta.nivel === 'danger'"
-                        [class.bg-warning]="alerta.nivel !== 'danger'"
-                      >
-                        {{ initials(alerta.alumnoName) }}
-                      </div>
-                      <p
-                        class="text-xs font-semibold leading-tight min-w-0 flex-1"
-                        [class.text-error]="alerta.nivel === 'danger'"
-                        [class.text-warning]="alerta.nivel !== 'danger'"
-                      >
-                        {{ alerta.alumnoName }}
-                      </p>
-                    </div>
-
-                    <!-- Línea 2: detalle (conteo + última falta) + acción -->
-                    <div class="flex items-center justify-between gap-2 pl-7">
-                      <span class="text-2xs text-text-muted leading-tight">
-                        {{ alerta.faltasConsecutivas }}
-                        {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
-                        {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
-                      </span>
-                      <div class="shrink-0">
-                        <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
-                             spinner el botón de LA alerta en curso. Antes el booleano
-                             global isSaving() bloqueaba las de todos los alumnos y no
-                             se veía cuál se estaba procesando. "Eliminar" es la acción
-                             destructiva del grupo → btn-ghost, el peso visual más bajo
-                             (antes btn-primary, invirtiendo la jerarquía). -->
-                        @if (alerta.nivel === 'danger') {
-                          @if (alerta.horarioActivo) {
-                            <button
-                              class="btn-danger-ghost btn-sm"
-                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                              data-llm-action="remove-schedule"
-                              (click)="removeSchedule.emit(alerta.enrollmentId)"
-                            >
-                              @if (isAlertaBusy(alerta.enrollmentId)) {
-                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                              } @else {
-                                Eliminar
-                              }
-                            </button>
-                          } @else {
-                            <button
-                              class="btn-secondary btn-sm"
-                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                              data-llm-action="reactivate-schedule"
-                              (click)="reactivateSchedule.emit(alerta.enrollmentId)"
-                            >
-                              @if (isAlertaBusy(alerta.enrollmentId)) {
-                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                              } @else {
-                                Reactivar
-                              }
-                            </button>
-                          }
-                        } @else if (canRemind()) {
-                          <button
-                            class="btn-secondary btn-sm"
-                            [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                            data-llm-action="send-reminder"
-                            (click)="sendReminder.emit(alerta.enrollmentId)"
-                          >
-                            @if (isAlertaBusy(alerta.enrollmentId)) {
-                              <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                            } @else {
-                              Recordar
-                            }
-                          </button>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </aside>
-          }
-
           <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
-          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0 order-1" appCardHover>
+          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0" appCardHover>
             <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
               <div class="flex items-center gap-2">
                 <app-icon
@@ -665,6 +527,146 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               </div>
             }
           </section>
+
+          <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
+               de 1 línea; el detalle completo (última falta, política) va en el
+               atributo title (tooltip nativo). Va después de la tabla: a la
+               derecha en desktop / debajo en móvil. En desktop el rail llena
+               el alto de la fila (min-h-0) y el listado scrollea internamente;
+               en móvil altura natural y la página scrollea (dual). -->
+          <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
+               real para que la tabla NO cambie de ancho entre carga y datos
+               (antes el aside solo existía tras cargar → la tabla saltaba de
+               904→568px). Sin appCardHover: es un placeholder, no interactivo. -->
+          @if (isLoading()) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-skeleton-block variant="circle" width="14px" height="14px" />
+                <app-skeleton-block variant="text" width="80px" height="12px" />
+              </div>
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+                @for (i of alertSkeletonIndexes; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="48px" />
+                }
+              </div>
+            </aside>
+          } @else if (alertas().length > 0) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+              appCardHover
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-icon
+                  name="alert-triangle"
+                  [size]="14"
+                  [style.color]="'var(--state-warning)'"
+                />
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Alertas ({{ alertas().length }})
+                </h2>
+              </div>
+
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
+                @for (alerta of alertas(); track alerta.enrollmentId) {
+                  <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
+                       (el rail scrollea). Línea 1 = avatar + nombre completo (sin
+                       truncar); línea 2 = conteo + última falta + acción. El title
+                       conserva la política como enriquecimiento en hover. -->
+                  <div
+                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
+                    [style.border-left-color]="
+                      alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
+                    "
+                    [pTooltip]="alertaTooltip(alerta)"
+                    tooltipPosition="left"
+                  >
+                    <!-- Línea 1: avatar + nombre completo -->
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
+                        [class.bg-error]="alerta.nivel === 'danger'"
+                        [class.bg-warning]="alerta.nivel !== 'danger'"
+                      >
+                        {{ initials(alerta.alumnoName) }}
+                      </div>
+                      <p
+                        class="text-xs font-semibold leading-tight min-w-0 flex-1"
+                        [class.text-error]="alerta.nivel === 'danger'"
+                        [class.text-warning]="alerta.nivel !== 'danger'"
+                      >
+                        {{ alerta.alumnoName }}
+                      </p>
+                    </div>
+
+                    <!-- Línea 2: detalle (conteo + última falta) + acción -->
+                    <div class="flex items-center justify-between gap-2 pl-7">
+                      <span class="text-2xs text-text-muted leading-tight">
+                        {{ alerta.faltasConsecutivas }}
+                        {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
+                        {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
+                      </span>
+                      <div class="shrink-0">
+                        <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
+                             spinner el botón de LA alerta en curso. Antes el booleano
+                             global isSaving() bloqueaba las de todos los alumnos y no
+                             se veía cuál se estaba procesando. "Eliminar" es la acción
+                             destructiva del grupo → btn-ghost, el peso visual más bajo
+                             (antes btn-primary, invirtiendo la jerarquía). -->
+                        @if (alerta.nivel === 'danger') {
+                          @if (alerta.horarioActivo) {
+                            <button
+                              class="btn-danger-ghost btn-sm"
+                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                              data-llm-action="remove-schedule"
+                              (click)="removeSchedule.emit(alerta.enrollmentId)"
+                            >
+                              @if (isAlertaBusy(alerta.enrollmentId)) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                              } @else {
+                                Eliminar
+                              }
+                            </button>
+                          } @else {
+                            <button
+                              class="btn-secondary btn-sm"
+                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                              data-llm-action="reactivate-schedule"
+                              (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                            >
+                              @if (isAlertaBusy(alerta.enrollmentId)) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                              } @else {
+                                Reactivar
+                              }
+                            </button>
+                          }
+                        } @else if (canRemind()) {
+                          <button
+                            class="btn-secondary btn-sm"
+                            [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                            data-llm-action="send-reminder"
+                            (click)="sendReminder.emit(alerta.enrollmentId)"
+                          >
+                            @if (isAlertaBusy(alerta.enrollmentId)) {
+                              <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                            } @else {
+                              Recordar
+                            }
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </aside>
+          }
         </div>
       }
 
@@ -759,6 +761,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
+          aria-label="Motivo de la justificación"
           (click)="closeViewMotivo()"
           (document:keydown.escape)="closeViewMotivo()"
         >
