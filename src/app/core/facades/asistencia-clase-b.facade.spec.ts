@@ -479,19 +479,18 @@ describe('AsistenciaClaseBFacade', () => {
       instructorSignature: null,
     };
 
-    it('finishClass: vehículo de otra sede (RLS filtra el update) → aviso, no éxito', async () => {
+    it('finishClass: no escribe el km del vehículo — lo hace la BD (fix-222-b)', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
-      mock.setResult('vehicles', []);
+      const from = vi.spyOn(mock.client, 'from');
 
       await facade.finishClass(finishPayload);
 
-      expect(toast.success).not.toHaveBeenCalled();
-      expect(toast.warning).toHaveBeenCalledWith(
-        'Clase finalizada, con datos sin guardar',
-        expect.stringContaining('el kilometraje del vehículo'),
-      );
-      // La clase sí quedó finalizada: la fila local refleja eso.
+      // Antes: UPDATE directo a vehicles, que la RLS filtraba con un vehículo "Ambas" o de otra
+      // sede (el km se perdía y había que avisarlo). Ahora un trigger lo actualiza al guardar km_end.
+      expect(from.mock.calls.map(([table]) => table)).not.toContain('vehicles');
+      expect(toast.warning).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Clase finalizada', 'Asistencia registrada.');
       expect(facade.clasesPracticas()[0].status).toBe('presente');
     });
 

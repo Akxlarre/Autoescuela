@@ -704,16 +704,9 @@ export class AsistenciaClaseBFacade {
       // avisa qué quedó sin guardar.
       const pendientes: string[] = [];
 
-      const vehicleId = this._selectedPractica()?.vehicleId;
-      if (vehicleId) {
-        // .select() + filas: un vehículo de otra sede lo filtra la RLS sin devolver error.
-        const km = await this.supabase.client
-          .from('vehicles')
-          .update({ current_km: payload.kmEnd })
-          .eq('id', vehicleId)
-          .select('id');
-        if (km.error || !km.data?.length) pendientes.push('el kilometraje del vehículo');
-      }
+      // fix-222-b: el km del vehículo ya no se escribe desde acá. Lo actualiza la BD al guardar
+      // km_end (trigger trg_sync_vehicle_km_from_class): no depende de la sede ni de los permisos
+      // de quien finaliza (antes fallaba con vehículos "Ambas") y nunca hace retroceder el odómetro.
 
       if (payload.studentId) {
         const attendance = await this.supabase.client.from('class_b_practice_attendance').upsert(
