@@ -86,17 +86,14 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
-| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-030 | Testing: Dashboards | `m` | fix | P1 | i | Integración · Media · correr al final |
 | ASG-i-031 | Testing: Servicios especiales | `m` | fix | P2 | i | Funcional · Baja |
 | ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
 | ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
-| ASG-i-034 | Testing: Instructores, secretarias y usuarios | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
-| ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `b` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
