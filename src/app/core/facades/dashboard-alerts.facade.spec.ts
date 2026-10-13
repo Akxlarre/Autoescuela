@@ -494,7 +494,9 @@ describe('DashboardAlertsFacade', () => {
 
   // ── Phase 3 — F-2: Overdue second installment ────────────────────────────────
   describe('F-2: checkOverdueSecondInstallment', () => {
-    it('should generate a warning when deposit-mode students have sessions past class 6 with unpaid balance', async () => {
+    /** Arma el mock y devuelve la cadena de la consulta F-2 (2ª a class_b_sessions). */
+    const mockF2 = (rows: unknown[]) => {
+      const f2Chain = buildChain({ data: rows });
       const callCounters: Record<string, number> = {};
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
@@ -505,29 +507,21 @@ describe('DashboardAlertsFacade', () => {
         if (table === 'cash_closings') return buildChain({ count: 1 });
 
         if (table === 'class_b_sessions') {
-          const n = callCounters[table];
-          if (n === 1) return buildChain({ data: [] }); // B-1
-          // F-2: 2 deposit students with sessions beyond class 6 (501 duplicated)
-          return buildChain({
-            data: [
-              {
-                enrollment_id: 501,
-                enrollments: { payment_mode: 'deposit', pending_balance: 100000, branch_id: 1 },
-              },
-              {
-                enrollment_id: 502,
-                enrollments: { payment_mode: 'deposit', pending_balance: 90000, branch_id: 1 },
-              },
-              {
-                enrollment_id: 502,
-                enrollments: { payment_mode: 'deposit', pending_balance: 90000, branch_id: 1 },
-              },
-            ],
-          });
+          return callCounters[table] === 1 ? buildChain({ data: [] }) /* B-1 */ : f2Chain;
         }
 
         return buildChain({ data: [], count: 0 });
       });
+      return f2Chain;
+    };
+
+    it('avisa de las matrículas con saldo que ya tomaron una clase 7+, una vez cada una (fix-402-m)', async () => {
+      // 501 con modalidad total, 502 con abono y dos clases 7+ tomadas.
+      mockF2([
+        { enrollment_id: 501, enrollments: { pending_balance: 100000, branch_id: 1 } },
+        { enrollment_id: 502, enrollments: { pending_balance: 90000, branch_id: 1 } },
+        { enrollment_id: 502, enrollments: { pending_balance: 90000, branch_id: 1 } },
+      ]);
 
       await facade.loadAlerts();
 
@@ -535,6 +529,21 @@ describe('DashboardAlertsFacade', () => {
       expect(f2).toBeDefined();
       expect(f2?.severity).toBe('warning');
       expect(f2?.count).toBe(2); // deduplicated: 501, 502
+    });
+
+    it('pide solo clases 7+ ya tomadas y no filtra por modalidad de pago (fix-402-m)', async () => {
+      const f2Chain = mockF2([]);
+
+      await facade.loadAlerts();
+
+      // Todos los métodos de la cadena comparten el mismo spy.
+      const filtros = f2Chain.eq.mock.calls as unknown[][];
+      expect(filtros).toContainEqual(['status', ['in_progress', 'completed']]);
+      expect(filtros).toContainEqual(['class_number', 6]);
+      expect(filtros).toContainEqual(['enrollments.pending_balance', 0]);
+      expect(filtros).toContainEqual(['enrollments.status', 'active']);
+      // 'deposit' nunca existió (DG-004) y la segunda cuota ya no depende de la modalidad (0010-i).
+      expect(filtros.some(([column]) => column === 'enrollments.payment_mode')).toBe(false);
     });
 
     it('should not generate F-2 when no overdue second installments exist', async () => {

@@ -36,7 +36,7 @@ import type { AlertModel } from '@core/models/ui/dashboard.model';
  *  7. (F-4) Alumnos con deuda superior a 2 meses
  * Fase 3 — Pagos y Finanzas:
  *  8. (F-1) Pagos registrados hoy
- *  9. (F-2) Cuota 2 vencida en modalidad depósito
+ *  9. (F-2) Cuota 2 vencida: clase 7+ tomada con saldo pendiente
  * 10. (F-5) Instructores con horas sin liquidar en el período actual
  * Fase 3 — Pre-inscripciones Profesionales:
  * 11. (P-1) Nuevas pre-inscripciones pendientes de revisión
@@ -576,15 +576,19 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (F-2) Alumnos con modalidad depósito que superaron la 6ª clase sin pagar la cuota 2.
-   * Condición: class_b_sessions con class_number > 6 cuya matrícula tiene
-   * payment_mode='deposit', status='active' y pending_balance > 0.
+   * (F-2) Matrículas activas con saldo pendiente que ya TOMARON una clase 7 o posterior.
+   *
+   * Desde spec 0010-i la clase 7 se bloquea con cualquier deuda, sin importar la modalidad de
+   * pago: quien la toma debiendo fue habilitado sin pago. Por eso no se filtra por payment_mode
+   * (hasta fix-402-m se filtraba por 'deposit', valor que nunca existió — DG-004 — y la alerta
+   * no se disparaba). Solo cuentan clases en curso o completadas: las 12 se agendan al
+   * matricular, así que una clase 7+ agendada o cancelada no dice nada.
    */
   private async checkOverdueSecondInstallment(branchId: number | null): Promise<AlertModel[]> {
     let query: any = this.supabase.client
       .from('class_b_sessions')
-      .select('enrollment_id, enrollments!inner(payment_mode, pending_balance, branch_id)')
-      .eq('enrollments.payment_mode', 'deposit')
+      .select('enrollment_id, enrollments!inner(pending_balance, branch_id, status)')
+      .in('status', ['in_progress', 'completed'])
       .eq('enrollments.status', 'active')
       .gt('enrollments.pending_balance', 0)
       .gt('class_number', 6);
@@ -601,8 +605,7 @@ export class DashboardAlertsFacade {
       {
         id: 'alert-overdue-second-installment',
         title: `${count} matrícula${count > 1 ? 's' : ''} con cuota 2 vencida`,
-        description:
-          'Alumnos con depósito inicial que superaron la 6ª clase sin pagar la segunda cuota',
+        description: 'Ya tomaron una clase 7 o posterior y siguen con saldo pendiente',
         severity: 'warning',
         count,
       },
