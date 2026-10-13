@@ -301,12 +301,8 @@ Tomadas por Matías el 2026-10-12 (bloque 4):
 | N01 | Asistencia B queda **sin tiempo real**: cada persona ve los cambios de la otra al actualizar (desde `fix-388-m` una pestaña vieja solo avisa) |
 | L14 | Las clases teóricas **no llevan registro de asistencia** (ya documentado en `indices/DATABASE.md`, `class_b_theory_sessions`: "sin asistencia") |
 | G09 | **No se exige certificado médico** para justificar en Clase B: basta el motivo |
+| H07 / H09 | "Eliminar" y "Reactivar" **se mantienen** (con la regla automática apagada son la forma manual de aplicar y deshacer la penalización). "Eliminar" **no se ofrece** cuando ese par de faltas ya causó una penalización → `fix-391-m` |
 
-Pendiente de Matías:
-
-| Caso | Pregunta |
-|---|---|
-| H07 / H09 | Con la penalización ya aplicada, ¿siguen haciendo falta "Eliminar" y "Reactivar" en las alertas? |
 
 ## Progreso
 
@@ -351,3 +347,4 @@ _(cada bug encontrado → su propio fix/hotfix)_
 | `fix-388-m` | N03: una pestaña sin actualizar pisaba el inicio, la inasistencia o el cierre de una clase | ✅ cerrado 2026-10-12 |
 | `fix-389-m` | O05: el teclado recorría todas las alertas antes de llegar a la tabla | ✅ cerrado 2026-10-12 |
 | `fix-390-m` | O05: los modales no tomaban el foco (confirmación global y modales de Asistencia B) | ✅ cerrado 2026-10-12 |
+| `fix-391-m` | H07/H09/J07: "Eliminar" y "Borrar horarios" volvían a cancelar las clases de un alumno ya penalizado | ✅ cerrado 2026-10-12 |
