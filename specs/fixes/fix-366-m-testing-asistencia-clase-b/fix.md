@@ -235,6 +235,14 @@ Tomadas por Matías el 2026-10-12 (bloque 3):
 | H03 / F09 | Durante el piloto **se oculta "Recordar"** (el alumno no ve notificaciones); la secretaria lo contacta por teléfono |
 | F05 | Se mantiene "consecutivas" por número de clase (sin cambios) |
 
+## Progreso
+
+- [x] Bloque 1 — Seguridad (2026-10-11)
+- [x] Bloque 2 — Carga, tabla del día, iniciar/finalizar/ausente y Dashboard (2026-10-11)
+- [x] Bloque 3 — Penalización, justificar, rail, cron, ficha y reagendar (2026-10-12)
+- [ ] Bloque 4 — K–O: Dashboard y otros módulos, Ciclos Teóricos, sedes y roles, 2 sesiones, visual
+- [ ] Casos "Auto ✓" en `e2e/` y borrar los datos `E2E-Asis*` al cerrar
+
 ## Regression Test
 
 - Casos "Auto ✓" del checklist en `e2e/` (suite de `0019-m`).
