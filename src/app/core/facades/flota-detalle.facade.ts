@@ -158,7 +158,6 @@ export class FlotaDetalleFacade {
         model: v.model,
         year: v.year,
         vehicleLabel: `${v.brand} ${v.model}`,
-        type: 'class_b',
         status: this.resolveStatus(v.status),
         currentKm: v.current_km ?? 0,
         nextMaintenanceDate: v.last_maintenance ?? null,
