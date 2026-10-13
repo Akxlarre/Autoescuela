@@ -85,7 +85,6 @@
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-030 | Testing: Dashboards | `m` | fix | P1 | i | Integración · Media · correr al final |
 | ASG-i-031 | Testing: Servicios especiales | `m` | fix | P2 | i | Funcional · Baja |
 | ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
 | ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
@@ -274,6 +273,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
+| ASG-i-030 | Testing: Dashboards (admin, ejecutivo y secretaria) | `m` | [fix-395-m-testing-dashboards](fixes/fix-395-m-testing-dashboards/fix.md) | 2026-10-13 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 
