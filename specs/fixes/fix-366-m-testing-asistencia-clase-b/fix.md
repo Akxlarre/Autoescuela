@@ -1,7 +1,8 @@
 # Fix: Testing — Asistencia Clase B, inasistencias y penalización
 > id: fix-366-m-testing-asistencia-clase-b
 > refs: ASG-i-027
-> status: open
+> status: done
+> closed: 2026-10-13
 > created: 2026-10-11
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -264,9 +265,37 @@ No ejecutados: L05 y L09 (hechos en el bloque 1), M06 (bloque 1).
 - Las pestañas "Prácticas / Ciclos Teóricos" no se recorren con las flechas; las dos se alcanzan
   con Tab.
 
-**Datos dejados:** los 9 alumnos `E2E-AsisB4*` y sus clases siguen en la BD de dev (se borran
-junto con los demás `E2E-Asis*` al cerrar el track). `E2E-AsisB4Dos1` tiene una clase agendada
-el 2026-11-20 a las 06:00 con Instructor1.
+### Capa Playwright (2026-10-13)
+
+`e2e/asistencia-clase-b.spec.ts`: 26 tests, todos en verde (2 min), con su sembrador
+`e2e/support/asistencia-seed.ts` (clases de ayer, un cupo de instructor × hora por test; no deja
+datos). Uso documentado en `docs/E2E-PLAYWRIGHT.md`.
+
+| Sección | Casos automatizados |
+|---|---|
+| A · B | A01, A02, A03, A05, A06, A08, B01, B02, B04, B05, B07, B10, B14 |
+| C · D | C01, C02, C03, C07, C10, D01, D02, D04 |
+| E · G | E01, E03, E04, E05, E10, G01, G02, G04, G10 |
+| H | H02, H05, H06, H08, H11, H12 y `fix-391-m` ("Ya penalizado") |
+| J | J04, J11, J12 (paso 1 de "Reagendar Clases") |
+| L | L01, L03, L04, L06, L10, L11, L12, L13 |
+| M · N | M01, M02, M04, M06, N02, N03 |
+| O | O02, O03, O05 (orden de Tab y foco de la confirmación) |
+
+Casos "Auto ✓" que quedan fuera de esta suite, y por qué:
+- **F01–F04** (penalización automática): la regla está apagada en las dos sedes de desarrollo y se
+  acordó prenderla solo dentro de transacciones que se revierten. Los cubre el test SQL de
+  `fix-384-m`.
+- **J01, J02** (panel de inasistencias y justificar desde la ficha): ya están en
+  `e2e/alumnos-b-ficha.spec.ts` (H02 · H03 · H04 · H09, H07, S03).
+- **J05, J06, J09** (reagendamiento masivo completo): ejecutados a mano en el bloque 3; el paso 2
+  usa el agendador de la matrícula, que tiene su propia suite (`e2e/agenda.spec.ts`).
+- **H03** ("Recordar"): oculto en el piloto por decisión (`fix-380-m`); el test de H02 comprueba
+  que no se ofrece.
+- **B13** (día sin clases): depende de que la base no tenga clases ese día.
+
+**Datos de prueba:** los 18 alumnos `E2E-Asis*` sembrados a mano en los bloques 2 a 4 se borraron
+el 2026-10-13, con sus clases, asistencias y notificaciones.
 
 ## Decisiones de negocio
 
@@ -310,7 +339,7 @@ Tomadas por Matías el 2026-10-12 (bloque 4):
 - [x] Bloque 2 — Carga, tabla del día, iniciar/finalizar/ausente y Dashboard (2026-10-11)
 - [x] Bloque 3 — Penalización, justificar, rail, cron, ficha y reagendar (2026-10-12)
 - [x] Bloque 4 — K–O: Dashboard y otros módulos, Ciclos Teóricos, sedes y roles, 2 sesiones, visual (2026-10-12)
-- [ ] Casos "Auto ✓" en `e2e/` y borrar los datos `E2E-Asis*` al cerrar
+- [x] Casos "Auto ✓" en `e2e/` y datos `E2E-Asis*` borrados (2026-10-13)
 
 ## Regression Test
 
