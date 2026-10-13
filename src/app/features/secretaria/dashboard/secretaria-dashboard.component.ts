@@ -2,10 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
-  OnInit,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
@@ -21,6 +22,7 @@ import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
@@ -297,8 +299,10 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
     </section>
   `,
 })
-export class SecretariaDashboardComponent implements OnInit {
+export class SecretariaDashboardComponent {
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -380,6 +384,21 @@ export class SecretariaDashboardComponent implements OnInit {
   );
 
   constructor() {
+    // Branch-scoped (facades.md §7): carga al entrar y recarga cuando la secretaria con acceso a
+    // ambas sedes cambia de sede. Solo la sede es dependencia: initialize() lee signals antes de
+    // su primer await y, sin untracked(), cualquiera de ellos volvería a disparar la carga.
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      untracked(() => {
+        void this.dashboardFacade.initialize();
+        void this.dashboardAlertsFacade.initialize();
+      });
+    });
+
+    // initialize() abre el canal Realtime del dashboard; sin esto seguía escuchando (y
+    // recargando) con la secretaria en otra pantalla (fix-403-m).
+    this.destroyRef.onDestroy(() => this.dashboardFacade.destroyRealtime());
+
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
@@ -387,11 +406,6 @@ export class SecretariaDashboardComponent implements OnInit {
         Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
       }
     });
-  }
-
-  ngOnInit(): void {
-    void this.dashboardFacade.initialize();
-    void this.dashboardAlertsFacade.initialize();
   }
 
   handleQuickAction(actionId: string): void {
