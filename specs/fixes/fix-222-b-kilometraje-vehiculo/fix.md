@@ -1,7 +1,7 @@
 # Fix: El kilometraje del vehículo no se actualiza con vehículos "Ambas", puede retroceder y el mantenimiento no lo mueve
 > id: fix-222-b-kilometraje-vehiculo
 > refs: ASG-i-032 (checklist 032, sospechas S2, S3 y S6; casos M03, N01–N05; decisiones 2 y 3 del owner, 2026-10-12)
-> status: active
+> status: done
 > created: 2026-10-13
 
 ## Root Cause
@@ -56,4 +56,4 @@ ACs propios:
 ## Progreso
 - [x] Migración + test SQL en transacción con ROLLBACK: 14 casos, 0 fallas (contra producción hoy falla en 10). Incluye el caso S2: la secretaria de la sede 2 no puede editar el vehículo "Ambas", pero al guardar el km final de su clase el vehículo queda actualizado.
 - [x] Facades sin el UPDATE directo a `vehicles`; specs reescritos (los de fix-189 y fix-362-m sobre el km pasan a "no escribe en vehicles"): 81/81. `tsc` sin errores, `lint:arch` 0 errores.
-- [ ] Aplicar la migración (con aprobación) y correr el test contra producción.
+- [x] Migración aplicada (aprobada 2026-10-13) y registrada. Test SQL contra producción: 14/14, sin datos de prueba residuales.
