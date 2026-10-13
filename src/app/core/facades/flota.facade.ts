@@ -12,10 +12,10 @@ import type {
   VehicleTableRow,
   VehicleDocSummary,
   FlotaKpis,
-  VehicleType,
   VehicleStatus,
   DocStatus,
 } from '@core/models/ui/vehicle-table.model';
+import { matchesVehicleSearch } from '@core/utils/vehicle-search.utils';
 import type { VehicleAgendaSlot } from '@core/models/ui/vehicle-detail.model';
 
 @Injectable({ providedIn: 'root' })
@@ -29,7 +29,8 @@ export class FlotaFacade {
   private readonly _vehicles = signal<VehicleTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
-  private readonly _typeFilter = signal<VehicleType | null>(null);
+  /** Texto del buscador del listado (hotfix-073-b: antes no filtraba nada). */
+  private readonly _searchTerm = signal('');
   private readonly _statusFilter = signal<VehicleStatus | null>(null);
   private readonly _selectedVehicleId = signal<number | null>(null);
   private readonly _vehicleAgenda = signal<VehicleAgendaSlot[]>([]);
@@ -45,7 +46,7 @@ export class FlotaFacade {
   readonly vehicles = this._vehicles.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  readonly typeFilter = this._typeFilter.asReadonly();
+  readonly searchTerm = this._searchTerm.asReadonly();
   readonly statusFilter = this._statusFilter.asReadonly();
   readonly selectedVehicleId = this._selectedVehicleId.asReadonly();
   readonly vehicleAgenda = this._vehicleAgenda.asReadonly();
@@ -63,9 +64,9 @@ export class FlotaFacade {
 
   readonly filteredVehicles = computed((): VehicleTableRow[] => {
     let result = this._vehicles();
-    const type = this._typeFilter();
+    const term = this._searchTerm();
     const status = this._statusFilter();
-    if (type) result = result.filter((v) => v.type === type);
+    if (term.trim()) result = result.filter((v) => matchesVehicleSearch(v, term));
     if (status) result = result.filter((v) => v.status === status);
     return result;
   });
@@ -218,7 +219,6 @@ export class FlotaFacade {
       model: v.model,
       year: v.year,
       vehicleLabel: `${v.brand} ${v.model}`,
-      type: this.resolveType(v.brand, v.model),
       status: resolveVehicleStatus(v.status),
       currentKm: v.current_km ?? 0,
       nextMaintenanceDate: v.last_maintenance ?? null,
@@ -236,8 +236,8 @@ export class FlotaFacade {
     };
   }
 
-  setTypeFilter(type: VehicleType | null): void {
-    this._typeFilter.set(type);
+  setSearchTerm(term: string): void {
+    this._searchTerm.set(term);
   }
   setStatusFilter(status: VehicleStatus | null): void {
     this._statusFilter.set(status);
@@ -359,14 +359,5 @@ export class FlotaFacade {
     } finally {
       this._isLoadingAgenda.set(false);
     }
-  }
-
-  private resolveType(brand: string, model: string): VehicleType {
-    const label = `${brand} ${model}`.toLowerCase();
-    return ['atego', 'actros', 'accelo', 'camion', 'bus', 'volvo', 'iveco'].some((k) =>
-      label.includes(k),
-    )
-      ? 'professional'
-      : 'class_b';
   }
 }

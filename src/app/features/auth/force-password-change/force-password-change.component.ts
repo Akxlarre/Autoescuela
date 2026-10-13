@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  computed,
   inject,
   signal,
   viewChild,
@@ -14,12 +15,14 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AuthFacade } from '@core/facades/auth.facade';
 import gsap from 'gsap';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
-import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { evaluatePassword, PASSWORD_MIN_LENGTH } from '@core/utils/password-policy.utils';
+import { PasswordRequirementsComponent } from '@shared/components/password-requirements/password-requirements.component';
 
 @Component({
   selector: 'app-force-password-change',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, PasswordRequirementsComponent],
   template: `
     <div
       class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
@@ -75,6 +78,8 @@ import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
                   class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) pl-(--input-padding-x) pr-10 font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
                   [placeholder]="'Mínimo ' + minLength + ' caracteres'"
                   required
+                  autocomplete="new-password"
+                  aria-describedby="new-password-requirements"
                   data-llm-description="input for the new account password"
                 />
                 <button
@@ -86,12 +91,38 @@ import { PASSWORD_MIN_LENGTH } from '@core/utils/auth-errors.utils';
                   <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="18" />
                 </button>
               </div>
+              <!-- spec 0050-b: los requisitos se ven mientras se escribe -->
+              <app-password-requirements
+                id="new-password-requirements"
+                [requirements]="evaluation().requirements"
+                [strength]="evaluation().strength"
+              />
+            </div>
+
+            <!-- spec 0050-b (AC6): antes era un solo campo; un error de tipeo dejaba a la persona fuera -->
+            <div class="flex flex-col gap-2 pb-4">
+              <label for="confirm-password" class="text-sm font-medium text-text-secondary">
+                Confirmar contraseña
+              </label>
+              <input
+                id="confirm-password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="confirm"
+                class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) px-(--input-padding-x) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
+                placeholder="Repite tu contraseña"
+                required
+                autocomplete="new-password"
+                data-llm-description="input to confirm the new account password"
+              />
+              @if (mismatch()) {
+                <span class="text-xs text-error" role="alert">Las contraseñas no coinciden.</span>
+              }
             </div>
 
             <button
               type="submit"
               class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
-              [disabled]="form.invalid || loading()"
+              [disabled]="!canSubmit() || loading()"
               [attr.data-llm-action]="copy.llmAction"
             >
               @if (loading()) {
@@ -119,7 +150,7 @@ export class ForcePasswordChangeComponent {
   private readonly route = inject(ActivatedRoute);
 
   /**
-   * Misma pantalla para dos flujos: el primer login (clave temporal) y el link de "recuperar
+   * Misma pantalla para dos flujos: el primer ingreso (activación por enlace) y el link de "recuperar
    * contraseña" (fix-181-b, ruta /recuperar-contrasena con data.mode = 'recovery').
    */
   readonly isRecovery = this.route.snapshot.data['mode'] === 'recovery';
@@ -133,17 +164,41 @@ export class ForcePasswordChangeComponent {
       }
     : {
         icon: 'shield-alert',
-        title: 'Actualiza tu contraseña',
+        // hotfix-072-b: decía "actualizar tu contraseña temporal". Desde fix-182-b las cuentas
+        // nacen sin contraseña y se activan por enlace: nadie tiene una temporal.
+        title: 'Crea tu contraseña',
         subtitle:
-          'Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio de sesión.',
-        submit: 'Actualizar y Continuar',
+          'Es tu primer ingreso. Crea la contraseña que usarás de ahora en adelante para entrar.',
+        submit: 'Guardar y entrar',
         llmAction: 'actualizar-contrasena-forzada',
       };
   private readonly gsap = inject(GsapAnimationsService);
 
   readonly form = this.fb.nonNullable.group({
     password: ['', [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH)]],
+    confirm: ['', [Validators.required]],
   });
+
+  private readonly values = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
+
+  /** La regla única de contraseñas (spec 0050-b), con los datos de la persona como contexto. */
+  readonly evaluation = computed(() => {
+    const user = this.auth.currentUser();
+    return evaluatePassword(this.values().password ?? '', {
+      name: user?.name,
+      email: user?.email,
+      rut: user?.rut,
+    });
+  });
+  readonly mismatch = computed(() => {
+    const { password, confirm } = this.values();
+    return !!confirm && confirm !== password;
+  });
+  readonly canSubmit = computed(
+    () => this.evaluation().valid && this.values().confirm === this.values().password,
+  );
 
   readonly loading = signal(false);
   readonly errorMsg = signal('');
@@ -189,7 +244,7 @@ export class ForcePasswordChangeComponent {
   }
 
   async onSubmit(): Promise<void> {
-    if (this.form.invalid) return;
+    if (!this.canSubmit()) return;
 
     this.hideError();
     this.loading.set(true);

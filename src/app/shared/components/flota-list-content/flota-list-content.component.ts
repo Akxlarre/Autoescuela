@@ -48,7 +48,6 @@ import type {
 import type {
   VehicleTableRow,
   FlotaKpis,
-  VehicleType,
   VehicleStatus,
 } from '@core/models/ui/vehicle-table.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
@@ -136,14 +135,6 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
               />
             </div>
             <div class="toolbar-dropdowns">
-              <p-select
-                [options]="typeOptions"
-                [(ngModel)]="selectedType"
-                placeholder="Todos los tipos"
-                styleClass="h-10 w-full"
-                (ngModelChange)="onTypeChange($event)"
-                data-llm-action="filtrar-flota-por-tipo"
-              />
               <p-select
                 [options]="statusOptions"
                 [(ngModel)]="selectedStatus"
@@ -492,7 +483,6 @@ export class FlotaListContentComponent {
   readonly viewAgenda = output<number>();
   readonly viewMaintenances = output<number>();
   readonly manageDocuments = output<number>();
-  readonly typeFilterChange = output<VehicleType | null>();
   readonly statusFilterChange = output<VehicleStatus | null>();
   readonly searchChange = output<string>();
   readonly refreshRequested = output<void>();
@@ -500,17 +490,9 @@ export class FlotaListContentComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
   searchTerm = '';
-  selectedType: VehicleType | null = null;
   selectedStatus: VehicleStatus | null = null;
 
   /** Cada filtro abre con su opción "todos" = null, su valor por defecto (spec 0022-m). */
-  readonly typeOptions = withAllOption(
-    [
-      { label: 'Clase B', value: 'class_b' as VehicleType },
-      { label: 'Profesional', value: 'professional' as VehicleType },
-    ],
-    'Todos los tipos',
-  );
   readonly statusOptions = withAllOption(
     [
       { label: 'Disponible', value: 'available' as VehicleStatus },
@@ -522,7 +504,7 @@ export class FlotaListContentComponent {
 
   /** Muestra "Limpiar filtros": algún selector fuera de "todos" o texto en el buscador. */
   hasActiveFilters(): boolean {
-    return this.searchTerm !== '' || this.selectedType !== null || this.selectedStatus !== null;
+    return this.searchTerm !== '' || this.selectedStatus !== null;
   }
 
   readonly heroChips = computed((): SectionHeroChip[] => [
@@ -559,7 +541,6 @@ export class FlotaListContentComponent {
     model: '',
     year: 0,
     vehicleLabel: '',
-    type: 'class_b',
     status: 'available',
     currentKm: 0,
     nextMaintenanceDate: null,
@@ -583,9 +564,6 @@ export class FlotaListContentComponent {
   onSearchChange(v: string): void {
     this.searchChange.emit(v);
   }
-  onTypeChange(v: VehicleType | null): void {
-    this.typeFilterChange.emit(v);
-  }
   onStatusChange(v: VehicleStatus | null): void {
     this.selectedStatus = v;
     this.statusFilterChange.emit(v);
@@ -593,10 +571,8 @@ export class FlotaListContentComponent {
 
   resetFilters(): void {
     this.searchTerm = '';
-    this.selectedType = null;
     this.selectedStatus = null;
     this.searchChange.emit('');
-    this.typeFilterChange.emit(null);
     this.statusFilterChange.emit(null);
   }
 
