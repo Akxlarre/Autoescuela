@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { StaleSessionError } from '@core/utils/class-b-session.utils';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -336,6 +337,8 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
       void this.dashboardFacade.refreshLiveClassesOnly();
       this.layoutDrawer.close();
     } catch (err) {
+      // fix-388-m: si otra persona ya cambió la clase, "Clases Actuales" también quedó vieja.
+      if (err instanceof StaleSessionError) void this.dashboardFacade.refreshLiveClassesOnly();
       this.error.set(
         err instanceof Error ? err.message : 'No se pudo iniciar la clase. Intenta de nuevo.',
       );

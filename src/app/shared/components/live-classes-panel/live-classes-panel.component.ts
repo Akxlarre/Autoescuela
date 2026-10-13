@@ -134,8 +134,13 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300 inline-flex items-center gap-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls) || isFromPrevDay(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="
+                    isOverdue(cls) || isFromPrevDay(cls) || isUnexcusedAbsence(cls)
+                  "
                   [attr.data-llm-description]="
                     isFromPrevDay(cls)
                       ? 'Sesión in_progress sin cerrar de un día anterior, distinta de una clase agendada hoy'
@@ -149,7 +154,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   } @else if (isOverdue(cls)) {
                     <app-icon name="alert-triangle" [size]="11" class="badge-pulse shrink-0" />
                   }
-                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls)) }}
+                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls), cls.excused) }}
                 </span>
               </div>
 
@@ -205,10 +210,13 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="isOverdue(cls) || isUnexcusedAbsence(cls)"
                 >
-                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls)) }}
+                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls), cls.excused) }}
                 </span>
               </div>
 
@@ -365,12 +373,19 @@ export class LiveClassesPanelComponent {
     return isFromPreviousDay(cls.scheduledAt, this._now());
   }
 
-  statusLabel(status: string, overdue = false, fromPrevDay = false): string {
+  /** fix-392-m: falta SIN justificar. Va en color de error para no confundirse con una clase
+   * concluida (ambas se pintaban en gris); la justificada sigue en gris. */
+  isUnexcusedAbsence(cls: LiveClassModel): boolean {
+    return cls.status === 'no_show' && !cls.excused;
+  }
+
+  statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {
     if (fromPrevDay) return 'Día Anterior';
     if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
-    if (status === 'no_show') return 'No Asistió';
+    // fix-381-m: misma etiqueta que Asistencia para una falta justificada.
+    if (status === 'no_show') return excused ? 'Justificada' : 'No Asistió';
     return 'Finalizada';
   }
 
@@ -384,10 +399,10 @@ export class LiveClassesPanelComponent {
     return formatChileTime(isoString);
   }
 
-  getRelativeTime(isoString: string, status: string, overdue = false): string {
+  getRelativeTime(isoString: string, status: string, overdue = false, excused = false): string {
     if (!isoString) return '';
     if (status === 'completed') return 'Concluida';
-    if (status === 'no_show') return 'No asistió';
+    if (status === 'no_show') return excused ? 'Justificada' : 'No asistió';
     if (overdue) return 'Cierre atrasado';
     if (status === 'in_progress') return 'Transcurriendo';
 

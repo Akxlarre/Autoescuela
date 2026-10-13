@@ -378,6 +378,42 @@ describe('DashboardFacade', () => {
       const [result] = await dashFacade.fetchLiveClasses(1);
 
       expect(result.status).toBe('no_show');
+      expect(result.excused).toBe(false);
+    });
+
+    it('fix-381-m: marca justificada una falta con asistencia vigente excused', async () => {
+      const rows = [
+        {
+          id: 3,
+          class_number: 4,
+          scheduled_at: '2026-08-18T17:30:00',
+          status: 'no_show',
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, students: { users: null } },
+          class_b_practice_attendance: [
+            { status: 'absent', archived_at: '2026-08-10T12:00:00Z' },
+            { status: 'excused', archived_at: null },
+          ],
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.excused).toBe(true);
     });
 
     it('no incluye sesiones reserved de enrollments draft (fix-110)', async () => {

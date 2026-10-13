@@ -1937,6 +1937,8 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   /** RF-053: abre el agendador reutilizado del wizard para reponer clases penalizadas. */
   protected openReagendarClasesDrawer(): void {
     if (!this.facade.puedeReagendarPenalizacion()) return;
+    // fix-382-m: una apertura nueva parte con todas marcadas (el paso 1 respeta una selección previa).
+    this.facade.setReagendarSeleccion([]);
     this.layoutDrawer.open(
       AdminReagendarClasesDrawerComponent,
       'Reagendar Clases',

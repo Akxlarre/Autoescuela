@@ -143,6 +143,25 @@ muestra un inscrito más.
 El helper crea solo `users`, `students` y `enrollments`: sin clases, pagos ni documentos. Para
 esos casos, por ahora, se lee un alumno del seed (nombres `AlumnoNN ApellidoNN`) sin modificarlo.
 
+Para **clases prácticas** de Asistencia Clase B: `seedClase()` (`e2e/support/asistencia-seed.ts`).
+Crea el alumno y una clase de **ayer** entre la 01:00 y las 06:59 (siempre "hora pasada", sin
+clases reales con las que chocar), con el estado que se pida y, si hace falta, su inasistencia.
+
+```ts
+import { limpiarAsistencia, seedClase } from './support/asistencia-seed';
+
+test.afterEach(limpiarAsistencia); // borra asistencias y notificaciones, devuelve el km de los vehículos
+
+test('marcar ausente', async ({ pageAs, cleanup }) => {
+  const clase = await seedClase({ label: 'Ausente', branchId: 1, cupo: { inst: 0, hora: 1 } }, cleanup);
+});
+```
+
+Cada test usa su propio `cupo` (instructor de la sede × hora): la BD rechaza dos clases solapadas
+del mismo instructor o vehículo, y un instructor no puede tener dos clases en curso. `de: otraClase`
+agrega otra clase al mismo alumno. En la pantalla hay que elegir el día de ayer (`elegirDia()` en
+`e2e/asistencia-clase-b.spec.ts`): Asistencia abre siempre en hoy.
+
 `getClientFor(email, password)` (`e2e/support/supabase-admin.ts`) entrega un cliente Supabase
 con la sesión de cualquier cuenta de prueba, para comprobar la RLS por fuera de la UI.
 

@@ -12,6 +12,7 @@ import {
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
   enrollmentsWithConsecutiveAbsences,
+  enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
@@ -198,6 +199,20 @@ export class DashboardAlertsFacade {
       );
 
       const cancelled = (result.data as unknown[]).length;
+
+      // fix-391-m: cancelar a mano también es penalizar; se registra en cada matrícula para que
+      // esas faltas no vuelvan a entrar en "Borrar horarios" cuando se reagenden las clases.
+      const stamp = await this.supabase.client
+        .from('enrollments')
+        .update({ absence_penalty_applied_at: new Date().toISOString() })
+        .in('id', [...groups.keys()])
+        .select('id');
+      if (stamp.error || !stamp.data?.length) {
+        this.toast.warning(
+          'No se registró la penalización',
+          'Las clases se cancelaron, pero estos alumnos pueden volver a aparecer en "Borrar horarios". Avisa al administrador.',
+        );
+      }
       this.toast.success(
         'Horarios borrados',
         `Se ${cancelled === 1 ? 'canceló 1 clase' : `cancelaron ${cancelled} clases`} de ${
@@ -421,7 +436,7 @@ export class DashboardAlertsFacade {
     let query: any = this.supabase.client
       .from('class_b_practice_attendance')
       .select(
-        'class_b_sessions!inner(enrollment_id, class_number, status, enrollments!inner(branch_id, status))',
+        'recorded_at, class_b_sessions!inner(enrollment_id, class_number, status, enrollments!inner(branch_id, status, absence_penalty_applied_at))',
       )
       .in('status', ['absent', 'no_show'])
       // Una falta ya reagendada quedó archivada: es historial, no una falta viva (fix-191-m).
@@ -435,17 +450,25 @@ export class DashboardAlertsFacade {
     const { data, error } = await query;
     if (error || !data) return [];
 
-    const affectedIds = enrollmentsWithConsecutiveAbsences(
-      (data as any[])
-        .filter((row) => row.class_b_sessions)
-        .map((row) => ({
-          enrollmentId: row.class_b_sessions.enrollment_id,
-          classNumber: row.class_b_sessions.class_number ?? null,
-        })),
+    const rows = (data as any[]).filter((row) => row.class_b_sessions);
+    const absences = rows.map((row) => ({
+      enrollmentId: row.class_b_sessions.enrollment_id as number,
+      classNumber: (row.class_b_sessions.class_number ?? null) as number | null,
+      recordedAt: (row.recorded_at ?? null) as string | null,
+    }));
+    const penalizedAt = new Map<number, string | null>(
+      rows.map((row) => [
+        row.class_b_sessions.enrollment_id,
+        row.class_b_sessions.enrollments?.absence_penalty_applied_at ?? null,
+      ]),
     );
 
-    const affectedCount = affectedIds.length;
+    const affectedCount = enrollmentsWithConsecutiveAbsences(absences).length;
     if (affectedCount === 0) return [];
+
+    // fix-391-m: la alerta cuenta a todos los alumnos con faltas seguidas, pero "Borrar horarios"
+    // solo actúa sobre los pares que todavía no fueron penalizados (J07).
+    const pendingIds = enrollmentsWithUnpenalizedPair(absences, penalizedAt);
 
     return [
       {
@@ -454,11 +477,15 @@ export class DashboardAlertsFacade {
         description: 'Faltaron a dos clases prácticas consecutivas sin justificar',
         severity: 'error',
         count: affectedCount,
-        action: {
-          label: 'Borrar horarios',
-          type: 'clear-schedule',
-          enrollmentIds: affectedIds,
-        },
+        ...(pendingIds.length > 0
+          ? {
+              action: {
+                label: 'Borrar horarios',
+                type: 'clear-schedule' as const,
+                enrollmentIds: pendingIds,
+              },
+            }
+          : {}),
       },
     ];
   }

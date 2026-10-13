@@ -96,4 +96,6 @@ export interface LiveClassModel {
   kmStart: number | null;
   kmEnd?: number | null;
   notes?: string | null;
+  /** fix-381-m: inasistencia (no_show) con la asistencia vigente justificada. */
+  excused?: boolean;
 }
