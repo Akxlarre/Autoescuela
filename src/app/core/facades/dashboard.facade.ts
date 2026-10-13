@@ -31,6 +31,8 @@ export class DashboardFacade {
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
+  /** Número de la última carga con skeleton (ver `initialize`). */
+  private _loadTicket = 0;
   private _realtimeChannel: any | null = null;
   /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
   private readonly dashboardGuard = createRequestGuard();
@@ -95,16 +97,22 @@ export class DashboardFacade {
       return;
     }
 
+    // Solo la carga más reciente apaga el skeleton, registra la sede cargada o muestra su error:
+    // si se disparó otra mientras esta esperaba (cambio de sede seguido), la vieja no debe
+    // dejar la pantalla "lista" con datos que no son de la sede elegida (fix-404-m).
+    const ticket = ++this._loadTicket;
     this.loading.set(true);
     this.error.set(null);
     try {
       await this.fetchRealDashboardData(branchId);
-      this._initialized = true;
-      this._lastBranchId = branchId;
+      if (ticket === this._loadTicket) {
+        this._initialized = true;
+        this._lastBranchId = branchId;
+      }
     } catch {
-      this.error.set('Error al cargar datos del dashboard');
+      if (ticket === this._loadTicket) this.error.set('Error al cargar datos del dashboard');
     } finally {
-      this.loading.set(false);
+      if (ticket === this._loadTicket) this.loading.set(false);
     }
   }
 
@@ -222,6 +230,7 @@ export class DashboardFacade {
       prevMonthlySpecialRevenue,
       vehiclesStatus,
       auditLogsResponse,
+      liveClasses,
     ] = await Promise.all([
       studentsQuery,
       recentStudentsQuery,
@@ -233,6 +242,9 @@ export class DashboardFacade {
       prevSpecialRevenueQuery,
       vehiclesQuery,
       auditLogQuery,
+      // En la misma tanda, antes del guard: pedirlas después dejaba que una carga vieja que ya
+      // había pasado el guard escribiera al final y pisara a la vigente (fix-404-m).
+      this.fetchLiveClasses(branchId),
     ]);
 
     const sumPayments = (rows: any[] | null) =>
@@ -354,7 +366,7 @@ export class DashboardFacade {
         { name: 'Supabase', ok: true },
         { name: 'Realtime', ok: !!this._realtimeChannel },
       ],
-      liveClasses: await this.fetchLiveClasses(branchId),
+      liveClasses,
     });
   }
 

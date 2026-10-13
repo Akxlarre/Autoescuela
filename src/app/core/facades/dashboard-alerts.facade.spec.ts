@@ -144,6 +144,79 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
+  // ── fix-404-m: cambio de sede seguido ───────────────────────────────────────
+  describe('cargas fuera de orden (fix-404-m)', () => {
+    const alerta = (id: string) => ({
+      id,
+      title: id,
+      description: '',
+      severity: 'warning' as const,
+    });
+
+    /**
+     * Deja todas las consultas en vacío salvo "pagos pendientes", que responde cuando el test
+     * lo decide: una promesa por carga, en el orden en que se pidieron.
+     */
+    function controlarCargas() {
+      const cargas: { resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = [];
+      const proto = Object.getPrototypeOf(facade);
+      for (const name of Object.getOwnPropertyNames(proto).filter((n) => n.startsWith('check'))) {
+        vi.spyOn(facade as any, name).mockResolvedValue([]);
+      }
+      vi.spyOn(facade as any, 'checkPendingPayments').mockImplementation(
+        () => new Promise((resolve, reject) => cargas.push({ resolve, reject })),
+      );
+      return cargas;
+    }
+
+    it('quedan las alertas de la última carga pedida aunque la primera responda después', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[1].resolve([alerta('sede-nueva')]);
+      await vigente;
+      cargas[0].resolve([alerta('sede-anterior')]);
+      await vieja;
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['sede-nueva']);
+    });
+
+    it('una carga vieja que termina primero no apaga isLoading ni deja sus alertas', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[0].resolve([alerta('sede-anterior')]);
+      await vieja;
+      expect(facade.isLoading()).toBe(true);
+      expect(facade.activeAlerts()).toEqual([]);
+
+      cargas[1].resolve([alerta('sede-nueva')]);
+      await vigente;
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['sede-nueva']);
+    });
+
+    it('el error de la carga vigente se muestra; el de una vieja, no', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[0].reject(new Error('vieja'));
+      await vieja;
+      expect(facade.error()).toBeNull();
+
+      cargas[1].reject(new Error('vigente'));
+      await vigente;
+      expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
   // ── B-1: Sixth class with pending debt ──────────────────────────────────────
   describe('B-1: checkSixthClassWithDebt', () => {
     it('should generate a warning alert when students at 6th class have pending balance', async () => {

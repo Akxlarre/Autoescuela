@@ -299,13 +299,14 @@ describe('DashboardFacade', () => {
      * invocación (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así
      * que cada tanda de QUERIES_POR_CARGA llamadas a `.from()` pertenece a una sola invocación del
      * método — agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
-     * Eran 8; fix-047-i sumó 2 (ventas de servicios especiales del mes y del mes anterior). Si
-     * agregas una query al método, actualiza la constante o estos tests se cuelgan esperando.
-     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * QUERIES_POR_CARGA` es una query
-     * auxiliar (ej. `fetchLiveClasses()`, que se dispara después de aplicar los datos
-     * principales) — se resuelve sola de inmediato, no la necesitamos controlada.
+     * Eran 8; fix-047-i sumó 2 (ventas de servicios especiales del mes y del mes anterior) y
+     * fix-404-m otras 2: las de `fetchLiveClasses()`, que ahora van en la misma tanda para que el
+     * guard las cubra. Si agregas una query al método, actualiza la constante o estos tests se
+     * cuelgan esperando.
+     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * QUERIES_POR_CARGA` es una
+     * query auxiliar — se resuelve sola de inmediato, no la necesitamos controlada.
      */
-    const QUERIES_POR_CARGA = 10;
+    const QUERIES_POR_CARGA = 12;
 
     function makeRaceableSupabaseMock(expectedInitializeCalls: number) {
       const mainCallsTotal = expectedInitializeCalls * QUERIES_POR_CARGA;
@@ -414,6 +415,55 @@ describe('DashboardFacade', () => {
       await oldCall;
 
       expect(dashFacade.data()?.hero.classesToday).toBe(200);
+    });
+
+    function facadeConCarrera(cargas: number) {
+      const mock = makeRaceableSupabaseMock(cargas);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      return { mock, dashFacade: TestBed.inject(DashboardFacade) };
+    }
+
+    it('fix-404-m: una carga vieja que termina primero no apaga el skeleton de la vigente', async () => {
+      const { mock, dashFacade } = facadeConCarrera(2);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente)
+
+      mock.resolveBatch(0, 100);
+      await oldCall;
+      expect(dashFacade.loading()).toBe(true);
+      expect(dashFacade.data()).toBeNull();
+
+      mock.resolveBatch(1, 200);
+      await newCall;
+      expect(dashFacade.loading()).toBe(false);
+      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+    });
+
+    it('fix-404-m: una carga vieja que falla no apaga el skeleton ni muestra error', async () => {
+      const { mock, dashFacade } = facadeConCarrera(2);
+
+      const oldCall = dashFacade.initialize();
+      const newCall = dashFacade.initialize();
+
+      mock.rejectBatch(0, new Error('network fail'));
+      await oldCall;
+      expect(dashFacade.loading()).toBe(true);
+      expect(dashFacade.error()).toBeNull();
+
+      mock.resolveBatch(1, 200);
+      await newCall;
+      expect(dashFacade.loading()).toBe(false);
+      expect(dashFacade.error()).toBeNull();
     });
   });
 

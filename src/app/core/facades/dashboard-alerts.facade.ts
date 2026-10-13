@@ -9,6 +9,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
@@ -59,6 +60,10 @@ export class DashboardAlertsFacade {
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** Número de la última carga con skeleton (ver `initialize`). */
+  private _loadTicket = 0;
+  /** Descarta respuestas de fetchAlertsData() fuera de orden (facades.md §7, fix-404-m). */
+  private readonly alertsGuard = createRequestGuard();
   private readonly SNOOZE_KEY = 'ds_snoozed_alerts';
   private readonly SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -95,16 +100,21 @@ export class DashboardAlertsFacade {
       return;
     }
 
+    // Solo la carga más reciente apaga isLoading, registra la sede cargada o muestra su error
+    // (fix-404-m): una carga vieja que termina después no debe dejar la lista como "lista".
+    const ticket = ++this._loadTicket;
     this._isLoading.set(true);
     this._error.set(null);
     try {
       await this.fetchAlertsData(branchId);
-      this._initialized = true;
-      this._lastBranchId = branchId;
+      if (ticket === this._loadTicket) {
+        this._initialized = true;
+        this._lastBranchId = branchId;
+      }
     } catch {
-      this._error.set('Error al cargar alertas');
+      if (ticket === this._loadTicket) this._error.set('Error al cargar alertas');
     } finally {
-      this._isLoading.set(false);
+      if (ticket === this._loadTicket) this._isLoading.set(false);
     }
   }
 
@@ -232,6 +242,7 @@ export class DashboardAlertsFacade {
   // ── Coordinador de queries ──────────────────────────────────────────────────
 
   private async fetchAlertsData(branchId: number | null): Promise<void> {
+    const requestToken = this.alertsGuard.next();
     const results = await Promise.all([
       // Fase 1 & 2
       this.checkExpiredDocuments(branchId),
@@ -255,6 +266,9 @@ export class DashboardAlertsFacade {
       this.checkFailedModules(branchId),
       this.checkDraftGrades(branchId),
     ]);
+    // Ya se pidió una carga más reciente (otra sede): descartar esta respuesta.
+    if (!this.alertsGuard.isCurrent(requestToken)) return;
+
     const allAlerts = results.flat();
     this._activeAlerts.set(this.filterSnoozedAlerts(allAlerts));
   }
