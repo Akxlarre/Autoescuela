@@ -16,6 +16,7 @@
 
 | ID | Título | Prioridad | Owner | Notas |
 |----|--------|-----------|-------|-------|
+| [0010-i](./specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | P0 | Ignacio (i) | Draft. Requisito del cliente, origen `ASG-i-062`. Entregas chicas: 1–4 primero (bloqueo + cobrar/forzar), luego 5–7. |
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |

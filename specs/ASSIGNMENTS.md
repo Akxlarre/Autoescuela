@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `cualquiera` | spec | P0 | i | **Requisito del cliente.** Hoy con saldo pendiente se toman las 12 clases y se certifica. Bloqueo en BD + "Registrar pago" en Asistencia + forzar con motivo (secretaria y admin) |
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
 | ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
@@ -281,6 +280,7 @@
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | `m` | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-11 |
+| ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 
 ---

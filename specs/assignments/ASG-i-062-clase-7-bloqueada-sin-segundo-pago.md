@@ -1,14 +1,14 @@
 # Asignación ASG-i-062 — Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P0
 > **created:** 2026-10-13
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-13
+> **resulting_track:** 0010-i-clase-7-bloqueada-sin-segundo-pago
 
 ---
 
