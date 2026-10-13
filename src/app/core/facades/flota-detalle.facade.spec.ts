@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { FlotaDetalleFacade } from './flota-detalle.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from './auth.facade';
 import { addDaysIso, chileToday } from '@core/utils/chile-time.utils';
 
 describe('FlotaDetalleFacade', () => {
@@ -15,7 +16,11 @@ describe('FlotaDetalleFacade', () => {
     };
 
     TestBed.configureTestingModule({
-      providers: [FlotaDetalleFacade, { provide: SupabaseService, useValue: supabaseMock }],
+      providers: [
+        FlotaDetalleFacade,
+        { provide: SupabaseService, useValue: supabaseMock },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+      ],
     });
 
     service = TestBed.inject(FlotaDetalleFacade);
@@ -44,6 +49,7 @@ describe('FlotaDetalleFacade — detalle, vencimientos y KPIs (hotfix-074-b)', (
   let vehicleResult: { data: unknown; error: unknown };
   let maintenancesResult: { data: unknown; error: unknown };
   let invoke: ReturnType<typeof vi.fn>;
+  let currentUser: { role: string; branchId: number | null; canAccessBothBranches: boolean };
 
   /** Vencimiento a N días de hoy (hora Chile). */
   const enDias = (n: number) => addDaysIso(chileToday(), n);
@@ -66,6 +72,7 @@ describe('FlotaDetalleFacade — detalle, vencimientos y KPIs (hotfix-074-b)', (
     vehicleResult = { data: vehiculo([]), error: null };
     maintenancesResult = { data: [], error: null };
     invoke = vi.fn();
+    currentUser = { role: 'admin', branchId: null, canAccessBothBranches: false };
 
     const client = {
       functions: { invoke },
@@ -82,7 +89,11 @@ describe('FlotaDetalleFacade — detalle, vencimientos y KPIs (hotfix-074-b)', (
     };
 
     TestBed.configureTestingModule({
-      providers: [FlotaDetalleFacade, { provide: SupabaseService, useValue: { client } }],
+      providers: [
+        FlotaDetalleFacade,
+        { provide: SupabaseService, useValue: { client } },
+        { provide: AuthFacade, useValue: { currentUser: () => currentUser } },
+      ],
     });
     service = TestBed.inject(FlotaDetalleFacade);
   });
@@ -136,6 +147,55 @@ describe('FlotaDetalleFacade — detalle, vencimientos y KPIs (hotfix-074-b)', (
       totalSpent: 80000,
       avgPerService: 26667,
       currentKm: 45200,
+    });
+  });
+
+  describe('permisos por sede (spec 0051-b)', () => {
+    const SEC_A = { role: 'secretaria', branchId: 1, canAccessBothBranches: false };
+    const enSede = (branch_id: number, both_branches = false) => ({
+      ...vehiculo([]),
+      branch_id,
+      both_branches,
+    });
+
+    it('la secretaria opera un vehículo de su sede', async () => {
+      currentUser = SEC_A;
+      vehicleResult.data = enSede(1);
+
+      await service.loadVehicleDetail(7);
+
+      expect(service.error()).toBeNull();
+      expect(service.vehicle()?.canManage).toBe(true);
+    });
+
+    it('un "Ambas" lo ve pero no lo opera (sin grant)', async () => {
+      currentUser = SEC_A;
+      vehicleResult.data = enSede(2, true);
+
+      await service.loadVehicleDetail(7);
+
+      expect(service.vehicle()?.canManage).toBe(false);
+    });
+
+    it('AC2: un vehículo exclusivo de la otra sede no se carga, aunque llegue por URL', async () => {
+      currentUser = SEC_A;
+      vehicleResult.data = enSede(2);
+      maintenancesResult.data = [{ id: 1, cost: 1000, created_at: '2026-10-01T12:00:00Z' }];
+
+      await service.loadVehicleDetail(7);
+
+      expect(service.vehicle()).toBeNull();
+      expect(service.maintenances()).toEqual([]);
+      expect(service.error()).toBe('Vehículo no encontrado.');
+    });
+
+    it('con grant multi-sede opera también los de la otra sede y los "Ambas"', async () => {
+      currentUser = { ...SEC_A, canAccessBothBranches: true };
+      vehicleResult.data = enSede(2, true);
+
+      await service.loadVehicleDetail(7);
+
+      expect(service.vehicle()?.canManage).toBe(true);
     });
   });
 });

@@ -141,16 +141,19 @@ const STATUS_BADGE_VARIANT: Record<VehicleStatus, BadgeVariant> = {
           >
             <app-icon name="file-text" [size]="16" />
           </button>
-          <button
-            aria-label="Editar"
-            pButton
-            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-            pTooltip="Editar"
-            (click)="editVehicle.emit(vehiculo().id)"
-            data-llm-action="editar-vehiculo-card"
-          >
-            <app-icon name="pencil" [size]="16" />
-          </button>
+          <!-- spec 0051-b: editar solo si la persona puede operar este vehículo -->
+          @if (vehiculo().canManage) {
+            <button
+              aria-label="Editar"
+              pButton
+              class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+              pTooltip="Editar"
+              (click)="editVehicle.emit(vehiculo().id)"
+              data-llm-action="editar-vehiculo-card"
+            >
+              <app-icon name="pencil" [size]="16" />
+            </button>
+          }
           <a
             pButton
             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"

@@ -93,7 +93,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
         [chips]="heroChips()"
         [actions]="heroActions()"
         [kpis]="maintenanceKpis()"
-        backRoute="/app/admin/flota"
+        [backRoute]="backRoute"
         backLabel="Flota"
         (actionClick)="handleHeroAction($event)"
       />
@@ -214,15 +214,18 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                     />
                   </td>
                   <td class="pr-6 text-right">
-                    <button
-                      pButton
-                      class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      aria-label="Editar mantención"
-                      data-llm-action="edit-maintenance"
-                      (click)="openMaintenanceForm(m.id)"
-                    >
-                      <app-icon name="pencil" [size]="14" />
-                    </button>
+                    <!-- spec 0051-b: editar solo si puede operar el vehículo -->
+                    @if (canManage()) {
+                      <button
+                        pButton
+                        class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        aria-label="Editar mantención"
+                        data-llm-action="edit-maintenance"
+                        (click)="openMaintenanceForm(m.id)"
+                      >
+                        <app-icon name="pencil" [size]="14" />
+                      </button>
+                    }
                   </td>
                 </tr>
               </ng-template>
@@ -234,7 +237,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                       icon="wrench"
                       message="Historial vacío"
                       subtitle="No hay registros de mantenimiento para este vehículo aún."
-                      actionLabel="Registrar Mantenimiento"
+                      [actionLabel]="canManage() ? 'Registrar Mantenimiento' : ''"
                       (action)="openMaintenanceForm()"
                     />
                   </td>
@@ -250,7 +253,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                 icon="wrench"
                 message="Historial vacío"
                 subtitle="No hay registros de mantenimiento para este vehículo aún."
-                actionLabel="Registrar Mantenimiento"
+                [actionLabel]="canManage() ? 'Registrar Mantenimiento' : ''"
                 (action)="openMaintenanceForm()"
               />
             } @else {
@@ -291,15 +294,17 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                     </div>
                   </div>
                   <div class="px-2 py-2 flex justify-end">
-                    <button
-                      pButton
-                      class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center"
-                      aria-label="Editar mantención"
-                      data-llm-action="edit-maintenance"
-                      (click)="openMaintenanceForm(m.id)"
-                    >
-                      <app-icon name="pencil" [size]="14" />
-                    </button>
+                    @if (canManage()) {
+                      <button
+                        pButton
+                        class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center"
+                        aria-label="Editar mantención"
+                        data-llm-action="edit-maintenance"
+                        (click)="openMaintenanceForm(m.id)"
+                      >
+                        <app-icon name="pencil" [size]="14" />
+                      </button>
+                    }
                   </div>
                 </div>
               }
@@ -376,10 +381,17 @@ export class VehicleMaintenancesComponent implements OnInit {
     ];
   });
 
-  readonly heroActions: () => SectionHeroAction[] = () => [
+  /** spec 0051-b: registrar y editar mantenimientos solo si puede operar el vehículo. */
+  protected readonly canManage = computed(() => this.facade.vehicle()?.canManage ?? false);
+  /** La misma pantalla sirve al admin y a la secretaria: la base sale de la ruta. */
+  protected readonly backRoute = `${this.route.snapshot.data['basePath'] ?? '/app/admin'}/flota`;
+
+  readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'imprimir-hoja', label: 'Hoja de Ruta', icon: 'printer', primary: false },
-    { id: 'registrar', label: 'Registrar Servicio', icon: 'plus', primary: true },
-  ];
+    ...(this.canManage()
+      ? [{ id: 'registrar', label: 'Registrar Servicio', icon: 'plus', primary: true }]
+      : []),
+  ]);
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   readonly maintenanceKpis = computed((): SectionHeroKpi[] => {
@@ -445,7 +457,7 @@ export class VehicleMaintenancesComponent implements OnInit {
 
   // ── Hero Action Handler ───────────────────────────────────────────────────
   handleHeroAction(id: string): void {
-    if (id === 'registrar') {
+    if (id === 'registrar' && this.canManage()) {
       this.openMaintenanceForm();
     } else if (id === 'imprimir-hoja') {
       this.layoutDrawer.open(RouteSheetDrawerComponent, 'Hoja de Ruta', 'printer');

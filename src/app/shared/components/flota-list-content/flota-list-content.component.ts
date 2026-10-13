@@ -313,16 +313,19 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
                         >
                           <app-icon name="file-text" [size]="16" />
                         </button>
-                        <button
-                          aria-label="Editar"
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
-                          pTooltip="Editar"
-                          (click)="editVehicle.emit(v.id)"
-                          data-llm-action="editar-vehiculo"
-                        >
-                          <app-icon name="pencil" [size]="16" />
-                        </button>
+                        <!-- spec 0051-b: editar solo si la persona puede operar este vehículo -->
+                        @if (v.canManage) {
+                          <button
+                            aria-label="Editar"
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0"
+                            pTooltip="Editar"
+                            (click)="editVehicle.emit(v.id)"
+                            data-llm-action="editar-vehiculo"
+                          >
+                            <app-icon name="pencil" [size]="16" />
+                          </button>
+                        }
                         <a
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
@@ -548,6 +551,7 @@ export class FlotaListContentComponent {
     instructorId: null,
     branchId: null,
     bothBranches: false,
+    canManage: false,
     documents: [],
     combustibleMes: 0,
   };

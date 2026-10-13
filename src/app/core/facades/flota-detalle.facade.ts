@@ -1,6 +1,8 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { toChileDate } from '@core/utils/chile-time.utils';
 import { resolveDocStatus } from '@core/utils/vehicle-document-status.utils';
+import { canManageVehicle, canViewVehicle } from '@core/utils/vehicle-permissions.utils';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type {
   MaintenanceRow,
@@ -63,6 +65,7 @@ interface RawVehicleForDetail {
 export class FlotaDetalleFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
   private readonly _vehicle = signal<VehicleTableRow | null>(null);
@@ -137,6 +140,14 @@ export class FlotaDetalleFacade {
 
       const v = vehicleResult.data as unknown as RawVehicleForDetail;
 
+      // spec 0051-b (AC2): una secretaria no abre por URL un vehículo exclusivo de la otra sede.
+      const scope = { branchId: v.branch_id ?? null, bothBranches: v.both_branches ?? false };
+      const user = this.auth.currentUser();
+      if (!canViewVehicle(user, scope)) {
+        this._error.set('Vehículo no encontrado.');
+        return;
+      }
+
       // Asignación activa (end_date IS NULL)
       const activeAssignment = v.vehicle_assignments.find((a) => a.end_date === null) ?? null;
       let instructorName: string | null = null;
@@ -164,8 +175,9 @@ export class FlotaDetalleFacade {
         nextMaintenanceDate: v.last_maintenance ?? null,
         instructorName,
         instructorId,
-        branchId: v.branch_id ?? null,
-        bothBranches: v.both_branches ?? false,
+        branchId: scope.branchId,
+        bothBranches: scope.bothBranches,
+        canManage: canManageVehicle(user, scope),
         documents: v.vehicle_documents.map((d) => ({
           type: d.type ?? 'unknown',
           expiryDate: d.expiry_date ?? '',

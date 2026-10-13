@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -41,6 +42,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
 import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import {
   isKmDecrease,
   isValidLicensePlate,
@@ -221,16 +223,25 @@ import {
                 ></p-select>
               </div>
 
-              <!-- Sede + Ambas sedes -->
-              <app-branch-scope-selector
-                [branches]="branchOptions()"
-                [branchId]="vehicleForm.controls.branch_id.value"
-                [bothBranches]="vehicleForm.controls.both_branches.value"
-                [role]="authFacade.currentUser()?.role ?? ''"
-                [mode]="isEdit() ? 'editar' : 'crear'"
-                [disabledReason]="sedeDisabledReason()"
-                (valueChange)="onSedeScopeChange($event)"
-              />
+              <!-- Sede + Ambas sedes: la elige el admin o la secretaria multi-sede; la secretaria
+                   anclada crea y edita en la suya, sin selector (spec 0051-b) -->
+              @if (branchRule().missingOwnBranch) {
+                <span class="field-error" data-llm-description="vehículo sin sede asignada">
+                  Tu usuario no tiene una sede asignada. Pide a un administrador que te asigne una.
+                </span>
+              }
+              @if (branchRule().canPick) {
+                <app-branch-scope-selector
+                  [branches]="branchOptions()"
+                  [branchId]="vehicleForm.controls.branch_id.value"
+                  [bothBranches]="vehicleForm.controls.both_branches.value"
+                  [role]="authFacade.currentUser()?.role ?? ''"
+                  [canAccessBothBranches]="authFacade.currentUser()?.canAccessBothBranches ?? false"
+                  [mode]="isEdit() ? 'editar' : 'crear'"
+                  [disabledReason]="sedeDisabledReason()"
+                  (valueChange)="onSedeScopeChange($event)"
+                />
+              }
 
               <!-- ── Sección: Documentos (solo al crear — recién existe vehicleId al guardar) ── -->
               @if (!isEdit()) {
@@ -424,6 +435,17 @@ export class VehicleFormDrawerComponent {
 
   readonly branchOptions = this.branchFacade.branches;
 
+  /** Quién elige la sede y con cuál parte el formulario (misma regla del alta de instructores). */
+  protected readonly branchRule = computed(() => {
+    const user = this.authFacade.currentUser();
+    return resolveInstructorCreateBranch(
+      user?.role,
+      user?.branchId,
+      !!user?.canAccessBothBranches,
+      this.branchFacade.selectedBranchId(),
+    );
+  });
+
   // ── Documentos adjuntos (se suben recién al crear el vehículo, cuando ya hay id — fix-154-m) ──
   readonly stagedDocs = signal<{ type: string; expiryDate: string; file: File | null }[]>([]);
   readonly pendingDocType = signal<string | null>(null);
@@ -510,6 +532,9 @@ export class VehicleFormDrawerComponent {
           year: chileYear(),
           status: 'available',
           both_branches: false,
+          // spec 0051-b: parte con la sede que corresponde (la propia de la secretaria anclada, o
+          // la del topbar para quien elige). Antes quedaba vacía y la secretaria no podía crear.
+          branch_id: untracked(() => this.branchRule().branchId),
         });
       }
     });
