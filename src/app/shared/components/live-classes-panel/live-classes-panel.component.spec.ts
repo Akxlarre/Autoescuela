@@ -90,6 +90,13 @@ describe('LiveClassesPanelComponent', () => {
     it('no_show → "No Asistió", distinto de "Finalizada" (fix-193)', () => {
       expect(component.statusLabel('no_show')).toBe('No Asistió');
     });
+
+    it('fix-381-m: no_show justificada → "Justificada", como en Asistencia', () => {
+      expect(component.statusLabel('no_show', false, false, true)).toBe('Justificada');
+      expect(component.getRelativeTime('2026-10-12T13:00:00.000Z', 'no_show', false, true)).toBe(
+        'Justificada',
+      );
+    });
   });
 
   // ─── isOverdue / aviso de cierre atrasado (spec 0001-i, AC3) ────────────────

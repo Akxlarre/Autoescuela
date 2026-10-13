@@ -149,7 +149,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   } @else if (isOverdue(cls)) {
                     <app-icon name="alert-triangle" [size]="11" class="badge-pulse shrink-0" />
                   }
-                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls)) }}
+                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls), cls.excused) }}
                 </span>
               </div>
 
@@ -208,7 +208,7 @@ import { TooltipModule } from 'primeng/tooltip';
                   [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
                   [class.text-error]="isOverdue(cls)"
                 >
-                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls)) }}
+                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls), cls.excused) }}
                 </span>
               </div>
 
@@ -365,12 +365,13 @@ export class LiveClassesPanelComponent {
     return isFromPreviousDay(cls.scheduledAt, this._now());
   }
 
-  statusLabel(status: string, overdue = false, fromPrevDay = false): string {
+  statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {
     if (fromPrevDay) return 'Día Anterior';
     if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
-    if (status === 'no_show') return 'No Asistió';
+    // fix-381-m: misma etiqueta que Asistencia para una falta justificada.
+    if (status === 'no_show') return excused ? 'Justificada' : 'No Asistió';
     return 'Finalizada';
   }
 
@@ -384,10 +385,10 @@ export class LiveClassesPanelComponent {
     return formatChileTime(isoString);
   }
 
-  getRelativeTime(isoString: string, status: string, overdue = false): string {
+  getRelativeTime(isoString: string, status: string, overdue = false, excused = false): string {
     if (!isoString) return '';
     if (status === 'completed') return 'Concluida';
-    if (status === 'no_show') return 'No asistió';
+    if (status === 'no_show') return excused ? 'Justificada' : 'No asistió';
     if (overdue) return 'Cierre atrasado';
     if (status === 'in_progress') return 'Transcurriendo';
 

@@ -127,6 +127,15 @@ describe('AsistenciaClaseBContentComponent — alerta compacta (fix post-QA visu
     expect(tooltip).toContain('eliminar el horario');
     expect(tooltip).not.toContain('Política');
   });
+
+  it('fix-379-m: 2 faltas no seguidas (amarilla) no dicen "consecutivas" ni "Política"', () => {
+    const tooltip = (component as any).alertaTooltip(
+      makeAlerta({ nivel: 'warning', faltasConsecutivas: 2 }),
+    );
+    expect(tooltip).toContain('no seguidas');
+    expect(tooltip).not.toContain('consecutivas');
+    expect(tooltip).not.toContain('Política');
+  });
 });
 
 describe('AsistenciaClaseBContentComponent — columna Sede (fix-158)', () => {

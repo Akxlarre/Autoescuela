@@ -305,6 +305,115 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-379-m: la alerta roja exige faltas seguidas, como el Dashboard y la RPC', () => {
+    const falta = (id: number, classNumber: number, scheduledAt: string, recordedAt: string) => ({
+      id,
+      student_id: 5,
+      status: 'absent',
+      recorded_at: recordedAt,
+      class_b_sessions: {
+        id: 100 + id,
+        enrollment_id: 10,
+        class_number: classNumber,
+        status: 'no_show',
+        scheduled_at: scheduledAt,
+        enrollments: {
+          id: 10,
+          branch_id: 1,
+          status: 'active',
+          students: { id: 5, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+        },
+      },
+    });
+
+    it('faltas 2 y 5 (no seguidas) → amarilla, aunque sean 2', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 5, '2026-10-08T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 2, '2026-10-02T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0]).toMatchObject({ faltasConsecutivas: 2, nivel: 'warning' });
+    });
+
+    it('faltas 3 y 4 (seguidas) → roja', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 4, '2026-10-09T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 3, '2026-10-07T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].nivel).toBe('danger');
+      const selects = mock
+        .builderFor('class_b_practice_attendance')
+        .select.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(selects.some((s: string) => s.includes('class_number'))).toBe(true);
+    });
+
+    it('la última falta es la fecha de la clase, no la del registro', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 3, '2026-10-07T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 4, '2026-10-09T10:00:00.000Z', '2026-10-11T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].ultimaFechaFalta).toBe('2026-10-09T10:00:00.000Z');
+    });
+
+    it('justifyAbsence recalcula las alertas sin recargar', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      const refresh = vi
+        .spyOn(facade as any, 'refreshAlertasSilently')
+        .mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it('justificar una falta que ya canceló clases avisa que siguen canceladas (G05)', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      mock.setResult('class_b_sessions', [], null, 8);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.success).toHaveBeenCalledWith('Justificación registrada');
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Las clases canceladas no vuelven solas',
+        expect.stringContaining('8 clase(s)'),
+      );
+    });
+
+    it('justificar una falta sin cancelaciones posteriores no avisa nada más', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      mock.setResult('class_b_sessions', [], null, 0);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+  });
+
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
@@ -351,7 +460,8 @@ describe('AsistenciaClaseBFacade', () => {
         enrollmentId,
         alumnoName: 'Ana',
         faltasConsecutivas,
-        nivel: 'critico',
+        // fix-379-m: el riesgo lo dice el nivel (faltas seguidas), no el conteo.
+        nivel: faltasConsecutivas >= 2 ? 'danger' : 'warning',
         ultimaFechaFalta: '2026-10-06',
         horarioActivo: true,
         branchId: 1,
@@ -679,6 +789,25 @@ describe('AsistenciaClaseBFacade', () => {
     expect(recipients).toEqual([77]);
     expect(payload.referenceType).toBe('class_b');
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('fix-380-m: el recordatorio habla de faltas sin justificar y concuerda en número', async () => {
+    (facade as any)._alertas.set([makeAlerta({ faltasConsecutivas: 1 })]);
+    mock.setResult('students:single', { user_id: 77 });
+    await facade.sendReminder(10);
+    expect(notifications.notifyUsers.mock.calls[0][1].message).toContain(
+      'Registramos 1 falta sin justificar',
+    );
+
+    (facade as any)._alertas.set([makeAlerta({ faltasConsecutivas: 2 })]);
+    await facade.sendReminder(10);
+    expect(notifications.notifyUsers.mock.calls[1][1].message).toContain(
+      'Registramos 2 faltas sin justificar',
+    );
+  });
+
+  it('fix-380-m: en el piloto (portal Alumno bloqueado) los recordatorios no se ofrecen', () => {
+    expect(facade.recordatoriosHabilitados).toBe(false);
   });
 
   it('sendReminder NO muestra toast de éxito si el envío falla', async () => {

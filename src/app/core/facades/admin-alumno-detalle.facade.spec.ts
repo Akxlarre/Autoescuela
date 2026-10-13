@@ -412,29 +412,93 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  it('fix-381-m: la falta lleva la fecha de su clase, no la de cuándo se registró', () => {
+    const ui = (facade as any).mapInasistenciaClaseB({
+      id: 1,
+      status: 'absent',
+      recorded_at: '2026-10-12T23:00:00.000Z',
+      archived_at: null,
+      class_b_sessions: { id: 7, class_number: 4, scheduled_at: '2026-10-09T13:00:00.000Z' },
+    });
+    expect(ui.fecha).toMatch(/^0?9 /);
+  });
+
   describe('justificarInasistenciaClaseB', () => {
-    it('actualiza la fila a excused con el motivo y muestra un toast de éxito', async () => {
-      const eqSpy = vi.fn().mockResolvedValue({ error: null });
-      const updateSpy = vi.fn().mockReturnValue({ eq: eqSpy });
-      supabaseSpy.client.from = vi.fn().mockReturnValue({ update: updateSpy });
+    /** Builder encadenable y awaitable con un resultado por tabla. */
+    function mockTablas(
+      results: Record<string, { data?: unknown; error?: unknown; count?: number }>,
+    ) {
+      const builders: Record<string, any> = {};
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (!builders[table]) {
+          const b: any = {};
+          for (const m of ['update', 'select', 'eq', 'is', 'gte']) b[m] = vi.fn(() => b);
+          b.then = (resolve: any) =>
+            resolve({ data: null, error: null, ...(results[table] ?? {}) });
+          builders[table] = b;
+        }
+        return builders[table];
+      });
+      return builders;
+    }
+    const falta = {
+      id: 42,
+      recorded_at: '2026-10-09T13:00:00.000Z',
+      class_b_sessions: { enrollment_id: 10 },
+    };
+
+    it('actualiza la falta vigente a excused con el motivo y muestra un toast de éxito', async () => {
+      const b = mockTablas({
+        class_b_practice_attendance: { data: [falta] },
+        class_b_sessions: { count: 0 },
+      });
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
       const toast = TestBed.inject(ToastService) as any;
 
       await facade.justificarInasistenciaClaseB(42, 'Certificado médico');
 
-      expect(supabaseSpy.client.from).toHaveBeenCalledWith('class_b_practice_attendance');
-      expect(updateSpy).toHaveBeenCalledWith({
+      const att = b['class_b_practice_attendance'];
+      expect(att.update).toHaveBeenCalledWith({
         status: 'excused',
         justification: 'Certificado médico',
       });
-      expect(eqSpy).toHaveBeenCalledWith('id', 42);
+      expect(att.eq).toHaveBeenCalledWith('id', 42);
+      // fix-379-m: nunca la fila histórica de una clase ya reagendada.
+      expect(att.is).toHaveBeenCalledWith('archived_at', null);
       expect(toast.success).toHaveBeenCalled();
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it('fix-379-m: si la falta ya canceló clases, avisa que siguen canceladas', async () => {
+      const b = mockTablas({
+        class_b_practice_attendance: { data: [falta] },
+        class_b_sessions: { count: 8 },
+      });
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+      const toast = TestBed.inject(ToastService) as any;
+
+      await facade.justificarInasistenciaClaseB(42, 'Certificado médico');
+
+      expect(b['class_b_sessions'].eq).toHaveBeenCalledWith('enrollment_id', 10);
+      expect(b['class_b_sessions'].gte).toHaveBeenCalledWith('cancelled_at', falta.recorded_at);
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Las clases canceladas no vuelven solas',
+        expect.stringContaining('8 clase(s)'),
+      );
+    });
+
+    it('fix-379-m: sin filas actualizadas no dice "justificada"', async () => {
+      mockTablas({ class_b_practice_attendance: { data: [] } });
+      const toast = TestBed.inject(ToastService) as any;
+
+      await facade.justificarInasistenciaClaseB(42, 'motivo');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
     });
 
     it('muestra un toast de error si la actualización falla', async () => {
-      const eqSpy = vi.fn().mockResolvedValue({ error: new Error('boom') });
-      supabaseSpy.client.from = vi.fn().mockReturnValue({
-        update: vi.fn().mockReturnValue({ eq: eqSpy }),
-      });
+      mockTablas({ class_b_practice_attendance: { error: new Error('boom') } });
       const toast = TestBed.inject(ToastService) as any;
 
       await facade.justificarInasistenciaClaseB(1, 'motivo');
@@ -1749,71 +1813,42 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
-  describe('reagendarClasesPenalizadas — RF-053 + fix-008-i (razones)', () => {
+  describe('reagendarClasesPenalizadas — RF-053 + fix-008-i + fix-383-m (todo o nada)', () => {
     /**
-     * Mock de `class_b_sessions` (select previo + update) y `class_b_reschedule_history`
-     * (insert + el select/eq/order que dispara `loadHistorialReagendamientos()` al final,
-     * fix-009-i: sin este refresh el historial quedaba pegado al snapshot pre-reagendamiento).
+     * fix-383-m: el reagendamiento es UNA llamada a `reschedule_class_b_sessions` (recicla las
+     * sesiones, archiva la asistencia y escribe el historial en una transacción). El select de
+     * `class_b_reschedule_history` es el refresh de `loadHistorialReagendamientos()` (fix-009-i).
      */
-    function buildReagendarMock(prevRows: any[]) {
-      const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
-      const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
-      const selectInSpy = vi.fn().mockResolvedValue({ data: prevRows, error: null });
-      const selectSpy = vi.fn().mockReturnValue({ in: selectInSpy });
-      const historyInsertSpy = vi.fn().mockResolvedValue({ error: null });
+    function buildReagendarMock(rpcResult: { data: unknown; error: unknown } = { data: 1, error: null }) {
+      const rpcSpy = vi.fn().mockResolvedValue(rpcResult);
       const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
       const historySelectSpy = vi.fn().mockReturnValue({ eq: historyEqSpy });
-      // fix-191-m: archivado de la asistencia de la ocurrencia anterior
-      // (update → eq(class_b_session_id) → is(archived_at, null)).
-      const attendanceIsSpy = vi.fn().mockResolvedValue({ error: null });
-      const attendanceEqSpy = vi.fn().mockReturnValue({ is: attendanceIsSpy });
-      const attendanceUpdateSpy = vi.fn().mockReturnValue({ eq: attendanceEqSpy });
-      const attendanceDeleteSpy = vi.fn();
-
       const fromSpy = vi.fn((table: string) => {
-        if (table === 'class_b_sessions') return { select: selectSpy, update: updateSpy };
-        if (table === 'class_b_reschedule_history') {
-          return { insert: historyInsertSpy, select: historySelectSpy };
-        }
-        if (table === 'class_b_practice_attendance') {
-          return { update: attendanceUpdateSpy, delete: attendanceDeleteSpy };
-        }
+        if (table === 'class_b_reschedule_history') return { select: historySelectSpy };
         throw new Error(`tabla inesperada: ${table}`);
       });
-
-      return {
-        fromSpy,
-        updateSpy,
-        updateEqSpy,
-        selectSpy,
-        selectInSpy,
-        historyInsertSpy,
-        historySelectSpy,
-        historyOrderSpy,
-        attendanceUpdateSpy,
-        attendanceEqSpy,
-        attendanceIsSpy,
-        attendanceDeleteSpy,
-      };
+      return { rpcSpy, fromSpy, historySelectSpy, historyOrderSpy };
     }
 
-    it('recicla in-place tanto las sesiones no_show como las cancelled de la selección (nunca inserta filas nuevas en class_b_sessions, sin borrar su historial de asistencia)', async () => {
-      const mock = buildReagendarMock([
-        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-        { id: 601, scheduled_at: '2026-06-02T09:00:00', instructor_id: 3 },
-      ]);
+    function usar(mock: ReturnType<typeof buildReagendarMock>) {
       supabaseSpy.client.from = mock.fromSpy;
+      supabaseSpy.client.rpc = mock.rpcSpy;
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+    }
+
+    it('una sola llamada a la RPC con las clases en orden de número y los horarios en orden cronológico', async () => {
+      const mock = buildReagendarMock();
+      usar(mock);
 
       // El Paso 1 marcó 1 no_show (clase #9) + 1 cancelled (clase #11).
       facade.setReagendarSeleccion([
-        { sessionId: 501, claseNumero: 9, origen: 'no_show' },
         { sessionId: 601, claseNumero: 11, origen: 'cancelled' },
+        { sessionId: 501, claseNumero: 9, origen: 'no_show' },
       ]);
-
       (facade as any)._slotVehicleMap = new Map([
         ['2026-07-10T09:00:00', 55],
-        ['2026-07-13T10:00:00', 55],
+        ['2026-07-13T10:00:00', 56],
       ]);
 
       await facade.reagendarClasesPenalizadas({
@@ -1824,52 +1859,24 @@ describe('AdminAlumnoDetalleFacade', () => {
         razon: 'medica',
       });
 
-      // 1. Recicla la sesión no_show #501 (clase #9): mismo id, primer slot cronológico.
-      expect(mock.updateSpy).toHaveBeenCalledWith({
-        instructor_id: 9,
-        vehicle_id: 55,
-        scheduled_at: '2026-07-10T09:00:00',
-        status: 'scheduled',
-        start_time: null,
-        end_time: null,
+      expect(mock.rpcSpy).toHaveBeenCalledTimes(1);
+      expect(mock.rpcSpy).toHaveBeenCalledWith('reschedule_class_b_sessions', {
+        p_enrollment_id: 100,
+        p_instructor_id: 9,
+        p_items: [
+          { session_id: 501, scheduled_at: '2026-07-10T09:00:00', vehicle_id: 55 },
+          { session_id: 601, scheduled_at: '2026-07-13T10:00:00', vehicle_id: 56 },
+        ],
+        p_reason: 'medica',
+        p_reason_other: null,
       });
-      expect(mock.updateEqSpy).toHaveBeenCalledWith('id', 501);
-
-      // 2. Recicla la sesión cancelled #601 (clase #11): mismo id, segundo slot cronológico.
-      expect(mock.updateSpy).toHaveBeenCalledWith({
-        instructor_id: 9,
-        vehicle_id: 55,
-        scheduled_at: '2026-07-13T10:00:00',
-        status: 'scheduled',
-        start_time: null,
-        end_time: null,
-      });
-      expect(mock.updateEqSpy).toHaveBeenCalledWith('id', 601);
-
-      // 3. Soft archive (RF-053 + fix-191-m): la fila de class_b_practice_attendance NUNCA
-      // se borra — el historial de la inasistencia original se conserva para auditoría —
-      // pero SÍ se marca `archived_at`, porque la sesión se recicló y esa asistencia dejó
-      // de describir su estado actual. Sin la marca, toda vista que deriva estado desde la
-      // asistencia (Asistencia B, vistas del alumno) seguía mostrando "Ausente" una clase
-      // agendada, y la penalización volvía a cancelarla.
-      expect(mock.attendanceDeleteSpy).not.toHaveBeenCalled();
-      expect(mock.attendanceUpdateSpy).toHaveBeenCalledWith({
-        archived_at: expect.any(String),
-      });
-      expect(mock.attendanceEqSpy).toHaveBeenCalledWith('class_b_session_id', 501);
-      expect(mock.attendanceEqSpy).toHaveBeenCalledWith('class_b_session_id', 601);
-      expect(mock.attendanceIsSpy).toHaveBeenCalledWith('archived_at', null);
-
-      // 4. Limpia la selección transitoria tras guardar.
+      // Limpia la selección transitoria tras guardar.
       expect(facade.reagendarSeleccion()).toEqual([]);
     });
 
-    it('inserta en el historial la razón, fecha anterior/nueva e instructor anterior/nuevo capturados ANTES del reciclaje (fix-008-i)', async () => {
-      const mock = buildReagendarMock([
-        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-      ]);
-      supabaseSpy.client.from = mock.fromSpy;
-
+    it('manda reason_other solo cuando la razón es "otro"', async () => {
+      const mock = buildReagendarMock();
+      usar(mock);
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
 
@@ -1877,28 +1884,17 @@ describe('AdminAlumnoDetalleFacade', () => {
         enrollmentId: 100,
         instructorId: 9,
         selectedSlotIds: ['2026-07-10T09:00:00'],
-        razon: 'medica',
+        razon: 'otro',
+        razonOtro: 'Se rompió el vehículo del alumno',
       });
 
-      expect(mock.historyInsertSpy).toHaveBeenCalledWith([
-        {
-          class_session_id: 501,
-          enrollment_id: 100,
-          old_scheduled_at: '2026-06-01T09:00:00',
-          new_scheduled_at: '2026-07-10T09:00:00',
-          old_instructor_id: 3,
-          new_instructor_id: 9,
-          reason: 'medica',
-          reason_other: null,
-          registered_by: 7,
-        },
-      ]);
+      const [, params] = mock.rpcSpy.mock.calls[0];
+      expect(params.p_reason).toBe('otro');
+      expect(params.p_reason_other).toBe('Se rompió el vehículo del alumno');
     });
 
-    it('refresca historialReagendamientos tras insertar (fix-009-i, antes quedaba pegado al snapshot pre-reagendamiento)', async () => {
-      const mock = buildReagendarMock([
-        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-      ]);
+    it('refresca historialReagendamientos tras guardar (fix-009-i)', async () => {
+      const mock = buildReagendarMock();
       mock.historyOrderSpy.mockResolvedValue({
         data: [
           {
@@ -1912,8 +1908,7 @@ describe('AdminAlumnoDetalleFacade', () => {
         ],
         error: null,
       });
-      supabaseSpy.client.from = mock.fromSpy;
-
+      usar(mock);
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
 
@@ -1929,31 +1924,31 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(facade.historialReagendamientos()[0].razonLabel).toBe('Médica');
     });
 
-    it('guarda reason_other solo cuando la razón es "otro"', async () => {
-      const mock = buildReagendarMock([
-        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-      ]);
-      supabaseSpy.client.from = mock.fromSpy;
-
+    it('fix-383-m: si la RPC falla (p. ej. choque de horario), lanza y no da nada por reagendado', async () => {
+      const choque = { code: 'P0001', message: 'El instructor ya tiene una clase agendada que se solapa con este horario.' };
+      const mock = buildReagendarMock({ data: null, error: choque });
+      usar(mock);
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
 
-      await facade.reagendarClasesPenalizadas({
-        enrollmentId: 100,
-        instructorId: 9,
-        selectedSlotIds: ['2026-07-10T09:00:00'],
-        razon: 'otro',
-        razonOtro: 'Se rompió el vehículo del alumno',
-      });
+      await expect(
+        facade.reagendarClasesPenalizadas({
+          enrollmentId: 100,
+          instructorId: 9,
+          selectedSlotIds: ['2026-07-10T09:00:00'],
+          razon: 'medica',
+        }),
+      ).rejects.toBe(choque);
 
-      const [rows] = mock.historyInsertSpy.mock.calls[0];
-      expect(rows[0].reason).toBe('otro');
-      expect(rows[0].reason_other).toBe('Se rompió el vehículo del alumno');
+      expect(toastSpy.success).not.toHaveBeenCalled();
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      // La selección se conserva para reintentar con otro horario.
+      expect(facade.reagendarSeleccion()).toHaveLength(1);
     });
 
     it('no hace ninguna llamada si no hay selección guardada (Paso 1 vacío)', async () => {
-      const fromSpy = vi.fn();
-      supabaseSpy.client.from = fromSpy;
+      const mock = buildReagendarMock();
+      usar(mock);
       facade.setReagendarSeleccion([]);
 
       await facade.reagendarClasesPenalizadas({
@@ -1963,14 +1958,13 @@ describe('AdminAlumnoDetalleFacade', () => {
         razon: 'medica',
       });
 
-      expect(fromSpy).not.toHaveBeenCalled();
+      expect(mock.rpcSpy).not.toHaveBeenCalled();
+      expect(mock.fromSpy).not.toHaveBeenCalled();
     });
 
-    it('lanza un error si no encuentra el vehículo del slot en el mapa', async () => {
-      const mock = buildReagendarMock([
-        { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-      ]);
-      supabaseSpy.client.from = mock.fromSpy;
+    it('lanza un error si no encuentra el vehículo del slot en el mapa (sin llamar a la RPC)', async () => {
+      const mock = buildReagendarMock();
+      usar(mock);
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map();
 
@@ -1982,10 +1976,12 @@ describe('AdminAlumnoDetalleFacade', () => {
           razon: 'medica',
         }),
       ).rejects.toThrow('No se pudo determinar el vehículo');
+      expect(mock.rpcSpy).not.toHaveBeenCalled();
     });
 
     it('lanza un error si la cantidad de horarios elegidos no coincide con la selección', async () => {
-      supabaseSpy.client.from = vi.fn();
+      const mock = buildReagendarMock();
+      usar(mock);
       facade.setReagendarSeleccion([
         { sessionId: 501, claseNumero: 9, origen: 'no_show' },
         { sessionId: 601, claseNumero: 11, origen: 'cancelled' },
@@ -2000,18 +1996,14 @@ describe('AdminAlumnoDetalleFacade', () => {
           razon: 'medica',
         }),
       ).rejects.toThrow('La cantidad de horarios elegidos no coincide con la selección.');
+      expect(mock.rpcSpy).not.toHaveBeenCalled();
     });
   });
 
   describe('reagendarClasesPenalizadas — notificaciones (fix-177-m)', () => {
     const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-    function buildReagendarMockConNotificaciones(prevRows: any[], instructorRows: any[]) {
-      const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
-      const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
-      const selectInSpy = vi.fn().mockResolvedValue({ data: prevRows, error: null });
-      const selectSpy = vi.fn().mockReturnValue({ in: selectInSpy });
-      const historyInsertSpy = vi.fn().mockResolvedValue({ error: null });
+    function buildReagendarMockConNotificaciones(instructorRows: any[]) {
       const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
       const historySelectSpy = vi.fn().mockReturnValue({ eq: historyEqSpy });
@@ -2019,38 +2011,22 @@ describe('AdminAlumnoDetalleFacade', () => {
       const instructorsSelectSpy = vi.fn().mockReturnValue({ in: instructorsInSpy });
 
       const fromSpy = vi.fn((table: string) => {
-        if (table === 'class_b_sessions') return { select: selectSpy, update: updateSpy };
-        if (table === 'class_b_reschedule_history') {
-          return { insert: historyInsertSpy, select: historySelectSpy };
-        }
+        if (table === 'class_b_reschedule_history') return { select: historySelectSpy };
         if (table === 'instructors') return { select: instructorsSelectSpy };
-        // fix-191-m: el reagendamiento archiva la asistencia de la ocurrencia anterior.
-        if (table === 'class_b_practice_attendance') {
-          return {
-            update: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue({ error: null }) }),
-            }),
-          };
-        }
         throw new Error(`tabla inesperada: ${table}`);
       });
-
-      return { fromSpy };
+      return { fromSpy, rpcSpy: vi.fn().mockResolvedValue({ data: 1, error: null }) };
     }
 
     beforeEach(() => {
       (facade as any)._alumno.set({ userId: 42, nombre: 'Ana Alumna' });
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
     });
 
     it('notifica a alumno e instructor con el detalle de todas las clases reagendadas', async () => {
-      const mock = buildReagendarMockConNotificaciones(
-        [
-          { id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 },
-          { id: 601, scheduled_at: '2026-06-02T09:00:00', instructor_id: 3 },
-        ],
-        [{ id: 9, user_id: 300 }],
-      );
+      const mock = buildReagendarMockConNotificaciones([{ id: 9, user_id: 300 }]);
       supabaseSpy.client.from = mock.fromSpy;
+      supabaseSpy.client.rpc = mock.rpcSpy;
 
       facade.setReagendarSeleccion([
         { sessionId: 501, claseNumero: 9, origen: 'no_show' },
@@ -2081,11 +2057,9 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
 
     it('no rompe el reagendamiento si falla la notificación', async () => {
-      const mock = buildReagendarMockConNotificaciones(
-        [{ id: 501, scheduled_at: '2026-06-01T09:00:00', instructor_id: 3 }],
-        [{ id: 9, user_id: 300 }],
-      );
+      const mock = buildReagendarMockConNotificaciones([{ id: 9, user_id: 300 }]);
       supabaseSpy.client.from = mock.fromSpy;
+      supabaseSpy.client.rpc = mock.rpcSpy;
       notificationsSpy.notifyUsers.mockRejectedValue(new Error('insert failed'));
 
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);

@@ -40,6 +40,7 @@ import type {
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
       [showBranchColumn]="showBranchColumn()"
+      [canRemind]="facade.recordatoriosHabilitados"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"

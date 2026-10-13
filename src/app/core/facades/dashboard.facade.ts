@@ -358,7 +358,8 @@ export class DashboardFacade {
     notes,
     vehicles(id, brand, model, license_plate, current_km),
     instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
-    enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name)))
+    enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name))),
+    class_b_practice_attendance(status, archived_at)
   `;
 
   private mapPracticaRow(row: any): LiveClassModel {
@@ -400,6 +401,11 @@ export class DashboardFacade {
       kmStart: row.km_start ?? null,
       kmEnd: row.km_end ?? null,
       notes: row.notes ?? null,
+      // fix-381-m: solo la asistencia vigente (una archivada es de una ocurrencia reagendada).
+      excused: (row.class_b_practice_attendance ?? []).some(
+        (a: { status: string; archived_at: string | null }) =>
+          a.archived_at == null && a.status === 'excused',
+      ),
     } as LiveClassModel;
   }
 

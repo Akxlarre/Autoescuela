@@ -154,6 +154,61 @@ No ejecutados en este bloque: A07 y D11/E09 (fallas de red: cubiertos por `fix-3
 clic en "Comenzar": la 2ª actualización es idempotente), C11 → `030` §M. P02–P05 pasan al bloque 3
 (dependen de faltas, penalización y reagendamiento).
 
+### Bloque 3 — Penalización, justificar, rail, cron, ficha y reagendar (2026-10-12)
+
+**Reglas de BD (F, G05, I, J07):** se ejecutaron por SQL en una transacción que termina en `RAISE
+EXCEPTION`, de modo que todo se revierte (`b3-penal.sql`, scratchpad de la sesión `f42de8d2`). La
+cancelación automática se prendió solo dentro de esa transacción (decisión del bloque 3). Se
+llamaron `apply_class_b_absence_penalty()` y `mark_end_of_day_class_b_absences()` como
+`postgres`. **Pantalla:** alumnos sembrados `E2E-AsisPenalizado` (faltas 3-4, clases 5-12
+canceladas) y `E2E-AsisNoConsec` (faltas 2 y 5), sede 1; ids en `b3-seed.json`. El estado
+penalizado se cargó directamente, sin prender la regla.
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| F01 / F06 penalización | ✅ | Faltas 3-4 → cancela 7: la clase 5 de hoy a las 23:00 y las 6-11 futuras. No toca las completadas ni la 12, que ya estaba cancelada. La matrícula sigue `active` (S1 sigue resuelta) |
+| F02 no consecutivas | ✅ | Faltas 2 y 5 → 0 canceladas |
+| F03 / F04 justificada entre medio | ✅ | 3 `excused` + 4 `absent` → 0 |
+| F05 orden de fechas | decisión | Por número: faltas 3 y 5 seguidas en fecha (la 4 se reagendó para después) → 0 |
+| F07 otra matrícula | ✅ | La 2ª matrícula del mismo alumno queda intacta |
+| F08 tras penalizar | ✅ | Ficha: 5-12 "Cancelada — pendiente reagendar"; sigue en la Base de Alumnos |
+| F09 aviso al alumno | decisión | No se le avisa. Ver H03: en el piloto el alumno no ve notificaciones |
+| F-extra `enabled_since` | ✅ | Un par registrado antes de prender la regla no penaliza |
+| G01 modal | ✅ | "Guardar" deshabilitado vacío y con solo espacios |
+| G02 guardar | ✅ | Toast "Justificación registrada", badge "Justificada", "Ver motivo" |
+| G03 motivo largo | ✅ | `pre-wrap`, alto máx. 240 px con scroll |
+| G04 cerrar | ✅ | Escape, X y clic en el fondo cierran sin guardar |
+| G05 justificar tras penalizar | decisión | Las clases 5-12 siguen canceladas (S7) |
+| G06 rail tras justificar | ❌ | Sigue "2 faltas" hasta recargar; al recargar baja a 1 (S7, parte de pantalla) |
+| G07 falta del cron | ✅ | Se justifica y persiste |
+| G10 recargar | ✅ | |
+| H02 / S8 alerta | ❌ | `E2E-AsisNoConsec` (faltas 2 y 5, no seguidas) sale en rojo "2 faltas" con "Eliminar", igual que un penalizado, y con el tooltip "2 inasistencias consecutivas". El Dashboard sí cuenta solo faltas seguidas (`enrollmentsWithConsecutiveAbsences`) → **P05 incoherente**. "últ. 12-10" es la fecha en que se registró la falta, no la de la clase (09-10) |
+| H03 recordar | ❌ | Spinner solo en esa fila y toast "Recordatorio enviado al alumno"; la notificación se guarda (id 636) con el texto "Registramos **1 falta consecutivas**…". Además es solo in-app: con el portal Alumno bloqueado (y sin cuenta, ASG-m-010) nadie la ve |
+| H04 sin cuenta | N/A | `students.user_id` es NOT NULL |
+| H09 reactivar | ✅ | Confirmación "Se volverán a agendar 8 clases futuras…" (regresión de `fix-364-m`) |
+| I01 cron | ✅ | Clase 4 de ayer sin iniciar → `no_show` + `absent`; con la falta 3 viva penaliza 5-7 |
+| I02 en curso | ✅ | Queda `in_progress` |
+| I03 clase después de las 21:00 | anotado | El cron corre a las 21:00 de Chile (`run_class_b_absences_cutoff`); la clase de las 21:30 del 11-10 sigue `scheduled` hasta la noche siguiente (el trigger de `fix-371-m` no deja marcarla antes de su hora) |
+| I04 matrícula retirada | decisión | La marca `no_show` + ausente: pasó de verdad anoche con F1 (`withdrawn`). Hoy ningún flujo deja una matrícula no activa con clases agendadas |
+| I05 doble corrida | ✅ | Idempotente |
+| J01 panel de inasistencias | ❌ | Fecha "12 oct" para faltas del 7 y 9 de octubre: usa `recorded_at` (`admin-alumno-detalle.facade.ts:851`) |
+| J04 paso 1 | ✅ | 10 preseleccionadas con sus badges (incluida "Inasistencia — Justificada") |
+| J05 paso 2 | ✅ (código) | Razón obligatoria, "Otro" exige detalle, horarios = clases elegidas |
+| J07 reagendar solo canceladas | decisión | El par 3-4 sigue vivo: **cualquier** llamada posterior a la penalización (otra falta, aunque no sea seguida, o el cron) vuelve a cancelar las 7 recién reagendadas |
+| J08 / S16 atomicidad | ❌ (código) | `reagendarClasesPenalizadas()` mueve clase por clase y guarda el historial al final: si un horario choca a mitad, quedan unas movidas, otras no y sin historial |
+| J11 desmarcar todas | ✅ | "Seleccionar Horarios (0)" deshabilitado |
+| J12 volver | ❌ | Con 8 de 10 marcadas → paso 2 "Reagendar 8 Clases" → "Volver" → vuelven las 10 marcadas (`ngOnInit` re-preselecciona todo) |
+| P02 penalizado en el Dashboard | ✅ (código) | Las canceladas no entran (`VALID_CLASS_B_SESSION_STATUSES`) |
+| P03 justificada en el Dashboard | ❌ | El panel dice "No Asistió" (solo mira `no_show`) y Asistencia "Justificada" |
+| P04 reagendada | ✅ (código) | Etiqueta por estado de la sesión → "Por Iniciar" |
+| P05 alertas | ❌ | Ver H02 |
+
+No ejecutados: G08 (falla de BD, cubierto por `fix-362-m`), H06/H08 (regresión de `fix-364-m` y
+`fix-365-m`), H10, J06 completo (cubierto por `e2e/alumnos-b-ficha.spec.ts` y `fix-299/300/301-m`).
+
+**Observación:** `class_b_reschedule_history` existía en la BD (con RLS admin/secretaria) sin
+ninguna migración que la creara → `hotfix-151-m` la versiona (migración idempotente, sin efecto en dev).
+
 ## Decisiones de negocio
 
 Tomadas por Matías el 2026-10-11:
@@ -169,6 +224,16 @@ Tomadas por Matías el 2026-10-11:
 | E07 | **"Deshacer"** en una falta sin justificar: se archiva y la clase vuelve a "Pendiente"; las canceladas por penalización no vuelven solas (se avisa) → `fix-377-m` |
 | E08 | **"Cancelar inicio"** en una clase en curso: vuelve a "Pendiente" sin hora ni km de inicio → `fix-378-m` |
 | Todas | Aplican igual desde Asistencia y desde "Clases Actuales" del Dashboard |
+
+Tomadas por Matías el 2026-10-12 (bloque 3):
+
+| Caso | Decisión |
+|---|---|
+| G05 / S7 | Justificar una falta que causó la penalización **no** devuelve las clases: se reagendan desde la ficha (se avisa al justificar) |
+| J07 | Un par de faltas que ya causó una penalización **no vuelve a contar**: reagendar solo las canceladas no deja al alumno expuesto a otra cancelación por esas faltas |
+| I04 | El cierre nocturno marca inasistencias **solo en matrículas activas** |
+| H03 / F09 | Durante el piloto **se oculta "Recordar"** (el alumno no ve notificaciones); la secretaria lo contacta por teléfono |
+| F05 | Se mantiene "consecutivas" por número de clase (sin cambios) |
 
 ## Regression Test
 
@@ -192,3 +257,10 @@ _(cada bug encontrado → su propio fix/hotfix)_
 | `fix-376-m` | C06: un vehículo en dos clases en curso | ✅ cerrado 2026-10-11 |
 | `fix-377-m` | E07: "Deshacer" una inasistencia sin justificar (Asistencia y Dashboard) | ✅ cerrado 2026-10-11 |
 | `fix-378-m` | E08: "Cancelar inicio" de una clase iniciada por error | ✅ cerrado 2026-10-11 |
+| `fix-379-m` | S8/P05/H02/G05/G06: el rail usa la regla de faltas seguidas, la fecha de la clase, se recalcula al justificar y avisa que las canceladas no vuelven | ✅ cerrado 2026-10-12 |
+| `fix-380-m` | H03/F09: "Recordar" oculto en el piloto + texto "N falta(s) sin justificar" | ✅ cerrado 2026-10-12 |
+| `fix-381-m` | J01/P03: fecha de la clase en la ficha y "Justificada" en Clases Actuales | ✅ cerrado 2026-10-12 |
+| `fix-382-m` | J12: "Volver" del reagendamiento conserva la selección | ✅ cerrado 2026-10-12 |
+| `fix-383-m` | J08/S16: reagendamiento masivo todo o nada (RPC `reschedule_class_b_sessions`) | ✅ cerrado 2026-10-12 |
+| `fix-384-m` | J07/I04: un par ya penalizado no vuelve a contar; el cron solo toca matrículas activas | ✅ cerrado 2026-10-12 |
+| `hotfix-151-m` | `class_b_reschedule_history` sin migración: se versiona (idempotente) | ✅ cerrado 2026-10-12 |

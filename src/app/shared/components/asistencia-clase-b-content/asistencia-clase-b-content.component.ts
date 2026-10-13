@@ -293,7 +293,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               }
                             </button>
                           }
-                        } @else {
+                        } @else if (canRemind()) {
                           <button
                             class="btn-secondary btn-sm"
                             [disabled]="isAlertaBusy(alerta.enrollmentId)"
@@ -826,6 +826,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   /** Columna "Sede" de la tabla de prácticas: solo aporta cuando conviven filas de varias
    *  sedes (admin en "Todas las sedes"). Resuelto por el Smart — este Dumb no inyecta BranchFacade/AuthFacade. */
   readonly showBranchColumn = input(true);
+  /** fix-380-m: false en el piloto (el alumno no ve notificaciones) → sin "Recordar". */
+  readonly canRemind = input(true);
 
   // ── Inputs Ciclos Teóricos (Spec 0001) ──────────────────────────────────────
   readonly cycles = input<CicloOption[]>([]);
@@ -1151,8 +1153,12 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   /** Política/motivo de la alerta para el pTooltip canon (fix-048). Nombre, conteo y
    *  última fecha ya van inline en la fila (fix-047); el tooltip solo aporta el "por qué". */
   protected alertaTooltip(alerta: AlertaFaltaConsecutiva): string {
-    return alerta.nivel === 'danger'
-      ? 'Política: 2 inasistencias consecutivas — acción manual requerida'
+    // fix-379-m: rojo = faltas en dos clases seguidas (la regla de la penalización).
+    if (alerta.nivel === 'danger') {
+      return 'Política: 2 inasistencias seguidas — acción manual requerida';
+    }
+    return alerta.faltasConsecutivas >= 2
+      ? 'Faltas en clases no seguidas: una falta más en la clase siguiente a una de ellas podría requerir eliminar el horario'
       : 'Próxima inasistencia podría requerir eliminar el horario';
   }
 

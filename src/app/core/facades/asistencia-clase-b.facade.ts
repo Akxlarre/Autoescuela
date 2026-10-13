@@ -8,13 +8,16 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { chileDayRange, chileTimeOfDay, formatChileTime } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import {
   NoRowsAffectedError,
   assertWriteOk,
   toFriendlyDbMessage,
 } from '@core/utils/db-error.utils';
 import {
+  type ClassBAbsence,
   VALID_CLASS_B_SESSION_STATUSES,
+  enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
 } from '@core/utils/class-b-session.utils';
 import type {
@@ -94,6 +97,11 @@ export class AsistenciaClaseBFacade {
   readonly error = this._error.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly savingAlertaId = this._savingAlertaId.asReadonly();
+  /**
+   * fix-380-m: "Recordar" es una notificación in-app; con el portal Alumno bloqueado en el piloto
+   * nadie la ve, así que no se ofrece (como las invitaciones de instructores, fix-214-b).
+   */
+  readonly recordatoriosHabilitados = !isBlockedInPilot('alumno');
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
 
@@ -406,7 +414,7 @@ export class AsistenciaClaseBFacade {
 
       // fix-362-m: requireRows — si no hay fila de asistencia vigente (o la RLS la filtra), el
       // update no toca nada y sin esto el toast decía "Justificación registrada" igual.
-      assertWriteOk(
+      const result = assertWriteOk(
         await this.supabase.client
           .from('class_b_practice_attendance')
           .update({ justification: reason, status: 'excused' })
@@ -414,7 +422,7 @@ export class AsistenciaClaseBFacade {
           .eq('student_id', enrollment.student_id)
           // fix-191-m: nunca reescribir el registro histórico de una ocurrencia ya reagendada.
           .is('archived_at', null)
-          .select('id'),
+          .select('id, recorded_at'),
         { requireRows: true },
       );
 
@@ -424,6 +432,18 @@ export class AsistenciaClaseBFacade {
         ),
       );
       this.toast.success('Justificación registrada');
+
+      // fix-379-m (G05): justificar no devuelve las clases que la falta ya canceló.
+      const recordedAt = (result.data as { recorded_at: string | null }[])[0]?.recorded_at ?? '';
+      const canceladas = await this.countCancelledSince(row.enrollmentId, recordedAt);
+      if (canceladas > 0) {
+        this.toast.warning(
+          'Las clases canceladas no vuelven solas',
+          `${canceladas} clase(s) se cancelaron después de esta falta. Reagéndalas desde la ficha del alumno.`,
+        );
+      }
+      // fix-379-m (G06): la falta justificada deja de contar en el rail.
+      await this.refreshAlertasSilently();
     } catch (err) {
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la justificación'));
     } finally {
@@ -582,9 +602,10 @@ export class AsistenciaClaseBFacade {
 
       await this.notifications.notifyUsers([userId], {
         subject: 'Recordatorio de asistencia',
+        // fix-380-m: las faltas pueden no ser seguidas; y "1 falta consecutivas" no concordaba.
         message: `Registramos ${alerta.faltasConsecutivas} ${
           alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas'
-        } consecutivas en tus clases prácticas. Contáctanos para reagendar antes de perder tu horario.`,
+        } sin justificar en tus clases prácticas. Contáctanos para reagendar antes de perder tu horario.`,
         referenceType: 'class_b',
       });
 
@@ -786,8 +807,9 @@ export class AsistenciaClaseBFacade {
     // spec 0048-b: -1 = la cancelación automática está desactivada en la sede. Si el alumno
     // igual quedó con 2 faltas seguidas, se avisa que su agenda NO se canceló (AC-E2).
     if (cancelledCount === -1) {
+      // fix-379-m: 'danger' = faltas en dos clases seguidas (la regla de la RPC).
       const quedoEnRiesgo = this._alertas().some(
-        (a) => a.enrollmentId === enrollmentId && a.faltasConsecutivas >= 2,
+        (a) => a.enrollmentId === enrollmentId && a.nivel === 'danger',
       );
       if (quedoEnRiesgo) {
         this.toast.info(
@@ -967,6 +989,7 @@ export class AsistenciaClaseBFacade {
         class_b_sessions!inner(
           id,
           enrollment_id,
+          class_number,
           status,
           scheduled_at,
           enrollments!inner(
@@ -1007,6 +1030,7 @@ export class AsistenciaClaseBFacade {
         sessionStatus: string;
       }
     >();
+    const absences: ClassBAbsence[] = [];
 
     for (const row of data ?? []) {
       const session = row.class_b_sessions as any;
@@ -1029,23 +1053,28 @@ export class AsistenciaClaseBFacade {
           sessionStatus: session.status,
         });
       }
-      enrollmentAbsences.get(enrollId)!.dates.push(row.recorded_at ?? session.scheduled_at);
+      // fix-379-m: la fecha de la falta es la de la clase, no la de cuándo se registró.
+      enrollmentAbsences.get(enrollId)!.dates.push(session.scheduled_at ?? row.recorded_at);
+      absences.push({ enrollmentId: enrollId, classNumber: session.class_number ?? null });
     }
 
     const sinHorario = await this.fetchEnrollmentsWithRemovedSchedule([
       ...enrollmentAbsences.keys(),
     ]);
+    // fix-379-m: rojo solo con faltas en dos clases seguidas — la regla de la RPC y del Dashboard.
+    const conFaltasSeguidas = new Set(enrollmentsWithConsecutiveAbsences(absences));
 
     const alertas: AlertaFaltaConsecutiva[] = [];
     for (const [, info] of enrollmentAbsences) {
       if (info.dates.length >= 1) {
+        const dates = [...info.dates].sort().reverse();
         alertas.push({
           studentId: info.studentId,
           enrollmentId: info.enrollmentId,
           alumnoName: info.alumnoName,
           faltasConsecutivas: info.dates.length,
-          nivel: info.dates.length >= 2 ? 'danger' : 'warning',
-          ultimaFechaFalta: info.dates[0] ?? '',
+          nivel: conFaltasSeguidas.has(info.enrollmentId) ? 'danger' : 'warning',
+          ultimaFechaFalta: dates[0] ?? '',
           horarioActivo: !sinHorario.has(info.enrollmentId),
           branchId: info.branchId,
           branchName: branchMap.get(info.branchId) ?? 'Sin sede',
