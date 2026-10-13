@@ -3,7 +3,6 @@
  * Estas interfaces son el contrato entre FlotaFacade y FlotaListContentComponent.
  */
 
-export type VehicleType = 'class_b' | 'professional';
 export type VehicleStatus = 'available' | 'maintenance' | 'out_of_service';
 export type DocStatus = 'valid' | 'expiring_soon' | 'expired';
 
@@ -23,7 +22,6 @@ export interface VehicleTableRow {
   year: number;
   /** "{brand} {model}" combinado para la columna Vehículo */
   vehicleLabel: string;
-  type: VehicleType;
   status: VehicleStatus;
   currentKm: number;
   nextMaintenanceDate: string | null;
