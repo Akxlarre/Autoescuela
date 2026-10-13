@@ -134,8 +134,13 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300 inline-flex items-center gap-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls) || isFromPrevDay(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="
+                    isOverdue(cls) || isFromPrevDay(cls) || isUnexcusedAbsence(cls)
+                  "
                   [attr.data-llm-description]="
                     isFromPrevDay(cls)
                       ? 'Sesión in_progress sin cerrar de un día anterior, distinta de una clase agendada hoy'
@@ -205,8 +210,11 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="isOverdue(cls) || isUnexcusedAbsence(cls)"
                 >
                   {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls), cls.excused) }}
                 </span>
@@ -363,6 +371,12 @@ export class LiveClassesPanelComponent {
    * misma hora con el mismo alumno. */
   isFromPrevDay(cls: LiveClassModel): boolean {
     return isFromPreviousDay(cls.scheduledAt, this._now());
+  }
+
+  /** fix-392-m: falta SIN justificar. Va en color de error para no confundirse con una clase
+   * concluida (ambas se pintaban en gris); la justificada sigue en gris. */
+  isUnexcusedAbsence(cls: LiveClassModel): boolean {
+    return cls.status === 'no_show' && !cls.excused;
   }
 
   statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {

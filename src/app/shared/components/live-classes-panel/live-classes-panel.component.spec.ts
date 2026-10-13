@@ -91,6 +91,14 @@ describe('LiveClassesPanelComponent', () => {
       expect(component.statusLabel('no_show')).toBe('No Asistió');
     });
 
+    it('fix-392-m: solo la falta sin justificar se marca como error (no se confunde con "Concluida")', () => {
+      expect(component.isUnexcusedAbsence(makeLiveClass({ status: 'no_show' }))).toBe(true);
+      expect(
+        component.isUnexcusedAbsence(makeLiveClass({ status: 'no_show', excused: true })),
+      ).toBe(false);
+      expect(component.isUnexcusedAbsence(makeLiveClass({ status: 'completed' }))).toBe(false);
+    });
+
     it('fix-381-m: no_show justificada → "Justificada", como en Asistencia', () => {
       expect(component.statusLabel('no_show', false, false, true)).toBe('Justificada');
       expect(component.getRelativeTime('2026-10-12T13:00:00.000Z', 'no_show', false, true)).toBe(

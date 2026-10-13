@@ -890,8 +890,8 @@ export class AdminAlumnoDetalleFacade {
           .gte('cancelled_at', falta.recorded_at);
         if ((count ?? 0) > 0) {
           this.toast.warning(
-            'Las clases canceladas no vuelven solas',
-            `${count} clase(s) se cancelaron después de esta falta. Reagéndalas con "Reagendar Clases".`,
+            'Hay clases que siguen canceladas',
+            `${count} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo con "Reagendar Clases".`,
           );
         }
       }

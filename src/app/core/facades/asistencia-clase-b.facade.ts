@@ -357,15 +357,35 @@ export class AsistenciaClaseBFacade {
   }
 
   /**
-   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. Archiva la falta (queda
-   * en el historial, como al reagendar — fix-191-m) y la clase vuelve a 'scheduled' ("Pendiente").
-   * Las clases que esa falta haya cancelado por penalización NO vuelven solas: se avisa.
+   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. La clase vuelve a
+   * 'scheduled' ("Pendiente").
+   * fix-392-m: la falta se BORRA (antes se archivaba como al reagendar — fix-191-m — y seguía
+   * figurando en la ficha como "reagendada", aunque el alumno nunca faltó). Las clases canceladas
+   * después de esa falta NO vuelven solas: la confirmación lo dice solo si las hay (con la
+   * cancelación automática apagada en la sede nunca las hay, y mencionarlas confunde).
    */
   async undoAbsence(sessionId: number): Promise<boolean> {
     const target = await this.resolvePractica(sessionId);
+    let absence: { id: number; recordedAt: string } | null;
+    let canceladas = 0;
+    try {
+      absence = await this.findUndoableAbsence(sessionId);
+      if (!absence) return false;
+      if (target?.enrollmentId) {
+        canceladas = await this.countCancelledSince(target.enrollmentId, absence.recordedAt);
+      }
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al deshacer la inasistencia'));
+      return false;
+    }
+
     const confirmed = await this.confirmModal.confirm({
       title: 'Deshacer inasistencia',
-      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente y la falta pasa al historial. Si esa falta ya canceló clases por penalización, esas clases no vuelven solas: se reagendan desde la ficha del alumno.`,
+      message:
+        `La falta de ${target?.alumnoName ?? 'este alumno'} se borra y la clase vuelve a quedar pendiente, como si no se hubiera marcado.` +
+        (canceladas > 0
+          ? ` Después de esta falta se le cancelaron ${canceladas} clase(s): seguirán canceladas y hay que agendarlas de nuevo desde su ficha.`
+          : ''),
       confirmLabel: 'Deshacer',
       cancelLabel: 'Cancelar',
       severity: 'warn',
@@ -374,8 +394,14 @@ export class AsistenciaClaseBFacade {
 
     this._isSaving.set(true);
     try {
-      const recordedAt = await this.archiveCurrentAbsence(sessionId);
-      if (recordedAt === null) return false;
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_practice_attendance')
+          .delete()
+          .eq('id', absence.id)
+          .select('id'),
+        { requireRows: true },
+      );
       assertWriteOk(
         await this.supabase.client
           .from('class_b_sessions')
@@ -386,15 +412,11 @@ export class AsistenciaClaseBFacade {
         { requireRows: true },
       );
 
-      const canceladas = target?.enrollmentId
-        ? await this.countCancelledSince(target.enrollmentId, recordedAt)
-        : 0;
-
       this.toast.success('Inasistencia deshecha', 'La clase quedó pendiente.');
       if (canceladas > 0) {
         this.toast.warning(
-          'Clases canceladas por la penalización',
-          `${canceladas} clase(s) se cancelaron después de esta falta y siguen canceladas. Reagéndalas desde la ficha del alumno.`,
+          'Hay clases que siguen canceladas',
+          `${canceladas} clase(s) se cancelaron después de esta falta y no se recuperan solas. Agéndalas de nuevo desde la ficha del alumno.`,
         );
       }
       await this.refreshSilently();
@@ -408,10 +430,12 @@ export class AsistenciaClaseBFacade {
   }
 
   /**
-   * fix-377-m: archiva la falta vigente (sin justificar) de una sesión. Devuelve su `recorded_at`,
-   * o `null` si no hay una falta que deshacer (ya avisado al usuario).
+   * fix-392-m: falta vigente y sin justificar de una sesión, la única que se puede deshacer.
+   * Devuelve `null` si no la hay (ya avisado al usuario).
    */
-  private async archiveCurrentAbsence(sessionId: number): Promise<string | null> {
+  private async findUndoableAbsence(
+    sessionId: number,
+  ): Promise<{ id: number; recordedAt: string } | null> {
     const { data: att, error } = await this.supabase.client
       .from('class_b_practice_attendance')
       .select('id, status, recorded_at')
@@ -428,15 +452,7 @@ export class AsistenciaClaseBFacade {
       );
       return null;
     }
-    assertWriteOk(
-      await this.supabase.client
-        .from('class_b_practice_attendance')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('id', att.id)
-        .select('id'),
-      { requireRows: true },
-    );
-    return att.recorded_at ?? '';
+    return { id: att.id, recordedAt: att.recorded_at ?? '' };
   }
 
   /** fix-377-m: clases de la matrícula canceladas desde un instante (¿la falta disparó la penalización?). */
@@ -529,8 +545,8 @@ export class AsistenciaClaseBFacade {
       const canceladas = await this.countCancelledSince(row.enrollmentId, recordedAt);
       if (canceladas > 0) {
         this.toast.warning(
-          'Las clases canceladas no vuelven solas',
-          `${canceladas} clase(s) se cancelaron después de esta falta. Reagéndalas desde la ficha del alumno.`,
+          'Hay clases que siguen canceladas',
+          `${canceladas} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo desde la ficha del alumno.`,
         );
       }
       // fix-379-m (G06): la falta justificada deja de contar en el rail.

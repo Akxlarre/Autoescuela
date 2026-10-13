@@ -32,6 +32,7 @@ function makeSupabaseMock() {
       or: vi.fn(() => b),
       order: vi.fn(() => b),
       update: vi.fn(() => b),
+      delete: vi.fn(() => b),
       upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
       single: () => Promise.resolve(results.get(`${table}:single`) ?? { data: null, error: null }),
       maybeSingle: () =>
@@ -470,7 +471,7 @@ describe('AsistenciaClaseBFacade', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Justificación registrada');
       expect(toast.warning).toHaveBeenCalledWith(
-        'Las clases canceladas no vuelven solas',
+        'Hay clases que siguen canceladas',
         expect.stringContaining('8 clase(s)'),
       );
     });
@@ -1074,7 +1075,7 @@ describe('AsistenciaClaseBFacade', () => {
       (facade as any)._clasesPracticas.set([makeRow({ id: 1, status: 'ausente' })]);
     });
 
-    it('archiva la falta y devuelve la clase a scheduled', async () => {
+    it('fix-392-m: borra la falta (no la archiva) y devuelve la clase a scheduled', async () => {
       mock.setResult('class_b_practice_attendance:maybeSingle', {
         id: 900,
         status: 'absent',
@@ -1086,7 +1087,9 @@ describe('AsistenciaClaseBFacade', () => {
       expect(await facade.undoAbsence(1)).toBe(true);
 
       const att = mock.builderFor('class_b_practice_attendance');
-      expect(att.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+      expect(att.delete).toHaveBeenCalled();
+      expect(att.eq).toHaveBeenCalledWith('id', 900);
+      expect(att.update).not.toHaveBeenCalled();
       const ses = mock.builderFor('class_b_sessions');
       expect(ses.update).toHaveBeenCalledWith({ status: 'scheduled' });
       expect(ses.eq).toHaveBeenCalledWith('status', 'no_show');
@@ -1094,6 +1097,41 @@ describe('AsistenciaClaseBFacade', () => {
         'Inasistencia deshecha',
         'La clase quedó pendiente.',
       );
+    });
+
+    it('fix-392-m: la confirmación nombra al alumno y no usa jerga interna', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+
+      await facade.undoAbsence(1);
+
+      const { message } = confirmModal.confirm.mock.calls[0][0];
+      expect(message).toContain('Juan Pérez');
+      expect(message).not.toMatch(/historial|penalización/i);
+      // Sin clases canceladas después de la falta (p. ej. cancelación automática apagada),
+      // la confirmación no las menciona.
+      expect(message).not.toMatch(/cancel/i);
+    });
+
+    it('fix-392-m: la confirmación menciona las clases canceladas solo si las hay, con su número', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }], null, 8);
+
+      await facade.undoAbsence(1);
+
+      const { message } = confirmModal.confirm.mock.calls[0][0];
+      expect(message).toContain('8 clase(s)');
+      expect(message).toContain('seguirán canceladas');
     });
 
     it('si la falta ya canceló clases por penalización, lo avisa (no vuelven solas)', async () => {
@@ -1111,7 +1149,7 @@ describe('AsistenciaClaseBFacade', () => {
         '2026-06-30T15:00:00.000Z',
       );
       expect(toast.warning).toHaveBeenCalledWith(
-        'Clases canceladas por la penalización',
+        'Hay clases que siguen canceladas',
         expect.stringContaining('8 clase(s)'),
       );
     });
@@ -1123,7 +1161,8 @@ describe('AsistenciaClaseBFacade', () => {
         recorded_at: '2026-06-30T15:00:00.000Z',
       });
       expect(await facade.undoAbsence(1)).toBe(false);
-      expect(mock.builderFor('class_b_practice_attendance').update).not.toHaveBeenCalled();
+      expect(mock.builderFor('class_b_practice_attendance').delete).not.toHaveBeenCalled();
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith(
         'No se puede deshacer',
         'La inasistencia está justificada.',

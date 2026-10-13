@@ -11,7 +11,7 @@
  * - El envío real de correos Zoom (L07) y el cierre nocturno (I).
  */
 import type { Locator, Page } from '@playwright/test';
-import { addDaysIso, chileToday } from '../src/app/core/utils/chile-time.utils';
+import { addDaysIso, chileParts, chileToday } from '../src/app/core/utils/chile-time.utils';
 import { ACCOUNTS } from './support/accounts';
 import {
   SEDE_A,
@@ -998,4 +998,67 @@ test('O05 (fix-389-m · fix-390-m): con teclado se llega a la tabla antes que a 
   await expect(accion(page, 'confirm-modal-accept')).toHaveCount(0);
   await expect(ausente).toBeFocused();
   expect((await estadoClase(clase.sessionId)).status).toBe('scheduled');
+});
+
+test('E07 (fix-377-m · fix-392-m): en "Clases Actuales" la falta se distingue de la clase concluida y deshacerla la borra', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const hoy = chileToday();
+  test.skip(
+    chileParts().hour < 2,
+    'Antes de las 02:00 de Chile las clases sembradas hoy todavía no son "hora pasada".',
+  );
+  const falta = await seedClase(
+    {
+      label: 'AsisDeshacer',
+      branchId: SEDE_A,
+      cupo: { inst: 0, hora: 1 },
+      dia: hoy,
+      status: 'no_show',
+      falta: 'vigente',
+    },
+    cleanup,
+  );
+  const concluida = await seedClase(
+    {
+      label: 'AsisConcluida',
+      branchId: SEDE_A,
+      cupo: { inst: 1, hora: 1 },
+      dia: hoy,
+      status: 'completed',
+    },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await page.setViewportSize(DESKTOP);
+  await page.goto('/app/secretaria/dashboard');
+
+  const item = (clase: ClaseSembrada) =>
+    page.locator('.live-class-item').filter({ hasText: clase.alumno.firstNames });
+  await expect(item(falta)).toBeVisible(CARGA);
+
+  // fix-392-m: "No asistió" va en color de error; "Concluida" sigue en gris.
+  await expect(item(falta).getByText('No asistió', { exact: true })).toHaveClass(/text-error/);
+  await expect(item(concluida).getByText('Concluida', { exact: true })).toHaveClass(
+    /text-text-muted/,
+  );
+  await expect(item(concluida).getByText('Concluida', { exact: true })).not.toHaveClass(
+    /text-error/,
+  );
+
+  // La confirmación dice qué pasa, sin jerga interna.
+  await item(falta).click();
+  await accion(page, 'deshacer-inasistencia-detalle').click();
+  const dialogo = page.getByRole('dialog', { name: 'Deshacer inasistencia' });
+  await expect(dialogo).toContainText('como si no se hubiera marcado');
+  // Sin clases canceladas después de la falta, el aviso no habla de cancelaciones.
+  await expect(dialogo).not.toContainText(/historial|penalización|cancelad|cancelaron/i);
+  await accion(page, 'confirm-modal-accept').click();
+  await expect(toast(page, 'Inasistencia deshecha')).toBeVisible();
+
+  // La falta se borra (no queda archivada: no aparece en la ficha) y la clase vuelve a pendiente.
+  const estado = await estadoClase(falta.sessionId);
+  expect(estado.status).toBe('scheduled');
+  expect(estado.asistencias).toEqual([]);
 });

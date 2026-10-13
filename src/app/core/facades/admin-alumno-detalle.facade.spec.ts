@@ -482,7 +482,7 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(b['class_b_sessions'].eq).toHaveBeenCalledWith('enrollment_id', 10);
       expect(b['class_b_sessions'].gte).toHaveBeenCalledWith('cancelled_at', falta.recorded_at);
       expect(toast.warning).toHaveBeenCalledWith(
-        'Las clases canceladas no vuelven solas',
+        'Hay clases que siguen canceladas',
         expect.stringContaining('8 clase(s)'),
       );
     });
@@ -1819,7 +1819,9 @@ describe('AdminAlumnoDetalleFacade', () => {
      * sesiones, archiva la asistencia y escribe el historial en una transacción). El select de
      * `class_b_reschedule_history` es el refresh de `loadHistorialReagendamientos()` (fix-009-i).
      */
-    function buildReagendarMock(rpcResult: { data: unknown; error: unknown } = { data: 1, error: null }) {
+    function buildReagendarMock(
+      rpcResult: { data: unknown; error: unknown } = { data: 1, error: null },
+    ) {
       const rpcSpy = vi.fn().mockResolvedValue(rpcResult);
       const historyOrderSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const historyEqSpy = vi.fn().mockReturnValue({ order: historyOrderSpy });
@@ -1925,7 +1927,10 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
 
     it('fix-383-m: si la RPC falla (p. ej. choque de horario), lanza y no da nada por reagendado', async () => {
-      const choque = { code: 'P0001', message: 'El instructor ya tiene una clase agendada que se solapa con este horario.' };
+      const choque = {
+        code: 'P0001',
+        message: 'El instructor ya tiene una clase agendada que se solapa con este horario.',
+      };
       const mock = buildReagendarMock({ data: null, error: choque });
       usar(mock);
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
