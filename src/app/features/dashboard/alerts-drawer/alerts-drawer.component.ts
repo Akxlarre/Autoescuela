@@ -3,7 +3,9 @@ import { Router } from '@angular/router';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
@@ -177,6 +179,8 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
 export class AlertsDrawerComponent {
   private readonly facade = inject(DashboardAlertsFacade);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthFacade);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
 
   readonly isLoading = this.facade.isLoading;
   readonly alertCount = this.facade.alertCount;
@@ -222,11 +226,16 @@ export class AlertsDrawerComponent {
   }
 
   private routeForAlert(alertId: string): void {
+    // El drawer se abre desde el dashboard de admin y el de secretaria: cada rol tiene su propia
+    // Cuadratura (fix-401-m). Misma regla que RecentActivityDrawerComponent.
+    const role = this.auth.currentUser()?.role === 'secretaria' ? 'secretaria' : 'admin';
     const alertRoutes: Record<string, string[]> = {
-      'alert-cash-not-closed': ['/app/admin/contabilidad/cuadratura'],
+      'alert-cash-not-closed': [`/app/${role}/contabilidad/cuadratura`],
     };
     const route = alertRoutes[alertId];
-    if (route) void this.router.navigate(route);
+    if (!route) return;
+    this.drawer.close();
+    void this.router.navigate(route);
   }
 
   getSeverityIcon(severity: string): string {
