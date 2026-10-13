@@ -140,18 +140,24 @@ export class DashboardFacade {
       .gte('created_at', sevenDaysAgoStart);
     if (branchId !== null) recentStudentsQuery = recentStudentsQuery.eq('branch_id', branchId);
 
+    // Mismo criterio que el panel "Clases Actuales" (fetchLiveClasses): sin canceladas, sin
+    // reservas de matrículas en borrador (DG-050) y solo de matrículas activas (fix-398-m).
     let classesQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, enrollments!inner(branch_id, status)', { count: 'exact', head: true })
       .gte('scheduled_at', todayRange.start)
-      .lt('scheduled_at', todayRange.endExclusive);
+      .lt('scheduled_at', todayRange.endExclusive)
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active');
     if (branchId !== null) classesQuery = classesQuery.eq('enrollments.branch_id', branchId);
 
     let classesYesterdayQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, enrollments!inner(branch_id, status)', { count: 'exact', head: true })
       .gte('scheduled_at', yesterdayRange.start)
-      .lt('scheduled_at', yesterdayRange.endExclusive);
+      .lt('scheduled_at', yesterdayRange.endExclusive)
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active');
     if (branchId !== null)
       classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
 

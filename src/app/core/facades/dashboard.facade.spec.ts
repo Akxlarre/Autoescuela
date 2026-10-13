@@ -119,6 +119,88 @@ describe('DashboardFacade — KPI "Ingresos Mes" incluye servicios especiales (f
   });
 });
 
+/**
+ * Facade con un cliente Supabase falso que registra un builder por consulta, agrupados por tabla.
+ * `respuesta(tabla, n)` decide qué devuelve la consulta número `n` (desde 0) de esa tabla.
+ */
+function crearFacadeConCliente(
+  respuesta: (tabla: string, n: number) => Record<string, unknown> = () => ({}),
+  user: Record<string, unknown> = { name: 'Test' },
+) {
+  const builders: Record<string, any[]> = {};
+  const client = {
+    from: vi.fn((tabla: string) => {
+      const b: any = {};
+      for (const m of [
+        'select',
+        'eq',
+        'gte',
+        'lte',
+        'lt',
+        'or',
+        'in',
+        'is',
+        'not',
+        'order',
+        'limit',
+      ]) {
+        b[m] = vi.fn(() => b);
+      }
+      const n = (builders[tabla] ??= []).length;
+      b.then = (resolve: any) =>
+        resolve({ data: [], count: 0, error: null, ...respuesta(tabla, n) });
+      builders[tabla].push(b);
+      return b;
+    }),
+    channel: vi.fn(() => {
+      const ch: any = { on: vi.fn(() => ch), subscribe: vi.fn(() => ch) };
+      return ch;
+    }),
+    removeChannel: vi.fn(),
+  };
+
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    imports: [HttpClientTestingModule],
+    providers: [
+      DashboardFacade,
+      { provide: SupabaseService, useValue: { client } },
+      { provide: AuthFacade, useValue: { currentUser: vi.fn(() => user) } },
+      { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+    ],
+  });
+  return { facade: TestBed.inject(DashboardFacade), builders, client };
+}
+
+describe('DashboardFacade — KPI "Clases Hoy" usa el criterio del panel (fix-398-m)', () => {
+  const VALIDAS = ['scheduled', 'in_progress', 'completed', 'no_show'];
+
+  it('cuenta solo clases válidas de matrículas activas, hoy y ayer', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Las dos primeras consultas a class_b_sessions son el KPI: hoy y ayer (tendencia).
+    const [hoy, ayer] = builders['class_b_sessions'];
+    for (const consulta of [hoy, ayer]) {
+      expect(consulta.in).toHaveBeenCalledWith('status', VALIDAS);
+      expect(consulta.eq).toHaveBeenCalledWith('enrollments.status', 'active');
+    }
+  });
+
+  it('el KPI y el chip del hero muestran ese conteo', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'class_b_sessions' && n === 0 ? { count: 3 } : {},
+    );
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    const data = (facade as any).data();
+    expect(data.kpis.find((k: { id: string }) => k.id === 'classes').value).toBe(3);
+    expect(data.hero.classesToday).toBe(3);
+  });
+});
+
 describe('DashboardFacade', () => {
   let facade: DashboardFacade;
   let httpMock: HttpTestingController;
