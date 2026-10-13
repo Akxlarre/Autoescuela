@@ -1,6 +1,6 @@
 # Asignación ASG-m-010 — El correo al alumno menciona el portal, que está deshabilitado en el piloto
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

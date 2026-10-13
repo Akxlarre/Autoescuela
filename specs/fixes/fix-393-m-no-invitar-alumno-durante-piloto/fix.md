@@ -1,7 +1,8 @@
 # Fix: el alumno recibe una invitación a un portal que está deshabilitado en el piloto
 > id: fix-393-m-no-invitar-alumno-durante-piloto
 > refs: ASG-m-010 · fix-214-b (mismo criterio para instructores) · fix-255-m (`pilot-phase.config.ts`) · fix-193-b (`PUBLIC_ENROLLMENT_ENABLED`)
-> status: in-progress
+> status: done
+> closed: 2026-10-13
 > created: 2026-10-13
 
 ## Síntoma
@@ -12,8 +13,8 @@ del alumno está bloqueado en el piloto: si activa la cuenta, llega a "Módulo n
 
 ## Root Cause
 
-[Heredado de ASG-m-010, a confirmar]: el portal del alumno está deshabilitado durante el piloto
-(`'alumno'` en `BLOCKED_MODULES`, `src/app/core/config/pilot-phase.config.ts`), pero
+[Heredado de ASG-m-010, confirmado leyendo el código el 2026-10-13]: el portal del alumno está
+deshabilitado durante el piloto (`'alumno'` en `BLOCKED_MODULES`, `src/app/core/config/pilot-phase.config.ts`), pero
 `EnrollmentFacade.inviteStudentToAuth()` llama igual a `activate-student-account` en los dos
 caminos que confirman la matrícula, y Editar perfil del alumno ofrece "Enviar invitación". Esa
 función es la que crea la cuenta de Auth, manda el correo y crea la notificación "Bienvenido al
@@ -34,7 +35,11 @@ no se despliega ninguna edge function.
 - `EnrollmentFacade.inviteStudentToAuth()` no llama a `activate-student-account` en el piloto.
 - Editar perfil del alumno: en el piloto, nota "las invitaciones se habilitan cuando termine el
   piloto" en vez del botón "Enviar invitación".
-- Migración: `cleanup_expired_drafts()` solo borra un `user` al que no le queda ningún `student`.
+- Migración `20261013140000_fix393_cleanup_drafts_conserva_user_con_student.sql`:
+  `cleanup_expired_drafts()` solo borra un `user` al que no le queda ningún `student`, y cada
+  `user` va en su propio bloque. `users` tiene unas 50 FKs entrantes sin `ON DELETE`: una
+  referencia inesperada conserva ese `user` (con sus notificaciones) y avisa, en vez de abortar
+  la limpieza. **La aplica Matías.**
 
 Fuera de alcance:
 - `public-enrollment` tiene su propia invitación en el servidor. No se alcanza mientras
@@ -44,16 +49,35 @@ Fuera de alcance:
 
 ## Acceptance Criteria
 
-- [ ] AC1 — Con el portal del alumno bloqueado, confirmar una matrícula (ambos caminos) no invoca
+- [x] AC1 — Con el portal del alumno bloqueado, confirmar una matrícula (ambos caminos) no invoca
       `activate-student-account`. Con el portal habilitado, la invoca como antes.
-- [ ] AC2 — En el piloto, Editar perfil del alumno no muestra "Enviar invitación" y explica que
+- [x] AC2 — En el piloto, Editar perfil del alumno no muestra "Enviar invitación" y explica que
       las invitaciones se habilitan cuando termine el piloto.
-- [ ] AC3 — `cleanup_expired_drafts()` no falla cuando vence el borrador de un alumno sin
+- [x] AC3 — `cleanup_expired_drafts()` no falla cuando vence el borrador de un alumno sin
       `supabase_uid` que conserva otra matrícula: borra el borrador y deja `user` y `student`.
-- [ ] AC4 — Un borrador vencido de alguien sin otra matrícula sigue borrando su `student` y su
+- [x] AC4 — Un borrador vencido de alguien sin otra matrícula sigue borrando su `student` y su
       `user`.
 
 ## Regression Test
 
-- `enrollment.facade.spec.ts` → invitación según el piloto
-- Ensayo de la migración en una transacción con `ROLLBACK` (AC3 y AC4)
+- `enrollment.facade.spec.ts` → `invitación del alumno según el piloto (fix-393-m)`
+- `e2e/alumnos-b-ficha.spec.ts` → `M13` (en el piloto: nota en vez del botón); `S18 · invitación`
+  se salta mientras dure el piloto.
+- Ensayo de la migración en una transacción con `ROLLBACK` (AC3 y AC4).
+
+## Verificación (2026-10-13)
+
+- Unit: `enrollment.facade.spec.ts` 97/97 (rojo → verde; el spec controla el piloto con un mock,
+  así que cubre los dos estados) y el spec del drawer 11/11. `tsc` y `lint:arch` sin errores.
+- E2E `M13` en verde como admin: el aviso "todavía no tiene cuenta activada" muestra la nota del
+  piloto y no hay botón; con la cuenta activada no aparece nada.
+- Migración ensayada contra la BD de dev en una transacción deshecha (no quedó aplicada):
+  - Función actual, alumno sin `supabase_uid` con otra matrícula y un borrador vencido:
+    aborta con `students_user_id_fkey`. En dev hay 205 alumnos sin `supabase_uid`.
+  - Función nueva, tres borradores vencidos: borra los 3. Caso A (conserva otra matrícula):
+    quedan `user` y `student`. Caso B (solo el borrador): se borran `student`, `user` y su
+    notificación. Caso C (como B, pero un `discounts.created_by` lo referencia): se borra el
+    `student`, se conserva el `user` con su notificación y la limpieza termina.
+  - Tras la migración la función conserva `search_path` y permisos (solo `service_role`).
+- Migración aplicada por Matías el 2026-10-13. Comprobado en la BD de dev: la función desplegada es
+  la nueva, con su `search_path` y permisos solo para `service_role`.
