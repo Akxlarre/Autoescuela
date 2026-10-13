@@ -57,8 +57,21 @@ el testing de Asistencia B (ASG-i-027), que resolvieron o cambiaron varias.
 
 **Resumen:** 3 resueltas, 3 parciales, 13 confirmadas, 1 decisión pura.
 
-## Decisiones de negocio pendientes (§5 del checklist)
-Ver la respuesta del owner; se registran acá al recibirlas.
+## Decisiones del owner (2026-10-12)
+
+| # | Casos | Decisión |
+|---|---|---|
+| 1 | F08 / S5 | Un vehículo en Mantenimiento o Fuera de Servicio **deja de ofrecer horarios** y sale de los selectores |
+| 2 | F05 / N05 / S3 | El kilometraje **no baja** en el uso normal (iniciar y finalizar clase lo bloquean); solo el admin puede corregirlo desde Editar, con confirmación |
+| 3 | M03 / S6 | Registrar un mantenimiento **actualiza** el kilometraje y la "última mantención", solo si el km informado es mayor al actual |
+| 4 | I02 / J05 / S11 | Un documento que vence hoy está **vigente hoy** y vencido desde mañana; la notificación dice "vence hoy" |
+| 5 | J04 / S9 | **Un solo umbral** de "por vencer": 30 días en todas las pantallas |
+| 6 | J13 | Documento vencido al agendar: **solo advierte**, como hoy |
+| 7 | L08 / S15 | KPIs renombrados: "Costo promedio por servicio" y "Kilometraje actual" |
+| 8 | S20 | Se **quita** el filtro "Tipo" (Clase B / Profesional): lo adivinaba por la marca |
+| 9 | A04 / R01 / S17 | La secretaria **no** tiene Flota en el piloto; se le quita la sugerencia de la búsqueda global |
+
+Quedan para cuando se llegue a esos casos: C04, F07, G09, I07, J10, J11, K07, M08, M14, O03, P03, R03, B11.
 
 ## Casos A–S — resultado
 Pendiente de ejecutar.
