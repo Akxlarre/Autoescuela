@@ -22,10 +22,11 @@
 - **Realidad:** la tabla define `score`. PostgREST rechaza la query completa (400) y el fallback silencioso muestra "Pendiente" aunque la nota ya esté registrada. Bug encontrado 2 veces en auditorías distintas.
 - **Fuente:** `specs/fixes/fix-059-b-nota-examen-final`
 
-### DG-003 — `vehicles.status = 'available'` nunca existe en producción
-- **Trampa:** comparar contra `'available'` como si fuera un valor válido del enum.
-- **Realidad:** el dominio real es `'operational'|'in_use'|'maintenance'|'out_of_service'|'blocked'`. Un KPI comparado contra el valor fantasma daba 0 siempre.
-- **Fuente:** `specs/fixes/fix-063-b-dashboard-kpis-estados`
+### DG-003 — `vehicles.status` no tiene un único valor para "disponible"
+- **Trampa:** contar vehículos disponibles comparando contra un solo valor (`= 'available'`) o contra una lista cerrada (`IN ('operational', 'in_use')`).
+- **Realidad:** la columna no tiene CHECK y conviven dos vocabularios. El formulario de Flota guarda `'available'|'maintenance'|'out_of_service'`; los datos antiguos y los seeds traen `'operational'|'in_use'|'blocked'`. Cualquiera de las dos comparaciones deja fuera a la mitad de la flota.
+- **Aplica cuando:** una query, RPC o KPI necesita saber si un vehículo está disponible. Disponible = **no** está en `'maintenance'`, `'out_of_service'` ni `'blocked'` — la regla de `resolveVehicleStatus()` (`core/utils/vehicle-status.utils.ts`); en SQL, `NOT IN (...)` sobre esos tres.
+- **Fuente:** `specs/fixes/fix-063-b-dashboard-kpis-estados`, `specs/fixes/fix-397-m-ejecutivo-vehiculos-disponibles-estado-available`
 
 ### DG-004 — `enrollments.payment_mode` real es `'partial'`, no `'deposit'`
 - **Trampa:** escribir `WHERE payment_mode = 'deposit'` porque así lo decía la documentación.
