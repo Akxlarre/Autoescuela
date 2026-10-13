@@ -1,6 +1,6 @@
 # Asignación ASG-i-059 — Anular pagos en vez de borrarlos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2
