@@ -54,7 +54,7 @@
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
-| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
+| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` — `EdgeFunctionError.code?` (spec 0010-i: código de negocio del body, ej. `DEUDA_PENDIENTE`) |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/egresados-export.utils.ts` | `ExportTable`, `buildEgresadosExcelTable`, `EGRESADOS_PDF_COLUMN_WEIGHTS`, `buildEgresadosPdfTable` |
 | `src/app/core/utils/egresados-sort.utils.ts` | `EgresadoSortField`, `EgresadoListSort`, `egresadoSortOptions`, `sortEgresados` |

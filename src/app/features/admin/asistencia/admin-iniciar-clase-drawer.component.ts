@@ -130,8 +130,10 @@ import { formatCLP } from '@core/utils/date.utils';
                       class="btn-secondary"
                       [disabled]="facade.isSaving()"
                       (click)="cancelarMotivo()"
+                      data-llm-action="volver-sin-habilitar"
                     >
-                      Cancelar
+                      <!-- T11: "Volver" vuelve a las dos opciones; el "Cancelar" del pie cierra el drawer -->
+                      Volver
                     </button>
                     <button
                       type="button"

@@ -134,6 +134,21 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               }
             </div>
           </div>
+          <!-- spec 0010-i: motivo obligatorio (solo con confirmWithReason) -->
+          @if (confirmModal.config()?.reason; as reasonCfg) {
+            <div class="flex flex-col gap-1.5">
+              <label for="confirm-modal-reason" class="field-label">{{ reasonCfg.label }}</label>
+              <textarea
+                id="confirm-modal-reason"
+                rows="3"
+                class="field-input"
+                [placeholder]="reasonCfg.placeholder ?? ''"
+                [value]="confirmModal.reason()"
+                (input)="onConfirmReasonInput($event)"
+                data-llm-description="Motivo obligatorio de la confirmación"
+              ></textarea>
+            </div>
+          }
           <div class="flex items-center gap-3 justify-end">
             @if (confirmModal.config()?.cancelLabel) {
               <button
@@ -153,6 +168,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               type="button"
               [class.btn-danger-solid]="confirmModal.config()?.severity === 'danger'"
               [class.btn-primary]="confirmModal.config()?.severity !== 'danger'"
+              [disabled]="!confirmModal.reasonValid()"
               (click)="confirmModal.accept()"
               data-llm-action="confirm-modal-accept"
             >
@@ -222,6 +238,12 @@ export class AppShellComponent {
   protected readonly globalSearch = inject(GlobalSearchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly confirmModal = inject(ConfirmModalService);
+
+  /** Spec 0010-i: motivo del modal de confirmación (confirmWithReason). */
+  protected onConfirmReasonInput(event: Event): void {
+    this.confirmModal.setReason((event.target as HTMLTextAreaElement).value);
+  }
+
   protected readonly dmsViewer = inject(DmsViewerService);
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly auth = inject(AuthFacade);

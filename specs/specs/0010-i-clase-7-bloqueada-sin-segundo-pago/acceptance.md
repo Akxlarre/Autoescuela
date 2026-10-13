@@ -9,7 +9,7 @@
 ## Resumen
 
 - Entrega 1: AC1–AC6, AC10, AC-E1–AC-E4, AC-E6.
-- Entrega 2 (AC7–AC9, AC-E5): AC9 hecho; AC7, AC8 y AC-E5 sin empezar (tocan BD y la edge function del certificado).
+- Entrega 2 (AC7–AC9, AC-E5): AC7 y AC9 verificados; AC8 y AC-E5 con código y tests, pendientes de desplegar `generate-certificate-b-pdf` y QA en navegador.
 - **Entrega 1 cerrada:** migración `20261013120000` aplicada en el piloto y `supabase/tests/rls/0010-i-bloqueo-clase7.sql` en verde (15/15). Pendiente menor: ver AC6 en la app del instructor con una clase 7 real.
 
 | AC | Estado | Evidencia |
@@ -25,6 +25,7 @@
 | AC-E2 pago pending no desbloquea | ✅ | Re-corrida 2026-10-13 sobre una matrícula con deuda real: tras un pago `pending` el saldo sigue igual a base − descuento − pagos `paid` (primera corrida ❌ era error del test: fijaba el saldo a mano y `trg_update_balance` lo recalcula) |
 | AC-E3 finalizar / ausente libres | ✅ | `in_progress → completed` con deuda pasa (fila 6) |
 | AC-E4 secretaria de otra sede | ✅ | RLS con JWT simulado: otra sede rechazada (fila 13), misma sede permitida (fila 14), nadie borra (fila 15); facade no da por habilitada con 0 filas |
+| AC7 aviso tras la clase 6 | ✅ | Test SQL en el piloto (3/3): matrícula con modalidad "total" y deuda completa la clase 6 sin error; 1 aviso al alumno ("antes de tu clase 7") y 1 por cada secretaria activa de la sede + admin activo (7/7). Migración `20261013130000` |
 | AC9 texto de la matrícula online | ✅ | "El saldo debe estar pagado antes de tu clase 7" en la opción "Abono inicial" y en la nota del paso de pago (había dos textos con la promesa "cuando quieras") |
 | AC-E6 forzado que falla | ✅ | Playwright con POST → 403: sigue "Bloqueada", el motivo queda escrito, toast "No tienes permisos…" (captura `qa-0010-i-forzado-falla.png`) |
 

@@ -53,7 +53,7 @@
 
 > Se detalla al cerrar la Entrega 1 (plan §11).
 
-- [ ] T8 Aviso tras la clase 6 para toda matrícula con deuda + personal (AC7)
-- [ ] T9 Certificado con deuda: edge function + UI + lote (AC8, AC-E5)
+- [x] T8 Aviso tras la clase 6 para toda matrícula con deuda + personal (AC7) — migración `20261013130000` aplicada en el piloto; test `supabase/tests/rls/0010-i-aviso-clase6.sql` 3/3 ✅ (2026-10-13)
+- [ ] T9 Certificado con deuda: edge function + UI + lote (AC8, AC-E5) — código y tests listos (2026-10-13): gate 409 `DEUDA_PENDIENTE` en `generate-certificate-b-pdf`, `ConfirmModalService.confirmWithReason`, facade (generar, descargar, lote). Falta: desplegar la edge function y QA
 - [x] T10 Texto de la matrícula online (AC9) — dos lugares: opción "Abono inicial" (`public-enrollment.component.ts`) y nota del paso de pago (`public-payment-mode.component.ts`); 29 tests del flujo en verde
-- [ ] T11 (reserva de /verify, baja) Con el motivo abierto quedan dos "Cancelar" (banda + pie del drawer): unificar
+- [x] T11 (reserva de /verify, baja) Con el motivo abierto quedan dos "Cancelar" (banda + pie del drawer): unificar — el de la banda pasó a "Volver" (vuelve a las dos opciones); el del pie sigue cerrando el drawer
