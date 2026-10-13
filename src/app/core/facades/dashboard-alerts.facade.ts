@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { addDaysIso, chileMonth } from '@core/utils/chile-time.utils';
+import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -556,6 +557,7 @@ export class DashboardAlertsFacade {
     let query: any = this.supabase.client
       .from('payments')
       .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .eq('payment_date', todayChile);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 

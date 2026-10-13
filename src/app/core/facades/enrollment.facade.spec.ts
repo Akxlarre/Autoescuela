@@ -12,6 +12,12 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 
+// fix-393-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
+const pilot = vi.hoisted(() => ({ alumnoBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) => module === 'alumno' && pilot.alumnoBloqueado,
+}));
+
 // ── Mock Supabase client ──
 
 function createMockQueryBuilder(responseData: any = null, responseError: any = null) {
@@ -1053,6 +1059,73 @@ describe('EnrollmentFacade', () => {
       await Promise.resolve(); // deja correr el .then() del invoke fire-and-forget
 
       expect(mockToast.warning).toHaveBeenCalled();
+    });
+
+    // fix-393-m: con el portal del alumno en piloto no se le crea la cuenta ni se le invita.
+    describe('invitación del alumno según el piloto (fix-393-m)', () => {
+      const llamadasAInvitar = () =>
+        (mockSupabase.client.functions.invoke as any).mock.calls.filter(
+          ([name]: [string]) => name === 'activate-student-account',
+        );
+
+      beforeEach(() => {
+        (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+        (facade as any)._enrollment.set({ course_id: 1 });
+        (facade as any)._personalData.set({
+          firstNames: 'Pedro',
+          paternalLastName: 'Morales',
+          email: 'pedro@test.cl',
+        });
+        mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+        mockSupabase.client.functions.invoke = vi.fn().mockResolvedValue({ data: {}, error: null });
+      });
+
+      afterEach(() => {
+        pilot.alumnoBloqueado = false;
+      });
+
+      it('con el portal habilitado, invita al alumno al confirmar', async () => {
+        await facade.confirmEnrollment();
+
+        expect(llamadasAInvitar()).toEqual([
+          ['activate-student-account', { body: { userId: 30, email: 'pedro@test.cl' } }],
+        ]);
+      });
+
+      it('con el portal en piloto, confirma sin invitar al alumno', async () => {
+        pilot.alumnoBloqueado = true;
+
+        const result = await facade.confirmEnrollment();
+
+        expect(result).toBe('2026-0001');
+        expect(llamadasAInvitar()).toEqual([]);
+      });
+
+      it('con el portal en piloto, confirmar con pago tampoco invita', async () => {
+        pilot.alumnoBloqueado = true;
+        mockPayment.pricing = vi.fn().mockReturnValue({ isDeposit: false });
+        mockPayment.paymentMethod = vi.fn().mockReturnValue('cash');
+        mockPayment.totalToPay = vi.fn().mockReturnValue(100000);
+        mockPayment.selectedDiscountId = vi.fn().mockReturnValue(null);
+        mockPayment.discount = vi.fn().mockReturnValue({ amount: 0 });
+
+        const result = await facade.confirmWithPayment();
+
+        expect(result).toBe('2026-0001');
+        expect(llamadasAInvitar()).toEqual([]);
+      });
+
+      it('con el portal habilitado, confirmar con pago invita al alumno', async () => {
+        mockPayment.pricing = vi.fn().mockReturnValue({ isDeposit: false });
+        mockPayment.paymentMethod = vi.fn().mockReturnValue('cash');
+        mockPayment.totalToPay = vi.fn().mockReturnValue(100000);
+        mockPayment.selectedDiscountId = vi.fn().mockReturnValue(null);
+        mockPayment.discount = vi.fn().mockReturnValue({ amount: 0 });
+
+        await facade.confirmWithPayment();
+
+        expect(llamadasAInvitar()).toHaveLength(1);
+      });
     });
 
     // fix-114-m (ASG-b-063): re-entrada rechazada a nivel de dominio, no solo de UI

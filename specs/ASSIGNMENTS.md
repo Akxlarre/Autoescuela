@@ -22,8 +22,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
-| ASG-i-059 | Anular pagos en vez de borrarlos (visible tachado, con motivo, sin sumar) | `cualquiera` | spec | P2 | i | Sigue a `fix-044-i` (hoy el admin borra). Inventario de ~20 lecturas de `payments` en el archivo. Mejor después de 060 |
-| ASG-m-010 | El correo al alumno menciona el portal, que está deshabilitado en el piloto | `m` | fix | P1 | m | Botón "Activar mi cuenta" incluido. Recomendado: igual que `fix-214-b` (instructores), no invitar mientras `isBlockedInPilot('alumno')` |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -439,6 +437,8 @@
 | ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
 | ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-13 |
+| ASG-i-059 | Anular pagos en vez de borrarlos | [0025-m-anular-pagos-en-vez-de-borrarlos](specs/0025-m-anular-pagos-en-vez-de-borrarlos/spec.md) | 2026-10-13 |
+| ASG-m-010 | El correo al alumno menciona el portal, que está deshabilitado en el piloto | [fix-393-m-no-invitar-alumno-durante-piloto](fixes/fix-393-m-no-invitar-alumno-durante-piloto/fix.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 
 ---

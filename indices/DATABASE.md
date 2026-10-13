@@ -135,7 +135,7 @@
 > ⚠️ **Nota de gobernanza (resuelta parcialmente en fix-028-m):** las migraciones `20260705000000`, `20260706000000` y `20260707000000` que originalmente crearon y corrigieron estas dos funciones se aplicaron directamente vía SQL Editor de Supabase y los archivos locales nunca llegaron a commitearse — se perdieron del repo sin dejar rastro en git. `20260709120000` recupera ambas funciones completas (`CREATE OR REPLACE`, idempotente) a partir del código real vigente en producción (confirmado por el dueño 2026-07-09) y corrige dos bugs adicionales encontrados en la revisión (ver descripciones arriba). **Nunca alterar la BD desde el Dashboard sin además guardar el archivo de migración correspondiente en `supabase/migrations/` y comitearlo.**
 | `cleanup_expired_public_enrollment()` | `20260317100000` + actualizada en `20260317120000` | Manual o pg_cron | Limpia `slot_holds` expirados, marca `payment_attempts` pendientes vencidos como `'failed'`, y cancela enrollments `pending_payment` cuya ventana de pago venció (`UPDATE enrollments SET status='cancelled' WHERE id IN (SELECT enrollment_id FROM payment_attempts WHERE status='failed')`). `SECURITY DEFINER`. |
 | `cleanup_public_enrollment_throttle()` | `20260603120000` | Manual o pg_cron | **Spec 0010 (S1).** Borra filas de `public_enrollment_throttle` con `created_at < now() - interval '1 day'` (fuera de cualquier ventana de rate-limit). `SECURITY DEFINER`. |
-| `cleanup_expired_drafts()` | `20260313140000` → `20260618120000` → `20260618140000` → **`20260622000001_drop_biometric_records.sql`** | pg_cron: `0 3 * * *` (diario 3AM UTC) | Limpia enrollments en `status='draft'` con `expires_at < NOW()`. Cascade: `route_incidents→NULL`, `class_b_practice_attendance→DELETE`, `class_b_sessions→DELETE`, `license_validations→DELETE`, `discount_applications→DELETE`, `payments→DELETE`, `student_documents→DELETE`, `digital_contracts→DELETE`, `enrollments→DELETE`. También elimina `students` (si no tienen otras matrículas) y `users` (si `supabase_uid IS NULL` Y no existen en `instructors`) creados durante el wizard que quedaron huérfanos. Guards: admins/secretarias siempre tienen `supabase_uid` activo → protegidos; instructores sin Auth → protegidos por NOT EXISTS en `instructors`. Por diseño, un draft nunca tiene `total_paid > 0`. Retorna conteo de enrollments eliminados. |
+| `cleanup_expired_drafts()` | `20260313140000` → `20260618120000` → `20260618140000` → `20260622000001` → `20260805100000` → **`20261013140000_fix393_cleanup_drafts_conserva_user_con_student.sql`** | pg_cron: `0 3 * * *` (diario 3AM UTC) | Limpia enrollments en `status='draft'` con `expires_at < NOW()`. Cascade: `route_incidents→NULL`, `class_b_practice_attendance→DELETE`, `class_b_sessions→DELETE`, `license_validations→DELETE`, `discount_applications→DELETE`, `payments→DELETE`, `student_documents→DELETE`, `digital_contracts→DELETE`, `enrollments→DELETE`. También elimina `students` (si no tienen otras matrículas) y `users` (si `supabase_uid IS NULL`, no existen en `instructors` y no les queda ningún `student` — fix-393-m) creados durante el wizard que quedaron huérfanos; antes borra sus `notifications`. Cada `user` va en su propio bloque: si otra tabla todavía lo referencia, se conserva con un `WARNING` y la limpieza sigue. Guards: admins/secretarias siempre tienen `supabase_uid` activo → protegidos; instructores sin Auth → protegidos por NOT EXISTS en `instructors`. Por diseño, un draft nunca tiene `total_paid > 0`. Retorna conteo de enrollments eliminados. |
 | `confirm_enrollment_with_payment(p_enrollment_id, p_payment_method, p_total_amount, p_discount_id, p_discount_amount, p_registered_by, p_is_deposit)` | **`20260618130000_rpc_confirm_enrollment_with_payment.sql`** | Llamada desde `EnrollmentFacade.confirmWithPayment()` vía `supabase.rpc()` | Consolida en una sola transacción atómica lo que antes eran dos llamadas independientes (`recordPayment` + `confirmEnrollment`). Orden: (1) SELECT enrollment FOR UPDATE (bloqueo anti-doble-clic, valida `status='draft'`); (2) `get_next_enrollment_number(course_id)`; (3) DELETE idempotente de payments/discount_applications previos; (4) INSERT payment; (5) INSERT discount_application si aplica; (6) UPDATE enrollment → `status='active'`, number, totales, `expires_at=NULL`; (7) UPDATE class_b_sessions `reserved→scheduled`. Retorna `TEXT` con número de matrícula. Lanza EXCEPTION si enrollment no existe o ya fue procesado. **El pago (paso 4) se inserta ANTES de asignar `number` (paso 6) — por diseño, no reordenar**: `check_payment_within_pending_balance()` (fix-057-m/H-024) depende de que `pending_balance` siga `NULL` en ese momento para no bloquear el pago de confirmación; consumidores de `audit_log.detail` para `payments` deben tolerar `enrollments.number` aún NULL en ese instante (ver `log_change()` (13)/fix-145-m). `SECURITY DEFINER`. |
 | `get_student_payment_status(p_supabase_uid TEXT)` | `20260416000001_rpc_get_student_payment_status.sql` | Llamada desde Edge Function `student-payment` acción `load-enrollment-status` vía `supabase.rpc()` | Consolida 5 round-trips en 1 transacción PostgreSQL. Busca user→student→enrollment (activo, class_b, partial, saldo>0) y en paralelo: sede, curso, instructor (primera sesión no cancelada), conteo de sesiones, historial de pagos. Retorna JSONB con `hasPaymentPending`, `enrollment`, `instructor`, `payments`, `studentName`, `existingSessionCount`. Si no encuentra usuario/alumno retorna `{ error, status }`. Solo accesible por `service_role` (REVOKE de PUBLIC/anon/authenticated). `SECURITY DEFINER`, `STABLE`. |
 | `trg_enrollment_validation_fn()` | `20260309130000_allow_draft_status_for_professional.sql` | Trigger BEFORE INSERT OR UPDATE en `enrollments` | Valida reglas de negocio: Clase B no puede tener `promotion_course_id`; cursos `professional` y SENCE deben ser `in_person`. **Desde esta migración, `status='draft'` está permitido para todos los tipos de curso** (antes restringido solo a `class_b`). |
@@ -143,6 +143,7 @@
 | `get_next_enrollment_number(p_course_id INT)` | `20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql` (actualiza `20260310110000`) | Llamada desde `EnrollmentFacade.confirmEnrollment()` vía RPC | Devuelve el siguiente número secuencial de matrícula **separado por (sede × tipo de licencia)**: Clase B Autoescuela Chillán, Clase B Conductores Chillán y Profesional tienen contadores independientes. Los drafts sin confirmar (`status = 'draft'`) no consumen número. Formato: 4 dígitos (0001-m–9999), 5 desde 10000. `SECURITY DEFINER`. |
 | `set_enrollment_license_group()` | `20260312100000_fix_enrollment_number_unique_constraint.sql` | Trigger `BEFORE INSERT` en `enrollments` | Popula `enrollments.license_group` automáticamente a partir de `courses.license_class` del curso asociado. Evita que el consumidor tenga que calcularlo manualmente. |
 | `recalculate_enrollment_balance()` / `trg_update_balance` | `20260301000008` → **`20261010121000`** (fix-044-i) | Trigger **AFTER INSERT OR UPDATE OR DELETE** en `payments` | Recalcula `enrollments.total_paid`/`pending_balance`/`payment_status` sumando solo pagos `status = 'paid'`. Es la **única** fuente del saldo (fix-114-m): el cliente nunca escribe saldos. Hasta fix-044-i no corría en `DELETE`, por eso la Caja ajustaba el saldo a mano antes de borrar. |
+| `guard_anulacion_pago()` / `trg_payments_guard_anulacion` | `20261013150000` (spec 0025-m) | Trigger **BEFORE INSERT OR UPDATE** en `payments` | Un pago se **anula**, no se borra: `status = 'anulado'` + `voided_at`/`voided_by`/`void_reason`. Solo admin (`ANULAR_SOLO_ADMIN`), motivo obligatorio (`ANULAR_SIN_MOTIVO`), definitivo (`PAGO_YA_ANULADO`), bloqueado si el día tiene caja cerrada (`CAJA_CERRADA`); quién y cuándo los fija el trigger. El saldo no cambia de lógica: `recalculate_enrollment_balance()` ya suma solo `paid`. No corre en `DELETE` (limpieza de borradores intacta). En la app, toda lectura de `payments` que suma filtra con `PAYMENT_STATUSES_QUE_SUMAN` (`payments-status-filter.guard.spec.ts`). |
 | `check_payment_within_pending_balance()` / `trg_check_payment_within_pending_balance` | `20260723010000` (fix-057-m/H-024) → **`20261010140000`** (fix-045-i) | Trigger `BEFORE INSERT` en `payments` | Rechaza (`23514`) un pago con `total_amount` mayor que `enrollments.pending_balance` (NULL no bloquea). Desde fix-045-i lee el saldo con `FOR UPDATE`: dos pagos simultáneos a la misma matrícula se serializan y el segundo valida contra el saldo ya recalculado por `trg_update_balance`. `SECURITY DEFINER` para que el bloqueo no dependa de las policies de UPDATE de quien inserta. |
 | `guard_movimiento_caja_cerrada()` | `20261010121000` (fix-044-i) | Trigger `BEFORE DELETE` en `payments`, `expenses`, `instructor_advances` | Rechaza con `CAJA_CERRADA` el borrado de un movimiento cuya fecha tiene un `cash_closings` `closed` en su sede (pago → `enrollments.branch_id`; anticipo → sede del usuario del instructor). Excepción: pagos de matrículas `draft` (los borra `cleanup_expired_drafts`). `SECURITY DEFINER` porque la secretaria solo ve 2 días de cierres por RLS. Corrección de un día cerrado: `cuadratura_adjustments`. |
 | `guard_cierre_definitivo()` | `20261010121000` (fix-044-i) | Trigger `BEFORE UPDATE OR DELETE` en `cash_closings` | Un cierre `status = 'closed'` no se modifica ni se borra (`CIERRE_DEFINITIVO`), tampoco por admin; cubre el `upsert` de una pestaña vieja. Un `draft` sí pasa a `closed`. Corregir datos a mano exige desactivar el trigger en la migración que lo haga. |
@@ -218,7 +219,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (84 tablas, acumulado de las migraciones)
+## Esquema efectivo (86 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -318,7 +319,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `audit_log` — 🔒 RLS
 
-> Historial inmutable de acciones del sistema (RF-009, RF-010). Sin updated_at.
+> Historial inmutable. Solo inserta el trigger log_change() (SECURITY DEFINER). anon y authenticated no tienen INSERT/UPDATE/DELETE ni policy de escritura (fix-363-m).
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -337,11 +338,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
-
-**Escritura:** solo el trigger `log_change()` (`SECURITY DEFINER` del dueño de la tabla). No hay
-policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT` (`authenticated`)
-— fix-363-m. `log_change()` resuelve `user_id` así: sesión (`auth.uid()`); sin sesión, header
-`x-audit-user-id` solo con la service key; si no, `registered_by` de la fila.
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
 
@@ -654,18 +650,17 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_practice_attendance | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND class_b_session_id IN (sesiones con instructor_id = auth_instructor_id())) OR (secretaria por sede) OR (alumno: su fila)` — fix-368-m | — |
-| insert_class_b_practice_attendance | INSERT | — | `admin OR (instructor AND sesión propia) OR (secretaria por sede)` — fix-368-m |
-| update_class_b_practice_attendance | UPDATE | `admin OR (instructor AND sesión propia) OR (secretaria por sede)` — fix-368-m | — |
 | delete_class_b_practice_attendance | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| select_class_b_practice_attendance | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND class_b_se…` | — |
+| insert_class_b_practice_attendance | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND class_b_se…` |
+| update_class_b_practice_attendance | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND class_b_se…` | — |
 
 **Índices:** `idx_class_b_practice_attendance_student`, `idx_class_b_practice_attendance_vigente`
 
 ### `class_b_reschedule_history` — 🔒 RLS
 
-> Historial de reagendamientos de clases prácticas Clase B (fix-008-i). Lo escribe
-> `reschedule_class_b_sessions()` (fix-383-m, masivo) y `reprogramarClase()` (individual). Versionada
-> recién en `20261012125000_hotfix151_…` (existía en la BD sin migración).
+> fix-008-i: historial de reagendamientos de clases prácticas Clase B (fecha/instructor anterior y '
+  'nuevo, razón). Lo escribe reschedule_class_b_sessions() (fix-383-m) y reprogramarClase().
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -681,7 +676,14 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | NO | `now()` | — |
 
-**Policies:** SELECT / INSERT / UPDATE / DELETE → `auth_user_role() IN ('admin', 'secretary')`.
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_reschedule_history | SELECT | `public.auth_user_role() = ANY (ARRAY['admin', 'secretary'])` | — |
+| insert_class_b_reschedule_history | INSERT | — | `public.auth_user_role() = ANY (ARRAY['admin', 'secretary'])` |
+| update_class_b_reschedule_history | UPDATE | `public.auth_user_role() = ANY (ARRAY['admin', 'secretary'])` | — |
+| delete_class_b_reschedule_history | DELETE | `public.auth_user_role() = ANY (ARRAY['admin', 'secretary'])` | — |
 
 **Índices:** `idx_class_b_reschedule_history_enrollment_id`
 
@@ -1075,6 +1077,30 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | insert_document_templates | INSERT | — | `auth_user_role() = 'admin'` |
 | update_document_templates | UPDATE | `auth_user_role() = 'admin'` | — |
 
+### `enrollment_payment_overrides` — 🔒 RLS
+
+> Spec 0010-i: habilitaciones sin pago (clases 7+ o certificado) con motivo. Solo inserción: '
+  'sin policy de UPDATE/DELETE. La lee el trigger de bloqueo de class_b_sessions.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `kind` | TEXT | NO | — | — |
+| `reason` | TEXT | NO | — | — |
+| `pending_at_override` | INT | NO | `0` | — |
+| `created_by` | INT | NO | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_enrollment_payment_overrides | SELECT | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
+| insert_enrollment_payment_overrides | INSERT | — | `created_by = public.auth_user_id() AND ( public.auth_user_role() = 'admin' OR…` |
+
+**Índices:** `idx_enrollment_payment_overrides_enrollment`
+
 ### `enrollments` — 🔒 RLS
 
 > Matrícula central: Clase B y Profesional (RF-080). El tipo se deriva de course_id → courses.type
@@ -1110,7 +1136,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `license_full_url` | TEXT | sí | — | — |
 | `theory_cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
 | `completed_at` | TIMESTAMPTZ | sí | — | — |
-| `absence_penalty_applied_at` | TIMESTAMPTZ | sí | — | — (fix-384-m: última vez que `apply_class_b_absence_penalty()` canceló clases; un par de faltas cuenta solo si sus dos faltas son posteriores) |
+| `absence_penalty_applied_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 
@@ -1556,6 +1582,9 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `receipt_id` | INT | sí | — | → `sii_receipts.id` |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `voided_at` | TIMESTAMPTZ | sí | — | — |
+| `voided_by` | INT | sí | — | → `users.id` |
+| `void_reason` | TEXT | sí | — | — |
 
 **Policies:**
 
@@ -2127,7 +2156,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `branch_id` | INT | sí | — | → `branches.id` |
 | `service_name` | TEXT | sí | — | — |
 | `document_number` | TEXT | sí | — | — |
-| `payment_method` | TEXT | NO | `'efectivo'` | — |  CHECK `efectivo`/`transferencia`/`tarjeta`. Medio de pago de la venta; decide la columna en Caja Diaria (`20261012120000`, fix-047-i). Las ventas anteriores quedaron `efectivo`. |
+| `payment_method` | TEXT | NO | `'efectivo'` | — |
 
 **Policies:**
 
@@ -2477,7 +2506,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 
 | Función | Argumentos |
 |---------|-----------|
-| `apply_class_b_absence_penalty` | `(p_enrollment_id INT)` |
+| `apply_class_b_absence_penalty` | `(p_enrollment_id integer)` |
 | `assign_theory_cycle` | `()` |
 | `audit_format_evaluation_checklist` | `(p_value TEXT)` |
 | `audit_format_timestamp_value` | `(p_value TEXT)` |
@@ -2495,6 +2524,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `auto_transition_promotion_status` | `()` |
 | `auto_transition_standalone_course_status` | `()` |
 | `auto_transition_theory_cycle_status` | `()` |
+| `block_class_b_without_second_payment` | `()` |
 | `branch_visible` | `(p_branch_id INT)` |
 | `calculate_vehicle_document_status` | `()` |
 | `cascade_promotion_status_to_courses` | `()` |
@@ -2520,13 +2550,18 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `exec_instructor_accrued_cost` | `(p_from DATE, p_to DATE, p_branch_id INT DEFAULT NULL)` |
 | `generate_license_alert` | `()` |
 | `generate_sessions_from_promotion` | `()` |
-| `get_next_enrollment_number` | `(p_course_id INT)` |
+| `get_next_enrollment_number` | `(p_course_id integer)` |
 | `get_student_payment_status` | `(p_supabase_uid TEXT)` |
+| `guard_anulacion_pago` | `()` |
+| `guard_cierre_definitivo` | `()` |
+| `guard_movimiento_caja_cerrada` | `()` |
 | `instructor_enrollment_ids` | `()` |
 | `log_change` | `()` |
 | `mark_end_of_day_class_b_absences` | `()` |
 | `notify_class_b_completed` | `()` |
+| `notify_class_b_started_with_debt` | `()` |
 | `notify_deposit_reminder` | `()` |
+| `notify_payment_override` | `()` |
 | `notify_task_completed` | `()` |
 | `notify_task_reply` | `()` |
 | `notify_vehicle_document_expiry` | `()` |
@@ -2534,12 +2569,14 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `prevent_concurrent_in_progress_class_b_sessions` | `()` |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `prevent_double_booking_class_b_sessions` | `()` |
+| `prevent_early_class_b_absence` | `()` |
+| `prevent_early_class_b_no_show` | `()` |
 | `prevent_student_double_booking_class_b_sessions` | `()` |
 | `prevent_vehicle_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
-| `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT)` — fix-383-m: reagendamiento masivo todo o nada (SECURITY INVOKER, solo admin/secretaria) |
 | `recalculate_enrollment_balance` | `()` |
 | `request_client_ip` | `()` |
+| `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT DEFAULT NULL)` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `run_class_b_absences_cutoff` | `()` |
@@ -2547,6 +2584,7 @@ policy de INSERT/UPDATE/DELETE, y `anon`/`authenticated` solo conservan `SELECT`
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
+| `set_payment_override_pending` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `stamp_branch_absence_penalty_config` | `()` |
 | `tasks_set_updated_at` | `()` |

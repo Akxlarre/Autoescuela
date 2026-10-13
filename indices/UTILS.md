@@ -26,6 +26,7 @@
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
+| `src/app/core/utils/anulacion-pago.utils.ts` | `formatAnulacionDetalle`, `resumenConAnulados` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
@@ -33,8 +34,8 @@
 | `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch` |
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
-| `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime`, `chileTimeOfDay` (fix-370-m: 'HH:MM:SS' de Chile para columnas `time`; reemplaza `toTimeString()`) |
-| `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus`, `cycleMoveTargets` |
+| `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime`, `chileTimeOfDay` |
+| `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `cycleMoveTargets`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
 | `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES`, `ClassBAbsence`, `enrollmentsWithConsecutiveAbsences`, `enrollmentsWithUnpenalizedPair`, `enrollmentsWithRemovedSchedule`, `ScheduleChangeGroup`, `buildClearScheduleMessage`, `ClassBSessionAction`, `staleSessionMessage`, `StaleSessionError` |
 | `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` |
@@ -49,12 +50,12 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
-| `src/app/core/utils/db-error.utils.ts` | `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage`, `MENSAJE_PAGO_PENDIENTE_CLASE_7` |
+| `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
-| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` — `EdgeFunctionError.code?` (spec 0010-i: código de negocio del body, ej. `DEUDA_PENDIENTE`) |
+| `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
 | `src/app/core/utils/egresados-export.utils.ts` | `ExportTable`, `buildEgresadosExcelTable`, `EGRESADOS_PDF_COLUMN_WEIGHTS`, `buildEgresadosPdfTable` |
 | `src/app/core/utils/egresados-sort.utils.ts` | `EgresadoSortField`, `EgresadoListSort`, `egresadoSortOptions`, `sortEgresados` |
@@ -66,11 +67,11 @@
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
 | `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
-| `src/app/core/utils/focus-trap.utils.ts` | `focusableWithin`, `initialFocusTarget`, `trapTabTarget` |
 | `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
-| `src/app/core/utils/ficha-pagos.utils.ts` | `formatPaymentConcept`, `canRegistrarPago` |
+| `src/app/core/utils/ficha-pagos.utils.ts` | `formatPaymentConcept`, `paymentPositions`, `canRegistrarPago` |
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
+| `src/app/core/utils/focus-trap.utils.ts` | `focusableWithin`, `initialFocusTarget`, `trapTabTarget` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/hourly-rate.utils.ts` | `isValidHourlyRate` |
 | `src/app/core/utils/html.utils.ts` | `escapeHtml` |
@@ -99,7 +100,7 @@
 | `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
 | `src/app/core/utils/password-policy.utils.ts` | `PASSWORD_MIN_LENGTH`, `PasswordContext`, `PasswordRequirementId`, `PasswordRequirement`, `PasswordStrength`, `PasswordEvaluation`, `evaluatePassword`, `passwordStrengthLabel` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
-| `src/app/core/utils/payment-status.utils.ts` | `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
+| `src/app/core/utils/payment-status.utils.ts` | `PAYMENT_STATUS_ANULADO`, `PAYMENT_STATUSES_QUE_SUMAN`, `paymentCuentaComoIngreso`, `soloPagosVigentes`, `paymentStatusLabel`, `paymentStatusVariant`, `PAYMENT_ANULACION_SELECT`, `PaymentAnulacionRow`, `mapAnulacionPago`, `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `hasMinimumPhoneLength`, `normalizePhone` |

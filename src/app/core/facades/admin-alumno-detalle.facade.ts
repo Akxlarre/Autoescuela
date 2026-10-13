@@ -22,7 +22,8 @@ import { chileDayRange, formatChileDate, toChileDate } from '@core/utils/chile-t
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
-import { formatPaymentConcept } from '@core/utils/ficha-pagos.utils';
+import { formatPaymentConcept, paymentPositions } from '@core/utils/ficha-pagos.utils';
+import { mapAnulacionPago, PAYMENT_ANULACION_SELECT } from '@core/utils/payment-status.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
@@ -683,8 +684,9 @@ export class AdminAlumnoDetalleFacade {
           : Promise.resolve({ data: [] }),
         enrollmentId
           ? this.supabase.client
+              // payments-all-statuses: historial de la ficha; los anulados van tachados.
               .from('payments')
-              .select('*')
+              .select(`*, ${PAYMENT_ANULACION_SELECT}`)
               .eq('enrollment_id', enrollmentId)
               .order('payment_date', { ascending: true })
           : Promise.resolve({ data: [] }),
@@ -824,16 +826,7 @@ export class AdminAlumnoDetalleFacade {
       }),
     );
 
-    this._historialPagos.set(
-      (paymentsResult.data ?? []).map((p: any, idx: number) => ({
-        id: p.id,
-        fecha: this.formatDate(p.payment_date),
-        concepto: formatPaymentConcept(p.type, idx + 1),
-        monto: p.total_amount ?? 0,
-        metodo: this.derivePaymentMethod(p),
-        estado: this.formatPaymentStatus(p.status),
-      })),
-    );
+    this._historialPagos.set(this.mapHistorialPagos(paymentsResult.data ?? []));
   }
 
   /** Mapea una fila cruda de class_b_practice_attendance (+ join a sesión/instructor) a UI. */
@@ -941,8 +934,9 @@ export class AdminAlumnoDetalleFacade {
           .eq('enrollment_id', enrollmentId)
           .order('document_date', { ascending: false }),
         this.supabase.client
+          // payments-all-statuses: historial de la ficha; los anulados van tachados.
           .from('payments')
-          .select('*')
+          .select(`*, ${PAYMENT_ANULACION_SELECT}`)
           .eq('enrollment_id', enrollmentId)
           .order('payment_date', { ascending: true }),
         this.supabase.client
@@ -1020,16 +1014,7 @@ export class AdminAlumnoDetalleFacade {
       })),
     );
 
-    this._historialPagos.set(
-      (paymentsRes.data ?? []).map((p: any, idx: number) => ({
-        id: p.id,
-        fecha: this.formatDate(p.payment_date),
-        concepto: formatPaymentConcept(p.type, idx + 1),
-        monto: p.total_amount ?? 0,
-        metodo: this.derivePaymentMethod(p),
-        estado: this.formatPaymentStatus(p.status),
-      })),
-    );
+    this._historialPagos.set(this.mapHistorialPagos(paymentsRes.data ?? []));
 
     // Clase B específicos: vaciar para no mostrar datos obsoletos
     this._clasesPracticas.set([]);
@@ -1269,8 +1254,27 @@ export class AdminAlumnoDetalleFacade {
     }).format(new Date(ts));
   }
 
+  /**
+   * Historial de pagos de la ficha. Trae todos los estados: un pago anulado se muestra tachado,
+   * con su motivo, y no ocupa número entre los pagos sin concepto (spec 0025-m).
+   */
+  private mapHistorialPagos(rows: any[]): PagoUI[] {
+    const anulaciones = rows.map((p) => mapAnulacionPago(p));
+    const posiciones = paymentPositions(anulaciones.map((anulacion) => anulacion !== null));
+    return rows.map((p, idx) => ({
+      id: p.id,
+      fecha: this.formatDate(p.payment_date),
+      concepto: formatPaymentConcept(p.type, posiciones[idx]),
+      monto: p.total_amount ?? 0,
+      metodo: this.derivePaymentMethod(p),
+      estado: this.formatPaymentStatus(p.status),
+      anulacion: anulaciones[idx],
+    }));
+  }
+
   private formatPaymentStatus(status: string | null | undefined): string {
     const map: Record<string, string> = {
+      anulado: 'Anulado',
       paid: 'Pagado',
       pending: 'Pendiente',
       refunded: 'Reembolsado',

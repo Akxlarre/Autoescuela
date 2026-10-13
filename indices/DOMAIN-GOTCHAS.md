@@ -513,7 +513,19 @@
   al editar esta función, verificar contra la migración más reciente que la toca (no contra un
   fix intermedio) — `fix-113-m` casi reintrodujo una referencia a `biometric_records`, tabla
   eliminada por una migración posterior a la que se usó como base.
-- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`
+- **Cuándo aplica (regla general):** cuando una limpieza por lotes borra filas de una tabla con
+  muchas FKs entrantes (`users` tiene unas 50, todas `NO ACTION`), aislar cada fila en su propio
+  subbloque `BEGIN … EXCEPTION WHEN foreign_key_violation` en vez de enumerar las tablas hijas:
+  la lista queda vieja con la próxima FK, y el subbloque convierte "aborta toda la corrida" en
+  "se conserva esa fila y queda un `WARNING`". Si la fila puede seguir siendo necesaria (un
+  `user` cuyo `student` conserva otra matrícula), excluirla antes de intentar el borrado. Y cuando
+  se reescribe una función con `CREATE OR REPLACE`, volver a declarar su `SET search_path`: los
+  permisos se conservan, la configuración no.
+  Así quedó la sección de `users` huérfanos de esta función. La sección de `enrollments` sigue
+  sin esa red: una tabla nueva con FK a `enrollments` sin `ON DELETE` que pueda tener filas de un
+  borrador todavía aborta todo.
+- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`,
+  `specs/fixes/fix-393-m-no-invitar-alumno-durante-piloto`
 
 ### DG-052 — `enrollments.pending_balance`/`total_paid` ya se recalculan atómicamente vía trigger; escribirlos manualmente desde el cliente causa lost-update
 - **Trampa:** después de insertar un `payment`, hacer un segundo `UPDATE` manual sobre

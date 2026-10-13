@@ -18,6 +18,7 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockReturnThis(),
