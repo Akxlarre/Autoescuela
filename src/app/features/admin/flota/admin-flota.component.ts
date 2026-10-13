@@ -45,9 +45,8 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
       (editVehicle)="openVehicleForm($event)"
       (viewAgenda)="openAgenda($event)"
       (manageDocuments)="openDocuments($event)"
-      (typeFilterChange)="facade.setTypeFilter($event)"
       (statusFilterChange)="facade.setStatusFilter($event)"
-      (searchChange)="onLocalSearch($event)"
+      (searchChange)="facade.setSearchTerm($event)"
     />
   `,
 })
@@ -57,23 +56,21 @@ export class AdminFlotaComponent {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly localSearchTerm = signal('');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
   protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      // El facade vive más que la página: sin esto, al volver la lista seguiría filtrada con el
+      // buscador vacío (hotfix-073-b).
+      this.facade.setSearchTerm('');
+    });
 
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();
     });
-  }
-
-  protected onLocalSearch(term: string): void {
-    // Aquí podrías implementar búsqueda client-side si el facade no lo hace,
-    // pero FlotaFacade ya suele filtrar por señales.
-    console.log('Buscando:', term);
   }
 
   protected openVehicleForm(id?: number): void {

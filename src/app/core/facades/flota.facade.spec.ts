@@ -44,6 +44,43 @@ describe('FlotaFacade', () => {
     expect(service.isLoading()).toBe(false);
   });
 
+  describe('buscador del listado (hotfix-073-b, S4)', () => {
+    const fila = (licensePlate: string, brand: string, model: string, status = 'available') =>
+      ({ id: licensePlate, licensePlate, brand, model, status }) as any;
+
+    beforeEach(() => {
+      (service as any)._vehicles.set([
+        fila('ABCD43', 'Toyota', 'Yaris'),
+        fila('ERDF21', 'Nissan', 'Versa', 'maintenance'),
+        fila('XXYZ34', 'Toyota', 'Corolla', 'maintenance'),
+      ]);
+    });
+
+    it('sin texto se ven todos', () => {
+      expect(service.filteredVehicles()).toHaveLength(3);
+    });
+
+    it('filtra por patente, marca o modelo', () => {
+      service.setSearchTerm('toyota');
+      expect(service.filteredVehicles().map((v) => v.licensePlate)).toEqual(['ABCD43', 'XXYZ34']);
+      service.setSearchTerm('erdf');
+      expect(service.filteredVehicles().map((v) => v.licensePlate)).toEqual(['ERDF21']);
+    });
+
+    it('se combina con el filtro de estado', () => {
+      service.setSearchTerm('toyota');
+      service.setStatusFilter('maintenance');
+      expect(service.filteredVehicles().map((v) => v.licensePlate)).toEqual(['XXYZ34']);
+    });
+
+    it('al borrar el texto vuelven todos', () => {
+      service.setSearchTerm('zzz');
+      expect(service.filteredVehicles()).toHaveLength(0);
+      service.setSearchTerm('');
+      expect(service.filteredVehicles()).toHaveLength(3);
+    });
+  });
+
   it('loadVehicleAgenda consulta el día de Chile como rango semiabierto y ubica la clase en su hora de Chile (spec 0024-m)', async () => {
     const sessions: any = {};
     for (const m of ['select', 'eq', 'gte', 'lt']) sessions[m] = vi.fn().mockReturnValue(sessions);

@@ -127,6 +127,7 @@
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
 | `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
+| `src/app/core/utils/vehicle-search.utils.ts` | `VehicleSearchable`, `matchesVehicleSearch` |
 | `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
 
 <!-- AUTO-GENERATED:END -->
