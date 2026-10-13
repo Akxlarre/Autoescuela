@@ -18,8 +18,10 @@ export interface MaintenanceRow {
 export interface MaintenanceKpis {
   totalCount: number;
   totalSpent: number;
-  avgMonthly: number;
-  kmTraveled: number;
+  /** Inversión total ÷ cantidad de servicios. */
+  avgPerService: number;
+  /** Odómetro actual del vehículo. */
+  currentKm: number;
 }
 
 export interface ScheduledMaintenance {
