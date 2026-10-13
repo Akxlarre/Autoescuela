@@ -125,6 +125,7 @@
 | `src/app/core/utils/table-sort.utils.ts` | `SortDirection`, `TableSort`, `SortKey`, `textSortKey`, `dateSortKey`, `rutSortKey`, `sortRows`, `nextSort`, `toggleSortDirection`, `ariaSortOf`, `sortIconOf` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
+| `src/app/core/utils/vehicle-agenda.utils.ts` | `AgendaClassInput`, `AgendaMaintenanceInput`, `buildVehicleAgenda` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
 | `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
 | `src/app/core/utils/vehicle-form.utils.ts` | `MIN_VEHICLE_YEAR`, `normalizeLicensePlate`, `isValidLicensePlate`, `maxVehicleYear`, `isKmDecrease` |

@@ -16,6 +16,7 @@ import type {
   DocStatus,
 } from '@core/models/ui/vehicle-table.model';
 import { matchesVehicleSearch } from '@core/utils/vehicle-search.utils';
+import { buildVehicleAgenda } from '@core/utils/vehicle-agenda.utils';
 import { canManageVehicle } from '@core/utils/vehicle-permissions.utils';
 import type { VehicleAgendaSlot } from '@core/models/ui/vehicle-detail.model';
 
@@ -326,7 +327,7 @@ export class FlotaFacade {
         this.supabase.client
           .from('class_b_sessions')
           .select(
-            'id, scheduled_at, status, class_number, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
+            'id, scheduled_at, status, class_number, duration_min, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
           )
           .eq('vehicle_id', vehicleId)
           .gte('scheduled_at', day.start)
@@ -339,27 +340,26 @@ export class FlotaFacade {
           .eq('scheduled_date', dateStr),
       ]);
 
-      const slots: VehicleAgendaSlot[] = [];
-      const sessionMap = new Map(
-        (sessionsResult.data ?? []).map((s: any) => [chileParts(s.scheduled_at).hour, s]),
+      // fix-221-b: antes una grilla fija de horas en punto de 08 a 17 (pisaba la clase de las
+      // 11:50 con la de las 11:00 y no mostraba las de la tarde ni los mantenimientos).
+      const slots = buildVehicleAgenda(
+        (sessionsResult.data ?? []).map((s: any) => {
+          const at = chileParts(s.scheduled_at);
+          const user = s.enrollments?.students?.users;
+          return {
+            hour: at.hour,
+            minute: at.minute,
+            durationMin: s.duration_min ?? null,
+            status: s.status ?? null,
+            classNumber: s.class_number ?? null,
+            studentName: user ? `${user.first_names} ${user.paternal_last_name}` : null,
+          };
+        }),
+        (maintenancesResult.data ?? []).map((m: any) => ({
+          type: m.type ?? null,
+          description: m.description ?? null,
+        })),
       );
-
-      for (let h = 8; h < 18; h++) {
-        const hour = `${String(h).padStart(2, '0')}:00`;
-        const ses = sessionMap.get(h);
-        if (ses) {
-          const user = ses.enrollments?.students?.users;
-          slots.push({
-            hour,
-            endHour: `${String(h + 1).padStart(2, '0')}:00`,
-            type: 'class',
-            studentName: user ? `${user.first_names} ${user.paternal_last_name}`.trim() : 'Alumno',
-            classNumber: ses.class_number,
-          });
-        } else {
-          slots.push({ hour, endHour: `${String(h + 1).padStart(2, '0')}:00`, type: 'empty' });
-        }
-      }
       this._vehicleAgenda.set(slots);
     } finally {
       this._isLoadingAgenda.set(false);
