@@ -621,7 +621,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                              destructiva del grupo → btn-ghost, el peso visual más bajo
                              (antes btn-primary, invirtiendo la jerarquía). -->
                         @if (alerta.nivel === 'danger') {
-                          @if (alerta.horarioActivo) {
+                          @if (alerta.horarioActivo && alerta.parPenalizado) {
+                            <!-- fix-391-m: esas faltas ya se penalizaron y al alumno se le
+                                 reagendaron las clases. No se ofrece Eliminar otra vez. -->
+                            <span class="text-2xs text-text-muted">Ya penalizado</span>
+                          } @else if (alerta.horarioActivo) {
                             <button
                               class="btn-danger-ghost btn-sm"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
@@ -1163,6 +1167,12 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected alertaTooltip(alerta: AlertaFaltaConsecutiva): string {
     // fix-379-m: rojo = faltas en dos clases seguidas (la regla de la penalización).
     if (alerta.nivel === 'danger') {
+      // fix-391-m: un par ya penalizado no vuelve a contar (J07).
+      if (alerta.parPenalizado) {
+        return alerta.horarioActivo
+          ? 'Estas faltas ya se penalizaron y sus clases se reagendaron: no vuelven a contar'
+          : 'Estas faltas ya se penalizaron: sus clases futuras están canceladas';
+      }
       return 'Política: 2 inasistencias seguidas — acción manual requerida';
     }
     return alerta.faltasConsecutivas >= 2

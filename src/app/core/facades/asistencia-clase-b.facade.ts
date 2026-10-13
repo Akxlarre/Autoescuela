@@ -22,6 +22,7 @@ import {
   VALID_CLASS_B_SESSION_STATUSES,
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
+  enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
@@ -579,10 +580,31 @@ export class AsistenciaClaseBFacade {
         return;
       }
 
+      // fix-391-m: cancelar a mano también es penalizar. Se registra en la matrícula, como hace
+      // la regla automática, para que esas faltas no vuelvan a ofrecer "Eliminar" cuando al
+      // alumno se le reagenden las clases.
+      const stamp = await this.supabase.client
+        .from('enrollments')
+        .update({ absence_penalty_applied_at: new Date().toISOString() })
+        .eq('id', enrollmentId)
+        .select('id');
+      const stamped = !stamp.error && !!stamp.data?.length;
+
       this._alertas.update((rows) =>
-        rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: false } : r)),
+        rows.map((r) =>
+          r.enrollmentId === enrollmentId
+            ? { ...r, horarioActivo: false, parPenalizado: stamped || r.parPenalizado }
+            : r,
+        ),
       );
-      this.toast.success('Horario eliminado');
+      if (stamped) {
+        this.toast.success('Horario eliminado');
+      } else {
+        this.toast.warning(
+          'Horario eliminado, sin registrar la penalización',
+          'Si se reagendan sus clases, la alerta volverá a ofrecer "Eliminar". Avisa al administrador.',
+        );
+      }
     } catch {
       this.toast.error('Error al eliminar el horario');
     } finally {
@@ -1094,6 +1116,7 @@ export class AsistenciaClaseBFacade {
             id,
             branch_id,
             status,
+            absence_penalty_applied_at,
             students!inner(
               id,
               users!inner(first_names, paternal_last_name)
@@ -1129,6 +1152,7 @@ export class AsistenciaClaseBFacade {
       }
     >();
     const absences: ClassBAbsence[] = [];
+    const penalizedAt = new Map<number, string | null>();
 
     for (const row of data ?? []) {
       const session = row.class_b_sessions as any;
@@ -1153,7 +1177,12 @@ export class AsistenciaClaseBFacade {
       }
       // fix-379-m: la fecha de la falta es la de la clase, no la de cuándo se registró.
       enrollmentAbsences.get(enrollId)!.dates.push(session.scheduled_at ?? row.recorded_at);
-      absences.push({ enrollmentId: enrollId, classNumber: session.class_number ?? null });
+      absences.push({
+        enrollmentId: enrollId,
+        classNumber: session.class_number ?? null,
+        recordedAt: row.recorded_at ?? null,
+      });
+      penalizedAt.set(enrollId, enrollment.absence_penalty_applied_at ?? null);
     }
 
     const sinHorario = await this.fetchEnrollmentsWithRemovedSchedule([
@@ -1161,6 +1190,9 @@ export class AsistenciaClaseBFacade {
     ]);
     // fix-379-m: rojo solo con faltas en dos clases seguidas — la regla de la RPC y del Dashboard.
     const conFaltasSeguidas = new Set(enrollmentsWithConsecutiveAbsences(absences));
+    // fix-391-m: de esos, los que todavía no fueron penalizados (J07: un par ya penalizado no
+    // vuelve a contar). Solo ellos ofrecen "Eliminar".
+    const sinPenalizar = new Set(enrollmentsWithUnpenalizedPair(absences, penalizedAt));
 
     const alertas: AlertaFaltaConsecutiva[] = [];
     for (const [, info] of enrollmentAbsences) {
@@ -1174,6 +1206,8 @@ export class AsistenciaClaseBFacade {
           nivel: conFaltasSeguidas.has(info.enrollmentId) ? 'danger' : 'warning',
           ultimaFechaFalta: dates[0] ?? '',
           horarioActivo: !sinHorario.has(info.enrollmentId),
+          parPenalizado:
+            conFaltasSeguidas.has(info.enrollmentId) && !sinPenalizar.has(info.enrollmentId),
           branchId: info.branchId,
           branchName: branchMap.get(info.branchId) ?? 'Sin sede',
         });

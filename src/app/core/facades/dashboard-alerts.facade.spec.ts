@@ -336,6 +336,52 @@ describe('DashboardAlertsFacade', () => {
       ).toBeUndefined();
     });
 
+    it('fix-391-m: "Borrar horarios" deja fuera a los alumnos cuyo par ya fue penalizado', async () => {
+      const penalized = (enrollmentId: number, classNumber: number) => ({
+        recorded_at: '2026-10-07T12:00:00Z',
+        class_b_sessions: {
+          enrollment_id: enrollmentId,
+          class_number: classNumber,
+          status: 'no_show',
+          enrollments: {
+            branch_id: 1,
+            status: 'active',
+            absence_penalty_applied_at: '2026-10-08T00:00:00Z',
+          },
+        },
+      });
+      mockAbsences([penalized(301, 3), penalized(301, 4), absence(302, 7), absence(302, 8)]);
+
+      await facade.loadAlerts();
+
+      const b3 = facade.activeAlerts().find((a) => a.id === 'alert-consecutive-absences');
+      expect(b3?.count).toBe(2);
+      expect(b3?.action?.enrollmentIds).toEqual([302]);
+    });
+
+    it('fix-391-m: si todos los pares ya fueron penalizados, la alerta no ofrece acción', async () => {
+      const penalized = (classNumber: number) => ({
+        recorded_at: '2026-10-07T12:00:00Z',
+        class_b_sessions: {
+          enrollment_id: 301,
+          class_number: classNumber,
+          status: 'no_show',
+          enrollments: {
+            branch_id: 1,
+            status: 'active',
+            absence_penalty_applied_at: '2026-10-08T00:00:00Z',
+          },
+        },
+      });
+      mockAbsences([penalized(3), penalized(4)]);
+
+      await facade.loadAlerts();
+
+      const b3 = facade.activeAlerts().find((a) => a.id === 'alert-consecutive-absences');
+      expect(b3?.count).toBe(1);
+      expect(b3?.action).toBeUndefined();
+    });
+
     it('no alerta con dos faltas que no son seguidas', async () => {
       mockAbsences([absence(401, 2), absence(401, 7), absence(402, 1)]);
 
@@ -913,6 +959,25 @@ describe('DashboardAlertsFacade', () => {
       expect(fromSpy).toHaveBeenCalledTimes(1);
       expect(update.update).not.toHaveBeenCalled();
       expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('fix-391-m: al cancelar registra la penalización de las matrículas afectadas', async () => {
+      const chains = [
+        buildChain({ data: SESSIONS, error: null }),
+        buildChain({ data: [{ id: 1 }, { id: 2 }, { id: 3 }], error: null }),
+        buildChain({ data: [{ id: 301 }, { id: 302 }], error: null }),
+      ];
+      let call = 0;
+      fromSpy.mockImplementation(() => chains[Math.min(call++, chains.length - 1)]);
+
+      await facade.clearSchedules([301, 302]);
+
+      expect(fromSpy).toHaveBeenNthCalledWith(3, 'enrollments');
+      expect(chains[2].update).toHaveBeenCalledWith({
+        absence_penalty_applied_at: expect.any(String),
+      });
+      expect(chains[2].in).toHaveBeenCalledWith('id', [301, 302]);
+      expect(toast.warning).not.toHaveBeenCalled();
     });
 
     it('al confirmar cancela por id, deja cancelled_at y avisa el resultado', async () => {

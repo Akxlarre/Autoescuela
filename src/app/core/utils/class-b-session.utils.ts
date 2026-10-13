@@ -14,6 +14,8 @@ export const VALID_CLASS_B_SESSION_STATUSES = [
 export interface ClassBAbsence {
   enrollmentId: number;
   classNumber: number | null;
+  /** Cuándo se registró la falta (instante ISO). Solo lo necesita `enrollmentsWithUnpenalizedPair`. */
+  recordedAt?: string | null;
 }
 
 /**
@@ -32,6 +34,25 @@ export function enrollmentsWithConsecutiveAbsences(absences: ClassBAbsence[]): n
   return [...numbersByEnrollment.entries()]
     .filter(([, numbers]) => [...numbers].some((n) => numbers.has(n + 1)))
     .map(([enrollmentId]) => enrollmentId);
+}
+
+/**
+ * Matrículas con un par de faltas seguidas que todavía NO fue penalizado (fix-391-m). Misma regla
+ * que `apply_class_b_absence_penalty()` desde fix-384-m: un par cuenta solo si sus dos faltas se
+ * registraron después de la última penalización de la matrícula. `penalizedAt` trae esa fecha por
+ * matrícula (`enrollments.absence_penalty_applied_at`); sin fecha, nunca fue penalizada.
+ */
+export function enrollmentsWithUnpenalizedPair(
+  absences: ClassBAbsence[],
+  penalizedAt: ReadonlyMap<number, string | null | undefined>,
+): number[] {
+  const pending = absences.filter((absence) => {
+    const penalized = penalizedAt.get(absence.enrollmentId);
+    if (!penalized) return true;
+    if (!absence.recordedAt) return false;
+    return new Date(absence.recordedAt).getTime() > new Date(penalized).getTime();
+  });
+  return enrollmentsWithConsecutiveAbsences(pending);
 }
 
 /**

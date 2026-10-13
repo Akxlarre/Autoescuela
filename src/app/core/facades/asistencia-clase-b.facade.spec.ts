@@ -837,9 +837,73 @@ describe('AsistenciaClaseBFacade', () => {
       expect(facade.alertas()[0].horarioActivo).toBe(false);
     });
 
+    it('fix-391-m: removeSchedule registra la penalización en la matrícula', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', [{ id: 10 }]);
+
+      await facade.removeSchedule(10);
+
+      const b = mock.builderFor('enrollments');
+      expect(b.update).toHaveBeenCalledWith({ absence_penalty_applied_at: NOW });
+      expect(b.eq).toHaveBeenCalledWith('id', 10);
+      expect(facade.alertas()[0].parPenalizado).toBe(true);
+    });
+
+    it('fix-391-m: si no se pudo registrar la penalización, lo avisa en vez de dar éxito', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', []);
+
+      await facade.removeSchedule(10);
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Horario eliminado, sin registrar la penalización',
+        expect.stringContaining('Avisa al administrador'),
+      );
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+      expect(facade.alertas()[0].parPenalizado).toBeFalsy();
+    });
+
+    it('fix-391-m: fetchAlertas marca parPenalizado cuando las faltas son anteriores a la penalización', async () => {
+      const falta = (enrollmentId: number, n: number, penalizedAt: string | null) => ({
+        student_id: enrollmentId,
+        recorded_at: `2026-10-0${n}T12:00:00Z`,
+        class_b_sessions: {
+          enrollment_id: enrollmentId,
+          class_number: n,
+          status: 'no_show',
+          scheduled_at: `2026-10-0${n}T12:00:00Z`,
+          enrollments: {
+            id: enrollmentId,
+            branch_id: 1,
+            absence_penalty_applied_at: penalizedAt,
+            students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+          },
+        },
+      });
+      mock.setResult('class_b_practice_attendance', [
+        falta(10, 3, '2026-10-05T00:00:00Z'),
+        falta(10, 4, '2026-10-05T00:00:00Z'),
+        falta(11, 3, null),
+        falta(11, 4, null),
+      ]);
+      vi.spyOn(facade as any, 'fetchEnrollmentsWithRemovedSchedule').mockResolvedValue(new Set());
+
+      const alertas = await (facade as any).fetchAlertas(null, new Map());
+
+      const by = (id: number) => alertas.find((a: AlertaFaltaConsecutiva) => a.enrollmentId === id);
+      expect(by(10).nivel).toBe('danger');
+      expect(by(10).parPenalizado).toBe(true);
+      expect(by(11).nivel).toBe('danger');
+      expect(by(11).parPenalizado).toBe(false);
+    });
+
     it('removeSchedule cancela solo clases agendadas futuras', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
       mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', [{ id: 10 }]);
 
       await facade.removeSchedule(10);
 
