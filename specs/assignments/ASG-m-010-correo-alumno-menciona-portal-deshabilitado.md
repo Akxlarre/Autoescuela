@@ -1,14 +1,14 @@
 # Asignación ASG-m-010 — El correo al alumno menciona el portal, que está deshabilitado en el piloto
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-10-12
 > **created_by:** m
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-13
+> **resulting_track:** fix-393-m-no-invitar-alumno-durante-piloto
 
 ---
 
