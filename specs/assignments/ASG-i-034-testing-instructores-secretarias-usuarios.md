@@ -1,14 +1,14 @@
 # Asignación ASG-i-034 — Testing: Gestión de instructores, secretarias y usuarios
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-07
+> **resulting_track:** fix-197-b-testing-instructores-secretarias-usuarios
 
 ---
 
