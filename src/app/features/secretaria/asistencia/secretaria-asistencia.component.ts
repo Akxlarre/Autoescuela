@@ -1,7 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { CiclosTeoricosFacade } from '@core/facades/ciclos-teoricos.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -17,8 +26,8 @@ import type {
  * SecretariaAsistenciaComponent — Smart component.
  * Ruta: /app/secretaria/asistencia
  *
- * La secretaria siempre ve la asistencia y los ciclos de su propia sede.
- * El branchId viene de AuthFacade.currentUser().branchId (nunca null para secretaria).
+ * La secretaria ve la asistencia y los ciclos de su propia sede. Con el permiso multi-sede
+ * (spec 0017) manda el selector de la barra superior, incluido "Todas las sedes" (fix-385-m).
  */
 @Component({
   selector: 'app-secretaria-asistencia',
@@ -36,7 +45,8 @@ import type {
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
-      [showBranchColumn]="false"
+      [showBranchColumn]="showBranchColumn()"
+      [canRemind]="facade.recordatoriosHabilitados"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"
@@ -66,10 +76,11 @@ import type {
     />
   `,
 })
-export class SecretariaAsistenciaComponent implements OnInit {
+export class SecretariaAsistenciaComponent {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   protected readonly ciclos = inject(CiclosTeoricosFacade);
   private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutService = inject(LayoutService);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
@@ -80,16 +91,35 @@ export class SecretariaAsistenciaComponent implements OnInit {
     this.layoutService.tier() === 'desktop' ? null : 6,
   );
 
-  private get branchId(): number | null {
-    return this.authFacade.currentUser()?.branchId ?? null;
-  }
+  /** Sede de la pantalla: la del usuario, o la del selector si tiene el permiso multi-sede. */
+  protected readonly branchId = computed(() => {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  });
 
-  ngOnInit(): void {
-    const branchId = this.branchId;
-    this.facade.setBranchFilter(branchId);
-    this.ciclos.setBranchFilter(branchId);
-    void this.facade.initialize();
-    void this.ciclos.loadCycles();
+  // Columna "Sede" solo aporta cuando conviven filas de varias sedes en la misma tabla.
+  protected readonly showBranchColumn = computed(() => this.branchId() === null);
+
+  constructor() {
+    // fix-386-m: la pantalla siempre abre en hoy, no en el día que quedó elegido la vez anterior.
+    this.facade.enterToday();
+
+    // Carga inicial y recarga al cambiar de sede. initialize() decide solo si reutiliza lo que
+    // tiene (misma sede) o carga con skeleton (otra sede).
+    effect(() => {
+      const branchId = this.branchId();
+      untracked(() => {
+        this.facade.setBranchFilter(branchId);
+        this.ciclos.setBranchFilter(branchId);
+        void this.facade.initialize();
+        void this.ciclos.loadCycles();
+      });
+    });
   }
 
   protected openIniciarClaseDrawer(row: ClasePracticaRow): void {

@@ -27,6 +27,7 @@
 | Directiva | Selector | Propósito | Inputs | Estado |
 |-----------|----------|-----------|--------|--------|
 | `ModalOverlayDirective` | `[appModalOverlay]` | Teleporta el modal al overlay container (z-index > topbar) | `appModalOverlay: boolean` | ✅ Estable |
+| `ModalFocusDirective` | `[appModalFocus]` | Foco del teclado en un modal (fix-390-m): lo lleva adentro al abrir (a `data-modal-autofocus` o al primer control), no deja salir a Tab y lo devuelve al control que lo abrió. Va en el `role="dialog"` dentro de un `@if`. No cierra con Escape | — | ✅ Estable |
 | `ScrollContainerDirective` | `[appScrollContainer]` | Scroll interno vertical/horizontal con `max-height` configurable. Evita desborde en páginas y drawers. Scrollbar usa tokens del DS. | `maxHeight: string` (`'65vh'`), `scrollX: boolean` (`false`) | ✅ Estable |
 
 ## Auto-Index — Directivas detectadas por AST (generado automáticamente)
@@ -41,6 +42,7 @@
 | `ClickOutsideDirective` | `[appClickOutside]` | `clickOutsideEnabled`, `clickOutsideExclude` | `clickOutside` | `src/app/core/directives/click-outside.directive.ts` |
 | `FileDropzoneDirective` | `[appFileDropzone]` | `dropzoneEnabled` | `filesDropped` | `src/app/core/directives/file-dropzone.directive.ts` |
 | `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
+| `ModalFocusDirective` | `[appModalFocus]` | — | — | `src/app/core/directives/modal-focus.directive.ts` |
 | `PressFeedbackDirective` | `[appPressFeedback]` | `appPressFeedback` | — | `src/app/core/directives/press-feedback.directive.ts` |
 | `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |
 | `ScrollRevealDirective` | `[appScrollReveal]` | `appScrollReveal` | — | `src/app/core/directives/scroll-reveal.directive.ts` |

@@ -154,6 +154,80 @@ describe('CiclosTeoricosFacade', () => {
     });
   });
 
+  describe('fix-387-m: Actualizar y respuestas fuera de orden', () => {
+    const cycleRow = (id: number, branchId: number) => ({
+      id,
+      branch_id: branchId,
+      start_date: '2026-03-09',
+      end_date: '2026-03-20',
+      status: 'active',
+    });
+    const rosterRow = (id: number, name: string) => ({
+      id,
+      students: { id, users: { first_names: name, paternal_last_name: 'Pérez', email: '' } },
+    });
+
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('loadCycles relee el roster del ciclo que sigue elegido, sin skeleton', async () => {
+      mock.setResult('class_b_theory_cycles', [cycleRow(5, 1)]);
+      mock.setResult('enrollments', [rosterRow(100, 'Ana')]);
+      facade.setBranchFilter(1);
+      await facade.loadCycles();
+      expect(facade.roster()).toHaveLength(1);
+
+      // Otra sesión sumó un alumno al ciclo.
+      mock.setResult('enrollments', [rosterRow(100, 'Ana'), rosterRow(101, 'Beto')]);
+      const release = mock.deferResult('class_b_theory_sessions');
+      const pending = facade.loadCycles();
+      await tick();
+      expect(facade.isLoadingCycle()).toBe(false);
+      release([]);
+      await pending;
+
+      expect(facade.selectedCycleId()).toBe(5);
+      expect(facade.roster()).toHaveLength(2);
+    });
+
+    it('una respuesta vieja de loadCycles no pisa la lista de la sede nueva', async () => {
+      const releaseOld = mock.deferResult('class_b_theory_cycles');
+      facade.setBranchFilter(1);
+      const old = facade.loadCycles();
+      await tick();
+
+      const releaseNew = mock.deferResult('class_b_theory_cycles');
+      facade.setBranchFilter(2);
+      const next = facade.loadCycles();
+      await tick();
+      releaseNew([cycleRow(6, 2)]);
+      await next;
+      releaseOld([cycleRow(5, 1)]);
+      await old;
+
+      expect(facade.cycles().map((c) => c.id)).toEqual([6]);
+      expect(facade.selectedCycleId()).toBe(6);
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('la carga de un ciclo que ya no es el elegido no pisa al nuevo', async () => {
+      const releaseFirst = mock.deferResult('enrollments');
+      const first = facade.selectCycle(5);
+      await tick();
+      // El usuario elige otro ciclo antes de que llegue el roster del primero.
+      const releaseSecond = mock.deferResult('enrollments');
+      const second = facade.selectCycle(6);
+      await tick();
+      releaseSecond([rosterRow(101, 'Beto')]);
+      await second;
+      releaseFirst([rosterRow(100, 'Ana')]);
+      await first;
+
+      expect(facade.selectedCycleId()).toBe(6);
+      expect(facade.roster().map((r) => r.enrollmentId)).toEqual([101]);
+      expect(facade.isLoadingCycle()).toBe(false);
+    });
+  });
+
   describe('selectCycle', () => {
     it('carga clases y roster del ciclo', async () => {
       mock.setResult('class_b_theory_sessions', [
@@ -443,6 +517,21 @@ describe('CiclosTeoricosFacade', () => {
       const call = mock.updateCalls.find((c) => c.table === 'enrollments');
       expect(call?.payload).toEqual({ theory_cycle_id: 9 });
       expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('fix-387-m: no mueve a un ciclo de otra sede', async () => {
+      mock.setResult('class_b_theory_cycles', [
+        { id: 5, branch_id: 1, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+        { id: 6, branch_id: 2, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+      ]);
+      facade.setBranchFilter(null);
+      await facade.loadCycles();
+      await facade.selectCycle(5);
+
+      await facade.moveStudentToCycle(100, 6);
+
+      expect(mock.updateCalls.find((c) => c.table === 'enrollments')).toBeUndefined();
+      expect(toast.error).toHaveBeenCalledWith('Ese ciclo es de otra sede');
     });
   });
 });

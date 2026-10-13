@@ -8,20 +8,26 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { chileDayRange, chileTimeOfDay, formatChileTime } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   NoRowsAffectedError,
   assertWriteOk,
   toFriendlyDbMessage,
 } from '@core/utils/db-error.utils';
-import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   PRIMERA_CLASE_CON_SEGUNDO_PAGO,
   resolverEstadoPagoClase,
 } from '@core/utils/estado-pago-clase.utils';
 import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
 import {
+  type ClassBAbsence,
+  type ClassBSessionAction,
+  StaleSessionError,
   VALID_CLASS_B_SESSION_STATUSES,
+  enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
+  enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
 import type {
   AsistenciaClaseBKpis,
@@ -92,6 +98,10 @@ export class AsistenciaClaseBFacade {
   private readonly estadoPagoGuard = createRequestGuard();
 
   private _initialized = false;
+  /** Sede con la que se hizo la última carga completa (fix-386-m); `undefined` = ninguna. */
+  private _loadedBranchId: number | null | undefined = undefined;
+  /** Descarta la respuesta de una carga que quedó obsoleta (facades.md §7). */
+  private readonly dataGuard = createRequestGuard();
 
   // ── 2. Estado público ──────────────────────────────────────────────────────
 
@@ -103,6 +113,11 @@ export class AsistenciaClaseBFacade {
   readonly error = this._error.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly savingAlertaId = this._savingAlertaId.asReadonly();
+  /**
+   * fix-380-m: "Recordar" es una notificación in-app; con el portal Alumno bloqueado en el piloto
+   * nadie la ve, así que no se ofrece (como las invitaciones de instructores, fix-214-b).
+   */
+  readonly recordatoriosHabilitados = !isBlockedInPilot('alumno');
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
   /** Spec 0010-i: estado de pago de la clase del drawer de inicio. null = sin leer o lectura fallida. */
@@ -131,13 +146,32 @@ export class AsistenciaClaseBFacade {
     await this.reload();
   }
 
-  /** SWR initialize. */
+  /**
+   * fix-386-m: al abrir la pantalla la fecha vuelve a hoy (hora de Chile). El facade es un
+   * singleton: sin esto quedaba el día que dejó elegido quien la usó antes, incluso otro usuario
+   * tras cerrar sesión. Si estaba en otro día, lo cargado deja de valer.
+   */
+  enterToday(): void {
+    const today = todayIso();
+    if (this._selectedDate() === today) return;
+    this._selectedDate.set(today);
+    this._initialized = false;
+  }
+
+  /**
+   * SWR initialize. Solo reutiliza lo que hay en memoria si se cargó con la misma sede
+   * (fix-386-m): los datos de otra sede, o del usuario anterior, no se muestran ni un instante.
+   */
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this._branchFilter();
+    if (this._initialized && branchId === this._loadedBranchId) {
       void this.refreshSilently();
       return;
     }
     this._initialized = true;
+    this._loadedBranchId = branchId;
+    this._clasesPracticas.set([]);
+    this._alertas.set([]);
     this._isLoading.set(true);
     try {
       await this.fetchData();
@@ -206,7 +240,6 @@ export class AsistenciaClaseBFacade {
       }
 
       const dbStatus = status === 'presente' ? 'present' : status === 'ausente' ? 'absent' : null;
-      const sessionStatus = status === 'ausente' ? 'no_show' : undefined;
 
       if (dbStatus) {
         const { data: enrollment } = await this.supabase.client
@@ -219,35 +252,59 @@ export class AsistenciaClaseBFacade {
         // saltaba el upsert y el toast decía "marcada" igual.
         if (!enrollment) throw new NoRowsAffectedError();
 
-        assertWriteOk(
-          await this.supabase.client.from('class_b_practice_attendance').upsert(
-            {
-              class_b_session_id: sessionId,
-              student_id: enrollment.student_id,
-              status: dbStatus,
-              recorded_by: recordedBy,
-              // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
-              // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
-              archived_at: null,
-              // spec 0048-b: la penalización solo cuenta faltas registradas desde que se activó
-              // la regla en la sede; sin esto, un upsert sobre una fila existente conservaba la
-              // fecha vieja y la falta nueva no contaba.
-              recorded_at: new Date().toISOString(),
-            },
-            { onConflict: 'class_b_session_id,student_id' },
-          ),
-        );
-      }
+        // fix-388-m: primero la sesión, y solo si sigue pendiente. Antes se escribía la asistencia
+        // y después el estado sin mirar cómo estaba: una pestaña sin actualizar dejaba "Ausente"
+        // una clase que otra persona ya había iniciado.
+        if (status === 'ausente') {
+          try {
+            await this.moveSession(sessionId, 'scheduled', { status: 'no_show' }, 'absent');
+          } catch (err) {
+            if (err instanceof StaleSessionError && err.actualStatus === 'no_show') {
+              // Otra persona ya la marcó: no hay nada que corregir ni que avisar como error.
+              this.toast.info('La inasistencia ya estaba registrada');
+              await this.refreshSilently();
+              return true;
+            }
+            throw err;
+          }
+        }
 
-      if (sessionStatus) {
-        assertWriteOk(
-          await this.supabase.client
-            .from('class_b_sessions')
-            .update({ status: sessionStatus })
-            .eq('id', sessionId)
-            .select('id'),
-          { requireRows: true },
-        );
+        try {
+          assertWriteOk(
+            await this.supabase.client.from('class_b_practice_attendance').upsert(
+              {
+                class_b_session_id: sessionId,
+                student_id: enrollment.student_id,
+                status: dbStatus,
+                recorded_by: recordedBy,
+                // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
+                // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
+                archived_at: null,
+                // spec 0048-b: la penalización solo cuenta faltas registradas desde que se activó
+                // la regla en la sede; sin esto, un upsert sobre una fila existente conservaba la
+                // fecha vieja y la falta nueva no contaba.
+                recorded_at: new Date().toISOString(),
+              },
+              { onConflict: 'class_b_session_id,student_id' },
+            ),
+          );
+        } catch (err) {
+          // Sin su asistencia, la clase no puede quedar "Ausente": vuelve a pendiente.
+          if (status === 'ausente') {
+            const revert = await this.supabase.client
+              .from('class_b_sessions')
+              .update({ status: 'scheduled' })
+              .eq('id', sessionId)
+              .eq('status', 'no_show');
+            if (revert.error) {
+              this.toast.warning(
+                'La clase quedó como ausente sin su registro',
+                'No se pudo devolver a pendiente. Actualiza la lista y avisa al administrador.',
+              );
+            }
+          }
+          throw err;
+        }
       }
 
       this._clasesPracticas.update((rows) =>
@@ -261,6 +318,10 @@ export class AsistenciaClaseBFacade {
       }
       return true;
     } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        return false;
+      }
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la asistencia'));
       return false;
     } finally {
@@ -269,15 +330,72 @@ export class AsistenciaClaseBFacade {
   }
 
   /**
-   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. Archiva la falta (queda
-   * en el historial, como al reagendar — fix-191-m) y la clase vuelve a 'scheduled' ("Pendiente").
-   * Las clases que esa falta haya cancelado por penalización NO vuelven solas: se avisa.
+   * fix-388-m: cambia el estado de una clase solo si sigue en `from`, el estado que la persona
+   * tenía en pantalla. Sin tiempo real, dos personas pueden ver la misma clase "Pendiente": la
+   * segunda en actuar no debe pisar lo que registró la primera. Si no tocó filas, lee el estado
+   * real y lanza `StaleSessionError`; si tampoco puede leerla (RLS), `NoRowsAffectedError`.
+   */
+  private async moveSession(
+    sessionId: number,
+    from: 'scheduled' | 'in_progress',
+    patch: Record<string, unknown>,
+    action: ClassBSessionAction,
+  ): Promise<void> {
+    const result = assertWriteOk(
+      await this.supabase.client
+        .from('class_b_sessions')
+        .update(patch)
+        .eq('id', sessionId)
+        .eq('status', from)
+        .select('id'),
+    );
+    if (Array.isArray(result.data) && result.data.length > 0) return;
+
+    const { data: current } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('status')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (!current?.status) throw new NoRowsAffectedError();
+    throw new StaleSessionError(action, current.status);
+  }
+
+  /** Avisa que la clase cambió mientras se miraba y trae el estado real de la tabla. */
+  private async reportStaleSession(err: StaleSessionError): Promise<void> {
+    this.toast.warning('La clase cambió', `${err.message} La lista se actualizó.`);
+    await this.refreshSilently();
+  }
+
+  /**
+   * fix-377-m: deshace una inasistencia SIN justificar marcada por error. La clase vuelve a
+   * 'scheduled' ("Pendiente").
+   * fix-392-m: la falta se BORRA (antes se archivaba como al reagendar — fix-191-m — y seguía
+   * figurando en la ficha como "reagendada", aunque el alumno nunca faltó). Las clases canceladas
+   * después de esa falta NO vuelven solas: la confirmación lo dice solo si las hay (con la
+   * cancelación automática apagada en la sede nunca las hay, y mencionarlas confunde).
    */
   async undoAbsence(sessionId: number): Promise<boolean> {
     const target = await this.resolvePractica(sessionId);
+    let absence: { id: number; recordedAt: string } | null;
+    let canceladas = 0;
+    try {
+      absence = await this.findUndoableAbsence(sessionId);
+      if (!absence) return false;
+      if (target?.enrollmentId) {
+        canceladas = await this.countCancelledSince(target.enrollmentId, absence.recordedAt);
+      }
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al deshacer la inasistencia'));
+      return false;
+    }
+
     const confirmed = await this.confirmModal.confirm({
       title: 'Deshacer inasistencia',
-      message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente y la falta pasa al historial. Si esa falta ya canceló clases por penalización, esas clases no vuelven solas: se reagendan desde la ficha del alumno.`,
+      message:
+        `La falta de ${target?.alumnoName ?? 'este alumno'} se borra y la clase vuelve a quedar pendiente, como si no se hubiera marcado.` +
+        (canceladas > 0
+          ? ` Después de esta falta se le cancelaron ${canceladas} clase(s): seguirán canceladas y hay que agendarlas de nuevo desde su ficha.`
+          : ''),
       confirmLabel: 'Deshacer',
       cancelLabel: 'Cancelar',
       severity: 'warn',
@@ -286,8 +404,14 @@ export class AsistenciaClaseBFacade {
 
     this._isSaving.set(true);
     try {
-      const recordedAt = await this.archiveCurrentAbsence(sessionId);
-      if (recordedAt === null) return false;
+      assertWriteOk(
+        await this.supabase.client
+          .from('class_b_practice_attendance')
+          .delete()
+          .eq('id', absence.id)
+          .select('id'),
+        { requireRows: true },
+      );
       assertWriteOk(
         await this.supabase.client
           .from('class_b_sessions')
@@ -298,15 +422,11 @@ export class AsistenciaClaseBFacade {
         { requireRows: true },
       );
 
-      const canceladas = target?.enrollmentId
-        ? await this.countCancelledSince(target.enrollmentId, recordedAt)
-        : 0;
-
       this.toast.success('Inasistencia deshecha', 'La clase quedó pendiente.');
       if (canceladas > 0) {
         this.toast.warning(
-          'Clases canceladas por la penalización',
-          `${canceladas} clase(s) se cancelaron después de esta falta y siguen canceladas. Reagéndalas desde la ficha del alumno.`,
+          'Hay clases que siguen canceladas',
+          `${canceladas} clase(s) se cancelaron después de esta falta y no se recuperan solas. Agéndalas de nuevo desde la ficha del alumno.`,
         );
       }
       await this.refreshSilently();
@@ -320,10 +440,12 @@ export class AsistenciaClaseBFacade {
   }
 
   /**
-   * fix-377-m: archiva la falta vigente (sin justificar) de una sesión. Devuelve su `recorded_at`,
-   * o `null` si no hay una falta que deshacer (ya avisado al usuario).
+   * fix-392-m: falta vigente y sin justificar de una sesión, la única que se puede deshacer.
+   * Devuelve `null` si no la hay (ya avisado al usuario).
    */
-  private async archiveCurrentAbsence(sessionId: number): Promise<string | null> {
+  private async findUndoableAbsence(
+    sessionId: number,
+  ): Promise<{ id: number; recordedAt: string } | null> {
     const { data: att, error } = await this.supabase.client
       .from('class_b_practice_attendance')
       .select('id, status, recorded_at')
@@ -340,15 +462,7 @@ export class AsistenciaClaseBFacade {
       );
       return null;
     }
-    assertWriteOk(
-      await this.supabase.client
-        .from('class_b_practice_attendance')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('id', att.id)
-        .select('id'),
-      { requireRows: true },
-    );
-    return att.recorded_at ?? '';
+    return { id: att.id, recordedAt: att.recorded_at ?? '' };
   }
 
   /** fix-377-m: clases de la matrícula canceladas desde un instante (¿la falta disparó la penalización?). */
@@ -417,7 +531,7 @@ export class AsistenciaClaseBFacade {
 
       // fix-362-m: requireRows — si no hay fila de asistencia vigente (o la RLS la filtra), el
       // update no toca nada y sin esto el toast decía "Justificación registrada" igual.
-      assertWriteOk(
+      const result = assertWriteOk(
         await this.supabase.client
           .from('class_b_practice_attendance')
           .update({ justification: reason, status: 'excused' })
@@ -425,7 +539,7 @@ export class AsistenciaClaseBFacade {
           .eq('student_id', enrollment.student_id)
           // fix-191-m: nunca reescribir el registro histórico de una ocurrencia ya reagendada.
           .is('archived_at', null)
-          .select('id'),
+          .select('id, recorded_at'),
         { requireRows: true },
       );
 
@@ -435,6 +549,18 @@ export class AsistenciaClaseBFacade {
         ),
       );
       this.toast.success('Justificación registrada');
+
+      // fix-379-m (G05): justificar no devuelve las clases que la falta ya canceló.
+      const recordedAt = (result.data as { recorded_at: string | null }[])[0]?.recorded_at ?? '';
+      const canceladas = await this.countCancelledSince(row.enrollmentId, recordedAt);
+      if (canceladas > 0) {
+        this.toast.warning(
+          'Hay clases que siguen canceladas',
+          `${canceladas} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo desde la ficha del alumno.`,
+        );
+      }
+      // fix-379-m (G06): la falta justificada deja de contar en el rail.
+      await this.refreshAlertasSilently();
     } catch (err) {
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la justificación'));
     } finally {
@@ -480,10 +606,31 @@ export class AsistenciaClaseBFacade {
         return;
       }
 
+      // fix-391-m: cancelar a mano también es penalizar. Se registra en la matrícula, como hace
+      // la regla automática, para que esas faltas no vuelvan a ofrecer "Eliminar" cuando al
+      // alumno se le reagenden las clases.
+      const stamp = await this.supabase.client
+        .from('enrollments')
+        .update({ absence_penalty_applied_at: new Date().toISOString() })
+        .eq('id', enrollmentId)
+        .select('id');
+      const stamped = !stamp.error && !!stamp.data?.length;
+
       this._alertas.update((rows) =>
-        rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: false } : r)),
+        rows.map((r) =>
+          r.enrollmentId === enrollmentId
+            ? { ...r, horarioActivo: false, parPenalizado: stamped || r.parPenalizado }
+            : r,
+        ),
       );
-      this.toast.success('Horario eliminado');
+      if (stamped) {
+        this.toast.success('Horario eliminado');
+      } else {
+        this.toast.warning(
+          'Horario eliminado, sin registrar la penalización',
+          'Si se reagendan sus clases, la alerta volverá a ofrecer "Eliminar". Avisa al administrador.',
+        );
+      }
     } catch {
       this.toast.error('Error al eliminar el horario');
     } finally {
@@ -593,9 +740,10 @@ export class AsistenciaClaseBFacade {
 
       await this.notifications.notifyUsers([userId], {
         subject: 'Recordatorio de asistencia',
+        // fix-380-m: las faltas pueden no ser seguidas; y "1 falta consecutivas" no concordaba.
         message: `Registramos ${alerta.faltasConsecutivas} ${
           alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas'
-        } consecutivas en tus clases prácticas. Contáctanos para reagendar antes de perder tu horario.`,
+        } sin justificar en tus clases prácticas. Contáctanos para reagendar antes de perder tu horario.`,
         referenceType: 'class_b',
       });
 
@@ -727,12 +875,8 @@ export class AsistenciaClaseBFacade {
       };
       if (vehicleId !== undefined) payload['vehicle_id'] = vehicleId;
 
-      const { error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update(payload)
-        .eq('id', sessionId);
-
-      if (error) throw error;
+      // fix-388-m: solo se inicia una clase que sigue pendiente.
+      await this.moveSession(sessionId, 'scheduled', payload, 'start');
 
       this._clasesPracticas.update((rows) =>
         rows.map((r) =>
@@ -754,6 +898,10 @@ export class AsistenciaClaseBFacade {
       // vehículo anterior y los KPIs sin recalcular hasta recargar).
       await this.refreshSilently();
     } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        throw err;
+      }
       const sanitized = this.sanitizer.sanitize(err);
       this.toast.error('Error al iniciar la clase', sanitized.message);
       throw new Error(sanitized.message);
@@ -772,9 +920,11 @@ export class AsistenciaClaseBFacade {
     try {
       const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
 
-      const { error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update({
+      // fix-388-m: solo se finaliza una clase que sigue en curso.
+      await this.moveSession(
+        payload.sessionId,
+        'in_progress',
+        {
           status: 'completed',
           end_time: chileTimeOfDay(),
           km_end: payload.kmEnd,
@@ -785,10 +935,9 @@ export class AsistenciaClaseBFacade {
               : null,
           student_signature: !!payload.studentSignature,
           instructor_signature: !!payload.instructorSignature,
-        })
-        .eq('id', payload.sessionId);
-
-      if (error) throw error;
+        },
+        'finish',
+      );
 
       // fix-362-m: a esta altura la clase YA quedó finalizada. Si falla el KM o la asistencia no
       // se lanza (el catch diría "Error al finalizar la clase" sobre una clase finalizada): se
@@ -838,7 +987,11 @@ export class AsistenciaClaseBFacade {
         // fix-373-m: desde Asistencia no se evalúa (fix-115-m); solo se registra la asistencia.
         this.toast.success('Clase finalizada', 'Asistencia registrada.');
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        throw err;
+      }
       this.toast.error('Error al finalizar la clase');
       throw new Error('finishClass failed');
     } finally {
@@ -877,8 +1030,9 @@ export class AsistenciaClaseBFacade {
     // spec 0048-b: -1 = la cancelación automática está desactivada en la sede. Si el alumno
     // igual quedó con 2 faltas seguidas, se avisa que su agenda NO se canceló (AC-E2).
     if (cancelledCount === -1) {
+      // fix-379-m: 'danger' = faltas en dos clases seguidas (la regla de la RPC).
       const quedoEnRiesgo = this._alertas().some(
-        (a) => a.enrollmentId === enrollmentId && a.faltasConsecutivas >= 2,
+        (a) => a.enrollmentId === enrollmentId && a.nivel === 'danger',
       );
       if (quedoEnRiesgo) {
         this.toast.info(
@@ -931,10 +1085,13 @@ export class AsistenciaClaseBFacade {
       branchMap.set(b.id, b.name);
     }
 
+    const requestToken = this.dataGuard.next();
     const practicas = await this.fetchPracticas(branchId, start, endExclusive, branchMap);
+    if (!this.dataGuard.isCurrent(requestToken)) return;
     this._clasesPracticas.set(practicas);
 
     const alertas = await this.fetchAlertas(branchId, branchMap);
+    if (!this.dataGuard.isCurrent(requestToken)) return;
     this._alertas.set(alertas);
 
     this.computeKpis(practicas, alertas);
@@ -1058,12 +1215,14 @@ export class AsistenciaClaseBFacade {
         class_b_sessions!inner(
           id,
           enrollment_id,
+          class_number,
           status,
           scheduled_at,
           enrollments!inner(
             id,
             branch_id,
             status,
+            absence_penalty_applied_at,
             students!inner(
               id,
               users!inner(first_names, paternal_last_name)
@@ -1098,6 +1257,8 @@ export class AsistenciaClaseBFacade {
         sessionStatus: string;
       }
     >();
+    const absences: ClassBAbsence[] = [];
+    const penalizedAt = new Map<number, string | null>();
 
     for (const row of data ?? []) {
       const session = row.class_b_sessions as any;
@@ -1120,24 +1281,39 @@ export class AsistenciaClaseBFacade {
           sessionStatus: session.status,
         });
       }
-      enrollmentAbsences.get(enrollId)!.dates.push(row.recorded_at ?? session.scheduled_at);
+      // fix-379-m: la fecha de la falta es la de la clase, no la de cuándo se registró.
+      enrollmentAbsences.get(enrollId)!.dates.push(session.scheduled_at ?? row.recorded_at);
+      absences.push({
+        enrollmentId: enrollId,
+        classNumber: session.class_number ?? null,
+        recordedAt: row.recorded_at ?? null,
+      });
+      penalizedAt.set(enrollId, enrollment.absence_penalty_applied_at ?? null);
     }
 
     const sinHorario = await this.fetchEnrollmentsWithRemovedSchedule([
       ...enrollmentAbsences.keys(),
     ]);
+    // fix-379-m: rojo solo con faltas en dos clases seguidas — la regla de la RPC y del Dashboard.
+    const conFaltasSeguidas = new Set(enrollmentsWithConsecutiveAbsences(absences));
+    // fix-391-m: de esos, los que todavía no fueron penalizados (J07: un par ya penalizado no
+    // vuelve a contar). Solo ellos ofrecen "Eliminar".
+    const sinPenalizar = new Set(enrollmentsWithUnpenalizedPair(absences, penalizedAt));
 
     const alertas: AlertaFaltaConsecutiva[] = [];
     for (const [, info] of enrollmentAbsences) {
       if (info.dates.length >= 1) {
+        const dates = [...info.dates].sort().reverse();
         alertas.push({
           studentId: info.studentId,
           enrollmentId: info.enrollmentId,
           alumnoName: info.alumnoName,
           faltasConsecutivas: info.dates.length,
-          nivel: info.dates.length >= 2 ? 'danger' : 'warning',
-          ultimaFechaFalta: info.dates[0] ?? '',
+          nivel: conFaltasSeguidas.has(info.enrollmentId) ? 'danger' : 'warning',
+          ultimaFechaFalta: dates[0] ?? '',
           horarioActivo: !sinHorario.has(info.enrollmentId),
+          parPenalizado:
+            conFaltasSeguidas.has(info.enrollmentId) && !sinPenalizar.has(info.enrollmentId),
           branchId: info.branchId,
           branchName: branchMap.get(info.branchId) ?? 'Sin sede',
         });

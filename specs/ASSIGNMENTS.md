@@ -85,17 +85,14 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
-| ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | fix | P0 | i | E2E · Alta · ⚠️ confirmar quién cierra clases sin portal Instructor |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-030 | Testing: Dashboards | `m` | fix | P1 | i | Integración · Media · correr al final |
 | ASG-i-031 | Testing: Servicios especiales | `m` | fix | P2 | i | Funcional · Baja |
 | ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
 | ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
-| ASG-i-034 | Testing: Instructores, secretarias y usuarios | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
-| ASG-i-037 | Testing transversal: multi-sede, responsive, temas, app-like | `b` | fix | P0 | i | E2E · Alta · fuga entre sedes = bloqueante |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
@@ -279,7 +276,6 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
-| ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | `m` | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-11 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 
@@ -442,6 +438,7 @@
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
 | ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
 | ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
+| ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 
 ---
