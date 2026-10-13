@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
+import { ModalFocusDirective } from '@core/directives/modal-focus.directive';
 import { cycleMoveTargets, groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { filterBySearch } from '@core/utils/search-filter.utils';
@@ -53,6 +54,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
     CardHoverDirective,
     AnimateInDirective,
     ModalOverlayDirective,
+    ModalFocusDirective,
     StableWidthDirective,
   ],
   styles: `
@@ -445,6 +447,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           role="dialog"
           aria-modal="true"
           aria-label="Elegir destinatarios y enviar enlace Zoom"
+          appModalFocus
           (click)="closeSendPanel()"
           (document:keydown.escape)="closeSendPanel()"
         >
@@ -557,6 +560,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           role="dialog"
           aria-modal="true"
           aria-label="Incorporar alumno de otro ciclo"
+          appModalFocus
           (click)="closeAddPanel()"
           (document:keydown.escape)="closeAddPanel()"
         >
@@ -613,6 +617,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     [ngModel]="addableSearchQuery()"
                     (ngModelChange)="addableSearchQuery.set($event)"
                     data-llm-description="Buscar alumno candidato a incorporar"
+                    data-modal-autofocus
                   />
                 </div>
                 @if (filteredAddableStudents().length === 0) {

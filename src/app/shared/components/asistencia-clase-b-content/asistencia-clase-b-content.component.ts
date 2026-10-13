@@ -24,6 +24,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
+import { ModalFocusDirective } from '@core/directives/modal-focus.directive';
 import { todayIso } from '@core/utils/date.utils';
 import { visibleWithLoadMore } from '@core/utils/layout-tier.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
@@ -80,6 +81,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     CardHoverDirective,
     AnimateInDirective,
     ModalOverlayDirective,
+    ModalFocusDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
     EmptyStateComponent,
@@ -709,6 +711,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           role="dialog"
           aria-modal="true"
           aria-label="Justificar inasistencia"
+          appModalFocus
           (click)="closeJustifyModal()"
           (document:keydown.escape)="closeJustifyModal()"
         >
@@ -735,6 +738,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               rows="3"
               placeholder="Ej: Certificado médico presentado..."
               data-llm-description="textarea for absence justification reason"
+              data-modal-autofocus
               [value]="justifyReason()"
               (input)="justifyReason.set($any($event.target).value)"
             ></textarea>
@@ -762,6 +766,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           role="dialog"
           aria-modal="true"
           aria-label="Motivo de la justificación"
+          appModalFocus
           (click)="closeViewMotivo()"
           (document:keydown.escape)="closeViewMotivo()"
         >
