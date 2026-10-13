@@ -17,7 +17,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
-import { groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
+import { cycleMoveTargets, groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { filterBySearch } from '@core/utils/search-filter.utils';
 import type {
@@ -748,11 +748,9 @@ export class CiclosTeoricosContentComponent {
   /** Agrupa el selector en Activos / Finalizados para que la lista no se vuelva ilegible con el historial. */
   protected readonly cycleSelectGroups = computed(() => groupCyclesByStatus(this.cycles()));
 
-  /** Ciclos distintos al actual, para mover/traer alumnos. */
+  /** Ciclos a los que se puede cambiar un alumno: los demás de la sede del ciclo elegido. */
   protected readonly otherCycleOptions = computed(() =>
-    this.cycles()
-      .filter((c) => c.id !== this.selectedCycleId())
-      .map((c) => ({ label: c.label, value: c.id })),
+    cycleMoveTargets(this.cycles(), this.selectedCycleId()),
   );
 
   protected readonly selectedRecipientCount = computed(() => this.recipientSelection().size);
