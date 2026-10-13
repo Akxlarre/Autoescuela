@@ -153,7 +153,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                   </div>
                   <div>
                     <h2 class="font-bold text-text-primary">Registro de Ingresos</h2>
-                    <p class="text-compact text-text-muted mt-0.5">
+                    <p class="cuadratura-card-desc text-compact text-text-muted mt-0.5">
                       Detalle de pagos y boletas recibidos en el día.
                     </p>
                   </div>
@@ -258,11 +258,18 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               >
                                 {{ fila.nBoleta ?? '—' }}
                               </span>
-                              <span
-                                class="text-compact font-semibold text-text-primary truncate"
-                                [class.line-through]="!!fila.anulacion"
-                              >
-                                {{ fila.glosa }}
+                              <span class="flex flex-col min-w-0">
+                                <span
+                                  class="text-compact font-semibold text-text-primary truncate"
+                                  [class.line-through]="!!fila.anulacion"
+                                >
+                                  {{ fila.glosa }}
+                                </span>
+                                <!-- fix-394-m: en la tabla mas angosta la columna Medio se
+                                     oculta y el medio de pago baja a esta segunda linea. -->
+                                <span class="medio-inline text-2xs text-text-muted truncate">
+                                  {{ medioDePago(fila) }}
+                                </span>
                               </span>
                               <span
                                 class="col-monto text-compact text-right text-text-secondary tabular-nums"
@@ -483,7 +490,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                   </div>
                   <div>
                     <h2 class="font-bold text-text-primary">Egresos / Retiros</h2>
-                    <p class="text-compact text-text-muted mt-0.5">
+                    <p class="cuadratura-card-desc text-compact text-text-muted mt-0.5">
                       Retiros y gastos pagados desde la caja.
                     </p>
                   </div>
@@ -848,6 +855,41 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
 
       .col-medio {
         display: block;
+      }
+    }
+
+    /* fix-394-m: tercer modo, bajo 520px de tabla. Es el ancho que queda cuando Ingresos y
+       Egresos van lado a lado en una celda de 900 a ~1200px (pantallas de ~1280px): con el modo
+       compacto de arriba las columnas fijas, los espacios y el padding suman ~366px y a la glosa
+       (1fr) le quedaban ~18px. Aca la columna Medio se libera y el medio de pago baja a una
+       segunda linea bajo la glosa (medio-inline); el padding lateral se achica.
+       Va DESPUES del modo compacto: con la misma especificidad, gana por orden. */
+    .medio-inline {
+      display: none;
+    }
+
+    @container ingresos-tabla (max-width: 519px) {
+      .ingresos-grid {
+        grid-template-columns: 64px 1fr 88px 32px;
+        padding-inline: 1rem;
+      }
+
+      .col-medio {
+        display: none;
+      }
+
+      .medio-inline {
+        display: block;
+      }
+    }
+
+    /* fix-394-m: en ese mismo rango (dos cards lado a lado en menos de 1200px) el encabezado
+       de cada card media ~150px: el titulo partia en dos lineas y la descripcion en tres. Con
+       el alto fijo del modo app-like, a la lista le quedaban ~50px, menos de una fila. Sin la
+       descripcion el encabezado vuelve a ~90px y ese alto pasa a la lista. */
+    @container cuadratura-stack (min-width: 900px) and (max-width: 1199px) {
+      .cuadratura-card-desc {
+        display: none;
       }
     }
 
