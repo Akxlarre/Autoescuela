@@ -87,6 +87,8 @@ export class SecretariaAsistenciaComponent implements OnInit {
 
   ngOnInit(): void {
     const branchId = this.branchId;
+    // fix-386-m: la pantalla siempre abre en hoy, no en el día que quedó elegido la vez anterior.
+    this.facade.enterToday();
     this.facade.setBranchFilter(branchId);
     this.ciclos.setBranchFilter(branchId);
     void this.facade.initialize();

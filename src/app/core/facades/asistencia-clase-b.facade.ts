@@ -9,6 +9,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { chileDayRange, chileTimeOfDay, formatChileTime } from '@core/utils/chile-time.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   NoRowsAffectedError,
   assertWriteOk,
@@ -88,6 +89,10 @@ export class AsistenciaClaseBFacade {
   private _initialized = false;
 
   // ── 2. Estado público ──────────────────────────────────────────────────────
+  /** Sede con la que se hizo la última carga completa (fix-386-m); `undefined` = ninguna. */
+  private _loadedBranchId: number | null | undefined = undefined;
+  /** Descarta la respuesta de una carga que quedó obsoleta (facades.md §7). */
+  private readonly dataGuard = createRequestGuard();
 
   readonly selectedDate = this._selectedDate.asReadonly();
   readonly kpis = this._kpis.asReadonly();
@@ -128,15 +133,34 @@ export class AsistenciaClaseBFacade {
     await this.reload();
   }
 
-  /** SWR initialize. */
+  /**
+   * fix-386-m: al abrir la pantalla la fecha vuelve a hoy (hora de Chile). El facade es un
+   * singleton: sin esto quedaba el día que dejó elegido quien la usó antes, incluso otro usuario
+   * tras cerrar sesión. Si estaba en otro día, lo cargado deja de valer.
+   */
+  enterToday(): void {
+    const today = todayIso();
+    if (this._selectedDate() === today) return;
+    this._selectedDate.set(today);
+    this._initialized = false;
+  }
+
+  /**
+   * SWR initialize. Solo reutiliza lo que hay en memoria si se cargó con la misma sede
+   * (fix-386-m): los datos de otra sede, o del usuario anterior, no se muestran ni un instante.
+   */
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this._branchFilter();
+    if (this._initialized && branchId === this._loadedBranchId) {
       void this.refreshSilently();
       return;
     }
     this._initialized = true;
     this._isLoading.set(true);
     try {
+    this._loadedBranchId = branchId;
+    this._clasesPracticas.set([]);
+    this._alertas.set([]);
       await this.fetchData();
     } finally {
       this._isLoading.set(false);
@@ -933,10 +957,13 @@ export class AsistenciaClaseBFacade {
 
       const student = row.enrollments?.students?.users;
       const alumnoName = student
+    const requestToken = this.dataGuard.next();
         ? `${student.first_names ?? ''} ${student.paternal_last_name ?? ''}`.trim()
+    if (!this.dataGuard.isCurrent(requestToken)) return;
         : null;
 
       // fix-191-m: solo la asistencia VIGENTE describe el estado de la sesión. Una fila
+    if (!this.dataGuard.isCurrent(requestToken)) return;
       // archivada es el registro histórico de una ocurrencia anterior de esa misma sesión
       // (reagendamiento RF-053, que recicla la fila en vez de crear una nueva); tomarla
       // pintaba "Ausente" una clase que está agendada.

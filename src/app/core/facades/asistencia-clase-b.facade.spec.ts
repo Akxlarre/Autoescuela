@@ -142,6 +142,82 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis?.tasaAsistencia).toBe(100);
   });
 
+  describe('fix-386-m: datos y fecha de otro alcance', () => {
+    it('con otra sede no reutiliza lo que hay en memoria: vacía y carga con skeleton', async () => {
+      facade.setBranchFilter(null);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, branchId: 2 })]);
+      (facade as any)._alertas.set([makeAlerta({ branchId: 2 })]);
+
+      facade.setBranchFilter(1);
+      const pending = facade.initialize();
+
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await pending;
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('con la misma sede la re-entrada no muestra skeleton (SWR)', async () => {
+      facade.setBranchFilter(1);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      const pending = facade.initialize();
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      await pending;
+    });
+
+    it('enterToday devuelve la fecha a hoy y obliga a cargar de nuevo', async () => {
+      vi.useFakeTimers();
+      // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+      vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+      await facade.setDate('2026-10-01');
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      facade.enterToday();
+      const pending = facade.initialize();
+      vi.useRealTimers();
+
+      expect(facade.selectedDate()).toBe('2026-10-06');
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await pending;
+    });
+
+    it('enterToday no descarta lo cargado si la fecha ya era hoy', async () => {
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      facade.enterToday();
+      const pending = facade.initialize();
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      await pending;
+    });
+
+    it('una respuesta vieja que llega tarde no pisa a la más nueva', async () => {
+      let resolveOld: (rows: ClasePracticaRow[]) => void = () => undefined;
+      const fetchPracticas = vi
+        .spyOn(facade as any, 'fetchPracticas')
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveOld = resolve)))
+        .mockResolvedValueOnce([makeRow({ id: 2, alumnoName: 'Nueva' })]);
+      vi.spyOn(facade as any, 'fetchAlertas').mockResolvedValue([]);
+
+      const old = (facade as any).fetchData();
+      await (facade as any).fetchData();
+      resolveOld([makeRow({ id: 1, alumnoName: 'Vieja' })]);
+      await old;
+
+      expect(fetchPracticas).toHaveBeenCalledTimes(2);
+      expect(facade.clasesPracticas().map((r) => r.alumnoName)).toEqual(['Nueva']);
+    });
+  });
+
   it('fix-373-m: la tasa solo considera clases registradas (las pendientes no cuentan)', () => {
     (facade as any).computeKpis(
       [
