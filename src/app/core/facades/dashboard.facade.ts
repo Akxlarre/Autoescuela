@@ -125,7 +125,9 @@ export class DashboardFacade {
     const yesterdayRange = chileDayRange(addDaysIso(todayStr, -1));
     const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -7)).start;
     const firstOfPrevMonth = addMonthsIso(firstOfMonth, -1);
-    const lastOfPrevMonthStr = addDaysIso(firstOfMonth, -1);
+    // Tramo comparable del mes anterior: día 1 → mismo día del mes (fix-399-m). Comparar lo que
+    // va del mes contra el mes anterior completo daba casi siempre una caída.
+    const sameDayPrevMonthStr = addMonthsIso(todayStr, -1);
 
     let studentsQuery: any = this.supabase.client
       .from('enrollments')
@@ -173,7 +175,7 @@ export class DashboardFacade {
       .select('total_amount, enrollments!inner(branch_id)')
       .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', firstOfPrevMonth)
-      .lte('payment_date', lastOfPrevMonthStr);
+      .lte('payment_date', sameDayPrevMonthStr);
     if (branchId !== null)
       prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
 
@@ -191,7 +193,7 @@ export class DashboardFacade {
       .select('price')
       .eq('paid', true)
       .gte('sale_date', firstOfPrevMonth)
-      .lte('sale_date', lastOfPrevMonthStr);
+      .lte('sale_date', sameDayPrevMonthStr);
     if (branchId !== null)
       prevSpecialRevenueQuery = prevSpecialRevenueQuery.eq('branch_id', branchId);
 
@@ -294,9 +296,9 @@ export class DashboardFacade {
         {
           id: 'revenue',
           label: 'Ingresos Mes',
-          value: revenue / 1000000,
+          // Monto completo en pesos; la pantalla le pone el separador de miles (fix-399-m).
+          value: revenue,
           prefix: '$',
-          suffix: 'M',
           trend: revenueTrend,
           trendLabel: 'vs mes pasado',
           trendSuffix: '%',

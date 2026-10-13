@@ -84,6 +84,24 @@ describe('SecretariaDashboardComponent', () => {
     component = TestBed.createComponent(SecretariaDashboardComponent).componentInstance;
   });
 
+  // ─── fix-399-m: los KPIs del hero llevan separador de miles ────────────────
+  describe('heroKpis (fix-399-m)', () => {
+    it('formatea el valor con separador de miles: $1234567 se lee $1.234.567', () => {
+      const facade = TestBed.inject(DashboardFacade) as any;
+      facade.data.update((d: object) => ({
+        ...d,
+        kpis: [
+          { id: 'revenue', label: 'Ingresos Mes', value: 1_234_567, prefix: '$' },
+          { id: 'classes', label: 'Clases Hoy', value: 0 },
+        ],
+      }));
+
+      const [revenue, classes] = component.heroKpis();
+      expect(`${revenue.prefix}${revenue.value}${revenue.suffix ?? ''}`).toBe('$1.234.567');
+      expect(classes.value).toBe('0');
+    });
+  });
+
   // ─── fix-080: Registrar Pago abre el drawer real (no navega a /pagos) ──────
   describe('handleQuickAction("qa3") (fix-080)', () => {
     it('llama pagosFacade.seleccionarParaPago(null) e initialize() de forma síncrona', () => {

@@ -115,7 +115,7 @@ describe('DashboardFacade — KPI "Ingresos Mes" incluye servicios especiales (f
     expect(builders['special_service_sales']?.length).toBe(2);
     expect(builders['special_service_sales'][0].eq).toHaveBeenCalledWith('paid', true);
     const revenue = (facade as any).data().kpis.find((k: { id: string }) => k.id === 'revenue');
-    expect(revenue.value).toBe(1.5); // (1.000.000 + 500.000) / 1.000.000
+    expect(revenue.value).toBe(1_500_000); // 1.000.000 + 500.000 (monto completo, fix-399-m)
   });
 });
 
@@ -198,6 +198,59 @@ describe('DashboardFacade — KPI "Clases Hoy" usa el criterio del panel (fix-39
     const data = (facade as any).data();
     expect(data.kpis.find((k: { id: string }) => k.id === 'classes').value).toBe(3);
     expect(data.hero.classesToday).toBe(3);
+  });
+});
+
+describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fix-399-m)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  const revenueKpi = (facade: DashboardFacade) =>
+    (facade as any).data().kpis.find((k: { id: string }) => k.id === 'revenue');
+
+  it('entrega el monto completo en pesos, sin dividir por un millón ni sufijo "M"', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'payments' && n === 0 ? { data: [{ total_amount: 1_234_567 }] } : {},
+    );
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    const kpi = revenueKpi(facade);
+    expect(kpi.value).toBe(1_234_567);
+    expect(kpi.prefix).toBe('$');
+    expect(kpi.suffix).toBeUndefined();
+  });
+
+  it('compara contra el mismo tramo del mes anterior (13 oct → 1–13 sep)', async () => {
+    // 12:00 hora Chile del 13 de octubre.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-13T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente((tabla, n) => {
+      if (tabla !== 'payments') return {};
+      return { data: [{ total_amount: n === 0 ? 150_000 : 100_000 }] };
+    });
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Segunda consulta de cada tabla = período anterior.
+    for (const [tabla, columna] of [
+      ['payments', 'payment_date'],
+      ['special_service_sales', 'sale_date'],
+    ]) {
+      const anterior = builders[tabla][1];
+      expect(anterior.gte).toHaveBeenCalledWith(columna, '2026-09-01');
+      expect(anterior.lte).toHaveBeenCalledWith(columna, '2026-09-13');
+    }
+    expect(revenueKpi(facade).trend).toBe(50);
+  });
+
+  it('el 31 de marzo compara contra todo febrero', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-31T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    expect(builders['payments'][1].lte).toHaveBeenCalledWith('payment_date', '2026-02-28');
   });
 });
 

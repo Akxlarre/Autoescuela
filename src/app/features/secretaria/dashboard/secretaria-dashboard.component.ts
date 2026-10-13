@@ -367,7 +367,8 @@ export class SecretariaDashboardComponent implements OnInit {
     this.kpis().map((k) => ({
       id: k.id,
       label: k.label,
-      value: k.value,
+      // El hero imprime el valor tal cual: con separador de miles, $1234567 se lee $1.234.567.
+      value: k.value.toLocaleString('es-CL'),
       prefix: k.prefix,
       suffix: k.suffix,
       trend: k.trend,
