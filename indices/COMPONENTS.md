@@ -472,7 +472,7 @@
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
 | `app-today-ops-strip` | `ops`, `loading` | — | `src/app/shared/components/today-ops-strip/today-ops-strip.component.ts` |
 | `app-user-panel` | `user`, `darkMode` | `action`, `toggleTheme`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
-| `app-vehiculo-card` | `vehiculo`, `loading`, `basePath`, `sedeLabel` | `viewAgenda`, `manageDocuments`, `editVehicle` | `src/app/shared/components/vehiculo-card/vehiculo-card.component.ts` | **spec 0051-b:** el botón Editar se muestra solo si `vehiculo().canManage` (lo calcula el facade con `canManageVehicle()`); Agenda, Documentos y Mantenimientos siempre.
+| `app-vehiculo-card` | `vehiculo`, `loading`, `basePath`, `sedeLabel` | `viewAgenda`, `manageDocuments`, `editVehicle` | `src/app/shared/components/vehiculo-card/vehiculo-card.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->
