@@ -404,7 +404,7 @@
 | `app-ex-alumnos-profesional-content` | `egresados`, `isLoading`, `backRoute`, `basePath`, `isExporting` | `reEnroll`, `exportRequested` | `src/app/shared/components/ex-alumnos-profesional-content/ex-alumnos-profesional-content.component.ts` |
 | `app-exec-period-filter` | `preset`, `range`, `today` | `rangeChange` | `src/app/shared/components/exec-period-filter/exec-period-filter.component.ts` |
 | `app-export-menu` | `exporting`, `disabled`, `llmSubject` | `exportRequested` | `src/app/shared/components/export-menu/export-menu.component.ts` |
-| `app-flota-list-content` | `vehicles`, `kpis`, `isLoading`, `basePath`, `showSedeColumn`, `branches` | `newVehicle`, `editVehicle`, `viewAgenda`, `viewMaintenances`, `manageDocuments`, `typeFilterChange`, `statusFilterChange`, `searchChange`, `refreshRequested` | `src/app/shared/components/flota-list-content/flota-list-content.component.ts` |
+| `app-flota-list-content` | `vehicles`, `kpis`, `isLoading`, `basePath`, `showSedeColumn`, `branches` | `newVehicle`, `editVehicle`, `viewAgenda`, `viewMaintenances`, `manageDocuments`, `statusFilterChange`, `searchChange`, `refreshRequested` | `src/app/shared/components/flota-list-content/flota-list-content.component.ts` |
 | `app-help-hint` | `text` | — | `src/app/shared/components/help-hint/help-hint.component.ts` |
 | `app-historial-cuadraturas-content` | `cierres`, `isLoading`, `mesActual`, `anioActual`, `backRoute`, `backLabel`, `isExporting` | `mesAnterior`, `mesSiguiente`, `exportarMes`, `cierreClicked` | `src/app/shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component.ts` |
 | `app-horizontal-bar-chart` | `title`, `subtitle`, `data` | — | `src/app/shared/components/horizontal-bar-chart/horizontal-bar-chart.component.ts` |
