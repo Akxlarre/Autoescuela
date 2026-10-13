@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import {
@@ -157,12 +158,14 @@ export class DashboardFacade {
     let revenueQuery: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', firstOfMonth);
     if (branchId !== null) revenueQuery = revenueQuery.eq('enrollments.branch_id', branchId);
 
     let prevRevenueQuery: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', firstOfPrevMonth)
       .lte('payment_date', lastOfPrevMonthStr);
     if (branchId !== null)

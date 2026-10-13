@@ -428,6 +428,9 @@ export class EnrollmentPaymentFacade {
       .select('*')
       .eq('enrollment_id', enrollmentId)
       .eq('type', 'enrollment')
+      // Un pago anulado sigue en la tabla: sin este filtro, uno anulado más uno nuevo son dos
+      // filas y maybeSingle() falla (spec 0025-m). 'pending' sí entra: es el "Cobrar después".
+      .neq('status', 'anulado')
       .maybeSingle();
 
     if (payment) {

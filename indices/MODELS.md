@@ -100,8 +100,8 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `DiscountApplication` | `dto` | `src/app/core/models/dto/discount-application.model.ts` |
 | `Discount` | `dto` | `src/app/core/models/dto/discount.model.ts` |
 | `DocumentType`, `DocumentTemplate` | `dto` | `src/app/core/models/dto/document-template.model.ts` |
-| `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
 | `EnrollmentPaymentOverrideKind`, `EnrollmentPaymentOverride` | `dto` | `src/app/core/models/dto/enrollment-payment-override.model.ts` |
+| `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
 | `ExecKpisDto`, `ExecMonthlySeriesRowDto`, `ExecInstructorHoursRowDto`, `ExecReceivablesRowDto`, `ExecTodayOpsDto` | `dto` | `src/app/core/models/dto/executive-dashboard.model.ts` |
 | `Expense` | `dto` | `src/app/core/models/dto/expense.model.ts` |
 | `FixedExpense` | `dto` | `src/app/core/models/dto/fixed-expense.model.ts` |
@@ -164,7 +164,6 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `FinishClassPayload` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
 | `AuditAction`, `AuditLogRow` | `ui` | `src/app/core/models/ui/audit-log-row.model.ts` |
-| `EstadoPagoClaseTipo`, `EstadoPagoClase` | `ui` | `src/app/core/models/ui/estado-pago-clase.model.ts` |
 | `BranchOption`, `BranchCoursePrice` | `ui` | `src/app/core/models/ui/branch.model.ts` |
 | `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
@@ -185,6 +184,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PaymentMethod`, `PaymentMethodOption`, `PricingBreakdown`, `DiscountData`, `AvailableDiscount`, `SingularPaymentAlert`, `EnrollmentPaymentData` | `ui` | `src/app/core/models/ui/enrollment-payment.model.ts` |
 | `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
 | `EnrollmentWizardStep`, `StepStatus`, `StepConfig`, `CourseSummary`, `Requirement`, `SidebarSummary`, `EnrollmentWizardState`, `DraftSummary` | `ui` | `src/app/core/models/ui/enrollment-wizard.model.ts` |
+| `EstadoPagoClaseTipo`, `EstadoPagoClase` | `ui` | `src/app/core/models/ui/estado-pago-clase.model.ts` |
 | `CeldaNota`, `FilaEvaluacion`, `CursoEstado`, `CursoResumen`, `PromocionConCursos`, `GrillaEvaluacion` | `ui` | `src/app/core/models/ui/evaluaciones-profesional.model.ts` |
 | `ExecPeriodPreset`, `ExecPeriodOption`, `ExecDateRange`, `ExecRangeChange`, `DeltaKind`, `ExecDelta`, `DeltaTone`, `ExecKpi`, `ExecExpenseBreakdown`, `ExecKpiSummary`, `ExecMonthlyPoint`, `ExecMonthlySeries`, `InstructorHoursRow`, `StudentStageCounts`, `ReceivableAgingBucket`, `ReceivablesSummary`, `TodayOpsSummary`, `ExecKpiCard`, `ExecSection` | `ui` | `src/app/core/models/ui/executive-dashboard.model.ts` |
 | `AlumnoQuickActionType`, `AlumnoQuickAction`, `ActionResult`, `AlumnoResult`, `InstructorResult`, `SearchResult`, `SearchResultGroup` | `ui` | `src/app/core/models/ui/global-search.model.ts` |
@@ -197,7 +197,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
 | `TemplateVariable`, `TemplateVariableValues`, `TemplateDraft`, `TemplateRow` | `ui` | `src/app/core/models/ui/notification-template.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |
-| `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
+| `AlumnoDeudor`, `AnulacionPago`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
 | `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |
 | `PolicyParagraph`, `PolicyList`, `PolicyTable`, `PolicyBlock`, `PolicySection`, `PrivacyPolicyContent` | `ui` | `src/app/core/models/ui/privacy-policy.model.ts` |
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
@@ -216,6 +216,6 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `TaskRow`, `TaskWithReplies`, `TaskFilter`, `RoleMatrixKey`, `CreateTaskPayload`, `RecipientOption` | `ui` | `src/app/core/models/ui/task.model.ts` |
 | `UserRole`, `User` | `ui` | `src/app/core/models/ui/user.model.ts` |
 | `MaintenanceRow`, `MaintenanceKpis`, `ScheduledMaintenance`, `VehicleAgendaSlot` | `ui` | `src/app/core/models/ui/vehicle-detail.model.ts` |
-| `VehicleType`, `VehicleStatus`, `DocStatus`, `VehicleDocSummary`, `VehicleTableRow`, `FlotaKpis` | `ui` | `src/app/core/models/ui/vehicle-table.model.ts` |
+| `VehicleStatus`, `DocStatus`, `VehicleDocSummary`, `VehicleTableRow`, `FlotaKpis` | `ui` | `src/app/core/models/ui/vehicle-table.model.ts` |
 
 <!-- AUTO-GENERATED:END -->

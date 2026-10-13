@@ -64,6 +64,17 @@ describe('toFriendlyDbMessage', () => {
     expect(result).not.toContain('CAJA_CERRADA');
   });
 
+  it.each([
+    ['PAGO_YA_ANULADO', 'ya estaba anulado'],
+    ['ANULAR_SOLO_ADMIN', 'Solo un administrador'],
+    ['ANULAR_SIN_MOTIVO', 'motivo'],
+    ['ANULACION_INVALIDA', 'no se pueden modificar'],
+  ])('spec 0025-m: token %s se traduce sin mostrar el token', (token, fragmento) => {
+    const result = toFriendlyDbMessage({ code: 'P0001', message: token }, FALLBACK);
+    expect(result).toContain(fragmento);
+    expect(result).not.toContain(token);
+  });
+
   it('spec 0010-i: token PAGO_PENDIENTE_CLASE_7 manda al alumno a secretaría', () => {
     const result = toFriendlyDbMessage(
       { code: 'P0001', message: 'PAGO_PENDIENTE_CLASE_7' },

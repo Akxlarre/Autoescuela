@@ -41,8 +41,8 @@
 | `CardHoverDirective` | `[appCardHover]` | — | — | `src/app/core/directives/card-hover.directive.ts` |
 | `ClickOutsideDirective` | `[appClickOutside]` | `clickOutsideEnabled`, `clickOutsideExclude` | `clickOutside` | `src/app/core/directives/click-outside.directive.ts` |
 | `FileDropzoneDirective` | `[appFileDropzone]` | `dropzoneEnabled` | `filesDropped` | `src/app/core/directives/file-dropzone.directive.ts` |
-| `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
 | `ModalFocusDirective` | `[appModalFocus]` | — | — | `src/app/core/directives/modal-focus.directive.ts` |
+| `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
 | `PressFeedbackDirective` | `[appPressFeedback]` | `appPressFeedback` | — | `src/app/core/directives/press-feedback.directive.ts` |
 | `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |
 | `ScrollRevealDirective` | `[appScrollReveal]` | `appScrollReveal` | — | `src/app/core/directives/scroll-reveal.directive.ts` |

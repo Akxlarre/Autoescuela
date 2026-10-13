@@ -1,6 +1,6 @@
 # Spec 0025-m — Anular pagos en vez de borrarlos
 
-> **Status:** draft
+> **Status:** done
 > **Created:** 2026-10-13
 > **Owner:** Matías
 > **Priority:** P2
@@ -37,28 +37,69 @@ la BD, y ningún reporte suma plata que no entró.
 
 ## 2. User Stories
 
-- **US1**: Como {{rol}}, quiero {{capacidad}} para {{outcome}}.
-- **US2**: …
+- **US1**: Como admin, quiero anular un pago mal registrado indicando el motivo, para corregir la
+  Caja sin que el pago desaparezca.
+- **US2**: Como secretaria, quiero ver en la Caja y en la ficha del alumno que un pago fue anulado,
+  por quién, cuándo y por qué, para responder un reclamo sin pedir ayuda.
+- **US3**: Como admin, quiero que ningún total (saldo, Caja, Pagos, reportes, dashboards) cuente un
+  pago anulado, para que los números reflejen la plata que entró.
 
 ---
 
 ## 3. Acceptance Criteria (Gherkin)
 
-> Cada AC debe ser verificable empíricamente. Si no puedes escribir un test o un check
-> manual reproducible, el AC está mal formulado.
-
-- **AC1**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
-- **AC2**: …
+- **AC1**: Given un admin en la Caja del día con un pago de matrícula, When aprieta quitar,
+  Then se le pide un motivo obligatorio y, al confirmar, el pago queda `anulado` con quién, cuándo
+  y motivo. La fila no se borra de `payments`.
+- **AC2**: Given un pago anulado hoy, When cualquier rol abre la Caja del día, Then la fila aparece
+  tachada con la etiqueta "Anulado" y su motivo, sin botón de quitar, y **no suma** en los totales
+  de ingresos, en el arqueo, en el cierre ni en la exportación.
+- **AC3**: Given un pago anulado, When se lee la matrícula, Then `total_paid`, `pending_balance` y
+  `payment_status` equivalen a la suma de los pagos no anulados (lo recalcula el trigger, sin
+  cálculo en el cliente).
+- **AC4**: Given un pago anulado, When se abre la ficha del alumno (Clase B y Profesional),
+  Then el pago aparece tachado en el historial, con "Anulado", el motivo, quién y cuándo.
+- **AC5**: Given un pago anulado, When se abre Pagos, Then los indicadores (ingresos de hoy, del
+  mes, cantidad del mes y totales por método) no lo cuentan, y en el listado de recientes y en el
+  estado de cuenta aparece como "Anulado", tachado.
+- **AC6**: Given un pago anulado, When se abren Reportes Contables, el dashboard (recaudación del
+  mes y del anterior) y la alerta "pagos registrados hoy", Then ninguno lo cuenta.
+- **AC7**: Given un pago anulado, When se genera el reporte de pagos (PDF/Excel), Then aparece
+  marcado "Anulado" y no suma en los totales; y en la ficha de matrícula impresa no aparece.
+- **AC8**: Given una secretaria, When mira la Caja, Then no ve el botón de quitar en pagos de
+  matrícula; y si intenta anular directo contra la BD, la BD lo rechaza.
+- **AC9**: Given un pago de un día con caja cerrada, When el admin intenta anularlo, Then se
+  rechaza con el aviso que apunta a Historial de Cuadraturas (mismo de `fix-044-i`).
+- **AC10**: Given el código de la app, When una lectura de `payments` suma o cuenta sin declarar
+  qué estados incluye, Then un test guardián falla y nombra el archivo.
 
 ### Edge cases obligatorios
 
-- **AC-E1**: Given {{caso límite}}, When …, Then …
+- **AC-E1**: Given un pago ya anulado, When se intenta anularlo otra vez o modificarlo, Then la BD
+  lo rechaza: la anulación es definitiva (si fue un error, se registra el pago de nuevo).
+- **AC-E2**: Given una anulación sin motivo (vacío o solo espacios), When se envía, Then la BD la
+  rechaza; quién y cuándo los fija la BD, no el cliente.
+- **AC-E3**: Given una matrícula con un pago de matrícula anulado y uno nuevo, When se abre el
+  paso de pago de esa matrícula, Then carga el pago vigente sin error.
+- **AC-E4**: Given una matrícula en borrador vencida con pagos, When corre
+  `cleanup_expired_drafts`, Then los borra como hoy (el borrado real sigue solo para borradores).
+- **AC-E5**: Given un pago anulado, When el alumno abre su portal, Then lo ve como "Anulado" (no
+  como "Pendiente") y sin el motivo interno.
+- **AC-E6**: Given un cobro de curso singular o de servicio especial en la Caja, When se quita,
+  Then se comporta como hoy (se revierte a pendiente): esta spec no los cambia.
 
 ---
 
 ## 4. Out of scope
 
-- ❌ {{cosa que NO va}}
+- ❌ Mostrar las acciones del admin en la vista Auditoría (decisión de Matías, 2026-10-13). La
+  anulación igual queda en `audit_log`.
+- ❌ Anular desde la ficha del alumno o desde Pagos: solo desde la Caja del día.
+- ❌ Anular en un día con caja cerrada o "reabrir caja": se corrige con un ajuste de cuadratura.
+- ❌ Deshacer una anulación.
+- ❌ Anular gastos, anticipos, cursos singulares o servicios especiales.
+- ❌ Unificar `paid` / `completado` en la BD (no hay filas `completado` en el piloto).
+- ❌ Nota de crédito o anulación de boleta ante el SII.
 
 ---
 
@@ -109,26 +150,37 @@ la BD, y ningún reporte suma plata que no entró.
 
 ## 7. UX y flujos (preliminar)
 
-- Pantalla(s) afectada(s): Caja (Cuadratura), ficha del alumno (B y Profesional), Pagos.
-- Flujo principal (happy path): …
-- Estados especiales (loading, error, vacío): …
+- Pantallas afectadas: Caja (Cuadratura), ficha del alumno (B y Profesional), Pagos, portal del
+  alumno.
+- Flujo principal: admin en la Caja → quitar pago → modal con motivo obligatorio → la fila queda
+  tachada con "Anulado" y el motivo; los totales bajan; el saldo del alumno sube.
+- Errores: día cerrado, pago ya anulado o sin permiso muestran un aviso claro, nunca el de éxito.
 
 ---
 
 ## 8. Métricas de éxito post-launch
 
-- {{métrica}}
+- Ningún `DELETE` en `payments` de matrículas confirmadas en `audit_log` tras el despliegue.
 
 ---
 
-## 9. Notas / decisiones abiertas
+## 9. Notas / decisiones
 
-- [ ] ¿Quién puede anular: solo admin (como hoy el borrado) o también la secretaria?
-- [ ] ¿Desde dónde se anula: solo la Caja del día, o también desde la ficha del alumno y Pagos?
-- [ ] ¿La vista Auditoría debe mostrar las acciones del admin sobre pagos?
-- [ ] Un pago anulado que ya tenía boleta (`receipt_id`): ¿se permite anular?, ¿qué se muestra?
-- [ ] ¿Sigue existiendo el borrado real para algún caso? (El cron `cleanup_expired_drafts` y el
-  descarte de borradores sí borran: son matrículas que nunca se confirmaron.)
+Decididas por Matías el 2026-10-13:
+
+- [x] Anula solo el admin.
+- [x] Solo desde la Caja del día, como hoy.
+- [x] La vista Auditoría no cambia.
+- [x] La Caja deja de borrar; el borrado real queda solo para matrículas en borrador.
+
+Supuestos de la redacción (corregir si no corresponden):
+
+- Un pago con boleta asociada se puede anular igual; la boleta sigue visible en la fila.
+- El alumno ve "Anulado" en su portal, sin el motivo.
+- La ficha de matrícula impresa no lista los pagos anulados.
+
+Otras notas:
+
 - Observado en `fix-044-i`: la Caja y las RPC del dashboard ejecutivo cuentan `paid` y
   `completado`; el saldo solo `paid`. En el piloto no existe ninguna fila `completado`
   (`ASG-i-060`).
@@ -139,3 +191,5 @@ la BD, y ningún reporte suma plata que no entró.
 ## Changelog
 
 - 2026-10-13 — draft inicial por Matías (reclamada desde ASG-i-059)
+- 2026-10-13 — decisiones de alcance, user stories y criterios de aceptación
+- 2026-10-13 — implementada y verificada (ver acceptance.md)

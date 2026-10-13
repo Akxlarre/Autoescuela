@@ -83,6 +83,19 @@ export function toFriendlyDbMessage(err: unknown, fallback: string): string {
   if (err.message?.includes('PAGO_PENDIENTE_CLASE_7')) {
     return MENSAJE_PAGO_PENDIENTE_CLASE_7;
   }
+  // spec 0025-m: reglas de la anulación de un pago (trigger guard_anulacion_pago).
+  if (err.message?.includes('PAGO_YA_ANULADO')) {
+    return 'Este pago ya estaba anulado. La pantalla se actualizó.';
+  }
+  if (err.message?.includes('ANULAR_SOLO_ADMIN')) {
+    return 'Solo un administrador puede anular un pago.';
+  }
+  if (err.message?.includes('ANULAR_SIN_MOTIVO')) {
+    return 'Indica el motivo de la anulación.';
+  }
+  if (err.message?.includes('ANULACION_INVALIDA')) {
+    return 'Los datos de anulación de un pago no se pueden modificar a mano.';
+  }
   if (err.message?.includes('CIERRE_DEFINITIVO')) {
     return 'Esta caja ya se cerró (en otra pestaña o por otra persona). La pantalla se actualizó con el cierre guardado.';
   }

@@ -14,6 +14,7 @@ import {
 import { formatCLP } from '@core/utils/date.utils';
 import { buildCuadraturaHeroKpis } from '@core/utils/cuadratura-hero-kpis.utils';
 import { medioDePagoLabel } from '@core/utils/cuadratura-medio-pago.utils';
+import { formatAnulacionDetalle, resumenConAnulados } from '@core/utils/anulacion-pago.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -249,29 +250,41 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                             <div
                               class="ingresos-grid px-6 py-3.5 grid gap-2 items-center hover:bg-subtle transition-colors group"
                             >
-                              <span class="text-compact font-mono font-medium text-text-secondary">
+                              <!-- Pago anulado (spec 0025-m): tachado, con etiqueta y motivo, sin
+                                   boton de quitar. No suma en los totales del pie. -->
+                              <span
+                                class="text-compact font-mono font-medium text-text-secondary"
+                                [class.line-through]="!!fila.anulacion"
+                              >
                                 {{ fila.nBoleta ?? '—' }}
                               </span>
-                              <span class="text-compact font-semibold text-text-primary truncate">
+                              <span
+                                class="text-compact font-semibold text-text-primary truncate"
+                                [class.line-through]="!!fila.anulacion"
+                              >
                                 {{ fila.glosa }}
                               </span>
                               <span
                                 class="col-monto text-compact text-right text-text-secondary tabular-nums"
+                                [class.line-through]="!!fila.anulacion"
                               >
                                 {{ fila.claseB > 0 ? fila.claseB.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
                                 class="col-monto text-compact text-right text-text-secondary tabular-nums"
+                                [class.line-through]="!!fila.anulacion"
                               >
                                 {{ fila.claseA > 0 ? fila.claseA.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
                                 class="col-monto text-compact text-right text-text-secondary tabular-nums"
+                                [class.line-through]="!!fila.anulacion"
                               >
                                 {{ fila.sence > 0 ? fila.sence.toLocaleString('es-CL') : '—' }}
                               </span>
                               <span
                                 class="col-monto text-compact text-right text-text-secondary tabular-nums"
+                                [class.line-through]="!!fila.anulacion"
                               >
                                 {{ fila.otros > 0 ? fila.otros.toLocaleString('es-CL') : '—' }}
                               </span>
@@ -279,24 +292,48 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                                 {{ medioDePago(fila) }}
                               </span>
                               <span
-                                class="text-sm text-right font-black text-text-primary tabular-nums tracking-tight"
+                                class="text-sm text-right font-black tabular-nums tracking-tight"
+                                [class.text-text-primary]="!fila.anulacion"
+                                [class.text-text-muted]="!!fila.anulacion"
+                                [class.line-through]="!!fila.anulacion"
                               >
                                 {{ clp(fila.total) }}
                               </span>
                               @if (puedeEliminarIngreso(fila)) {
                                 <button
                                   class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto cursor-pointer"
-                                  data-llm-action="eliminar-ingreso-cuadratura"
+                                  [attr.data-llm-action]="
+                                    fila.source === 'payment'
+                                      ? 'anular-pago-cuadratura'
+                                      : 'eliminar-ingreso-cuadratura'
+                                  "
                                   [disabled]="cajaYaCerrada()"
                                   [attr.aria-label]="
-                                    'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)
+                                    (fila.source === 'payment'
+                                      ? 'Anular pago '
+                                      : 'Eliminar ingreso ') + (fila.nBoleta ?? fila.id)
                                   "
                                   (click)="onEliminarIngreso(fila, $event)"
                                 >
-                                  <app-icon name="trash-2" [size]="15" />
+                                  <app-icon
+                                    [name]="fila.source === 'payment' ? 'ban' : 'trash-2'"
+                                    [size]="15"
+                                  />
                                 </button>
                               } @else {
                                 <span></span>
+                              }
+                              <!-- Detalle en una linea propia de ancho completo: la columna de
+                                   glosa es angosta y la etiqueta se montaba sobre el medio. -->
+                              @if (fila.anulacion) {
+                                <span
+                                  class="col-span-full flex items-center gap-1.5 min-w-0 text-2xs text-text-muted"
+                                  [attr.title]="detalleAnulacion(fila)"
+                                  data-llm-description="voided payment: reason, who voided it and when"
+                                >
+                                  <app-badge variant="neutral" class="shrink-0">Anulado</app-badge>
+                                  <span class="truncate">{{ detalleAnulacion(fila) }}</span>
+                                </span>
                               }
                             </div>
                           }
@@ -327,20 +364,36 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                                   class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                                   >Boleta {{ fila.nBoleta ?? 'S/N' }}</span
                                 >
-                                <span class="item-title">{{ fila.glosa }}</span>
+                                <span class="item-title" [class.line-through]="!!fila.anulacion">{{
+                                  fila.glosa
+                                }}</span>
                               </div>
                               @if (puedeEliminarIngreso(fila)) {
                                 <button
                                   class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer"
-                                  data-llm-action="eliminar-ingreso-cuadratura"
+                                  [attr.data-llm-action]="
+                                    fila.source === 'payment'
+                                      ? 'anular-pago-cuadratura'
+                                      : 'eliminar-ingreso-cuadratura'
+                                  "
                                   [disabled]="cajaYaCerrada()"
-                                  aria-label="Eliminar ingreso"
+                                  [attr.aria-label]="
+                                    fila.source === 'payment' ? 'Anular pago' : 'Eliminar ingreso'
+                                  "
                                   (click)="onEliminarIngreso(fila, $event)"
                                 >
-                                  <app-icon name="trash-2" [size]="14" />
+                                  <app-icon
+                                    [name]="fila.source === 'payment' ? 'ban' : 'trash-2'"
+                                    [size]="14"
+                                  />
                                 </button>
+                              } @else if (fila.anulacion) {
+                                <app-badge variant="neutral">Anulado</app-badge>
                               }
                             </div>
+                            @if (fila.anulacion) {
+                              <p class="text-2xs text-text-muted">{{ detalleAnulacion(fila) }}</p>
+                            }
                             <div
                               class="grid grid-cols-2 gap-y-2 mt-2 pt-2 border-t border-border-muted/30"
                             >
@@ -363,9 +416,13 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               </div>
                               <div class="flex flex-col items-end">
                                 <span class="text-2xs text-text-muted uppercase">Total</span>
-                                <span class="text-text-primary font-black">{{
-                                  clp(fila.total)
-                                }}</span>
+                                <span
+                                  class="font-black"
+                                  [class.text-text-primary]="!fila.anulacion"
+                                  [class.text-text-muted]="!!fila.anulacion"
+                                  [class.line-through]="!!fila.anulacion"
+                                  >{{ clp(fila.total) }}</span
+                                >
                               </div>
                             </div>
                           </div>
@@ -382,7 +439,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 class="px-6 py-5 flex items-center justify-between gap-4 border-t border-border-muted/50 bg-surface mt-auto"
               >
                 <span class="text-2xs font-bold uppercase tracking-widest text-text-muted">
-                  Mostrando {{ pagosHoy().length }} ingresos
+                  {{ resumenIngresos() }}
                 </span>
                 <div class="min-w-52 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10">
                   <div class="flex items-center justify-between gap-4">
@@ -987,10 +1044,24 @@ export class CuadraturaContentComponent implements AfterViewInit {
     this.exportRequested.emit(format);
   }
 
-  /** Un pago de matrícula solo lo quita el admin (fix-044-i); el resto de ingresos, ambos roles. */
+  /**
+   * Un pago de matrícula solo lo anula el admin (fix-044-i, spec 0025-m) y uno ya anulado no
+   * tiene acción; el resto de ingresos, ambos roles.
+   */
   protected puedeEliminarIngreso(fila: IngresoRow): boolean {
+    if (fila.anulacion) return false;
     return fila.source !== 'payment' || this.puedeEliminarRestringidos();
   }
+
+  /** "Motivo · quién · cuándo" de un pago anulado. */
+  protected detalleAnulacion(fila: IngresoRow): string {
+    return formatAnulacionDetalle(fila.anulacion);
+  }
+
+  /** Conteo del pie: los anulados se listan pero no cuentan como ingresos del día. */
+  protected readonly resumenIngresos = computed(() =>
+    resumenConAnulados(this.pagosHoy(), 'ingreso', 'ingresos'),
+  );
 
   /** Un anticipo solo lo quita el admin (la RLS de instructor_advances); un gasto, ambos roles. */
   protected puedeEliminarEgreso(egreso: EgresoRow): boolean {

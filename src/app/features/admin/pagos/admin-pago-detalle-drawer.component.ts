@@ -221,8 +221,29 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     </span>
 
                     <!-- Concepto -->
-                    <span class="font-semibold truncate text-text-primary">
-                      {{ pago.concepto ?? '—' }}
+                    <!-- Anulado (spec 0025-m): tachado, con el motivo debajo; no suma en el total. -->
+                    <span class="flex flex-col min-w-0">
+                      <span
+                        class="font-semibold truncate text-text-primary"
+                        [class.line-through]="!!pago.anulacion"
+                      >
+                        {{ pago.concepto ?? '—' }}
+                      </span>
+                      @if (pago.anulacion; as anulacion) {
+                        <span
+                          class="truncate text-text-muted"
+                          [attr.title]="
+                            anulacion.motivo +
+                            ' · ' +
+                            (anulacion.por ?? 'Administrador') +
+                            ' · ' +
+                            anulacion.cuando
+                          "
+                          data-llm-description="voided payment: reason, who voided it and when"
+                        >
+                          {{ anulacion.motivo }} · {{ anulacion.cuando }}
+                        </span>
+                      }
                     </span>
 
                     <!-- Método -->
@@ -239,7 +260,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     </span>
 
                     <!-- Monto -->
-                    <span class="font-bold text-right text-text-primary">
+                    <span
+                      class="font-bold text-right"
+                      [class.text-text-primary]="!pago.anulacion"
+                      [class.text-text-muted]="!!pago.anulacion"
+                      [class.line-through]="!!pago.anulacion"
+                    >
                       {{ clp(pago.monto) }}
                     </span>
 
@@ -318,7 +344,11 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   }
 
   protected totalHistorial(): number {
-    return this.facade.estadoCuentaHistorial().reduce((acc, p) => acc + p.monto, 0);
+    // Un pago anulado se lista pero no suma (spec 0025-m).
+    return this.facade
+      .estadoCuentaHistorial()
+      .filter((p) => !p.anulacion)
+      .reduce((acc, p) => acc + p.monto, 0);
   }
 
   // hotfix-127-m: el estado de una matrícula pagada completa es paid_full, no paid; antes se
@@ -354,6 +384,8 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
         return 'OK';
       case 'pendiente':
         return 'Pend.';
+      case 'anulado':
+        return 'Anulado';
       default:
         return estado ?? '—';
     }
