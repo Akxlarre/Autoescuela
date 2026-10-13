@@ -1,6 +1,6 @@
 # Spec 0051-b — Flota para la secretaria, limitada a su sede
 
-> **Status:** approved (decisiones del owner el 2026-10-12, ver §6)
+> **Status:** done (2026-10-13; ver acceptance.md)
 > **Created:** 2026-10-12
 > **Owner:** Benjamín
 > **Priority:** P2 (no bloquea el piloto; hoy el admin hace todo lo de Flota)

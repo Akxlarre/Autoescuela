@@ -1,26 +1,24 @@
 # Acceptance 0051-b — Flota para la secretaria, limitada a su sede
 
-> **Estado (2026-10-13):** código listo y verificado. **Pendiente aplicar la migración**
-> `20261012150000_spec0051_flota_secretaria.sql` en producción (requiere aprobación). Sin ella, la
-> secretaria ya ve Flota y puede crear y editar vehículos de su sede, pero cargar un documento o
-> registrar un mantenimiento le da error de permisos.
+> **Estado (2026-10-13):** ✅ cerrada. Migración `20261012150000_spec0051_flota_secretaria.sql`
+> aplicada en producción (aprobada por el owner) y registrada; el test SQL pasa 66/66 contra
+> producción y no deja datos de prueba.
 
 | AC | Estado | Evidencia |
 |---|---|---|
 | AC1 — Menú y acceso | ✅ | `e2e/flota-secretaria.spec.ts`: "Flota" en el menú, ve tantos vehículos como hay en su sede + "Ambas" |
 | AC2 — No ve la otra sede | ✅ | e2e: un vehículo exclusivo de la otra sede no aparece ni buscándolo; por URL, su detalle dice "Vehículo no encontrado." (`flota-detalle.facade.spec.ts`) |
-| AC3 — Opera en su sede | ✅ app · ⏳ BD | e2e: tiene Editar y "Registrar Servicio"; al crear envía `branch_id` = su sede (creación interceptada). Test SQL (con la migración en una transacción con ROLLBACK): registra mantenimiento, carga documento, edita y crea |
-| AC4 — "Ambas" en solo lectura (sin grant) | ✅ app · ⏳ BD | e2e: sin Editar, sin cargar documento, sin "Registrar Servicio" (un vehículo presentado como "Ambas" en la respuesta). Test SQL: la BD rechaza mantenimiento, documento y edición |
-| AC5 — La otra sede, cerrada en la BD | ⏳ BD | Test SQL: rechaza mantenimiento y documento en un vehículo de la otra sede |
+| AC3 — Opera en su sede | ✅ | e2e: tiene Editar y "Registrar Servicio"; al crear envía `branch_id` = su sede (creación interceptada). Test SQL (con la migración en una transacción con ROLLBACK): registra mantenimiento, carga documento, edita y crea |
+| AC4 — "Ambas" en solo lectura (sin grant) | ✅ | e2e: sin Editar, sin cargar documento, sin "Registrar Servicio" (un vehículo presentado como "Ambas" en la respuesta). Test SQL: la BD rechaza mantenimiento, documento y edición |
+| AC5 — La otra sede, cerrada en la BD | ✅ | Test SQL: rechaza mantenimiento y documento en un vehículo de la otra sede |
 | AC6 — Sin "Ambas" ni cambio de sede | ✅ | e2e: sin selector de sede ni "Ambas sedes"; el alta sale con su sede y `both_branches = false` |
 | AC7 — Búsqueda global | ✅ | e2e: buscar "flota" como secretaria abre `/app/secretaria/flota` y carga |
 | AC8 — El admin no cambia | ✅ | e2e del admin (`flota-listado`, `flota-documentos`, `flota-formulario`) 8/8 + test SQL (admin: todo permitido) |
-| AC-E1 — Auditoría | ⏳ BD | Test SQL: el mantenimiento registrado como secretaria queda en `audit_log` con su `user_id` |
-| AC-E2 — Multi-sede con grant | ✅ app · ⏳ BD | e2e: ve todos los vehículos y tiene Editar en uno de la otra sede. Test SQL: opera sede 1, sede 2 y "Ambas" |
+| AC-E1 — Auditoría | ✅ | Test SQL: el mantenimiento registrado como secretaria queda en `audit_log` con su `user_id` |
+| AC-E2 — Multi-sede con grant | ✅ | e2e: ve todos los vehículos y tiene Editar en uno de la otra sede. Test SQL: opera sede 1, sede 2 y "Ambas" |
 
-"⏳ BD" = verificado con la migración aplicada dentro de una transacción con ROLLBACK (66 casos, 0
-fallas); falta aplicarla de verdad. Contra producción hoy el mismo test falla en 15 casos, que son
-exactamente los permisos nuevos.
+Antes de aplicar la migración el mismo test fallaba en 15 casos, que eran exactamente los permisos
+nuevos; con ella aplicada, 66 casos y 0 fallas.
 
 ## Verificación
 
@@ -39,7 +37,9 @@ exactamente los permisos nuevos.
    la respuesta (e2e) y marcándolo dentro del bloque que se deshace (SQL).
 3. Esta rama integra `hotfix-073/074/075-b` (PRs #262–#264), que tocan los mismos archivos.
 
-## Para cerrar la spec
+## Cierre
 
-1. Aprobar y aplicar la migración; correr el test SQL contra producción.
-2. Mergear y publicar.
+- Migración aplicada el 2026-10-13 antes de publicar la app: así no existe la ventana en que la
+  secretaria ve Flota pero recibe error al cargar un documento o registrar un mantenimiento.
+- Rama integrada con `main` (hotfix-073-b ya mergeado) y con las versiones resueltas de
+  hotfix-074-b y 075-b: e2e de Flota 16/16, vitest 114/114, `lint:arch` 0 errores.
