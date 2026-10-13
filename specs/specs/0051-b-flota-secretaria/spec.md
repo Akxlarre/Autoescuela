@@ -1,6 +1,6 @@
 # Spec 0051-b — Flota para la secretaria, limitada a su sede
 
-> **Status:** draft
+> **Status:** approved (decisiones del owner el 2026-10-12, ver §6)
 > **Created:** 2026-10-12
 > **Owner:** Benjamín
 > **Priority:** P2 (no bloquea el piloto; hoy el admin hace todo lo de Flota)
@@ -51,8 +51,10 @@ registrar mantenimientos, que es justo lo que más se hace en Flota día a día.
    dos sedes (igual que en el resto de la app).
 3. **Qué puede hacer en un vehículo de su sede:** crear, editar la ficha, cambiar el estado, cargar y
    renovar documentos, registrar y editar mantenimientos, ver la agenda e imprimir la Hoja de Ruta.
-4. **Vehículos "Ambas":** los ve, pero **solo lectura** (ficha, documentos y mantenimientos). Tampoco
-   puede marcar un vehículo como "Ambas" ni cambiarlo de sede: eso sigue siendo del admin.
+4. **Vehículos "Ambas":** la secretaria **sin** grant multi-sede los ve en **solo lectura** (ficha,
+   documentos y mantenimientos). La secretaria **con** grant multi-sede opera en ellos igual que en
+   los de las dos sedes (editar, documentos, mantenimientos). Marcar un vehículo como "Ambas" sigue
+   siendo solo del admin.
 5. **Asignar instructor:** sin cambios (se hace desde Instructores).
 6. **Lo que la interfaz no deja, la BD tampoco:** se amplían las policies de `vehicle_documents` y
    `maintenance_records` (y la del bucket de archivos) para la secretaria, con la misma regla que ya
@@ -67,8 +69,9 @@ registrar mantenimientos, que es justo lo que más se hace en Flota día a día.
   exclusivo de la sede B aparece en su listado, ni entrando por URL a su página de mantenimientos.
 - **AC3 — Opera en su sede:** en un vehículo de su sede puede crear, editar, cargar un documento y
   registrar un mantenimiento, y queda guardado.
-- **AC4 — "Ambas" en solo lectura:** en un vehículo "Ambas" no tiene los botones de editar, cargar
-  documento ni registrar mantenimiento; y si lo intenta por fuera de la pantalla, la BD lo rechaza.
+- **AC4 — "Ambas" en solo lectura (sin grant):** una secretaria sin grant multi-sede no tiene, en un
+  vehículo "Ambas", los botones de editar, cargar documento ni registrar mantenimiento; y si lo
+  intenta por fuera de la pantalla, la BD lo rechaza.
 - **AC5 — La otra sede, cerrada en la BD:** con su sesión no puede crear ni modificar documentos ni
   mantenimientos de un vehículo de la otra sede.
 - **AC6 — Sin "Ambas" ni cambio de sede:** el formulario de la secretaria no ofrece "Ambas sedes" ni
@@ -77,8 +80,8 @@ registrar mantenimientos, que es justo lo que más se hace en Flota día a día.
   que existe.
 - **AC8 — El admin no cambia:** las pantallas y permisos del admin quedan igual.
 - **AC-E1 — Auditoría:** lo que haga la secretaria en Flota queda en Auditoría a su nombre.
-- **AC-E2 — Multi-sede con grant:** una secretaria con grant ve y opera las dos sedes como hoy en el
-  resto de la app; los "Ambas" siguen en solo lectura para ella.
+- **AC-E2 — Multi-sede con grant:** una secretaria con grant ve y opera los vehículos de las dos
+  sedes y los "Ambas" (editar, documentos, mantenimientos).
 
 ## 5. Fuera de alcance
 
@@ -88,10 +91,9 @@ registrar mantenimientos, que es justo lo que más se hace en Flota día a día.
 - Eliminar vehículos, documentos o mantenimientos (sigue siendo solo del admin).
 - Asignar o quitar instructores de un vehículo.
 
-## 6. Preguntas abiertas (decisión del owner)
+## 6. Decisiones del owner (2026-10-12)
 
-1. **¿Puede cargar documentos y registrar mantenimientos**, o solo ver? Recomendado: sí puede, en
-   vehículos de su sede (punto 3). Sin eso, Flota le serviría solo para mirar.
-2. **¿Puede crear vehículos nuevos?** La BD ya lo permite. Recomendado: sí, en su sede.
-3. **Vehículos "Ambas":** ¿solo lectura (recomendado) o también puede cargarles documentos y
-   mantenimientos?
+1. **Documentos y mantenimientos:** sí puede cargarlos y registrarlos en vehículos de su sede.
+2. **Crear vehículos:** sí, en su sede.
+3. **Vehículos "Ambas":** depende del grant multi-sede. Con grant, opera en ellos (todo lo de 1 y 2)
+   y en las dos sedes; sin grant, solo lectura.
