@@ -101,6 +101,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `Discount` | `dto` | `src/app/core/models/dto/discount.model.ts` |
 | `DocumentType`, `DocumentTemplate` | `dto` | `src/app/core/models/dto/document-template.model.ts` |
 | `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
+| `EnrollmentPaymentOverrideKind`, `EnrollmentPaymentOverride` | `dto` | `src/app/core/models/dto/enrollment-payment-override.model.ts` |
 | `ExecKpisDto`, `ExecMonthlySeriesRowDto`, `ExecInstructorHoursRowDto`, `ExecReceivablesRowDto`, `ExecTodayOpsDto` | `dto` | `src/app/core/models/dto/executive-dashboard.model.ts` |
 | `Expense` | `dto` | `src/app/core/models/dto/expense.model.ts` |
 | `FixedExpense` | `dto` | `src/app/core/models/dto/fixed-expense.model.ts` |
@@ -163,6 +164,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `FinishClassPayload` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
 | `AuditAction`, `AuditLogRow` | `ui` | `src/app/core/models/ui/audit-log-row.model.ts` |
+| `EstadoPagoClaseTipo`, `EstadoPagoClase` | `ui` | `src/app/core/models/ui/estado-pago-clase.model.ts` |
 | `BranchOption`, `BranchCoursePrice` | `ui` | `src/app/core/models/ui/branch.model.ts` |
 | `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |

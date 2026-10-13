@@ -32,6 +32,8 @@ function makeSupabaseMock() {
       or: vi.fn(() => b),
       order: vi.fn(() => b),
       update: vi.fn(() => b),
+      insert: vi.fn(() => b),
+      limit: vi.fn(() => b),
       upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
       single: () => Promise.resolve(results.get(`${table}:single`) ?? { data: null, error: null }),
       maybeSingle: () =>
@@ -888,6 +890,116 @@ describe('AsistenciaClaseBFacade', () => {
         'Error al iniciar la clase',
         'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
       );
+    });
+
+    it('spec 0010-i: el bloqueo de la clase 7 llega como mensaje claro, no como token', async () => {
+      mock.setResult('class_b_sessions', null, {
+        code: 'P0001',
+        message: 'PAGO_PENDIENTE_CLASE_7',
+      });
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow(
+        'Pago pendiente: el alumno debe pasar por secretaría.',
+      );
+    });
+  });
+
+  // ── Estado de pago de la clase (spec 0010-i) ─────────────────────────────
+  describe('cargarEstadoPagoClase', () => {
+    it('clase 1–6: libre sin consultar la BD (AC2)', async () => {
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 6 }));
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'libre', saldo: 0 });
+      expect(mock.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
+
+    it('clase 7 con deuda y sin habilitación → bloqueada con el saldo real (AC3)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 180000 });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'bloqueada', saldo: 180000 });
+      expect(mock.builderFor('enrollment_payment_overrides').eq).toHaveBeenCalledWith(
+        'kind',
+        'clases',
+      );
+    });
+
+    it('clase 9 con deuda y habilitada → habilitada_sin_pago (AC10)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 90000 });
+      mock.setResult('enrollment_payment_overrides', [{ id: 1 }]);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 9 }));
+
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'habilitada_sin_pago', saldo: 90000 });
+    });
+
+    it('clase 7 sin deuda (pagó en el mesón) → libre (AC4)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 0 });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()?.estado).toBe('libre');
+    });
+
+    it('si falla la lectura queda en null (la BD sigue bloqueando)', async () => {
+      mock.setResult('enrollments:maybeSingle', null, { message: 'boom' });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()).toBeNull();
+    });
+  });
+
+  describe('habilitarSinPago', () => {
+    beforeEach(async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 180000 });
+      mock.setResult('enrollment_payment_overrides', []);
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7, enrollmentId: 10 }));
+    });
+
+    it('inserta la habilitación con motivo y autor, y pasa a habilitada_sin_pago (AC5)', async () => {
+      mock.setResult('enrollment_payment_overrides', [{ id: 7 }]);
+
+      const ok = await facade.habilitarSinPago(10, '  Paga a fin de mes  ');
+
+      expect(ok).toBe(true);
+      expect(mock.builderFor('enrollment_payment_overrides').insert).toHaveBeenCalledWith({
+        enrollment_id: 10,
+        kind: 'clases',
+        reason: 'Paga a fin de mes',
+        created_by: 99,
+      });
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'habilitada_sin_pago', saldo: 180000 });
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('sin motivo suficiente no escribe nada', async () => {
+      const ok = await facade.habilitarSinPago(10, '   ab ');
+
+      expect(ok).toBe(false);
+      expect(mock.builderFor('enrollment_payment_overrides').insert).not.toHaveBeenCalled();
+    });
+
+    it('si falla el INSERT sigue bloqueada y muestra el error (AC-E6)', async () => {
+      mock.setResult('enrollment_payment_overrides', null, { code: '42501', message: 'rls' });
+
+      const ok = await facade.habilitarSinPago(10, 'Paga a fin de mes');
+
+      expect(ok).toBe(false);
+      expect(facade.estadoPagoClase()?.estado).toBe('bloqueada');
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('si RLS filtra el INSERT (0 filas) no se da por habilitada (AC-E4/AC-E6)', async () => {
+      mock.setResult('enrollment_payment_overrides', []);
+
+      const ok = await facade.habilitarSinPago(10, 'Paga a fin de mes');
+
+      expect(ok).toBe(false);
+      expect(facade.estadoPagoClase()?.estado).toBe('bloqueada');
     });
   });
 });

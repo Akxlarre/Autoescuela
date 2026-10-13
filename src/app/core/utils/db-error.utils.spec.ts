@@ -64,6 +64,14 @@ describe('toFriendlyDbMessage', () => {
     expect(result).not.toContain('CAJA_CERRADA');
   });
 
+  it('spec 0010-i: token PAGO_PENDIENTE_CLASE_7 manda al alumno a secretaría', () => {
+    const result = toFriendlyDbMessage(
+      { code: 'P0001', message: 'PAGO_PENDIENTE_CLASE_7' },
+      FALLBACK,
+    );
+    expect(result).toBe('Pago pendiente: el alumno debe pasar por secretaría.');
+  });
+
   it('fix-044-i: token CIERRE_DEFINITIVO explica que la caja ya se cerró', () => {
     const result = toFriendlyDbMessage({ code: 'P0001', message: 'CIERRE_DEFINITIVO' }, FALLBACK);
     expect(result).toContain('ya se cerró');

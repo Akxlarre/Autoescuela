@@ -18,6 +18,13 @@ function isPostgrestLike(err: unknown): err is PostgrestLikeError {
 }
 
 /**
+ * Texto del token `PAGO_PENDIENTE_CLASE_7` (trigger `block_class_b_without_second_payment`,
+ * spec 0010-i). Lo comparten `toFriendlyDbMessage` y `ErrorSanitizerService`.
+ */
+export const MENSAJE_PAGO_PENDIENTE_CLASE_7 =
+  'Pago pendiente: el alumno debe pasar por secretaría.';
+
+/**
  * Una escritura terminó sin error pero no tocó ninguna fila. Con RLS es el caso normal de un
  * UPDATE/DELETE rechazado: la policy filtra la fila y PostgREST responde 200 con `[]`.
  */
@@ -71,6 +78,10 @@ export function toFriendlyDbMessage(err: unknown, fallback: string): string {
   // guarda totales congelados, DG-065) y un cierre definitivo no se sobrescribe.
   if (err.message?.includes('CAJA_CERRADA')) {
     return 'La caja de ese día ya está cerrada. Registra la corrección como ajuste en Historial de Cuadraturas.';
+  }
+  // spec 0010-i: la clase 7+ no se inicia sin el segundo pago (o una habilitación sin pago).
+  if (err.message?.includes('PAGO_PENDIENTE_CLASE_7')) {
+    return MENSAJE_PAGO_PENDIENTE_CLASE_7;
   }
   if (err.message?.includes('CIERRE_DEFINITIVO')) {
     return 'Esta caja ya se cerró (en otra pestaña o por otra persona). La pantalla se actualizó con el cierre guardado.';

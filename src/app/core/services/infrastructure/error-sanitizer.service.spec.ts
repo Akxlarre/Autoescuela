@@ -83,6 +83,12 @@ describe('ErrorSanitizerService', () => {
     expect(result.code).toBe('CUPOS_AGOTADOS');
   });
 
+  it('traduce el token PAGO_PENDIENTE_CLASE_7 (P0001) en vez de mostrarlo crudo (spec 0010-i)', () => {
+    const result = service.sanitize({ code: 'P0001', message: 'PAGO_PENDIENTE_CLASE_7' });
+    expect(result.message).toBe('Pago pendiente: el alumno debe pasar por secretaría.');
+    expect(result.code).toBe('PAGO_PENDIENTE_CLASE_7');
+  });
+
   it('should trust error.message as-is for P0001 (business-rule RAISE EXCEPTION, spec 0001-i)', () => {
     const error = {
       code: 'P0001',

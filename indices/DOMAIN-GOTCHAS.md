@@ -1794,6 +1794,22 @@
 - **Fuente:** `specs/fixes/fix-047-i-servicios-especiales-como-ingreso` (columnas renombradas en
   fix-230-m; bucket fijo de fix-025-i).
 
+### DG-110 — Un trigger que bloquea un cambio de estado debe vigilar la llegada al estado, no la salida del estado "normal"
+
+- **Trampa:** escribir el `WHEN` del trigger con el camino feliz que uno tiene en la cabeza
+  (`OLD.status = 'scheduled' AND NEW.status = 'in_progress'`) porque "así se inicia una clase".
+- **Realidad:** `class_b_sessions.status` tiene más estados de origen (`no_show`, y los que se agreguen).
+  Un `UPDATE` de `no_show` directo a `in_progress`/`completed` no cumple `OLD.status = 'scheduled'` y
+  el bloqueo no corre: la regla de negocio queda con una puerta lateral sin error ni aviso. Se detectó
+  al escribir el test SQL, antes de aplicar la migración.
+- **Regla de aplicabilidad:** cuando un trigger impide **llegar** a un estado (iniciar, completar,
+  aprobar, emitir), condicionarlo por el destino y por "no estaba ya ahí":
+  `OLD.status NOT IN (<estados bloqueados>) AND NEW.status IN (<estados bloqueados>)`. Solo excluir
+  transiciones dentro del conjunto bloqueado (aquí, `in_progress → completed`) si la regla lo permite
+  explícitamente. El test SQL debe probar al menos un origen distinto del habitual.
+- **Fuente:** `specs/specs/0010-i-clase-7-bloqueada-sin-segundo-pago`
+  (`trg_block_class_b_without_second_payment`, migración `20261013120000`).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

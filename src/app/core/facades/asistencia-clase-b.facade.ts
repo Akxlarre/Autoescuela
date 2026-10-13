@@ -13,6 +13,12 @@ import {
   assertWriteOk,
   toFriendlyDbMessage,
 } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
+import {
+  PRIMERA_CLASE_CON_SEGUNDO_PAGO,
+  resolverEstadoPagoClase,
+} from '@core/utils/estado-pago-clase.utils';
+import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
 import {
   VALID_CLASS_B_SESSION_STATUSES,
   enrollmentsWithRemovedSchedule,
@@ -81,6 +87,9 @@ export class AsistenciaClaseBFacade {
   // Practical class drawer state
   private readonly _selectedPractica = signal<ClasePracticaRow | null>(null);
   private readonly _vehiclesPorSede = signal<VehicleOption[]>([]);
+  private readonly _estadoPagoClase = signal<EstadoPagoClase | null>(null);
+  /** Un drawer puede cambiar de clase antes de que vuelva la lectura anterior. */
+  private readonly estadoPagoGuard = createRequestGuard();
 
   private _initialized = false;
 
@@ -96,6 +105,8 @@ export class AsistenciaClaseBFacade {
   readonly savingAlertaId = this._savingAlertaId.asReadonly();
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
+  /** Spec 0010-i: estado de pago de la clase del drawer de inicio. null = sin leer o lectura fallida. */
+  readonly estadoPagoClase = this._estadoPagoClase.asReadonly();
 
   /** Lista deduplicada de instructores para el filtro de la tabla de prácticas. */
   readonly instructores = computed<InstructorOption[]>(() => {
@@ -621,6 +632,86 @@ export class AsistenciaClaseBFacade {
   /** Establece la clase práctica seleccionada para los drawers de inicio/finalización. */
   selectPractica(row: ClasePracticaRow | null): void {
     this._selectedPractica.set(row);
+  }
+
+  /**
+   * Spec 0010-i: lee si la clase se puede iniciar frente al segundo pago (saldo de la matrícula +
+   * habilitación sin pago). La regla es la del trigger de la BD; esto solo la anticipa en la UI.
+   * Si la lectura falla queda en null y el drawer muestra "Iniciar": la BD igual bloquea.
+   */
+  async cargarEstadoPagoClase(row: ClasePracticaRow): Promise<void> {
+    const token = this.estadoPagoGuard.next();
+    this._estadoPagoClase.set(null);
+
+    if (
+      row.enrollmentId === null ||
+      row.classNumber === null ||
+      row.classNumber < PRIMERA_CLASE_CON_SEGUNDO_PAGO
+    ) {
+      this._estadoPagoClase.set({ estado: 'libre', saldo: 0 });
+      return;
+    }
+
+    const [enrollment, overrides] = await Promise.all([
+      this.supabase.client
+        .from('enrollments')
+        .select('pending_balance')
+        .eq('id', row.enrollmentId)
+        .maybeSingle(),
+      this.supabase.client
+        .from('enrollment_payment_overrides')
+        .select('id')
+        .eq('enrollment_id', row.enrollmentId)
+        .eq('kind', 'clases')
+        .limit(1),
+    ]);
+    if (!this.estadoPagoGuard.isCurrent(token)) return;
+    if (enrollment.error || overrides.error) return;
+
+    this._estadoPagoClase.set(
+      resolverEstadoPagoClase(
+        row.classNumber,
+        enrollment.data?.pending_balance ?? 0,
+        (overrides.data ?? []).length > 0,
+      ),
+    );
+  }
+
+  /**
+   * Spec 0010-i (AC5): habilita sin pago las clases 7–12 de la matrícula, con motivo. El saldo de la
+   * constancia lo fija la BD; el aviso a los admins y la auditoría salen de triggers. Devuelve
+   * false (y la clase sigue bloqueada) si el motivo es muy corto o la escritura no se guardó.
+   */
+  async habilitarSinPago(enrollmentId: number, motivo: string): Promise<boolean> {
+    const reason = motivo.trim();
+    if (reason.length < 5) return false;
+
+    const createdBy = this.authFacade.currentUser()?.dbId ?? null;
+    if (createdBy === null) {
+      this.toast.error('No se pudo identificar tu usuario. Vuelve a iniciar sesión.');
+      return false;
+    }
+
+    this._isSaving.set(true);
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('enrollment_payment_overrides')
+          .insert({ enrollment_id: enrollmentId, kind: 'clases', reason, created_by: createdBy })
+          .select('id'),
+        { requireRows: true },
+      );
+
+      const actual = this._estadoPagoClase();
+      this._estadoPagoClase.set({ estado: 'habilitada_sin_pago', saldo: actual?.saldo ?? 0 });
+      this.toast.success('Clases habilitadas sin pago', 'Se avisó a los administradores.');
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'No se pudo habilitar la clase sin pago'));
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
   }
 
   /** Inicia una clase práctica (establece status in_progress + km_start, opcionalmente cambia el vehículo). */
