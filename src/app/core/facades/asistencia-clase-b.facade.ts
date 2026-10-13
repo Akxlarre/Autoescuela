@@ -17,6 +17,8 @@ import {
 } from '@core/utils/db-error.utils';
 import {
   type ClassBAbsence,
+  type ClassBSessionAction,
+  StaleSessionError,
   VALID_CLASS_B_SESSION_STATUSES,
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
@@ -87,12 +89,12 @@ export class AsistenciaClaseBFacade {
   private readonly _vehiclesPorSede = signal<VehicleOption[]>([]);
 
   private _initialized = false;
-
-  // ── 2. Estado público ──────────────────────────────────────────────────────
   /** Sede con la que se hizo la última carga completa (fix-386-m); `undefined` = ninguna. */
   private _loadedBranchId: number | null | undefined = undefined;
   /** Descarta la respuesta de una carga que quedó obsoleta (facades.md §7). */
   private readonly dataGuard = createRequestGuard();
+
+  // ── 2. Estado público ──────────────────────────────────────────────────────
 
   readonly selectedDate = this._selectedDate.asReadonly();
   readonly kpis = this._kpis.asReadonly();
@@ -156,11 +158,11 @@ export class AsistenciaClaseBFacade {
       return;
     }
     this._initialized = true;
-    this._isLoading.set(true);
-    try {
     this._loadedBranchId = branchId;
     this._clasesPracticas.set([]);
     this._alertas.set([]);
+    this._isLoading.set(true);
+    try {
       await this.fetchData();
     } finally {
       this._isLoading.set(false);
@@ -227,7 +229,6 @@ export class AsistenciaClaseBFacade {
       }
 
       const dbStatus = status === 'presente' ? 'present' : status === 'ausente' ? 'absent' : null;
-      const sessionStatus = status === 'ausente' ? 'no_show' : undefined;
 
       if (dbStatus) {
         const { data: enrollment } = await this.supabase.client
@@ -240,35 +241,59 @@ export class AsistenciaClaseBFacade {
         // saltaba el upsert y el toast decía "marcada" igual.
         if (!enrollment) throw new NoRowsAffectedError();
 
-        assertWriteOk(
-          await this.supabase.client.from('class_b_practice_attendance').upsert(
-            {
-              class_b_session_id: sessionId,
-              student_id: enrollment.student_id,
-              status: dbStatus,
-              recorded_by: recordedBy,
-              // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
-              // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
-              archived_at: null,
-              // spec 0048-b: la penalización solo cuenta faltas registradas desde que se activó
-              // la regla en la sede; sin esto, un upsert sobre una fila existente conservaba la
-              // fecha vieja y la falta nueva no contaba.
-              recorded_at: new Date().toISOString(),
-            },
-            { onConflict: 'class_b_session_id,student_id' },
-          ),
-        );
-      }
+        // fix-388-m: primero la sesión, y solo si sigue pendiente. Antes se escribía la asistencia
+        // y después el estado sin mirar cómo estaba: una pestaña sin actualizar dejaba "Ausente"
+        // una clase que otra persona ya había iniciado.
+        if (status === 'ausente') {
+          try {
+            await this.moveSession(sessionId, 'scheduled', { status: 'no_show' }, 'absent');
+          } catch (err) {
+            if (err instanceof StaleSessionError && err.actualStatus === 'no_show') {
+              // Otra persona ya la marcó: no hay nada que corregir ni que avisar como error.
+              this.toast.info('La inasistencia ya estaba registrada');
+              await this.refreshSilently();
+              return true;
+            }
+            throw err;
+          }
+        }
 
-      if (sessionStatus) {
-        assertWriteOk(
-          await this.supabase.client
-            .from('class_b_sessions')
-            .update({ status: sessionStatus })
-            .eq('id', sessionId)
-            .select('id'),
-          { requireRows: true },
-        );
+        try {
+          assertWriteOk(
+            await this.supabase.client.from('class_b_practice_attendance').upsert(
+              {
+                class_b_session_id: sessionId,
+                student_id: enrollment.student_id,
+                status: dbStatus,
+                recorded_by: recordedBy,
+                // fix-191-m: la sesión vuelve a tener asistencia vigente; si quedaba la fila
+                // archivada de una ocurrencia anterior (reagendamiento), se reactiva.
+                archived_at: null,
+                // spec 0048-b: la penalización solo cuenta faltas registradas desde que se activó
+                // la regla en la sede; sin esto, un upsert sobre una fila existente conservaba la
+                // fecha vieja y la falta nueva no contaba.
+                recorded_at: new Date().toISOString(),
+              },
+              { onConflict: 'class_b_session_id,student_id' },
+            ),
+          );
+        } catch (err) {
+          // Sin su asistencia, la clase no puede quedar "Ausente": vuelve a pendiente.
+          if (status === 'ausente') {
+            const revert = await this.supabase.client
+              .from('class_b_sessions')
+              .update({ status: 'scheduled' })
+              .eq('id', sessionId)
+              .eq('status', 'no_show');
+            if (revert.error) {
+              this.toast.warning(
+                'La clase quedó como ausente sin su registro',
+                'No se pudo devolver a pendiente. Actualiza la lista y avisa al administrador.',
+              );
+            }
+          }
+          throw err;
+        }
       }
 
       this._clasesPracticas.update((rows) =>
@@ -282,11 +307,52 @@ export class AsistenciaClaseBFacade {
       }
       return true;
     } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        return false;
+      }
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la asistencia'));
       return false;
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /**
+   * fix-388-m: cambia el estado de una clase solo si sigue en `from`, el estado que la persona
+   * tenía en pantalla. Sin tiempo real, dos personas pueden ver la misma clase "Pendiente": la
+   * segunda en actuar no debe pisar lo que registró la primera. Si no tocó filas, lee el estado
+   * real y lanza `StaleSessionError`; si tampoco puede leerla (RLS), `NoRowsAffectedError`.
+   */
+  private async moveSession(
+    sessionId: number,
+    from: 'scheduled' | 'in_progress',
+    patch: Record<string, unknown>,
+    action: ClassBSessionAction,
+  ): Promise<void> {
+    const result = assertWriteOk(
+      await this.supabase.client
+        .from('class_b_sessions')
+        .update(patch)
+        .eq('id', sessionId)
+        .eq('status', from)
+        .select('id'),
+    );
+    if (Array.isArray(result.data) && result.data.length > 0) return;
+
+    const { data: current } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('status')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (!current?.status) throw new NoRowsAffectedError();
+    throw new StaleSessionError(action, current.status);
+  }
+
+  /** Avisa que la clase cambió mientras se miraba y trae el estado real de la tabla. */
+  private async reportStaleSession(err: StaleSessionError): Promise<void> {
+    this.toast.warning('La clase cambió', `${err.message} La lista se actualizó.`);
+    await this.refreshSilently();
   }
 
   /**
@@ -681,12 +747,8 @@ export class AsistenciaClaseBFacade {
       };
       if (vehicleId !== undefined) payload['vehicle_id'] = vehicleId;
 
-      const { error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update(payload)
-        .eq('id', sessionId);
-
-      if (error) throw error;
+      // fix-388-m: solo se inicia una clase que sigue pendiente.
+      await this.moveSession(sessionId, 'scheduled', payload, 'start');
 
       this._clasesPracticas.update((rows) =>
         rows.map((r) =>
@@ -708,6 +770,10 @@ export class AsistenciaClaseBFacade {
       // vehículo anterior y los KPIs sin recalcular hasta recargar).
       await this.refreshSilently();
     } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        throw err;
+      }
       const sanitized = this.sanitizer.sanitize(err);
       this.toast.error('Error al iniciar la clase', sanitized.message);
       throw new Error(sanitized.message);
@@ -726,9 +792,11 @@ export class AsistenciaClaseBFacade {
     try {
       const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
 
-      const { error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update({
+      // fix-388-m: solo se finaliza una clase que sigue en curso.
+      await this.moveSession(
+        payload.sessionId,
+        'in_progress',
+        {
           status: 'completed',
           end_time: chileTimeOfDay(),
           km_end: payload.kmEnd,
@@ -739,10 +807,9 @@ export class AsistenciaClaseBFacade {
               : null,
           student_signature: !!payload.studentSignature,
           instructor_signature: !!payload.instructorSignature,
-        })
-        .eq('id', payload.sessionId);
-
-      if (error) throw error;
+        },
+        'finish',
+      );
 
       // fix-362-m: a esta altura la clase YA quedó finalizada. Si falla el KM o la asistencia no
       // se lanza (el catch diría "Error al finalizar la clase" sobre una clase finalizada): se
@@ -792,7 +859,11 @@ export class AsistenciaClaseBFacade {
         // fix-373-m: desde Asistencia no se evalúa (fix-115-m); solo se registra la asistencia.
         this.toast.success('Clase finalizada', 'Asistencia registrada.');
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof StaleSessionError) {
+        await this.reportStaleSession(err);
+        throw err;
+      }
       this.toast.error('Error al finalizar la clase');
       throw new Error('finishClass failed');
     } finally {
@@ -886,10 +957,13 @@ export class AsistenciaClaseBFacade {
       branchMap.set(b.id, b.name);
     }
 
+    const requestToken = this.dataGuard.next();
     const practicas = await this.fetchPracticas(branchId, start, endExclusive, branchMap);
+    if (!this.dataGuard.isCurrent(requestToken)) return;
     this._clasesPracticas.set(practicas);
 
     const alertas = await this.fetchAlertas(branchId, branchMap);
+    if (!this.dataGuard.isCurrent(requestToken)) return;
     this._alertas.set(alertas);
 
     this.computeKpis(practicas, alertas);
@@ -957,13 +1031,10 @@ export class AsistenciaClaseBFacade {
 
       const student = row.enrollments?.students?.users;
       const alumnoName = student
-    const requestToken = this.dataGuard.next();
         ? `${student.first_names ?? ''} ${student.paternal_last_name ?? ''}`.trim()
-    if (!this.dataGuard.isCurrent(requestToken)) return;
         : null;
 
       // fix-191-m: solo la asistencia VIGENTE describe el estado de la sesión. Una fila
-    if (!this.dataGuard.isCurrent(requestToken)) return;
       // archivada es el registro histórico de una ocurrencia anterior de esa misma sesión
       // (reagendamiento RF-053, que recicla la fila en vez de crear una nueva); tomarla
       // pintaba "Ausente" una clase que está agendada.

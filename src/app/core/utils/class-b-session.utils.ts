@@ -82,3 +82,42 @@ export function buildClearScheduleMessage(groups: ScheduleChangeGroup[], maxName
     'Las clases de horas ya pasadas no se tocan. Para devolverles la agenda hay que reagendarlas desde la ficha de cada alumno.',
   ].join('\n');
 }
+
+/** Acción sobre una clase práctica que parte de un estado concreto. */
+export type ClassBSessionAction = 'start' | 'absent' | 'finish';
+
+/**
+ * Mensaje para quien intentó una acción sobre una clase que ya no está en el estado que veía
+ * (fix-388-m): otra persona, u otra pestaña, la cambió antes. Dice qué pasó y qué hacer.
+ */
+export function staleSessionMessage(action: ClassBSessionAction, actualStatus: string): string {
+  switch (actualStatus) {
+    case 'in_progress':
+      return action === 'absent'
+        ? 'Esta clase ya fue iniciada. Si se inició por error, usa "Cancelar inicio" antes de marcar la inasistencia.'
+        : 'Esta clase ya fue iniciada, en otra pestaña o por otra persona.';
+    case 'no_show':
+      return action === 'start'
+        ? 'Esta clase ya tiene una inasistencia registrada. Para iniciarla, primero deshaz la inasistencia.'
+        : 'Esta clase ya tiene una inasistencia registrada.';
+    case 'completed':
+      return 'Esta clase ya fue finalizada.';
+    case 'scheduled':
+      return 'El inicio de esta clase se canceló: volvió a quedar pendiente.';
+    case 'cancelled':
+      return 'Esta clase fue cancelada.';
+    default:
+      return 'El estado de esta clase cambió.';
+  }
+}
+
+/** La clase ya no estaba en el estado desde el que se intentó la acción (fix-388-m). */
+export class StaleSessionError extends Error {
+  constructor(
+    readonly action: ClassBSessionAction,
+    readonly actualStatus: string,
+  ) {
+    super(staleSessionMessage(action, actualStatus));
+    this.name = 'StaleSessionError';
+  }
+}

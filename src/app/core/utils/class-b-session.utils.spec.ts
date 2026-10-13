@@ -1,10 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import {
+  StaleSessionError,
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
+  staleSessionMessage,
 } from './class-b-session.utils';
+
+describe('staleSessionMessage() — fix-388-m', () => {
+  it('iniciar una clase ya iniciada o con inasistencia dice qué pasó', () => {
+    expect(staleSessionMessage('start', 'in_progress')).toContain('ya fue iniciada');
+    expect(staleSessionMessage('start', 'no_show')).toContain('deshaz la inasistencia');
+    expect(staleSessionMessage('start', 'completed')).toContain('ya fue finalizada');
+  });
+
+  it('marcar ausente una clase en curso manda a "Cancelar inicio"', () => {
+    expect(staleSessionMessage('absent', 'in_progress')).toContain('Cancelar inicio');
+  });
+
+  it('finalizar una clase cuyo inicio se canceló lo explica', () => {
+    expect(staleSessionMessage('finish', 'scheduled')).toContain('volvió a quedar pendiente');
+  });
+
+  it('un estado desconocido cae en el mensaje general', () => {
+    expect(staleSessionMessage('finish', 'reserved')).toBe('El estado de esta clase cambió.');
+  });
+
+  it('StaleSessionError lleva el estado real y el mensaje', () => {
+    const err = new StaleSessionError('start', 'in_progress');
+    expect(err.actualStatus).toBe('in_progress');
+    expect(err.message).toBe(staleSessionMessage('start', 'in_progress'));
+  });
+});
 
 describe('VALID_CLASS_B_SESSION_STATUSES', () => {
   it('excluye reserved y cancelled', () => {

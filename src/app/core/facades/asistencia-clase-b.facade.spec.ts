@@ -618,6 +618,49 @@ describe('AsistenciaClaseBFacade', () => {
       expect(toast.success).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
       expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+    });
+
+    it('fix-388-m: si la asistencia falla, la sesión vuelve a quedar pendiente', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.markAttendance(1, 'ausente');
+
+      const updates = mock
+        .builderFor('class_b_sessions')
+        .update.mock.calls.map((c: unknown[]) => (c[0] as { status: string }).status);
+      expect(updates).toEqual(['no_show', 'scheduled']);
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it('fix-388-m: si tampoco se pudo devolver a pendiente, lo avisa', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      const b = mock.builderFor('class_b_sessions');
+      // 1ª lectura = el cambio a ausente (1 fila); 2ª = la reversión, que falla.
+      const original = b.then;
+      let reads = 0;
+      b.then = (resolve: any) =>
+        resolve(
+          reads++ === 0 ? { data: [{ id: 1 }], error: null } : { data: null, error: rlsError },
+        );
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.markAttendance(1, 'ausente');
+      b.then = original;
+
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase quedó como ausente sin su registro',
+        expect.stringContaining('avisa al administrador'),
+      );
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('permisos'));
     });
 
     it('markAttendance: si falla la RPC de penalización, avisa que no se pudo revisar', async () => {
@@ -668,6 +711,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('finishClass: vehículo de otra sede (RLS filtra el update) → aviso, no éxito', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       mock.setResult('vehicles', []);
 
       await facade.finishClass(finishPayload);
@@ -684,6 +728,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('finishClass: si falla la asistencia, también lo avisa', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       mock.setResult('vehicles', [{ id: 7 }]);
       mock
         .builderFor('class_b_practice_attendance')
@@ -701,6 +746,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('finishClass: con todo guardado mantiene el toast de éxito', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       mock.setResult('vehicles', [{ id: 7 }]);
 
       await facade.finishClass(finishPayload);
@@ -1052,9 +1098,105 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-388-m: la clase ya no está en el estado que se veía', () => {
+    const finishPayload = {
+      sessionId: 1,
+      studentId: 5,
+      kmEnd: 12050,
+      studentSignature: null,
+      instructorSignature: null,
+    };
+
+    /** El UPDATE condicionado no toca filas y la clase está en `actual`. */
+    function sessionIs(actual: string): void {
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_sessions:maybeSingle', { status: actual });
+    }
+
+    it('startClass filtra por estado pendiente', async () => {
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      await facade.startClass(1, 12000);
+      expect(mock.builderFor('class_b_sessions').eq).toHaveBeenCalledWith('status', 'scheduled');
+    });
+
+    it('startClass sobre una clase que otra persona ya inició: avisa, no dice "iniciada" y recarga', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      sessionIs('in_progress');
+      const refresh = vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow('ya fue iniciada');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase cambió',
+        expect.stringContaining('ya fue iniciada'),
+      );
+      expect(refresh).toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    });
+
+    it('startClass sobre una clase con inasistencia manda a deshacerla', async () => {
+      sessionIs('no_show');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+      await expect(facade.startClass(1, 12000)).rejects.toThrow('deshaz la inasistencia');
+    });
+
+    it('marcar ausente una clase en curso no escribe la asistencia', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      sessionIs('in_progress');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      expect(await facade.markAttendance(1, 'ausente')).toBe(false);
+
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase cambió',
+        expect.stringContaining('Cancelar inicio'),
+      );
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+    });
+
+    it('marcar ausente una clase que ya está ausente no es un error', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      sessionIs('no_show');
+      const refresh = vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      expect(await facade.markAttendance(1, 'ausente')).toBe(true);
+
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith('La inasistencia ya estaba registrada');
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it('finishClass filtra por estado en curso', async () => {
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso' }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      await facade.finishClass(finishPayload);
+      expect(mock.builderFor('class_b_sessions').eq).toHaveBeenCalledWith('status', 'in_progress');
+    });
+
+    it('finishClass sobre una clase que ya no está en curso no toca vehículo ni asistencia', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      sessionIs('scheduled');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      await expect(facade.finishClass(finishPayload)).rejects.toThrow('volvió a quedar pendiente');
+
+      expect(mock.client.from).not.toHaveBeenCalledWith('vehicles');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].status).toBe('en_curso');
+    });
+  });
+
   describe('startClass', () => {
     it('actualiza la sesión y muestra toast de éxito', async () => {
-      mock.setResult('class_b_sessions', null, null);
+      mock.setResult('class_b_sessions', [{ id: 1 }], null);
 
       await facade.startClass(1, 12000);
 
@@ -1065,7 +1207,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('fix-370-m: guarda la hora de Chile y recarga la tabla (vehículo y KPIs desde la BD)', async () => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date('2026-10-11T17:30:44.000Z')); // 14:30:44 en Chile
-      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       const b = mock.builderFor('class_b_sessions');
       b.select.mockClear();
 
