@@ -391,10 +391,14 @@ export class SecretariaDashboardComponent {
     const chips: SectionHeroChip[] = [
       { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
     ];
-    const alertCount = this.dashboardAlertsFacade.alertCount();
-    if (alertCount > 0) {
+    // "Urgentes" = error o advertencia. Las informativas y las de éxito ("listos para
+    // certificar", "pagos registrados hoy") no cuentan en un chip rojo (fix-412-m).
+    const urgentCount = this.alerts().filter(
+      (alert) => alert.severity === 'error' || alert.severity === 'warning',
+    ).length;
+    if (urgentCount > 0) {
       chips.push({
-        label: `${alertCount} alertas urgentes`,
+        label: urgentCount === 1 ? '1 alerta urgente' : `${urgentCount} alertas urgentes`,
         icon: 'alert-triangle',
         style: 'error',
       });

@@ -96,6 +96,39 @@ describe('SecretariaDashboardComponent', () => {
     component = fixture.componentInstance;
   });
 
+  // ─── fix-412-m: el chip rojo cuenta solo lo urgente ────────────────────────
+  describe('chip de alertas urgentes (fix-412-m)', () => {
+    const conAlertas = (severidades: string[]) => {
+      (TestBed.inject(DashboardFacade) as any).data.update((d: object) => ({
+        ...d,
+        hero: { userName: 'Test', date: '', classesToday: 0 },
+      }));
+      (TestBed.inject(DashboardAlertsFacade) as any).activeAlerts.set(
+        severidades.map((severity, i) => ({ ...buildAlert(i + 1), severity })),
+      );
+    };
+    const chipUrgente = () =>
+      component.heroChips().find((chip) => chip.style === 'error')?.label ?? null;
+
+    it('cuenta solo las alertas de error y de advertencia', () => {
+      conAlertas(['error', 'warning', 'warning', 'success', 'info']);
+
+      expect(chipUrgente()).toBe('3 alertas urgentes');
+    });
+
+    it('con una sola, va en singular', () => {
+      conAlertas(['error', 'success']);
+
+      expect(chipUrgente()).toBe('1 alerta urgente');
+    });
+
+    it('sin alertas urgentes no hay chip', () => {
+      conAlertas(['success', 'info']);
+
+      expect(chipUrgente()).toBeNull();
+    });
+  });
+
   // ─── fix-405-m: una carga fallida se avisa, no se muestra como ceros ───────
   describe('error de carga (fix-405-m)', () => {
     const dashboard = () => TestBed.inject(DashboardFacade) as any;
