@@ -170,7 +170,8 @@ export class DashboardFacade {
     const firstOfMonth = `${todayStr.slice(0, 7)}-01`;
     const todayRange = chileDayRange(todayStr);
     const yesterdayRange = chileDayRange(addDaysIso(todayStr, -1));
-    const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -7)).start;
+    // "Últimos 7 días" = hoy y los 6 anteriores (hotfix-155-m).
+    const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -6)).start;
     const firstOfPrevMonth = addMonthsIso(firstOfMonth, -1);
     // Tramo comparable del mes anterior: día 1 → mismo día del mes (fix-399-m). Comparar lo que
     // va del mes contra el mes anterior completo daba casi siempre una caída.

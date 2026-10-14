@@ -243,6 +243,20 @@ describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fi
     expect(revenueKpi(facade).trend).toBe(50);
   });
 
+  it('"nuevos últ. 7 días" cuenta hoy y los 6 días anteriores (hotfix-155-m)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-14T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Segunda consulta a enrollments = matrículas recientes. 8 oct 00:00 en Chile = 03:00 UTC.
+    expect(builders['enrollments'][1].gte).toHaveBeenCalledWith(
+      'created_at',
+      '2026-10-08T03:00:00.000Z',
+    );
+  });
+
   it('el 31 de marzo compara contra todo febrero', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-31T15:00:00.000Z'));
