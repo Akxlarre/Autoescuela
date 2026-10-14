@@ -459,7 +459,7 @@ export class DashboardFacade {
     notes,
     vehicles(id, brand, model, license_plate, current_km),
     instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
-    enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name))),
+    enrollments!inner(branch_id, student_id, number, students(users(first_names, paternal_last_name))),
     class_b_practice_attendance(status, archived_at)
   `;
 
@@ -499,6 +499,7 @@ export class DashboardFacade {
       scheduledAt: row.scheduled_at,
       durationMin: row.duration_min ?? 45,
       studentId: row.enrollments?.student_id ?? null,
+      enrollmentNumber: row.enrollments?.number ?? null,
       kmStart: row.km_start ?? null,
       kmEnd: row.km_end ?? null,
       notes: row.notes ?? null,

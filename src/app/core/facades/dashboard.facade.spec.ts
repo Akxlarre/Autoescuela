@@ -817,6 +817,42 @@ describe('DashboardFacade', () => {
       expect(result.excused).toBe(false);
     });
 
+    it('fix-424-m: entrega el Nº de matrícula de cada clase', async () => {
+      const rows = [
+        {
+          id: 4,
+          class_number: 2,
+          scheduled_at: '2026-08-18T17:30:00',
+          status: 'scheduled',
+          vehicles: null,
+          instructors: null,
+          enrollments: {
+            branch_id: 1,
+            number: '0027',
+            students: { users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+          },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.enrollmentNumber).toBe('0027');
+      expect(result.studentName).toBe('Juan Pérez');
+    });
+
     it('fix-381-m: marca justificada una falta con asistencia vigente excused', async () => {
       const rows = [
         {

@@ -67,6 +67,28 @@ describe('LiveClassesPanelComponent', () => {
     });
   });
 
+  // ─── fix-424-m: el Nº de matrícula identifica la clase ──────────────────────
+  describe('Nº de matrícula (fix-424-m)', () => {
+    const clase = {
+      status: 'pending',
+      studentName: 'Julio Verstappen',
+      enrollmentNumber: '0027',
+      scheduledAt: '2026-07-27T15:30:00.000Z',
+    } as any;
+
+    it('el nombre accesible de la fila lleva el Nº de matrícula', () => {
+      expect(component.actionLabel(clase)).toBe(
+        'Iniciar la clase de Julio Verstappen (Nº 0027), 11:30',
+      );
+    });
+
+    it('sin Nº de matrícula queda solo el nombre', () => {
+      expect(component.actionLabel({ ...clase, enrollmentNumber: null })).toBe(
+        'Iniciar la clase de Julio Verstappen, 11:30',
+      );
+    });
+  });
+
   // ─── fix-073: "Transcurriendo" vs "Atrasada" según status real ─────────────
   describe('getRelativeTime (fix-073)', () => {
     it('clase pending con hora futura → "En X min"', () => {
