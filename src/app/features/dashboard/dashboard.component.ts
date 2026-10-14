@@ -353,7 +353,7 @@ export class DashboardComponent {
 
   protected readonly kpiCards = computed(() => {
     const kpis = this.facade.kpis();
-    return kpis ? buildExecKpiCards(kpis, this.facade.receivables()) : [];
+    return kpis ? buildExecKpiCards(kpis, this.facade.receivables(), this.facade.preset()) : [];
   });
   /** Plata (ingresos, gastos, resultado, cartera) → tarjetas grandes. */
   protected readonly financeCards = computed(() => this.kpiCards().slice(0, 4));

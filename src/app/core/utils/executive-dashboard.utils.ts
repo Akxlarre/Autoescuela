@@ -375,7 +375,17 @@ function yoyLabel(delta: ExecDelta): string {
   return delta.pct !== null ? 'vs año anterior' : 'Sin base el año anterior';
 }
 
-function withDeltas(kpi: ExecKpi) {
+function withDeltas(kpi: ExecKpi, preset: ExecPeriodPreset) {
+  // "Este año" se compara solo con el mismo tramo del año anterior: el período anterior apunta
+  // al mismo tramo (la misma línea dos veces) y en enero apuntaba a diciembre (fix-426-m).
+  if (preset === 'this_year') {
+    return {
+      trend: trendOf(kpi.deltaYoy),
+      trendLabel: yoyLabel(kpi.deltaYoy),
+      secondaryTrend: undefined,
+      secondaryTrendLabel: '',
+    };
+  }
   return {
     trend: trendOf(kpi.deltaPrev),
     trendLabel: prevLabel(kpi.deltaPrev),
@@ -396,6 +406,7 @@ function pctText(n: number): string {
 export function buildExecKpiCards(
   s: ExecKpiSummary,
   receivables: ReceivablesSummary | null,
+  preset: ExecPeriodPreset = 'this_month',
 ): ExecKpiCard[] {
   const res = s.resultado.value;
   const margin = s.margenPct === null ? 'sin ingresos' : pctText(s.margenPct);
@@ -415,7 +426,7 @@ export function buildExecKpiCards(
   return [
     {
       ...base,
-      ...withDeltas(s.ingresos),
+      ...withDeltas(s.ingresos, preset),
       id: 'ingresos',
       label: 'Ingresos Clase B',
       value: s.ingresos.value,
@@ -425,7 +436,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.gastos),
+      ...withDeltas(s.gastos, preset),
       id: 'gastos',
       label: 'Gastos',
       value: s.gastos.value,
@@ -439,7 +450,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.resultado),
+      ...withDeltas(s.resultado, preset),
       id: 'resultado',
       label: `Resultado · margen ${margin}`,
       value: Math.abs(res),
@@ -461,7 +472,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.nuevasMatriculas),
+      ...withDeltas(s.nuevasMatriculas, preset),
       id: 'matriculas',
       label: 'Nuevas matrículas',
       value: s.nuevasMatriculas.value,
@@ -520,8 +531,14 @@ export function toHeroKpi(card: ExecKpiCard): SectionHeroKpi {
     suffix: card.noData ? '' : card.suffix,
     trend: card.trend,
     trendSuffix: '%',
-    trendLabel: card.trend !== undefined ? 'vs per. ant.' : undefined,
-    subValue: card.subValue || yoyText,
+    trendLabel:
+      card.trend === undefined
+        ? undefined
+        : card.trendLabel === 'vs año anterior'
+          ? 'vs año ant.'
+          : 'vs per. ant.',
+    // Sin segunda comparación ("Este año", fix-426-m) y sin base, el hero dice por qué no hay %.
+    subValue: card.subValue || yoyText || (card.trend === undefined ? card.trendLabel : ''),
     color: card.color,
   };
 }
