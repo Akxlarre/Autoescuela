@@ -539,12 +539,15 @@ test('R01 · R02 · K09: la secretaria multi-sede ve otra sede al cambiarla, sin
   pageAs,
 }) => {
   const sb = await getAdminClient();
-  const { data: vehiculos, error } = await sb.from('vehicles').select('branch_id, status');
+  const { data: vehiculos, error } = await sb
+    .from('vehicles')
+    .select('branch_id, both_branches, status');
   if (error) throw new Error(`[e2e] No se pudieron leer los vehículos: ${error.message}`);
+  // Un vehículo de "ambas sedes" cuenta en las dos (fix-411-m).
   const disponibles = (branchId: number | null) =>
     (vehiculos ?? []).filter(
       (v) =>
-        (branchId === null || v.branch_id === branchId) &&
+        (branchId === null || v.branch_id === branchId || v.both_branches) &&
         resolveVehicleStatus(v.status) === 'available',
     ).length;
 

@@ -245,7 +245,10 @@ export class DashboardFacade {
       prevSpecialRevenueQuery = prevSpecialRevenueQuery.eq('branch_id', branchId);
 
     let vehiclesQuery: any = this.supabase.client.from('vehicles').select('id, status');
-    if (branchId !== null) vehiclesQuery = vehiclesQuery.eq('branch_id', branchId);
+    // Igual que Flota (spec 0004-m, AC7): un vehículo de "ambas sedes" cuenta en las dos.
+    if (branchId !== null) {
+      vehiclesQuery = vehiclesQuery.or(`branch_id.eq.${branchId},both_branches.eq.true`);
+    }
 
     let auditLogQuery: any = this.supabase.client
       .from('audit_log')

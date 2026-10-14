@@ -254,6 +254,26 @@ describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fi
   });
 });
 
+describe('DashboardFacade — KPI "Vehículos" incluye los de ambas sedes (fix-411-m)', () => {
+  it('con una sede, pide los vehículos de la sede o marcados "ambas sedes", como Flota', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(2);
+
+    const [vehiculos] = builders['vehicles'];
+    expect(vehiculos.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true');
+    expect(vehiculos.eq).not.toHaveBeenCalledWith('branch_id', 2);
+  });
+
+  it('con "Todas" no filtra', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    expect(builders['vehicles'][0].or).not.toHaveBeenCalled();
+  });
+});
+
 describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
   it('otro usuario en la misma sede no ve los datos del anterior: se descartan y carga con skeleton', async () => {
     const user = { id: 'uid-1', name: 'Secretaria Uno' };
