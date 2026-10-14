@@ -206,17 +206,106 @@ punto decimal (`1.5M`); es de `ASG-i-028`.
   `fix-408-m`. Medido antes del fix: cargar 4 dashboards de secretaria a la vez deja **todas** las
   consultas en 12–16 s. Es un riesgo de rendimiento para el piloto más allá de este módulo.
 
+### Tercera pasada — números del ejecutivo contra la BD y panel con clases sembradas (2026-10-13)
+
+**Ejecutivo, septiembre 2026, cada sede.** Cada cifra se recalculó con una consulta escrita aparte
+(`cross.sql` en el scratchpad) y se comparó con lo que devuelven las funciones `exec_dashboard_*`:
+
+| Caso | Res. | Sede 1 | Sede 2 |
+|---|---|---|---|
+| C01 ingresos Clase B | ✅ | $1.170.000 | $1.470.000 |
+| C02 no suman Profesional ni servicios | ✅ | $20.000 de servicios especiales fuera | $630.000 de pagos Profesional fuera |
+| C05 egresos + fijos | ✅ | $2.000 + $0 | $20.000 + $0 |
+| C05 sueldos devengados (mes sin liquidar: horas × tarifa) | ✅ | $361.000 | $375.500 |
+| D01 nuevas matrículas | ✅ | 72 | 72 |
+| D03 alumnos activos | ✅ | 67 | 65 |
+| D05 clases realizadas | ✅ | 96 | 100 |
+| D07 canceladas / inasistencias | ✅ | 347 / 128 | 326 / 128 |
+| G02 horas de instrucción | ✅ | 4.320 min | 4.500 min (147 h en total) |
+| C10, H04 cartera | ✅ | $3.600.000 · 25 alumnos | $2.850.000 · 22 alumnos |
+| C07 mes liquidado | ✅ | No hay liquidaciones en dev; cubierto en el ensayo de `fix-396-m` (AC4) | |
+
+**Secretaria, con 9 clases sembradas hoy** (exploración con Playwright, ya borrada):
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| M02 orden | ✅ | Primero la sesión colgada de ayer, después por hora |
+| M04 por iniciar con hora pasada | ✅ | "Debía iniciar hace 22 h" |
+| M05 en curso atrasada | ✅ | "Atrasada · Cierre atrasado" |
+| M06 colgada de ayer | ✅ | "12-oct · Día Anterior", borde rojo |
+| M07 iniciar | ✅ | Drawer "Iniciar Clase Práctica" con clase, alumno, instructor y vehículo; ofrece "Marcar ausente" |
+| M11, M13 finalizar | ✅ | Drawer "Finalizar Clase" con km de salida, firmas opcionales y "Cancelar inicio"; también para la colgada de ayer |
+| M18 tablet | ✅ | 4 clases + "Ver toda la agenda" |
+| N01, N02 | ✅ | "Agenda de Hoy" con las 9; iniciar desde ahí abre el drawer encima |
+| L08 egreso dos veces | ✅ | "Combustible" preseleccionado las dos veces |
+| P03 textos de actividad | ❌→✅ | "Absence Penalty Applied At" → `fix-413-m`. Sin "undefined" |
+| P05 | ✅ | Drawer con el historial; el dashboard pasa a modo compacto sin romperse |
+| Q16 descartar | ✅ | Desaparece y sigue oculta al recargar |
+| Q17, Q18 / S13b | ❌→✅ | El descarte no distinguía usuario ni casos nuevos → `fix-415-m` |
+| S05 teclado | ❌→✅ | Las clases no recibían foco → `fix-414-m` |
+| S06 | ✅ | Los botones "X" de alertas tienen `aria-label` y tooltip "Descartar" |
+
+### Casos no ejecutados
+
+Quedaron sin ejecutar en pantalla; no se encontró nada al leer su código:
+
+- Ejecutivo: B08–B10 (fechas futuras, cruce de año, medianoche), C13 (montos > $10 M), D02, D06,
+  D09, E02, E06, E07, F02, F05–F07, G03, G04, H02, H03, H05, I01, I04, I08.
+- Secretaria: K03, K06, K12, L02, L04, L07, L09, M08–M10 (decididos en `fix-366-m`), M12, M14,
+  M16, M17, M19, N04, O03, O04, O06, P02, P04, P06–P10, Q01, Q03, Q04, Q06, Q09, Q12, R03, R04,
+  R07, S03, S04, S07.
+
+M12 (km final ≤ inicial) y el flujo completo de iniciar/finalizar están cubiertos por
+`e2e/asistencia-clase-b.spec.ts`.
+
 ## Decisiones de negocio
 
-<!-- Preguntas de §5 del checklist y la respuesta de Matías -->
+Pendientes de Matías (§5 del checklist); no se marcan ✅/❌:
+
+| Caso | Pregunta | Qué hace hoy |
+|---|---|---|
+| K02 / S8 | ¿"Alumnos Activos" de secretaria cuenta solo Clase B? | Cuenta matrículas activas de todos los cursos: sede 2 muestra 130 (65 B + 65 Profesional) |
+| Q15 / S14 | ¿Se muestran alertas de Clase Profesional durante el piloto? | Sí (pre-inscripciones, asistencia, módulos) |
+| Q14 | ¿"Instructores sin liquidar" revisa el mes en curso o el anterior? | El mes en curso: aparece todo el mes |
+| C04 / S11 | ¿El Resultado resta solo gastos de Clase B? | Ingresos solo B; egresos y fijos de toda la sede |
+| P02 | ¿La secretaria ve la actividad de toda su sede? | Solo sus propias acciones |
+| I06 / Q20 | ¿Las alertas llevan a su módulo? | Solo "Caja sin cerrar" navega |
+| Q10 | "Caja sin cerrar" con "Todas": ¿exige el cierre de cada sede? | Desaparece si cualquier sede cerró |
+| D08 | Sin clases en el período: ¿"0 %" o "—"? | "0 %" con "Sin clases en el período" |
+| B12 / S17b | "Este año": las dos comparaciones son contra el mismo tramo del año anterior | Muestra las dos líneas |
+| A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso" en su dashboard? | No los tiene desde `0044-b` |
+| L10 | ¿En qué sede queda un pago o egreso de una secretaria multi-sede en "Todas"? | Sin revisar |
+| H05 / Q03 / S16 | ¿Cuál es el número oficial de "alumnos con saldo"? | Ejecutivo (incluye finalizadas), alerta (solo activas, todos los cursos) y Base B difieren |
+| S02 (obs.) | A 1440 × 900, ¿"Actividad" y "Alertas" con una fila y media visibles está bien? | "Clases Actuales" ocupa media pantalla |
+| J03 (obs.) | Al cambiar de sede en el ejecutivo, 1–2,5 s con el nombre nuevo y los números viejos | Sin indicador de carga |
+
+Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
+
+- K08: "Ingresos Mes" en pesos completos y comparado con el mismo tramo del mes anterior, como el
+  ejecutivo (`fix-399-m`).
+- K11: el chip "alertas urgentes" cuenta solo errores y advertencias (`fix-412-m`).
+- Q13: "cuota 2 vencida" = clase 7+ tomada con saldo, cualquier modalidad, alineado con `0010-i`
+  (`fix-402-m`).
+- M08, M09, M10: resueltas en `fix-366-m` (C04, C06, C08).
+- B11: el rango personalizado se conserva al salir y volver.
+
+## Rendimiento (para el piloto)
+
+Medido el 2026-10-13 contra la BD de dev: un dashboard de secretaria hace unas 34 consultas. Con
+una sesión carga en 3–6 s; con 4 cargando a la vez, todas las consultas tardan 12–16 s y aparecen
+timeouts (`57014`), también al sembrar y limpiar datos en otras suites E2E. `fix-408-m` quita la
+consulta más cara y `fix-407-m` evita recargas en cadena, pero el dashboard sigue siendo caro: si
+la BD de producción es del mismo tamaño, conviene medirlo con la migración aplicada.
 
 ## Progreso
 
-- [ ] Bloque 1 — Seguridad
-- [ ] Bloque 2 — Ejecutivo
-- [ ] Bloque 3 — Secretaria
-- [ ] Bloque 4 — Alertas, sedes y visual
-- [ ] Capa Playwright (`e2e/dashboards.spec.ts`)
+- [x] Bloque 1 — Seguridad
+- [x] Bloque 2 — Ejecutivo
+- [x] Bloque 3 — Secretaria
+- [x] Bloque 4 — Alertas, sedes y visual
+- [x] Capa Playwright (`e2e/dashboards.spec.ts`, 22 tests)
+- [ ] Matías aplica las 4 migraciones
+- [ ] Decisiones de negocio
 
 ## ACs Afectados
 
@@ -224,7 +313,9 @@ punto decimal (`1.5M`); es de `ASG-i-028`.
 
 ## Regression Test
 
-- Suite `e2e/dashboards.spec.ts` (casos "Auto ✓" del checklist).
+- Suite `e2e/dashboards.spec.ts` (22 tests: casos "Auto ✓" del checklist y regresión de los fixes 396 a 415).
+- Con `e2e/asistencia-clase-b.spec.ts` en paralelo: 43 en verde. Hasta aplicar `fix-408-m`, la BD de
+  dev puede responder con timeout al sembrar o limpiar cuando corren varias suites a la vez.
 
 ## Tracks generados
 
@@ -248,6 +339,9 @@ punto decimal (`1.5M`); es de `ASG-i-028`.
 | `fix-411-m-kpi-vehiculos-secretaria-sin-ambas-sedes` | K09 / S9 | Cerrado |
 | `fix-412-m-chip-alertas-urgentes-cuenta-informativas` | K11 / S13c | Cerrado |
 | `hotfix-153-m-textos-de-los-dashboards` | Q11, H06, G04 / S17c, S18 | Cerrado |
+| `fix-413-m-actividad-columnas-nuevas-sin-etiqueta` | P03 | Cerrado · migración por aplicar |
+| `fix-414-m-clases-actuales-sin-teclado` | S05 | Cerrado |
+| `fix-415-m-descartar-alerta-oculta-casos-nuevos` | Q16–Q18 / S13b | Cerrado |
 
 ### Migraciones por aplicar (Matías)
 
@@ -256,5 +350,6 @@ punto decimal (`1.5M`); es de `ASG-i-028`.
 | `20261013160000_fix396_exec_costo_instructores_mes_en_curso.sql` | `fix-396-m` |
 | `20261013161000_fix397_exec_today_ops_vehiculos_available.sql` | `fix-397-m` |
 | `20261013162000_fix408_audit_log_policy_initplan.sql` | `fix-408-m` |
+| `20261013163000_fix413_audit_humanize_columnas_nuevas.sql` | `fix-413-m` |
 
-Las tres se ensayaron contra la BD de dev en una transacción que se revierte.
+Las cuatro se ensayaron contra la BD de dev en una transacción que se revierte.
