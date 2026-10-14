@@ -21,6 +21,8 @@ function setup(opts: { branchId?: number | null; tier?: 'mobile' | 'tablet' | 'd
     preset: signal('this_month'),
     range: signal({ from: '2026-09-01', to: '2026-09-27' }),
     isLoading: signal(false),
+    isRefreshing: signal(false),
+    dataPreset: signal('this_month'),
     kpis,
     receivables: signal(null),
     series: signal(null),
