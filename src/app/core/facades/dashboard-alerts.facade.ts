@@ -292,7 +292,7 @@ export class DashboardAlertsFacade {
       // Fase 3 — Pagos y Finanzas
       this.checkRecentPayments(branchId),
       this.checkOverdueSecondInstallment(branchId),
-      this.checkPendingInstructorPayments(),
+      this.checkPendingInstructorPayments(branchId),
       // Fase 3 — Pre-inscripciones Profesionales
       this.checkNewPreRegistrations(branchId),
       this.checkPendingPsychEvaluation(branchId),
@@ -466,6 +466,8 @@ export class DashboardAlertsFacade {
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
+      // Solo Clase B: una matrícula Profesional no tiene 12ª clase ni se certifica acá (fix-410-m).
+      .eq('license_group', 'class_b')
       .eq('certificate_enabled', true)
       .is('certificate_b_pdf_url', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
@@ -672,18 +674,20 @@ export class DashboardAlertsFacade {
 
   /**
    * (F-5) Instructores con horas prácticas registradas en el período actual sin liquidación.
-   * No aplica filtro de sede — los instructores tienen scope propio vía su branch_id de usuario.
+   * Con una sede elegida, solo los instructores de esa sede.
    */
-  private async checkPendingInstructorPayments(): Promise<AlertModel[]> {
+  private async checkPendingInstructorPayments(branchId: number | null): Promise<AlertModel[]> {
     const currentPeriod = chileMonth(); // 'YYYY-MM'
 
-    const { data: hoursData, error: hoursError } = await queryOk(
-      this.supabase.client
-        .from('instructor_monthly_hours')
-        .select('instructor_id')
-        .eq('period', currentPeriod)
-        .gt('practical_sessions', 0),
-    );
+    // Sede del instructor = users.branch_id, el mismo criterio de Liquidaciones (fix-410-m).
+    let hoursQuery: any = this.supabase.client
+      .from('instructor_monthly_hours')
+      .select('instructor_id, instructors!inner(users!inner(branch_id))')
+      .eq('period', currentPeriod)
+      .gt('practical_sessions', 0);
+    if (branchId !== null) hoursQuery = hoursQuery.eq('instructors.users.branch_id', branchId);
+
+    const { data: hoursData, error: hoursError } = await queryOk(hoursQuery);
 
     if (hoursError || !hoursData || hoursData.length === 0) return [];
 
@@ -795,19 +799,47 @@ export class DashboardAlertsFacade {
   // ── Queries privadas — Fase 3: Clase Profesional ──────────────────────────
 
   /**
-   * (R-1) Alumnos Profesional con semáforo de asistencia en rojo.
-   * No aplica filtro de sede — la vista v_professional_attendance no expone FK
-   * joinable; RLS restringe acceso por rol.
+   * Cuántas matrículas Profesional tienen el semáforo de asistencia en el color pedido, dentro
+   * de la sede elegida. La vista v_professional_attendance no trae sede: con una sede elegida se
+   * cruzan sus enrollment_id contra enrollments.branch_id (fix-410-m; antes se ignoraba la sede).
    */
-  private async checkRedAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await queryOk(
+  private async countProfessionalAttendance(
+    flag: 'red' | 'yellow',
+    branchId: number | null,
+  ): Promise<number> {
+    if (branchId === null) {
+      const { count } = await queryOk(
+        this.supabase.client
+          .from('v_professional_attendance')
+          .select('enrollment_id', { count: 'exact', head: true })
+          .eq('attendance_flag', flag),
+      );
+      return count ?? 0;
+    }
+
+    const { data } = await queryOk(
       this.supabase.client
         .from('v_professional_attendance')
-        .select('enrollment_id', { count: 'exact', head: true })
-        .eq('attendance_flag', 'red'),
+        .select('enrollment_id')
+        .eq('attendance_flag', flag),
     );
+    const ids = ((data ?? []) as { enrollment_id: number }[]).map((row) => row.enrollment_id);
+    if (ids.length === 0) return 0;
 
-    if (error || !count || count === 0) return [];
+    const { count } = await queryOk(
+      this.supabase.client
+        .from('enrollments')
+        .select('id', { count: 'exact', head: true })
+        .in('id', ids)
+        .eq('branch_id', branchId),
+    );
+    return count ?? 0;
+  }
+
+  /** (R-1) Alumnos Profesional con semáforo de asistencia en rojo. */
+  private async checkRedAttendance(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countProfessionalAttendance('red', branchId);
+    if (count === 0) return [];
 
     return [
       {
@@ -820,19 +852,10 @@ export class DashboardAlertsFacade {
     ];
   }
 
-  /**
-   * (R-2) Alumnos Profesional con semáforo de asistencia en amarillo.
-   * No aplica filtro de sede — ver checkRedAttendance.
-   */
-  private async checkYellowAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await queryOk(
-      this.supabase.client
-        .from('v_professional_attendance')
-        .select('enrollment_id', { count: 'exact', head: true })
-        .eq('attendance_flag', 'yellow'),
-    );
-
-    if (error || !count || count === 0) return [];
+  /** (R-2) Alumnos Profesional con semáforo de asistencia en amarillo. */
+  private async checkYellowAttendance(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countProfessionalAttendance('yellow', branchId);
+    if (count === 0) return [];
 
     return [
       {

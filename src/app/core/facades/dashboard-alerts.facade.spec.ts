@@ -144,6 +144,91 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
+  // ── fix-410-m: cada alerta cuenta dentro de su curso y de su sede ────────────
+  describe('alcance de las alertas (fix-410-m)', () => {
+    /** Llamadas a los filtros de una cadena (todos los métodos comparten el mismo spy). */
+    const filtros = (chain: any) => chain.eq.mock.calls as unknown[][];
+    const sede = (branchId: number | null) =>
+      (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(branchId);
+    const comoAdmin = () =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+
+    it('"listos para certificar" cuenta solo matrículas Clase B', async () => {
+      const chains: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        const chain = buildChain(table === 'cash_closings' ? { count: 1 } : { data: [], count: 0 });
+        if (table === 'enrollments') chains.push(chain);
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      // Una de las consultas a enrollments es la de certificados: debe acotar el curso.
+      const certificados = chains.find((c) =>
+        filtros(c).some(([column]) => column === 'certificate_enabled'),
+      );
+      expect(filtros(certificados)).toContainEqual(['license_group', 'class_b']);
+    });
+
+    it('asistencia Profesional: con una sede elegida cuenta solo las matrículas de esa sede', async () => {
+      comoAdmin();
+      sede(1);
+      const cruces: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'v_professional_attendance')
+          return buildChain({ data: [{ enrollment_id: 10 }, { enrollment_id: 11 }] });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'enrollments') cruces.push(chain);
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      // Los ids de la vista se cruzan contra enrollments de la sede; ninguno es de la sede 1.
+      const cruce = cruces.find((c) =>
+        filtros(c).some(([column, value]) => column === 'id' && Array.isArray(value)),
+      );
+      expect(filtros(cruce)).toContainEqual(['id', [10, 11]]);
+      expect(filtros(cruce)).toContainEqual(['branch_id', 1]);
+      expect(
+        facade.activeAlerts().find((a) => a.id === 'alert-professional-attendance-red'),
+      ).toBeUndefined();
+    });
+
+    it('asistencia Profesional: con "Todas" cuenta todas, sin cruce', async () => {
+      comoAdmin();
+      sede(null);
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'v_professional_attendance') return buildChain({ count: 6 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.loadAlerts();
+
+      expect(
+        facade.activeAlerts().find((a) => a.id === 'alert-professional-attendance-red')?.count,
+      ).toBe(6);
+    });
+
+    it('"instructores sin liquidar": con una sede elegida filtra por la sede del instructor', async () => {
+      comoAdmin();
+      sede(2);
+      let horas: any;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'instructor_monthly_hours') horas = chain;
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      expect(filtros(horas)).toContainEqual(['instructors.users.branch_id', 2]);
+    });
+  });
+
   // ── fix-409-m: lo guardado es de quien lo cargó ─────────────────────────────
   describe('cambio de usuario (fix-409-m)', () => {
     const conPagosPendientes = (count: number) => {
@@ -926,6 +1011,8 @@ describe('DashboardAlertsFacade', () => {
   // ── Phase 3 — R-1: Professional attendance red ───────────────────────────────
   describe('R-1: checkRedAttendance', () => {
     it('should generate an error alert for students with critical (red) attendance', async () => {
+      // Admin en "Todas las sedes": se cuenta la vista completa (fix-410-m).
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
       fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') return buildChain({ data: [] });
         if (table === 'vehicle_documents') return buildChain({ count: 0 });
@@ -956,6 +1043,8 @@ describe('DashboardAlertsFacade', () => {
   // ── Phase 3 — R-2: Professional attendance yellow ────────────────────────────
   describe('R-2: checkYellowAttendance', () => {
     it('should generate a warning for students with at-risk (yellow) attendance', async () => {
+      // Admin en "Todas las sedes": se cuenta la vista completa (fix-410-m).
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
       const callCounters: Record<string, number> = {};
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
