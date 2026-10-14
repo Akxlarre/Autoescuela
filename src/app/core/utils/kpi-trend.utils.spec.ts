@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatTrendDisplay, kpiTrendColor, trendView } from './kpi-trend.utils';
+import {
+  formatTrendDisplay,
+  formatTrendMagnitude,
+  kpiTrendColor,
+  trendView,
+} from './kpi-trend.utils';
 
 describe('trendView', () => {
   it('combina color, ícono y texto', () => {
@@ -39,8 +44,23 @@ describe('formatTrendDisplay', () => {
     expect(formatTrendDisplay(-3, '%')).toBe('3%');
   });
 
-  it('un decimal si no es entero', () => {
-    expect(formatTrendDisplay(14.7, '%')).toBe('+14.7%');
-    expect(formatTrendDisplay(-0.25, '%')).toBe('0.3%');
+  it('un decimal si no es entero, con coma decimal (fix-400-m)', () => {
+    expect(formatTrendDisplay(14.7, '%')).toBe('+14,7%');
+    expect(formatTrendDisplay(-0.25, '%')).toBe('0,3%');
+    expect(formatTrendDisplay(-76.7, '%')).toBe('76,7%');
+  });
+});
+
+describe('formatTrendMagnitude (fix-400-m)', () => {
+  it('magnitud sin signo, con coma decimal y a lo más un decimal', () => {
+    expect(formatTrendMagnitude(-97.1)).toBe('97,1');
+    expect(formatTrendMagnitude(97.14)).toBe('97,1');
+    expect(formatTrendMagnitude(0.25)).toBe('0,3');
+  });
+
+  it('los enteros van sin decimales', () => {
+    expect(formatTrendMagnitude(15)).toBe('15');
+    expect(formatTrendMagnitude(-100)).toBe('100');
+    expect(formatTrendMagnitude(3.0)).toBe('3');
   });
 });

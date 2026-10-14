@@ -31,6 +31,13 @@ export class DashboardFacade {
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
+  /** Usuario para el que se cargó lo que hay en `data` (ver `initialize`). */
+  private _loadedUserId: string | null = null;
+  /** Número de la última carga con skeleton (ver `initialize`). */
+  private _loadTicket = 0;
+  /** Hay un refresco silencioso en curso / pedido mientras otra carga corría (fix-407-m). */
+  private _refreshRunning = false;
+  private _refreshQueued = false;
   private _realtimeChannel: any | null = null;
   /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
   private readonly dashboardGuard = createRequestGuard();
@@ -90,29 +97,69 @@ export class DashboardFacade {
     const branchId = this.getActiveBranchId();
     this.setupRealtime();
 
+    // Lo guardado es de quien lo cargó: el saludo y la actividad reciente son personales. Si
+    // entró otra persona en la misma pestaña (cerrar sesión no recarga la página), se descarta
+    // en vez de mostrarlo mientras refresca (fix-409-m).
+    const userId = this.auth.currentUser()?.id ?? null;
+    if (userId !== this._loadedUserId) {
+      this._loadedUserId = userId;
+      this._initialized = false;
+      this.data.set(null);
+    }
+
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
 
+    // Solo la carga más reciente apaga el skeleton, registra la sede cargada o muestra su error:
+    // si se disparó otra mientras esta esperaba (cambio de sede seguido), la vieja no debe
+    // dejar la pantalla "lista" con datos que no son de la sede elegida (fix-404-m).
+    const ticket = ++this._loadTicket;
     this.loading.set(true);
     this.error.set(null);
     try {
       await this.fetchRealDashboardData(branchId);
-      this._initialized = true;
-      this._lastBranchId = branchId;
+      if (ticket === this._loadTicket) {
+        this._initialized = true;
+        this._lastBranchId = branchId;
+      }
     } catch {
-      this.error.set('Error al cargar datos del dashboard');
+      if (ticket === this._loadTicket) this.error.set('Error al cargar datos del dashboard');
     } finally {
-      this.loading.set(false);
+      if (ticket === this._loadTicket) {
+        this.loading.set(false);
+        // Un evento que llegó durante la carga quedó anotado: se refresca ahora, una vez.
+        if (this._refreshQueued) void this.refreshSilently();
+      }
     }
   }
 
+  /**
+   * Refresco sin skeleton (re-entrada SWR, eventos Realtime, post-acción).
+   *
+   * Nunca arranca una carga si ya hay una en curso: la anota y la corre una vez al terminar.
+   * Cada carga tarda segundos y el guard descarta toda carga que no sea la última pedida; si
+   * cada evento arrancara la suya, con eventos seguidos (varias personas iniciando y cerrando
+   * clases) ninguna llegaba a aplicarse y el dashboard quedaba vacío (fix-407-m).
+   */
   private async refreshSilently(): Promise<void> {
+    if (this.loading() || this._refreshRunning) {
+      this._refreshQueued = true;
+      return;
+    }
+
+    this._refreshRunning = true;
     try {
-      await this.fetchRealDashboardData(this.getActiveBranchId());
+      do {
+        this._refreshQueued = false;
+        await this.fetchRealDashboardData(this.getActiveBranchId());
+        // Empezó una carga con skeleton (cambio de sede): ella refresca al terminar.
+      } while (this._refreshQueued && !this.loading());
     } catch {
-      // Swallowed
+      // Fail silencioso — los datos anteriores siguen visibles.
+    } finally {
+      this._refreshRunning = false;
     }
   }
 
@@ -123,9 +170,12 @@ export class DashboardFacade {
     const firstOfMonth = `${todayStr.slice(0, 7)}-01`;
     const todayRange = chileDayRange(todayStr);
     const yesterdayRange = chileDayRange(addDaysIso(todayStr, -1));
-    const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -7)).start;
+    // "Últimos 7 días" = hoy y los 6 anteriores (hotfix-155-m).
+    const sevenDaysAgoStart = chileDayRange(addDaysIso(todayStr, -6)).start;
     const firstOfPrevMonth = addMonthsIso(firstOfMonth, -1);
-    const lastOfPrevMonthStr = addDaysIso(firstOfMonth, -1);
+    // Tramo comparable del mes anterior: día 1 → mismo día del mes (fix-399-m). Comparar lo que
+    // va del mes contra el mes anterior completo daba casi siempre una caída.
+    const sameDayPrevMonthStr = addMonthsIso(todayStr, -1);
 
     let studentsQuery: any = this.supabase.client
       .from('enrollments')
@@ -140,18 +190,24 @@ export class DashboardFacade {
       .gte('created_at', sevenDaysAgoStart);
     if (branchId !== null) recentStudentsQuery = recentStudentsQuery.eq('branch_id', branchId);
 
+    // Mismo criterio que el panel "Clases Actuales" (fetchLiveClasses): sin canceladas, sin
+    // reservas de matrículas en borrador (DG-050) y solo de matrículas activas (fix-398-m).
     let classesQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, enrollments!inner(branch_id, status)', { count: 'exact', head: true })
       .gte('scheduled_at', todayRange.start)
-      .lt('scheduled_at', todayRange.endExclusive);
+      .lt('scheduled_at', todayRange.endExclusive)
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active');
     if (branchId !== null) classesQuery = classesQuery.eq('enrollments.branch_id', branchId);
 
     let classesYesterdayQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, enrollments!inner(branch_id, status)', { count: 'exact', head: true })
       .gte('scheduled_at', yesterdayRange.start)
-      .lt('scheduled_at', yesterdayRange.endExclusive);
+      .lt('scheduled_at', yesterdayRange.endExclusive)
+      .in('status', VALID_CLASS_B_SESSION_STATUSES)
+      .eq('enrollments.status', 'active');
     if (branchId !== null)
       classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
 
@@ -167,7 +223,7 @@ export class DashboardFacade {
       .select('total_amount, enrollments!inner(branch_id)')
       .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', firstOfPrevMonth)
-      .lte('payment_date', lastOfPrevMonthStr);
+      .lte('payment_date', sameDayPrevMonthStr);
     if (branchId !== null)
       prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
 
@@ -185,12 +241,15 @@ export class DashboardFacade {
       .select('price')
       .eq('paid', true)
       .gte('sale_date', firstOfPrevMonth)
-      .lte('sale_date', lastOfPrevMonthStr);
+      .lte('sale_date', sameDayPrevMonthStr);
     if (branchId !== null)
       prevSpecialRevenueQuery = prevSpecialRevenueQuery.eq('branch_id', branchId);
 
     let vehiclesQuery: any = this.supabase.client.from('vehicles').select('id, status');
-    if (branchId !== null) vehiclesQuery = vehiclesQuery.eq('branch_id', branchId);
+    // Igual que Flota (spec 0004-m, AC7): un vehículo de "ambas sedes" cuenta en las dos.
+    if (branchId !== null) {
+      vehiclesQuery = vehiclesQuery.or(`branch_id.eq.${branchId},both_branches.eq.true`);
+    }
 
     let auditLogQuery: any = this.supabase.client
       .from('audit_log')
@@ -214,6 +273,7 @@ export class DashboardFacade {
       prevMonthlySpecialRevenue,
       vehiclesStatus,
       auditLogsResponse,
+      liveClasses,
     ] = await Promise.all([
       studentsQuery,
       recentStudentsQuery,
@@ -225,7 +285,27 @@ export class DashboardFacade {
       prevSpecialRevenueQuery,
       vehiclesQuery,
       auditLogQuery,
+      // En la misma tanda, antes del guard: pedirlas después dejaba que una carga vieja que ya
+      // había pasado el guard escribiera al final y pisara a la vigente (fix-404-m).
+      this.fetchLiveClasses(branchId),
     ]);
+
+    // supabase-js no lanza cuando una consulta falla: devuelve { error }. Sin esto, una falla de
+    // red o de RLS se publicaba como KPIs en 0 (fix-405-m).
+    for (const result of [
+      activeStudents,
+      recentStudents,
+      classesToday,
+      classesYesterday,
+      monthlyRevenue,
+      prevMonthlyRevenue,
+      monthlySpecialRevenue,
+      prevMonthlySpecialRevenue,
+      vehiclesStatus,
+      auditLogsResponse,
+    ]) {
+      if (result.error) throw result.error;
+    }
 
     const sumPayments = (rows: any[] | null) =>
       (rows ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0);
@@ -288,9 +368,9 @@ export class DashboardFacade {
         {
           id: 'revenue',
           label: 'Ingresos Mes',
-          value: revenue / 1000000,
+          // Monto completo en pesos; la pantalla le pone el separador de miles (fix-399-m).
+          value: revenue,
           prefix: '$',
-          suffix: 'M',
           trend: revenueTrend,
           trendLabel: 'vs mes pasado',
           trendSuffix: '%',
@@ -346,7 +426,7 @@ export class DashboardFacade {
         { name: 'Supabase', ok: true },
         { name: 'Realtime', ok: !!this._realtimeChannel },
       ],
-      liveClasses: await this.fetchLiveClasses(branchId),
+      liveClasses,
     });
   }
 
@@ -447,11 +527,16 @@ export class DashboardFacade {
     const [{ data: practicasData, error: practicasError }, { data: stuckData, error: stuckError }] =
       await Promise.all([practicasQuery, stuckSessionsQuery]);
 
-    if (!practicasError && practicasData) {
+    // Una consulta fallida no es "sin clases": se propaga para que la pantalla no muestre
+    // "Sin clases actuales" con clases en curso (fix-405-m).
+    if (practicasError) throw practicasError;
+    if (stuckError) throw stuckError;
+
+    if (practicasData) {
       liveClasses = [...liveClasses, ...practicasData.map((row: any) => this.mapPracticaRow(row))];
     }
 
-    if (!stuckError && stuckData) {
+    if (stuckData) {
       liveClasses = [...liveClasses, ...stuckData.map((row: any) => this.mapPracticaRow(row))];
     }
 

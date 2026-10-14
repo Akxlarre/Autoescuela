@@ -2,14 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
-  OnInit,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
-import { toChileDate } from '@core/utils/chile-time.utils';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
@@ -21,6 +21,7 @@ import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
@@ -35,8 +36,10 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 import type { LiveClassModel } from '@core/models/ui/dashboard.model';
-import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
-import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
+import {
+  liveClassToAgendaSlot,
+  resolveLiveClassActionPlan,
+} from '@core/utils/live-class-action.utils';
 
 @Component({
   selector: 'app-secretaria-dashboard',
@@ -103,202 +106,239 @@ import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils'
         (actionClick)="handleQuickAction($event)"
       />
 
-      <app-live-classes-panel
-        class="bento-wide bento-card bento-fill w-full"
-        appCardHover
-        appScrollReveal
-        data-row-span-md="2"
-        data-row-span="2"
-        [classes]="liveClasses()"
-        [loading]="loading()"
-        [maxItems]="liveClassesBudget()"
-        (actionClick)="handleLiveClassAction($event)"
-        (viewAllClick)="openAgenda()"
-      />
-
-      <!-- Actividad reciente -->
-      <div
-        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
-        appCardHover
-        [appScrollReveal]="{ delay: 0.1 }"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <app-icon name="activity" [size]="16" class="text-brand" />
-            <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
-          </div>
+      <!-- La primera carga falló: un aviso, no paneles en cero (fix-405-m) -->
+      @if (loadError(); as message) {
+        <div
+          class="bento-banner bento-card bento-fill flex items-center justify-center"
+          role="alert"
+        >
+          <app-empty-state
+            icon="triangle-alert"
+            message="No se pudo cargar el panel"
+            [subtitle]="message + '. Revisa tu conexión y vuelve a intentarlo.'"
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="retry()"
+          />
         </div>
+      } @else {
+        <app-live-classes-panel
+          class="bento-wide bento-card bento-fill w-full"
+          appCardHover
+          appScrollReveal
+          data-row-span-md="2"
+          data-row-span="2"
+          [classes]="liveClasses()"
+          [loading]="loading()"
+          [maxItems]="liveClassesBudget()"
+          (actionClick)="handleLiveClassAction($event)"
+          (viewAllClick)="openAgenda()"
+        />
 
-        @if (loading()) {
-          <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2, 3, 4]; track i) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-              >
-                <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                  <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
-                </div>
-              </li>
-            }
-          </ul>
-        } @else {
-          <div class="scroll-fade flex-1 min-h-0">
-            <ul
-              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-            >
-              @for (item of visibleActivities(); track item.id; let i = $index) {
+        <!-- Actividad reciente -->
+        <div
+          class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
+          appCardHover
+          [appScrollReveal]="{ delay: 0.1 }"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <app-icon name="activity" [size]="16" class="text-brand" />
+              <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
+            </div>
+          </div>
+
+          @if (loading()) {
+            <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
+              @for (i of [1, 2, 3, 4]; track i) {
                 <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                  [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
                 >
-                  <div
-                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                    [style.background]="item.iconBg"
-                    [style.color]="item.iconColor"
-                  >
-                    <app-icon [name]="item.icon" [size]="14" />
+                  <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
+                  <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
+                    <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
+                    <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p
-                      class="m-0 text-sm font-medium text-text-primary truncate"
-                      [pTooltip]="item.title"
-                      tooltipPosition="top"
-                    >
-                      {{ item.title }}
-                    </p>
-                    <p
-                      class="m-0 text-xs text-text-muted truncate"
-                      [pTooltip]="item.description"
-                      tooltipPosition="bottom"
-                    >
-                      {{ item.description }}
-                    </p>
-                  </div>
-                  <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
-                </li>
-              } @empty {
-                <li class="flex-1 flex flex-col justify-center py-6">
-                  <app-empty-state
-                    icon="activity"
-                    message="Sin actividad reciente"
-                    subtitle="Aún no hay registros en la escuela."
-                  />
                 </li>
               }
             </ul>
-          </div>
-          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-            <button
-              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-              (click)="openRecentActivity()"
-              data-llm-action="view-all-activity"
-            >
-              Ver toda la actividad
-            </button>
-          </div>
-        }
-      </div>
-
-      <!-- Alertas Importantes -->
-      <div
-        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
-        appCardHover
-        [appScrollReveal]="{ delay: 0.2 }"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <app-icon name="bell" [size]="16" class="text-warning" />
-            <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
-          </div>
+          } @else {
+            <div class="scroll-fade flex-1 min-h-0">
+              <ul
+                class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+              >
+                @for (item of visibleActivities(); track item.id; let i = $index) {
+                  <li
+                    class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                    [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                  >
+                    <div
+                      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                      [style.background]="item.iconBg"
+                      [style.color]="item.iconColor"
+                    >
+                      <app-icon [name]="item.icon" [size]="14" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="m-0 text-sm font-medium text-text-primary truncate"
+                        [pTooltip]="item.title"
+                        tooltipPosition="top"
+                      >
+                        {{ item.title }}
+                      </p>
+                      <p
+                        class="m-0 text-xs text-text-muted truncate"
+                        [pTooltip]="item.description"
+                        tooltipPosition="bottom"
+                      >
+                        {{ item.description }}
+                      </p>
+                    </div>
+                    <span class="shrink-0 text-xs text-text-muted self-center">{{
+                      item.time
+                    }}</span>
+                  </li>
+                } @empty {
+                  <li class="flex-1 flex flex-col justify-center py-6">
+                    <app-empty-state
+                      icon="activity"
+                      message="Sin actividad reciente"
+                      subtitle="Aún no hay registros en la escuela."
+                    />
+                  </li>
+                }
+              </ul>
+            </div>
+            <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+            <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+              <button
+                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                (click)="openRecentActivity()"
+                data-llm-action="view-all-activity"
+              >
+                Ver toda la actividad
+              </button>
+            </div>
+          }
         </div>
 
-        @if (loading()) {
-          <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2, 3]; track i) {
-              <li
-                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-              >
-                <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                  <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
-                </div>
-              </li>
-            }
-          </ul>
-        } @else {
-          <div class="scroll-fade flex-1 min-h-0">
-            <ul
-              class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-            >
-              @for (alert of visibleAlerts(); track alert.id; let i = $index) {
+        <!-- Alertas Importantes -->
+        <div
+          class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
+          appCardHover
+          [appScrollReveal]="{ delay: 0.2 }"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <app-icon name="bell" [size]="16" class="text-warning" />
+              <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
+            </div>
+          </div>
+
+          @if (loading()) {
+            <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
+              @for (i of [1, 2, 3]; track i) {
                 <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                  [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
                 >
-                  <div
-                    class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                    [style.background]="getAlertBg(alert.severity)"
-                    [style.color]="getAlertColor(alert.severity)"
-                  >
-                    <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
+                  <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
+                  <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
+                    <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
+                    <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p
-                      class="m-0 text-sm font-medium text-text-primary truncate"
-                      [pTooltip]="alert.title"
-                      tooltipPosition="top"
-                    >
-                      {{ alert.title }}
-                    </p>
-                    <p
-                      class="m-0 text-xs text-text-muted truncate"
-                      [pTooltip]="alert.description"
-                      tooltipPosition="bottom"
-                    >
-                      {{ alert.description }}
-                    </p>
-                  </div>
-                  <button
-                    aria-label="Descartar"
-                    class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
-                    (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
-                    pTooltip="Descartar"
-                  >
-                    <app-icon name="x" [size]="12" />
-                  </button>
-                </li>
-              } @empty {
-                <li class="flex-1 flex flex-col justify-center py-6">
-                  <app-empty-state
-                    icon="bell"
-                    message="Todo en orden"
-                    subtitle="No hay alertas importantes por revisar."
-                  />
                 </li>
               }
             </ul>
-          </div>
-          <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-          <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-            <button
-              class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-              (click)="openAlerts()"
-              data-llm-action="view-all-alerts"
-            >
-              Ver todas las alertas
-            </button>
-          </div>
-        }
-      </div>
+          } @else {
+            @if (alertsProblem() && alerts().length) {
+              <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
+                {{ alertsProblem() }} Puede faltar alguna.
+              </p>
+            }
+            <div class="scroll-fade flex-1 min-h-0">
+              <ul
+                class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+              >
+                @for (alert of visibleAlerts(); track alert.id; let i = $index) {
+                  <li
+                    class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                    [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                  >
+                    <div
+                      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                      [style.background]="getAlertBg(alert.severity)"
+                      [style.color]="getAlertColor(alert.severity)"
+                    >
+                      <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="m-0 text-sm font-medium text-text-primary truncate"
+                        [pTooltip]="alert.title"
+                        tooltipPosition="top"
+                      >
+                        {{ alert.title }}
+                      </p>
+                      <p
+                        class="m-0 text-xs text-text-muted truncate"
+                        [pTooltip]="alert.description"
+                        tooltipPosition="bottom"
+                      >
+                        {{ alert.description }}
+                      </p>
+                    </div>
+                    <button
+                      aria-label="Descartar"
+                      class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
+                      (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
+                      pTooltip="Descartar"
+                    >
+                      <app-icon name="x" [size]="12" />
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="flex-1 flex flex-col justify-center py-6">
+                    @if (alertsProblem(); as problem) {
+                      <app-empty-state
+                        icon="triangle-alert"
+                        [message]="problem"
+                        subtitle="No significa que no haya alertas. Vuelve a intentarlo."
+                        actionLabel="Reintentar"
+                        actionIcon="refresh-cw"
+                        (action)="retryAlerts()"
+                      />
+                    } @else {
+                      <app-empty-state
+                        icon="bell"
+                        message="Todo en orden"
+                        subtitle="No hay alertas importantes por revisar."
+                      />
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+            <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+            <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+              <button
+                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                (click)="openAlerts()"
+                data-llm-action="view-all-alerts"
+              >
+                Ver todas las alertas
+              </button>
+            </div>
+          }
+        </div>
+      }
     </section>
   `,
 })
-export class SecretariaDashboardComponent implements OnInit {
+export class SecretariaDashboardComponent {
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -312,6 +352,15 @@ export class SecretariaDashboardComponent implements OnInit {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly loading = computed(() => this.dashboardFacade.loading());
+  /**
+   * Mensaje cuando la carga falló y no hay nada que mostrar. Con datos ya cargados (un refresco
+   * en segundo plano que falla) no aplica: los datos anteriores siguen a la vista.
+   */
+  readonly loadError = computed(() =>
+    !this.loading() && !this.dashboardFacade.data() ? this.dashboardFacade.error() : null,
+  );
+  /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
+  readonly alertsProblem = computed(() => this.dashboardAlertsFacade.loadProblem());
   protected readonly isDrawerOpen = computed(() => this.layoutDrawer.isOpen());
   readonly hero = computed(() => this.dashboardFacade.data()?.hero);
   readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
@@ -342,10 +391,14 @@ export class SecretariaDashboardComponent implements OnInit {
     const chips: SectionHeroChip[] = [
       { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
     ];
-    const alertCount = this.dashboardAlertsFacade.alertCount();
-    if (alertCount > 0) {
+    // "Urgentes" = error o advertencia. Las informativas y las de éxito ("listos para
+    // certificar", "pagos registrados hoy") no cuentan en un chip rojo (fix-412-m).
+    const urgentCount = this.alerts().filter(
+      (alert) => alert.severity === 'error' || alert.severity === 'warning',
+    ).length;
+    if (urgentCount > 0) {
       chips.push({
-        label: `${alertCount} alertas urgentes`,
+        label: urgentCount === 1 ? '1 alerta urgente' : `${urgentCount} alertas urgentes`,
         icon: 'alert-triangle',
         style: 'error',
       });
@@ -367,7 +420,8 @@ export class SecretariaDashboardComponent implements OnInit {
     this.kpis().map((k) => ({
       id: k.id,
       label: k.label,
-      value: k.value,
+      // El hero imprime el valor tal cual: con separador de miles, $1234567 se lee $1.234.567.
+      value: k.value.toLocaleString('es-CL'),
       prefix: k.prefix,
       suffix: k.suffix,
       trend: k.trend,
@@ -379,6 +433,21 @@ export class SecretariaDashboardComponent implements OnInit {
   );
 
   constructor() {
+    // Branch-scoped (facades.md §7): carga al entrar y recarga cuando la secretaria con acceso a
+    // ambas sedes cambia de sede. Solo la sede es dependencia: initialize() lee signals antes de
+    // su primer await y, sin untracked(), cualquiera de ellos volvería a disparar la carga.
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      untracked(() => {
+        void this.dashboardFacade.initialize();
+        void this.dashboardAlertsFacade.initialize();
+      });
+    });
+
+    // initialize() abre el canal Realtime del dashboard; sin esto seguía escuchando (y
+    // recargando) con la secretaria en otra pantalla (fix-403-m).
+    this.destroyRef.onDestroy(() => this.dashboardFacade.destroyRealtime());
+
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
@@ -388,8 +457,12 @@ export class SecretariaDashboardComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  retry(): void {
     void this.dashboardFacade.initialize();
+    void this.dashboardAlertsFacade.initialize();
+  }
+
+  retryAlerts(): void {
     void this.dashboardAlertsFacade.initialize();
   }
 
@@ -436,26 +509,7 @@ export class SecretariaDashboardComponent implements OnInit {
         await import('../../admin/asistencia/admin-finalizar-clase-drawer.component');
       this.layoutDrawer.open(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
     } else {
-      const startTime = to24hTime(cls.scheduledAt);
-      const slot: any = {
-        id: cls.id,
-        date: toChileDate(cls.scheduledAt),
-        startTime,
-        endTime: addMinutesToTime(startTime, 45),
-        status: cls.status,
-        instructorId: 0,
-        instructorName: cls.instructorName,
-        vehicleId: 0,
-        vehiclePlate: cls.vehicle || '',
-        studentName: cls.studentName,
-        // fix-377-m: con la sesión, el detalle de una clase "No asistió" ofrece deshacer la falta.
-        sessionId: cls.type === 'practical' ? cls.originalId : undefined,
-        classNumber: 0,
-        kmStart: cls.kmStart,
-        kmEnd: cls.kmEnd,
-        notes: cls.notes,
-      };
-      this.agendaFacade.setSelectedSlot(slot);
+      this.agendaFacade.setSelectedSlot(liveClassToAgendaSlot(cls) as any);
       const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';
       const { AgendaSlotDetailDrawerComponent } =
         await import('../../agenda/agenda-slot-detail-drawer.component');

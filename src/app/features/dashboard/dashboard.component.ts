@@ -109,7 +109,9 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
             <app-exec-period-filter
               [preset]="facade.preset()"
               [range]="facade.range()"
-              [today]="today"
+              [today]="today()"
+              (pointerdown)="refreshToday()"
+              (focusin)="refreshToday()"
               (rangeChange)="onRangeChange($event)"
             />
           </div>
@@ -268,6 +270,11 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                       </button>
                     }
                   </div>
+                  @if (alertsProblem() && alerts().length) {
+                    <p class="m-0 mb-2 text-xs text-text-muted" role="status">
+                      {{ alertsProblem() }} Puede faltar alguna.
+                    </p>
+                  }
                   <ul class="m-0 p-0 list-none flex flex-col gap-1">
                     @for (alert of visibleAlerts(); track alert.id) {
                       <li
@@ -288,11 +295,22 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                       </li>
                     } @empty {
                       <li class="py-4">
-                        <app-empty-state
-                          icon="bell"
-                          message="Todo en orden"
-                          subtitle="No hay alertas importantes por revisar."
-                        />
+                        @if (alertsProblem(); as problem) {
+                          <app-empty-state
+                            icon="triangle-alert"
+                            [message]="problem"
+                            subtitle="No significa que no haya alertas. Vuelve a intentarlo."
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryAlerts()"
+                          />
+                        } @else {
+                          <app-empty-state
+                            icon="bell"
+                            message="Todo en orden"
+                            subtitle="No hay alertas importantes por revisar."
+                          />
+                        }
                       </li>
                     }
                   </ul>
@@ -314,7 +332,8 @@ export class DashboardComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
-  protected readonly today = chileTodayIso();
+  /** Hoy en Chile. Se vuelve a leer al tocar el filtro: la pantalla puede quedar abierta de un día para otro. */
+  protected readonly today = signal(chileTodayIso());
   protected readonly placeholderCards = [1, 2, 3, 4];
 
   protected readonly tabs: TabOption[] = [
@@ -353,6 +372,8 @@ export class DashboardComponent {
 
   protected readonly alerts = computed(() => this.alertsFacade.activeAlerts());
   protected readonly visibleAlerts = computed(() => this.alerts().slice(0, 5));
+  /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
+  protected readonly alertsProblem = computed(() => this.alertsFacade.loadProblem());
 
   constructor() {
     // Branch-scoped (facades.md §7): recarga al cambiar de sede. SWR dentro del Facade.
@@ -382,12 +403,20 @@ export class DashboardComponent {
     void this.facade.applyRange(change.range, change.preset);
   }
 
+  protected refreshToday(): void {
+    this.today.set(chileTodayIso());
+  }
+
   protected setTab(id: string): void {
     this.activeTab.set(id as ExecTab);
   }
 
   protected retry(): void {
     void this.facade.reload();
+  }
+
+  protected retryAlerts(): void {
+    void this.alertsFacade.initialize();
   }
 
   protected openAlerts(): void {
