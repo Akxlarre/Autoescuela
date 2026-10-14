@@ -50,4 +50,4 @@ carga llega a aplicarse y los eventos seguidos se funden en un solo refresco pos
 - E2E `e2e/dashboards.spec.ts` con 4 workers escribiendo clases y pagos: 19 de 20 en verde en
   tres corridas seguidas. El caso que sigue fallando a veces (secretaria multi-sede en "Todas") ya
   no queda en blanco: muestra "No se pudo cargar el panel", por el timeout de `audit_log` que
-  corrige `fix-408-m` (migración por aplicar).
+  corrige `fix-408-m` (migración aplicada el 2026-10-14).

@@ -60,4 +60,4 @@ de la función original (ARCH-28). Los meses del rango se arman ahora solo con f
 (`make_date` + `make_interval`). Ensayo repetido: mismos resultados de la tabla, y el año a la fecha
 (1 ene – 13 oct, todas las sedes) da $2.998.500 antes y después.
 
-**Falta que Matías aplique la migración.**
+Migración aplicada por Matías el 2026-10-14 y verificada en la BD de dev.

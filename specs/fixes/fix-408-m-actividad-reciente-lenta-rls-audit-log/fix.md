@@ -65,5 +65,5 @@ Migración ensayada contra la BD de dev en una transacción deshecha (no quedó 
 - Medición en el navegador antes del fix (dashboard de secretaria, una sesión): `audit_log` 4.071 ms;
   la siguiente consulta más lenta, 1.527 ms. Con 4 sesiones: `audit_log` 500 / `57014` en 3 de 4.
 
-**Falta que Matías aplique la migración.** Hasta entonces, con varias sesiones cargando a la vez el
-dashboard de secretaria puede mostrar "No se pudo cargar el panel" (se recupera con "Reintentar").
+Migración aplicada por Matías el 2026-10-14 y verificada en la BD de dev. Antes de aplicarla, con varias sesiones cargando a la vez el
+dashboard de secretaria podía mostrar "No se pudo cargar el panel" (se recuperaba con "Reintentar").

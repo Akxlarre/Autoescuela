@@ -50,4 +50,4 @@ Migración ensayada contra la BD de dev en una transacción deshecha (no quedó 
 | AC2 — sede 1 con uno en mantención, uno fuera de servicio, uno bloqueado y uno de la sede 2 marcado "ambas sedes" | — | 7 disponibles, 1 en mantención |
 | AC3 — clases e instructores | iguales | iguales; secretaria `42501`; `search_path` intacto |
 
-DG-003 de `indices/DOMAIN-GOTCHAS.md` corregida. **Falta que Matías aplique la migración.**
+DG-003 de `indices/DOMAIN-GOTCHAS.md` corregida. Migración aplicada por Matías el 2026-10-14 y verificada en la BD de dev.

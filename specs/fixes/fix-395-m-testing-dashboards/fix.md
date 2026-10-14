@@ -258,17 +258,59 @@ Quedaron sin ejecutar en pantalla; no se encontró nada al leer su código:
 M12 (km final ≤ inicial) y el flujo completo de iniciar/finalizar están cubiertos por
 `e2e/asistencia-clase-b.spec.ts`.
 
+### Segunda pasada (2026-10-14, con las migraciones aplicadas)
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| B08 | ✅ | Calendario: del 15 en adelante deshabilitado |
+| B09, E02, E06, E07, F05, F07, H03 | ✅ | Tests de `executive-dashboard.utils.spec.ts` (cruce de año, base negativa, mismo tramo, enero → año anterior, meses sin filas, ensayos sin datos); serie 2019 = 24 filas en 0 |
+| B10 / S17a | ❌→✅ | Con la pestaña abierta pasada la medianoche no se podía elegir el día nuevo → `fix-418-m` |
+| C13 | ✅ | Montos con `toLocaleString('es-CL')`; $6.450.000 cabe con holgura |
+| D02 | ✅ | 23:30 del 30-sep hora Chile → `2026-09-30` |
+| D06 | ✅ | "En agenda" = 0 en el mes y en septiembre, igual que la BD |
+| D09 | ✅ | Inasistencias de septiembre 128 = filas `absent` (incluye archivadas) |
+| F02 | ✅ | Tooltip "Sep 2026: $2.640.000 / 2025: $0"; diciembre "—" |
+| F06 | ✅ | El gráfico solo usa tokens (`--color-primary`, `--text-muted`, `--border-subtle`) |
+| G03 | ✅ | El roster suma a quien tuvo clases (UNION); hoy no hay inactivos con clases |
+| G04, I08 | ✅ | Estados vacíos "Sin instructores activos" y "Todo en orden" en el código |
+| H02 | ✅ | "Pendientes de examen" 62 = activas con certificado habilitado, por sede |
+| H05 | ✅ | Cuenta alumnos distintos por tramo: sede 1 tiene 26 matrículas con saldo de 25 alumnos y muestra 25 |
+| I01 | ✅ | Hoy sin clases: 0/0/0 igual que la BD; 18 instructores, 17 vehículos |
+| K03 | ❌→✅ | "Nuevos últ. 7 días" contaba 8 días → `hotfix-155-m` |
+| K06 | ✅ | Ayer 17 canceladas, hoy 0: tendencia 0 (las canceladas no cuentan) |
+| M17 | ✅ | "Sin clases actuales" |
+| Q01 | ❌→✅ | Documentos de vehículos de "ambas sedes" no avisaban en la otra sede → `hotfix-156-m` |
+| Q03, Q04, Q12, Q13 | ✅ | Sede 1: 22 pagos pendientes, 11 en 6ª clase, 9 con cuota 2 vencida, 0 pagos hoy: iguales a la BD |
+| S03 | ✅ | 375 px: el filtro trunca "1 oct – 1…" sin desbordar |
+| S04 | ❌→✅ | Tabs solo con ícono y `title` a 375 px (diseño de `app-tabs`); las etiquetas de "Operación de hoy" se cortaban → `hotfix-154-m` |
+| S07 | ✅ | `gridAnimated` anima una sola vez |
+
+**Hallazgo abierto (O03 / L02):** el canal Realtime del dashboard de secretaria escucha
+`students`, `class_b_sessions` y `payments`, pero no `enrollments`: matricular a un alumno que ya
+existe o completar una matrícula no actualiza "Alumnos Activos" hasta recargar. `enrollments`,
+`special_service_sales` y `vehicles` ya están publicadas (`fix-360-m`). Se corrige en el próximo
+track.
+
+**Falta ejecutar:** K12, L02, L04, L07, L09, M14, M16, M19, N04, O03, O04, O06, P04, P06–P10, Q06,
+Q09, R03, R04, R07.
+
 ## Decisiones de negocio
+
+Decididas por Matías el 2026-10-14:
+
+| Caso | Pregunta | Decisión |
+|---|---|---|
+| K02 / S8 | ¿"Alumnos Activos" de secretaria cuenta solo Clase B? | Cuenta B y Profesional si la sede tiene ambos: sin cambio |
+| Q15 / S14 | ¿Se muestran alertas de Clase Profesional durante el piloto? | No, mientras sus vistas estén bloqueadas → `fix-416-m` |
+| Q14 | ¿"Instructores sin liquidar" revisa el mes en curso o el anterior? | El mes anterior → `fix-417-m` |
+| C04 / S11 | ¿El Resultado resta solo gastos de Clase B? | Lo cubre `ASG-i-061` (después del piloto): sin cambio |
+| P02 | ¿La secretaria ve la actividad de toda su sede? | Solo sus propias acciones, por ahora |
 
 Pendientes de Matías (§5 del checklist); no se marcan ✅/❌:
 
 | Caso | Pregunta | Qué hace hoy |
 |---|---|---|
-| K02 / S8 | ¿"Alumnos Activos" de secretaria cuenta solo Clase B? | Cuenta matrículas activas de todos los cursos: sede 2 muestra 130 (65 B + 65 Profesional) |
-| Q15 / S14 | ¿Se muestran alertas de Clase Profesional durante el piloto? | Sí (pre-inscripciones, asistencia, módulos) |
-| Q14 | ¿"Instructores sin liquidar" revisa el mes en curso o el anterior? | El mes en curso: aparece todo el mes |
-| C04 / S11 | ¿El Resultado resta solo gastos de Clase B? | Ingresos solo B; egresos y fijos de toda la sede |
-| P02 | ¿La secretaria ve la actividad de toda su sede? | Solo sus propias acciones |
+| I04 | ¿"Operación de hoy" del ejecutivo debe actualizarse en tiempo real? | No: se actualiza al recargar o cambiar de sede |
 | I06 / Q20 | ¿Las alertas llevan a su módulo? | Solo "Caja sin cerrar" navega |
 | Q10 | "Caja sin cerrar" con "Todas": ¿exige el cierre de cada sede? | Desaparece si cualquier sede cerró |
 | D08 | Sin clases en el período: ¿"0 %" o "—"? | "0 %" con "Sin clases en el período" |
@@ -304,8 +346,9 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 - [x] Bloque 3 — Secretaria
 - [x] Bloque 4 — Alertas, sedes y visual
 - [x] Capa Playwright (`e2e/dashboards.spec.ts`, 22 tests)
-- [ ] Matías aplica las 4 migraciones
-- [ ] Decisiones de negocio
+- [x] Matías aplicó las 4 migraciones (2026-10-14), verificadas en la BD de dev
+- [x] Decisiones de negocio principales (K02, Q14, Q15, C04, P02); quedan las menores de la tabla
+- [ ] Casos no ejecutados: segunda pasada en curso (2026-10-14), ver "Segunda pasada"
 
 ## ACs Afectados
 
@@ -316,13 +359,17 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 - Suite `e2e/dashboards.spec.ts` (22 tests: casos "Auto ✓" del checklist y regresión de los fixes 396 a 415).
 - Con `e2e/asistencia-clase-b.spec.ts` en paralelo: 43 en verde. Hasta aplicar `fix-408-m`, la BD de
   dev puede responder con timeout al sembrar o limpiar cuando corren varias suites a la vez.
+- Con las migraciones aplicadas (2026-10-14): dashboards 20 + 2 saltados; asistencia 26 + 1; las dos
+  juntas 42 + 3 saltados, 0 fallos. Los 2 tests que siembran clases de hoy ya ocurridas se saltan
+  antes de las 07:00 hora Chile (`saltarDeMadrugada()`): `seedClase` las pone entre la 01:00 y las
+  06:59 y de madrugada todavía son futuras.
 
 ## Tracks generados
 
 | Track | Caso / sospecha | Estado |
 |---|---|---|
-| `fix-396-m-ejecutivo-costo-instructores-mes-en-curso` | C06 / S2 (H5) | Cerrado · migración por aplicar |
-| `fix-397-m-ejecutivo-vehiculos-disponibles-estado-available` | I02 (H1) | Cerrado · migración por aplicar |
+| `fix-396-m-ejecutivo-costo-instructores-mes-en-curso` | C06 / S2 (H5) | Cerrado · migración aplicada |
+| `fix-397-m-ejecutivo-vehiculos-disponibles-estado-available` | I02 (H1) | Cerrado · migración aplicada |
 | `fix-398-m-clases-hoy-secretaria-cuenta-canceladas` | K04, K06, K10 / S5 (H2) | Cerrado |
 | `fix-399-m-ingresos-mes-secretaria-formato-y-comparacion` | K07, K08 / S10 (H3) | Cerrado |
 | `fix-400-m-porcentajes-kpi-con-punto-decimal` | E01 (H4) | Cerrado |
@@ -333,17 +380,23 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `fix-405-m-dashboard-secretaria-error-de-carga-como-ceros` | A09 / S15 (H10) | Cerrado |
 | `fix-406-m-detalle-de-clase-desde-dashboard-incompleto` | M15, N03 / S20 (H13) | Cerrado |
 | `fix-407-m-dashboard-secretaria-sin-datos-con-eventos-seguidos` | A02, O01, O02 (nuevo, visto en la suite E2E) | Cerrado |
-| `fix-408-m-actividad-reciente-lenta-rls-audit-log` | A02, P01 (nuevo, visto en la suite E2E) | Cerrado · migración por aplicar |
+| `fix-408-m-actividad-reciente-lenta-rls-audit-log` | A02, P01 (nuevo, visto en la suite E2E) | Cerrado · migración aplicada |
 | `fix-409-m-dashboard-secretaria-datos-del-usuario-anterior` | R06 / S19 | Cerrado |
 | `fix-410-m-alertas-con-alcance-equivocado` | Q05, Q14, Q15 / S14 (H12) | Cerrado |
 | `fix-411-m-kpi-vehiculos-secretaria-sin-ambas-sedes` | K09 / S9 | Cerrado |
 | `fix-412-m-chip-alertas-urgentes-cuenta-informativas` | K11 / S13c | Cerrado |
 | `hotfix-153-m-textos-de-los-dashboards` | Q11, H06, G04 / S17c, S18 | Cerrado |
-| `fix-413-m-actividad-columnas-nuevas-sin-etiqueta` | P03 | Cerrado · migración por aplicar |
+| `fix-413-m-actividad-columnas-nuevas-sin-etiqueta` | P03 | Cerrado · migración aplicada |
 | `fix-414-m-clases-actuales-sin-teclado` | S05 | Cerrado |
 | `fix-415-m-descartar-alerta-oculta-casos-nuevos` | Q16–Q18 / S13b | Cerrado |
+| `fix-416-m-alertas-de-vistas-bloqueadas-en-el-piloto` | Q15 / S14 (decisión) | Cerrado |
+| `fix-417-m-instructores-sin-liquidar-revisa-el-mes-en-curso` | Q14 (decisión) | Cerrado |
+| `fix-418-m-ejecutivo-calendario-no-avanza-al-cambiar-de-dia` | B10 / S17a | Cerrado |
+| `hotfix-154-m-operacion-de-hoy-etiquetas-cortadas-en-movil` | S04 | Cerrado |
+| `hotfix-155-m-nuevos-ultimos-7-dias-cuenta-8` | K03 | Cerrado |
+| `hotfix-156-m-alerta-documentos-sin-vehiculos-de-ambas-sedes` | Q01 | Cerrado |
 
-### Migraciones por aplicar (Matías)
+### Migraciones (aplicadas por Matías el 2026-10-14)
 
 | Archivo | Fix |
 |---|---|

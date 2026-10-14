@@ -12,7 +12,7 @@
  *   ejecutivo (fix-397-m): se ensayaron como migración en una transacción que se revierte.
  */
 import type { Page } from '@playwright/test';
-import { chileToday } from '../src/app/core/utils/chile-time.utils';
+import { chileParts, chileToday } from '../src/app/core/utils/chile-time.utils';
 import { describeRange, resolvePresetRange } from '../src/app/core/utils/executive-dashboard.utils';
 import { resolveVehicleStatus } from '../src/app/core/utils/vehicle-status.utils';
 import { ACCOUNTS } from './support/accounts';
@@ -34,6 +34,18 @@ test.describe.configure({ mode: 'default', timeout: 240_000 });
 test.afterEach(limpiarAsistencia);
 
 // ── Ayudas ────────────────────────────────────────────────────────────────────
+
+/**
+ * Los dashboards solo muestran clases de HOY y `seedClase` las siembra entre la 01:00 y las 06:59.
+ * Antes de las 07:00 (hora de Chile) esas horas todavía no pasan, y la BD no deja sembrar una
+ * clase finalizada o una inasistencia a futuro: los tests que las necesitan se saltan.
+ */
+function saltarDeMadrugada(): void {
+  test.skip(
+    chileParts().hour < 7,
+    'Antes de las 07:00 hora Chile no se pueden sembrar clases de hoy ya ocurridas',
+  );
+}
 
 const accion = (page: Page, name: string) => page.locator(`[data-llm-action="${name}"]`);
 const drawer = (page: Page) => page.locator('[data-drawer-panel]');
@@ -424,6 +436,7 @@ test('K04 · K10 · M01 · M03 · M15 · N01: "Clases Hoy" y el panel cuentan lo
   pageAs,
   cleanup,
 }) => {
+  saltarDeMadrugada();
   const page = await pageAs('secretariaA');
   await abrirSecretaria(page);
   const antes = Number(await heroKpi(page, 'Clases Hoy'));
@@ -643,6 +656,7 @@ test('O01 · O02: una clase y un pago registrados desde otra sesión aparecen si
   pageAs,
   cleanup,
 }) => {
+  saltarDeMadrugada();
   const sb = await getAdminClient();
   const page = await pageAs('secretariaA');
   await abrirSecretaria(page);

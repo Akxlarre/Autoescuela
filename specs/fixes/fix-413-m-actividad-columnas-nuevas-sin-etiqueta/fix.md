@@ -63,4 +63,4 @@ la etiqueta de las 395 columnas distintas del esquema antes y después:
   que ya se leen bien ("Horario", "Folio").
 - La función desplegada hoy es idéntica a la de `fix-218-b` (255 entradas, comparadas una a una).
 
-**Falta que Matías aplique la migración.**
+Migración aplicada por Matías el 2026-10-14 y verificada en la BD de dev.
