@@ -340,9 +340,12 @@ export function mapReceivables(rows: ExecReceivablesRowDto[]): ReceivablesSummar
     monto: Number(r.monto) || 0,
     alumnos: Number(r.alumnos) || 0,
   }));
+  // Sumar los tramos cuenta 2 veces a un alumno con deuda en dos tramos: se usa el total de
+  // alumnos distintos de la RPC cuando viene (fix-428-m).
+  const total = rows[0]?.alumnos_total;
   return {
     total: buckets.reduce((s, b) => s + b.monto, 0),
-    alumnos: buckets.reduce((s, b) => s + b.alumnos, 0),
+    alumnos: total != null ? Number(total) : buckets.reduce((s, b) => s + b.alumnos, 0),
     buckets,
   };
 }

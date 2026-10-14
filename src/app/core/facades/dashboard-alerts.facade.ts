@@ -54,7 +54,7 @@ async function queryOk<T = any>(query: PromiseLike<T>): Promise<T> {
  * Queries paralelas (17):
  * Fase 1 & 2:
  *  1. Documentos de vehículos vencidos/por vencer
- *  2. Pagos pendientes de matrículas activas
+ *  2. Alumnos con saldo pendiente (criterio de la cartera, incluye egresados — fix-428-m)
  *  3. (B-1) Alumnos en 6ª clase con saldo pendiente
  *  4. (B-2) Alumnos con 12ª clase completada pendientes de certificado
  *  5. (B-3) Alumnos con inasistencias en 2 clases seguidas
@@ -424,27 +424,40 @@ export class DashboardAlertsFacade {
    * Matrículas activas con saldo pendiente (general).
    */
   private async checkPendingPayments(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countStudentsWithDebt(branchId);
+    if (count === 0) return [];
+
+    return [
+      {
+        id: 'alert-pending-payments',
+        title: `${count} alumno${count > 1 ? 's' : ''} con saldo pendiente`,
+        description: 'Incluye egresados y retirados · revisar cuentas por cobrar',
+        severity: 'warning',
+        count,
+      },
+    ];
+  }
+
+  /**
+   * Alumnos distintos con saldo, con el criterio de la cartera del ejecutivo
+   * (`exec_dashboard_receivables`): toda matrícula Clase B con saldo salvo borradores, canceladas
+   * y pagos online abandonados — también egresados y retirados, porque esa plata se sigue
+   * debiendo (fix-428-m: antes solo contaba matrículas activas y no cuadraba con la cartera).
+   */
+  private async countStudentsWithDebt(
+    branchId: number | null,
+    createdBefore?: string,
+  ): Promise<number> {
     let query: any = this.supabase.client
       .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
+      .select('student_id')
+      .eq('license_group', 'class_b')
+      .not('status', 'in', '(draft,cancelled,pending_payment)')
       .gt('pending_balance', 0);
+    if (createdBefore) query = query.lt('created_at', createdBefore);
     if (branchId !== null) query = query.eq('branch_id', branchId);
-    const { count } = await queryOk(query);
-
-    if (count && count > 0) {
-      return [
-        {
-          id: 'alert-pending-payments',
-          title: `${count} Pago${count > 1 ? 's' : ''} pendiente${count > 1 ? 's' : ''}`,
-          description: 'Revisar cuentas por cobrar',
-          severity: 'warning',
-          count,
-        },
-      ];
-    }
-
-    return [];
+    const { data } = await queryOk(query);
+    return new Set(((data ?? []) as { student_id: number }[]).map((e) => e.student_id)).size;
   }
 
   /**
@@ -619,23 +632,16 @@ export class DashboardAlertsFacade {
   private async checkOldDebts(branchId: number | null): Promise<AlertModel[]> {
     const sixtyDaysAgo = new Date(Date.now() - 60 * 86_400_000);
 
-    let query: any = this.supabase.client
-      .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .gt('pending_balance', 0)
-      .lt('created_at', sixtyDaysAgo.toISOString());
-    if (branchId !== null) query = query.eq('branch_id', branchId);
-
-    const { count } = await queryOk(query);
-    if (!count || count === 0) return [];
+    const count = await this.countStudentsWithDebt(branchId, sixtyDaysAgo.toISOString());
+    if (count === 0) return [];
 
     return [
       {
         id: 'alert-old-debts',
         // Mide la antigüedad de la matrícula, no los días sin pagar (hotfix-153-m).
-        title: `${count} matrícula${count > 1 ? 's' : ''} de más de 60 días con saldo`,
-        description: 'Se matricularon hace más de 60 días y todavía tienen saldo pendiente',
+        title: `${count} alumno${count > 1 ? 's' : ''} con saldo de una matrícula de más de 60 días`,
+        description:
+          'Se matricularon hace más de 60 días y todavía tienen saldo pendiente (incluye egresados)',
         severity: 'warning',
         count,
       },

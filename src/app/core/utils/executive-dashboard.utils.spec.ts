@@ -344,6 +344,16 @@ describe('mapReceivables (AC6)', () => {
     expect(r.alumnos).toBe(3);
     expect(r.buckets[3].label).toBe('Más de 90 días');
   });
+
+  it('fix-428-m: con alumnos_total, cuenta a cada alumno una vez aunque tenga deuda en dos tramos', () => {
+    const r = mapReceivables([
+      { bucket: '0-30', monto: 100, alumnos: 2, alumnos_total: 2 },
+      { bucket: '31-60', monto: 0, alumnos: 0, alumnos_total: 2 },
+      { bucket: '61-90', monto: 0, alumnos: 0, alumnos_total: 2 },
+      { bucket: '90+', monto: 50, alumnos: 1, alumnos_total: 2 },
+    ]);
+    expect(r.alumnos).toBe(2);
+  });
 });
 
 describe('describeRange', () => {

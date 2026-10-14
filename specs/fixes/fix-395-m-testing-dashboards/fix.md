@@ -324,17 +324,11 @@ Decididas por Matías el 2026-10-14:
 | D08 | Sin clases en el período | "—" en vez de "0 %" → `fix-425-m` |
 | A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso"? | No: sin cambio |
 | L10 | Sede de un pago o egreso de una secretaria multi-sede en "Todas" | Revisado, sin cambio: el pago no tiene sede propia (va a la de su matrícula) y el egreso la saca del vehículo (combustible) o del instructor (anticipo), y en "gastos varios" la exige (`fix-243-m`). Obs.: el combustible de un vehículo de "ambas sedes" va a su sede de origen |
-| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Matrículas activas con saldo, el mismo criterio en los tres lugares |
 | S02 (obs.) | "Actividad" y "Alertas" con fila y media a 1440 × 900 | Aceptable: sin cambio |
 | M19 | ¿Basta el primer nombre en "Clases Actuales"? | No: el Nº de matrícula es lo principal, por sobre el nombre → `fix-424-m` |
 | J03 (obs.) | Números viejos 1–2,5 s al cambiar de sede en el ejecutivo | Mostrar un indicador de carga → `fix-427-m` |
+| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Todo el saldo pendiente, incluidos egresados, en todos lados (propuesta de Matías) → `fix-428-m` (migración `20261014120000` pendiente de aplicar). Base B "Con deuda" sin cambio: es la lista de alumnos vigentes |
 | B12 / S17b | "Este año": dos comparaciones contra el mismo tramo, y en enero contra diciembre | Una sola, siempre "vs año anterior", también en enero → `fix-426-m` |
-
-Pendiente de Matías:
-
-| Caso | Pregunta | Qué hace hoy |
-|---|---|---|
-| H05 / Q03 / S16 | "Matrículas activas con saldo" en los tres lugares sacaría de la cartera del ejecutivo la deuda de alumnos que ya terminaron (plata que se sigue debiendo). ¿Se mantiene la cartera con todas las deudas y solo se aclaran los rótulos? | Cartera: toda deuda Clase B (también finalizadas), alumnos distintos. Alerta "N Pagos pendientes": matrículas activas de todos los cursos. Base B "Con deuda": la matrícula B más reciente de cada alumno |
 
 Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
 
@@ -423,6 +417,7 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `fix-425-m-cancelacion-sin-clases-muestra-guion` | D08 (decisión) | Cerrado |
 | `fix-426-m-este-anio-una-sola-comparacion` | B12 (decisión) | Cerrado |
 | `fix-427-m-ejecutivo-sin-indicador-al-recargar` | J03 (decisión) | Cerrado |
+| `fix-428-m-saldo-pendiente-mismo-criterio` | H05, Q03 / S16 (decisión) | Cerrado · migración pendiente |
 
 ### Migraciones (aplicadas por Matías el 2026-10-14)
 

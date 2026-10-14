@@ -25,7 +25,14 @@ describe('DashboardAlertsFacade', () => {
    * Supports all chainable methods used by the facade.
    */
   const buildChain = (result: { data?: unknown; count?: number | null; error?: unknown }) => {
-    const resolved = Promise.resolve(result);
+    // fix-428-m: las alertas de saldo leen filas (alumnos distintos), no un conteo. Un mock que
+    // solo declara `count: N` entrega N filas de alumnos distintos, para que los tests escritos
+    // con conteos sigan diciendo lo mismo.
+    const filas =
+      result.data === undefined && result.count
+        ? Array.from({ length: result.count }, (_, i) => ({ id: i + 1, student_id: i + 1 }))
+        : result.data;
+    const resolved = Promise.resolve({ ...result, data: filas });
     const chain: any = {};
     const ret = vi.fn().mockReturnValue(chain);
     chain.select = ret;
@@ -805,6 +812,68 @@ describe('DashboardAlertsFacade', () => {
 
         expect(alertaCaja()?.title).toBe('Caja sin cerrar: Autoescuela Chillán');
       });
+    });
+  });
+
+  // ── fix-428-m: el saldo pendiente con el mismo criterio que la cartera ───────
+  describe('saldo pendiente con el criterio de la cartera (fix-428-m)', () => {
+    /** Chain que anota cada filtro aplicado sobre `enrollments`. */
+    const enrollmentsQueries: Array<Array<[string, unknown[]]>> = [];
+    const chainConFiltros = (data: unknown[]) => {
+      const llamadas: Array<[string, unknown[]]> = [];
+      enrollmentsQueries.push(llamadas);
+      const chain: any = buildChain({ data });
+      for (const m of ['select', 'eq', 'not', 'gt', 'lt', 'in', 'is', 'or']) {
+        chain[m] = vi.fn((...args: unknown[]) => {
+          llamadas.push([m, args]);
+          return chain;
+        });
+      }
+      return chain;
+    };
+
+    const montar = (filasPorLlamada: (n: number) => unknown[]) => {
+      enrollmentsQueries.length = 0;
+      let n = 0;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'enrollments') return chainConFiltros(filasPorLlamada(++n));
+        if (table === 'alert_config') return buildChain({ data: [] });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const consultaCon = (filtro: string) =>
+      enrollmentsQueries.find(
+        (q) =>
+          q.some(([m, a]) => m === 'gt' && a[0] === 'pending_balance') &&
+          q.some(([m]) => m === filtro),
+      );
+
+    it('cuenta alumnos distintos, no matrículas', async () => {
+      // Todas las consultas de matrículas devuelven 3 matrículas de 2 alumnos.
+      montar(() => [{ student_id: 7 }, { student_id: 7 }, { student_id: 9 }]);
+      await facade.loadAlerts();
+
+      const alerta = facade.activeAlerts().find((a) => a.id === 'alert-pending-payments');
+      expect(alerta?.title).toBe('2 alumnos con saldo pendiente');
+      expect(alerta?.count).toBe(2);
+      const vieja = facade.activeAlerts().find((a) => a.id === 'alert-old-debts');
+      expect(vieja?.title).toBe('2 alumnos con saldo de una matrícula de más de 60 días');
+    });
+
+    it('incluye egresados y retirados: excluye solo borradores, canceladas y pagos abandonados', async () => {
+      montar(() => []);
+      await facade.loadAlerts();
+
+      const deudas = enrollmentsQueries.filter((q) =>
+        q.some(([m, a]) => m === 'gt' && a[0] === 'pending_balance'),
+      );
+      expect(deudas).toHaveLength(2);
+      for (const q of deudas) {
+        expect(q).toContainEqual(['not', ['status', 'in', '(draft,cancelled,pending_payment)']]);
+        expect(q).toContainEqual(['eq', ['license_group', 'class_b']]);
+        expect(q.some(([m, a]) => m === 'eq' && a[0] === 'status')).toBe(false);
+      }
+      expect(consultaCon('lt')).toBeDefined(); // la de más de 60 días
     });
   });
 
