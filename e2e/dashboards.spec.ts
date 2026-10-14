@@ -707,6 +707,70 @@ test('O01 · O02: una clase y un pago registrados desde otra sesión aparecen si
   await expect.poll(pesos, CARGA).toBe(ingresosAntes + 25_000);
 });
 
+test('O03 · L02: una matrícula activada desde otra sesión sube "Alumnos Activos" sin recargar (fix-419-m)', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // Borrador sembrado ANTES de abrir: después solo cambia `enrollments`, no `students`.
+  const alumno = await createE2eAlumno(
+    { label: 'DashMatricula', branchId: SEDE_A, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const activos = async () => {
+    const digitos = (await heroKpi(page, 'Alumnos Activos')).replace(/[^0-9]/g, '');
+    return digitos === '' ? -1 : Number(digitos);
+  };
+  const antes = await activos();
+
+  const sb = await getAdminClient();
+  const { error } = await sb
+    .from('enrollments')
+    .update({ status: 'active' })
+    .eq('id', alumno.enrollmentIds[0]);
+  expect(error).toBeNull();
+  await expect.poll(activos, CARGA).toBe(antes + 1);
+});
+
+test('L04 · O06: un pago registrado desde otra sesión actualiza las alertas sin recargar (fix-420-m)', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const alumno = await createE2eAlumno(
+    {
+      label: 'DashAlertaPago',
+      branchId: SEDE_A,
+      enrollments: [{ pendingBalance: 10_000, paymentStatus: 'partial' }],
+    },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  // Sin pagos hoy la alerta no existe: cuenta 0.
+  const pagosHoy = async () =>
+    Number(
+      (await page.locator('main').innerText()).match(/(\d+) pagos? registrados? hoy/)?.[1] ?? 0,
+    );
+  const antes = await pagosHoy();
+
+  const sb = await getAdminClient();
+  const { data: pago, error } = await sb
+    .from('payments')
+    .insert({
+      enrollment_id: alumno.enrollmentIds[0],
+      total_amount: 10_000,
+      cash_amount: 10_000,
+      status: 'paid',
+      payment_date: chileToday(),
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error('[e2e] No se pudo sembrar el pago: ' + error.message);
+  cleanup.track('payments', pago.id);
+  await expect.poll(pagosHoy, CARGA).toBe(antes + 1);
+});
+
 test('S05: una clase de "Clases Actuales" se abre con el teclado y dice qué hace', async ({
   pageAs,
   cleanup,

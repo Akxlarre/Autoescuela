@@ -166,7 +166,11 @@ export class DashboardAlertsFacade {
     }
   }
 
-  private async refreshSilently(): Promise<void> {
+  /**
+   * Recarga sin skeleton. Las alertas no tienen canal Realtime propio: el dashboard de secretaria
+   * llama a esto cuando su canal trae un cambio (`DashboardFacade.liveUpdates`, fix-420-m).
+   */
+  async refreshSilently(): Promise<void> {
     try {
       await this.fetchAlertsData(this.getActiveBranchId());
     } catch {
