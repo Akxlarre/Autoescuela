@@ -857,6 +857,56 @@ describe('DashboardAlertsFacade', () => {
 
   // ── Phase 3 — F-5: Pending instructor payments ───────────────────────────────
   describe('F-5: checkPendingInstructorPayments', () => {
+    describe('revisa el mes anterior (fix-417-m)', () => {
+      afterEach(() => vi.useRealTimers());
+
+      /** Corre la carga en la fecha dada y devuelve los períodos consultados y la alerta. */
+      const enFecha = async (instante: string) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(instante));
+        const cadenas: Record<string, any> = {};
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'cash_closings') return buildChain({ count: 1 });
+          if (table === 'instructor_monthly_hours')
+            return (cadenas[table] = buildChain({ data: [{ instructor_id: 10 }] }));
+          if (table === 'instructor_monthly_payments')
+            return (cadenas[table] = buildChain({ data: [] }));
+          return buildChain({ data: [], count: 0 });
+        });
+        await facade.loadAlerts();
+        const periodo = (table: string) =>
+          (cadenas[table].eq.mock.calls as unknown[][]).find(([c]) => c === 'period')?.[1];
+        return {
+          horas: periodo('instructor_monthly_hours'),
+          pagos: periodo('instructor_monthly_payments'),
+          alerta: facade.activeAlerts().find((a) => a.id === 'alert-pending-instructor-payments'),
+        };
+      };
+
+      it('el 14 de octubre revisa septiembre y lo dice en el texto', async () => {
+        // 12:00 hora Chile del 14 de octubre de 2026.
+        const { horas, pagos, alerta } = await enFecha('2026-10-14T15:00:00.000Z');
+
+        expect(horas).toBe('2026-09');
+        expect(pagos).toBe('2026-09');
+        expect(alerta?.description).toBe('Tienen horas de septiembre de 2026 sin liquidación');
+      });
+
+      it('en enero revisa diciembre del año anterior', async () => {
+        const { horas, pagos } = await enFecha('2027-01-05T15:00:00.000Z');
+
+        expect(horas).toBe('2026-12');
+        expect(pagos).toBe('2026-12');
+      });
+
+      it('el día 1 a las 23:30 hora Chile sigue siendo el mes que empieza, no el siguiente', async () => {
+        // 23:30 del 1 de noviembre en Chile = 02:30 UTC del día 2.
+        const { horas } = await enFecha('2026-11-02T02:30:00.000Z');
+
+        expect(horas).toBe('2026-10');
+      });
+    });
+
     it('should generate a warning when instructors have hours but no payment for this period', async () => {
       fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') return buildChain({ data: [] });

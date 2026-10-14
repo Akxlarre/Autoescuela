@@ -1,5 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { addDaysIso, chileMonth } from '@core/utils/chile-time.utils';
+import {
+  addDaysIso,
+  addMonthsIso,
+  chileMonth,
+  formatChileDate,
+} from '@core/utils/chile-time.utils';
 import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { todayIso } from '@core/utils/date.utils';
 
@@ -58,7 +63,7 @@ async function queryOk<T = any>(query: PromiseLike<T>): Promise<T> {
  * Fase 3 — Pagos y Finanzas:
  *  8. (F-1) Pagos registrados hoy
  *  9. (F-2) Cuota 2 vencida: clase 7+ tomada con saldo pendiente
- * 10. (F-5) Instructores con horas sin liquidar en el período actual
+ * 10. (F-5) Instructores con horas del mes anterior sin liquidar
  * Fase 3 — Pre-inscripciones Profesionales:
  * 11. (P-1) Nuevas pre-inscripciones pendientes de revisión
  * 12. (P-2) Tests psicológicos completados sin evaluación
@@ -678,17 +683,23 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (F-5) Instructores con horas prácticas registradas en el período actual sin liquidación.
-   * Con una sede elegida, solo los instructores de esa sede.
+   * (F-5) Instructores con horas prácticas en el mes ANTERIOR que siguen sin liquidación.
+   * Un mes se liquida cuando termina: revisar el mes en curso dejaba la alerta encendida todo el
+   * mes (fix-417-m). Con una sede elegida, solo los instructores de esa sede.
    */
   private async checkPendingInstructorPayments(branchId: number | null): Promise<AlertModel[]> {
-    const currentPeriod = chileMonth(); // 'YYYY-MM'
+    const period = addMonthsIso(`${chileMonth()}-01`, -1).slice(0, 7); // 'YYYY-MM'
+    // Mediodía del día 15: cualquier instante dentro del mes sirve para nombrarlo.
+    const monthLabel = formatChileDate(`${period}-15T15:00:00.000Z`, {
+      month: 'long',
+      year: 'numeric',
+    });
 
     // Sede del instructor = users.branch_id, el mismo criterio de Liquidaciones (fix-410-m).
     let hoursQuery: any = this.supabase.client
       .from('instructor_monthly_hours')
       .select('instructor_id, instructors!inner(users!inner(branch_id))')
-      .eq('period', currentPeriod)
+      .eq('period', period)
       .gt('practical_sessions', 0);
     if (branchId !== null) hoursQuery = hoursQuery.eq('instructors.users.branch_id', branchId);
 
@@ -700,7 +711,7 @@ export class DashboardAlertsFacade {
       this.supabase.client
         .from('instructor_monthly_payments')
         .select('instructor_id')
-        .eq('period', currentPeriod),
+        .eq('period', period),
     );
 
     if (paidError) return [];
@@ -713,7 +724,7 @@ export class DashboardAlertsFacade {
       {
         id: 'alert-pending-instructor-payments',
         title: `${pendingCount} instructor${pendingCount > 1 ? 'es' : ''} sin liquidar`,
-        description: `Período ${currentPeriod} — tienen horas registradas sin liquidación`,
+        description: `Tienen horas de ${monthLabel} sin liquidación`,
         severity: 'warning',
         count: pendingCount,
       },
