@@ -10,7 +10,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
-import { toChileDate } from '@core/utils/chile-time.utils';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
@@ -37,8 +36,10 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 import type { LiveClassModel } from '@core/models/ui/dashboard.model';
-import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
-import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
+import {
+  liveClassToAgendaSlot,
+  resolveLiveClassActionPlan,
+} from '@core/utils/live-class-action.utils';
 
 @Component({
   selector: 'app-secretaria-dashboard',
@@ -504,26 +505,7 @@ export class SecretariaDashboardComponent {
         await import('../../admin/asistencia/admin-finalizar-clase-drawer.component');
       this.layoutDrawer.open(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
     } else {
-      const startTime = to24hTime(cls.scheduledAt);
-      const slot: any = {
-        id: cls.id,
-        date: toChileDate(cls.scheduledAt),
-        startTime,
-        endTime: addMinutesToTime(startTime, 45),
-        status: cls.status,
-        instructorId: 0,
-        instructorName: cls.instructorName,
-        vehicleId: 0,
-        vehiclePlate: cls.vehicle || '',
-        studentName: cls.studentName,
-        // fix-377-m: con la sesión, el detalle de una clase "No asistió" ofrece deshacer la falta.
-        sessionId: cls.type === 'practical' ? cls.originalId : undefined,
-        classNumber: 0,
-        kmStart: cls.kmStart,
-        kmEnd: cls.kmEnd,
-        notes: cls.notes,
-      };
-      this.agendaFacade.setSelectedSlot(slot);
+      this.agendaFacade.setSelectedSlot(liveClassToAgendaSlot(cls) as any);
       const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';
       const { AgendaSlotDetailDrawerComponent } =
         await import('../../agenda/agenda-slot-detail-drawer.component');
