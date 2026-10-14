@@ -707,6 +707,224 @@ test('O01 · O02: una clase y un pago registrados desde otra sesión aparecen si
   await expect.poll(pesos, CARGA).toBe(ingresosAntes + 25_000);
 });
 
+test('O03 · L02: una matrícula activada desde otra sesión sube "Alumnos Activos" sin recargar (fix-419-m)', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // Borrador sembrado ANTES de abrir: después solo cambia `enrollments`, no `students`.
+  const alumno = await createE2eAlumno(
+    { label: 'DashMatricula', branchId: SEDE_A, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const activos = async () => {
+    const digitos = (await heroKpi(page, 'Alumnos Activos')).replace(/[^0-9]/g, '');
+    return digitos === '' ? -1 : Number(digitos);
+  };
+  const antes = await activos();
+
+  const sb = await getAdminClient();
+  const { error } = await sb
+    .from('enrollments')
+    .update({ status: 'active' })
+    .eq('id', alumno.enrollmentIds[0]);
+  expect(error).toBeNull();
+  await expect.poll(activos, CARGA).toBe(antes + 1);
+});
+
+test('L04 · O06: un pago registrado desde otra sesión actualiza las alertas sin recargar (fix-420-m)', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const alumno = await createE2eAlumno(
+    {
+      label: 'DashAlertaPago',
+      branchId: SEDE_A,
+      enrollments: [{ pendingBalance: 10_000, paymentStatus: 'partial' }],
+    },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  // Sin pagos hoy la alerta no existe: cuenta 0.
+  const pagosHoy = async () =>
+    Number(
+      (await page.locator('main').innerText()).match(/(\d+) pagos? registrados? hoy/)?.[1] ?? 0,
+    );
+  const antes = await pagosHoy();
+
+  const sb = await getAdminClient();
+  const { data: pago, error } = await sb
+    .from('payments')
+    .insert({
+      enrollment_id: alumno.enrollmentIds[0],
+      total_amount: 10_000,
+      cash_amount: 10_000,
+      status: 'paid',
+      payment_date: chileToday(),
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error('[e2e] No se pudo sembrar el pago: ' + error.message);
+  cleanup.track('payments', pago.id);
+  await expect.poll(pagosHoy, CARGA).toBe(antes + 1);
+});
+
+/** "Alumnos Activos" del hero como número; -1 mientras recarga (para `expect.poll`). */
+async function alumnosActivos(page: Page): Promise<number> {
+  const digitos = (await heroKpi(page, 'Alumnos Activos')).replace(/[^0-9]/g, '');
+  return digitos === '' ? -1 : Number(digitos);
+}
+
+/** Matrículas activas según la BD, de una sede o de todas (lo que cuenta "Alumnos Activos"). */
+async function matriculasActivas(branchId: number | null): Promise<number> {
+  const sb = await getAdminClient();
+  let query = sb
+    .from('enrollments')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active');
+  if (branchId !== null) query = query.eq('branch_id', branchId);
+  const { count, error } = await query;
+  if (error) throw new Error('[e2e] No se pudieron contar las matrículas: ' + error.message);
+  return count ?? 0;
+}
+
+async function activarMatricula(enrollmentId: number): Promise<void> {
+  const sb = await getAdminClient();
+  const { error } = await sb
+    .from('enrollments')
+    .update({ status: 'active' })
+    .eq('id', enrollmentId);
+  if (error) throw new Error('[e2e] No se pudo activar la matrícula: ' + error.message);
+}
+
+test('O04: un cambio en la otra sede no se cuela en el dashboard de esta', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const ajeno = await createE2eAlumno(
+    { label: 'DashOtraSede', branchId: SEDE_B, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const propio = await createE2eAlumno(
+    { label: 'DashMiSede', branchId: SEDE_A, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const antes = await alumnosActivos(page);
+
+  // Los dos eventos llegan por el mismo canal; si el de la sede B contara, subiría 2.
+  await activarMatricula(ajeno.enrollmentIds[0]);
+  await activarMatricula(propio.enrollmentIds[0]);
+  await expect.poll(() => alumnosActivos(page), CARGA).toBe(antes + 1);
+  await page.waitForTimeout(3_000); // un refresco tardío del evento de la sede B
+  expect(await alumnosActivos(page)).toBe(antes + 1);
+});
+
+test('R03: la secretaria multi-sede en "Todas" ve la suma de las dos sedes', async ({ pageAs }) => {
+  const page = await pageAs('secretariaMultisede');
+  await abrirSecretaria(page);
+  await expect(page.locator('header button[aria-label^="Sede activa"]')).toContainText('Todas');
+
+  await expect(async () => {
+    const [sedeA, sedeB, todas] = await Promise.all([
+      matriculasActivas(SEDE_A),
+      matriculasActivas(SEDE_B),
+      matriculasActivas(null),
+    ]);
+    expect(todas).toBe(sedeA + sedeB);
+    expect(await alumnosActivos(page)).toBe(todas);
+  }).toPass({ timeout: 30_000 });
+});
+
+test('R07: si le quitan el acceso a ambas sedes con la sesión abierta, el dashboard vuelve a la suya', async ({
+  pageAs,
+}) => {
+  const sb = await getAdminClient();
+  const { data: cuenta, error } = await sb
+    .from('users')
+    .select('id, branch_id')
+    .eq('email', ACCOUNTS.secretariaMultisede.email)
+    .single();
+  if (error) throw new Error('[e2e] No se encontró la cuenta multi-sede: ' + error.message);
+  const otorgar = async (valor: boolean) => {
+    const { error: e } = await sb
+      .from('users')
+      .update({ can_access_both_branches: valor })
+      .eq('id', cuenta.id);
+    if (e) throw new Error('[e2e] No se pudo cambiar el acceso a ambas sedes: ' + e.message);
+  };
+
+  const page = await pageAs('secretariaMultisede');
+  await abrirSecretaria(page);
+  const selector = page.locator('header button[aria-label^="Sede activa"]');
+  await expect(selector).toContainText('Todas');
+
+  try {
+    await otorgar(false);
+    await expect(selector).toHaveCount(0, CARGA);
+    await expect(async () => {
+      expect(await alumnosActivos(page)).toBe(await matriculasActivas(cuenta.branch_id));
+    }).toPass({ timeout: 30_000 });
+  } finally {
+    await otorgar(true);
+  }
+});
+
+test('M14 · M16: finalizar desde "Clases Actuales" guarda el km del vehículo y un corte de red no cierra el drawer', async ({
+  pageAs,
+  cleanup,
+}) => {
+  saltarDeMadrugada();
+  const clase = await seedClase(
+    { label: 'DashKm', branchId: SEDE_A, dia: chileToday(), cupo: { inst: 3, hora: 3 } },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const fila = page
+    .locator('app-live-classes-panel .live-class-item')
+    .filter({ hasText: clase.alumno.firstNames });
+
+  await fila.click();
+  const kmSalida = page.locator('[data-llm-description^="Odómetro inicial"]');
+  await expect(kmSalida).not.toHaveValue('', CARGA);
+  const km = Number(await kmSalida.inputValue());
+  await accion(page, 'admin-start-class').click();
+  // Empezó a las 03:00: en curso pasada su hora de término se muestra "Atrasada".
+  await expect(fila).toContainText(/En curso|Atrasada/, CARGA);
+
+  await fila.click();
+  const kmRetorno = page.locator('[data-llm-description^="Odómetro final"]');
+  await expect(kmRetorno).toBeVisible(CARGA);
+  await kmRetorno.fill(String(km + 5));
+
+  // M16: sin red, la escritura falla: el drawer sigue abierto con el error a la vista.
+  const sinRed = (route: import('@playwright/test').Route) =>
+    route.request().method() === 'GET' ? route.fallback() : route.abort('internetdisconnected');
+  await page.route('**/rest/v1/**', sinRed);
+  await accion(page, 'admin-finish-class').click();
+  await expect(drawer(page)).toContainText('No se pudo finalizar la clase', CARGA);
+  await expect(accion(page, 'admin-finish-class')).toBeVisible();
+  await page.unroute('**/rest/v1/**', sinRed);
+
+  // M14: con red, finaliza y el vehículo queda con el km de retorno.
+  await accion(page, 'admin-finish-class').click();
+  // El toast sale cuando terminó de guardar todo (km y asistencia); "Finalizada" en la fila
+  // llega antes, por tiempo real, apenas se cierra la clase.
+  await expect(page.getByText('Clase finalizada').first()).toBeVisible(CARGA);
+  await expect(fila).toContainText('Finalizada', CARGA);
+  const sb = await getAdminClient();
+  const { data: vehiculo } = await sb
+    .from('vehicles')
+    .select('current_km')
+    .eq('id', clase.vehicleId)
+    .single();
+  expect(vehiculo?.current_km).toBe(km + 5);
+});
+
 test('S05: una clase de "Clases Actuales" se abre con el teclado y dice qué hace', async ({
   pageAs,
   cleanup,

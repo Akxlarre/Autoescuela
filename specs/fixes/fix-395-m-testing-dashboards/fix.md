@@ -1,7 +1,8 @@
 # Fix: Testing — Dashboards (admin ejecutivo y secretaria)
 > id: fix-395-m-testing-dashboards
 > refs: ASG-i-030
-> status: in_progress
+> status: done
+> closed: 2026-10-14
 > created: 2026-10-13
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -284,15 +285,28 @@ M12 (km final ≤ inicial) y el flujo completo de iniciar/finalizar están cubie
 | S03 | ✅ | 375 px: el filtro trunca "1 oct – 1…" sin desbordar |
 | S04 | ❌→✅ | Tabs solo con ícono y `title` a 375 px (diseño de `app-tabs`); las etiquetas de "Operación de hoy" se cortaban → `hotfix-154-m` |
 | S07 | ✅ | `gridAnimated` anima una sola vez |
+| O03 / L02 | ❌→✅ | El canal Realtime del dashboard de secretaria no escuchaba `enrollments`, `special_service_sales` ni `vehicles`: activar una matrícula no cambiaba "Alumnos Activos" hasta recargar → `fix-419-m` |
 
-**Hallazgo abierto (O03 / L02):** el canal Realtime del dashboard de secretaria escucha
-`students`, `class_b_sessions` y `payments`, pero no `enrollments`: matricular a un alumno que ya
-existe o completar una matrícula no actualiza "Alumnos Activos" hasta recargar. `enrollments`,
-`special_service_sales` y `vehicles` ya están publicadas (`fix-360-m`). Se corrige en el próximo
-track.
+| K12 | ✅ | 768 y 375 px: los 4 KPIs legibles, sin scroll horizontal |
+| L04 / O06 | ❌→✅ | Un pago subía "Ingresos Mes" pero las alertas ("pagos registrados hoy", "pagos pendientes") y el chip seguían igual hasta salir y volver → `fix-420-m` |
+| L07 | ✅ | Egreso "Gastos varios" de $1.234 desde el dashboard: aparece en Caja Diaria del día (efectivo). Borrado después |
+| L09 | ✅ | Solo "Matricular" y "Registrar Pago" van rellenos con el color de marca; "Agenda" y "Registrar Egreso" son secundarios |
+| M14 | ✅ | E2E `M14 · M16`: finalizar desde "Clases Actuales" deja `vehicles.current_km` en el km de retorno |
+| M16 | ✅ | Mismo E2E: con la escritura cortada, "No se pudo finalizar la clase…" dentro del drawer, que sigue abierto; al reintentar con red, finaliza |
+| N04 | ✅ | El drawer no se actualiza solo, pero no pisa el inicio de otra persona: avisa "ya fue iniciada" al confirmar (`fix-388-m`, E2E N03 de asistencia; es el mismo drawer) |
+| O04 | ✅ | E2E: una matrícula activada en la sede B no cambia "Alumnos Activos" de la secretaria A; la de su sede sí (+1, no +2) |
+| P04 | ✅ | Hoy "12:31"; días anteriores `formatChileDate` con día, mes corto y hora |
+| P06 | ❌→✅ | Abre la ficha del alumno correcto (2824) y cierra el drawer, pero los eventos no se alcanzaban con el teclado → `fix-421-m` |
+| P07, P08 | ✅ | Pagos → `/app/{rol}/pagos`; DELETE o alumno ya borrado: sin rol de botón ni foco (test de `fix-421-m`; los 50 eventos de la secretaria de prueba eran de datos E2E borrados y ninguno quedó clicable) |
+| P09 | ✅ | Una matrícula Profesional lleva a `/app/secretaria/alumnos/:id`, la misma ficha (`AdminAlumnoDetalleComponent`) que muestra ambos cursos; esa ruta no está bloqueada en el piloto |
+| P10 | ✅ | "Sin actividad reciente" en el panel y "No hay actividad reciente para mostrar." en el drawer |
+| Q06 | ✅ | Solo cuenta faltas registradas (`absent`/`no_show`) vigentes de matrículas activas: una clase de hoy sin marcar no cuenta (`fix-364-m`, `fix-391-m`) |
+| Q09 | ✅ | Al volver al dashboard `initialize()` refresca las alertas: la de caja desaparece con el cierre |
+| R03 | ✅ | E2E: en "Todas", "Alumnos Activos" = sede 1 + sede 2 según la BD |
+| R04 | ✅ | No se puede producir desde la app: `create-secretary` y `update-secretary` exigen sede, y hoy ninguna secretaria está sin sede. Si pasara, `resolveBranchScope` usa la sede `-1` y las 17 revisiones de alertas filtran por ella |
+| R07 | ❌→✅ | Al quitarle el acceso con "Todas" elegida, el selector desaparecía pero seguía viendo las dos sedes (197 en vez de 67) → `fix-422-m` |
 
-**Falta ejecutar:** K12, L02, L04, L07, L09, M14, M16, M19, N04, O03, O04, O06, P04, P06–P10, Q06,
-Q09, R03, R04, R07.
+Todos los casos del checklist quedaron ejecutados. M19 es una pregunta (ver "Pendientes de Matías").
 
 ## Decisiones de negocio
 
@@ -305,21 +319,17 @@ Decididas por Matías el 2026-10-14:
 | Q14 | ¿"Instructores sin liquidar" revisa el mes en curso o el anterior? | El mes anterior → `fix-417-m` |
 | C04 / S11 | ¿El Resultado resta solo gastos de Clase B? | Lo cubre `ASG-i-061` (después del piloto): sin cambio |
 | P02 | ¿La secretaria ve la actividad de toda su sede? | Solo sus propias acciones, por ahora |
-
-Pendientes de Matías (§5 del checklist); no se marcan ✅/❌:
-
-| Caso | Pregunta | Qué hace hoy |
-|---|---|---|
-| I04 | ¿"Operación de hoy" del ejecutivo debe actualizarse en tiempo real? | No: se actualiza al recargar o cambiar de sede |
-| I06 / Q20 | ¿Las alertas llevan a su módulo? | Solo "Caja sin cerrar" navega |
-| Q10 | "Caja sin cerrar" con "Todas": ¿exige el cierre de cada sede? | Desaparece si cualquier sede cerró |
-| D08 | Sin clases en el período: ¿"0 %" o "—"? | "0 %" con "Sin clases en el período" |
-| B12 / S17b | "Este año": las dos comparaciones son contra el mismo tramo del año anterior | Muestra las dos líneas |
-| A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso" en su dashboard? | No los tiene desde `0044-b` |
-| L10 | ¿En qué sede queda un pago o egreso de una secretaria multi-sede en "Todas"? | Sin revisar |
-| H05 / Q03 / S16 | ¿Cuál es el número oficial de "alumnos con saldo"? | Ejecutivo (incluye finalizadas), alerta (solo activas, todos los cursos) y Base B difieren |
-| S02 (obs.) | A 1440 × 900, ¿"Actividad" y "Alertas" con una fila y media visibles está bien? | "Clases Actuales" ocupa media pantalla |
-| J03 (obs.) | Al cambiar de sede en el ejecutivo, 1–2,5 s con el nombre nuevo y los números viejos | Sin indicador de carga |
+| I04 | ¿"Operación de hoy" del ejecutivo en tiempo real? | No: se actualiza al recargar o cambiar de sede |
+| I06 / Q20 | ¿Las alertas llevan a su módulo? | Sí, después del piloto. Hoy solo "Caja sin cerrar" navega |
+| Q10 | "Caja sin cerrar" con "Todas" | Decir explícitamente qué sede falta por cerrar, o que faltan ambas → `fix-423-m` |
+| D08 | Sin clases en el período | "—" en vez de "0 %" → `fix-425-m` |
+| A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso"? | No: sin cambio |
+| L10 | Sede de un pago o egreso de una secretaria multi-sede en "Todas" | Revisado, sin cambio: el pago no tiene sede propia (va a la de su matrícula) y el egreso la saca del vehículo (combustible) o del instructor (anticipo), y en "gastos varios" la exige (`fix-243-m`). Obs.: el combustible de un vehículo de "ambas sedes" va a su sede de origen |
+| S02 (obs.) | "Actividad" y "Alertas" con fila y media a 1440 × 900 | Aceptable: sin cambio |
+| M19 | ¿Basta el primer nombre en "Clases Actuales"? | No: el Nº de matrícula es lo principal, por sobre el nombre → `fix-424-m` |
+| J03 (obs.) | Números viejos 1–2,5 s al cambiar de sede en el ejecutivo | Mostrar un indicador de carga → `fix-427-m` |
+| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Todo el saldo pendiente, incluidos egresados, en todos lados (propuesta de Matías) → `fix-428-m` (migración `20261014120000` aplicada y verificada). Base B "Con deuda" sin cambio: es la lista de alumnos vigentes |
+| B12 / S17b | "Este año": dos comparaciones contra el mismo tramo, y en enero contra diciembre | Una sola, siempre "vs año anterior", también en enero → `fix-426-m` |
 
 Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
 
@@ -348,7 +358,7 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 - [x] Capa Playwright (`e2e/dashboards.spec.ts`, 22 tests)
 - [x] Matías aplicó las 4 migraciones (2026-10-14), verificadas en la BD de dev
 - [x] Decisiones de negocio principales (K02, Q14, Q15, C04, P02); quedan las menores de la tabla
-- [ ] Casos no ejecutados: segunda pasada en curso (2026-10-14), ver "Segunda pasada"
+- [x] Casos no ejecutados: segunda pasada terminada (2026-10-14), ver "Segunda pasada"
 
 ## ACs Afectados
 
@@ -363,6 +373,10 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
   juntas 42 + 3 saltados, 0 fallos. Los 2 tests que siembran clases de hoy ya ocurridas se saltan
   antes de las 07:00 hora Chile (`saltarDeMadrugada()`): `seedClase` las pone entre la 01:00 y las
   06:59 y de madrugada todavía son futuras.
+- Segunda pasada (2026-10-14, 13:00 hora Chile): la suite suma O03 · L02, L04 · O06, O04, R03, R07 y
+  M14 · M16. Corrida completa con un worker: 24/24, sin saltados (4 de sesión aparte). Unit de
+  facades y dashboards: 1845/1845. `--repeat-each` necesita `--workers=1`: dos copias del mismo
+  test siembran la misma hora y chocan.
 
 ## Tracks generados
 
@@ -395,6 +409,16 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `hotfix-154-m-operacion-de-hoy-etiquetas-cortadas-en-movil` | S04 | Cerrado |
 | `hotfix-155-m-nuevos-ultimos-7-dias-cuenta-8` | K03 | Cerrado |
 | `hotfix-156-m-alerta-documentos-sin-vehiculos-de-ambas-sedes` | Q01 | Cerrado |
+| `fix-419-m-dashboard-secretaria-realtime-sin-matriculas` | O03, L02 | Cerrado |
+| `fix-420-m-alertas-del-dashboard-no-siguen-el-tiempo-real` | L04, O06 | Cerrado |
+| `fix-421-m-actividad-reciente-sin-teclado` | P06–P08 | Cerrado |
+| `fix-422-m-revocar-ambas-sedes-no-recarga-con-todas` | R07 | Cerrado |
+| `fix-423-m-caja-sin-cerrar-dice-que-sede` | Q10 (decisión) | Cerrado |
+| `fix-424-m-clases-actuales-sin-numero-de-matricula` | M19 (decisión) | Cerrado |
+| `fix-425-m-cancelacion-sin-clases-muestra-guion` | D08 (decisión) | Cerrado |
+| `fix-426-m-este-anio-una-sola-comparacion` | B12 (decisión) | Cerrado |
+| `fix-427-m-ejecutivo-sin-indicador-al-recargar` | J03 (decisión) | Cerrado |
+| `fix-428-m-saldo-pendiente-mismo-criterio` | H05, Q03 / S16 (decisión) | Cerrado · migración aplicada |
 
 ### Migraciones (aplicadas por Matías el 2026-10-14)
 
@@ -404,5 +428,6 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `20261013161000_fix397_exec_today_ops_vehiculos_available.sql` | `fix-397-m` |
 | `20261013162000_fix408_audit_log_policy_initplan.sql` | `fix-408-m` |
 | `20261013163000_fix413_audit_humanize_columnas_nuevas.sql` | `fix-413-m` |
+| `20261014120000_fix428_exec_receivables_alumnos_total.sql` | `fix-428-m` (aplicada el 2026-10-14) |
 
 Las cuatro se ensayaron contra la BD de dev en una transacción que se revierte.

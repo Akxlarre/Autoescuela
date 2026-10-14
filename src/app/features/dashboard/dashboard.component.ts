@@ -87,6 +87,9 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
         [kpis]="heroKpis()"
         [loading]="kpisLoading()"
         [loadingKpiCount]="4"
+        class="transition-opacity"
+        [class.opacity-60]="facade.isRefreshing()"
+        [attr.aria-busy]="facade.isRefreshing()"
       />
 
       <!-- ── KPIs (2 filas × 4) ── -->
@@ -105,7 +108,16 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
         <div class="bento-banner flex flex-col gap-3">
           <!-- Filtro de período: vive acá porque el hero slim no proyecta contenido -->
           <div class="flex flex-wrap items-end justify-between gap-2">
-            <p class="micro-label m-0">Indicadores del período · Clase B</p>
+            <div class="flex items-center gap-3">
+              <p class="micro-label m-0">Indicadores del período · Clase B</p>
+              <!-- Recarga con datos a la vista: los números todavía son los anteriores (fix-427-m) -->
+              @if (facade.isRefreshing()) {
+                <span class="flex items-center gap-1.5 text-xs text-text-muted" role="status">
+                  <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                  Actualizando…
+                </span>
+              }
+            </div>
             <app-exec-period-filter
               [preset]="facade.preset()"
               [range]="facade.range()"
@@ -115,7 +127,11 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
               (rangeChange)="onRangeChange($event)"
             />
           </div>
-          <div class="exec-kpis">
+          <div
+            class="exec-kpis transition-opacity"
+            [class.opacity-60]="facade.isRefreshing()"
+            [attr.aria-busy]="facade.isRefreshing()"
+          >
             @for (card of financeCards(); track card.id; let first = $first) {
               <div class="exec-kpi" [pTooltip]="card.tooltip" tooltipPosition="bottom">
                 <app-kpi-card-variant
@@ -353,7 +369,7 @@ export class DashboardComponent {
 
   protected readonly kpiCards = computed(() => {
     const kpis = this.facade.kpis();
-    return kpis ? buildExecKpiCards(kpis, this.facade.receivables()) : [];
+    return kpis ? buildExecKpiCards(kpis, this.facade.receivables(), this.facade.dataPreset()) : [];
   });
   /** Plata (ingresos, gastos, resultado, cartera) → tarjetas grandes. */
   protected readonly financeCards = computed(() => this.kpiCards().slice(0, 4));

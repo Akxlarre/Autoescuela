@@ -28,6 +28,13 @@ export class DashboardFacade {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<DashboardModel | null>(null);
+  private readonly _liveUpdates = signal(0);
+  /**
+   * Sube cada vez que termina una recarga pedida por un evento Realtime (una por ráfaga, no una
+   * por evento). Quien muestra datos que este canal no cubre, como las alertas, lo sigue para
+   * refrescarse a la par (fix-420-m). La re-entrada SWR no lo sube.
+   */
+  readonly liveUpdates = this._liveUpdates.asReadonly();
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
@@ -38,6 +45,8 @@ export class DashboardFacade {
   /** Hay un refresco silencioso en curso / pedido mientras otra carga corría (fix-407-m). */
   private _refreshRunning = false;
   private _refreshQueued = false;
+  /** Llegó un evento Realtime que todavía no cubre ninguna recarga terminada (fix-420-m). */
+  private _realtimePending = false;
   private _realtimeChannel: any | null = null;
   /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
   private readonly dashboardGuard = createRequestGuard();
@@ -47,24 +56,30 @@ export class DashboardFacade {
   setupRealtime(): void {
     if (this._realtimeChannel) return;
 
-    this._realtimeChannel = this.supabase.client
-      .channel('dashboard-realtime')
-      .on(
+    // Toda tabla base que alimenta un KPI (fix-419-m: matrículas, ventas de servicios y
+    // vehículos faltaban). Deben estar en la publicación Realtime (fix-360-m).
+    const tablas = [
+      'students',
+      'enrollments',
+      'class_b_sessions',
+      'payments',
+      'special_service_sales',
+      'vehicles',
+    ];
+    let channel = this.supabase.client.channel('dashboard-realtime');
+    for (const table of tablas) {
+      channel = channel.on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'students' },
-        () => void this.refreshSilently(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'class_b_sessions' },
-        () => void this.refreshSilently(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        () => void this.refreshSilently(),
-      )
-      .subscribe();
+        { event: '*', schema: 'public', table },
+        () => this.onRealtimeChange(),
+      );
+    }
+    this._realtimeChannel = channel.subscribe();
+  }
+
+  private onRealtimeChange(): void {
+    this._realtimePending = true;
+    void this.refreshSilently();
   }
 
   destroyRealtime(): void {
@@ -153,7 +168,10 @@ export class DashboardFacade {
     try {
       do {
         this._refreshQueued = false;
+        const porEvento = this._realtimePending;
+        this._realtimePending = false;
         await this.fetchRealDashboardData(this.getActiveBranchId());
+        if (porEvento) this._liveUpdates.update((n) => n + 1);
         // Empezó una carga con skeleton (cambio de sede): ella refresca al terminar.
       } while (this._refreshQueued && !this.loading());
     } catch {
@@ -441,7 +459,7 @@ export class DashboardFacade {
     notes,
     vehicles(id, brand, model, license_plate, current_km),
     instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
-    enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name))),
+    enrollments!inner(branch_id, student_id, number, students(users(first_names, paternal_last_name))),
     class_b_practice_attendance(status, archived_at)
   `;
 
@@ -481,6 +499,7 @@ export class DashboardFacade {
       scheduledAt: row.scheduled_at,
       durationMin: row.duration_min ?? 45,
       studentId: row.enrollments?.student_id ?? null,
+      enrollmentNumber: row.enrollments?.number ?? null,
       kmStart: row.km_start ?? null,
       kmEnd: row.km_end ?? null,
       notes: row.notes ?? null,

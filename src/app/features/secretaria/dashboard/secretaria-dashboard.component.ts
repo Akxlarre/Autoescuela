@@ -448,6 +448,17 @@ export class SecretariaDashboardComponent {
     // recargando) con la secretaria en otra pantalla (fix-403-m).
     this.destroyRef.onDestroy(() => this.dashboardFacade.destroyRealtime());
 
+    // Las alertas no tienen canal propio: se refrescan cada vez que el del dashboard trae un
+    // cambio (un pago hace aparecer "pagos registrados hoy", fix-420-m). El valor con que se
+    // monta no cuenta: esas alertas ya las carga initialize().
+    let liveUpdatesSeen = this.dashboardFacade.liveUpdates();
+    effect(() => {
+      const liveUpdates = this.dashboardFacade.liveUpdates();
+      if (liveUpdates === liveUpdatesSeen) return;
+      liveUpdatesSeen = liveUpdates;
+      untracked(() => void this.dashboardAlertsFacade.refreshSilently());
+    });
+
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;

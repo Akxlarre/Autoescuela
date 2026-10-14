@@ -65,12 +65,15 @@ describe('SecretariaDashboardComponent', () => {
             error: signal<string | null>(null),
             initialize: vi.fn(),
             destroyRealtime: vi.fn(),
+            // Distinto de 0: el dashboard ya recibió eventos antes de montarse (re-entrada).
+            liveUpdates: signal(3),
           },
         },
         {
           provide: DashboardAlertsFacade,
           useValue: {
             initialize: vi.fn(),
+            refreshSilently: vi.fn(),
             activeAlerts: signal(Array.from({ length: 5 }, (_, i) => buildAlert(i + 1))),
             alertCount: signal(5),
             loadProblem: signal<string | null>(null),
@@ -312,6 +315,29 @@ describe('SecretariaDashboardComponent', () => {
       (layoutDrawerSpy.isOpen as ReturnType<typeof signal>).set(true);
 
       expect((component as any).isDrawerOpen()).toBe(true);
+    });
+  });
+
+  // ─── fix-420-m: las alertas siguen los cambios en vivo del dashboard ────────
+  describe('alertas en vivo (fix-420-m)', () => {
+    const alertas = () => TestBed.inject(DashboardAlertsFacade) as any;
+    const dashboard = () => TestBed.inject(DashboardFacade) as any;
+
+    it('al montarse no refresca las alertas por el valor que ya traía el contador', () => {
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).not.toHaveBeenCalled();
+    });
+
+    it('cada recarga por un evento en vivo refresca las alertas en silencio', () => {
+      fixture.detectChanges();
+
+      dashboard().liveUpdates.set(4);
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).toHaveBeenCalledTimes(1);
+
+      dashboard().liveUpdates.set(5);
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).toHaveBeenCalledTimes(2);
     });
   });
 });

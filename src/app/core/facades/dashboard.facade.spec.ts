@@ -645,6 +645,61 @@ describe('DashboardFacade', () => {
       });
     });
 
+    describe('liveUpdates (fix-420-m)', () => {
+      const asentar = async () => {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+      };
+      const eventoRealtime = (facade: DashboardFacade) => (facade as any).onRealtimeChange();
+
+      it('una ráfaga de eventos durante un refresco sube el contador una vez por recarga', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.liveUpdates()).toBe(0);
+
+        void eventoRealtime(dashFacade); // batch 1, en curso
+        void eventoRealtime(dashFacade);
+        void eventoRealtime(dashFacade);
+
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(1);
+
+        mock.resolveBatch(2, 300); // la recarga agrupada de los eventos que llegaron mientras tanto
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(2);
+      });
+
+      it('un evento durante la primera carga sube el contador cuando corre su recarga', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+        const carga = dashFacade.initialize();
+        void eventoRealtime(dashFacade);
+
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.liveUpdates()).toBe(0);
+
+        await asentar();
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(1);
+      });
+
+      it('la re-entrada SWR recarga sin subir el contador', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        void dashFacade.initialize(); // re-entrada: refresco silencioso, batch 1
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+        expect(dashFacade.liveUpdates()).toBe(0);
+      });
+    });
+
     it('fix-404-m: una carga vieja que falla no apaga el skeleton ni muestra error', async () => {
       const { mock, dashFacade } = facadeConCarrera(2);
 
@@ -760,6 +815,42 @@ describe('DashboardFacade', () => {
 
       expect(result.status).toBe('no_show');
       expect(result.excused).toBe(false);
+    });
+
+    it('fix-424-m: entrega el Nº de matrícula de cada clase', async () => {
+      const rows = [
+        {
+          id: 4,
+          class_number: 2,
+          scheduled_at: '2026-08-18T17:30:00',
+          status: 'scheduled',
+          vehicles: null,
+          instructors: null,
+          enrollments: {
+            branch_id: 1,
+            number: '0027',
+            students: { users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+          },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.enrollmentNumber).toBe('0027');
+      expect(result.studentName).toBe('Juan Pérez');
     });
 
     it('fix-381-m: marca justificada una falta con asistencia vigente excused', async () => {
@@ -1042,6 +1133,60 @@ describe('DashboardFacade', () => {
       dashFacade.destroyRealtime();
 
       expect(mock.client.removeChannel).toHaveBeenCalledWith(mock.channel);
+    });
+
+    describe('tablas que escucha (fix-419-m)', () => {
+      const TABLAS = [
+        'students',
+        'class_b_sessions',
+        'payments',
+        'enrollments',
+        'special_service_sales',
+        'vehicles',
+      ];
+
+      function setup() {
+        const mock = makeChannelMock();
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          imports: [HttpClientTestingModule],
+          providers: [
+            DashboardFacade,
+            { provide: SupabaseService, useValue: mock },
+            { provide: AuthFacade, useValue: {} },
+            { provide: BranchFacade, useValue: {} },
+          ],
+        });
+        const dashFacade = TestBed.inject(DashboardFacade);
+        const refreshSpy = vi
+          .spyOn(
+            dashFacade as unknown as { refreshSilently: () => Promise<void> },
+            'refreshSilently',
+          )
+          .mockResolvedValue();
+        dashFacade.setupRealtime();
+        const calls = mock.channel.on.mock.calls as unknown as [
+          string,
+          { table: string },
+          () => void,
+        ][];
+        return { calls, refreshSpy };
+      }
+
+      it('se suscribe a matrículas, ventas de servicios y vehículos además de las tablas de antes', () => {
+        const { calls } = setup();
+        expect(calls.map(([, filtro]) => filtro.table).sort()).toEqual([...TABLAS].sort());
+      });
+
+      it.each(['enrollments', 'special_service_sales', 'vehicles'])(
+        'un evento de %s refresca en silencio',
+        (tabla) => {
+          const { calls, refreshSpy } = setup();
+          const handler = calls.find(([, filtro]) => filtro.table === tabla)?.[2];
+          handler?.();
+          expect(refreshSpy).toHaveBeenCalledTimes(1);
+        },
+      );
     });
   });
 
