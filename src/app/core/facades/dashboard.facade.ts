@@ -33,6 +33,9 @@ export class DashboardFacade {
   private _lastBranchId: number | null = null;
   /** Número de la última carga con skeleton (ver `initialize`). */
   private _loadTicket = 0;
+  /** Hay un refresco silencioso en curso / pedido mientras otra carga corría (fix-407-m). */
+  private _refreshRunning = false;
+  private _refreshQueued = false;
   private _realtimeChannel: any | null = null;
   /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
   private readonly dashboardGuard = createRequestGuard();
@@ -112,15 +115,39 @@ export class DashboardFacade {
     } catch {
       if (ticket === this._loadTicket) this.error.set('Error al cargar datos del dashboard');
     } finally {
-      if (ticket === this._loadTicket) this.loading.set(false);
+      if (ticket === this._loadTicket) {
+        this.loading.set(false);
+        // Un evento que llegó durante la carga quedó anotado: se refresca ahora, una vez.
+        if (this._refreshQueued) void this.refreshSilently();
+      }
     }
   }
 
+  /**
+   * Refresco sin skeleton (re-entrada SWR, eventos Realtime, post-acción).
+   *
+   * Nunca arranca una carga si ya hay una en curso: la anota y la corre una vez al terminar.
+   * Cada carga tarda segundos y el guard descarta toda carga que no sea la última pedida; si
+   * cada evento arrancara la suya, con eventos seguidos (varias personas iniciando y cerrando
+   * clases) ninguna llegaba a aplicarse y el dashboard quedaba vacío (fix-407-m).
+   */
   private async refreshSilently(): Promise<void> {
+    if (this.loading() || this._refreshRunning) {
+      this._refreshQueued = true;
+      return;
+    }
+
+    this._refreshRunning = true;
     try {
-      await this.fetchRealDashboardData(this.getActiveBranchId());
+      do {
+        this._refreshQueued = false;
+        await this.fetchRealDashboardData(this.getActiveBranchId());
+        // Empezó una carga con skeleton (cambio de sede): ella refresca al terminar.
+      } while (this._refreshQueued && !this.loading());
     } catch {
-      // Swallowed
+      // Fail silencioso — los datos anteriores siguen visibles.
+    } finally {
+      this._refreshRunning = false;
     }
   }
 

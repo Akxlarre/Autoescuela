@@ -509,6 +509,79 @@ describe('DashboardFacade', () => {
       expect(dashFacade.data()?.hero.classesToday).toBe(200);
     });
 
+    describe('eventos Realtime seguidos (fix-407-m)', () => {
+      /** Deja correr las promesas ya resueltas (la cadena de un refresco encolado). */
+      const asentar = async () => {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+      };
+      const evento = (facade: DashboardFacade) => (facade as any).refreshSilently();
+      const cargasPedidas = (mock: { client: { from: { mock: { calls: unknown[] } } } }) =>
+        mock.client.from.mock.calls.length / QUERIES_POR_CARGA;
+
+      it('un evento durante la primera carga no la descarta: se muestra y después se refresca', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+
+        const carga = dashFacade.initialize(); // batch 0
+        void evento(dashFacade); // llega un cambio por Realtime mientras carga
+        expect(cargasPedidas(mock)).toBe(1);
+
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.data()?.hero.classesToday).toBe(100);
+        expect(dashFacade.loading()).toBe(false);
+
+        // El refresco que quedó pendiente corre una vez terminada la carga.
+        await asentar();
+        expect(cargasPedidas(mock)).toBe(2);
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero.classesToday).toBe(200);
+      });
+
+      it('varios eventos durante un refresco en curso producen un solo refresco más', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = evento(dashFacade); // batch 1, en curso
+        void evento(dashFacade);
+        void evento(dashFacade);
+        void evento(dashFacade);
+        expect(cargasPedidas(mock)).toBe(2);
+
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero.classesToday).toBe(200);
+        expect(cargasPedidas(mock)).toBe(3);
+
+        mock.resolveBatch(2, 300);
+        await refresco;
+        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+        expect(cargasPedidas(mock)).toBe(3);
+      });
+
+      it('un cambio de sede durante un refresco sigue ganando', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = evento(dashFacade); // batch 1, en curso
+        (dashFacade as any)._lastBranchId = 99; // la sede activa ya no es la cargada
+        const otraSede = dashFacade.initialize(); // batch 2
+
+        mock.resolveBatch(2, 300);
+        await otraSede;
+        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+        expect(dashFacade.loading()).toBe(false);
+
+        mock.resolveBatch(1, 200); // el refresco viejo llega después: se descarta
+        await refresco;
+        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+      });
+    });
+
     it('fix-404-m: una carga vieja que falla no apaga el skeleton ni muestra error', async () => {
       const { mock, dashFacade } = facadeConCarrera(2);
 
