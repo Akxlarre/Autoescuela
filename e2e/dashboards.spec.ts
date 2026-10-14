@@ -686,3 +686,31 @@ test('O01 · O02: una clase y un pago registrados desde otra sesión aparecen si
   cleanup.track('payments', pago.id);
   await expect.poll(pesos, CARGA).toBe(ingresosAntes + 25_000);
 });
+
+test('S05: una clase de "Clases Actuales" se abre con el teclado y dice qué hace', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const clase = await seedClase(
+    { label: 'DashTecla', branchId: SEDE_A, dia: chileToday(), cupo: { inst: 5, hora: 5 } },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+
+  const fila = page
+    .locator('app-live-classes-panel .live-class-item')
+    .filter({ hasText: clase.alumno.firstNames });
+  await expect(fila).toHaveAttribute('role', 'button');
+  await expect(fila).toHaveAttribute(
+    'aria-label',
+    new RegExp(`^Iniciar la clase de ${clase.alumno.firstNames}`),
+  );
+  await expect(fila).toHaveAttribute('data-llm-action', 'start-live-class');
+
+  await fila.focus();
+  await expect(fila).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(drawer(page)).toContainText('Comenzar Clase', CARGA);
+  await expect(drawer(page)).toContainText(clase.alumno.firstNames);
+});

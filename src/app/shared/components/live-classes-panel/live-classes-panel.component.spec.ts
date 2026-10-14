@@ -37,6 +37,36 @@ describe('LiveClassesPanelComponent', () => {
     vi.useRealTimers();
   });
 
+  // ─── fix-414-m: cada fila dice qué hace y se identifica para agentes ───────
+  describe('acción de cada fila (fix-414-m)', () => {
+    // 15:30 UTC = 11:30 hora Chile del 27 de julio de 2026 (invierno, UTC-4).
+    const clase = (status: string) =>
+      ({ status, studentName: 'Julio Verstappen', scheduledAt: '2026-07-27T15:30:00.000Z' }) as any;
+
+    it('por iniciar → "Iniciar la clase de …"', () => {
+      expect(component.actionLabel(clase('pending'))).toBe(
+        'Iniciar la clase de Julio Verstappen, 11:30',
+      );
+      expect(component.actionId(clase('pending'))).toBe('start-live-class');
+    });
+
+    it('en curso → "Finalizar la clase de …"', () => {
+      expect(component.actionLabel(clase('in_progress'))).toBe(
+        'Finalizar la clase de Julio Verstappen, 11:30',
+      );
+      expect(component.actionId(clase('in_progress'))).toBe('finish-live-class');
+    });
+
+    it('finalizada o sin asistir → "Ver el detalle de la clase de …"', () => {
+      for (const status of ['completed', 'no_show']) {
+        expect(component.actionLabel(clase(status))).toBe(
+          'Ver el detalle de la clase de Julio Verstappen, 11:30',
+        );
+        expect(component.actionId(clase(status))).toBe('view-live-class');
+      }
+    });
+  });
+
   // ─── fix-073: "Transcurriendo" vs "Atrasada" según status real ─────────────
   describe('getRelativeTime (fix-073)', () => {
     it('clase pending con hora futura → "En X min"', () => {

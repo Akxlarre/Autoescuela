@@ -111,11 +111,17 @@ import { TooltipModule } from 'primeng/tooltip';
         @for (cls of visibleClasses(); track cls.id; let i = $index) {
           <li
             [attr.data-status]="cls.status"
-            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
+            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
             [class.border-l-4]="isFromPrevDay(cls)"
             [class.border-error]="isFromPrevDay(cls)"
             appPressFeedback="press"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="actionLabel(cls)"
+            [attr.data-llm-action]="actionId(cls)"
             (click)="actionClick.emit(cls)"
+            (keydown.enter)="actionClick.emit(cls)"
+            (keydown.space)="$event.preventDefault(); actionClick.emit(cls)"
             [appAnimateIn]="{ delay: 0.1 + i * 0.05 }"
           >
             <!-- Lado Izquierdo: Hora y Avatares -->
@@ -377,6 +383,27 @@ export class LiveClassesPanelComponent {
    * concluida (ambas se pintaban en gris); la justificada sigue en gris. */
   isUnexcusedAbsence(cls: LiveClassModel): boolean {
     return cls.status === 'no_show' && !cls.excused;
+  }
+
+  /**
+   * Qué hace el clic (o Enter / Espacio) sobre una clase, como nombre accesible de la fila
+   * (fix-414-m). Sigue la misma regla que resolveLiveClassActionPlan: por iniciar → iniciar,
+   * en curso → finalizar, el resto → detalle.
+   */
+  actionLabel(cls: Pick<LiveClassModel, 'status' | 'studentName' | 'scheduledAt'>): string {
+    const verbo =
+      cls.status === 'pending'
+        ? 'Iniciar la clase'
+        : cls.status === 'in_progress'
+          ? 'Finalizar la clase'
+          : 'Ver el detalle de la clase';
+    return `${verbo} de ${cls.studentName}, ${this.formatTime(cls.scheduledAt)}`;
+  }
+
+  /** Identificador de esa acción para agentes (ai-readability.md). */
+  actionId(cls: Pick<LiveClassModel, 'status'>): string {
+    if (cls.status === 'pending') return 'start-live-class';
+    return cls.status === 'in_progress' ? 'finish-live-class' : 'view-live-class';
   }
 
   statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {
