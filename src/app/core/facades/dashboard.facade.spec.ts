@@ -279,7 +279,7 @@ describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
     const user = { id: 'uid-1', name: 'Secretaria Uno' };
     const { facade } = crearFacadeConCliente(() => ({}), user);
     await facade.initialize();
-    expect(facade.data()?.hero.userName).toBe('Secretaria Uno');
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Uno');
 
     // Cierra sesión y entra otra persona en la misma pestaña (el facade es un singleton).
     user.id = 'uid-2';
@@ -289,7 +289,7 @@ describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
     expect(facade.data()).toBeNull();
     expect(facade.loading()).toBe(true);
     await carga;
-    expect(facade.data()?.hero.userName).toBe('Secretaria Dos');
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Dos');
   });
 
   it('el mismo usuario que vuelve sigue viendo sus datos al instante', async () => {
@@ -298,7 +298,7 @@ describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
 
     void facade.initialize();
 
-    expect(facade.data()?.hero.userName).toBe('Secretaria Uno');
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Uno');
     expect(facade.loading()).toBe(false);
   });
 });
@@ -344,7 +344,7 @@ describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
     await facade.initialize();
 
     expect(facade.error()).toBeNull();
-    expect(facade.data()?.hero.classesToday).toBe(3);
+    expect(facade.data()?.hero?.classesToday).toBe(3);
   });
 
   it('un refresco en segundo plano que falla conserva los datos ya cargados', async () => {
@@ -358,7 +358,7 @@ describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
     roto = true;
     await (facade as any).refreshSilently();
 
-    expect(facade.data()?.hero.classesToday).toBe(3);
+    expect(facade.data()?.hero?.classesToday).toBe(3);
     expect(facade.error()).toBeNull();
   });
 });
@@ -523,7 +523,7 @@ describe('DashboardFacade', () => {
       mock.resolveBatch(0, 100);
       await oldCall;
 
-      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+      expect(dashFacade.data()?.hero?.classesToday).toBe(200);
     });
 
     function facadeConCarrera(cargas: number) {
@@ -555,7 +555,7 @@ describe('DashboardFacade', () => {
       mock.resolveBatch(1, 200);
       await newCall;
       expect(dashFacade.loading()).toBe(false);
-      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+      expect(dashFacade.data()?.hero?.classesToday).toBe(200);
     });
 
     describe('eventos Realtime seguidos (fix-407-m)', () => {
@@ -576,7 +576,7 @@ describe('DashboardFacade', () => {
 
         mock.resolveBatch(0, 100);
         await carga;
-        expect(dashFacade.data()?.hero.classesToday).toBe(100);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(100);
         expect(dashFacade.loading()).toBe(false);
 
         // El refresco que quedó pendiente corre una vez terminada la carga.
@@ -584,7 +584,7 @@ describe('DashboardFacade', () => {
         expect(cargasPedidas(mock)).toBe(2);
         mock.resolveBatch(1, 200);
         await asentar();
-        expect(dashFacade.data()?.hero.classesToday).toBe(200);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
       });
 
       it('varios eventos durante un refresco en curso producen un solo refresco más', async () => {
@@ -601,12 +601,12 @@ describe('DashboardFacade', () => {
 
         mock.resolveBatch(1, 200);
         await asentar();
-        expect(dashFacade.data()?.hero.classesToday).toBe(200);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
         expect(cargasPedidas(mock)).toBe(3);
 
         mock.resolveBatch(2, 300);
         await refresco;
-        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
         expect(cargasPedidas(mock)).toBe(3);
       });
 
@@ -622,12 +622,12 @@ describe('DashboardFacade', () => {
 
         mock.resolveBatch(2, 300);
         await otraSede;
-        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
         expect(dashFacade.loading()).toBe(false);
 
         mock.resolveBatch(1, 200); // el refresco viejo llega después: se descarta
         await refresco;
-        expect(dashFacade.data()?.hero.classesToday).toBe(300);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
       });
     });
 

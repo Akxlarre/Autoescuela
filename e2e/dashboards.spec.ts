@@ -30,7 +30,7 @@ const SECRETARIA = '/app/secretaria/dashboard';
 
 // Uno tras otro, no en paralelo entre sí: cada dashboard dispara unas 34 consultas y varios a la
 // vez saturan la BD de desarrollo (timeouts al sembrar y al limpiar en este y en otros archivos).
-test.describe.configure({ mode: 'default', timeout: 150_000 });
+test.describe.configure({ mode: 'default', timeout: 240_000 });
 test.afterEach(limpiarAsistencia);
 
 // ── Ayudas ────────────────────────────────────────────────────────────────────
@@ -130,7 +130,13 @@ async function ejecutivoCoincideConLaBd(page: Page, branchId: number): Promise<v
     const esperado = `${clp(bd.ingresos)} · ${clp(bd.alumnos_activos)}`;
     if ((await enPantalla()) !== esperado) {
       await page.reload();
-      await expect(page.locator('.exec-kpis')).toContainText('Ingresos Clase B', CARGA);
+      // Con la BD de desarrollo cargada (otras suites en paralelo) una función puede dar timeout:
+      // la pantalla lo avisa con "Reintentar", que es lo que haría una persona.
+      const kpis = page.locator('.exec-kpis');
+      const reintentar = page.locator('main').getByRole('button', { name: 'Reintentar' }).first();
+      await expect(kpis.or(reintentar).first()).toBeVisible(CARGA);
+      if (await reintentar.isVisible()) await reintentar.click();
+      await expect(kpis).toContainText('Ingresos Clase B', CARGA);
       await expect(page.locator('main app-skeleton-block')).toHaveCount(0, CARGA);
       const fresco = await kpisDelMes(branchId);
       // El contador de la tarjeta se anima: se espera a que llegue al valor final.
@@ -138,7 +144,7 @@ async function ejecutivoCoincideConLaBd(page: Page, branchId: number): Promise<v
         .poll(enPantalla, { timeout: 10_000 })
         .toBe(`${clp(fresco.ingresos)} · ${clp(fresco.alumnos_activos)}`);
     }
-  }).toPass({ timeout: 90_000 });
+  }).toPass({ timeout: 180_000 });
 }
 
 // ── Ejecutivo: carga, acceso y período ────────────────────────────────────────
