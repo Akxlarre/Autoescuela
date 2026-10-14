@@ -492,6 +492,8 @@ export function buildExecKpiCards(
       label: 'Cancelación e inasistencia',
       value: s.tasaCancelacionPct ?? 0,
       suffix: '%',
+      // Sin clases no hay tasa: "0 %" se leería como un resultado perfecto (fix-425-m).
+      noData: s.tasaCancelacionPct === null,
       icon: 'circle-x',
       color: (s.tasaCancelacionPct ?? 0) >= 20 ? 'warning' : 'default',
       subValue:
@@ -513,9 +515,9 @@ export function toHeroKpi(card: ExecKpiCard): SectionHeroKpi {
   return {
     id: card.id,
     label: card.label,
-    value: card.value.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
-    prefix: card.prefix,
-    suffix: card.suffix,
+    value: card.noData ? '—' : card.value.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
+    prefix: card.noData ? '' : card.prefix,
+    suffix: card.noData ? '' : card.suffix,
     trend: card.trend,
     trendSuffix: '%',
     trendLabel: card.trend !== undefined ? 'vs per. ant.' : undefined,

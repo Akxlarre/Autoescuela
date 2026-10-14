@@ -438,6 +438,19 @@ describe('buildExecKpiCards', () => {
     expect(cards[6].subValue).toBe('6 en agenda');
     expect(cards[7].subValue).toBe('Sin clases en el período');
   });
+
+  it('fix-425-m: sin clases en el período, cancelación se muestra "—" y no "0 %"', () => {
+    const k = toHeroKpi(buildExecKpiCards(summary, receivables)[7]);
+    expect(k.value).toBe('—');
+    expect(k.suffix).toBe('');
+    expect(k.subValue).toBe('Sin clases en el período');
+  });
+
+  it('fix-425-m: con clases, cancelación sigue mostrando el porcentaje', () => {
+    const k = toHeroKpi(buildExecKpiCards({ ...summary, tasaCancelacionPct: 12.5 }, receivables)[7]);
+    expect(k.value).toBe('12,5');
+    expect(k.suffix).toBe('%');
+  });
 });
 
 describe('toHeroKpi', () => {
