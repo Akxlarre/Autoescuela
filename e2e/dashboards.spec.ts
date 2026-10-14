@@ -771,6 +771,108 @@ test('L04 · O06: un pago registrado desde otra sesión actualiza las alertas si
   await expect.poll(pagosHoy, CARGA).toBe(antes + 1);
 });
 
+/** "Alumnos Activos" del hero como número; -1 mientras recarga (para `expect.poll`). */
+async function alumnosActivos(page: Page): Promise<number> {
+  const digitos = (await heroKpi(page, 'Alumnos Activos')).replace(/[^0-9]/g, '');
+  return digitos === '' ? -1 : Number(digitos);
+}
+
+/** Matrículas activas según la BD, de una sede o de todas (lo que cuenta "Alumnos Activos"). */
+async function matriculasActivas(branchId: number | null): Promise<number> {
+  const sb = await getAdminClient();
+  let query = sb
+    .from('enrollments')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active');
+  if (branchId !== null) query = query.eq('branch_id', branchId);
+  const { count, error } = await query;
+  if (error) throw new Error('[e2e] No se pudieron contar las matrículas: ' + error.message);
+  return count ?? 0;
+}
+
+async function activarMatricula(enrollmentId: number): Promise<void> {
+  const sb = await getAdminClient();
+  const { error } = await sb
+    .from('enrollments')
+    .update({ status: 'active' })
+    .eq('id', enrollmentId);
+  if (error) throw new Error('[e2e] No se pudo activar la matrícula: ' + error.message);
+}
+
+test('O04: un cambio en la otra sede no se cuela en el dashboard de esta', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const ajeno = await createE2eAlumno(
+    { label: 'DashOtraSede', branchId: SEDE_B, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const propio = await createE2eAlumno(
+    { label: 'DashMiSede', branchId: SEDE_A, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const antes = await alumnosActivos(page);
+
+  // Los dos eventos llegan por el mismo canal; si el de la sede B contara, subiría 2.
+  await activarMatricula(ajeno.enrollmentIds[0]);
+  await activarMatricula(propio.enrollmentIds[0]);
+  await expect.poll(() => alumnosActivos(page), CARGA).toBe(antes + 1);
+  await page.waitForTimeout(3_000); // un refresco tardío del evento de la sede B
+  expect(await alumnosActivos(page)).toBe(antes + 1);
+});
+
+test('R03: la secretaria multi-sede en "Todas" ve la suma de las dos sedes', async ({ pageAs }) => {
+  const page = await pageAs('secretariaMultisede');
+  await abrirSecretaria(page);
+  await expect(page.locator('header button[aria-label^="Sede activa"]')).toContainText('Todas');
+
+  await expect(async () => {
+    const [sedeA, sedeB, todas] = await Promise.all([
+      matriculasActivas(SEDE_A),
+      matriculasActivas(SEDE_B),
+      matriculasActivas(null),
+    ]);
+    expect(todas).toBe(sedeA + sedeB);
+    expect(await alumnosActivos(page)).toBe(todas);
+  }).toPass({ timeout: 30_000 });
+});
+
+test('R07: si le quitan el acceso a ambas sedes con la sesión abierta, el dashboard vuelve a la suya', async ({
+  pageAs,
+}) => {
+  const sb = await getAdminClient();
+  const { data: cuenta, error } = await sb
+    .from('users')
+    .select('id, branch_id')
+    .eq('email', ACCOUNTS.secretariaMultisede.email)
+    .single();
+  if (error) throw new Error('[e2e] No se encontró la cuenta multi-sede: ' + error.message);
+  const otorgar = async (valor: boolean) => {
+    const { error: e } = await sb
+      .from('users')
+      .update({ can_access_both_branches: valor })
+      .eq('id', cuenta.id);
+    if (e) throw new Error('[e2e] No se pudo cambiar el acceso a ambas sedes: ' + e.message);
+  };
+
+  const page = await pageAs('secretariaMultisede');
+  await abrirSecretaria(page);
+  const selector = page.locator('header button[aria-label^="Sede activa"]');
+  await expect(selector).toContainText('Todas');
+
+  try {
+    await otorgar(false);
+    await expect(selector).toHaveCount(0, CARGA);
+    await expect(async () => {
+      expect(await alumnosActivos(page)).toBe(await matriculasActivas(cuenta.branch_id));
+    }).toPass({ timeout: 30_000 });
+  } finally {
+    await otorgar(true);
+  }
+});
+
 test('S05: una clase de "Clases Actuales" se abre con el teclado y dice qué hace', async ({
   pageAs,
   cleanup,
