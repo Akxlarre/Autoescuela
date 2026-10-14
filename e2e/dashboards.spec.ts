@@ -873,6 +873,58 @@ test('R07: si le quitan el acceso a ambas sedes con la sesión abierta, el dashb
   }
 });
 
+test('M14 · M16: finalizar desde "Clases Actuales" guarda el km del vehículo y un corte de red no cierra el drawer', async ({
+  pageAs,
+  cleanup,
+}) => {
+  saltarDeMadrugada();
+  const clase = await seedClase(
+    { label: 'DashKm', branchId: SEDE_A, dia: chileToday(), cupo: { inst: 3, hora: 3 } },
+    cleanup,
+  );
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  const fila = page
+    .locator('app-live-classes-panel .live-class-item')
+    .filter({ hasText: clase.alumno.firstNames });
+
+  await fila.click();
+  const kmSalida = page.locator('[data-llm-description^="Odómetro inicial"]');
+  await expect(kmSalida).not.toHaveValue('', CARGA);
+  const km = Number(await kmSalida.inputValue());
+  await accion(page, 'admin-start-class').click();
+  // Empezó a las 03:00: en curso pasada su hora de término se muestra "Atrasada".
+  await expect(fila).toContainText(/En curso|Atrasada/, CARGA);
+
+  await fila.click();
+  const kmRetorno = page.locator('[data-llm-description^="Odómetro final"]');
+  await expect(kmRetorno).toBeVisible(CARGA);
+  await kmRetorno.fill(String(km + 5));
+
+  // M16: sin red, la escritura falla: el drawer sigue abierto con el error a la vista.
+  const sinRed = (route: import('@playwright/test').Route) =>
+    route.request().method() === 'GET' ? route.fallback() : route.abort('internetdisconnected');
+  await page.route('**/rest/v1/**', sinRed);
+  await accion(page, 'admin-finish-class').click();
+  await expect(drawer(page)).toContainText('No se pudo finalizar la clase', CARGA);
+  await expect(accion(page, 'admin-finish-class')).toBeVisible();
+  await page.unroute('**/rest/v1/**', sinRed);
+
+  // M14: con red, finaliza y el vehículo queda con el km de retorno.
+  await accion(page, 'admin-finish-class').click();
+  // El toast sale cuando terminó de guardar todo (km y asistencia); "Finalizada" en la fila
+  // llega antes, por tiempo real, apenas se cierra la clase.
+  await expect(page.getByText('Clase finalizada').first()).toBeVisible(CARGA);
+  await expect(fila).toContainText('Finalizada', CARGA);
+  const sb = await getAdminClient();
+  const { data: vehiculo } = await sb
+    .from('vehicles')
+    .select('current_km')
+    .eq('id', clase.vehicleId)
+    .single();
+  expect(vehiculo?.current_km).toBe(km + 5);
+});
+
 test('S05: una clase de "Clases Actuales" se abre con el teclado y dice qué hace', async ({
   pageAs,
   cleanup,
