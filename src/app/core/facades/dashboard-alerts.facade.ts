@@ -20,6 +20,18 @@ import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
 /**
+ * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
+ * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
+ * Toda consulta de una revisión de alertas pasa por acá (fix-405-m).
+ */
+async function queryOk<T = any>(query: PromiseLike<T>): Promise<T> {
+  const result = await query;
+  const error = (result as { error?: unknown } | null)?.error;
+  if (error) throw error;
+  return result;
+}
+
+/**
  * DashboardAlertsFacade — Capa 3 del sistema de notificaciones.
  *
  * Alertas computadas en tiempo real desde el estado de la BD.
@@ -314,18 +326,6 @@ export class DashboardAlertsFacade {
     }
   }
 
-  /**
-   * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
-   * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
-   * Toda consulta de una revisión pasa por acá (fix-405-m).
-   */
-  private async ok<T = any>(query: PromiseLike<T>): Promise<T> {
-    const result = await query;
-    const error = (result as { error?: unknown } | null)?.error;
-    if (error) throw error;
-    return result;
-  }
-
   // ── Queries privadas — Fase 1 & 2 ─────────────────────────────────────────
 
   /**
@@ -335,7 +335,7 @@ export class DashboardAlertsFacade {
   private async checkExpiredDocuments(branchId: number | null): Promise<AlertModel[]> {
     const alerts: AlertModel[] = [];
 
-    const { data: configs } = await this.ok(
+    const { data: configs } = await queryOk(
       this.supabase.client
         .from('alert_config')
         .select('alert_type, advance_days')
@@ -352,7 +352,7 @@ export class DashboardAlertsFacade {
       .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
       .lt('expiry_date', todayStr);
     if (branchId !== null) expiredQuery = expiredQuery.eq('vehicles.branch_id', branchId);
-    const { count: expiredCount } = await this.ok(expiredQuery);
+    const { count: expiredCount } = await queryOk(expiredQuery);
 
     if (expiredCount && expiredCount > 0) {
       alerts.push({
@@ -372,7 +372,7 @@ export class DashboardAlertsFacade {
       .gte('expiry_date', todayStr)
       .lte('expiry_date', futureDateStr);
     if (branchId !== null) soonQuery = soonQuery.eq('vehicles.branch_id', branchId);
-    const { count: soonCount } = await this.ok(soonQuery);
+    const { count: soonCount } = await queryOk(soonQuery);
 
     if (soonCount && soonCount > 0) {
       alerts.push({
@@ -397,7 +397,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'active')
       .gt('pending_balance', 0);
     if (branchId !== null) query = query.eq('branch_id', branchId);
-    const { count } = await this.ok(query);
+    const { count } = await queryOk(query);
 
     if (count && count > 0) {
       return [
@@ -427,7 +427,7 @@ export class DashboardAlertsFacade {
       .gt('enrollments.pending_balance', 0);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await this.ok(query);
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
@@ -457,7 +457,7 @@ export class DashboardAlertsFacade {
       .is('certificate_b_pdf_url', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count } = await this.ok(query);
+    const { count } = await queryOk(query);
     if (!count || count === 0) return [];
 
     return [
@@ -493,7 +493,7 @@ export class DashboardAlertsFacade {
       query = query.eq('class_b_sessions.enrollments.branch_id', branchId);
     }
 
-    const { data, error } = await this.ok(query);
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const rows = (data as any[]).filter((row) => row.class_b_sessions);
@@ -549,7 +549,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'closed');
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count } = await this.ok(query);
+    const { count } = await queryOk(query);
     if (count && count > 0) return [];
 
     return [
@@ -577,7 +577,7 @@ export class DashboardAlertsFacade {
       .lt('created_at', sixtyDaysAgo.toISOString());
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count } = await this.ok(query);
+    const { count } = await queryOk(query);
     if (!count || count === 0) return [];
 
     return [
@@ -606,7 +606,7 @@ export class DashboardAlertsFacade {
       .eq('payment_date', todayChile);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -639,7 +639,7 @@ export class DashboardAlertsFacade {
       .gt('class_number', 6);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await this.ok(query);
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
@@ -664,7 +664,7 @@ export class DashboardAlertsFacade {
   private async checkPendingInstructorPayments(): Promise<AlertModel[]> {
     const currentPeriod = chileMonth(); // 'YYYY-MM'
 
-    const { data: hoursData, error: hoursError } = await this.ok(
+    const { data: hoursData, error: hoursError } = await queryOk(
       this.supabase.client
         .from('instructor_monthly_hours')
         .select('instructor_id')
@@ -674,7 +674,7 @@ export class DashboardAlertsFacade {
 
     if (hoursError || !hoursData || hoursData.length === 0) return [];
 
-    const { data: paidData, error: paidError } = await this.ok(
+    const { data: paidData, error: paidError } = await queryOk(
       this.supabase.client
         .from('instructor_monthly_payments')
         .select('instructor_id')
@@ -710,7 +710,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'pending_review');
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -735,7 +735,7 @@ export class DashboardAlertsFacade {
       .is('psych_test_result', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -765,7 +765,7 @@ export class DashboardAlertsFacade {
       .lte('expires_at', sevenDaysFromNow.toISOString());
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -787,7 +787,7 @@ export class DashboardAlertsFacade {
    * joinable; RLS restringe acceso por rol.
    */
   private async checkRedAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await this.ok(
+    const { count, error } = await queryOk(
       this.supabase.client
         .from('v_professional_attendance')
         .select('enrollment_id', { count: 'exact', head: true })
@@ -812,7 +812,7 @@ export class DashboardAlertsFacade {
    * No aplica filtro de sede — ver checkRedAttendance.
    */
   private async checkYellowAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await this.ok(
+    const { count, error } = await queryOk(
       this.supabase.client
         .from('v_professional_attendance')
         .select('enrollment_id', { count: 'exact', head: true })
@@ -843,7 +843,7 @@ export class DashboardAlertsFacade {
       .lt('grade', 75);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -867,7 +867,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'draft');
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await this.ok(query);
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
