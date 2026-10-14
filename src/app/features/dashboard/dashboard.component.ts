@@ -109,7 +109,9 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
             <app-exec-period-filter
               [preset]="facade.preset()"
               [range]="facade.range()"
-              [today]="today"
+              [today]="today()"
+              (pointerdown)="refreshToday()"
+              (focusin)="refreshToday()"
               (rangeChange)="onRangeChange($event)"
             />
           </div>
@@ -330,7 +332,8 @@ export class DashboardComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
-  protected readonly today = chileTodayIso();
+  /** Hoy en Chile. Se vuelve a leer al tocar el filtro: la pantalla puede quedar abierta de un día para otro. */
+  protected readonly today = signal(chileTodayIso());
   protected readonly placeholderCards = [1, 2, 3, 4];
 
   protected readonly tabs: TabOption[] = [
@@ -398,6 +401,10 @@ export class DashboardComponent {
 
   protected onRangeChange(change: ExecRangeChange): void {
     void this.facade.applyRange(change.range, change.preset);
+  }
+
+  protected refreshToday(): void {
+    this.today.set(chileTodayIso());
   }
 
   protected setTab(id: string): void {
