@@ -144,6 +144,49 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
+  // ── fix-409-m: lo guardado es de quien lo cargó ─────────────────────────────
+  describe('cambio de usuario (fix-409-m)', () => {
+    const conPagosPendientes = (count: number) => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'enrollments')
+          return callCounters[table] % 4 === 1 ? buildChain({ count }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const usuario = (id: string) =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ id, dbId: 1 });
+
+    it('otro usuario no ve las alertas del anterior mientras cargan las suyas', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.initialize();
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+
+      usuario('uid-2');
+      const carga = facade.initialize();
+
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await carga;
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('el mismo usuario que vuelve sigue viendo sus alertas al instante', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.initialize();
+
+      void facade.initialize();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
   // ── fix-405-m: una consulta fallida no es "0 resultados" ─────────────────────
   describe('errores de consulta (fix-405-m)', () => {
     const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };

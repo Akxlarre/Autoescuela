@@ -31,6 +31,8 @@ export class DashboardFacade {
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
+  /** Usuario para el que se cargó lo que hay en `data` (ver `initialize`). */
+  private _loadedUserId: string | null = null;
   /** Número de la última carga con skeleton (ver `initialize`). */
   private _loadTicket = 0;
   /** Hay un refresco silencioso en curso / pedido mientras otra carga corría (fix-407-m). */
@@ -94,6 +96,16 @@ export class DashboardFacade {
   async initialize(): Promise<void> {
     const branchId = this.getActiveBranchId();
     this.setupRealtime();
+
+    // Lo guardado es de quien lo cargó: el saludo y la actividad reciente son personales. Si
+    // entró otra persona en la misma pestaña (cerrar sesión no recarga la página), se descarta
+    // en vez de mostrarlo mientras refresca (fix-409-m).
+    const userId = this.auth.currentUser()?.id ?? null;
+    if (userId !== this._loadedUserId) {
+      this._loadedUserId = userId;
+      this._initialized = false;
+      this.data.set(null);
+    }
 
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();

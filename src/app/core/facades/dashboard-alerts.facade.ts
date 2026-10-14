@@ -74,6 +74,8 @@ export class DashboardAlertsFacade {
   private _lastBranchId: number | null | undefined = undefined;
   /** Número de la última carga con skeleton (ver `initialize`). */
   private _loadTicket = 0;
+  /** Usuario para el que se cargaron las alertas guardadas (ver `initialize`). */
+  private _loadedUserId: string | null = null;
   /** Descarta respuestas de fetchAlertsData() fuera de orden (facades.md §7, fix-404-m). */
   private readonly alertsGuard = createRequestGuard();
   private readonly SNOOZE_KEY = 'ds_snoozed_alerts';
@@ -118,6 +120,17 @@ export class DashboardAlertsFacade {
    */
   async initialize(): Promise<void> {
     const branchId = this.getActiveBranchId();
+
+    // Lo guardado es de quien lo cargó: si entró otra persona en la misma pestaña se descarta
+    // en vez de mostrarlo mientras refresca (fix-409-m).
+    const userId = this.auth.currentUser()?.id ?? null;
+    if (userId !== this._loadedUserId) {
+      this._loadedUserId = userId;
+      this._initialized = false;
+      this._activeAlerts.set([]);
+      this._incomplete.set(false);
+    }
+
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;

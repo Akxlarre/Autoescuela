@@ -254,6 +254,35 @@ describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fi
   });
 });
 
+describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
+  it('otro usuario en la misma sede no ve los datos del anterior: se descartan y carga con skeleton', async () => {
+    const user = { id: 'uid-1', name: 'Secretaria Uno' };
+    const { facade } = crearFacadeConCliente(() => ({}), user);
+    await facade.initialize();
+    expect(facade.data()?.hero.userName).toBe('Secretaria Uno');
+
+    // Cierra sesión y entra otra persona en la misma pestaña (el facade es un singleton).
+    user.id = 'uid-2';
+    user.name = 'Secretaria Dos';
+    const carga = facade.initialize();
+
+    expect(facade.data()).toBeNull();
+    expect(facade.loading()).toBe(true);
+    await carga;
+    expect(facade.data()?.hero.userName).toBe('Secretaria Dos');
+  });
+
+  it('el mismo usuario que vuelve sigue viendo sus datos al instante', async () => {
+    const { facade } = crearFacadeConCliente(() => ({}), { id: 'uid-1', name: 'Secretaria Uno' });
+    await facade.initialize();
+
+    void facade.initialize();
+
+    expect(facade.data()?.hero.userName).toBe('Secretaria Uno');
+    expect(facade.loading()).toBe(false);
+  });
+});
+
 describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
   const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
 
