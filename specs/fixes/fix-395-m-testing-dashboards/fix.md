@@ -171,6 +171,41 @@ Playwright.
 Fuera del módulo (sin track): los KPI de Pagos (admin, secretaria, alumno) abrevian montos con
 punto decimal (`1.5M`); es de `ASG-i-028`.
 
+### Bloques 3 y 4 — segunda pasada, con los fixes aplicados (2026-10-13)
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| A09 / S15 error de carga | ❌→✅ | Sin red mostraba 0 alumnos, $0, "Sin clases actuales" y una "Caja sin cerrar" falsa → `fix-405-m`. Ahora "No se pudo cargar el panel" + "Reintentar" |
+| K04, K10 | ✅ | Con 3 clases válidas y 1 cancelada sembradas hoy: KPI y chip suben 3 (E2E) |
+| K11 / S13c | ❌→✅ | Chip "6 alertas urgentes" con una alerta verde → `fix-412-m` |
+| L01, L03, L05, L06 | ✅ | Cada acceso rápido abre su drawer: "Nueva Matrícula", "Registrar Pago", "Agenda Semanal", "Registrar Egreso" (E2E) |
+| M01, M03 | ✅ | "Por Iniciar", "Finalizada", "No Asistió"; la cancelada no aparece (E2E) |
+| M15, N01, N03 / S20 | ❌→✅ | Detalle sin "Clase N" → `fix-406-m`. Desde "Agenda de Hoy" ahora también permite deshacer la falta |
+| O01, O02 | ✅ | Una clase sembrada desde otra sesión aparece "Por Iniciar" sin recargar; al cerrarla pasa a "Finalizada"; un pago de $25.000 sube "Ingresos Mes" ese monto (E2E) |
+| O05 / S12 | ❌→✅ | `phx_join` al entrar, `phx_leave` al salir, `phx_join` al volver (E2E) |
+| P01, P05 | ✅ | Actividad propia de la secretaria; "Ver toda la actividad" abre el drawer |
+| Q05, Q14, Q15 / S14 | ❌→✅ | "Listos para certificar" 184 con 132 alumnos B activos; asistencia Profesional sin filtro de sede → `fix-410-m` |
+| Q08 / S3 | ❌→✅ | Secretaria llega a `/app/secretaria/contabilidad/cuadratura` y el drawer se cierra (E2E) |
+| Q11 / S18 | ❌→✅ | Texto "60 días sin pagar" para algo que mide antigüedad de matrícula → `hotfix-153-m` |
+| Q02 / S18 (fecha UTC) | ✅ | Resuelto por `0024-m`: las alertas usan `todayIso()`, que es el día de Chile |
+| Q13 / S6 | ❌→✅ | "9 matrículas con cuota 2 vencida" en la sede 1 (antes nunca aparecía) |
+| Q19 | ✅ | Drawer ordenado error → advertencia → info → éxito, con "N alertas activas" (E2E) |
+| R01, R02 / S7 | ❌→✅ | Multi-sede: "Todas" 197 alumnos / 17 vehículos → sede 2: 130 / 8 → sede 1: 67 / 9, sin salir (E2E) |
+| R05 | ✅ | Ver bloque 1 |
+| R06 / S19 | ❌→✅ | Datos del usuario anterior en la misma pestaña → `fix-409-m` (verificado con tests unitarios; en dev no hay dos secretarias con la misma sede activa) |
+| S01 modo claro y oscuro | ✅ | Ambos dashboards legibles en los dos modos; sin colores fijos |
+| S02 375 / 768 / 1440 px | ✅ | Sin scroll horizontal ni errores de consola en ningún tamaño, ambos dashboards; desktop no scrollea la página |
+| S02 (observación) | Obs. | Secretaria a 1440 × 900: "Actividad reciente" y "Alertas Importantes" muestran una fila y media cada una (el resto con scroll), mientras "Clases Actuales" ocupa media pantalla aunque esté vacía |
+
+**Dos hallazgos que no estaban en el checklist** salieron al correr la suite con 4 sesiones a la vez:
+
+- Con eventos Realtime seguidos, ninguna carga del dashboard llegaba a aplicarse y la pantalla
+  quedaba solo con el saludo → `fix-407-m`.
+- La consulta de "Actividad reciente" tarda 2–4 s para un usuario con pocas acciones propias y da
+  timeout con varias sesiones: la política RLS de `audit_log` evalúa sus funciones por fila →
+  `fix-408-m`. Medido antes del fix: cargar 4 dashboards de secretaria a la vez deja **todas** las
+  consultas en 12–16 s. Es un riesgo de rendimiento para el piloto más allá de este módulo.
+
 ## Decisiones de negocio
 
 <!-- Preguntas de §5 del checklist y la respuesta de Matías -->
@@ -204,3 +239,22 @@ punto decimal (`1.5M`); es de `ASG-i-028`.
 | `fix-402-m-alerta-cuota-2-vencida-nunca-se-dispara` | Q13 / S6 (H7) | Cerrado |
 | `fix-403-m-dashboard-secretaria-no-sigue-sede-ni-cierra-realtime` | R02, O05 / S7, S12 (H8, H9) | Cerrado |
 | `fix-404-m-dashboard-secretaria-cargas-fuera-de-orden` | R02 / S13a (H11) | Cerrado |
+| `fix-405-m-dashboard-secretaria-error-de-carga-como-ceros` | A09 / S15 (H10) | Cerrado |
+| `fix-406-m-detalle-de-clase-desde-dashboard-incompleto` | M15, N03 / S20 (H13) | Cerrado |
+| `fix-407-m-dashboard-secretaria-sin-datos-con-eventos-seguidos` | A02, O01, O02 (nuevo, visto en la suite E2E) | Cerrado |
+| `fix-408-m-actividad-reciente-lenta-rls-audit-log` | A02, P01 (nuevo, visto en la suite E2E) | Cerrado · migración por aplicar |
+| `fix-409-m-dashboard-secretaria-datos-del-usuario-anterior` | R06 / S19 | Cerrado |
+| `fix-410-m-alertas-con-alcance-equivocado` | Q05, Q14, Q15 / S14 (H12) | Cerrado |
+| `fix-411-m-kpi-vehiculos-secretaria-sin-ambas-sedes` | K09 / S9 | Cerrado |
+| `fix-412-m-chip-alertas-urgentes-cuenta-informativas` | K11 / S13c | Cerrado |
+| `hotfix-153-m-textos-de-los-dashboards` | Q11, H06, G04 / S17c, S18 | Cerrado |
+
+### Migraciones por aplicar (Matías)
+
+| Archivo | Fix |
+|---|---|
+| `20261013160000_fix396_exec_costo_instructores_mes_en_curso.sql` | `fix-396-m` |
+| `20261013161000_fix397_exec_today_ops_vehiculos_available.sql` | `fix-397-m` |
+| `20261013162000_fix408_audit_log_policy_initplan.sql` | `fix-408-m` |
+
+Las tres se ensayaron contra la BD de dev en una transacción que se revierte.
