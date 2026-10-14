@@ -368,12 +368,19 @@ export class DashboardAlertsFacade {
       configs?.find((c: any) => c.alert_type === 'document_expiry')?.advance_days ?? 30;
 
     const todayStr = todayIso();
+    // Un vehículo de "ambas sedes" avisa en las dos, como en Flota y en el KPI (hotfix-156-m).
+    const bySede = (query: any) =>
+      branchId === null
+        ? query
+        : query.or(`branch_id.eq.${branchId},both_branches.eq.true`, {
+            referencedTable: 'vehicles',
+          });
 
     let expiredQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id, both_branches)', { count: 'exact', head: true })
       .lt('expiry_date', todayStr);
-    if (branchId !== null) expiredQuery = expiredQuery.eq('vehicles.branch_id', branchId);
+    expiredQuery = bySede(expiredQuery);
     const { count: expiredCount } = await queryOk(expiredQuery);
 
     if (expiredCount && expiredCount > 0) {
@@ -390,10 +397,10 @@ export class DashboardAlertsFacade {
 
     let soonQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id, both_branches)', { count: 'exact', head: true })
       .gte('expiry_date', todayStr)
       .lte('expiry_date', futureDateStr);
-    if (branchId !== null) soonQuery = soonQuery.eq('vehicles.branch_id', branchId);
+    soonQuery = bySede(soonQuery);
     const { count: soonCount } = await queryOk(soonQuery);
 
     if (soonCount && soonCount > 0) {

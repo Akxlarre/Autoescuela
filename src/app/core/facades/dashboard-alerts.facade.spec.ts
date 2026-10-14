@@ -131,6 +131,33 @@ describe('DashboardAlertsFacade', () => {
       expect(severities).toContain('warning');
     });
 
+    it('documentos con sede elegida incluyen los vehículos de ambas sedes (hotfix-156-m)', async () => {
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(2);
+      const docChains: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'vehicle_documents') {
+          // buildChain comparte un solo vi.fn entre métodos: espías propios para or/eq.
+          chain.or = vi.fn(() => chain);
+          chain.eq = vi.fn(() => chain);
+          docChains.push(chain);
+        }
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      expect(docChains).toHaveLength(2);
+      for (const chain of docChains) {
+        expect(chain.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true', {
+          referencedTable: 'vehicles',
+        });
+        expect(chain.eq).not.toHaveBeenCalledWith('vehicles.branch_id', 2);
+      }
+    });
+
     it('should produce no alerts when everything is clean', async () => {
       buildCleanMock(fromSpy);
 
