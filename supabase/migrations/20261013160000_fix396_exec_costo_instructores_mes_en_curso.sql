@@ -37,16 +37,24 @@ BEGIN
     RETURN 0;
   END IF;
 
-  WITH months AS (
-    SELECT
-      m::date                                            AS month_start,
-      (m + INTERVAL '1 month' - INTERVAL '1 day')::date  AS month_end,
-      TO_CHAR(m, 'YYYY-MM')                              AS period
+  -- Meses tocados por el rango, armados solo con fechas puras (sin pasar por un instante).
+  WITH month_starts AS (
+    SELECT (
+      make_date(EXTRACT(YEAR FROM p_from)::INT, EXTRACT(MONTH FROM p_from)::INT, 1)
+      + make_interval(months => n)
+    )::date AS month_start
     FROM generate_series(
-      date_trunc('month', p_from::timestamp),
-      date_trunc('month', p_to::timestamp),
-      INTERVAL '1 month'
-    ) AS m
+      0,
+      (EXTRACT(YEAR FROM p_to)::INT * 12 + EXTRACT(MONTH FROM p_to)::INT)
+        - (EXTRACT(YEAR FROM p_from)::INT * 12 + EXTRACT(MONTH FROM p_from)::INT)
+    ) AS n
+  ),
+  months AS (
+    SELECT
+      month_start,
+      (month_start + INTERVAL '1 month' - INTERVAL '1 day')::date AS month_end,
+      TO_CHAR(month_start, 'YYYY-MM')                             AS period
+    FROM month_starts
   ),
   months_overlap AS (
     SELECT

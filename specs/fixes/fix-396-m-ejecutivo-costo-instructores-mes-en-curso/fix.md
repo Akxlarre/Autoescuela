@@ -55,4 +55,9 @@ Migración ensayada contra la BD de dev en una transacción deshecha (no quedó 
 | AC4 — abril 2025 liquidado en $300.000, 1–15 / completo | $150.000 / $300.000 | $150.000 / $300.000 |
 | AC5 — secretaria | `42501` | `42501`; `search_path` y permisos intactos |
 
+**Ajuste posterior (mismo día):** `npm run lint:arch` marcó dos conversiones a `timestamp` heredadas
+de la función original (ARCH-28). Los meses del rango se arman ahora solo con fechas puras
+(`make_date` + `make_interval`). Ensayo repetido: mismos resultados de la tabla, y el año a la fecha
+(1 ene – 13 oct, todas las sedes) da $2.998.500 antes y después.
+
 **Falta que Matías aplique la migración.**
