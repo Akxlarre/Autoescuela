@@ -284,15 +284,28 @@ M12 (km final ≤ inicial) y el flujo completo de iniciar/finalizar están cubie
 | S03 | ✅ | 375 px: el filtro trunca "1 oct – 1…" sin desbordar |
 | S04 | ❌→✅ | Tabs solo con ícono y `title` a 375 px (diseño de `app-tabs`); las etiquetas de "Operación de hoy" se cortaban → `hotfix-154-m` |
 | S07 | ✅ | `gridAnimated` anima una sola vez |
+| O03 / L02 | ❌→✅ | El canal Realtime del dashboard de secretaria no escuchaba `enrollments`, `special_service_sales` ni `vehicles`: activar una matrícula no cambiaba "Alumnos Activos" hasta recargar → `fix-419-m` |
 
-**Hallazgo abierto (O03 / L02):** el canal Realtime del dashboard de secretaria escucha
-`students`, `class_b_sessions` y `payments`, pero no `enrollments`: matricular a un alumno que ya
-existe o completar una matrícula no actualiza "Alumnos Activos" hasta recargar. `enrollments`,
-`special_service_sales` y `vehicles` ya están publicadas (`fix-360-m`). Se corrige en el próximo
-track.
+| K12 | ✅ | 768 y 375 px: los 4 KPIs legibles, sin scroll horizontal |
+| L04 / O06 | ❌→✅ | Un pago subía "Ingresos Mes" pero las alertas ("pagos registrados hoy", "pagos pendientes") y el chip seguían igual hasta salir y volver → `fix-420-m` |
+| L07 | ✅ | Egreso "Gastos varios" de $1.234 desde el dashboard: aparece en Caja Diaria del día (efectivo). Borrado después |
+| L09 | ✅ | Solo "Matricular" y "Registrar Pago" van rellenos con el color de marca; "Agenda" y "Registrar Egreso" son secundarios |
+| M14 | ✅ | E2E `M14 · M16`: finalizar desde "Clases Actuales" deja `vehicles.current_km` en el km de retorno |
+| M16 | ✅ | Mismo E2E: con la escritura cortada, "No se pudo finalizar la clase…" dentro del drawer, que sigue abierto; al reintentar con red, finaliza |
+| N04 | ✅ | El drawer no se actualiza solo, pero no pisa el inicio de otra persona: avisa "ya fue iniciada" al confirmar (`fix-388-m`, E2E N03 de asistencia; es el mismo drawer) |
+| O04 | ✅ | E2E: una matrícula activada en la sede B no cambia "Alumnos Activos" de la secretaria A; la de su sede sí (+1, no +2) |
+| P04 | ✅ | Hoy "12:31"; días anteriores `formatChileDate` con día, mes corto y hora |
+| P06 | ❌→✅ | Abre la ficha del alumno correcto (2824) y cierra el drawer, pero los eventos no se alcanzaban con el teclado → `fix-421-m` |
+| P07, P08 | ✅ | Pagos → `/app/{rol}/pagos`; DELETE o alumno ya borrado: sin rol de botón ni foco (test de `fix-421-m`; los 50 eventos de la secretaria de prueba eran de datos E2E borrados y ninguno quedó clicable) |
+| P09 | ✅ | Una matrícula Profesional lleva a `/app/secretaria/alumnos/:id`, la misma ficha (`AdminAlumnoDetalleComponent`) que muestra ambos cursos; esa ruta no está bloqueada en el piloto |
+| P10 | ✅ | "Sin actividad reciente" en el panel y "No hay actividad reciente para mostrar." en el drawer |
+| Q06 | ✅ | Solo cuenta faltas registradas (`absent`/`no_show`) vigentes de matrículas activas: una clase de hoy sin marcar no cuenta (`fix-364-m`, `fix-391-m`) |
+| Q09 | ✅ | Al volver al dashboard `initialize()` refresca las alertas: la de caja desaparece con el cierre |
+| R03 | ✅ | E2E: en "Todas", "Alumnos Activos" = sede 1 + sede 2 según la BD |
+| R04 | ✅ | No se puede producir desde la app: `create-secretary` y `update-secretary` exigen sede, y hoy ninguna secretaria está sin sede. Si pasara, `resolveBranchScope` usa la sede `-1` y las 17 revisiones de alertas filtran por ella |
+| R07 | ❌→✅ | Al quitarle el acceso con "Todas" elegida, el selector desaparecía pero seguía viendo las dos sedes (197 en vez de 67) → `fix-422-m` |
 
-**Falta ejecutar:** K12, L02, L04, L07, L09, M14, M16, M19, N04, O03, O04, O06, P04, P06–P10, Q06,
-Q09, R03, R04, R07.
+Todos los casos del checklist quedaron ejecutados. M19 es una pregunta (ver "Pendientes de Matías").
 
 ## Decisiones de negocio
 
@@ -319,6 +332,7 @@ Pendientes de Matías (§5 del checklist); no se marcan ✅/❌:
 | L10 | ¿En qué sede queda un pago o egreso de una secretaria multi-sede en "Todas"? | Sin revisar |
 | H05 / Q03 / S16 | ¿Cuál es el número oficial de "alumnos con saldo"? | Ejecutivo (incluye finalizadas), alerta (solo activas, todos los cursos) y Base B difieren |
 | S02 (obs.) | A 1440 × 900, ¿"Actividad" y "Alertas" con una fila y media visibles está bien? | "Clases Actuales" ocupa media pantalla |
+| M19 | En "Clases Actuales" va solo el primer nombre del alumno (con el nombre completo en el tooltip): ¿basta para distinguir a dos alumnos con el mismo nombre a la misma hora? | Primer nombre + tooltip |
 | J03 (obs.) | Al cambiar de sede en el ejecutivo, 1–2,5 s con el nombre nuevo y los números viejos | Sin indicador de carga |
 
 Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
@@ -348,7 +362,7 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 - [x] Capa Playwright (`e2e/dashboards.spec.ts`, 22 tests)
 - [x] Matías aplicó las 4 migraciones (2026-10-14), verificadas en la BD de dev
 - [x] Decisiones de negocio principales (K02, Q14, Q15, C04, P02); quedan las menores de la tabla
-- [ ] Casos no ejecutados: segunda pasada en curso (2026-10-14), ver "Segunda pasada"
+- [x] Casos no ejecutados: segunda pasada terminada (2026-10-14), ver "Segunda pasada"
 
 ## ACs Afectados
 
@@ -363,6 +377,10 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
   juntas 42 + 3 saltados, 0 fallos. Los 2 tests que siembran clases de hoy ya ocurridas se saltan
   antes de las 07:00 hora Chile (`saltarDeMadrugada()`): `seedClase` las pone entre la 01:00 y las
   06:59 y de madrugada todavía son futuras.
+- Segunda pasada (2026-10-14, 13:00 hora Chile): la suite suma O03 · L02, L04 · O06, O04, R03, R07 y
+  M14 · M16. Corrida completa con un worker: 24/24, sin saltados (4 de sesión aparte). Unit de
+  facades y dashboards: 1845/1845. `--repeat-each` necesita `--workers=1`: dos copias del mismo
+  test siembran la misma hora y chocan.
 
 ## Tracks generados
 
@@ -395,6 +413,10 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `hotfix-154-m-operacion-de-hoy-etiquetas-cortadas-en-movil` | S04 | Cerrado |
 | `hotfix-155-m-nuevos-ultimos-7-dias-cuenta-8` | K03 | Cerrado |
 | `hotfix-156-m-alerta-documentos-sin-vehiculos-de-ambas-sedes` | Q01 | Cerrado |
+| `fix-419-m-dashboard-secretaria-realtime-sin-matriculas` | O03, L02 | Cerrado |
+| `fix-420-m-alertas-del-dashboard-no-siguen-el-tiempo-real` | L04, O06 | Cerrado |
+| `fix-421-m-actividad-reciente-sin-teclado` | P06–P08 | Cerrado |
+| `fix-422-m-revocar-ambas-sedes-no-recarga-con-todas` | R07 | Cerrado |
 
 ### Migraciones (aplicadas por Matías el 2026-10-14)
 
