@@ -6,6 +6,14 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 
+// El piloto se controla desde el test: por defecto las vistas de Clase Profesional están
+// habilitadas, para que los tests de sus alertas describan el comportamiento sin recorte.
+const pilot = vi.hoisted(() => ({ profesionalBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) =>
+    module === 'clase-profesional-recorte' && pilot.profesionalBloqueado,
+}));
+
 describe('DashboardAlertsFacade', () => {
   let facade: DashboardAlertsFacade;
   let fromSpy: ReturnType<typeof vi.fn>;
@@ -141,6 +149,54 @@ describe('DashboardAlertsFacade', () => {
 
       expect(facade.error()).toBe('Error al cargar alertas');
       expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  // ── fix-416-m: una alerta de una vista bloqueada no se muestra ───────────────
+  describe('alertas de vistas bloqueadas en el piloto (fix-416-m)', () => {
+    afterEach(() => (pilot.profesionalBloqueado = false));
+
+    const TABLAS_PROFESIONAL = [
+      'professional_pre_registrations',
+      'v_professional_attendance',
+      'professional_module_grades',
+    ];
+    /** Todo con datos: cada revisión de Clase Profesional generaría su alerta. */
+    const conDatosEnTodo = () => {
+      const consultadas: string[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        consultadas.push(table);
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (TABLAS_PROFESIONAL.includes(table)) return buildChain({ count: 3 });
+        if (table === 'enrollments') return buildChain({ count: 2 });
+        return buildChain({ data: [], count: 0 });
+      });
+      return consultadas;
+    };
+    const esProfesional = (id: string) =>
+      /pre-registration|psych|professional|failed-modules|draft-grades/.test(id);
+
+    it('con el recorte bloqueado no consulta ni muestra las alertas de Clase Profesional', async () => {
+      pilot.profesionalBloqueado = true;
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      const consultadas = conDatosEnTodo();
+
+      await facade.loadAlerts();
+
+      expect(consultadas.filter((t) => TABLAS_PROFESIONAL.includes(t))).toEqual([]);
+      expect(facade.activeAlerts().filter((a) => esProfesional(a.id))).toEqual([]);
+      // Las demás siguen: pagos pendientes, por ejemplo.
+      expect(facade.activeAlerts().some((a) => a.id === 'alert-pending-payments')).toBe(true);
+      expect(facade.loadProblem()).toBeNull();
+    });
+
+    it('con el recorte habilitado se muestran', async () => {
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      conDatosEnTodo();
+
+      await facade.loadAlerts();
+
+      expect(facade.activeAlerts().filter((a) => esProfesional(a.id)).length).toBe(7);
     });
   });
 

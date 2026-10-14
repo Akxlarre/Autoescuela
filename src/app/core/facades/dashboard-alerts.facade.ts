@@ -10,6 +10,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import {
   filterSnoozedAlerts,
   parseSnoozes,
@@ -309,15 +310,21 @@ export class DashboardAlertsFacade {
       this.checkRecentPayments(branchId),
       this.checkOverdueSecondInstallment(branchId),
       this.checkPendingInstructorPayments(branchId),
-      // Fase 3 — Pre-inscripciones Profesionales
-      this.checkNewPreRegistrations(branchId),
-      this.checkPendingPsychEvaluation(branchId),
-      this.checkExpiringPreRegistrations(branchId),
-      // Fase 3 — Clase Profesional
-      this.checkRedAttendance(branchId),
-      this.checkYellowAttendance(branchId),
-      this.checkFailedModules(branchId),
-      this.checkDraftGrades(branchId),
+      // Pre-inscritos, Asistencia y Evaluaciones de Clase Profesional están bloqueadas en el
+      // piloto: una alerta que nadie puede atender no se muestra (fix-416-m).
+      ...(isBlockedInPilot('clase-profesional-recorte')
+        ? []
+        : [
+            // Fase 3 — Pre-inscripciones Profesionales
+            this.checkNewPreRegistrations(branchId),
+            this.checkPendingPsychEvaluation(branchId),
+            this.checkExpiringPreRegistrations(branchId),
+            // Fase 3 — Clase Profesional
+            this.checkRedAttendance(branchId),
+            this.checkYellowAttendance(branchId),
+            this.checkFailedModules(branchId),
+            this.checkDraftGrades(branchId),
+          ]),
     ]);
     // Ya se pidió una carga más reciente (otra sede): descartar esta respuesta.
     if (!this.alertsGuard.isCurrent(requestToken)) return;
