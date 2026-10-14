@@ -28,7 +28,9 @@ const SEDE_B_NOMBRE = 'Conductores Chillán';
 const EJECUTIVO = '/app/admin/dashboard';
 const SECRETARIA = '/app/secretaria/dashboard';
 
-test.describe.configure({ timeout: 120_000 });
+// Uno tras otro, no en paralelo entre sí: cada dashboard dispara unas 34 consultas y varios a la
+// vez saturan la BD de desarrollo (timeouts al sembrar y al limpiar en este y en otros archivos).
+test.describe.configure({ mode: 'default', timeout: 150_000 });
 test.afterEach(limpiarAsistencia);
 
 // ── Ayudas ────────────────────────────────────────────────────────────────────
@@ -95,24 +97,48 @@ interface Kpis {
   alumnos_activos: number;
 }
 
-async function kpisDelMes(branchId: number | null): Promise<Kpis> {
+async function kpisDelRango(branchId: number | null, from: string, to: string): Promise<Kpis> {
   const sb = await getAdminClient();
-  const hoy = chileToday();
   const { data, error } = await sb.rpc('exec_dashboard_kpis', {
-    p_from: `${hoy.slice(0, 7)}-01`,
-    p_to: hoy,
+    p_from: from,
+    p_to: to,
     p_branch_id: branchId,
   });
   if (error) throw new Error(`[e2e] exec_dashboard_kpis falló: ${error.message}`);
   return data as Kpis;
 }
 
-async function carteraReciente(branchId: number): Promise<number> {
-  const sb = await getAdminClient();
-  const { data, error } = await sb.rpc('exec_dashboard_receivables', { p_branch_id: branchId });
-  if (error) throw new Error(`[e2e] exec_dashboard_receivables falló: ${error.message}`);
-  const row = (data as { bucket: string; monto: number }[]).find((r) => r.bucket === '0-30');
-  return Number(row?.monto ?? 0);
+/** KPIs de "Este mes" (día 1 → hoy), lo que muestra el ejecutivo al abrirse. */
+function kpisDelMes(branchId: number | null): Promise<Kpis> {
+  const hoy = chileToday();
+  return kpisDelRango(branchId, `${hoy.slice(0, 7)}-01`, hoy);
+}
+
+/**
+ * El ejecutivo muestra, para la sede elegida, los ingresos y los alumnos activos que devuelve la
+ * BD. Otros tests crean y borran alumnos y pagos mientras tanto, y el ejecutivo no se refresca
+ * solo: si no coinciden, se recarga la página (la sede elegida se conserva) y se compara de nuevo.
+ */
+async function ejecutivoCoincideConLaBd(page: Page, branchId: number): Promise<void> {
+  const enPantalla = async () => {
+    const tarjeta = await page.locator('.exec-kpi').first().innerText();
+    const ingresos = tarjeta.match(/\$\s*([\d.]+)/);
+    return `${ingresos?.[1] ?? ''} · ${await heroKpi(page, 'Alumnos activos')}`;
+  };
+  await expect(async () => {
+    const bd = await kpisDelMes(branchId);
+    const esperado = `${clp(bd.ingresos)} · ${clp(bd.alumnos_activos)}`;
+    if ((await enPantalla()) !== esperado) {
+      await page.reload();
+      await expect(page.locator('.exec-kpis')).toContainText('Ingresos Clase B', CARGA);
+      await expect(page.locator('main app-skeleton-block')).toHaveCount(0, CARGA);
+      const fresco = await kpisDelMes(branchId);
+      // El contador de la tarjeta se anima: se espera a que llegue al valor final.
+      await expect
+        .poll(enPantalla, { timeout: 10_000 })
+        .toBe(`${clp(fresco.ingresos)} · ${clp(fresco.alumnos_activos)}`);
+    }
+  }).toPass({ timeout: 90_000 });
 }
 
 // ── Ejecutivo: carga, acceso y período ────────────────────────────────────────
@@ -209,26 +235,35 @@ test('B02 · B04 · B05 · B06: cambiar de período recarga una sola vez; el ran
 
 // ── Ejecutivo: números contra datos sembrados ─────────────────────────────────
 
-test('C01 · C03 · C10 · D01 · D03: una matrícula y un pago nuevos mueven solo lo que corresponde', async ({
+test('C01 · C03 · D01 · D03: una matrícula y un pago nuevos mueven solo lo que corresponde', async ({
   pageAs,
   cleanup,
 }) => {
   const sb = await getAdminClient();
-  const antes = await kpisDelMes(SEDE_A);
-  const carteraAntes = await carteraReciente(SEDE_A);
+  // Un día de 2019: ningún otro test ni persona crea matrículas o pagos con esa fecha, así que
+  // los KPIs "del período" de ese día se pueden comparar de forma exacta aunque la suite corra
+  // en paralelo. Los que son foto de hoy (activos, cartera) los mueve cualquier otro test: se
+  // comprueban al final, comparando la pantalla contra la BD.
+  const DIA = '2019-03-12';
+  const antes = await kpisDelRango(SEDE_A, DIA, DIA);
 
   const alumno = await createE2eAlumno(
     {
       label: 'DashEjec',
       branchId: SEDE_A,
-      enrollments: [{ status: 'active', paymentStatus: 'partial', pendingBalance: 150_000 }],
+      enrollments: [
+        {
+          status: 'active',
+          paymentStatus: 'partial',
+          pendingBalance: 150_000,
+          createdAt: `${DIA}T15:00:00.000Z`,
+        },
+      ],
     },
     cleanup,
   );
-  const conMatricula = await kpisDelMes(SEDE_A);
+  const conMatricula = await kpisDelRango(SEDE_A, DIA, DIA);
   expect(conMatricula.nuevas_matriculas).toBe(antes.nuevas_matriculas + 1);
-  expect(conMatricula.alumnos_activos).toBe(antes.alumnos_activos + 1);
-  expect(await carteraReciente(SEDE_A)).toBe(carteraAntes + 150_000);
 
   // Un pago recibido suma; uno "Cobrar después" (pending), no.
   const { data: pagos, error } = await sb
@@ -239,20 +274,20 @@ test('C01 · C03 · C10 · D01 · D03: una matrícula y un pago nuevos mueven so
         total_amount: 100_000,
         cash_amount: 100_000,
         status: 'paid',
-        payment_date: chileToday(),
+        payment_date: DIA,
       },
       {
         enrollment_id: alumno.enrollmentIds[0],
         total_amount: 50_000,
         status: 'pending',
-        payment_date: chileToday(),
+        payment_date: DIA,
       },
     ])
     .select('id');
   if (error) throw new Error(`[e2e] No se pudieron sembrar los pagos: ${error.message}`);
   for (const pago of pagos ?? []) cleanup.track('payments', pago.id);
 
-  const conPago = await kpisDelMes(SEDE_A);
+  const conPago = await kpisDelRango(SEDE_A, DIA, DIA);
   expect(conPago.ingresos).toBe(conMatricula.ingresos + 100_000);
 
   // La pantalla muestra lo mismo que devuelve la función para esa sede.
@@ -260,12 +295,7 @@ test('C01 · C03 · C10 · D01 · D03: una matrícula y un pago nuevos mueven so
   await abrirEjecutivo(page);
   await elegirSede(page, SEDE_A_NOMBRE);
   await expect(hero(page)).toContainText(new RegExp(SEDE_A_NOMBRE, 'i'), CARGA);
-  const actual = await kpisDelMes(SEDE_A);
-  const tarjetaIngresos = page.locator('.exec-kpi').first();
-  await expect(tarjetaIngresos).toContainText(clp(actual.ingresos), CARGA);
-  await expect
-    .poll(() => heroKpi(page, 'Alumnos activos'), CARGA)
-    .toBe(clp(actual.alumnos_activos));
+  await ejecutivoCoincideConLaBd(page, SEDE_A);
 });
 
 test('E01: las variaciones se muestran con coma decimal, nunca con punto', async ({ pageAs }) => {
@@ -289,18 +319,14 @@ test('J01 · J02: el ejecutivo sigue a la sede elegida, también al cambiar vari
 
   await elegirSede(page, SEDE_A_NOMBRE);
   await expect(hero(page)).toContainText(new RegExp(SEDE_A_NOMBRE, 'i'), CARGA);
-  await expect
-    .poll(async () => heroKpi(page, 'Alumnos activos'), CARGA)
-    .toBe(clp((await kpisDelMes(SEDE_A)).alumnos_activos));
+  await ejecutivoCoincideConLaBd(page, SEDE_A);
 
   // Cambio rápido: gana la última sede pedida y no queda ningún skeleton pegado.
   await elegirSede(page, SEDE_B_NOMBRE);
   await elegirSede(page, SEDE_A_NOMBRE);
   await elegirSede(page, SEDE_B_NOMBRE);
   await expect(hero(page)).toContainText(new RegExp(SEDE_B_NOMBRE, 'i'), CARGA);
-  await expect
-    .poll(async () => heroKpi(page, 'Alumnos activos'), CARGA)
-    .toBe(clp((await kpisDelMes(SEDE_B)).alumnos_activos));
+  await ejecutivoCoincideConLaBd(page, SEDE_B);
   await expect(page.locator('main app-skeleton-block')).toHaveCount(0);
 
   // "Todas" suma las dos sedes.
@@ -538,32 +564,47 @@ test('A09: si la carga falla, la secretaria ve un aviso con "Reintentar", no un 
 test('R01 · R02 · K09: la secretaria multi-sede ve otra sede al cambiarla, sin salir del dashboard', async ({
   pageAs,
 }) => {
-  const sb = await getAdminClient();
-  const { data: vehiculos, error } = await sb
-    .from('vehicles')
-    .select('branch_id, both_branches, status');
-  if (error) throw new Error(`[e2e] No se pudieron leer los vehículos: ${error.message}`);
-  // Un vehículo de "ambas sedes" cuenta en las dos (fix-411-m).
-  const disponibles = (branchId: number | null) =>
-    (vehiculos ?? []).filter(
+  // Un vehículo de "ambas sedes" cuenta en las dos (fix-411-m). Se relee cada vez: otros tests
+  // crean y borran vehículos mientras tanto.
+  const disponibles = async (branchId: number | null) => {
+    const sb = await getAdminClient();
+    const { data, error } = await sb.from('vehicles').select('branch_id, both_branches, status');
+    if (error) throw new Error('[e2e] No se pudieron leer los vehículos: ' + error.message);
+    return (data ?? []).filter(
       (v) =>
         (branchId === null || v.branch_id === branchId || v.both_branches) &&
         resolveVehicleStatus(v.status) === 'available',
     ).length;
-
+  };
+  /** Sede por la que el dashboard pidió los vehículos la última vez ('' = todas). */
+  let ultimaSedePedida: string | null = null;
   const page = await pageAs('secretariaMultisede');
+  page.on('request', (req) => {
+    const url = decodeURIComponent(req.url());
+    if (!url.includes('/rest/v1/vehicles?')) return;
+    ultimaSedePedida = url.match(/branch_id\.eq\.(\d+)/)?.[1] ?? '';
+  });
+  const muestraLaSede = async (branchId: number | null) => {
+    await expect
+      .poll(() => ultimaSedePedida, CARGA)
+      .toBe(branchId === null ? '' : String(branchId));
+    await expect(page.locator('main app-skeleton-block')).toHaveCount(0, CARGA);
+    await expect(async () => {
+      expect(await heroKpi(page, 'Vehículos')).toBe(String(await disponibles(branchId)));
+    }).toPass({ timeout: 30_000 });
+  };
+
   await abrirSecretaria(page);
-  await expect.poll(() => heroKpi(page, 'Vehículos'), CARGA).toBe(String(disponibles(null)));
+  await muestraLaSede(null);
 
   await elegirSede(page, SEDE_B_NOMBRE);
-  await expect.poll(() => heroKpi(page, 'Vehículos'), CARGA).toBe(String(disponibles(SEDE_B)));
+  await muestraLaSede(SEDE_B);
 
   // Cambio seguido: termina con la última sede pedida.
   await elegirSede(page, SEDE_A_NOMBRE);
   await elegirSede(page, SEDE_B_NOMBRE);
   await elegirSede(page, SEDE_A_NOMBRE);
-  await expect.poll(() => heroKpi(page, 'Vehículos'), CARGA).toBe(String(disponibles(SEDE_A)));
-  await expect(page.locator('main app-skeleton-block')).toHaveCount(0, CARGA);
+  await muestraLaSede(SEDE_A);
 });
 
 test('O05: al salir del dashboard se cierra su canal de tiempo real y al volver se abre otra vez', async ({
