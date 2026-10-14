@@ -40,6 +40,7 @@ describe('DashboardAlertsFacade', () => {
     chain.or = ret;
     chain.in = ret;
     chain.limit = ret;
+    chain.order = ret;
     chain.then = (resolve: any, reject: any) => resolved.then(resolve, reject);
     return chain;
   };
@@ -89,7 +90,9 @@ describe('DashboardAlertsFacade', () => {
   const buildCleanMock = (fromFn: ReturnType<typeof vi.fn>) => {
     fromFn.mockImplementation((table: string) => {
       if (table === 'alert_config') return buildChain({ data: [] });
-      if (table === 'cash_closings') return buildChain({ count: 1 }); // caja cerrada
+      // Una sede, con la caja cerrada (fix-423-m: la alerta revisa sede por sede).
+      if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+      if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
       return buildChain({ data: [], count: 0 });
     });
   };
@@ -731,7 +734,8 @@ describe('DashboardAlertsFacade', () => {
         if (table === 'vehicle_documents') return buildChain({ count: 0 });
         if (table === 'enrollments') return buildChain({ count: 0 });
         if (table === 'class_b_sessions') return buildChain({ data: [] });
-        if (table === 'cash_closings') return buildChain({ count: 0 }); // NOT closed
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [] }); // NOT closed
 
         return buildChain({ data: [], count: 0 });
       });
@@ -750,6 +754,57 @@ describe('DashboardAlertsFacade', () => {
       await facade.loadAlerts();
 
       expect(facade.activeAlerts().find((a) => a.id === 'alert-cash-not-closed')).toBeUndefined();
+    });
+
+    describe('dice qué sede falta por cerrar (fix-423-m)', () => {
+      const SEDES = [
+        { id: 1, name: 'Autoescuela Chillán' },
+        { id: 2, name: 'Conductores Chillán' },
+      ];
+      const conCierres = (cerradas: number[]) =>
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'branches') return buildChain({ data: SEDES });
+          if (table === 'cash_closings')
+            return buildChain({ data: cerradas.map((branch_id) => ({ branch_id })) });
+          if (table === 'alert_config') return buildChain({ data: [] });
+          return buildChain({ data: [], count: 0 });
+        });
+      const alertaCaja = () => facade.activeAlerts().find((a) => a.id === 'alert-cash-not-closed');
+
+      it('con "Todas" y una sede cerrada, nombra la que falta', async () => {
+        conCierres([1]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar: Conductores Chillán');
+      });
+
+      it('con "Todas" y ninguna cerrada, dice que faltan ambas', async () => {
+        conCierres([]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar en ambas sedes');
+      });
+
+      it('con las dos cerradas no hay alerta', async () => {
+        conCierres([1, 2]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()).toBeUndefined();
+      });
+
+      it('con una sede elegida, nombra esa sede', async () => {
+        (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+        (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(1);
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'branches') return buildChain({ data: [SEDES[0]] });
+          if (table === 'cash_closings') return buildChain({ data: [] });
+          if (table === 'alert_config') return buildChain({ data: [] });
+          return buildChain({ data: [], count: 0 });
+        });
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar: Autoescuela Chillán');
+      });
     });
   });
 
@@ -1439,7 +1494,8 @@ describe('DashboardAlertsFacade', () => {
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
         if (table === 'alert_config') return buildChain({ data: [] });
-        if (table === 'cash_closings') return buildChain({ count: 0 }); // not closed → F-3 alert
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [] }); // not closed → F-3 alert
         return buildChain({ data: [], count: 0 });
       });
 

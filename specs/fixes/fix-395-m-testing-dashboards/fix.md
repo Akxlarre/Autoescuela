@@ -318,22 +318,22 @@ Decididas por Matías el 2026-10-14:
 | Q14 | ¿"Instructores sin liquidar" revisa el mes en curso o el anterior? | El mes anterior → `fix-417-m` |
 | C04 / S11 | ¿El Resultado resta solo gastos de Clase B? | Lo cubre `ASG-i-061` (después del piloto): sin cambio |
 | P02 | ¿La secretaria ve la actividad de toda su sede? | Solo sus propias acciones, por ahora |
+| I04 | ¿"Operación de hoy" del ejecutivo en tiempo real? | No: se actualiza al recargar o cambiar de sede |
+| I06 / Q20 | ¿Las alertas llevan a su módulo? | Sí, después del piloto. Hoy solo "Caja sin cerrar" navega |
+| Q10 | "Caja sin cerrar" con "Todas" | Decir explícitamente qué sede falta por cerrar, o que faltan ambas |
+| D08 | Sin clases en el período | "—" en vez de "0 %" |
+| A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso"? | No: sin cambio |
+| L10 | Sede de un pago o egreso de una secretaria multi-sede en "Todas" | Revisar qué hace hoy; si no la pide, pedir la sede antes de guardar |
+| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Matrículas activas con saldo, el mismo criterio en los tres lugares |
+| S02 (obs.) | "Actividad" y "Alertas" con fila y media a 1440 × 900 | Aceptable: sin cambio |
+| M19 | ¿Basta el primer nombre en "Clases Actuales"? | No: el Nº de matrícula es lo principal, por sobre el nombre (hoy no se muestra) |
+| J03 (obs.) | Números viejos 1–2,5 s al cambiar de sede en el ejecutivo | Mostrar un indicador de carga |
 
-Pendientes de Matías (§5 del checklist); no se marcan ✅/❌:
+Pendiente de Matías:
 
 | Caso | Pregunta | Qué hace hoy |
 |---|---|---|
-| I04 | ¿"Operación de hoy" del ejecutivo debe actualizarse en tiempo real? | No: se actualiza al recargar o cambiar de sede |
-| I06 / Q20 | ¿Las alertas llevan a su módulo? | Solo "Caja sin cerrar" navega |
-| Q10 | "Caja sin cerrar" con "Todas": ¿exige el cierre de cada sede? | Desaparece si cualquier sede cerró |
-| D08 | Sin clases en el período: ¿"0 %" o "—"? | "0 %" con "Sin clases en el período" |
-| B12 / S17b | "Este año": las dos comparaciones son contra el mismo tramo del año anterior | Muestra las dos líneas |
-| A04 | ¿El admin necesita "Clases Actuales" y "Registrar Egreso" en su dashboard? | No los tiene desde `0044-b` |
-| L10 | ¿En qué sede queda un pago o egreso de una secretaria multi-sede en "Todas"? | Sin revisar |
-| H05 / Q03 / S16 | ¿Cuál es el número oficial de "alumnos con saldo"? | Ejecutivo (incluye finalizadas), alerta (solo activas, todos los cursos) y Base B difieren |
-| S02 (obs.) | A 1440 × 900, ¿"Actividad" y "Alertas" con una fila y media visibles está bien? | "Clases Actuales" ocupa media pantalla |
-| M19 | En "Clases Actuales" va solo el primer nombre del alumno (con el nombre completo en el tooltip): ¿basta para distinguir a dos alumnos con el mismo nombre a la misma hora? | Primer nombre + tooltip |
-| J03 (obs.) | Al cambiar de sede en el ejecutivo, 1–2,5 s con el nombre nuevo y los números viejos | Sin indicador de carga |
+| B12 / S17b | "Este año": las dos comparaciones de cada KPI ("vs per. ant." y "vs año ant.") apuntan al mismo tramo del año anterior y muestran el mismo número; en enero "vs per. ant." compara con diciembre | Muestra las dos líneas |
 
 Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
 

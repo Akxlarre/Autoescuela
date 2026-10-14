@@ -577,21 +577,36 @@ export class DashboardAlertsFacade {
   private async checkUnclosedCash(branchId: number | null): Promise<AlertModel[]> {
     const todayChile = todayIso();
 
-    let query: any = this.supabase.client
+    // Sede por sede (fix-423-m): con "Todas", un cierre de una sola sede ya apagaba la alerta, y
+    // el texto no decía cuál faltaba.
+    let branchesQuery: any = this.supabase.client.from('branches').select('id, name').order('id');
+    if (branchId !== null) branchesQuery = branchesQuery.eq('id', branchId);
+
+    let closingsQuery: any = this.supabase.client
       .from('cash_closings')
-      .select('id', { count: 'exact', head: true })
+      .select('branch_id')
       .eq('date', todayChile)
       .eq('status', 'closed');
-    if (branchId !== null) query = query.eq('branch_id', branchId);
+    if (branchId !== null) closingsQuery = closingsQuery.eq('branch_id', branchId);
 
-    const { count } = await queryOk(query);
-    if (count && count > 0) return [];
+    const [{ data: branches }, { data: closings }] = await Promise.all([
+      queryOk(branchesQuery),
+      queryOk(closingsQuery),
+    ]);
+    const closed = new Set(((closings ?? []) as { branch_id: number }[]).map((c) => c.branch_id));
+    const allBranches = (branches ?? []) as { id: number; name: string }[];
+    const missing = allBranches.filter((b) => !closed.has(b.id));
+    if (missing.length === 0) return [];
 
+    const all = missing.length > 1 && missing.length === allBranches.length;
+    const names = missing.map((b) => b.name).join(' y ');
     return [
       {
         id: 'alert-cash-not-closed',
-        title: 'Caja sin cerrar',
-        description: 'No se ha registrado el cierre de caja del día',
+        title: all ? 'Caja sin cerrar en ambas sedes' : `Caja sin cerrar: ${names}`,
+        description: all
+          ? 'Ninguna sede ha registrado el cierre de caja del día'
+          : `No se ha registrado el cierre de caja del día en ${names}`,
         severity: 'error',
         action: { label: 'Ir a Cuadratura', type: 'navigate' },
       },
