@@ -588,3 +588,57 @@ test('O05: al salir del dashboard se cierra su canal de tiempo real y al volver 
   await secretariaLista(page);
   await expect.poll(() => tramas.at(-1), CARGA).toBe('join');
 });
+
+test('O01 · O02: una clase y un pago registrados desde otra sesión aparecen sin recargar', async ({
+  pageAs,
+  cleanup,
+}) => {
+  const sb = await getAdminClient();
+  const page = await pageAs('secretariaA');
+  await abrirSecretaria(page);
+  // '' mientras el hero recarga → -1, para que expect.poll siga esperando.
+  const pesos = async () => {
+    const digitos = (await heroKpi(page, 'Ingresos Mes')).replace(/[^0-9]/g, '');
+    return digitos === '' ? -1 : Number(digitos);
+  };
+  const ingresosAntes = await pesos();
+
+  // Otra sesión agenda una clase para hoy: aparece sola en "Clases Actuales".
+  const clase = await seedClase(
+    { label: 'DashVivo', branchId: SEDE_A, dia: chileToday(), cupo: { inst: 4, hora: 4 } },
+    cleanup,
+  );
+  const fila = page
+    .locator('app-live-classes-panel .live-class-item')
+    .filter({ hasText: clase.alumno.firstNames });
+  await expect(fila).toContainText('Por Iniciar', CARGA);
+
+  // Otra sesión la cierra: la etiqueta cambia sin recargar.
+  const { error: cierre } = await sb
+    .from('class_b_sessions')
+    .update({ status: 'completed' })
+    .eq('id', clase.sessionId);
+  expect(cierre).toBeNull();
+  await expect(fila).toContainText('Finalizada', CARGA);
+
+  // Otra sesión registra un pago de esa matrícula: "Ingresos Mes" sube ese monto.
+  const { error: saldo } = await sb
+    .from('enrollments')
+    .update({ pending_balance: 40_000, payment_status: 'partial' })
+    .eq('id', clase.enrollmentId);
+  expect(saldo).toBeNull();
+  const { data: pago, error: pagoError } = await sb
+    .from('payments')
+    .insert({
+      enrollment_id: clase.enrollmentId,
+      total_amount: 25_000,
+      cash_amount: 25_000,
+      status: 'paid',
+      payment_date: chileToday(),
+    })
+    .select('id')
+    .single();
+  if (pagoError) throw new Error('[e2e] No se pudo sembrar el pago: ' + pagoError.message);
+  cleanup.track('payments', pago.id);
+  await expect.poll(pesos, CARGA).toBe(ingresosAntes + 25_000);
+});
