@@ -36,7 +36,7 @@ import { EmptyStateComponent } from '../empty-state/empty-state.component';
         <app-empty-state
           icon="users"
           message="Sin instructores activos"
-          subtitle="No hay instructores ni clases en esta sede."
+          subtitle="No hay instructores ni clases para mostrar."
         />
       </div>
     } @else {

@@ -598,8 +598,9 @@ export class DashboardAlertsFacade {
     return [
       {
         id: 'alert-old-debts',
-        title: `${count} alumno${count > 1 ? 's' : ''} con deuda mayor a 2 meses`,
-        description: 'Tienen saldo pendiente con más de 60 días sin pagar',
+        // Mide la antigüedad de la matrícula, no los días sin pagar (hotfix-153-m).
+        title: `${count} matrícula${count > 1 ? 's' : ''} de más de 60 días con saldo`,
+        description: 'Se matricularon hace más de 60 días y todavía tienen saldo pendiente',
         severity: 'warning',
         count,
       },
