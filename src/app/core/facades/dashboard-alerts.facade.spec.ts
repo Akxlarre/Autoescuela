@@ -1317,4 +1317,66 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.activeAlerts().some((a) => a.id === 'alert-cash-not-closed')).toBe(false);
     });
   });
+
+  // ── fix-415-m: descartar recuerda quién descartó y cuántos casos había ──────
+  describe('descartar una alerta (fix-415-m)', () => {
+    beforeEach(() => localStorage.removeItem('ds_snoozed_alerts'));
+    afterEach(() => localStorage.removeItem('ds_snoozed_alerts'));
+
+    const conPagosPendientes = (count: number) => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'enrollments')
+          return callCounters[table] % 4 === 1 ? buildChain({ count }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const usuario = (id: string) =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ id, dbId: 1 });
+    const visibles = () => facade.activeAlerts().map((a) => a.id);
+
+    it('sigue oculta al recargar con los mismos casos, y vuelve si hay más', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+      facade.dismissAlert('alert-pending-payments');
+
+      // Una revisita refresca en segundo plano: se espera ese refresco directamente.
+      const refrescar = () => (facade as any).refreshSilently() as Promise<void>;
+
+      conPagosPendientes(5);
+      await refrescar();
+      expect(visibles()).toEqual([]);
+
+      conPagosPendientes(6);
+      await refrescar();
+      expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+
+    it('otro usuario en el mismo navegador la sigue viendo', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+      facade.dismissAlert('alert-pending-payments');
+
+      usuario('uid-2');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+
+      expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+
+    it('un descarte guardado con el formato anterior no oculta nada', async () => {
+      localStorage.setItem('ds_snoozed_alerts', '{"alert-pending-payments":' + Date.now() + '}');
+      usuario('uid-1');
+      conPagosPendientes(5);
+
+      await facade.loadAlerts();
+
+      expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+  });
 });

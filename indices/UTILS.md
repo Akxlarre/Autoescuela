@@ -84,6 +84,7 @@
 | `src/app/core/utils/instructor-invite.utils.ts` | `instructorCreatedToast` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
+| `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` — descarte de alertas del dashboard por usuario y con el conteo al descartar (fix-415-m) |
 | `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay`, `formatTrendMagnitude` (único lugar donde una tendencia de KPI pasa a texto: coma decimal, a lo más un decimal — fix-400-m) |
 | `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |

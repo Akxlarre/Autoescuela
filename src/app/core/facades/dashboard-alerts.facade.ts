@@ -11,6 +11,13 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
+  filterSnoozedAlerts,
+  parseSnoozes,
+  pruneSnoozes,
+  snoozeAlert,
+  type AlertSnoozeMap,
+} from '@core/utils/alert-snooze.utils';
+import {
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
   enrollmentsWithConsecutiveAbsences,
@@ -79,7 +86,6 @@ export class DashboardAlertsFacade {
   /** Descarta respuestas de fetchAlertsData() fuera de orden (facades.md §7, fix-404-m). */
   private readonly alertsGuard = createRequestGuard();
   private readonly SNOOZE_KEY = 'ds_snoozed_alerts';
-  private readonly SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000;
 
   // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
   private _activeAlerts = signal<AlertModel[]>([]);
@@ -168,14 +174,24 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * Descarta una alerta localmente (snooze 24h).
+   * Descarta una alerta por 24 h, para este usuario y con los casos que tiene ahora: si después
+   * tiene más, vuelve a mostrarse (fix-415-m; regla en alert-snooze.utils.ts).
    */
   dismissAlert(alertId: string): void {
-    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
-    const snoozed = snoozedStr ? JSON.parse(snoozedStr) : {};
-    snoozed[alertId] = Date.now();
-    localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
+    const alert = this._activeAlerts().find((a) => a.id === alertId) ?? { id: alertId };
+    const now = Date.now();
+    const snoozes = snoozeAlert(this.readSnoozes(now), this.currentUserId(), alert, now);
+    localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozes));
     this._activeAlerts.update((alerts) => alerts.filter((a) => a.id !== alertId));
+  }
+
+  private currentUserId(): string | null {
+    return this.auth.currentUser()?.id ?? null;
+  }
+
+  /** Descartes vigentes guardados en este navegador (los vencidos se limpian al leer). */
+  private readSnoozes(now: number): AlertSnoozeMap {
+    return pruneSnoozes(parseSnoozes(localStorage.getItem(this.SNOOZE_KEY)), now);
   }
 
   /**
@@ -316,27 +332,8 @@ export class DashboardAlertsFacade {
   }
 
   private filterSnoozedAlerts(alerts: AlertModel[]): AlertModel[] {
-    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
-    if (!snoozedStr) return alerts;
-
-    try {
-      const snoozed = JSON.parse(snoozedStr) as Record<string, number>;
-      const now = Date.now();
-      let modified = false;
-
-      for (const [id, timestamp] of Object.entries(snoozed)) {
-        if (now - timestamp > this.SNOOZE_DURATION_MS) {
-          delete snoozed[id];
-          modified = true;
-        }
-      }
-
-      if (modified) localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
-
-      return alerts.filter((a) => !snoozed[a.id]);
-    } catch {
-      return alerts;
-    }
+    const now = Date.now();
+    return filterSnoozedAlerts(alerts, this.readSnoozes(now), this.currentUserId(), now);
   }
 
   // ── Queries privadas — Fase 1 & 2 ─────────────────────────────────────────
