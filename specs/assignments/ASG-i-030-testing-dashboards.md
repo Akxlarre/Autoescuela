@@ -1,6 +1,6 @@
 # Asignación ASG-i-030 — Testing: Dashboards (admin, ejecutivo y secretaria)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

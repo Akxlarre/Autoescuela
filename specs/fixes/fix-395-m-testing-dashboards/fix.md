@@ -1,7 +1,8 @@
 # Fix: Testing — Dashboards (admin ejecutivo y secretaria)
 > id: fix-395-m-testing-dashboards
 > refs: ASG-i-030
-> status: in_progress
+> status: done
+> closed: 2026-10-14
 > created: 2026-10-13
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -327,7 +328,7 @@ Decididas por Matías el 2026-10-14:
 | S02 (obs.) | "Actividad" y "Alertas" con fila y media a 1440 × 900 | Aceptable: sin cambio |
 | M19 | ¿Basta el primer nombre en "Clases Actuales"? | No: el Nº de matrícula es lo principal, por sobre el nombre → `fix-424-m` |
 | J03 (obs.) | Números viejos 1–2,5 s al cambiar de sede en el ejecutivo | Mostrar un indicador de carga → `fix-427-m` |
-| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Todo el saldo pendiente, incluidos egresados, en todos lados (propuesta de Matías) → `fix-428-m` (migración `20261014120000` pendiente de aplicar). Base B "Con deuda" sin cambio: es la lista de alumnos vigentes |
+| H05 / Q03 / S16 | Número oficial de "alumnos con saldo" | Todo el saldo pendiente, incluidos egresados, en todos lados (propuesta de Matías) → `fix-428-m` (migración `20261014120000` aplicada y verificada). Base B "Con deuda" sin cambio: es la lista de alumnos vigentes |
 | B12 / S17b | "Este año": dos comparaciones contra el mismo tramo, y en enero contra diciembre | Una sola, siempre "vs año anterior", también en enero → `fix-426-m` |
 
 Decididas sin consultar, por ser la lectura obvia (se pueden revertir):
@@ -417,7 +418,7 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `fix-425-m-cancelacion-sin-clases-muestra-guion` | D08 (decisión) | Cerrado |
 | `fix-426-m-este-anio-una-sola-comparacion` | B12 (decisión) | Cerrado |
 | `fix-427-m-ejecutivo-sin-indicador-al-recargar` | J03 (decisión) | Cerrado |
-| `fix-428-m-saldo-pendiente-mismo-criterio` | H05, Q03 / S16 (decisión) | Cerrado · migración pendiente |
+| `fix-428-m-saldo-pendiente-mismo-criterio` | H05, Q03 / S16 (decisión) | Cerrado · migración aplicada |
 
 ### Migraciones (aplicadas por Matías el 2026-10-14)
 
@@ -427,5 +428,6 @@ la BD de producción es del mismo tamaño, conviene medirlo con la migración ap
 | `20261013161000_fix397_exec_today_ops_vehiculos_available.sql` | `fix-397-m` |
 | `20261013162000_fix408_audit_log_policy_initplan.sql` | `fix-408-m` |
 | `20261013163000_fix413_audit_humanize_columnas_nuevas.sql` | `fix-413-m` |
+| `20261014120000_fix428_exec_receivables_alumnos_total.sql` | `fix-428-m` (aplicada el 2026-10-14) |
 
 Las cuatro se ensayaron contra la BD de dev en una transacción que se revierte.

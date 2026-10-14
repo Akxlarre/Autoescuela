@@ -51,9 +51,11 @@ Decisión de Matías: todos muestran todo el saldo pendiente, incluidos los egre
 
 ## Migración
 
-`supabase/migrations/20261014120000_fix428_exec_receivables_alumnos_total.sql` — **la aplica
-Matías.** Mientras no se aplique, `mapReceivables` sigue sumando los tramos (hoy da lo mismo: en
-dev ningún alumno tiene deuda en dos tramos).
+`supabase/migrations/20261014120000_fix428_exec_receivables_alumnos_total.sql` — **aplicada por
+Matías el 2026-10-14.** Verificada: la función devuelve `TABLE(bucket, monto, alumnos,
+alumnos_total)`, la ejecuta `authenticated` y no `anon`, y el ejecutivo muestra 47 / 25 / 22
+alumnos con saldo (todas / sede 1 / sede 2), igual que `alumnos_total` de la RPC y que las
+alertas.
 
 ## Verificación (2026-10-14)
 
