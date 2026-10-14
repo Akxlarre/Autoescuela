@@ -144,6 +144,48 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
+  // ── fix-405-m: una consulta fallida no es "0 resultados" ─────────────────────
+  describe('errores de consulta (fix-405-m)', () => {
+    const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+
+    it('si fallan todas las consultas, no hay alertas inventadas y la carga queda en error', async () => {
+      fromSpy.mockImplementation(() => buildChain(fallo));
+
+      await facade.loadAlerts();
+
+      // Antes: "Caja sin cerrar" aparecía porque no se pudo contar el cierre.
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
+    });
+
+    it('si falla solo una revisión, muestra las demás y avisa que la lista está incompleta', async () => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain(fallo);
+        if (table === 'enrollments')
+          return callCounters[table] === 1 ? buildChain({ count: 5 }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.loadAlerts();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+    });
+
+    it('con todas las revisiones respondidas no hay aviso', async () => {
+      buildCleanMock(fromSpy);
+
+      await facade.loadAlerts();
+
+      expect(facade.loadProblem()).toBeNull();
+    });
+  });
+
   // ── fix-404-m: cambio de sede seguido ───────────────────────────────────────
   describe('cargas fuera de orden (fix-404-m)', () => {
     const alerta = (id: string) => ({
@@ -200,7 +242,7 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.activeAlerts().map((a) => a.id)).toEqual(['sede-nueva']);
     });
 
-    it('el error de la carga vigente se muestra; el de una vieja, no', async () => {
+    it('el fallo de la carga vigente se avisa; el de una vieja, no', async () => {
       const cargas = controlarCargas();
 
       const vieja = facade.initialize();
@@ -208,11 +250,12 @@ describe('DashboardAlertsFacade', () => {
 
       cargas[0].reject(new Error('vieja'));
       await vieja;
-      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
 
+      // Falla una sola revisión de la carga vigente: lista incompleta (fix-405-m).
       cargas[1].reject(new Error('vigente'));
       await vigente;
-      expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
       expect(facade.isLoading()).toBe(false);
     });
   });

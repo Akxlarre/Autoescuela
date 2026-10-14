@@ -254,6 +254,66 @@ describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fi
   });
 });
 
+describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
+  const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+
+  it('si falla una consulta de KPI, la carga falla: error() avisa y no se publican ceros', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'enrollments' && n === 0 ? fallo : {},
+    );
+
+    await facade.initialize();
+
+    expect(facade.error()).toBe('Error al cargar datos del dashboard');
+    expect(facade.data()).toBeNull();
+    expect(facade.loading()).toBe(false);
+  });
+
+  it('si fallan las clases actuales, la carga también falla', async () => {
+    // class_b_sessions: 0 y 1 son el KPI (hoy y ayer); 2 y 3, el panel "Clases Actuales".
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'class_b_sessions' && n === 2 ? fallo : {},
+    );
+
+    await facade.initialize();
+
+    expect(facade.error()).toBe('Error al cargar datos del dashboard');
+    expect(facade.data()).toBeNull();
+  });
+
+  it('tras un error, volver a llamar initialize() carga de nuevo', async () => {
+    let roto = true;
+    const { facade } = crearFacadeConCliente((tabla, n) => {
+      if (roto) return fallo;
+      return tabla === 'class_b_sessions' && n % 4 === 0 ? { count: 3 } : {};
+    });
+
+    await facade.initialize();
+    expect(facade.error()).not.toBeNull();
+
+    roto = false;
+    await facade.initialize();
+
+    expect(facade.error()).toBeNull();
+    expect(facade.data()?.hero.classesToday).toBe(3);
+  });
+
+  it('un refresco en segundo plano que falla conserva los datos ya cargados', async () => {
+    let roto = false;
+    const { facade } = crearFacadeConCliente((tabla, n) => {
+      if (roto) return fallo;
+      return tabla === 'class_b_sessions' && n === 0 ? { count: 3 } : {};
+    });
+    await facade.initialize();
+
+    roto = true;
+    await (facade as any).refreshSilently();
+
+    expect(facade.data()?.hero.classesToday).toBe(3);
+    expect(facade.error()).toBeNull();
+  });
+});
+
 describe('DashboardFacade', () => {
   let facade: DashboardFacade;
   let httpMock: HttpTestingController;

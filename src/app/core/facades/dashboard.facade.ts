@@ -247,6 +247,23 @@ export class DashboardFacade {
       this.fetchLiveClasses(branchId),
     ]);
 
+    // supabase-js no lanza cuando una consulta falla: devuelve { error }. Sin esto, una falla de
+    // red o de RLS se publicaba como KPIs en 0 (fix-405-m).
+    for (const result of [
+      activeStudents,
+      recentStudents,
+      classesToday,
+      classesYesterday,
+      monthlyRevenue,
+      prevMonthlyRevenue,
+      monthlySpecialRevenue,
+      prevMonthlySpecialRevenue,
+      vehiclesStatus,
+      auditLogsResponse,
+    ]) {
+      if (result.error) throw result.error;
+    }
+
     const sumPayments = (rows: any[] | null) =>
       (rows ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0);
     const sumSales = (rows: any[] | null) =>
@@ -467,11 +484,16 @@ export class DashboardFacade {
     const [{ data: practicasData, error: practicasError }, { data: stuckData, error: stuckError }] =
       await Promise.all([practicasQuery, stuckSessionsQuery]);
 
-    if (!practicasError && practicasData) {
+    // Una consulta fallida no es "sin clases": se propaga para que la pantalla no muestre
+    // "Sin clases actuales" con clases en curso (fix-405-m).
+    if (practicasError) throw practicasError;
+    if (stuckError) throw stuckError;
+
+    if (practicasData) {
       liveClasses = [...liveClasses, ...practicasData.map((row: any) => this.mapPracticaRow(row))];
     }
 
-    if (!stuckError && stuckData) {
+    if (stuckData) {
       liveClasses = [...liveClasses, ...stuckData.map((row: any) => this.mapPracticaRow(row))];
     }
 

@@ -62,6 +62,7 @@ describe('SecretariaDashboardComponent', () => {
               quickActions: [],
               liveClasses: [],
             }),
+            error: signal<string | null>(null),
             initialize: vi.fn(),
             destroyRealtime: vi.fn(),
           },
@@ -72,6 +73,7 @@ describe('SecretariaDashboardComponent', () => {
             initialize: vi.fn(),
             activeAlerts: signal(Array.from({ length: 5 }, (_, i) => buildAlert(i + 1))),
             alertCount: signal(5),
+            loadProblem: signal<string | null>(null),
             dismissAlert: vi.fn(),
           },
         },
@@ -92,6 +94,48 @@ describe('SecretariaDashboardComponent', () => {
     TestBed.overrideComponent(SecretariaDashboardComponent, { set: { template: '', imports: [] } });
     fixture = TestBed.createComponent(SecretariaDashboardComponent);
     component = fixture.componentInstance;
+  });
+
+  // ─── fix-405-m: una carga fallida se avisa, no se muestra como ceros ───────
+  describe('error de carga (fix-405-m)', () => {
+    const dashboard = () => TestBed.inject(DashboardFacade) as any;
+    const alerts = () => TestBed.inject(DashboardAlertsFacade) as any;
+
+    it('sin datos y con error: loadError trae el mensaje', () => {
+      dashboard().data.set(null);
+      dashboard().error.set('Error al cargar datos del dashboard');
+
+      expect(component.loadError()).toBe('Error al cargar datos del dashboard');
+    });
+
+    it('mientras carga no se muestra el error', () => {
+      dashboard().data.set(null);
+      dashboard().error.set('Error al cargar datos del dashboard');
+      dashboard().loading.set(true);
+
+      expect(component.loadError()).toBeNull();
+    });
+
+    it('con datos ya cargados, un error posterior no reemplaza la pantalla', () => {
+      dashboard().error.set('Error al cargar datos del dashboard');
+
+      expect(component.loadError()).toBeNull();
+    });
+
+    it('"Reintentar" vuelve a cargar el dashboard y las alertas', () => {
+      component.retry();
+
+      expect(dashboard().initialize).toHaveBeenCalledTimes(1);
+      expect(alerts().initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('alertsProblem refleja el aviso del facade de alertas', () => {
+      expect(component.alertsProblem()).toBeNull();
+
+      alerts().loadProblem.set('No se pudieron revisar las alertas.');
+
+      expect(component.alertsProblem()).toBe('No se pudieron revisar las alertas.');
+    });
   });
 
   // ─── fix-403-m: sigue a la sede seleccionada y libera el canal Realtime ────

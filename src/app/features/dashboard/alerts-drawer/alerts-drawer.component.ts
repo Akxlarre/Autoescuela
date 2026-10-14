@@ -57,6 +57,33 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
             </div>
           }
 
+          <!-- La revisión falló: no es lo mismo que no tener alertas (fix-405-m) -->
+        } @else if (loadProblem() && sortedAlerts().length === 0) {
+          <div
+            class="flex flex-col items-center justify-center py-10 gap-3 text-center"
+            role="status"
+          >
+            <div
+              class="w-14 h-14 rounded-full bg-warning-subtle flex items-center justify-center text-warning"
+            >
+              <app-icon name="triangle-alert" [size]="28" />
+            </div>
+            <div>
+              <p class="item-title m-0">{{ loadProblem() }}</p>
+              <p class="m-0 text-xs text-text-muted mt-1 max-w-56 mx-auto leading-relaxed">
+                No significa que no haya alertas. Vuelve a intentarlo.
+              </p>
+            </div>
+            <button
+              class="btn-ghost flex items-center gap-1.5 text-xs px-2.5 py-1 rounded cursor-pointer"
+              (click)="retry()"
+              data-llm-action="retry-load-alerts"
+            >
+              <app-icon name="refresh-cw" [size]="12" />
+              <span>Reintentar</span>
+            </button>
+          </div>
+
           <!-- Empty state positivo -->
         } @else if (sortedAlerts().length === 0) {
           <div class="flex flex-col items-center justify-center py-10 gap-3 text-center">
@@ -75,6 +102,11 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
 
           <!-- Lista de alertas ordenadas por severidad -->
         } @else {
+          @if (loadProblem()) {
+            <p class="m-0 text-xs text-text-muted" role="status">
+              {{ loadProblem() }} Puede faltar alguna.
+            </p>
+          }
           @for (alert of sortedAlerts(); track alert.id) {
             <div
               class="card flex gap-3 p-3 transition-[border-color] duration-200"
@@ -184,6 +216,8 @@ export class AlertsDrawerComponent {
 
   readonly isLoading = this.facade.isLoading;
   readonly alertCount = this.facade.alertCount;
+  /** Aviso cuando la lista no es confiable (carga fallida o incompleta). */
+  readonly loadProblem = this.facade.loadProblem;
   readonly SKELETON_ROWS = [1, 2, 3, 4] as const;
 
   /** Alertas ordenadas: error → warning → info → success */
@@ -198,6 +232,10 @@ export class AlertsDrawerComponent {
 
   isProcessing(id: string): boolean {
     return this._processing().has(id);
+  }
+
+  retry(): void {
+    void this.facade.initialize();
   }
 
   dismiss(id: string): void {
