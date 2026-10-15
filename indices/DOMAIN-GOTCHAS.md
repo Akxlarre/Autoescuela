@@ -1823,6 +1823,23 @@
 - **Fuente:** `specs/specs/0010-i-clase-7-bloqueada-sin-segundo-pago`
   (`trg_block_class_b_without_second_payment`, migración `20261013120000`).
 
+### DG-111 — Un "borrar lo anterior y volver a insertar" desde el front duplica filas cuando la RLS no deja borrar
+
+- **Trampa:** hacer idempotente un paso que se puede repetir (volver atrás en un wizard) con
+  `DELETE ... WHERE <clave>` seguido de `INSERT`, revisando el `error` del DELETE.
+- **Realidad:** si el rol no tiene DELETE por RLS, PostgREST responde `error: null` y 0 filas, y
+  el INSERT agrega una fila más en cada reintento. `assertWriteOk({ requireRows: true })` (DG-103)
+  no sirve acá: la primera vez 0 filas borradas es lo correcto, así que "0 filas" no distingue
+  "no había nada" de "no me dejaron". Así se duplicó el pago de matrícula de la secretaria.
+- **Regla de aplicabilidad:** cuando un reemplazo (DELETE + INSERT, o DELETE + INSERT + UPDATE de
+  totales) lo ejecuta un rol que no tiene DELETE sobre esa tabla —y no debe tenerlo—, el reemplazo
+  va en una RPC `SECURITY DEFINER` que valida estado y permiso por sede y lo hace en una
+  transacción. No abrir DELETE al rol para "arreglar" el front. Si la tabla tiene un trigger que
+  recalcula totales con columnas de otra tabla (ej. `enrollments.discount` en
+  `recalculate_enrollment_balance()`), la RPC actualiza esas columnas **antes** de tocar las filas.
+- **Fuente:** `specs/fixes/fix-050-i-pago-matricula-duplicado-al-reintentar`
+  (`record_enrollment_payment()`, migración `20261014180000`).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

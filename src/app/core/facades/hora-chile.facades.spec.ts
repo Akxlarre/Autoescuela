@@ -107,20 +107,8 @@ describe('Hoy en Chile en los facades — 23:30 hora Chile (spec 0024-m)', () =>
   afterEach(() => vi.useRealTimers());
 
   describe('fechas que se escriben', () => {
-    it('EnrollmentPaymentFacade.recordPayment guarda el pago con la fecha de hoy', async () => {
-      const supabase = recordingSupabase();
-      const self = fakeThis({
-        supabase,
-        _pricing: () => ({}),
-        _paymentMethod: () => 'efectivo',
-        totalToPay: () => 1000,
-        _documentNumber: () => '',
-      });
-
-      await run(() => EnrollmentPaymentFacade.prototype.recordPayment.call(self, 10, 1));
-
-      expect(insertedRow(supabase.calls, 'payments')['payment_date']).toBe('2026-10-06');
-    });
+    // EnrollmentPaymentFacade.recordPayment ya no pone la fecha: desde fix-050-i la pone la RPC
+    // record_enrollment_payment con public.chile_today() (supabase/tests/rls/fix-050-i-*.sql).
 
     it('AdminPreInscritosFacade.completarMatricula guarda el pago con la fecha de hoy', async () => {
       const supabase = recordingSupabase();

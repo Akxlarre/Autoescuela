@@ -1,5 +1,5 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
-import { todayIso } from '@core/utils/date.utils';
+import { formatCLP, todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -212,10 +212,16 @@ export class EnrollmentPaymentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
 
   /**
-   * Registra el pago en la tabla `payments`, aplica descuento si corresponde,
-   * y actualiza el enrollment con los totales.
+   * Registra el pago del paso Pago del wizard (y el descuento si corresponde) y actualiza los
+   * totales de la matrícula en borrador.
+   *
+   * fix-050-i: todo lo hace la RPC `record_enrollment_payment` en una transacción. Antes eran
+   * DELETE + INSERT + UPDATE sueltos: la RLS no deja borrar pagos a la secretaria y PostgREST
+   * responde a ese DELETE sin error y con 0 filas, así que volver al paso Pago duplicaba el pago.
+   * La RPC también pone la fecha (hoy en Chile) y `registered_by` (usuario de la sesión), por eso
+   * `_registeredBy` ya no se usa.
    */
-  async recordPayment(enrollmentId: number | null, registeredBy: number | null): Promise<boolean> {
+  async recordPayment(enrollmentId: number | null, _registeredBy: number | null): Promise<boolean> {
     if (!enrollmentId) return false;
 
     const pricing = this._pricing();
@@ -227,113 +233,26 @@ export class EnrollmentPaymentFacade {
 
     try {
       const total = this.totalToPay();
-      const isPending = method === 'pendiente';
-      const paymentStatus = isPending ? 'pending' : 'paid';
-
-      // 0. Delete previous enrollment payment records (idempotencia: back-button safe)
-      // fix-362-m: si la limpieza falla y se sigue, el insert de abajo deja el pago (y el
-      // descuento) duplicados. Se corta acá.
-      const { error: discountCleanupError } = await this.supabase.client
-        .from('discount_applications')
-        .delete()
-        .eq('enrollment_id', enrollmentId);
-
-      const cleanupError =
-        discountCleanupError ??
-        (
-          await this.supabase.client
-            .from('payments')
-            .delete()
-            .eq('enrollment_id', enrollmentId)
-            .eq('type', 'enrollment')
-        ).error;
-
-      if (cleanupError) {
-        this._error.set(
-          'Error al reemplazar el pago anterior: ' + this.sanitizer.sanitize(cleanupError).message,
-        );
-        return false;
-      }
-
-      // 1. Insert payment record
-      const paymentRecord = {
-        enrollment_id: enrollmentId,
-        type: 'enrollment',
-        total_amount: total,
-        cash_amount: method === 'efectivo' ? total : 0,
-        transfer_amount: method === 'transferencia' ? total : 0,
-        card_amount: method === 'tarjeta' ? total : 0,
-        voucher_amount: 0,
-        status: paymentStatus,
-        payment_date: isPending ? null : todayIso(),
-        requires_receipt: true,
-        registered_by: registeredBy,
-        document_number: this._documentNumber() || null,
-      };
-
-      const { error: paymentError } = await this.supabase.client
-        .from('payments')
-        .insert(paymentRecord);
-
-      if (paymentError) {
-        this._error.set(
-          'Error al registrar pago: ' + this.sanitizer.sanitize(paymentError).message,
-        );
-        return false;
-      }
-
-      // 2. Apply discount if selected
-      const discountId = this._selectedDiscountId();
       const disc = this._discount();
-      if (discountId && disc.enabled && disc.amount) {
-        const { error: discountError } = await this.supabase.client
-          .from('discount_applications')
-          .insert({
-            discount_id: discountId,
-            enrollment_id: enrollmentId,
-            discount_amount: disc.amount,
-            applied_by: registeredBy,
-          });
-
-        if (discountError) {
-          this._error.set(
-            'Error al aplicar descuento: ' + this.sanitizer.sanitize(discountError).message,
-          );
-          return false;
-        }
-      }
-
-      // 3. Update enrollment totals
       const discountAmount = disc.enabled && disc.amount ? disc.amount : 0;
-      const totalPaid = isPending ? 0 : total;
-      const pendingBalance = isPending
-        ? pricing.basePrice - discountAmount
-        : pricing.basePrice - discountAmount - totalPaid;
-      const enrollmentPaymentStatus = isPending
-        ? 'pending'
-        : pricing.isDeposit
-          ? 'partial'
-          : 'paid_full';
 
-      const { error: updateError } = await this.supabase.client
-        .from('enrollments')
-        .update({
-          discount: discountAmount,
-          total_paid: totalPaid,
-          pending_balance: pendingBalance,
-          payment_status: enrollmentPaymentStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', enrollmentId);
+      const { error } = await this.supabase.client.rpc('record_enrollment_payment', {
+        p_enrollment_id: enrollmentId,
+        p_payment_method: method,
+        p_total_amount: total,
+        p_discount_id: discountAmount > 0 ? this._selectedDiscountId() : null,
+        p_discount_amount: discountAmount,
+        p_is_deposit: pricing.isDeposit,
+        p_document_number: this._documentNumber() || null,
+      });
 
-      if (updateError) {
-        this._error.set(
-          'Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message,
-        );
+      if (error) {
+        this._error.set('Error al registrar pago: ' + this.sanitizer.sanitize(error).message);
         return false;
       }
 
-      this.notifyPaymentRegistered(enrollmentId, total);
+      // fix-052-i: "Cobrar después" deja el pago 'pending' — el alumno no pagó nada todavía.
+      if (method !== 'pendiente') this.notifyPaymentRegistered(enrollmentId, total);
 
       return true;
     } catch {
@@ -358,7 +277,7 @@ export class EnrollmentPaymentFacade {
         this.notifications
           .notifyUsers([userId], {
             subject: 'Pago registrado',
-            message: `Se registró un pago de $${amount} en tu matrícula.`,
+            message: `Se registró un pago de ${formatCLP(amount)} en tu matrícula.`,
             referenceType: 'payment',
           })
           .catch(() => this.toast.warning('No se pudo notificar al alumno'));

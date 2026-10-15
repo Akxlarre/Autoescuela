@@ -13,6 +13,10 @@ export interface AlumnoDeudor {
   cursoNombre: string;
   /** `enrollments.created_at` (fecha de matrícula) — único campo de fecha disponible en esta tabla. */
   fechaMatricula: string | null;
+  /** `enrollments.number` (fix-053-i): distingue dos matrículas con saldo del mismo alumno. */
+  numeroMatricula: string | null;
+  /** `enrollments.status` (fix-053-i): 'active' | 'pending_payment' | 'completed' | 'cancelled'. */
+  estadoMatricula: string | null;
   sedeId: number;
   sedeNombre: string;
 }
