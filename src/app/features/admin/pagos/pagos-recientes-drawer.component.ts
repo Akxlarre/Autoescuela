@@ -8,6 +8,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 
 /**
@@ -243,15 +244,13 @@ export class PagosRecientesDrawerComponent {
   }
 
   protected readonly pagosFiltrados = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
+    const q = this.searchQuery();
     const estado = this.filtroEstado();
     const metodo = this.filtroMetodo();
 
     return this.facade.pagosRecientes().filter((p) => {
-      const matchSearch =
-        !q ||
-        p.alumno.toLowerCase().includes(q) ||
-        (p.nroDocumento ?? '').toLowerCase().includes(q);
+      // fix-054-i: ignora tildes y ñ ("munoz" encuentra "Muñoz"), como el resto de la app.
+      const matchSearch = matchesSearchTokens([p.alumno, p.nroDocumento], q);
       const matchEstado = !estado || p.estado === estado;
       const matchMetodo = !metodo || p.metodo === metodo;
       return matchSearch && matchEstado && matchMetodo;

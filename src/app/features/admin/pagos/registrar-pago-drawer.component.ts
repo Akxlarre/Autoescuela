@@ -19,6 +19,7 @@ import {
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { formatCLP, todayIso } from '@core/utils/date.utils';
+import { describeMatriculaDeudor } from '@core/utils/deudor-label.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SelectModule } from 'primeng/select';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -149,7 +150,15 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     emptyFilterMessage="No se encontraron alumnos"
                     data-llm-description="Selecciona el alumno al que se le asocia el pago, con buscador por nombre"
                     [class.field-input--error]="isInvalid('enrollment_id')"
-                  />
+                  >
+                    <!-- fix-053-i: dos líneas para que N°, curso y saldo no desborden el panel -->
+                    <ng-template #item let-opt>
+                      <div class="flex flex-col min-w-0 whitespace-normal">
+                        <span class="text-sm text-text-primary">{{ opt.titulo }}</span>
+                        <span class="text-xs text-text-muted">{{ opt.detalle }}</span>
+                      </div>
+                    </ng-template>
+                  </p-select>
                   @if (isInvalid('enrollment_id')) {
                     <span class="field-error">Selecciona un alumno.</span>
                   }
@@ -165,7 +174,9 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="item-title">
                         {{ alumno.alumno }}
                       </span>
-                      <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
+                      <span class="text-xs text-text-muted">
+                        {{ alumno.rut }} · {{ describirMatricula(alumno) }}
+                      </span>
                     </div>
                     <div class="flex flex-col gap-0.5 text-right">
                       <span class="micro-label"> Saldo Pendiente </span>
@@ -584,15 +595,19 @@ export class RegistrarPagoDrawerComponent {
   protected readonly isSaving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   protected readonly clp = formatCLP;
+  protected readonly describirMatricula = describeMatriculaDeudor;
 
   /** Modo global: drawer abierto sin matrícula preseleccionada. */
   protected readonly modoGlobal = computed(() => this.facade.enrollmentSeleccionado() === null);
 
+  // fix-053-i: N°, curso, estado y saldo distinguen dos matrículas con deuda del mismo alumno.
   protected readonly enrollmentOptions = computed(() =>
-    this.facade.alumnosConDeuda().map((a) => ({
-      label: `${a.alumno} — ${a.rut}`,
-      value: a.enrollmentId,
-    })),
+    this.facade.alumnosConDeuda().map((a) => {
+      const titulo = `${a.alumno} — ${a.rut}`;
+      const detalle = `${describeMatriculaDeudor(a)} · saldo ${formatCLP(a.saldo)}`;
+      // `label` (texto completo) lo usan el buscador y el valor elegido; la lista lo muestra en 2 líneas.
+      return { label: `${titulo} · ${detalle}`, titulo, detalle, value: a.enrollmentId };
+    }),
   );
 
   /** Alumno seleccionado en el dropdown (solo modo global). */
@@ -746,11 +761,9 @@ export class RegistrarPagoDrawerComponent {
       this.saved.emit();
       this.layoutDrawer.back();
     } catch (err) {
-      this.saveError.set(
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al guardar. Intenta de nuevo.',
-      );
+      // fix-051-i: supabase-js entrega el error como objeto plano, no como Error. El sanitizador
+      // ya traduce ambos (y deja pasar los avisos P0001 de la BD, como "caja cerrada").
+      this.saveError.set(this.sanitizer.sanitize(err).message);
     } finally {
       this.isSaving.set(false);
     }
