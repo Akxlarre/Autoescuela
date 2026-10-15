@@ -124,6 +124,7 @@ Deno.serve(async (req: Request) => {
         `
         id,
         branch_id,
+        pending_balance,
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
@@ -169,6 +170,32 @@ Deno.serve(async (req: Request) => {
         },
         400,
       );
+    }
+
+    // 1.6 Spec 0010-i (AC8): con deuda, el certificado exige una habilitación explícita con motivo
+    //     (enrollment_payment_overrides, kind 'certificado'), que la secretaria o el admin registran
+    //     al confirmar en la UI. El bypass `force` de clases incompletas NO salta este gate: son dos
+    //     decisiones distintas. `code` permite a la UI pedir la confirmación en vez de un error.
+    const pendingBalance = Number(enrollment.pending_balance ?? 0);
+    if (pendingBalance > 0) {
+      const { count: overrides, error: overrideErr } = await supabase
+        .from('enrollment_payment_overrides')
+        .select('id', { count: 'exact', head: true })
+        .eq('enrollment_id', enrollment_id)
+        .eq('kind', 'certificado');
+
+      if (overrideErr) {
+        return jsonRes({ error: `Error al validar el saldo: ${overrideErr.message}` }, 500);
+      }
+      if (!overrides) {
+        return jsonRes(
+          {
+            error: `El alumno tiene un saldo pendiente de $${new Intl.NumberFormat('es-CL').format(pendingBalance)}.`,
+            code: 'DEUDA_PENDIENTE',
+          },
+          409,
+        );
+      }
     }
 
     const u = enrollment.students.users;
@@ -377,7 +404,6 @@ function fmtDateShort(ts: string): string {
   // Formato dd-mm-yyyy
   return formatChilePattern(ts, 'dd-MM-yyyy') ?? '';
 }
-
 
 function todayInSpanish(): string {
   const meses = [

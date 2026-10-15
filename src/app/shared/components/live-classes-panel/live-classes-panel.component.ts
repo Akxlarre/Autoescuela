@@ -62,7 +62,7 @@ import { TooltipModule } from 'primeng/tooltip';
                 <app-skeleton-block variant="text" width="55px" height="9px" />
               </div>
               <div class="flex items-center gap-3">
-                <div class="flex -space-x-2 shrink-0">
+                <div class="hidden sm:flex -space-x-2 shrink-0">
                   <app-skeleton-block
                     variant="circle"
                     width="32px"
@@ -111,11 +111,17 @@ import { TooltipModule } from 'primeng/tooltip';
         @for (cls of visibleClasses(); track cls.id; let i = $index) {
           <li
             [attr.data-status]="cls.status"
-            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
+            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
             [class.border-l-4]="isFromPrevDay(cls)"
             [class.border-error]="isFromPrevDay(cls)"
             appPressFeedback="press"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="actionLabel(cls)"
+            [attr.data-llm-action]="actionId(cls)"
             (click)="actionClick.emit(cls)"
+            (keydown.enter)="actionClick.emit(cls)"
+            (keydown.space)="$event.preventDefault(); actionClick.emit(cls)"
             [appAnimateIn]="{ delay: 0.1 + i * 0.05 }"
           >
             <!-- Lado Izquierdo: Hora y Avatares -->
@@ -134,8 +140,13 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-2xs font-bold uppercase tracking-widest mt-1 transition-colors duration-300 inline-flex items-center gap-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls) || isFromPrevDay(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="
+                    isOverdue(cls) || isFromPrevDay(cls) || isUnexcusedAbsence(cls)
+                  "
                   [attr.data-llm-description]="
                     isFromPrevDay(cls)
                       ? 'Sesión in_progress sin cerrar de un día anterior, distinta de una clase agendada hoy'
@@ -149,14 +160,15 @@ import { TooltipModule } from 'primeng/tooltip';
                   } @else if (isOverdue(cls)) {
                     <app-icon name="alert-triangle" [size]="11" class="badge-pulse shrink-0" />
                   }
-                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls)) }}
+                  {{ statusLabel(cls.status, isOverdue(cls), isFromPrevDay(cls), cls.excused) }}
                 </span>
               </div>
 
               <!-- Participantes (Avatares solapados) -->
               <div class="flex items-center gap-3 min-w-0">
+                <!-- En móvil sin avatares: el espacio es para el Nº de matrícula (fix-424-m) -->
                 <div
-                  class="flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
+                  class="hidden sm:flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
                   <!-- Alumno Avatar -->
                   <div
@@ -179,12 +191,19 @@ import { TooltipModule } from 'primeng/tooltip';
                 <div
                   class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
+                  <!-- El Nº de matrícula es el dato principal; el nombre va al lado (fix-424-m) -->
                   <span
-                    class="item-title truncate"
+                    class="flex items-baseline gap-1 min-w-0"
                     [pTooltip]="cls.studentName"
                     tooltipPosition="top"
-                    >{{ cls.studentName.split(' ')[0] }}</span
                   >
+                    @if (cls.enrollmentNumber) {
+                      <span class="item-title shrink-0">Nº {{ cls.enrollmentNumber }}</span>
+                      <span class="text-sm text-text-secondary truncate">· {{ cls.studentName }}</span>
+                    } @else {
+                      <span class="item-title truncate">{{ cls.studentName }}</span>
+                    }
+                  </span>
                   <span
                     class="text-2xs text-text-muted truncate uppercase tracking-wider"
                     [pTooltip]="
@@ -205,10 +224,13 @@ import { TooltipModule } from 'primeng/tooltip';
                   class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
                   [class.text-warning]="cls.status === 'pending'"
                   [class.text-success]="cls.status === 'in_progress' && !isOverdue(cls)"
-                  [class.text-text-muted]="cls.status === 'completed' || cls.status === 'no_show'"
-                  [class.text-error]="isOverdue(cls)"
+                  [class.text-text-muted]="
+                    cls.status === 'completed' ||
+                    (cls.status === 'no_show' && !isUnexcusedAbsence(cls))
+                  "
+                  [class.text-error]="isOverdue(cls) || isUnexcusedAbsence(cls)"
                 >
-                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls)) }}
+                  {{ getRelativeTime(cls.scheduledAt, cls.status, isOverdue(cls), cls.excused) }}
                 </span>
               </div>
 
@@ -365,12 +387,43 @@ export class LiveClassesPanelComponent {
     return isFromPreviousDay(cls.scheduledAt, this._now());
   }
 
-  statusLabel(status: string, overdue = false, fromPrevDay = false): string {
+  /** fix-392-m: falta SIN justificar. Va en color de error para no confundirse con una clase
+   * concluida (ambas se pintaban en gris); la justificada sigue en gris. */
+  isUnexcusedAbsence(cls: LiveClassModel): boolean {
+    return cls.status === 'no_show' && !cls.excused;
+  }
+
+  /**
+   * Qué hace el clic (o Enter / Espacio) sobre una clase, como nombre accesible de la fila
+   * (fix-414-m). Sigue la misma regla que resolveLiveClassActionPlan: por iniciar → iniciar,
+   * en curso → finalizar, el resto → detalle.
+   */
+  actionLabel(
+    cls: Pick<LiveClassModel, 'status' | 'studentName' | 'scheduledAt' | 'enrollmentNumber'>,
+  ): string {
+    const verbo =
+      cls.status === 'pending'
+        ? 'Iniciar la clase'
+        : cls.status === 'in_progress'
+          ? 'Finalizar la clase'
+          : 'Ver el detalle de la clase';
+    const numero = cls.enrollmentNumber ? ` (Nº ${cls.enrollmentNumber})` : '';
+    return `${verbo} de ${cls.studentName}${numero}, ${this.formatTime(cls.scheduledAt)}`;
+  }
+
+  /** Identificador de esa acción para agentes (ai-readability.md). */
+  actionId(cls: Pick<LiveClassModel, 'status'>): string {
+    if (cls.status === 'pending') return 'start-live-class';
+    return cls.status === 'in_progress' ? 'finish-live-class' : 'view-live-class';
+  }
+
+  statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {
     if (fromPrevDay) return 'Día Anterior';
     if (overdue) return 'Atrasada';
     if (status === 'pending') return 'Por Iniciar';
     if (status === 'in_progress') return 'En Curso';
-    if (status === 'no_show') return 'No Asistió';
+    // fix-381-m: misma etiqueta que Asistencia para una falta justificada.
+    if (status === 'no_show') return excused ? 'Justificada' : 'No Asistió';
     return 'Finalizada';
   }
 
@@ -384,10 +437,10 @@ export class LiveClassesPanelComponent {
     return formatChileTime(isoString);
   }
 
-  getRelativeTime(isoString: string, status: string, overdue = false): string {
+  getRelativeTime(isoString: string, status: string, overdue = false, excused = false): string {
     if (!isoString) return '';
     if (status === 'completed') return 'Concluida';
-    if (status === 'no_show') return 'No asistió';
+    if (status === 'no_show') return excused ? 'Justificada' : 'No asistió';
     if (overdue) return 'Cierre atrasado';
     if (status === 'in_progress') return 'Transcurriendo';
 

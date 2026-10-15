@@ -6,6 +6,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type { CertificacionAlumnoRow } from '@core/models/ui/certificacion-clase-b.model';
 
 describe('CertificacionClaseBFacade', () => {
@@ -16,6 +17,7 @@ describe('CertificacionClaseBFacade', () => {
   let branchFacadeSpy: any;
   let authFacadeSpy: any;
   let notificationsSpy: any;
+  let confirmSpy: any;
 
   const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -97,6 +99,7 @@ describe('CertificacionClaseBFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
+    confirmSpy = { confirmWithReason: vi.fn().mockResolvedValue(null) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -107,6 +110,7 @@ describe('CertificacionClaseBFacade', () => {
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: ConfirmModalService, useValue: confirmSpy },
       ],
     });
 
@@ -419,6 +423,91 @@ describe('CertificacionClaseBFacade', () => {
     it('limpia generatingId tras la llamada (éxito o error)', async () => {
       await facade.generarCertificado(42);
       expect(facade.generatingId()).toBeNull();
+    });
+  });
+
+  // ── Spec 0010-i (AC8, AC-E5): certificado con deuda ───────────────────────
+  describe('certificado con deuda (spec 0010-i)', () => {
+    const deuda = () => ({
+      data: null,
+      error: Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+        context: new Response(
+          JSON.stringify({
+            error: 'El alumno tiene un saldo pendiente de $180.000.',
+            code: 'DEUDA_PENDIENTE',
+          }),
+          { status: 409 },
+        ),
+      }),
+    });
+
+    let overrideInsert: any;
+    beforeEach(() => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1, dbId: 77 });
+      overrideInsert = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: [{ id: 1 }], error: null }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ enrollment_payment_overrides: overrideInsert });
+    });
+
+    it('pide confirmación con el saldo y, si se cancela, no registra ni reintenta', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
+      confirmSpy.confirmWithReason.mockResolvedValueOnce(null);
+
+      await facade.generarCertificado(42);
+
+      expect(confirmSpy.confirmWithReason).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('$180.000'),
+          reason: expect.objectContaining({ minLength: 5 }),
+        }),
+      );
+      expect(overrideInsert.insert).not.toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(1);
+      expect(toastSpy.error).not.toHaveBeenCalled();
+    });
+
+    it('con motivo registra la habilitación "certificado" y reintenta (AC8)', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
+      confirmSpy.confirmWithReason.mockResolvedValueOnce('Paga el viernes');
+
+      await facade.generarCertificado(42);
+
+      expect(overrideInsert.insert).toHaveBeenCalledWith({
+        enrollment_id: 42,
+        kind: 'certificado',
+        reason: 'Paga el viernes',
+        created_by: 77,
+      });
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(2);
+      expect(toastSpy.success).toHaveBeenCalledWith('Certificado generado correctamente');
+    });
+
+    it('si la habilitación no se guarda, no reintenta y muestra el error', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
+      confirmSpy.confirmWithReason.mockResolvedValueOnce('Paga el viernes');
+      overrideInsert.select.mockResolvedValueOnce({ data: null, error: { code: '42501' } });
+
+      await facade.generarCertificado(42);
+
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(1);
+      expect(toastSpy.error).toHaveBeenCalled();
+    });
+
+    it('"Generar pendientes" salta a los alumnos con deuda y lo informa (AC-E5)', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 1, nombre: 'Con deuda' }),
+        makeAlumnoRow({ enrollmentId: 2, nombre: 'Al día' }),
+      ]);
+      supabaseSpy.client.functions.invoke
+        .mockResolvedValueOnce(deuda())
+        .mockResolvedValueOnce({ data: { pdfUrl: 'u', pdfPath: 'p' }, error: null });
+
+      await facade.generarPendientes();
+
+      expect(confirmSpy.confirmWithReason).not.toHaveBeenCalled();
+      expect(toastSpy.warning).toHaveBeenCalledWith(expect.stringContaining('1 con deuda'));
     });
   });
 

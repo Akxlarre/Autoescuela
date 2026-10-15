@@ -119,7 +119,8 @@ Deno.serve(async (req: Request) => {
       fecha: p.payment_date,
       alumno: formatAlumnoName(p.enrollments?.students?.users),
       rut: p.enrollments?.students?.users?.rut ?? '-',
-      concepto: p.type?.trim() || 'Pago',
+      // spec 0025-m: un pago anulado se lista marcado y no suma en los totales.
+      concepto: p.status === 'anulado' ? 'ANULADO' : p.type?.trim() || 'Pago',
       metodo: deriveMetodo(p),
       nroDocumento: p.document_number,
       monto: p.total_amount ?? 0,
@@ -312,14 +313,16 @@ function buildPaymentReportPdf(data: ReportData): Uint8Array {
   y -= 20;
 
   // ── Calcular totales ─────────────────────────────────────────────────────────
-  const totalRecaudado = data.payments.reduce((s, p) => s + p.monto, 0);
-  const totalCompletados = data.payments.filter((p) => p.estado === 'completado').length;
+  // spec 0025-m: los anulados se listan en la tabla, pero no cuentan como recaudación.
+  const vigentes = data.payments.filter((p) => p.estado !== 'anulado');
+  const totalRecaudado = vigentes.reduce((s, p) => s + p.monto, 0);
+  const totalCompletados = vigentes.filter((p) => p.estado === 'completado').length;
   const totalPendienteDeudores = data.deudores.reduce((s, d) => s + d.saldo, 0);
-  const nPagos = data.payments.length;
+  const nPagos = vigentes.length;
 
   // Totales por método
   const byMethod: Record<string, number> = {};
-  for (const p of data.payments) {
+  for (const p of vigentes) {
     byMethod[p.metodo] = (byMethod[p.metodo] ?? 0) + p.monto;
   }
   const topMethod = Object.entries(byMethod).sort((a, b) => b[1] - a[1])[0] ?? ['—', 0];
@@ -381,7 +384,7 @@ function buildPaymentReportPdf(data: ReportData): Uint8Array {
   // 2. TABLA DE PAGOS
   // ════════════════════════════════════════════════════════════════════════════
 
-  sectionBar(`Pagos del Período (${nPagos} registros)`);
+  sectionBar(`Pagos del Período (${data.payments.length} registros)`);
   y -= 4;
 
   // Anchos de columna según si se muestra sede o no
@@ -447,7 +450,9 @@ function buildPaymentReportPdf(data: ReportData): Uint8Array {
     for (let j = 0; j < cells.length; j++) {
       // Monto en azul, estado visual
       if (j === pCols.length - 1) {
-        rgb(0.13, 0.33, 0.68);
+        // Anulado en gris: el monto se ve, pero no es recaudación.
+        if (p.estado === 'anulado') rgb(0.55, 0.55, 0.55);
+        else rgb(0.13, 0.33, 0.68);
         T(xc + 2, y - 9, cells[j], 6.5, true);
         black();
       } else if (!showBranch && j === 0 && p.estado === 'pendiente') {

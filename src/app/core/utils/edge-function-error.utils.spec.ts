@@ -39,6 +39,20 @@ describe('readEdgeFunctionError — fix-268-m', () => {
     expect(await readEdgeFunctionError(err)).toEqual({ status: 502, message: null });
   });
 
+  it('spec 0010-i: expone el code de negocio cuando la función lo envía', async () => {
+    const result = await readEdgeFunctionError(
+      functionsHttpError(409, {
+        error: 'El alumno tiene un saldo pendiente de $180.000.',
+        code: 'DEUDA_PENDIENTE',
+      }),
+    );
+    expect(result).toEqual({
+      status: 409,
+      message: 'El alumno tiene un saldo pendiente de $180.000.',
+      code: 'DEUDA_PENDIENTE',
+    });
+  });
+
   it('un error sin respuesta de la función (red caída, Error común, null) → null', async () => {
     expect(await readEdgeFunctionError(new Error('Failed to fetch'))).toBeNull();
     expect(await readEdgeFunctionError(null)).toBeNull();

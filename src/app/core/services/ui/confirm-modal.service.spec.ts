@@ -68,4 +68,44 @@ describe('ConfirmModalService', () => {
     expect(service.isOpen()).toBe(false);
     expect(service.config()).toBeNull();
   });
+
+  // ── spec 0010-i: confirmación con motivo obligatorio ──────────────────────
+  describe('confirmWithReason', () => {
+    const cfg = {
+      title: 'Alumno con deuda',
+      message: 'Debe $180.000',
+      reason: { label: 'Motivo', minLength: 5 },
+    };
+
+    it('abre con el campo de motivo vacío y no deja aceptar sin motivo suficiente', async () => {
+      const result = service.confirmWithReason(cfg);
+      expect(service.config()?.reason?.label).toBe('Motivo');
+      expect(service.reasonValid()).toBe(false);
+
+      service.setReason('abc');
+      service.accept(); // ignorado: motivo muy corto
+      expect(service.isOpen()).toBe(true);
+
+      service.setReason('  Paga el viernes  ');
+      expect(service.reasonValid()).toBe(true);
+      service.accept();
+      expect(await result).toBe('Paga el viernes');
+      expect(service.isOpen()).toBe(false);
+    });
+
+    it('cancelar resuelve null y limpia el motivo', async () => {
+      const result = service.confirmWithReason(cfg);
+      service.setReason('Paga el viernes');
+      service.cancel();
+      expect(await result).toBeNull();
+      expect(service.reason()).toBe('');
+    });
+
+    it('confirm() normal no exige motivo', async () => {
+      const result = service.confirm({ title: 'T', message: 'M' });
+      expect(service.reasonValid()).toBe(true);
+      service.accept();
+      expect(await result).toBe(true);
+    });
+  });
 });

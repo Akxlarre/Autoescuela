@@ -1,5 +1,6 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { chileRange } from '@core/utils/chile-time.utils';
+import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
@@ -330,6 +331,7 @@ export class ReportesContablesFacade {
     return this.supabase.client
       .from('payments')
       .select('total_amount, type, payment_date, enrollments!inner(branch_id, license_group)')
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', desde)
       .lte('payment_date', hasta);
   }

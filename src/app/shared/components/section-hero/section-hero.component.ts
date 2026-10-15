@@ -19,6 +19,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { getSparklinePoints } from '@core/utils/sparkline.utils';
+import { formatTrendMagnitude } from '@core/utils/kpi-trend.utils';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -1160,7 +1161,7 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   }
 
   getTrendDisplay(trend: number): string {
-    return String(Math.abs(trend));
+    return formatTrendMagnitude(trend);
   }
 
   getSparklineColor(kpi: SectionHeroKpi): string {

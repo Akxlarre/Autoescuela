@@ -789,7 +789,8 @@ export class PublicEnrollmentComponent {
       {
         value: 'partial',
         label: 'Abono inicial',
-        description: `Pagas el 50% ahora y agendas igualmente tus ${total} clases. El saldo lo completas cuando quieras desde tu portal o presencialmente.`,
+        // spec 0010-i (AC9): la clase 7 no se inicia sin el segundo pago.
+        description: `Pagas el 50% ahora y agendas igualmente tus ${total} clases. El saldo debe estar pagado antes de tu clase 7, desde tu portal o presencialmente.`,
         icon: 'wallet',
         price: halfPrice,
         priceLabel: formatCLP(halfPrice),

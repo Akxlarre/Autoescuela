@@ -87,6 +87,9 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
         [kpis]="heroKpis()"
         [loading]="kpisLoading()"
         [loadingKpiCount]="4"
+        class="transition-opacity"
+        [class.opacity-60]="facade.isRefreshing()"
+        [attr.aria-busy]="facade.isRefreshing()"
       />
 
       <!-- ── KPIs (2 filas × 4) ── -->
@@ -105,15 +108,30 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
         <div class="bento-banner flex flex-col gap-3">
           <!-- Filtro de período: vive acá porque el hero slim no proyecta contenido -->
           <div class="flex flex-wrap items-end justify-between gap-2">
-            <p class="micro-label m-0">Indicadores del período · Clase B</p>
+            <div class="flex items-center gap-3">
+              <p class="micro-label m-0">Indicadores del período · Clase B</p>
+              <!-- Recarga con datos a la vista: los números todavía son los anteriores (fix-427-m) -->
+              @if (facade.isRefreshing()) {
+                <span class="flex items-center gap-1.5 text-xs text-text-muted" role="status">
+                  <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                  Actualizando…
+                </span>
+              }
+            </div>
             <app-exec-period-filter
               [preset]="facade.preset()"
               [range]="facade.range()"
-              [today]="today"
+              [today]="today()"
+              (pointerdown)="refreshToday()"
+              (focusin)="refreshToday()"
               (rangeChange)="onRangeChange($event)"
             />
           </div>
-          <div class="exec-kpis">
+          <div
+            class="exec-kpis transition-opacity"
+            [class.opacity-60]="facade.isRefreshing()"
+            [attr.aria-busy]="facade.isRefreshing()"
+          >
             @for (card of financeCards(); track card.id; let first = $first) {
               <div class="exec-kpi" [pTooltip]="card.tooltip" tooltipPosition="bottom">
                 <app-kpi-card-variant
@@ -268,6 +286,11 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                       </button>
                     }
                   </div>
+                  @if (alertsProblem() && alerts().length) {
+                    <p class="m-0 mb-2 text-xs text-text-muted" role="status">
+                      {{ alertsProblem() }} Puede faltar alguna.
+                    </p>
+                  }
                   <ul class="m-0 p-0 list-none flex flex-col gap-1">
                     @for (alert of visibleAlerts(); track alert.id) {
                       <li
@@ -288,11 +311,22 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                       </li>
                     } @empty {
                       <li class="py-4">
-                        <app-empty-state
-                          icon="bell"
-                          message="Todo en orden"
-                          subtitle="No hay alertas importantes por revisar."
-                        />
+                        @if (alertsProblem(); as problem) {
+                          <app-empty-state
+                            icon="triangle-alert"
+                            [message]="problem"
+                            subtitle="No significa que no haya alertas. Vuelve a intentarlo."
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryAlerts()"
+                          />
+                        } @else {
+                          <app-empty-state
+                            icon="bell"
+                            message="Todo en orden"
+                            subtitle="No hay alertas importantes por revisar."
+                          />
+                        }
                       </li>
                     }
                   </ul>
@@ -314,7 +348,8 @@ export class DashboardComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
-  protected readonly today = chileTodayIso();
+  /** Hoy en Chile. Se vuelve a leer al tocar el filtro: la pantalla puede quedar abierta de un día para otro. */
+  protected readonly today = signal(chileTodayIso());
   protected readonly placeholderCards = [1, 2, 3, 4];
 
   protected readonly tabs: TabOption[] = [
@@ -334,7 +369,7 @@ export class DashboardComponent {
 
   protected readonly kpiCards = computed(() => {
     const kpis = this.facade.kpis();
-    return kpis ? buildExecKpiCards(kpis, this.facade.receivables()) : [];
+    return kpis ? buildExecKpiCards(kpis, this.facade.receivables(), this.facade.dataPreset()) : [];
   });
   /** Plata (ingresos, gastos, resultado, cartera) → tarjetas grandes. */
   protected readonly financeCards = computed(() => this.kpiCards().slice(0, 4));
@@ -353,6 +388,8 @@ export class DashboardComponent {
 
   protected readonly alerts = computed(() => this.alertsFacade.activeAlerts());
   protected readonly visibleAlerts = computed(() => this.alerts().slice(0, 5));
+  /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
+  protected readonly alertsProblem = computed(() => this.alertsFacade.loadProblem());
 
   constructor() {
     // Branch-scoped (facades.md §7): recarga al cambiar de sede. SWR dentro del Facade.
@@ -382,12 +419,20 @@ export class DashboardComponent {
     void this.facade.applyRange(change.range, change.preset);
   }
 
+  protected refreshToday(): void {
+    this.today.set(chileTodayIso());
+  }
+
   protected setTab(id: string): void {
     this.activeTab.set(id as ExecTab);
   }
 
   protected retry(): void {
     void this.facade.reload();
+  }
+
+  protected retryAlerts(): void {
+    void this.alertsFacade.initialize();
   }
 
   protected openAlerts(): void {
