@@ -444,6 +444,17 @@ describe('PagosFacade', () => {
       );
     });
 
+    // fix-052-i: el monto salía como "$50000".
+    it('fix-052-i: el aviso muestra el monto con separador de miles', async () => {
+      await facade.registrarNuevoPago(10, payload);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [77],
+        expect.objectContaining({ message: 'Se registró un pago de $50.000 en tu matrícula.' }),
+      );
+    });
+
     it('monto $0 no dispara notificación (AC-E1)', async () => {
       await facade.registrarNuevoPago(10, { ...payload, total_amount: 0 });
       await flushMicrotasks();
