@@ -201,14 +201,17 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
                             <app-icon name="external-link" [size]="14" />
                           </button>
                         }
-                        <button
-                          class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
-                          aria-label="Actualizar documento"
-                          data-llm-action="edit-vehicle-document"
-                          (click)="onEditDoc(doc)"
-                        >
-                          <app-icon name="pencil" [size]="14" />
-                        </button>
+                        <!-- spec 0051-b: cargar/renovar solo si puede operar el vehículo -->
+                        @if (canManage()) {
+                          <button
+                            class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                            aria-label="Actualizar documento"
+                            data-llm-action="edit-vehicle-document"
+                            (click)="onEditDoc(doc)"
+                          >
+                            <app-icon name="pencil" [size]="14" />
+                          </button>
+                        }
                       </div>
                     </div>
 
@@ -293,6 +296,10 @@ export class VehicleDocumentsDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
 
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
+  /** ¿Puede cargar o renovar documentos de este vehículo? (spec 0051-b) */
+  readonly canManage = computed(
+    () => this.flotaFacade.vehicles().find((v) => v.id === this.vehicleId())?.canManage ?? false,
+  );
   readonly documents = signal<
     { type: string; expiryDate: string; status: DocStatus; filePath: string | null }[]
   >([]);

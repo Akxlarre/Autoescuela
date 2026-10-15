@@ -16,6 +16,7 @@ import type {
   DocStatus,
 } from '@core/models/ui/vehicle-table.model';
 import { matchesVehicleSearch } from '@core/utils/vehicle-search.utils';
+import { canManageVehicle } from '@core/utils/vehicle-permissions.utils';
 import type { VehicleAgendaSlot } from '@core/models/ui/vehicle-detail.model';
 
 @Injectable({ providedIn: 'root' })
@@ -226,6 +227,10 @@ export class FlotaFacade {
       instructorId,
       branchId: v.branch_id ?? null,
       bothBranches: v.both_branches ?? false,
+      canManage: canManageVehicle(this.auth.currentUser(), {
+        branchId: v.branch_id ?? null,
+        bothBranches: v.both_branches ?? false,
+      }),
       documents: (v.vehicle_documents ?? []).map((d: any) => ({
         type: d.type ?? 'unknown',
         expiryDate: d.expiry_date ?? '',

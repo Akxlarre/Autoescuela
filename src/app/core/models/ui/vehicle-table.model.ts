@@ -29,6 +29,11 @@ export interface VehicleTableRow {
   instructorId: number | null;
   branchId: number | null;
   bothBranches: boolean;
+  /**
+   * ¿La persona con sesión puede operar este vehículo (editar la ficha, documentos y
+   * mantenimientos)? Lo calcula el facade con `canManageVehicle()` (spec 0051-b).
+   */
+  canManage: boolean;
   documents: VehicleDocSummary[];
   /** Suma de expenses.amount con category='combustible' del mes en curso (fix-007-i). 0 si no registra gastos. */
   combustibleMes: number;

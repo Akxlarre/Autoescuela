@@ -315,6 +315,8 @@ const SECRETARIA_NAV: NavGroup[] = [
     group: 'Recursos y Logística',
     items: [
       { label: 'Instructores', icon: 'user-check', routerLink: '/app/secretaria/instructores' },
+      // spec 0051-b: Flota para la secretaria, limitada a su sede.
+      { label: 'Flota', icon: 'truck', routerLink: '/app/secretaria/flota' },
       { label: 'DMS Documentos', icon: 'folder-open', routerLink: '/app/secretaria/documentos' },
       { label: 'Sitio Web', icon: 'globe', routerLink: '/app/secretaria/configuracion-web' },
     ],

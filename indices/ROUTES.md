@@ -88,6 +88,8 @@
 | `/app/secretaria/certificados` | `SecretariaCertificadosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/documentos` | `SecretariaDocumentosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/instructores` | `SecretariaInstructoresComponent` | — | `src/app/app.routes.ts` |
+| `/app/secretaria/flota` | `AdminFlotaComponent` | — | `src/app/app.routes.ts` |
+| `/app/secretaria/flota/:id/mantenimientos` | `VehicleMaintenancesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/observaciones` | `SecretariaObservacionesComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/relatores` | `SecretariaProfesionalRelatoresComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/promociones` | `SecretariaProfesionalPromocionesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
