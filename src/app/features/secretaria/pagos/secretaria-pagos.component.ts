@@ -27,6 +27,7 @@ import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -58,6 +59,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClearFiltersButtonComponent,
+    EmptyStateComponent,
     FormsModule,
     ChileDatePipe,
     DatePickerModule,
@@ -184,6 +186,18 @@ function toCompact(amount: number): { value: number; suffix: string } {
               <app-icon name="check-circle" [size]="32" color="var(--state-success)" />
               <p class="text-sm font-medium text-text-primary">¡Sin saldos pendientes!</p>
               <p class="text-xs text-text-muted">Todos los alumnos están al día con sus pagos.</p>
+            </div>
+          } @else if (sinResultadosPorFiltro()) {
+            <!-- fix-055-i: antes quedaban los encabezados sin filas y sin mensaje -->
+            <div class="flex-1 flex items-center justify-center px-6 py-10">
+              <app-empty-state
+                icon="filter-x"
+                message="Ningún alumno coincide con los filtros"
+                subtitle="Cambia las fechas o el curso, o limpia los filtros para ver todos los deudores."
+                actionLabel="Limpiar filtros"
+                actionIcon="x"
+                (action)="limpiarFiltros()"
+              />
             </div>
           } @else {
             <div
@@ -569,6 +583,11 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
     { label: 'Clase B', value: 'class_b' },
     { label: 'Profesional', value: 'professional' },
   ];
+
+  /** fix-055-i: hay deudores, pero los filtros no dejan ninguno (≠ "sin saldos pendientes"). */
+  protected readonly sinResultadosPorFiltro = computed(
+    () => this.facade.alumnosConDeuda().length > 0 && this.deudoresFiltrados().length === 0,
+  );
 
   protected readonly deudoresFiltrados = computed<AlumnoDeudor[]>(() => {
     const desde = this.filtroFechaDesde();

@@ -247,6 +247,19 @@ describe('SecretariaPagosComponent — filtros de deudores (fix-248-m)', () => {
     expect(ids).toEqual([1, 3]);
   });
 
+  // fix-055-i: con filtros sin resultados la lista quedaba con los encabezados y sin mensaje.
+  it('fix-055-i: con deudores, un filtro sin resultados activa el estado vacío y limpiar lo quita', () => {
+    setup();
+    expect((component as any).sinResultadosPorFiltro()).toBe(false);
+
+    (component as any).setFiltroCurso('singular');
+    expect((component as any).sinResultadosPorFiltro()).toBe(true);
+
+    (component as any).limpiarFiltros();
+    expect((component as any).sinResultadosPorFiltro()).toBe(false);
+    expect((component as any).deudoresFiltrados().length).toBe(3);
+  });
+
   it('cambiar un filtro vuelve a la página 1', () => {
     setup();
     (component as any).paginaDeudoresActual.set(2);
