@@ -43,6 +43,7 @@ import { RegistrarPagoDrawerComponent } from '../../admin/pagos/registrar-pago-d
 import { AdminPagoDetalleDrawerComponent } from '../../admin/pagos/admin-pago-detalle-drawer.component';
 import { PagosRecientesDrawerComponent } from '../../admin/pagos/pagos-recientes-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { describeMatriculaDeudor } from '@core/utils/deudor-label.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000)
@@ -204,6 +205,10 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   <div class="flex flex-col min-w-0">
                     <span class="item-title truncate" [title]="alumno.alumno">{{
                       alumno.alumno
+                    }}</span>
+                    <!-- fix-053-i: distingue dos matrículas con deuda del mismo alumno -->
+                    <span class="text-xs mt-0.5 text-text-muted truncate">{{
+                      describirMatricula(alumno)
                     }}</span>
                     <span class="text-xs lg:hidden mt-0.5 text-text-secondary"
                       >RUT: {{ alumno.rut }} · {{ fechaCorta(alumno.fechaMatricula) }}</span
@@ -490,6 +495,7 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   ]);
 
   protected readonly clp = formatCLP;
+  protected readonly describirMatricula = describeMatriculaDeudor;
 
   protected readonly ingresosHoyDisplay = computed(() => toCompact(this.facade.ingresosHoy()));
   protected readonly ingresosMesDisplay = computed(() => toCompact(this.facade.ingresosMes()));

@@ -163,6 +163,34 @@ describe('RegistrarPagoDrawerComponent', () => {
     expect((component as any).saldoExcedido).toBe(false);
   });
 
+  // fix-053-i: dos matrículas con deuda del mismo alumno salían como dos opciones idénticas.
+  it('fix-053-i: cada opción del selector distingue la matrícula (N°, curso, estado y saldo)', () => {
+    const base = { alumno: 'Juan Pérez', rut: '12.345.678-9', cursoNombre: 'Clase B' };
+    setup({
+      alumnosConDeuda: [
+        {
+          ...base,
+          enrollmentId: 1,
+          numeroMatricula: 'B-0088',
+          estadoMatricula: 'cancelled',
+          saldo: 60000,
+        },
+        {
+          ...base,
+          enrollmentId: 2,
+          numeroMatricula: 'B-0210',
+          estadoMatricula: 'active',
+          saldo: 180000,
+        },
+      ],
+    });
+
+    expect((component as any).enrollmentOptions().map((o: { label: string }) => o.label)).toEqual([
+      'Juan Pérez — 12.345.678-9 · N° B-0088 · Clase B · cancelada · saldo $60.000',
+      'Juan Pérez — 12.345.678-9 · N° B-0210 · Clase B · saldo $180.000',
+    ]);
+  });
+
   it('onSubmit() expone el error sanitizado si registrarNuevoPago rechaza (ej: insert bloqueado por RLS)', async () => {
     setup({ alumnosConDeuda: [] });
     facadeSpy.registrarNuevoPago.mockRejectedValue(new Error('insert failed'));
@@ -185,7 +213,8 @@ describe('RegistrarPagoDrawerComponent', () => {
     setup({ alumnosConDeuda: [] });
     const dbError = {
       code: 'P0001',
-      message: 'La caja del 27-08-2026 ya está cerrada: no se puede registrar un pago con esa fecha.',
+      message:
+        'La caja del 27-08-2026 ya está cerrada: no se puede registrar un pago con esa fecha.',
     };
     facadeSpy.registrarNuevoPago.mockRejectedValue(dbError);
 

@@ -302,7 +302,7 @@ export class PagosFacade {
     let q: any = this.supabase.client
       .from('enrollments')
       .select(
-        'id, base_price, discount, total_paid, pending_balance, created_at, branch_id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut)), courses!inner(type, name), branches!inner(name)',
+        'id, number, status, base_price, discount, total_paid, pending_balance, created_at, branch_id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut)), courses!inner(type, name), branches!inner(name)',
       )
       .gt('pending_balance', 0)
       .neq('status', 'draft')
@@ -330,6 +330,8 @@ export class PagosFacade {
         cursoTipo: row.courses?.type ?? null,
         cursoNombre: row.courses?.name ?? '—',
         fechaMatricula: row.created_at ?? null,
+        numeroMatricula: row.number ?? null,
+        estadoMatricula: row.status ?? null,
         sedeId: row.branch_id,
         sedeNombre: row.branches?.name ?? '—',
       })),
