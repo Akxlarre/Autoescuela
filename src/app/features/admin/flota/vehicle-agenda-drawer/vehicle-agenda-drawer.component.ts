@@ -119,12 +119,16 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   <app-icon name="calendar-x" [size]="32" />
                 </div>
                 <div class="space-y-1">
-                  <p class="font-bold text-text-primary">Sin datos</p>
+                  <p class="font-bold text-text-primary">Sin actividad hoy</p>
+                  <p class="text-sm text-text-muted">
+                    Este vehículo no tiene clases ni mantenimientos programados para hoy.
+                  </p>
                 </div>
               </div>
             } @else {
               <div class="space-y-3">
-                @for (slot of flotaFacade.vehicleAgenda(); track slot.hour) {
+                <!-- fix-221-b: track por posición — dos filas pueden compartir hora (mantenimientos) -->
+                @for (slot of flotaFacade.vehicleAgenda(); track $index) {
                   <div
                     class="group p-4 rounded-xl border bg-base hover:border-ds-brand hover:shadow-sm transition-all cursor-default"
                     [class.opacity-50]="slot.type === 'empty'"
@@ -141,7 +145,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                             <p class="item-title">
                               {{ slot.studentName }}
                             </p>
-                            <p class="text-2xs text-text-muted">Clase B #{{ slot.classNumber }}</p>
+                            <p class="text-2xs text-text-muted">
+                              Clase B #{{ slot.classNumber }} · hasta las {{ slot.endHour }}
+                            </p>
                           } @else if (slot.type === 'maintenance') {
                             <p class="text-sm font-bold text-warning">{{ slot.description }}</p>
                             <p class="text-2xs text-text-muted uppercase tracking-wider">
