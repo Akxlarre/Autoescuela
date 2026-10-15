@@ -1049,22 +1049,50 @@ const ingresoPago: IngresoRowFixture = {
 
 const writesTo = (calls: DbCall[], table: string) => calls.filter((c) => c.table === table);
 
-describe('CuadraturaFacade.eliminarIngreso — pago de matrícula (fix-044-i AC-1, AC-2, AC-6)', () => {
-  it('el admin borra solo el pago: no escribe saldos en enrollments (los recalcula el trigger)', async () => {
+describe('CuadraturaFacade.eliminarIngreso — pago de matrícula (fix-044-i, spec 0025-m)', () => {
+  it('el admin ANULA el pago con motivo: un UPDATE, nunca un DELETE, y no escribe saldos', async () => {
     const { facade, db, toast } = setupFix044();
 
-    const ok = await facade.eliminarIngreso(ingresoPago);
+    const ok = await facade.eliminarIngreso(ingresoPago, '  Monto mal digitado  ');
 
     expect(ok).toBe(true);
-    expect(writesTo(db.calls, 'payments')).toEqual([expect.objectContaining({ op: 'delete' })]);
+    expect(writesTo(db.calls, 'payments')).toEqual([
+      {
+        table: 'payments',
+        op: 'update',
+        args: [{ status: 'anulado', void_reason: 'Monto mal digitado' }],
+      },
+    ]);
     expect(writesTo(db.calls, 'enrollments')).toEqual([]);
     expect(toast.success).toHaveBeenCalled();
   });
 
-  it('si la RLS no deja borrar (0 filas, sin error) avisa error, no éxito', async () => {
-    const { facade, toast } = setupFix044({ 'payments:delete': { data: [], error: null } });
+  it.each(['', '   '])('sin motivo (%j) no escribe nada', async (motivo) => {
+    const { facade, db, toast } = setupFix044();
 
-    const ok = await facade.eliminarIngreso(ingresoPago);
+    const ok = await facade.eliminarIngreso(ingresoPago, motivo);
+
+    expect(ok).toBe(false);
+    expect(db.calls).toEqual([]);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('un pago ya anulado no se vuelve a anular', async () => {
+    const { facade, db } = setupFix044();
+
+    const ok = await facade.eliminarIngreso(
+      { ...ingresoPago, anulacion: { motivo: 'x', por: null, cuando: '—' } },
+      'otro motivo',
+    );
+
+    expect(ok).toBe(false);
+    expect(db.calls).toEqual([]);
+  });
+
+  it('si la RLS no deja anular (0 filas, sin error) avisa error, no éxito', async () => {
+    const { facade, toast } = setupFix044({ 'payments:update': { data: [], error: null } });
+
+    const ok = await facade.eliminarIngreso(ingresoPago, 'motivo');
 
     expect(ok).toBe(false);
     expect(toast.success).not.toHaveBeenCalled();
@@ -1073,24 +1101,83 @@ describe('CuadraturaFacade.eliminarIngreso — pago de matrícula (fix-044-i AC-
 
   it('día con caja cerrada: el aviso apunta a Historial de Cuadraturas', async () => {
     const { facade, toast } = setupFix044({
-      'payments:delete': { data: null, error: { code: 'P0001', message: 'CAJA_CERRADA' } },
+      'payments:update': { data: null, error: { code: 'P0001', message: 'CAJA_CERRADA' } },
     });
 
-    const ok = await facade.eliminarIngreso(ingresoPago);
+    const ok = await facade.eliminarIngreso(ingresoPago, 'motivo');
 
     expect(ok).toBe(false);
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.error.mock.calls[0].join(' ')).toContain('Historial de Cuadraturas');
   });
 
-  it('la secretaria no puede quitar un pago de matrícula: ni siquiera intenta escribir', async () => {
+  it('la BD rechaza por rol: aviso claro, sin mostrar el token', async () => {
+    const { facade, toast } = setupFix044({
+      'payments:update': { data: null, error: { code: 'P0001', message: 'ANULAR_SOLO_ADMIN' } },
+    });
+
+    const ok = await facade.eliminarIngreso(ingresoPago, 'motivo');
+
+    expect(ok).toBe(false);
+    expect(toast.error.mock.calls[0].join(' ')).toContain('Solo un administrador');
+  });
+
+  it('la secretaria no puede anular un pago de matrícula: ni siquiera intenta escribir', async () => {
     const { facade, db, toast } = setupFix044({}, 'secretary');
 
-    const ok = await facade.eliminarIngreso(ingresoPago);
+    const ok = await facade.eliminarIngreso(ingresoPago, 'motivo');
 
     expect(ok).toBe(false);
     expect(db.calls).toEqual([]);
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('los pagos anulados se listan pero no suman en totales ni en el cierre (AC2)', async () => {
+    const pago = {
+      id: 1,
+      type: 'enrollment',
+      total_amount: 50_000,
+      cash_amount: 50_000,
+      transfer_amount: 0,
+      card_amount: 0,
+      voucher_amount: 0,
+      status: 'paid',
+      requires_receipt: true,
+      created_at: '2026-10-13T15:00:00.000Z',
+    };
+    const { facade, db } = setupFix044({
+      'payments:select': {
+        data: [
+          pago,
+          {
+            ...pago,
+            id: 2,
+            total_amount: 90_000,
+            cash_amount: 90_000,
+            status: 'anulado',
+            void_reason: 'Duplicado',
+            voided_at: '2026-10-13T16:00:00.000Z',
+            anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    await facade.initialize();
+
+    expect(facade.pagosHoy()).toHaveLength(2);
+    expect(facade.pagosHoy()[1].anulacion).toEqual(
+      expect.objectContaining({ motivo: 'Duplicado', por: 'Ana Rojas' }),
+    );
+    expect(facade.totalIngresosHoy()).toBe(50_000);
+    expect(facade.ingresosEfectivoHoy()).toBe(50_000);
+
+    await facade.cerrarCaja();
+    const cierre = writesTo(db.calls, 'cash_closings').at(-1)?.args[0] as Record<string, unknown>;
+    expect(cierre['total_income']).toBe(50_000);
+    expect(cierre['cash_amount']).toBe(50_000);
+    expect(cierre['payments_count']).toBe(1);
   });
 
   it('puedeEliminarRestringidos es true para admin y false para secretaria', () => {

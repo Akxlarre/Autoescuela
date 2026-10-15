@@ -30,11 +30,20 @@ export function trendView(trend: number, suffix: string, invert = false): TrendV
 }
 
 /**
- * `14.7` → `+14.7%`; `-3` → `3%`. Los negativos van SIN signo a propósito: el ícono
+ * Magnitud de una variación, sin signo: `-97.14` → `97,1`; `15` → `15`. A lo más un decimal y
+ * con coma, que es el separador decimal en Chile (fix-400-m). Es el único lugar donde una
+ * tendencia de KPI pasa de número a texto: la usan `app-kpi-card-variant` y `app-section-hero`.
+ */
+export function formatTrendMagnitude(trend: number): string {
+  const abs = Math.abs(trend);
+  return (abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)).replace('.', ',');
+}
+
+/**
+ * `14.7` → `+14,7%`; `-3` → `3%`. Los negativos van SIN signo a propósito: el ícono
  * `trending-down` ya indica la dirección (comportamiento histórico del componente).
  */
 export function formatTrendDisplay(trend: number, suffix: string): string {
   const sign = trend >= 0 ? '+' : '';
-  const abs = Math.abs(trend);
-  return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}${suffix}`;
+  return `${sign}${formatTrendMagnitude(trend)}${suffix}`;
 }

@@ -17,6 +17,15 @@ export interface AlumnoDeudor {
   sedeNombre: string;
 }
 
+/** Datos de un pago anulado (spec 0025-m): se muestra tachado y no suma en ningún total. */
+export interface AnulacionPago {
+  motivo: string;
+  /** Nombre del admin que anuló; null si quien mira no puede leerlo. */
+  por: string | null;
+  /** Fecha y hora de Chile, lista para mostrar ("13/10/2026 23:30"). */
+  cuando: string;
+}
+
 /** UI model para una fila de la tabla Pagos Recientes. */
 export interface PagoReciente {
   id: number;
@@ -30,6 +39,8 @@ export interface PagoReciente {
   metodoIcono: string;
   nroDocumento: string | null;
   estado: string | null;
+  /** Presente solo si el pago fue anulado (spec 0025-m). */
+  anulacion: AnulacionPago | null;
 }
 
 /** UI model para la distribución de métodos de pago del mes actual. */
@@ -70,4 +81,6 @@ export interface EstadoCuentaHistorialItem {
   nroDocumento: string | null;
   monto: number;
   estado: string | null;
+  /** Presente solo si el pago fue anulado (spec 0025-m). */
+  anulacion: AnulacionPago | null;
 }

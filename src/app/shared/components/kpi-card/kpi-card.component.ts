@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { kpiDisplayValue } from '@core/utils/kpi-display-value.util';
+import { formatTrendDisplay, formatTrendMagnitude } from '@core/utils/kpi-trend.utils';
 import { IconComponent } from '../icon/icon.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
@@ -169,18 +170,13 @@ export class KpiCardComponent {
     (this.trend() ?? 0) >= 0 ? 'var(--state-success)' : 'var(--state-error)',
   );
 
-  protected readonly trendDisplay = computed(() => {
-    const t = this.trend() ?? 0;
-    const sign = t >= 0 ? '+' : '';
-    const abs = Math.abs(t);
-    return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}%`;
-  });
+  protected readonly trendDisplay = computed(() => formatTrendDisplay(this.trend() ?? 0, '%'));
 
   protected readonly trendAriaLabel = computed(() => {
     const t = this.trend();
     if (t === undefined) return null;
     const dir = t >= 0 ? 'incremento' : 'descenso';
-    return `${dir} de ${Math.abs(t).toFixed(1)}%${this.trendLabel() ? ' ' + this.trendLabel() : ''}`;
+    return `${dir} de ${formatTrendMagnitude(t)}%${this.trendLabel() ? ' ' + this.trendLabel() : ''}`;
   });
 
   // ── GSAP counter ──────────────────────────────────────────────────────────

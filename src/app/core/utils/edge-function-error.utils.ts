@@ -11,6 +11,8 @@ export interface EdgeFunctionError {
   status: number | null;
   /** Campo `error` del body, o null si el body no lo trae o no es JSON. */
   message: string | null;
+  /** Campo `code` del body (rechazo de negocio identificable, ej. `DEUDA_PENDIENTE`), si lo trae. */
+  code?: string;
 }
 
 /**
@@ -29,7 +31,12 @@ export async function readEdgeFunctionError(err: unknown): Promise<EdgeFunctionE
   try {
     const body: unknown = await response.json();
     const message = (body as { error?: unknown } | null)?.error;
-    return { status, message: typeof message === 'string' ? message : null };
+    const code = (body as { code?: unknown } | null)?.code;
+    return {
+      status,
+      message: typeof message === 'string' ? message : null,
+      ...(typeof code === 'string' ? { code } : {}),
+    };
   } catch {
     return { status, message: null };
   }

@@ -547,4 +547,31 @@ describe('AuthFacade — cuenta desactivada con la sesión abierta (fix-219-b)',
     expect(toast.error).not.toHaveBeenCalled();
     expect(supabaseSpy.signOut).not.toHaveBeenCalled();
   });
+
+  describe('le quitan el acceso a ambas sedes (fix-422-m)', () => {
+    const revocar = async () => {
+      service.setUser({ ...SECRETARIA, canAccessBothBranches: true });
+      profileRow = { ...profileRow, can_access_both_branches: false };
+      onUserRowChange!();
+      await vi.waitFor(() => expect(service.currentUser()?.canAccessBothBranches).toBe(false));
+    };
+
+    it('mirando "Todas", la sede elegida pasa a la propia (el signal cambia y las vistas recargan)', async () => {
+      const branches = TestBed.inject(BranchFacade);
+      branches.selectBranch(null);
+
+      await revocar();
+
+      expect(branches.selectedBranchId()).toBe(2);
+    });
+
+    it('mirando la otra sede, también vuelve a la propia', async () => {
+      const branches = TestBed.inject(BranchFacade);
+      branches.selectBranch(1);
+
+      await revocar();
+
+      expect(branches.selectedBranchId()).toBe(2);
+    });
+  });
 });

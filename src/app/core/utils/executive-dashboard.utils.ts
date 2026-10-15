@@ -340,9 +340,12 @@ export function mapReceivables(rows: ExecReceivablesRowDto[]): ReceivablesSummar
     monto: Number(r.monto) || 0,
     alumnos: Number(r.alumnos) || 0,
   }));
+  // Sumar los tramos cuenta 2 veces a un alumno con deuda en dos tramos: se usa el total de
+  // alumnos distintos de la RPC cuando viene (fix-428-m).
+  const total = rows[0]?.alumnos_total;
   return {
     total: buckets.reduce((s, b) => s + b.monto, 0),
-    alumnos: buckets.reduce((s, b) => s + b.alumnos, 0),
+    alumnos: total != null ? Number(total) : buckets.reduce((s, b) => s + b.alumnos, 0),
     buckets,
   };
 }
@@ -375,7 +378,17 @@ function yoyLabel(delta: ExecDelta): string {
   return delta.pct !== null ? 'vs año anterior' : 'Sin base el año anterior';
 }
 
-function withDeltas(kpi: ExecKpi) {
+function withDeltas(kpi: ExecKpi, preset: ExecPeriodPreset) {
+  // "Este año" se compara solo con el mismo tramo del año anterior: el período anterior apunta
+  // al mismo tramo (la misma línea dos veces) y en enero apuntaba a diciembre (fix-426-m).
+  if (preset === 'this_year') {
+    return {
+      trend: trendOf(kpi.deltaYoy),
+      trendLabel: yoyLabel(kpi.deltaYoy),
+      secondaryTrend: undefined,
+      secondaryTrendLabel: '',
+    };
+  }
   return {
     trend: trendOf(kpi.deltaPrev),
     trendLabel: prevLabel(kpi.deltaPrev),
@@ -396,6 +409,7 @@ function pctText(n: number): string {
 export function buildExecKpiCards(
   s: ExecKpiSummary,
   receivables: ReceivablesSummary | null,
+  preset: ExecPeriodPreset = 'this_month',
 ): ExecKpiCard[] {
   const res = s.resultado.value;
   const margin = s.margenPct === null ? 'sin ingresos' : pctText(s.margenPct);
@@ -415,7 +429,7 @@ export function buildExecKpiCards(
   return [
     {
       ...base,
-      ...withDeltas(s.ingresos),
+      ...withDeltas(s.ingresos, preset),
       id: 'ingresos',
       label: 'Ingresos Clase B',
       value: s.ingresos.value,
@@ -425,7 +439,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.gastos),
+      ...withDeltas(s.gastos, preset),
       id: 'gastos',
       label: 'Gastos',
       value: s.gastos.value,
@@ -439,7 +453,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.resultado),
+      ...withDeltas(s.resultado, preset),
       id: 'resultado',
       label: `Resultado · margen ${margin}`,
       value: Math.abs(res),
@@ -461,7 +475,7 @@ export function buildExecKpiCards(
     },
     {
       ...base,
-      ...withDeltas(s.nuevasMatriculas),
+      ...withDeltas(s.nuevasMatriculas, preset),
       id: 'matriculas',
       label: 'Nuevas matrículas',
       value: s.nuevasMatriculas.value,
@@ -492,6 +506,8 @@ export function buildExecKpiCards(
       label: 'Cancelación e inasistencia',
       value: s.tasaCancelacionPct ?? 0,
       suffix: '%',
+      // Sin clases no hay tasa: "0 %" se leería como un resultado perfecto (fix-425-m).
+      noData: s.tasaCancelacionPct === null,
       icon: 'circle-x',
       color: (s.tasaCancelacionPct ?? 0) >= 20 ? 'warning' : 'default',
       subValue:
@@ -513,13 +529,19 @@ export function toHeroKpi(card: ExecKpiCard): SectionHeroKpi {
   return {
     id: card.id,
     label: card.label,
-    value: card.value.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
-    prefix: card.prefix,
-    suffix: card.suffix,
+    value: card.noData ? '—' : card.value.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
+    prefix: card.noData ? '' : card.prefix,
+    suffix: card.noData ? '' : card.suffix,
     trend: card.trend,
     trendSuffix: '%',
-    trendLabel: card.trend !== undefined ? 'vs per. ant.' : undefined,
-    subValue: card.subValue || yoyText,
+    trendLabel:
+      card.trend === undefined
+        ? undefined
+        : card.trendLabel === 'vs año anterior'
+          ? 'vs año ant.'
+          : 'vs per. ant.',
+    // Sin segunda comparación ("Este año", fix-426-m) y sin base, el hero dice por qué no hay %.
+    subValue: card.subValue || yoyText || (card.trend === undefined ? card.trendLabel : ''),
     color: card.color,
   };
 }

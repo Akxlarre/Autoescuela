@@ -157,10 +157,23 @@ import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-bu
                     <span class="truncate"
                       >{{ fechaCorta(pago.fecha) }} · {{ pago.concepto ?? '—' }}</span
                     >
-                    <span class="font-semibold text-text-primary shrink-0">{{
-                      clp(pago.monto)
-                    }}</span>
+                    <span
+                      class="font-semibold shrink-0"
+                      [class.text-text-primary]="!pago.anulacion"
+                      [class.line-through]="!!pago.anulacion"
+                      >{{ clp(pago.monto) }}</span
+                    >
                   </div>
+                  <!-- Pago anulado (spec 0025-m): se lista tachado y no suma en los indicadores. -->
+                  @if (pago.anulacion; as anulacion) {
+                    <p
+                      class="text-xs text-text-muted"
+                      data-llm-description="voided payment: reason, who voided it and when"
+                    >
+                      {{ anulacion.motivo }} · {{ anulacion.por ?? 'Administrador' }} ·
+                      {{ anulacion.cuando }}
+                    </p>
+                  }
                   <div class="flex items-center gap-1.5 text-xs text-text-secondary">
                     <app-icon [name]="pago.metodoIcono" [size]="12" />
                     {{ pago.metodo }}
@@ -203,6 +216,7 @@ export class PagosRecientesDrawerComponent {
     [
       { label: 'Completado', value: 'completado' },
       { label: 'Pendiente', value: 'pendiente' },
+      { label: 'Anulado', value: 'anulado' },
     ],
     'Todos los estados',
   );
@@ -276,6 +290,8 @@ export class PagosRecientesDrawerComponent {
         return 'Completado';
       case 'pendiente':
         return 'Pendiente';
+      case 'anulado':
+        return 'Anulado';
       default:
         return estado ? 'Pendiente' : '—';
     }

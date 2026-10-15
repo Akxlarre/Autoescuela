@@ -80,6 +80,8 @@ Deno.serve(async (req: Request) => {
       .from('payments')
       .select('id, payment_date, type, total_amount, cash_amount, transfer_amount, card_amount')
       .eq('enrollment_id', enrollment_id)
+      // spec 0025-m: la ficha impresa no lista los pagos anulados.
+      .neq('status', 'anulado')
       .order('payment_date', { ascending: true });
 
     const licenseGroup: string = enrollment.license_group;

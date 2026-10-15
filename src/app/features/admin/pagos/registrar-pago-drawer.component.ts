@@ -182,7 +182,12 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             }
 
             <!-- ── MODO CONTEXTUAL: info del alumno preseleccionado ───────────── -->
-            @if (facade.enrollmentSeleccionado() !== null && facade.estadoCuentaResumen(); as ctx) {
+            @if (
+              facade.enrollmentSeleccionado() !== null &&
+                facade.estadoCuentaResumen()?.enrollmentId === facade.enrollmentSeleccionado() &&
+                facade.estadoCuentaResumen();
+              as ctx
+            ) {
               <div class="alumno-info-card" appAnimateIn>
                 <div class="flex flex-col gap-0.5">
                   <span class="text-xs font-semibold uppercase tracking-wide text-brand">
