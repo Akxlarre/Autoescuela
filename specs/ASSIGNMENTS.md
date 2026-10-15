@@ -83,7 +83,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
-| ASG-i-028 | Testing: Pagos, abonos y descuentos | `i` | fix | P0 | i | E2E · Alta |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-030 | Testing: Dashboards | `m` | fix | P1 | i | Integración · Media · correr al final |
 | ASG-i-031 | Testing: Servicios especiales | `m` | fix | P2 | i | Funcional · Baja |
@@ -439,6 +438,7 @@
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-13 |
 | ASG-i-059 | Anular pagos en vez de borrarlos | [0025-m-anular-pagos-en-vez-de-borrarlos](specs/0025-m-anular-pagos-en-vez-de-borrarlos/spec.md) | 2026-10-13 |
 | ASG-m-010 | El correo al alumno menciona el portal, que está deshabilitado en el piloto | [fix-393-m-no-invitar-alumno-durante-piloto](fixes/fix-393-m-no-invitar-alumno-durante-piloto/fix.md) | 2026-10-13 |
+| ASG-i-028 | Testing: Pagos, abonos y descuentos | [fix-048-i-testing-pagos-y-descuentos](fixes/fix-048-i-testing-pagos-y-descuentos/fix.md) | 2026-10-14 |
 <!-- AUTO-GENERATED:END -->
 
 ---
