@@ -14,6 +14,7 @@ import type {
   PagoReciente,
 } from '@core/models/ui/pagos.model';
 import { chileToday, endOfMonthIso, startOfMonthIso } from '@core/utils/chile-time.utils';
+import { formatCLP } from '@core/utils/date.utils';
 import { roundPercentagesTo100 } from '@core/utils/percentage.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
@@ -458,7 +459,7 @@ export class PagosFacade {
         this.notifications
           .notifyUsers([userId], {
             subject: 'Pago registrado',
-            message: `Se registró un pago de $${amount} en tu matrícula.`,
+            message: `Se registró un pago de ${formatCLP(amount)} en tu matrícula.`,
             referenceType: 'payment',
           })
           .catch(() => this.toast.warning('No se pudo notificar al alumno'));

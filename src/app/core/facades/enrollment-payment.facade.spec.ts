@@ -379,6 +379,32 @@ describe('EnrollmentPaymentFacade', () => {
         expect(builder.update).not.toHaveBeenCalled();
       });
 
+      // fix-052-i: "Cobrar después" deja el pago 'pending'; el alumno no pagó nada.
+      it('fix-052-i: con "Cobrar después" no avisa al alumno', async () => {
+        facade.setPaymentMethod('pendiente');
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
+      it('fix-052-i: el aviso muestra el monto con separador de miles', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+          [55],
+          expect.objectContaining({ message: 'Se registró un pago de $300.000 en tu matrícula.' }),
+        );
+      });
+
       it('fix-050-i: si la RPC falla, devuelve false con el error y no notifica', async () => {
         mockSupabase.client.rpc = vi
           .fn()

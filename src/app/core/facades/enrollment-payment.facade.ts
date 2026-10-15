@@ -1,5 +1,5 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
-import { todayIso } from '@core/utils/date.utils';
+import { formatCLP, todayIso } from '@core/utils/date.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -251,7 +251,8 @@ export class EnrollmentPaymentFacade {
         return false;
       }
 
-      this.notifyPaymentRegistered(enrollmentId, total);
+      // fix-052-i: "Cobrar después" deja el pago 'pending' — el alumno no pagó nada todavía.
+      if (method !== 'pendiente') this.notifyPaymentRegistered(enrollmentId, total);
 
       return true;
     } catch {
@@ -276,7 +277,7 @@ export class EnrollmentPaymentFacade {
         this.notifications
           .notifyUsers([userId], {
             subject: 'Pago registrado',
-            message: `Se registró un pago de $${amount} en tu matrícula.`,
+            message: `Se registró un pago de ${formatCLP(amount)} en tu matrícula.`,
             referenceType: 'payment',
           })
           .catch(() => this.toast.warning('No se pudo notificar al alumno'));
