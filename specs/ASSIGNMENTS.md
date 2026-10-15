@@ -22,6 +22,7 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
+| ASG-i-063 | Cerrar una matrícula y reiniciar el curso (Clase B) | `cualquiera` | spec | P1 | i | **Decisión de negocio primero.** Cerrar con motivo; deuda: perdonar o mantener; ¿también la secretaria? (el admin es el dueño y no siempre está) |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
