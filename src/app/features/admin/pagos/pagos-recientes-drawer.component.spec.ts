@@ -75,6 +75,15 @@ describe('PagosRecientesDrawerComponent — filtros', () => {
     expect((component as any).pagosFiltrados().map((p: PagoReciente) => p.id)).toEqual([1]);
   });
 
+  // fix-054-i: "perez" no encontraba "Pérez" ni "munoz" a "Muñoz".
+  it('fix-054-i: el buscador ignora tildes y ñ', () => {
+    (component as any).onSearch({ target: { value: 'perez' } } as unknown as Event);
+    expect((component as any).pagosFiltrados().map((p: PagoReciente) => p.id)).toEqual([1]);
+
+    (component as any).onSearch({ target: { value: 'lopez maria' } } as unknown as Event);
+    expect((component as any).pagosFiltrados().map((p: PagoReciente) => p.id)).toEqual([2]);
+  });
+
   it('el buscador filtra por N° de documento', () => {
     (component as any).onSearch({ target: { value: 'b-101' } } as unknown as Event);
     expect((component as any).pagosFiltrados().map((p: PagoReciente) => p.id)).toEqual([2]);
@@ -107,8 +116,14 @@ describe('PagosRecientesDrawerComponent — filtros', () => {
   });
 
   it('los selectores abren con su opción "todos" = null (spec 0022-m)', () => {
-    expect((component as any).estadoOptions[0]).toEqual({ label: 'Todos los estados', value: null });
-    expect((component as any).metodoOptions[0]).toEqual({ label: 'Todos los métodos', value: null });
+    expect((component as any).estadoOptions[0]).toEqual({
+      label: 'Todos los estados',
+      value: null,
+    });
+    expect((component as any).metodoOptions[0]).toEqual({
+      label: 'Todos los métodos',
+      value: null,
+    });
   });
 
   it('"Limpiar filtros" aparece con un filtro o búsqueda y deja la lista completa (spec 0022-m)', () => {
