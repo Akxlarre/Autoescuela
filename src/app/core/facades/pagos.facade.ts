@@ -119,6 +119,8 @@ export class PagosFacade {
    * deudores de B.
    */
   private readonly pagosGuard = createRequestGuard();
+  /** fix-049-i: una carga del Estado de Cuenta de un alumno anterior no pisa la del actual. */
+  private readonly estadoCuentaGuard = createRequestGuard();
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
   readonly ingresosHoy = this._ingresosHoy.asReadonly();
@@ -479,8 +481,17 @@ export class PagosFacade {
     return student?.user_id ?? null;
   }
 
+  /**
+   * Fija la matrícula del Estado de Cuenta y carga sus datos (fix-049-i). Antes solo cambiaba la
+   * selección y la carga quedaba en el `ngOnInit()` del drawer: con el drawer ya abierto, "Ver
+   * detalle" de otro alumno no lo re-crea, así que la pantalla seguía con el alumno anterior
+   * mientras "Registrar Pago" guardaba en el nuevo.
+   */
   seleccionarEnrollment(enrollmentId: number): void {
     this._enrollmentSeleccionado.set(enrollmentId);
+    this._estadoCuentaResumen.set(null);
+    this._estadoCuentaHistorial.set([]);
+    void this.cargarEstadoCuenta(enrollmentId);
   }
 
   seleccionarParaPago(enrollmentId: number | null): void {
@@ -493,18 +504,20 @@ export class PagosFacade {
   }
 
   async cargarEstadoCuenta(enrollmentId: number): Promise<void> {
+    // fix-049-i: si se elige otro alumno antes de que esta carga termine, su respuesta se descarta.
+    const token = this.estadoCuentaGuard.next();
     this._isLoadingDetalle.set(true);
     try {
       await Promise.all([
-        this.fetchEstadoCuentaResumen(enrollmentId),
-        this.fetchEstadoCuentaHistorial(enrollmentId),
+        this.fetchEstadoCuentaResumen(enrollmentId, token),
+        this.fetchEstadoCuentaHistorial(enrollmentId, token),
       ]);
     } finally {
-      this._isLoadingDetalle.set(false);
+      if (this.estadoCuentaGuard.isCurrent(token)) this._isLoadingDetalle.set(false);
     }
   }
 
-  private async fetchEstadoCuentaResumen(enrollmentId: number): Promise<void> {
+  private async fetchEstadoCuentaResumen(enrollmentId: number, token: number): Promise<void> {
     const { data } = await this.supabase.client
       .from('enrollments')
       .select(
@@ -512,7 +525,7 @@ export class PagosFacade {
       )
       .eq('id', enrollmentId)
       .maybeSingle();
-    if (!data) return;
+    if (!data || !this.estadoCuentaGuard.isCurrent(token)) return;
     const user = (data as any).students?.users;
     this._estadoCuentaResumen.set({
       enrollmentId: data.id,
@@ -534,7 +547,7 @@ export class PagosFacade {
     });
   }
 
-  private async fetchEstadoCuentaHistorial(enrollmentId: number): Promise<void> {
+  private async fetchEstadoCuentaHistorial(enrollmentId: number, token: number): Promise<void> {
     // payments-all-statuses: historial del estado de cuenta; los anulados se muestran tachados.
     const { data } = await this.supabase.client
       .from('payments')
@@ -543,6 +556,7 @@ export class PagosFacade {
       )
       .eq('enrollment_id', enrollmentId)
       .order('created_at', { ascending: false });
+    if (!this.estadoCuentaGuard.isCurrent(token)) return;
     this._estadoCuentaHistorial.set(
       (data ?? []).map((row: any) => {
         const { metodo, icono } = resolveMetodo(row);

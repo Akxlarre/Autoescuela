@@ -324,7 +324,9 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
 
   ngOnInit(): void {
     const eid = this.facade.enrollmentSeleccionado();
-    if (eid !== null) {
+    // fix-049-i: seleccionarEnrollment() ya dispara la carga; solo se recarga si no hay nada en curso.
+    const yaCargado = this.facade.estadoCuentaResumen()?.enrollmentId === eid;
+    if (eid !== null && !this.facade.isLoadingDetalle() && !yaCargado) {
       this.facade.cargarEstadoCuenta(eid);
     }
   }
