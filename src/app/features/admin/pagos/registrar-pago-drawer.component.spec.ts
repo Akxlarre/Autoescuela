@@ -178,4 +178,22 @@ describe('RegistrarPagoDrawerComponent', () => {
     expect((component as any).saveError()).toBe('Error sanitizado');
     expect(layoutDrawerSpy.back).not.toHaveBeenCalled();
   });
+
+  // fix-051-i: supabase-js entrega el error como objeto plano (no `instanceof Error`); antes
+  // caía en "Error al guardar" y tapaba el aviso de la BD (ej. caja cerrada).
+  it('fix-051-i: un error de Supabase (objeto plano) también pasa por el sanitizador', async () => {
+    setup({ alumnosConDeuda: [] });
+    const dbError = {
+      code: 'P0001',
+      message: 'La caja del 27-08-2026 ya está cerrada: no se puede registrar un pago con esa fecha.',
+    };
+    facadeSpy.registrarNuevoPago.mockRejectedValue(dbError);
+
+    (component as any).form.patchValue({ type: 'Abono', total_amount: 1000, cash_amount: 1000 });
+
+    await (component as any).onSubmit();
+
+    expect(sanitizerSpy.sanitize).toHaveBeenCalledWith(dbError);
+    expect((component as any).saveError()).toBe('Error sanitizado');
+  });
 });

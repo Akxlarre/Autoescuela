@@ -746,11 +746,9 @@ export class RegistrarPagoDrawerComponent {
       this.saved.emit();
       this.layoutDrawer.back();
     } catch (err) {
-      this.saveError.set(
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al guardar. Intenta de nuevo.',
-      );
+      // fix-051-i: supabase-js entrega el error como objeto plano, no como Error. El sanitizador
+      // ya traduce ambos (y deja pasar los avisos P0001 de la BD, como "caja cerrada").
+      this.saveError.set(this.sanitizer.sanitize(err).message);
     } finally {
       this.isSaving.set(false);
     }
