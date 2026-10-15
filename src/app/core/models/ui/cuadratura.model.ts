@@ -1,3 +1,5 @@
+import type { AnulacionPago } from './pagos.model';
+
 /** Fila de ingreso (payment o cobro de curso singular) para la cuadratura diaria. */
 export interface IngresoRow {
   id: number;
@@ -21,6 +23,11 @@ export interface IngresoRow {
   /** card_amount del pago */
   otros: number;
   total: number;
+  /**
+   * Presente solo si el pago fue anulado (spec 0025-m): la fila se muestra tachada y no suma en
+   * los totales, el arqueo, el cierre ni la exportación.
+   */
+  anulacion?: AnulacionPago | null;
 }
 
 /** Fila de egreso (expense o instructor_advance) para la cuadratura. */

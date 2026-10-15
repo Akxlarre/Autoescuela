@@ -1,9 +1,10 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { SecretariaDashboardComponent } from './secretaria-dashboard.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
@@ -14,6 +15,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
 describe('SecretariaDashboardComponent', () => {
   let component: SecretariaDashboardComponent;
+  let fixture: ComponentFixture<SecretariaDashboardComponent>;
+  let branchSig: ReturnType<typeof signal<number | null>>;
   let pagosFacadeSpy: any;
   let cuadraturaFacadeSpy: any;
   let layoutDrawerSpy: any;
@@ -43,6 +46,7 @@ describe('SecretariaDashboardComponent', () => {
     cuadraturaFacadeSpy = { egresoTipoPreset: signal<string | null>(null) };
     layoutDrawerSpy = { close: vi.fn(), open: vi.fn(), isOpen: signal(false) };
     tierSig = signal<'mobile' | 'tablet' | 'desktop'>('desktop');
+    branchSig = signal<number | null>(null);
 
     TestBed.configureTestingModule({
       imports: [SecretariaDashboardComponent],
@@ -58,19 +62,26 @@ describe('SecretariaDashboardComponent', () => {
               quickActions: [],
               liveClasses: [],
             }),
+            error: signal<string | null>(null),
             initialize: vi.fn(),
+            destroyRealtime: vi.fn(),
+            // Distinto de 0: el dashboard ya recibió eventos antes de montarse (re-entrada).
+            liveUpdates: signal(3),
           },
         },
         {
           provide: DashboardAlertsFacade,
           useValue: {
             initialize: vi.fn(),
+            refreshSilently: vi.fn(),
             activeAlerts: signal(Array.from({ length: 5 }, (_, i) => buildAlert(i + 1))),
             alertCount: signal(5),
+            loadProblem: signal<string | null>(null),
             dismissAlert: vi.fn(),
           },
         },
         { provide: AuthFacade, useValue: { currentUser: signal(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: branchSig } },
         { provide: LayoutDrawerFacadeService, useValue: layoutDrawerSpy },
         { provide: LayoutService, useValue: { tier: tierSig } },
         { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
@@ -81,7 +92,147 @@ describe('SecretariaDashboardComponent', () => {
       ],
     });
 
-    component = TestBed.createComponent(SecretariaDashboardComponent).componentInstance;
+    // Plantilla vacía: los tests miran decisiones del componente, no su render (y Vitest no
+    // compila los inputs de señal de los hijos — ver vitest.config.ts).
+    TestBed.overrideComponent(SecretariaDashboardComponent, { set: { template: '', imports: [] } });
+    fixture = TestBed.createComponent(SecretariaDashboardComponent);
+    component = fixture.componentInstance;
+  });
+
+  // ─── fix-412-m: el chip rojo cuenta solo lo urgente ────────────────────────
+  describe('chip de alertas urgentes (fix-412-m)', () => {
+    const conAlertas = (severidades: string[]) => {
+      (TestBed.inject(DashboardFacade) as any).data.update((d: object) => ({
+        ...d,
+        hero: { userName: 'Test', date: '', classesToday: 0 },
+      }));
+      (TestBed.inject(DashboardAlertsFacade) as any).activeAlerts.set(
+        severidades.map((severity, i) => ({ ...buildAlert(i + 1), severity })),
+      );
+    };
+    const chipUrgente = () =>
+      component.heroChips().find((chip) => chip.style === 'error')?.label ?? null;
+
+    it('cuenta solo las alertas de error y de advertencia', () => {
+      conAlertas(['error', 'warning', 'warning', 'success', 'info']);
+
+      expect(chipUrgente()).toBe('3 alertas urgentes');
+    });
+
+    it('con una sola, va en singular', () => {
+      conAlertas(['error', 'success']);
+
+      expect(chipUrgente()).toBe('1 alerta urgente');
+    });
+
+    it('sin alertas urgentes no hay chip', () => {
+      conAlertas(['success', 'info']);
+
+      expect(chipUrgente()).toBeNull();
+    });
+  });
+
+  // ─── fix-405-m: una carga fallida se avisa, no se muestra como ceros ───────
+  describe('error de carga (fix-405-m)', () => {
+    const dashboard = () => TestBed.inject(DashboardFacade) as any;
+    const alerts = () => TestBed.inject(DashboardAlertsFacade) as any;
+
+    it('sin datos y con error: loadError trae el mensaje', () => {
+      dashboard().data.set(null);
+      dashboard().error.set('Error al cargar datos del dashboard');
+
+      expect(component.loadError()).toBe('Error al cargar datos del dashboard');
+    });
+
+    it('mientras carga no se muestra el error', () => {
+      dashboard().data.set(null);
+      dashboard().error.set('Error al cargar datos del dashboard');
+      dashboard().loading.set(true);
+
+      expect(component.loadError()).toBeNull();
+    });
+
+    it('con datos ya cargados, un error posterior no reemplaza la pantalla', () => {
+      dashboard().error.set('Error al cargar datos del dashboard');
+
+      expect(component.loadError()).toBeNull();
+    });
+
+    it('"Reintentar" vuelve a cargar el dashboard y las alertas', () => {
+      component.retry();
+
+      expect(dashboard().initialize).toHaveBeenCalledTimes(1);
+      expect(alerts().initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('alertsProblem refleja el aviso del facade de alertas', () => {
+      expect(component.alertsProblem()).toBeNull();
+
+      alerts().loadProblem.set('No se pudieron revisar las alertas.');
+
+      expect(component.alertsProblem()).toBe('No se pudieron revisar las alertas.');
+    });
+  });
+
+  // ─── fix-403-m: sigue a la sede seleccionada y libera el canal Realtime ────
+  describe('ciclo de vida (fix-403-m)', () => {
+    const dashboard = () => TestBed.inject(DashboardFacade) as any;
+    const alerts = () => TestBed.inject(DashboardAlertsFacade) as any;
+
+    it('al entrar carga una sola vez el dashboard y las alertas', () => {
+      fixture.detectChanges();
+
+      expect(dashboard().initialize).toHaveBeenCalledTimes(1);
+      expect(alerts().initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('recarga los dos cuando cambia la sede seleccionada', () => {
+      fixture.detectChanges();
+
+      branchSig.set(2);
+      fixture.detectChanges();
+
+      expect(dashboard().initialize).toHaveBeenCalledTimes(2);
+      expect(alerts().initialize).toHaveBeenCalledTimes(2);
+    });
+
+    it('no recarga por cambios que no son de sede (p. ej. termina de cargar)', () => {
+      fixture.detectChanges();
+
+      dashboard().loading.set(true);
+      fixture.detectChanges();
+      dashboard().loading.set(false);
+      fixture.detectChanges();
+
+      expect(dashboard().initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('al salir de la pantalla cierra el canal Realtime del dashboard', () => {
+      fixture.detectChanges();
+      expect(dashboard().destroyRealtime).not.toHaveBeenCalled();
+
+      fixture.destroy();
+
+      expect(dashboard().destroyRealtime).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── fix-399-m: los KPIs del hero llevan separador de miles ────────────────
+  describe('heroKpis (fix-399-m)', () => {
+    it('formatea el valor con separador de miles: $1234567 se lee $1.234.567', () => {
+      const facade = TestBed.inject(DashboardFacade) as any;
+      facade.data.update((d: object) => ({
+        ...d,
+        kpis: [
+          { id: 'revenue', label: 'Ingresos Mes', value: 1_234_567, prefix: '$' },
+          { id: 'classes', label: 'Clases Hoy', value: 0 },
+        ],
+      }));
+
+      const [revenue, classes] = component.heroKpis();
+      expect(`${revenue.prefix}${revenue.value}${revenue.suffix ?? ''}`).toBe('$1.234.567');
+      expect(classes.value).toBe('0');
+    });
   });
 
   // ─── fix-080: Registrar Pago abre el drawer real (no navega a /pagos) ──────
@@ -164,6 +315,29 @@ describe('SecretariaDashboardComponent', () => {
       (layoutDrawerSpy.isOpen as ReturnType<typeof signal>).set(true);
 
       expect((component as any).isDrawerOpen()).toBe(true);
+    });
+  });
+
+  // ─── fix-420-m: las alertas siguen los cambios en vivo del dashboard ────────
+  describe('alertas en vivo (fix-420-m)', () => {
+    const alertas = () => TestBed.inject(DashboardAlertsFacade) as any;
+    const dashboard = () => TestBed.inject(DashboardFacade) as any;
+
+    it('al montarse no refresca las alertas por el valor que ya traía el contador', () => {
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).not.toHaveBeenCalled();
+    });
+
+    it('cada recarga por un evento en vivo refresca las alertas en silencio', () => {
+      fixture.detectChanges();
+
+      dashboard().liveUpdates.set(4);
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).toHaveBeenCalledTimes(1);
+
+      dashboard().liveUpdates.set(5);
+      fixture.detectChanges();
+      expect(alertas().refreshSilently).toHaveBeenCalledTimes(2);
     });
   });
 });

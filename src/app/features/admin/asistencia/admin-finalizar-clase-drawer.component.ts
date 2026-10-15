@@ -12,6 +12,7 @@ import { kmWarning } from '@core/utils/odometer.utils';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { StaleSessionError } from '@core/utils/class-b-session.utils';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -306,7 +307,13 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
       await this.facade.finishClass(payload);
       void this.dashboardFacade.refreshLiveClassesOnly();
       this.layoutDrawer.close();
-    } catch {
+    } catch (err) {
+      // fix-388-m: la clase ya no estaba en curso (otra persona la cerró o canceló su inicio).
+      if (err instanceof StaleSessionError) {
+        void this.dashboardFacade.refreshLiveClassesOnly();
+        this.error.set(err.message);
+        return;
+      }
       this.error.set('No se pudo finalizar la clase. Intenta de nuevo.');
     } finally {
       this.isSubmitting.set(false);

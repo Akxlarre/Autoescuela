@@ -60,6 +60,10 @@ export class ExecutiveDashboardFacade {
     resolvePresetRange('this_month', chileTodayIso()),
   );
   private readonly _isLoading = signal(false);
+  /** Recarga en curso con datos ya visibles (fix-427-m). */
+  private readonly _isRefreshing = signal(false);
+  /** Preset de los datos que se están mostrando, no del recién elegido (fix-427-m). */
+  private readonly _dataPreset = signal<ExecPeriodPreset>('this_month');
   private readonly _kpis = signal<ExecKpiSummary | null>(null);
   private readonly _kpisRaw = signal<ExecKpisDto | null>(null);
   private readonly _series = signal<ExecMonthlySeries | null>(null);
@@ -78,6 +82,8 @@ export class ExecutiveDashboardFacade {
   public readonly preset = this._preset.asReadonly();
   public readonly range = this._range.asReadonly();
   public readonly isLoading = this._isLoading.asReadonly();
+  public readonly isRefreshing = this._isRefreshing.asReadonly();
+  public readonly dataPreset = this._dataPreset.asReadonly();
   public readonly kpis = this._kpis.asReadonly();
   public readonly series = this._series.asReadonly();
   public readonly instructorHours = this._instructorHours.asReadonly();
@@ -158,6 +164,18 @@ export class ExecutiveDashboardFacade {
 
   private async fetchAll(): Promise<void> {
     const token = this.fetchGuard.next();
+    // Con datos a la vista no hay skeleton (AC23): sin esto, al cambiar de sede se veían los
+    // números anteriores sin ninguna señal de que venían otros (fix-427-m).
+    if (this.hasData()) this._isRefreshing.set(true);
+    try {
+      await this.fetchAndApply(token);
+    } finally {
+      // Solo la carga vigente apaga el indicador: una vieja que termina después no.
+      if (this.fetchGuard.isCurrent(token)) this._isRefreshing.set(false);
+    }
+  }
+
+  private async fetchAndApply(token: number): Promise<void> {
     // Un preset ("Este mes", …) se re-resuelve contra hoy en cada carga: el Facade es singleton
     // y la app puede quedar abierta al cambiar de mes (fix-175-b). Los rangos custom no se tocan.
     const preset = this._preset();
@@ -170,6 +188,7 @@ export class ExecutiveDashboardFacade {
     if (!this.fetchGuard.isCurrent(token)) return;
 
     this.applyResults(results, seriesYear, seriesCurrentMonth(seriesYear, chileTodayIso()));
+    this._dataPreset.set(preset);
   }
 
   /** Dispara las 7 RPC en paralelo; cada una puede fallar sola (AC-E2). */

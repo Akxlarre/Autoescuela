@@ -8,6 +8,13 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { mapConcepto } from '@core/utils/payment-concept.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import {
+  mapAnulacionPago,
+  PAYMENT_ANULACION_SELECT,
+  PAYMENT_STATUS_ANULADO,
+  PAYMENT_STATUSES_QUE_SUMAN,
+  type PaymentAnulacionRow,
+} from '@core/utils/payment-status.utils';
 import type {
   IngresoRow,
   EgresoRow,
@@ -38,7 +45,7 @@ function buildPaymentGlosa(
 }
 
 export function mapPaymentToIngreso(
-  p: Payment & { enrollments?: PaymentEnrollmentInfo | null },
+  p: Payment & { enrollments?: PaymentEnrollmentInfo | null } & PaymentAnulacionRow,
 ): IngresoRow {
   return {
     id: p.id,
@@ -51,6 +58,7 @@ export function mapPaymentToIngreso(
     sence: p.voucher_amount ?? 0,
     otros: p.card_amount ?? 0,
     total: p.total_amount ?? 0,
+    anulacion: mapAnulacionPago(p),
   };
 }
 
@@ -217,13 +225,21 @@ export class CuadraturaFacade {
    */
   readonly puedeEliminarRestringidos = computed(() => this.auth.currentUser()?.role === 'admin');
 
+  /**
+   * Ingresos que cuentan: `pagosHoy` incluye los pagos anulados para mostrarlos tachados, pero
+   * ningún total, ni el arqueo ni el cierre los suman (spec 0025-m).
+   */
+  private readonly pagosVigentes = computed(() => this._pagosHoy().filter((p) => !p.anulacion));
+
   readonly ingresosEfectivoHoy = computed(() =>
-    this._pagosHoy().reduce((sum, p) => sum + p.claseB, 0),
+    this.pagosVigentes().reduce((sum, p) => sum + p.claseB, 0),
   );
   readonly otrosIngresosHoy = computed(() =>
-    this._pagosHoy().reduce((sum, p) => sum + p.claseA + p.otros, 0),
+    this.pagosVigentes().reduce((sum, p) => sum + p.claseA + p.otros, 0),
   );
-  readonly totalIngresosHoy = computed(() => this._pagosHoy().reduce((sum, p) => sum + p.total, 0));
+  readonly totalIngresosHoy = computed(() =>
+    this.pagosVigentes().reduce((sum, p) => sum + p.total, 0),
+  );
   readonly totalEgresosHoy = computed(() => this._gastosHoy().reduce((sum, e) => sum + e.monto, 0));
   /** Solo egresos pagados en efectivo — es lo único que sale físicamente de la caja (fix-211-m). */
   readonly totalEgresosEfectivoHoy = computed(() =>
@@ -390,8 +406,9 @@ export class CuadraturaFacade {
 
     let query: any = this.supabase.client
       .from('payments')
-      .select('*, enrollments!inner(branch_id, number, license_group)')
-      .in('status', ['paid', 'completado'])
+      .select(`*, enrollments!inner(branch_id, number, license_group), ${PAYMENT_ANULACION_SELECT}`)
+      // Los anulados vienen para mostrarse tachados; los totales usan solo los vigentes.
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN, PAYMENT_STATUS_ANULADO])
       .eq('payment_date', today);
 
     if (branchId) {
@@ -554,11 +571,24 @@ export class CuadraturaFacade {
    * Quita un ingreso del día. Toda escritura pasa por `assertWriteOk` con `requireRows`: un
    * UPDATE/DELETE que la RLS filtra no devuelve error, devuelve 0 filas (fix-044-i). Si el día ya
    * tiene caja cerrada, un trigger rechaza la escritura con `CAJA_CERRADA`.
+   *
+   * Un pago de matrícula no se borra: se anula con un motivo y sigue visible, tachado (spec
+   * 0025-m). `motivo` solo aplica a `source === 'payment'`.
    */
-  async eliminarIngreso(row: IngresoRow): Promise<boolean> {
-    if (row.source === 'payment' && !this.puedeEliminarRestringidos()) {
-      this.toast.error('Solo un administrador puede quitar un pago de matrícula.');
-      return false;
+  async eliminarIngreso(row: IngresoRow, motivo = ''): Promise<boolean> {
+    if (row.source === 'payment') {
+      if (!this.puedeEliminarRestringidos()) {
+        this.toast.error('Solo un administrador puede anular un pago de matrícula.');
+        return false;
+      }
+      if (row.anulacion) {
+        this.toast.error('Este pago ya está anulado.');
+        return false;
+      }
+      if (!motivo.trim()) {
+        this.toast.error('Indica el motivo de la anulación.');
+        return false;
+      }
     }
 
     this._isSaving.set(true);
@@ -582,19 +612,32 @@ export class CuadraturaFacade {
         });
         this.toast.success('Cobro revertido: la venta quedó pendiente de pago.');
       } else {
-        // Pago de matrícula: un solo DELETE. El saldo del alumno lo recalcula el trigger
-        // `trg_update_balance` en la misma transacción — antes el cliente restaba el saldo y
-        // después borraba, y si el borrado fallaba el saldo quedaba inflado (fix-044-i).
+        // Pago de matrícula: un solo UPDATE a 'anulado'. El trigger `guard_anulacion_pago` valida
+        // rol, motivo y día cerrado y fija quién y cuándo; `trg_update_balance` recalcula el saldo
+        // del alumno en la misma transacción (el cliente nunca escribe saldos, fix-044-i).
         assertWriteOk(
-          await this.supabase.client.from('payments').delete().eq('id', row.id).select('id'),
+          await this.supabase.client
+            .from('payments')
+            .update({ status: PAYMENT_STATUS_ANULADO, void_reason: motivo.trim() })
+            .eq('id', row.id)
+            .select('id'),
           { requireRows: true },
         );
-        this.toast.success('Pago eliminado. El saldo del alumno se recalculó.');
+        this.toast.success('Pago anulado. El saldo del alumno se recalculó.');
       }
       void this.refreshSilently();
       return true;
     } catch (err) {
-      this.toast.error(toFriendlyDbMessage(err, 'No se pudo eliminar el ingreso.'));
+      // Si otro admin ya lo anuló, la fila vigente en pantalla está vieja.
+      void this.refreshSilently();
+      this.toast.error(
+        toFriendlyDbMessage(
+          err,
+          row.source === 'payment'
+            ? 'No se pudo anular el pago.'
+            : 'No se pudo eliminar el ingreso.',
+        ),
+      );
       return false;
     } finally {
       this._isSaving.set(false);
@@ -753,7 +796,7 @@ export class CuadraturaFacade {
 
   /** Fila completa de `cash_closings` para el cierre definitivo del día (status `closed`). */
   private buildCierreRow(closedBy: number | undefined): Record<string, unknown> {
-    const pagos = this._pagosHoy();
+    const pagos = this.pagosVigentes();
     const payload = this.buildCierrePayload();
     return {
       date: chileToday(),

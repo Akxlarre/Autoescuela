@@ -34,13 +34,13 @@ interface OpsItem {
     } @else {
       <ul class="m-0 p-0 list-none grid grid-cols-2 gap-x-4 gap-y-3">
         @for (item of items(); track item.id) {
-          <li class="flex items-center gap-2 min-w-0">
-            <app-icon [name]="item.icon" [size]="14" class="text-text-muted shrink-0" />
+          <li class="flex items-start gap-2 min-w-0">
+            <app-icon [name]="item.icon" [size]="14" class="text-text-muted shrink-0 mt-1" />
             <div class="min-w-0">
               <p class="m-0 text-lg font-semibold text-text-primary leading-tight tabular-nums">
                 {{ item.value }}
               </p>
-              <p class="m-0 text-2xs text-text-muted truncate">{{ item.label }}</p>
+              <p class="m-0 text-2xs text-text-muted leading-tight">{{ item.label }}</p>
             </div>
           </li>
         }

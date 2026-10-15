@@ -10,6 +10,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
@@ -1611,8 +1612,12 @@ export class EnrollmentFacade {
    * el `error` de la respuesta — `functions.invoke()` de supabase-js NO rechaza la promesa
    * en respuestas no-2xx (ej. `inviteUserByEmail` rechazando un email con formato inválido),
    * así que un `.catch()` solo nunca se enteraba de ese tipo de fallo (fix-157-m).
+   *
+   * fix-393-m: con el portal del alumno en piloto no se invita. La función es la que crea la
+   * cuenta, manda el correo y crea la notificación de bienvenida, así que basta con no llamarla.
    */
   private inviteStudentToAuth(userId: number | null, email: string | undefined): void {
+    if (isBlockedInPilot('alumno')) return;
     if (!userId || !email) return;
 
     this.supabase.client.functions
