@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { formatCycleLabel } from '@core/utils/theory-cycle';
 import { buildDayLabel, monthsAgoIso } from '@core/utils/date.utils';
 import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   CicloAlumno,
   CicloAlumnoMovible,
@@ -52,6 +53,9 @@ export class CiclosTeoricosFacade {
   private readonly _sendingClassId = signal<number | null>(null);
   private readonly _error = signal<string | null>(null);
   private readonly _emailResult = signal<ZoomEmailResult | null>(null);
+  /** Descartan la respuesta de una carga que quedó obsoleta (facades.md §7, fix-387-m). */
+  private readonly cyclesGuard = createRequestGuard();
+  private readonly cycleGuard = createRequestGuard();
 
   // ── 2. Estado público ──────────────────────────────────────────────────────
   readonly cycles = this._cycles.asReadonly();
@@ -80,6 +84,7 @@ export class CiclosTeoricosFacade {
 
   /** Carga los ciclos de la sede (RF-11) y autoselecciona el más reciente. */
   async loadCycles(): Promise<void> {
+    const requestToken = this.cyclesGuard.next();
     this._isLoading.set(true);
     this._error.set(null);
     try {
@@ -98,6 +103,8 @@ export class CiclosTeoricosFacade {
 
       const { data, error } = await query;
       if (error) throw error;
+      // Otra carga más nueva (cambio rápido de sede) ya está en curso: esta no aplica nada.
+      if (!this.cyclesGuard.isCurrent(requestToken)) return;
 
       // Con "Todas las escuelas" (branchId null) distintas sedes pueden compartir el
       // mismo lunes de inicio → se agrega el nombre de sede al label para diferenciarlos.
@@ -119,7 +126,11 @@ export class CiclosTeoricosFacade {
       // Mantener selección si sigue existiendo; si no, tomar el primer activo o el más reciente.
       const current = this._selectedCycleId();
       const stillThere = current !== null && cycles.some((c) => c.id === current);
-      if (!stillThere) {
+      if (stillThere) {
+        // fix-387-m: "Actualizar" también trae lo que otra persona cambió en el ciclo elegido
+        // (roster, tema, enlace). En silencio: lo que ya se ve sigue visible mientras tanto.
+        await this.loadCycleData(current, { silent: true });
+      } else {
         const firstActive = cycles.find((c) => c.status === 'active') ?? cycles[0] ?? null;
         if (firstActive) {
           await this.selectCycle(firstActive.id);
@@ -130,30 +141,44 @@ export class CiclosTeoricosFacade {
         }
       }
     } catch {
+      if (!this.cyclesGuard.isCurrent(requestToken)) return;
       this._error.set('Error al cargar los ciclos teóricos');
       this._cycles.set([]);
     } finally {
-      this._isLoading.set(false);
+      // La carga más nueva apaga su propio indicador; una obsoleta no lo toca.
+      if (this.cyclesGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 
   /** Selecciona un ciclo y carga sus 6 clases + roster (RF-12). */
   async selectCycle(cycleId: number): Promise<void> {
     this._selectedCycleId.set(cycleId);
-    this._isLoadingCycle.set(true);
+    await this.loadCycleData(cycleId, { silent: false });
+  }
+
+  /**
+   * Trae las clases y el roster de un ciclo. `silent` no muestra skeleton ni vacía lo visible si
+   * falla (refresco de un ciclo que ya está en pantalla).
+   */
+  private async loadCycleData(cycleId: number, options: { silent: boolean }): Promise<void> {
+    const requestToken = this.cycleGuard.next();
+    if (!options.silent) this._isLoadingCycle.set(true);
     try {
       const [clases, roster] = await Promise.all([
         this.fetchClases(cycleId),
         this.fetchRoster(cycleId),
       ]);
+      // El usuario ya eligió otro ciclo: esta respuesta no corresponde a lo que mira.
+      if (!this.cycleGuard.isCurrent(requestToken)) return;
       this._clases.set(clases);
       this._roster.set(roster);
     } catch {
+      if (!this.cycleGuard.isCurrent(requestToken) || options.silent) return;
       this._clases.set([]);
       this._roster.set([]);
       this.toast.error('Error al cargar el ciclo');
     } finally {
-      this._isLoadingCycle.set(false);
+      if (this.cycleGuard.isCurrent(requestToken)) this._isLoadingCycle.set(false);
     }
   }
 
@@ -281,6 +306,15 @@ export class CiclosTeoricosFacade {
 
   /** Override: mueve un alumno (su matrícula) a otro ciclo (RF override). */
   async moveStudentToCycle(enrollmentId: number, targetCycleId: number): Promise<void> {
+    // fix-387-m: con "Todas las sedes" la lista trae ciclos de varias sedes. El alumno sale del
+    // ciclo elegido (o entra a él): el otro extremo tiene que ser de la misma sede.
+    const origin = this.selectedCycle();
+    const target = this._cycles().find((c) => c.id === targetCycleId);
+    if (origin && target && origin.branchId !== target.branchId) {
+      this.toast.error('Ese ciclo es de otra sede');
+      return;
+    }
+
     this._isSaving.set(true);
     try {
       const { error } = await this.supabase.client

@@ -42,6 +42,11 @@ export interface ExecReceivablesRowDto {
   bucket: '0-30' | '31-60' | '61-90' | '90+';
   monto: number;
   alumnos: number;
+  /**
+   * Alumnos distintos en toda la cartera, repetido en cada fila (fix-428-m). Opcional: antes de la
+   * migración `20261014120000` la RPC no lo devuelve.
+   */
+  alumnos_total?: number;
 }
 
 /** `exec_dashboard_today_ops(p_branch_id)` → JSONB. */

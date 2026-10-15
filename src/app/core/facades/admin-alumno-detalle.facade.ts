@@ -22,7 +22,8 @@ import { chileDayRange, formatChileDate, toChileDate } from '@core/utils/chile-t
 import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
-import { formatPaymentConcept } from '@core/utils/ficha-pagos.utils';
+import { formatPaymentConcept, paymentPositions } from '@core/utils/ficha-pagos.utils';
+import { mapAnulacionPago, PAYMENT_ANULACION_SELECT } from '@core/utils/payment-status.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
@@ -34,6 +35,7 @@ import {
   type VehicleDocWarningInfo,
 } from '@core/utils/vehicle-document-status.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { assertWriteOk } from '@core/utils/db-error.utils';
 import type {
   InstructorOption,
   ScheduleGrid,
@@ -682,8 +684,9 @@ export class AdminAlumnoDetalleFacade {
           : Promise.resolve({ data: [] }),
         enrollmentId
           ? this.supabase.client
+              // payments-all-statuses: historial de la ficha; los anulados van tachados.
               .from('payments')
-              .select('*')
+              .select(`*, ${PAYMENT_ANULACION_SELECT}`)
               .eq('enrollment_id', enrollmentId)
               .order('payment_date', { ascending: true })
           : Promise.resolve({ data: [] }),
@@ -823,16 +826,7 @@ export class AdminAlumnoDetalleFacade {
       }),
     );
 
-    this._historialPagos.set(
-      (paymentsResult.data ?? []).map((p: any, idx: number) => ({
-        id: p.id,
-        fecha: this.formatDate(p.payment_date),
-        concepto: formatPaymentConcept(p.type, idx + 1),
-        monto: p.total_amount ?? 0,
-        metodo: this.derivePaymentMethod(p),
-        estado: this.formatPaymentStatus(p.status),
-      })),
-    );
+    this._historialPagos.set(this.mapHistorialPagos(paymentsResult.data ?? []));
   }
 
   /** Mapea una fila cruda de class_b_practice_attendance (+ join a sesión/instructor) a UI. */
@@ -848,7 +842,8 @@ export class AdminAlumnoDetalleFacade {
       id: row.id,
       sessionId: session?.id ?? null,
       claseNumero: session?.class_number ?? null,
-      fecha: this.formatDate(row.recorded_at ?? session?.scheduled_at),
+      // fix-381-m: la fecha de la clase; recorded_at es cuándo se marcó (puede ser otro día).
+      fecha: this.formatDate(session?.scheduled_at ?? row.recorded_at),
       justificada: row.status === 'excused',
       justificacion: row.justification ?? null,
       instructor,
@@ -863,12 +858,36 @@ export class AdminAlumnoDetalleFacade {
   /** RF-053: justifica una inasistencia automática de clase práctica Clase B. */
   async justificarInasistenciaClaseB(attendanceId: number, reason: string): Promise<void> {
     try {
-      const { error } = await this.supabase.client
-        .from('class_b_practice_attendance')
-        .update({ status: 'excused', justification: reason })
-        .eq('id', attendanceId);
-      if (error) throw error;
+      // fix-379-m: solo la falta vigente (nunca la fila histórica de una clase reagendada) y
+      // exigiendo filas: si la RLS la filtra no se dice "justificada".
+      const { data } = assertWriteOk(
+        await this.supabase.client
+          .from('class_b_practice_attendance')
+          .update({ status: 'excused', justification: reason })
+          .eq('id', attendanceId)
+          .is('archived_at', null)
+          .select('id, recorded_at, class_b_sessions(enrollment_id)'),
+        { requireRows: true },
+      );
       this.toast.success('Inasistencia justificada correctamente.');
+
+      // fix-379-m (G05): justificar no devuelve las clases que la falta ya canceló.
+      const falta = (data as any[])[0];
+      const enrollmentId = falta?.class_b_sessions?.enrollment_id;
+      if (enrollmentId && falta?.recorded_at) {
+        const { count } = await this.supabase.client
+          .from('class_b_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('enrollment_id', enrollmentId)
+          .eq('status', 'cancelled')
+          .gte('cancelled_at', falta.recorded_at);
+        if ((count ?? 0) > 0) {
+          this.toast.warning(
+            'Hay clases que siguen canceladas',
+            `${count} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo con "Reagendar Clases".`,
+          );
+        }
+      }
       await this.refreshSilently();
     } catch {
       this.toast.error('Error al justificar la inasistencia.');
@@ -915,8 +934,9 @@ export class AdminAlumnoDetalleFacade {
           .eq('enrollment_id', enrollmentId)
           .order('document_date', { ascending: false }),
         this.supabase.client
+          // payments-all-statuses: historial de la ficha; los anulados van tachados.
           .from('payments')
-          .select('*')
+          .select(`*, ${PAYMENT_ANULACION_SELECT}`)
           .eq('enrollment_id', enrollmentId)
           .order('payment_date', { ascending: true }),
         this.supabase.client
@@ -994,16 +1014,7 @@ export class AdminAlumnoDetalleFacade {
       })),
     );
 
-    this._historialPagos.set(
-      (paymentsRes.data ?? []).map((p: any, idx: number) => ({
-        id: p.id,
-        fecha: this.formatDate(p.payment_date),
-        concepto: formatPaymentConcept(p.type, idx + 1),
-        monto: p.total_amount ?? 0,
-        metodo: this.derivePaymentMethod(p),
-        estado: this.formatPaymentStatus(p.status),
-      })),
-    );
+    this._historialPagos.set(this.mapHistorialPagos(paymentsRes.data ?? []));
 
     // Clase B específicos: vaciar para no mostrar datos obsoletos
     this._clasesPracticas.set([]);
@@ -1243,8 +1254,27 @@ export class AdminAlumnoDetalleFacade {
     }).format(new Date(ts));
   }
 
+  /**
+   * Historial de pagos de la ficha. Trae todos los estados: un pago anulado se muestra tachado,
+   * con su motivo, y no ocupa número entre los pagos sin concepto (spec 0025-m).
+   */
+  private mapHistorialPagos(rows: any[]): PagoUI[] {
+    const anulaciones = rows.map((p) => mapAnulacionPago(p));
+    const posiciones = paymentPositions(anulaciones.map((anulacion) => anulacion !== null));
+    return rows.map((p, idx) => ({
+      id: p.id,
+      fecha: this.formatDate(p.payment_date),
+      concepto: formatPaymentConcept(p.type, posiciones[idx]),
+      monto: p.total_amount ?? 0,
+      metodo: this.derivePaymentMethod(p),
+      estado: this.formatPaymentStatus(p.status),
+      anulacion: anulaciones[idx],
+    }));
+  }
+
   private formatPaymentStatus(status: string | null | undefined): string {
     const map: Record<string, string> = {
+      anulado: 'Anulado',
       paid: 'Pagado',
       pending: 'Pendiente',
       refunded: 'Reembolsado',
@@ -1689,75 +1719,30 @@ export class AdminAlumnoDetalleFacade {
       throw new Error('La cantidad de horarios elegidos no coincide con la selección.');
     }
 
-    // fix-008-i: capturar scheduled_at/instructor_id ANTES de reciclar la fila —
-    // el UPDATE de abajo los pisa, así que es la única oportunidad de guardarlos
-    // en el historial de reagendamientos.
-    const sessionIds = seleccion.map((s) => s.sessionId);
-    const { data: prevRows, error: prevError } = await this.supabase.client
-      .from('class_b_sessions')
-      .select('id, scheduled_at, instructor_id')
-      .in('id', sessionIds);
-    if (prevError) throw prevError;
-    const prevMap = new Map<
-      number,
-      { scheduled_at: string | null; instructor_id: number | null }
-    >();
-    for (const row of (prevRows ?? []) as Array<{
-      id: number;
-      scheduled_at: string | null;
-      instructor_id: number | null;
-    }>) {
-      prevMap.set(row.id, { scheduled_at: row.scheduled_at, instructor_id: row.instructor_id });
-    }
-
-    const registeredBy = this.auth.currentUser()?.dbId ?? null;
-    const historyRows: Record<string, unknown>[] = [];
-
-    for (let i = 0; i < seleccion.length; i++) {
-      const session = seleccion[i];
+    const items = seleccion.map((session, i) => {
       const slotId = orderedSlotIds[i];
       const vehicleId = this._slotVehicleMap.get(slotId);
       if (!vehicleId) {
         throw new Error(`No se pudo determinar el vehículo para el horario ${slotId}.`);
       }
+      return { session_id: session.sessionId, scheduled_at: slotId, vehicle_id: vehicleId };
+    });
 
-      const { error: updateError } = await this.supabase.client
-        .from('class_b_sessions')
-        .update({
-          instructor_id: payload.instructorId,
-          vehicle_id: vehicleId,
-          scheduled_at: slotId,
-          status: 'scheduled',
-          start_time: null,
-          end_time: null,
-        })
-        .eq('id', session.sessionId);
-      if (updateError) throw updateError;
-      await this.archivarAsistenciaDeSesion(session.sessionId);
+    // fix-383-m: una sola transacción en la BD — recicla cada sesión, archiva su asistencia
+    // (fix-191-m) y escribe su historial con la fecha e instructor anteriores (fix-008-i). Antes
+    // eran N llamadas sueltas: un choque a mitad dejaba unas clases movidas y sin historial.
+    const { error } = await this.supabase.client.rpc('reschedule_class_b_sessions', {
+      p_enrollment_id: payload.enrollmentId,
+      p_instructor_id: payload.instructorId,
+      p_items: items,
+      p_reason: payload.razon,
+      p_reason_other: payload.razon === 'otro' ? (payload.razonOtro ?? null) : null,
+    });
+    if (error) throw error;
 
-      const prev = prevMap.get(session.sessionId);
-      historyRows.push({
-        class_session_id: session.sessionId,
-        enrollment_id: payload.enrollmentId,
-        old_scheduled_at: prev?.scheduled_at ?? null,
-        new_scheduled_at: slotId,
-        old_instructor_id: prev?.instructor_id ?? null,
-        new_instructor_id: payload.instructorId,
-        reason: payload.razon,
-        reason_other: payload.razon === 'otro' ? (payload.razonOtro ?? null) : null,
-        registered_by: registeredBy,
-      });
-    }
-
-    if (historyRows.length > 0) {
-      const { error: historyError } = await this.supabase.client
-        .from('class_b_reschedule_history')
-        .insert(historyRows);
-      if (historyError) throw historyError;
-      // fix-009-i: refresca el historial que consume el drawer — sin esto quedaba
-      // pegado al snapshot cargado en ngOnInit, previo a cualquier reagendamiento.
-      await this.loadHistorialReagendamientos(payload.enrollmentId);
-    }
+    // fix-009-i: refresca el historial que consume el drawer — sin esto quedaba
+    // pegado al snapshot cargado en ngOnInit, previo a cualquier reagendamiento.
+    await this.loadHistorialReagendamientos(payload.enrollmentId);
 
     this._reagendarSeleccion.set([]);
     this.toast.success('Clases reagendadas correctamente.');

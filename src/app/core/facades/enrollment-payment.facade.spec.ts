@@ -17,6 +17,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     upsert: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    neq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
@@ -90,6 +91,41 @@ describe('EnrollmentPaymentFacade', () => {
 
   it('should initialize with empty available discounts', () => {
     expect(facade.availableDiscounts()).toEqual([]);
+  });
+
+  // ── Rehidratación con un pago anulado (spec 0025-m, AC-E3) ──
+
+  describe('rehydrateFromEnrollment', () => {
+    it('ignora el pago anulado: no lo trae y carga el vigente sin error', async () => {
+      const vigente = {
+        cash_amount: 0,
+        transfer_amount: 50_000,
+        card_amount: 0,
+        status: 'paid',
+        document_number: 'TRF-1',
+      };
+      // Una fila anulada más una vigente serían dos filas: maybeSingle() devolvería error y
+      // data null. El filtro deja solo la vigente.
+      mockSupabase._mockBuilder.maybeSingle.mockResolvedValue({ data: vigente, error: null });
+      mockSupabase._mockBuilder.single.mockResolvedValue({
+        data: {
+          base_price: 180_000,
+          discount: 0,
+          total_paid: 50_000,
+          pending_balance: 130_000,
+          payment_status: 'partial',
+          payment_mode: 'partial',
+          courses: { name: 'Clase B', practical_hours: 12 },
+        },
+        error: null,
+      });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(mockSupabase._mockBuilder.neq).toHaveBeenCalledWith('status', 'anulado');
+      expect(facade.paymentMethod()).toBe('transferencia');
+      expect(facade.error()).toBeNull();
+    });
   });
 
   // ── Pricing Breakdown ──

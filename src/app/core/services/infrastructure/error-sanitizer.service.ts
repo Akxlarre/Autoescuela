@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { MENSAJE_PAGO_PENDIENTE_CLASE_7 } from '@core/utils/db-error.utils';
 
 export interface SanitizedError {
   originalError: any;
@@ -75,6 +76,17 @@ export class ErrorSanitizerService {
         message:
           'No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.',
         code: 'CUPOS_AGOTADOS',
+        isNetworkError,
+      };
+    }
+
+    // spec 0010-i: trigger de bloqueo de la clase 7+ sin el segundo pago. Va antes del caso P0001
+    // genérico, que mostraría el token crudo.
+    if (error?.message?.includes('PAGO_PENDIENTE_CLASE_7')) {
+      return {
+        originalError: error,
+        message: MENSAJE_PAGO_PENDIENTE_CLASE_7,
+        code: 'PAGO_PENDIENTE_CLASE_7',
         isNetworkError,
       };
     }

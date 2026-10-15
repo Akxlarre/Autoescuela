@@ -26,6 +26,7 @@
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
+| `src/app/core/utils/anulacion-pago.utils.ts` | `formatAnulacionDetalle`, `resumenConAnulados` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
@@ -34,9 +35,9 @@
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
 | `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime`, `chileTimeOfDay` |
-| `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `groupCyclesByStatus` |
+| `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `cycleMoveTargets`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
-| `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES`, `ClassBAbsence`, `enrollmentsWithConsecutiveAbsences`, `enrollmentsWithRemovedSchedule`, `ScheduleChangeGroup`, `buildClearScheduleMessage` |
+| `src/app/core/utils/class-b-session.utils.ts` | `VALID_CLASS_B_SESSION_STATUSES`, `ClassBAbsence`, `enrollmentsWithConsecutiveAbsences`, `enrollmentsWithUnpenalizedPair`, `enrollmentsWithRemovedSchedule`, `ScheduleChangeGroup`, `buildClearScheduleMessage`, `ClassBSessionAction`, `staleSessionMessage`, `StaleSessionError` |
 | `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` |
 | `src/app/core/utils/class-schedule-timing.utils.ts` | `isClassStartOverdue` |
 | `src/app/core/utils/consent-builder.utils.ts` | `ConsentBuilderInput`, `buildEnrollmentConsents`, `buildMedicalCertificateConsent`, `buildPsychTestConsent`, `CommunicationsConsentInput`, `buildCommunicationsConsents` |
@@ -49,7 +50,7 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
-| `src/app/core/utils/db-error.utils.ts` | `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
+| `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
@@ -62,13 +63,15 @@
 | `src/app/core/utils/email.utils.ts` | `validateEmail`, `normalizeEmail`, `isSameEmail` |
 | `src/app/core/utils/enrollment-unsaved.utils.ts` | `hasUnsavedPersonalData` |
 | `src/app/core/utils/epq-questions.const.ts` | `EPQ_QUESTIONS`, `EPQ_TOTAL`, `EPQ_PAGE_SIZE`, `EPQ_TOTAL_PAGES` |
+| `src/app/core/utils/estado-pago-clase.utils.ts` | `PRIMERA_CLASE_CON_SEGUNDO_PAGO`, `resolverEstadoPagoClase` |
 | `src/app/core/utils/evaluaciones-landing.ts` | `PromotionLite`, `CourseLite`, `EnrollmentLite`, `GradeLite`, `buildCursoResumen`, `buildLanding`, `cursoPromedioAprueba` |
 | `src/app/core/utils/excel.utils.ts` | `downloadExcel` |
-| `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` |
+| `src/app/core/utils/executive-dashboard.utils.ts` | `resolvePresetRange`, `isValidRange`, `pickerDatesToRange`, `previousRange`, `yoyRange`, `computeDelta`, `deltaTone`, `formatDeltaLabel`, `marginPct`, `safeRatePct`, `formatMinutesAsHours`, `monthShortLabel`, `describeRange`, `buildMonthlySeries`, `seriesCurrentMonth`, `chileTodayIso`, `mapKpiSummary`, `mapStageCounts`, `mapReceivables`, `mapInstructorHours`, `buildExecKpiCards`, `toHeroKpi`, `mapTodayOps` — fix-425-m: `ExecKpiCard.noData` → `toHeroKpi()` pinta "—" sin prefijo ni sufijo (cancelación sin clases en el período); fix-426-m: `buildExecKpiCards(…, preset)` — con `this_year` una sola comparación, contra el año anterior; fix-428-m: `mapReceivables` usa `alumnos_total` de la RPC (alumnos distintos) y, si no viene, suma los tramos |
 | `src/app/core/utils/ficha-enrollment.utils.ts` | `FichaEnrollmentCandidate`, `buildEnrollmentTabLabel`, `parseEnrollmentParam`, `pickFichaEnrollment` |
-| `src/app/core/utils/ficha-pagos.utils.ts` | `formatPaymentConcept`, `canRegistrarPago` |
+| `src/app/core/utils/ficha-pagos.utils.ts` | `formatPaymentConcept`, `paymentPositions`, `canRegistrarPago` |
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
+| `src/app/core/utils/focus-trap.utils.ts` | `focusableWithin`, `initialFocusTarget`, `trapTabTarget` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/hourly-rate.utils.ts` | `isValidHourlyRate` |
 | `src/app/core/utils/html.utils.ts` | `escapeHtml` |
@@ -81,7 +84,8 @@
 | `src/app/core/utils/instructor-invite.utils.ts` | `instructorCreatedToast` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/kpi-es-cl-format.util.ts` | `formatKpiEsCl` |
-| `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay` |
+| `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` — descarte de alertas del dashboard por usuario y con el conteo al descartar (fix-415-m) |
+| `src/app/core/utils/kpi-trend.utils.ts` | `kpiTrendColor`, `TrendView`, `trendView`, `formatTrendDisplay`, `formatTrendMagnitude` (único lugar donde una tendencia de KPI pasa a texto: coma decimal, a lo más un decimal — fix-400-m) |
 | `src/app/core/utils/layout-drawer-size.utils.ts` | `LAYOUT_DRAWER_MOBILE_BREAKPOINT`, `isLayoutDrawerMobile`, `layoutDrawerDesktopWidth` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
 | `src/app/core/utils/license-number.utils.ts` | `isValidLicenseNumber` |
@@ -90,14 +94,14 @@
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
 | `src/app/core/utils/line-chart.utils.ts` | `niceMax`, `niceTickCount`, `yTicks`, `pointY`, `pointX`, `buildLinePath`, `formatCompactNumber` |
 | `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
-| `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
+| `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan`, `LiveClassAgendaSlot`, `liveClassToAgendaSlot` (slot del detalle de una clase cerrada, para el dashboard y "Agenda de Hoy" — fix-406-m) |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier`, `KM_SUSPICIOUS_DELTA`, `kmWarning` |
 | `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
 | `src/app/core/utils/password-policy.utils.ts` | `PASSWORD_MIN_LENGTH`, `PasswordContext`, `PasswordRequirementId`, `PasswordRequirement`, `PasswordStrength`, `PasswordEvaluation`, `evaluatePassword`, `passwordStrengthLabel` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
-| `src/app/core/utils/payment-status.utils.ts` | `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
+| `src/app/core/utils/payment-status.utils.ts` | `PAYMENT_STATUS_ANULADO`, `PAYMENT_STATUSES_QUE_SUMAN`, `paymentCuentaComoIngreso`, `soloPagosVigentes`, `paymentStatusLabel`, `paymentStatusVariant`, `PAYMENT_ANULACION_SELECT`, `PaymentAnulacionRow`, `mapAnulacionPago`, `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `hasMinimumPhoneLength`, `normalizePhone` |

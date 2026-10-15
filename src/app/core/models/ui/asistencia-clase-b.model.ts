@@ -66,6 +66,11 @@ export interface AlertaFaltaConsecutiva {
   ultimaFechaFalta: string;
   /** true = el horario sigue activo; false = ya fue eliminado manualmente */
   horarioActivo: boolean;
+  /**
+   * true = sus faltas seguidas ya causaron una penalización (automática o con "Eliminar") y no
+   * vuelven a contar: la alerta sigue en rojo pero no ofrece "Eliminar" otra vez (fix-391-m).
+   */
+  parPenalizado?: boolean;
   branchId: number;
   branchName: string;
 }

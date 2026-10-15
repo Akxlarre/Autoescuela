@@ -1,10 +1,99 @@
 import { describe, expect, it } from 'vitest';
 import {
+  StaleSessionError,
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithRemovedSchedule,
+  enrollmentsWithUnpenalizedPair,
+  staleSessionMessage,
 } from './class-b-session.utils';
+
+describe('enrollmentsWithUnpenalizedPair() — fix-391-m', () => {
+  const falta = (enrollmentId: number, classNumber: number, recordedAt: string) => ({
+    enrollmentId,
+    classNumber,
+    recordedAt,
+  });
+
+  it('sin penalización registrada, el par cuenta', () => {
+    const absences = [falta(1, 3, '2026-10-07T12:00:00Z'), falta(1, 4, '2026-10-09T12:00:00Z')];
+    expect(enrollmentsWithUnpenalizedPair(absences, new Map())).toEqual([1]);
+    expect(enrollmentsWithUnpenalizedPair(absences, new Map([[1, null]]))).toEqual([1]);
+  });
+
+  it('un par anterior a la penalización no vuelve a contar', () => {
+    const absences = [falta(1, 3, '2026-10-07T12:00:00Z'), falta(1, 4, '2026-10-09T12:00:00Z')];
+    const penalizedAt = new Map([[1, '2026-10-09T12:00:05+00:00']]);
+    expect(enrollmentsWithUnpenalizedPair(absences, penalizedAt)).toEqual([]);
+  });
+
+  it('una falta nueva junto a una ya penalizada no forma par', () => {
+    const absences = [
+      falta(1, 4, '2026-10-09T12:00:00Z'),
+      falta(1, 5, '2026-10-20T12:00:00Z'), // posterior a la penalización
+    ];
+    const penalizedAt = new Map([[1, '2026-10-10T00:00:00Z']]);
+    expect(enrollmentsWithUnpenalizedPair(absences, penalizedAt)).toEqual([]);
+  });
+
+  it('dos faltas seguidas posteriores a la penalización vuelven a contar', () => {
+    const absences = [
+      falta(1, 3, '2026-10-07T12:00:00Z'),
+      falta(1, 7, '2026-10-20T12:00:00Z'),
+      falta(1, 8, '2026-10-21T12:00:00Z'),
+    ];
+    const penalizedAt = new Map([[1, '2026-10-10T00:00:00Z']]);
+    expect(enrollmentsWithUnpenalizedPair(absences, penalizedAt)).toEqual([1]);
+  });
+
+  it('la penalización de una matrícula no afecta a otra', () => {
+    const absences = [
+      falta(1, 3, '2026-10-07T12:00:00Z'),
+      falta(1, 4, '2026-10-09T12:00:00Z'),
+      falta(2, 1, '2026-10-07T12:00:00Z'),
+      falta(2, 2, '2026-10-09T12:00:00Z'),
+    ];
+    const penalizedAt = new Map([[1, '2026-10-10T00:00:00Z']]);
+    expect(enrollmentsWithUnpenalizedPair(absences, penalizedAt)).toEqual([2]);
+  });
+
+  it('una falta sin fecha de registro en una matrícula penalizada no cuenta', () => {
+    const absences = [
+      { enrollmentId: 1, classNumber: 3 },
+      { enrollmentId: 1, classNumber: 4 },
+    ];
+    expect(
+      enrollmentsWithUnpenalizedPair(absences, new Map([[1, '2026-10-10T00:00:00Z']])),
+    ).toEqual([]);
+  });
+});
+
+describe('staleSessionMessage() — fix-388-m', () => {
+  it('iniciar una clase ya iniciada o con inasistencia dice qué pasó', () => {
+    expect(staleSessionMessage('start', 'in_progress')).toContain('ya fue iniciada');
+    expect(staleSessionMessage('start', 'no_show')).toContain('deshaz la inasistencia');
+    expect(staleSessionMessage('start', 'completed')).toContain('ya fue finalizada');
+  });
+
+  it('marcar ausente una clase en curso manda a "Cancelar inicio"', () => {
+    expect(staleSessionMessage('absent', 'in_progress')).toContain('Cancelar inicio');
+  });
+
+  it('finalizar una clase cuyo inicio se canceló lo explica', () => {
+    expect(staleSessionMessage('finish', 'scheduled')).toContain('volvió a quedar pendiente');
+  });
+
+  it('un estado desconocido cae en el mensaje general', () => {
+    expect(staleSessionMessage('finish', 'reserved')).toBe('El estado de esta clase cambió.');
+  });
+
+  it('StaleSessionError lleva el estado real y el mensaje', () => {
+    const err = new StaleSessionError('start', 'in_progress');
+    expect(err.actualStatus).toBe('in_progress');
+    expect(err.message).toBe(staleSessionMessage('start', 'in_progress'));
+  });
+});
 
 describe('VALID_CLASS_B_SESSION_STATUSES', () => {
   it('excluye reserved y cancelled', () => {

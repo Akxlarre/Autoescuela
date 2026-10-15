@@ -73,14 +73,30 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
               <div class="flex items-start justify-between gap-2">
                 <span
                   class="text-xs font-bold text-text-primary line-clamp-1 truncate pr-2"
+                  [class.line-through]="!!pago.anulacion"
                   [pTooltip]="pago.concepto"
                   tooltipPosition="top"
                   >{{ pago.concepto }}</span
                 >
-                <span class="text-xs font-bold text-text-primary shrink-0"
+                <span
+                  class="text-xs font-bold shrink-0"
+                  [class.text-text-primary]="!pago.anulacion"
+                  [class.text-text-muted]="!!pago.anulacion"
+                  [class.line-through]="!!pago.anulacion"
                   >\${{ pago.monto.toLocaleString('es-CL') }}</span
                 >
               </div>
+
+              <!-- Pago anulado (spec 0025-m): sigue visible, con motivo, quien y cuando. -->
+              @if (pago.anulacion; as anulacion) {
+                <p
+                  class="text-2xs text-text-muted"
+                  data-llm-description="voided payment: reason, who voided it and when"
+                >
+                  {{ anulacion.motivo }} · {{ anulacion.por ?? 'Administrador' }} ·
+                  {{ anulacion.cuando }}
+                </p>
+              }
 
               <div class="flex items-center justify-between mt-1">
                 <div class="flex items-center gap-2">

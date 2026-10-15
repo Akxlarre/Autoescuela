@@ -414,6 +414,18 @@ describe('InstructorClasesFacade', () => {
           'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
         );
       });
+
+      it('spec 0010-i (AC6): clase 7 bloqueada por pago → manda al alumno a secretaría', async () => {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ error: { code: 'P0001', message: 'PAGO_PENDIENTE_CLASE_7' } }),
+          );
+
+        await expect(facade.startClass(5, 12000)).rejects.toThrow(
+          'Pago pendiente: el alumno debe pasar por secretaría.',
+        );
+      });
     });
 
     describe('finishClass', () => {

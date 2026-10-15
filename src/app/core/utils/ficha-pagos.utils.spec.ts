@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { canRegistrarPago, formatPaymentConcept } from './ficha-pagos.utils';
+import { canRegistrarPago, formatPaymentConcept, paymentPositions } from './ficha-pagos.utils';
+
+describe('paymentPositions (spec 0025-m)', () => {
+  it('sin anulados numera por posición', () => {
+    expect(paymentPositions([false, false, false])).toEqual([1, 2, 3]);
+  });
+
+  it('un anulado no corre la numeración de los vigentes', () => {
+    expect(paymentPositions([false, true, false])).toEqual([1, 2, 2]);
+    expect(paymentPositions([true, false])).toEqual([1, 1]);
+  });
+});
 
 describe('formatPaymentConcept (fix-315-m)', () => {
   it.each([

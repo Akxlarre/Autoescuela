@@ -1,6 +1,6 @@
 # Asignación ASG-i-060 — ¿Los reportes suman pagos que no están pagados?
 
-> **status:** pendiente
+> **status:** descartada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P1
@@ -11,6 +11,20 @@
 > **resulting_track:** —
 
 ---
+
+## Resolución: descartada (Ignacio, 2026-10-13)
+
+**No se reproduce.** Paso 1 corrido en el piloto: solo existen `paid` (176 filas) y `pending`
+(5 filas); no hay `partial` ni `completado`. Los 5 `pending` tienen `payment_date` **NULL**:
+`recordPayment()` (`enrollment-payment.facade.ts`) guarda así el "Cobrar después". Todas las
+lecturas del inventario filtran por rango de `payment_date`, y un NULL nunca cae en un rango, así
+que ningún reporte los suma.
+
+Riesgo residual, no bug: el criterio es implícito (depende de que un `pending` nunca tenga fecha).
+Si algún flujo futuro guarda un `pending` con fecha, o aparece `completado`, esta sospecha
+revive; `ASG-i-059` (anular pagos) debe tenerlo en cuenta al definir estados nuevos.
+
+De esta revisión salió `ASG-i-062`: con saldo pendiente se toman las 12 clases y se certifica.
 
 ## Contexto / Objetivo
 

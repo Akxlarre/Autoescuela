@@ -1,14 +1,14 @@
 # Asignación ASG-i-028 — Testing: Pagos, abonos y descuentos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-13
+> **resulting_track:** fix-048-i-testing-pagos-y-descuentos
 
 ---
 

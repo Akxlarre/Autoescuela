@@ -24,6 +24,8 @@ export const ENTITY_MODULE_MAP: Record<string, string> = {
   class_b_theory_sessions: 'Ciclos Teóricos',
   // M3 - Finanzas
   payments: 'Pagos',
+  // spec 0010-i: habilitación sin pago (clase 7+ / certificado) — trigger en 20261013120000
+  enrollment_payment_overrides: 'Pagos',
   // M1 - Alumnos (triggers agregados en 20260323110000)
   students: 'Alumnos',
   student_documents: 'Alumnos',

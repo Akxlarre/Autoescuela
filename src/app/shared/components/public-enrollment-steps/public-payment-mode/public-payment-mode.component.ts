@@ -130,7 +130,8 @@ export interface PublicPaymentModeOption {
           <app-icon name="info" [size]="16" color="var(--ds-brand)" class="mt-0.5 shrink-0" />
           <p style="color: var(--text-secondary);">
             Con el abono reservas tu cupo y agendas igualmente tus {{ reservedSessions() }} clases.
-            El saldo lo pagas desde tu portal de alumno cuando quieras.
+            El saldo debe estar pagado antes de tu clase 7: puedes pagarlo desde tu portal de alumno
+            o presencialmente.
           </p>
         </div>
       }

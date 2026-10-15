@@ -43,8 +43,22 @@
   Confirmarlas o descartarlas es parte del trabajo.
 - **Todo pago que registres acá, verifícalo también en la Cuadratura del día** (coordinar con
   `ASG-i-029`). Anota monto, medio y hora de cada pago de prueba para poder cuadrar.
-- Trabaja siempre con alumnos de prueba (prefijo `QA-TEST`), nunca con alumnos reales: los pagos
-  no se pueden anular desde Pagos y el borrado desde Cuadratura tiene problemas (S3).
+- Trabaja siempre con alumnos de prueba (prefijo `QA-TEST`), nunca con alumnos reales. ~~Los pagos
+  no se pueden anular desde Pagos y el borrado desde Cuadratura tiene problemas (S3).~~ Desde
+  `0025-m` el **admin anula** un pago desde la Caja del día (no si la caja está cerrada): así se
+  revierten los pagos de prueba.
+
+### Actualización 2026-10-14 (al reclamar, `fix-048-i`)
+
+- **Resueltas por otros tracks — se ejecutan como regresión:** S1 y S2 (`fix-045-i`), S3
+  (`fix-044-i` + `0025-m`: ya no se borra, se anula; P04/P05 pasan a probar la anulación), S4 (el
+  código usa `todayIso()`).
+- **Casos nuevos:** sección **R** (anulación vista desde Pagos) y **T** (Pagos y el bloqueo de la
+  clase 7), al final de §3.
+- **Fuera de este checklist:** el medio de pago de servicios especiales (`fix-047-i`) no pasa por
+  Pagos (va a Caja y Reportes): corresponde a `029-contabilidad.md` / `ASG-i-031`.
+- Seguridad entre sedes (O07, O08, O09, S5, S11) se prueba con SQL que no deja datos, simulando el
+  JWT de una secretaria.
 
 ---
 
@@ -385,6 +399,30 @@ ver la notificación en la BD, ya que su portal está bloqueado en el piloto).
 | Q03 | Solo teclado | Se llega a todos los campos y botones; foco visible | — | |
 | Q04 | Etiquetas de los inputs de monto | Asociadas a su campo (lectores de pantalla) | — | |
 | Q05 | Animaciones | Sin parpadeos al abrir drawers | — | |
+
+### R. Anulación de pagos vista desde Pagos (spec `0025-m`, agregado 2026-10-14)
+
+> Matías ya verificó los ACs de `0025-m`. Acá solo el efecto en el módulo de Pagos. Anular lo
+> hace **solo el admin, desde la Caja del día**, y no en un día con caja cerrada.
+
+| ID | Caso | Resultado esperado | Auto | Res. |
+|---|---|---|---|---|
+| R01 | Anular un pago de prueba desde la Caja y abrir Pagos | "Ingresos Hoy/Mes" lo descuentan; el alumno vuelve a "Alumnos con saldo pendiente" con el saldo exacto; Estado de Cuenta lo muestra "Anulado" | — | |
+| R02 | Pagos Recientes y reporte PDF con un pago anulado | Aparece como anulado y no suma | — | |
+| R03 | Registrar un pago nuevo después de anular | Se registra; el tope de sobrepago usa el saldo nuevo (incluye lo anulado) | — | |
+| R04 | Anular un pago de un día con caja cerrada | Rechazado (regresión `0025-m` AC9) | — | |
+
+### T. Pagos y el bloqueo de la clase 7 (spec `0010-i`, agregado 2026-10-14)
+
+> Letra T (no S) para no confundir con las sospechas S1…S20.
+
+| ID | Caso | Resultado esperado | Auto | Res. |
+|---|---|---|---|---|
+| T01 | "Registrar pago" desde el drawer "Iniciar Clase Práctica" de una clase 7 bloqueada, por el saldo total | El pago aparece en la lista de Pagos, en la Caja del día y en el Estado de Cuenta; saldo 0; la clase se puede iniciar sin recargar | — | |
+| T02 | Lo mismo con un pago **parcial** | La clase sigue bloqueada; Pagos muestra el saldo restante | — | |
+| T03 | Anular (admin, Caja) el pago que desbloqueó la clase 7 | La clase 8 vuelve a bloquearse; el alumno vuelve a la lista de deudores | — | |
+| T04 | "Habilitar sin pago" en la clase 7 | **No** cambia el saldo: el alumno sigue en la lista de deudores con la misma deuda | — | |
+| T05 | Pago desde Asistencia | El alumno recibe "Pago registrado" (spec `0025-b`), igual que desde Pagos | — | |
 
 ---
 

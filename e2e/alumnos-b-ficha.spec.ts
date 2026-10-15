@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import type { Locator, Page } from '@playwright/test';
 import * as XLSX from 'xlsx';
 import { ACCOUNTS } from './support/accounts';
+import { isBlockedInPilot } from '../src/app/core/config/pilot-phase.config';
 import {
   addCompletedPractices,
   addMissedClass,
@@ -1355,6 +1356,7 @@ test.describe('segunda pasada (fix-264-m, 2026-10-02)', () => {
     pageAs,
     cleanup,
   }) => {
+    test.skip(isBlockedInPilot('alumno'), 'En el piloto no se ofrece invitar (fix-393-m)');
     // Los alumnos E2E- no han activado su cuenta: el bloque de la invitación está visible.
     const alumno = await createE2eAlumno(
       { label: 'Invitacion', branchId: SEDE_A, enrollments: [{}] },
@@ -2899,6 +2901,20 @@ test.describe('cierre de la asignación (fix-264-m, 2026-10-04)', () => {
     const sb = await getAdminClient();
     const page = await pageAs('admin');
     const invitar = page.locator('[data-llm-action="enviar-invitacion-alumno"]');
+    const aviso = page.getByText('Este alumno todavía no tiene cuenta activada');
+    const notaPiloto = page.locator(
+      '[data-llm-description="nota de invitaciones pausadas durante el piloto"]',
+    );
+    /** fix-393-m: en el piloto el aviso explica que no se invita, en vez de ofrecer el botón. */
+    const esperarAvisoSinCuenta = async (): Promise<void> => {
+      await expect(aviso).toBeVisible();
+      if (isBlockedInPilot('alumno')) {
+        await expect(notaPiloto).toBeVisible();
+        await expect(invitar).toHaveCount(0);
+      } else {
+        await expect(invitar).toBeVisible();
+      }
+    };
     const abrirEditar = async (): Promise<void> => {
       await openFicha(page, 'admin', alumno.studentId);
       await hero(page).locator('[data-llm-action="editar-alumno"]').click();
@@ -2917,16 +2933,17 @@ test.describe('cierre de la asignación (fix-264-m, 2026-10-04)', () => {
 
     // Sin cuenta (como nace un alumno): el aviso de invitación está.
     await abrirEditar();
-    await expect(invitar).toBeVisible();
+    await esperarAvisoSinCuenta();
 
     // Con cuenta creada pero sin haber entrado nunca: sigue estando.
     await dejarCuenta(true);
     await abrirEditar();
-    await expect(invitar).toBeVisible();
+    await esperarAvisoSinCuenta();
 
     // M13: con la cuenta ya activada (entró y cambió su clave), el aviso no aparece.
     await dejarCuenta(false);
     await abrirEditar();
+    await expect(aviso).toHaveCount(0);
     await expect(invitar).toHaveCount(0);
     await expect(page.getByText(/invitaci[oó]n/i)).toHaveCount(0);
   });

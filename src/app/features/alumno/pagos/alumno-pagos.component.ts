@@ -6,6 +6,7 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
 import type { StudentPaymentHistoryItem } from '@core/models/ui/student-payment.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { formatCLP } from '@core/utils/date.utils';
+import { paymentStatusLabel, paymentStatusVariant } from '@core/utils/payment-status.utils';
 import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -178,11 +179,17 @@ function toCompact(amount: number): { value: number; suffix: string } {
                     </div>
 
                     <div class="flex flex-col items-end gap-0.5 shrink-0">
-                      <span class="text-sm font-semibold text-success">
+                      <!-- Anulado (spec 0025-m): el alumno lo ve tachado, sin el motivo interno. -->
+                      <span
+                        class="text-sm font-semibold"
+                        [class.text-success]="payment.status !== 'anulado'"
+                        [class.text-text-muted]="payment.status === 'anulado'"
+                        [class.line-through]="payment.status === 'anulado'"
+                      >
                         {{ clp(payment.amount) }}
                       </span>
-                      <app-badge [variant]="payment.status === 'paid' ? 'success' : 'warning'">
-                        {{ payment.status === 'paid' ? 'Pagado' : 'Pendiente' }}
+                      <app-badge [variant]="estadoVariant(payment.status)">
+                        {{ estadoLabel(payment.status) }}
                       </app-badge>
                     </div>
                   </div>
@@ -202,6 +209,8 @@ export class AlumnoPagosComponent implements OnInit {
 
   protected readonly toCompact = toCompact;
   protected readonly clp = (amount: number) => formatCLP(amount);
+  protected readonly estadoLabel = paymentStatusLabel;
+  protected readonly estadoVariant = paymentStatusVariant;
 
   protected readonly enrollmentTabs = computed(() =>
     this.context.enrollments().map((enr) => ({ id: String(enr.id), label: enr.label })),

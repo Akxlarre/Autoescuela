@@ -1,14 +1,14 @@
 # Asignación ASG-i-059 — Anular pagos en vez de borrarlos
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-10-10
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-13
+> **resulting_track:** 0025-m-anular-pagos-en-vez-de-borrarlos
 
 ---
 
