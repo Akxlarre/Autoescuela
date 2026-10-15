@@ -162,6 +162,11 @@ del mismo instructor o vehículo, y un instructor no puede tener dos clases en c
 agrega otra clase al mismo alumno. En la pantalla hay que elegir el día de ayer (`elegirDia()` en
 `e2e/asistencia-clase-b.spec.ts`): Asistencia abre siempre en hoy.
 
+Los dashboards solo muestran clases de **hoy**: `e2e/dashboards.spec.ts` siembra con
+`dia: chileToday()`. Sus cupos no chocan con los de Asistencia (que usa ayer). Los KPIs se leen
+con `heroKpi()` y se comparan contra lo que devuelve la BD en ese momento (`kpisDelMes()`), o
+antes y después de sembrar.
+
 `getClientFor(email, password)` (`e2e/support/supabase-admin.ts`) entrega un cliente Supabase
 con la sesión de cualquier cuenta de prueba, para comprobar la RLS por fuera de la UI.
 

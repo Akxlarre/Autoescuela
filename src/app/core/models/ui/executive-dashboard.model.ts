@@ -150,6 +150,8 @@ export interface ExecKpiCard {
   subValue: string;
   /** Explicación de cómo se calcula (tooltip). */
   tooltip: string;
+  /** Sin dato que mostrar: se pinta "—" en vez de `value` (fix-425-m). */
+  noData?: boolean;
 }
 
 /** Secciones del dashboard que pueden fallar de forma independiente (AC-E2). */

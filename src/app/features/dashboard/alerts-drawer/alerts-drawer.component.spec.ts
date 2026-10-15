@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AlertsDrawerComponent } from './alerts-drawer.component';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
 const makeAlert = (overrides: Partial<AlertModel> = {}): AlertModel => ({
@@ -41,12 +43,15 @@ describe('AlertsDrawerComponent', () => {
   };
 
   const routerMock = { navigate: vi.fn().mockResolvedValue(true) };
+  const currentUser$ = signal<{ role: string } | null>({ role: 'admin' });
+  const drawerMock = { close: vi.fn() };
 
   beforeEach(() => {
     vi.clearAllMocks();
     activeAlerts$.set([]);
     isLoading$.set(false);
     alertCount$.set(0);
+    currentUser$.set({ role: 'admin' });
 
     TestBed.configureTestingModule({
       imports: [AlertsDrawerComponent],
@@ -54,6 +59,8 @@ describe('AlertsDrawerComponent', () => {
         { provide: DashboardAlertsFacade, useValue: facadeMock },
         { provide: Router, useValue: routerMock },
         { provide: GsapAnimationsService, useValue: gsapMock },
+        { provide: AuthFacade, useValue: { currentUser: currentUser$ } },
+        { provide: LayoutDrawerFacadeService, useValue: drawerMock },
       ],
     });
 
@@ -196,6 +203,36 @@ describe('AlertsDrawerComponent', () => {
       await component.handleAction(alert);
       expect(facadeMock.clearSchedules).not.toHaveBeenCalled();
       expect(routerMock.navigate).toHaveBeenCalledWith(['/app/admin/contabilidad/cuadratura']);
+    });
+
+    describe('"Ir a Cuadratura" según el rol (fix-401-m)', () => {
+      const cajaSinCerrar = () =>
+        makeAlert({
+          id: 'alert-cash-not-closed',
+          action: { type: 'navigate', label: 'Ir a Cuadratura' },
+        });
+
+      it('la secretaria va a su propia Cuadratura', async () => {
+        currentUser$.set({ role: 'secretaria' });
+
+        await component.handleAction(cajaSinCerrar());
+
+        expect(routerMock.navigate).toHaveBeenCalledWith([
+          '/app/secretaria/contabilidad/cuadratura',
+        ]);
+      });
+
+      it('el admin va a la suya', async () => {
+        await component.handleAction(cajaSinCerrar());
+
+        expect(routerMock.navigate).toHaveBeenCalledWith(['/app/admin/contabilidad/cuadratura']);
+      });
+
+      it('cierra el drawer al navegar', async () => {
+        await component.handleAction(cajaSinCerrar());
+
+        expect(drawerMock.close).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should not navigate for unknown alert IDs', async () => {

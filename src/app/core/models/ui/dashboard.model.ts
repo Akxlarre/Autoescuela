@@ -78,6 +78,8 @@ export interface LiveClassModel {
   originalId: number;
   classNumber?: number;
   studentName: string;
+  /** Nº de matrícula: lo que identifica al alumno por sobre el nombre (fix-424-m). */
+  enrollmentNumber?: string | null;
   instructorName: string;
   timeLabel: string; // ej. "10:00 - 10:45"
   status: 'pending' | 'in_progress' | 'completed' | 'no_show';

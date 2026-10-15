@@ -115,7 +115,265 @@ describe('DashboardFacade — KPI "Ingresos Mes" incluye servicios especiales (f
     expect(builders['special_service_sales']?.length).toBe(2);
     expect(builders['special_service_sales'][0].eq).toHaveBeenCalledWith('paid', true);
     const revenue = (facade as any).data().kpis.find((k: { id: string }) => k.id === 'revenue');
-    expect(revenue.value).toBe(1.5); // (1.000.000 + 500.000) / 1.000.000
+    expect(revenue.value).toBe(1_500_000); // 1.000.000 + 500.000 (monto completo, fix-399-m)
+  });
+});
+
+/**
+ * Facade con un cliente Supabase falso que registra un builder por consulta, agrupados por tabla.
+ * `respuesta(tabla, n)` decide qué devuelve la consulta número `n` (desde 0) de esa tabla.
+ */
+function crearFacadeConCliente(
+  respuesta: (tabla: string, n: number) => Record<string, unknown> = () => ({}),
+  user: Record<string, unknown> = { name: 'Test' },
+) {
+  const builders: Record<string, any[]> = {};
+  const client = {
+    from: vi.fn((tabla: string) => {
+      const b: any = {};
+      for (const m of [
+        'select',
+        'eq',
+        'gte',
+        'lte',
+        'lt',
+        'or',
+        'in',
+        'is',
+        'not',
+        'order',
+        'limit',
+      ]) {
+        b[m] = vi.fn(() => b);
+      }
+      const n = (builders[tabla] ??= []).length;
+      b.then = (resolve: any) =>
+        resolve({ data: [], count: 0, error: null, ...respuesta(tabla, n) });
+      builders[tabla].push(b);
+      return b;
+    }),
+    channel: vi.fn(() => {
+      const ch: any = { on: vi.fn(() => ch), subscribe: vi.fn(() => ch) };
+      return ch;
+    }),
+    removeChannel: vi.fn(),
+  };
+
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    imports: [HttpClientTestingModule],
+    providers: [
+      DashboardFacade,
+      { provide: SupabaseService, useValue: { client } },
+      { provide: AuthFacade, useValue: { currentUser: vi.fn(() => user) } },
+      { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+    ],
+  });
+  return { facade: TestBed.inject(DashboardFacade), builders, client };
+}
+
+describe('DashboardFacade — KPI "Clases Hoy" usa el criterio del panel (fix-398-m)', () => {
+  const VALIDAS = ['scheduled', 'in_progress', 'completed', 'no_show'];
+
+  it('cuenta solo clases válidas de matrículas activas, hoy y ayer', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Las dos primeras consultas a class_b_sessions son el KPI: hoy y ayer (tendencia).
+    const [hoy, ayer] = builders['class_b_sessions'];
+    for (const consulta of [hoy, ayer]) {
+      expect(consulta.in).toHaveBeenCalledWith('status', VALIDAS);
+      expect(consulta.eq).toHaveBeenCalledWith('enrollments.status', 'active');
+    }
+  });
+
+  it('el KPI y el chip del hero muestran ese conteo', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'class_b_sessions' && n === 0 ? { count: 3 } : {},
+    );
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    const data = (facade as any).data();
+    expect(data.kpis.find((k: { id: string }) => k.id === 'classes').value).toBe(3);
+    expect(data.hero.classesToday).toBe(3);
+  });
+});
+
+describe('DashboardFacade — KPI "Ingresos Mes": formato y tramo comparable (fix-399-m)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  const revenueKpi = (facade: DashboardFacade) =>
+    (facade as any).data().kpis.find((k: { id: string }) => k.id === 'revenue');
+
+  it('entrega el monto completo en pesos, sin dividir por un millón ni sufijo "M"', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'payments' && n === 0 ? { data: [{ total_amount: 1_234_567 }] } : {},
+    );
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    const kpi = revenueKpi(facade);
+    expect(kpi.value).toBe(1_234_567);
+    expect(kpi.prefix).toBe('$');
+    expect(kpi.suffix).toBeUndefined();
+  });
+
+  it('compara contra el mismo tramo del mes anterior (13 oct → 1–13 sep)', async () => {
+    // 12:00 hora Chile del 13 de octubre.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-13T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente((tabla, n) => {
+      if (tabla !== 'payments') return {};
+      return { data: [{ total_amount: n === 0 ? 150_000 : 100_000 }] };
+    });
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Segunda consulta de cada tabla = período anterior.
+    for (const [tabla, columna] of [
+      ['payments', 'payment_date'],
+      ['special_service_sales', 'sale_date'],
+    ]) {
+      const anterior = builders[tabla][1];
+      expect(anterior.gte).toHaveBeenCalledWith(columna, '2026-09-01');
+      expect(anterior.lte).toHaveBeenCalledWith(columna, '2026-09-13');
+    }
+    expect(revenueKpi(facade).trend).toBe(50);
+  });
+
+  it('"nuevos últ. 7 días" cuenta hoy y los 6 días anteriores (hotfix-155-m)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-14T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    // Segunda consulta a enrollments = matrículas recientes. 8 oct 00:00 en Chile = 03:00 UTC.
+    expect(builders['enrollments'][1].gte).toHaveBeenCalledWith(
+      'created_at',
+      '2026-10-08T03:00:00.000Z',
+    );
+  });
+
+  it('el 31 de marzo compara contra todo febrero', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-31T15:00:00.000Z'));
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    expect(builders['payments'][1].lte).toHaveBeenCalledWith('payment_date', '2026-02-28');
+  });
+});
+
+describe('DashboardFacade — KPI "Vehículos" incluye los de ambas sedes (fix-411-m)', () => {
+  it('con una sede, pide los vehículos de la sede o marcados "ambas sedes", como Flota', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(2);
+
+    const [vehiculos] = builders['vehicles'];
+    expect(vehiculos.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true');
+    expect(vehiculos.eq).not.toHaveBeenCalledWith('branch_id', 2);
+  });
+
+  it('con "Todas" no filtra', async () => {
+    const { facade, builders } = crearFacadeConCliente();
+
+    await (facade as any).fetchRealDashboardData(null);
+
+    expect(builders['vehicles'][0].or).not.toHaveBeenCalled();
+  });
+});
+
+describe('DashboardFacade — cambio de usuario (fix-409-m)', () => {
+  it('otro usuario en la misma sede no ve los datos del anterior: se descartan y carga con skeleton', async () => {
+    const user = { id: 'uid-1', name: 'Secretaria Uno' };
+    const { facade } = crearFacadeConCliente(() => ({}), user);
+    await facade.initialize();
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Uno');
+
+    // Cierra sesión y entra otra persona en la misma pestaña (el facade es un singleton).
+    user.id = 'uid-2';
+    user.name = 'Secretaria Dos';
+    const carga = facade.initialize();
+
+    expect(facade.data()).toBeNull();
+    expect(facade.loading()).toBe(true);
+    await carga;
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Dos');
+  });
+
+  it('el mismo usuario que vuelve sigue viendo sus datos al instante', async () => {
+    const { facade } = crearFacadeConCliente(() => ({}), { id: 'uid-1', name: 'Secretaria Uno' });
+    await facade.initialize();
+
+    void facade.initialize();
+
+    expect(facade.data()?.hero?.userName).toBe('Secretaria Uno');
+    expect(facade.loading()).toBe(false);
+  });
+});
+
+describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
+  const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+
+  it('si falla una consulta de KPI, la carga falla: error() avisa y no se publican ceros', async () => {
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'enrollments' && n === 0 ? fallo : {},
+    );
+
+    await facade.initialize();
+
+    expect(facade.error()).toBe('Error al cargar datos del dashboard');
+    expect(facade.data()).toBeNull();
+    expect(facade.loading()).toBe(false);
+  });
+
+  it('si fallan las clases actuales, la carga también falla', async () => {
+    // class_b_sessions: 0 y 1 son el KPI (hoy y ayer); 2 y 3, el panel "Clases Actuales".
+    const { facade } = crearFacadeConCliente((tabla, n) =>
+      tabla === 'class_b_sessions' && n === 2 ? fallo : {},
+    );
+
+    await facade.initialize();
+
+    expect(facade.error()).toBe('Error al cargar datos del dashboard');
+    expect(facade.data()).toBeNull();
+  });
+
+  it('tras un error, volver a llamar initialize() carga de nuevo', async () => {
+    let roto = true;
+    const { facade } = crearFacadeConCliente((tabla, n) => {
+      if (roto) return fallo;
+      return tabla === 'class_b_sessions' && n % 4 === 0 ? { count: 3 } : {};
+    });
+
+    await facade.initialize();
+    expect(facade.error()).not.toBeNull();
+
+    roto = false;
+    await facade.initialize();
+
+    expect(facade.error()).toBeNull();
+    expect(facade.data()?.hero?.classesToday).toBe(3);
+  });
+
+  it('un refresco en segundo plano que falla conserva los datos ya cargados', async () => {
+    let roto = false;
+    const { facade } = crearFacadeConCliente((tabla, n) => {
+      if (roto) return fallo;
+      return tabla === 'class_b_sessions' && n === 0 ? { count: 3 } : {};
+    });
+    await facade.initialize();
+
+    roto = true;
+    await (facade as any).refreshSilently();
+
+    expect(facade.data()?.hero?.classesToday).toBe(3);
+    expect(facade.error()).toBeNull();
   });
 });
 
@@ -164,13 +422,14 @@ describe('DashboardFacade', () => {
      * invocación (todas construidas sincrónicamente antes del único `await Promise.all(...)`), así
      * que cada tanda de QUERIES_POR_CARGA llamadas a `.from()` pertenece a una sola invocación del
      * método — agrupamos por eso para poder controlar cuándo "responde" cada invocación completa.
-     * Eran 8; fix-047-i sumó 2 (ventas de servicios especiales del mes y del mes anterior). Si
-     * agregas una query al método, actualiza la constante o estos tests se cuelgan esperando.
-     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * QUERIES_POR_CARGA` es una query
-     * auxiliar (ej. `fetchLiveClasses()`, que se dispara después de aplicar los datos
-     * principales) — se resuelve sola de inmediato, no la necesitamos controlada.
+     * Eran 8; fix-047-i sumó 2 (ventas de servicios especiales del mes y del mes anterior) y
+     * fix-404-m otras 2: las de `fetchLiveClasses()`, que ahora van en la misma tanda para que el
+     * guard las cubra. Si agregas una query al método, actualiza la constante o estos tests se
+     * cuelgan esperando.
+     * Cualquier llamada a `.from()` MÁS ALLÁ de `expectedInitializeCalls * QUERIES_POR_CARGA` es una
+     * query auxiliar — se resuelve sola de inmediato, no la necesitamos controlada.
      */
-    const QUERIES_POR_CARGA = 10;
+    const QUERIES_POR_CARGA = 12;
 
     function makeRaceableSupabaseMock(expectedInitializeCalls: number) {
       const mainCallsTotal = expectedInitializeCalls * QUERIES_POR_CARGA;
@@ -278,7 +537,184 @@ describe('DashboardFacade', () => {
       mock.resolveBatch(0, 100);
       await oldCall;
 
-      expect(dashFacade.data()?.hero.classesToday).toBe(200);
+      expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+    });
+
+    function facadeConCarrera(cargas: number) {
+      const mock = makeRaceableSupabaseMock(cargas);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ name: 'Test' })) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+        ],
+      });
+      return { mock, dashFacade: TestBed.inject(DashboardFacade) };
+    }
+
+    it('fix-404-m: una carga vieja que termina primero no apaga el skeleton de la vigente', async () => {
+      const { mock, dashFacade } = facadeConCarrera(2);
+
+      const oldCall = dashFacade.initialize(); // batch 0 (vieja)
+      const newCall = dashFacade.initialize(); // batch 1 (vigente)
+
+      mock.resolveBatch(0, 100);
+      await oldCall;
+      expect(dashFacade.loading()).toBe(true);
+      expect(dashFacade.data()).toBeNull();
+
+      mock.resolveBatch(1, 200);
+      await newCall;
+      expect(dashFacade.loading()).toBe(false);
+      expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+    });
+
+    describe('eventos Realtime seguidos (fix-407-m)', () => {
+      /** Deja correr las promesas ya resueltas (la cadena de un refresco encolado). */
+      const asentar = async () => {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+      };
+      const evento = (facade: DashboardFacade) => (facade as any).refreshSilently();
+      const cargasPedidas = (mock: { client: { from: { mock: { calls: unknown[] } } } }) =>
+        mock.client.from.mock.calls.length / QUERIES_POR_CARGA;
+
+      it('un evento durante la primera carga no la descarta: se muestra y después se refresca', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+
+        const carga = dashFacade.initialize(); // batch 0
+        void evento(dashFacade); // llega un cambio por Realtime mientras carga
+        expect(cargasPedidas(mock)).toBe(1);
+
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.data()?.hero?.classesToday).toBe(100);
+        expect(dashFacade.loading()).toBe(false);
+
+        // El refresco que quedó pendiente corre una vez terminada la carga.
+        await asentar();
+        expect(cargasPedidas(mock)).toBe(2);
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+      });
+
+      it('varios eventos durante un refresco en curso producen un solo refresco más', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = evento(dashFacade); // batch 1, en curso
+        void evento(dashFacade);
+        void evento(dashFacade);
+        void evento(dashFacade);
+        expect(cargasPedidas(mock)).toBe(2);
+
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+        expect(cargasPedidas(mock)).toBe(3);
+
+        mock.resolveBatch(2, 300);
+        await refresco;
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
+        expect(cargasPedidas(mock)).toBe(3);
+      });
+
+      it('un cambio de sede durante un refresco sigue ganando', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = evento(dashFacade); // batch 1, en curso
+        (dashFacade as any)._lastBranchId = 99; // la sede activa ya no es la cargada
+        const otraSede = dashFacade.initialize(); // batch 2
+
+        mock.resolveBatch(2, 300);
+        await otraSede;
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
+        expect(dashFacade.loading()).toBe(false);
+
+        mock.resolveBatch(1, 200); // el refresco viejo llega después: se descarta
+        await refresco;
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
+      });
+    });
+
+    describe('liveUpdates (fix-420-m)', () => {
+      const asentar = async () => {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+      };
+      const eventoRealtime = (facade: DashboardFacade) => (facade as any).onRealtimeChange();
+
+      it('una ráfaga de eventos durante un refresco sube el contador una vez por recarga', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.liveUpdates()).toBe(0);
+
+        void eventoRealtime(dashFacade); // batch 1, en curso
+        void eventoRealtime(dashFacade);
+        void eventoRealtime(dashFacade);
+
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(1);
+
+        mock.resolveBatch(2, 300); // la recarga agrupada de los eventos que llegaron mientras tanto
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(2);
+      });
+
+      it('un evento durante la primera carga sube el contador cuando corre su recarga', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+        const carga = dashFacade.initialize();
+        void eventoRealtime(dashFacade);
+
+        mock.resolveBatch(0, 100);
+        await carga;
+        expect(dashFacade.liveUpdates()).toBe(0);
+
+        await asentar();
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.liveUpdates()).toBe(1);
+      });
+
+      it('la re-entrada SWR recarga sin subir el contador', async () => {
+        const { mock, dashFacade } = facadeConCarrera(2);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        void dashFacade.initialize(); // re-entrada: refresco silencioso, batch 1
+        mock.resolveBatch(1, 200);
+        await asentar();
+        expect(dashFacade.data()?.hero?.classesToday).toBe(200);
+        expect(dashFacade.liveUpdates()).toBe(0);
+      });
+    });
+
+    it('fix-404-m: una carga vieja que falla no apaga el skeleton ni muestra error', async () => {
+      const { mock, dashFacade } = facadeConCarrera(2);
+
+      const oldCall = dashFacade.initialize();
+      const newCall = dashFacade.initialize();
+
+      mock.rejectBatch(0, new Error('network fail'));
+      await oldCall;
+      expect(dashFacade.loading()).toBe(true);
+      expect(dashFacade.error()).toBeNull();
+
+      mock.resolveBatch(1, 200);
+      await newCall;
+      expect(dashFacade.loading()).toBe(false);
+      expect(dashFacade.error()).toBeNull();
     });
   });
 
@@ -379,6 +815,42 @@ describe('DashboardFacade', () => {
 
       expect(result.status).toBe('no_show');
       expect(result.excused).toBe(false);
+    });
+
+    it('fix-424-m: entrega el Nº de matrícula de cada clase', async () => {
+      const rows = [
+        {
+          id: 4,
+          class_number: 2,
+          scheduled_at: '2026-08-18T17:30:00',
+          status: 'scheduled',
+          vehicles: null,
+          instructors: null,
+          enrollments: {
+            branch_id: 1,
+            number: '0027',
+            students: { users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+          },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.enrollmentNumber).toBe('0027');
+      expect(result.studentName).toBe('Juan Pérez');
     });
 
     it('fix-381-m: marca justificada una falta con asistencia vigente excused', async () => {
@@ -661,6 +1133,60 @@ describe('DashboardFacade', () => {
       dashFacade.destroyRealtime();
 
       expect(mock.client.removeChannel).toHaveBeenCalledWith(mock.channel);
+    });
+
+    describe('tablas que escucha (fix-419-m)', () => {
+      const TABLAS = [
+        'students',
+        'class_b_sessions',
+        'payments',
+        'enrollments',
+        'special_service_sales',
+        'vehicles',
+      ];
+
+      function setup() {
+        const mock = makeChannelMock();
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          imports: [HttpClientTestingModule],
+          providers: [
+            DashboardFacade,
+            { provide: SupabaseService, useValue: mock },
+            { provide: AuthFacade, useValue: {} },
+            { provide: BranchFacade, useValue: {} },
+          ],
+        });
+        const dashFacade = TestBed.inject(DashboardFacade);
+        const refreshSpy = vi
+          .spyOn(
+            dashFacade as unknown as { refreshSilently: () => Promise<void> },
+            'refreshSilently',
+          )
+          .mockResolvedValue();
+        dashFacade.setupRealtime();
+        const calls = mock.channel.on.mock.calls as unknown as [
+          string,
+          { table: string },
+          () => void,
+        ][];
+        return { calls, refreshSpy };
+      }
+
+      it('se suscribe a matrículas, ventas de servicios y vehículos además de las tablas de antes', () => {
+        const { calls } = setup();
+        expect(calls.map(([, filtro]) => filtro.table).sort()).toEqual([...TABLAS].sort());
+      });
+
+      it.each(['enrollments', 'special_service_sales', 'vehicles'])(
+        'un evento de %s refresca en silencio',
+        (tabla) => {
+          const { calls, refreshSpy } = setup();
+          const handler = calls.find(([, filtro]) => filtro.table === tabla)?.[2];
+          handler?.();
+          expect(refreshSpy).toHaveBeenCalledTimes(1);
+        },
+      );
     });
   });
 

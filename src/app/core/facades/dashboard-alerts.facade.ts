@@ -1,5 +1,10 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { addDaysIso, chileMonth } from '@core/utils/chile-time.utils';
+import {
+  addDaysIso,
+  addMonthsIso,
+  chileMonth,
+  formatChileDate,
+} from '@core/utils/chile-time.utils';
 import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { todayIso } from '@core/utils/date.utils';
 
@@ -9,6 +14,15 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import {
+  filterSnoozedAlerts,
+  parseSnoozes,
+  pruneSnoozes,
+  snoozeAlert,
+  type AlertSnoozeMap,
+} from '@core/utils/alert-snooze.utils';
 import {
   VALID_CLASS_B_SESSION_STATUSES,
   buildClearScheduleMessage,
@@ -17,6 +31,18 @@ import {
 } from '@core/utils/class-b-session.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
+
+/**
+ * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
+ * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
+ * Toda consulta de una revisión de alertas pasa por acá (fix-405-m).
+ */
+async function queryOk<T = any>(query: PromiseLike<T>): Promise<T> {
+  const result = await query;
+  const error = (result as { error?: unknown } | null)?.error;
+  if (error) throw error;
+  return result;
+}
 
 /**
  * DashboardAlertsFacade — Capa 3 del sistema de notificaciones.
@@ -28,7 +54,7 @@ import type { AlertModel } from '@core/models/ui/dashboard.model';
  * Queries paralelas (17):
  * Fase 1 & 2:
  *  1. Documentos de vehículos vencidos/por vencer
- *  2. Pagos pendientes de matrículas activas
+ *  2. Alumnos con saldo pendiente (criterio de la cartera, incluye egresados — fix-428-m)
  *  3. (B-1) Alumnos en 6ª clase con saldo pendiente
  *  4. (B-2) Alumnos con 12ª clase completada pendientes de certificado
  *  5. (B-3) Alumnos con inasistencias en 2 clases seguidas
@@ -36,8 +62,8 @@ import type { AlertModel } from '@core/models/ui/dashboard.model';
  *  7. (F-4) Alumnos con deuda superior a 2 meses
  * Fase 3 — Pagos y Finanzas:
  *  8. (F-1) Pagos registrados hoy
- *  9. (F-2) Cuota 2 vencida en modalidad depósito
- * 10. (F-5) Instructores con horas sin liquidar en el período actual
+ *  9. (F-2) Cuota 2 vencida: clase 7+ tomada con saldo pendiente
+ * 10. (F-5) Instructores con horas del mes anterior sin liquidar
  * Fase 3 — Pre-inscripciones Profesionales:
  * 11. (P-1) Nuevas pre-inscripciones pendientes de revisión
  * 12. (P-2) Tests psicológicos completados sin evaluación
@@ -59,18 +85,34 @@ export class DashboardAlertsFacade {
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** Número de la última carga con skeleton (ver `initialize`). */
+  private _loadTicket = 0;
+  /** Usuario para el que se cargaron las alertas guardadas (ver `initialize`). */
+  private _loadedUserId: string | null = null;
+  /** Descarta respuestas de fetchAlertsData() fuera de orden (facades.md §7, fix-404-m). */
+  private readonly alertsGuard = createRequestGuard();
   private readonly SNOOZE_KEY = 'ds_snoozed_alerts';
-  private readonly SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000;
 
   // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
   private _activeAlerts = signal<AlertModel[]>([]);
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
+  /** Alguna revisión falló en la última carga: la lista puede estar incompleta. */
+  private _incomplete = signal(false);
 
   // ── 2. ESTADO PÚBLICO (readonly) ───────────────────────────────────────────
   readonly activeAlerts = this._activeAlerts.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  /**
+   * Texto para mostrar cuando la lista de alertas no es confiable: la carga falló entera o
+   * faltó alguna revisión. `null` = la lista está completa. Quien pinta alertas lo muestra en
+   * vez de "Todo en orden" (fix-405-m).
+   */
+  readonly loadProblem = computed(() => {
+    if (this._error()) return 'No se pudieron revisar las alertas.';
+    return this._incomplete() ? 'No se pudieron revisar todas las alertas.' : null;
+  });
   readonly alertCount = computed(() => this._activeAlerts().length);
 
   // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
@@ -90,25 +132,45 @@ export class DashboardAlertsFacade {
    */
   async initialize(): Promise<void> {
     const branchId = this.getActiveBranchId();
+
+    // Lo guardado es de quien lo cargó: si entró otra persona en la misma pestaña se descarta
+    // en vez de mostrarlo mientras refresca (fix-409-m).
+    const userId = this.auth.currentUser()?.id ?? null;
+    if (userId !== this._loadedUserId) {
+      this._loadedUserId = userId;
+      this._initialized = false;
+      this._activeAlerts.set([]);
+      this._incomplete.set(false);
+    }
+
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
 
+    // Solo la carga más reciente apaga isLoading, registra la sede cargada o muestra su error
+    // (fix-404-m): una carga vieja que termina después no debe dejar la lista como "lista".
+    const ticket = ++this._loadTicket;
     this._isLoading.set(true);
     this._error.set(null);
     try {
       await this.fetchAlertsData(branchId);
-      this._initialized = true;
-      this._lastBranchId = branchId;
+      if (ticket === this._loadTicket) {
+        this._initialized = true;
+        this._lastBranchId = branchId;
+      }
     } catch {
-      this._error.set('Error al cargar alertas');
+      if (ticket === this._loadTicket) this._error.set('Error al cargar alertas');
     } finally {
-      this._isLoading.set(false);
+      if (ticket === this._loadTicket) this._isLoading.set(false);
     }
   }
 
-  private async refreshSilently(): Promise<void> {
+  /**
+   * Recarga sin skeleton. Las alertas no tienen canal Realtime propio: el dashboard de secretaria
+   * llama a esto cuando su canal trae un cambio (`DashboardFacade.liveUpdates`, fix-420-m).
+   */
+  async refreshSilently(): Promise<void> {
     try {
       await this.fetchAlertsData(this.getActiveBranchId());
     } catch {
@@ -122,14 +184,24 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * Descarta una alerta localmente (snooze 24h).
+   * Descarta una alerta por 24 h, para este usuario y con los casos que tiene ahora: si después
+   * tiene más, vuelve a mostrarse (fix-415-m; regla en alert-snooze.utils.ts).
    */
   dismissAlert(alertId: string): void {
-    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
-    const snoozed = snoozedStr ? JSON.parse(snoozedStr) : {};
-    snoozed[alertId] = Date.now();
-    localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
+    const alert = this._activeAlerts().find((a) => a.id === alertId) ?? { id: alertId };
+    const now = Date.now();
+    const snoozes = snoozeAlert(this.readSnoozes(now), this.currentUserId(), alert, now);
+    localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozes));
     this._activeAlerts.update((alerts) => alerts.filter((a) => a.id !== alertId));
+  }
+
+  private currentUserId(): string | null {
+    return this.auth.currentUser()?.id ?? null;
+  }
+
+  /** Descartes vigentes guardados en este navegador (los vencidos se limpian al leer). */
+  private readSnoozes(now: number): AlertSnoozeMap {
+    return pruneSnoozes(parseSnoozes(localStorage.getItem(this.SNOOZE_KEY)), now);
   }
 
   /**
@@ -232,7 +304,9 @@ export class DashboardAlertsFacade {
   // ── Coordinador de queries ──────────────────────────────────────────────────
 
   private async fetchAlertsData(branchId: number | null): Promise<void> {
-    const results = await Promise.all([
+    const requestToken = this.alertsGuard.next();
+    // allSettled: una revisión que falla no debe ocultar las alertas de las que sí respondieron.
+    const settled = await Promise.allSettled([
       // Fase 1 & 2
       this.checkExpiredDocuments(branchId),
       this.checkPendingPayments(branchId),
@@ -244,43 +318,38 @@ export class DashboardAlertsFacade {
       // Fase 3 — Pagos y Finanzas
       this.checkRecentPayments(branchId),
       this.checkOverdueSecondInstallment(branchId),
-      this.checkPendingInstructorPayments(),
-      // Fase 3 — Pre-inscripciones Profesionales
-      this.checkNewPreRegistrations(branchId),
-      this.checkPendingPsychEvaluation(branchId),
-      this.checkExpiringPreRegistrations(branchId),
-      // Fase 3 — Clase Profesional
-      this.checkRedAttendance(branchId),
-      this.checkYellowAttendance(branchId),
-      this.checkFailedModules(branchId),
-      this.checkDraftGrades(branchId),
+      this.checkPendingInstructorPayments(branchId),
+      // Pre-inscritos, Asistencia y Evaluaciones de Clase Profesional están bloqueadas en el
+      // piloto: una alerta que nadie puede atender no se muestra (fix-416-m).
+      ...(isBlockedInPilot('clase-profesional-recorte')
+        ? []
+        : [
+            // Fase 3 — Pre-inscripciones Profesionales
+            this.checkNewPreRegistrations(branchId),
+            this.checkPendingPsychEvaluation(branchId),
+            this.checkExpiringPreRegistrations(branchId),
+            // Fase 3 — Clase Profesional
+            this.checkRedAttendance(branchId),
+            this.checkYellowAttendance(branchId),
+            this.checkFailedModules(branchId),
+            this.checkDraftGrades(branchId),
+          ]),
     ]);
-    const allAlerts = results.flat();
+    // Ya se pidió una carga más reciente (otra sede): descartar esta respuesta.
+    if (!this.alertsGuard.isCurrent(requestToken)) return;
+
+    const failed = settled.filter((r) => r.status === 'rejected');
+    // Ninguna revisión respondió (sin red, sesión caída): es un error de carga, no una lista vacía.
+    if (failed.length === settled.length) throw (failed[0] as PromiseRejectedResult).reason;
+
+    const allAlerts = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
     this._activeAlerts.set(this.filterSnoozedAlerts(allAlerts));
+    this._incomplete.set(failed.length > 0);
   }
 
   private filterSnoozedAlerts(alerts: AlertModel[]): AlertModel[] {
-    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
-    if (!snoozedStr) return alerts;
-
-    try {
-      const snoozed = JSON.parse(snoozedStr) as Record<string, number>;
-      const now = Date.now();
-      let modified = false;
-
-      for (const [id, timestamp] of Object.entries(snoozed)) {
-        if (now - timestamp > this.SNOOZE_DURATION_MS) {
-          delete snoozed[id];
-          modified = true;
-        }
-      }
-
-      if (modified) localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
-
-      return alerts.filter((a) => !snoozed[a.id]);
-    } catch {
-      return alerts;
-    }
+    const now = Date.now();
+    return filterSnoozedAlerts(alerts, this.readSnoozes(now), this.currentUserId(), now);
   }
 
   // ── Queries privadas — Fase 1 & 2 ─────────────────────────────────────────
@@ -292,22 +361,31 @@ export class DashboardAlertsFacade {
   private async checkExpiredDocuments(branchId: number | null): Promise<AlertModel[]> {
     const alerts: AlertModel[] = [];
 
-    const { data: configs } = await this.supabase.client
-      .from('alert_config')
-      .select('alert_type, advance_days')
-      .eq('active', true);
+    const { data: configs } = await queryOk(
+      this.supabase.client
+        .from('alert_config')
+        .select('alert_type, advance_days')
+        .eq('active', true),
+    );
 
     const advanceDays =
       configs?.find((c: any) => c.alert_type === 'document_expiry')?.advance_days ?? 30;
 
     const todayStr = todayIso();
+    // Un vehículo de "ambas sedes" avisa en las dos, como en Flota y en el KPI (hotfix-156-m).
+    const bySede = (query: any) =>
+      branchId === null
+        ? query
+        : query.or(`branch_id.eq.${branchId},both_branches.eq.true`, {
+            referencedTable: 'vehicles',
+          });
 
     let expiredQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id, both_branches)', { count: 'exact', head: true })
       .lt('expiry_date', todayStr);
-    if (branchId !== null) expiredQuery = expiredQuery.eq('vehicles.branch_id', branchId);
-    const { count: expiredCount } = await expiredQuery;
+    expiredQuery = bySede(expiredQuery);
+    const { count: expiredCount } = await queryOk(expiredQuery);
 
     if (expiredCount && expiredCount > 0) {
       alerts.push({
@@ -323,11 +401,11 @@ export class DashboardAlertsFacade {
 
     let soonQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id, both_branches)', { count: 'exact', head: true })
       .gte('expiry_date', todayStr)
       .lte('expiry_date', futureDateStr);
-    if (branchId !== null) soonQuery = soonQuery.eq('vehicles.branch_id', branchId);
-    const { count: soonCount } = await soonQuery;
+    soonQuery = bySede(soonQuery);
+    const { count: soonCount } = await queryOk(soonQuery);
 
     if (soonCount && soonCount > 0) {
       alerts.push({
@@ -346,27 +424,40 @@ export class DashboardAlertsFacade {
    * Matrículas activas con saldo pendiente (general).
    */
   private async checkPendingPayments(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countStudentsWithDebt(branchId);
+    if (count === 0) return [];
+
+    return [
+      {
+        id: 'alert-pending-payments',
+        title: `${count} alumno${count > 1 ? 's' : ''} con saldo pendiente`,
+        description: 'Incluye egresados y retirados · revisar cuentas por cobrar',
+        severity: 'warning',
+        count,
+      },
+    ];
+  }
+
+  /**
+   * Alumnos distintos con saldo, con el criterio de la cartera del ejecutivo
+   * (`exec_dashboard_receivables`): toda matrícula Clase B con saldo salvo borradores, canceladas
+   * y pagos online abandonados — también egresados y retirados, porque esa plata se sigue
+   * debiendo (fix-428-m: antes solo contaba matrículas activas y no cuadraba con la cartera).
+   */
+  private async countStudentsWithDebt(
+    branchId: number | null,
+    createdBefore?: string,
+  ): Promise<number> {
     let query: any = this.supabase.client
       .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
+      .select('student_id')
+      .eq('license_group', 'class_b')
+      .not('status', 'in', '(draft,cancelled,pending_payment)')
       .gt('pending_balance', 0);
+    if (createdBefore) query = query.lt('created_at', createdBefore);
     if (branchId !== null) query = query.eq('branch_id', branchId);
-    const { count } = await query;
-
-    if (count && count > 0) {
-      return [
-        {
-          id: 'alert-pending-payments',
-          title: `${count} Pago${count > 1 ? 's' : ''} pendiente${count > 1 ? 's' : ''}`,
-          description: 'Revisar cuentas por cobrar',
-          severity: 'warning',
-          count,
-        },
-      ];
-    }
-
-    return [];
+    const { data } = await queryOk(query);
+    return new Set(((data ?? []) as { student_id: number }[]).map((e) => e.student_id)).size;
   }
 
   /**
@@ -382,7 +473,7 @@ export class DashboardAlertsFacade {
       .gt('enrollments.pending_balance', 0);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await query;
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
@@ -408,11 +499,13 @@ export class DashboardAlertsFacade {
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
+      // Solo Clase B: una matrícula Profesional no tiene 12ª clase ni se certifica acá (fix-410-m).
+      .eq('license_group', 'class_b')
       .eq('certificate_enabled', true)
       .is('certificate_b_pdf_url', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count } = await query;
+    const { count } = await queryOk(query);
     if (!count || count === 0) return [];
 
     return [
@@ -448,7 +541,7 @@ export class DashboardAlertsFacade {
       query = query.eq('class_b_sessions.enrollments.branch_id', branchId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const rows = (data as any[]).filter((row) => row.class_b_sessions);
@@ -497,21 +590,36 @@ export class DashboardAlertsFacade {
   private async checkUnclosedCash(branchId: number | null): Promise<AlertModel[]> {
     const todayChile = todayIso();
 
-    let query: any = this.supabase.client
+    // Sede por sede (fix-423-m): con "Todas", un cierre de una sola sede ya apagaba la alerta, y
+    // el texto no decía cuál faltaba.
+    let branchesQuery: any = this.supabase.client.from('branches').select('id, name').order('id');
+    if (branchId !== null) branchesQuery = branchesQuery.eq('id', branchId);
+
+    let closingsQuery: any = this.supabase.client
       .from('cash_closings')
-      .select('id', { count: 'exact', head: true })
+      .select('branch_id')
       .eq('date', todayChile)
       .eq('status', 'closed');
-    if (branchId !== null) query = query.eq('branch_id', branchId);
+    if (branchId !== null) closingsQuery = closingsQuery.eq('branch_id', branchId);
 
-    const { count } = await query;
-    if (count && count > 0) return [];
+    const [{ data: branches }, { data: closings }] = await Promise.all([
+      queryOk(branchesQuery),
+      queryOk(closingsQuery),
+    ]);
+    const closed = new Set(((closings ?? []) as { branch_id: number }[]).map((c) => c.branch_id));
+    const allBranches = (branches ?? []) as { id: number; name: string }[];
+    const missing = allBranches.filter((b) => !closed.has(b.id));
+    if (missing.length === 0) return [];
 
+    const all = missing.length > 1 && missing.length === allBranches.length;
+    const names = missing.map((b) => b.name).join(' y ');
     return [
       {
         id: 'alert-cash-not-closed',
-        title: 'Caja sin cerrar',
-        description: 'No se ha registrado el cierre de caja del día',
+        title: all ? 'Caja sin cerrar en ambas sedes' : `Caja sin cerrar: ${names}`,
+        description: all
+          ? 'Ninguna sede ha registrado el cierre de caja del día'
+          : `No se ha registrado el cierre de caja del día en ${names}`,
         severity: 'error',
         action: { label: 'Ir a Cuadratura', type: 'navigate' },
       },
@@ -524,22 +632,16 @@ export class DashboardAlertsFacade {
   private async checkOldDebts(branchId: number | null): Promise<AlertModel[]> {
     const sixtyDaysAgo = new Date(Date.now() - 60 * 86_400_000);
 
-    let query: any = this.supabase.client
-      .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .gt('pending_balance', 0)
-      .lt('created_at', sixtyDaysAgo.toISOString());
-    if (branchId !== null) query = query.eq('branch_id', branchId);
-
-    const { count } = await query;
-    if (!count || count === 0) return [];
+    const count = await this.countStudentsWithDebt(branchId, sixtyDaysAgo.toISOString());
+    if (count === 0) return [];
 
     return [
       {
         id: 'alert-old-debts',
-        title: `${count} alumno${count > 1 ? 's' : ''} con deuda mayor a 2 meses`,
-        description: 'Tienen saldo pendiente con más de 60 días sin pagar',
+        // Mide la antigüedad de la matrícula, no los días sin pagar (hotfix-153-m).
+        title: `${count} alumno${count > 1 ? 's' : ''} con saldo de una matrícula de más de 60 días`,
+        description:
+          'Se matricularon hace más de 60 días y todavía tienen saldo pendiente (incluye egresados)',
         severity: 'warning',
         count,
       },
@@ -561,7 +663,7 @@ export class DashboardAlertsFacade {
       .eq('payment_date', todayChile);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -576,21 +678,25 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (F-2) Alumnos con modalidad depósito que superaron la 6ª clase sin pagar la cuota 2.
-   * Condición: class_b_sessions con class_number > 6 cuya matrícula tiene
-   * payment_mode='deposit', status='active' y pending_balance > 0.
+   * (F-2) Matrículas activas con saldo pendiente que ya TOMARON una clase 7 o posterior.
+   *
+   * Desde spec 0010-i la clase 7 se bloquea con cualquier deuda, sin importar la modalidad de
+   * pago: quien la toma debiendo fue habilitado sin pago. Por eso no se filtra por payment_mode
+   * (hasta fix-402-m se filtraba por 'deposit', valor que nunca existió — DG-004 — y la alerta
+   * no se disparaba). Solo cuentan clases en curso o completadas: las 12 se agendan al
+   * matricular, así que una clase 7+ agendada o cancelada no dice nada.
    */
   private async checkOverdueSecondInstallment(branchId: number | null): Promise<AlertModel[]> {
     let query: any = this.supabase.client
       .from('class_b_sessions')
-      .select('enrollment_id, enrollments!inner(payment_mode, pending_balance, branch_id)')
-      .eq('enrollments.payment_mode', 'deposit')
+      .select('enrollment_id, enrollments!inner(pending_balance, branch_id, status)')
+      .in('status', ['in_progress', 'completed'])
       .eq('enrollments.status', 'active')
       .gt('enrollments.pending_balance', 0)
       .gt('class_number', 6);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await query;
+    const { data, error } = await queryOk(query);
     if (error || !data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
@@ -601,8 +707,7 @@ export class DashboardAlertsFacade {
       {
         id: 'alert-overdue-second-installment',
         title: `${count} matrícula${count > 1 ? 's' : ''} con cuota 2 vencida`,
-        description:
-          'Alumnos con depósito inicial que superaron la 6ª clase sin pagar la segunda cuota',
+        description: 'Ya tomaron una clase 7 o posterior y siguen con saldo pendiente',
         severity: 'warning',
         count,
       },
@@ -610,24 +715,36 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * (F-5) Instructores con horas prácticas registradas en el período actual sin liquidación.
-   * No aplica filtro de sede — los instructores tienen scope propio vía su branch_id de usuario.
+   * (F-5) Instructores con horas prácticas en el mes ANTERIOR que siguen sin liquidación.
+   * Un mes se liquida cuando termina: revisar el mes en curso dejaba la alerta encendida todo el
+   * mes (fix-417-m). Con una sede elegida, solo los instructores de esa sede.
    */
-  private async checkPendingInstructorPayments(): Promise<AlertModel[]> {
-    const currentPeriod = chileMonth(); // 'YYYY-MM'
+  private async checkPendingInstructorPayments(branchId: number | null): Promise<AlertModel[]> {
+    const period = addMonthsIso(`${chileMonth()}-01`, -1).slice(0, 7); // 'YYYY-MM'
+    // Mediodía del día 15: cualquier instante dentro del mes sirve para nombrarlo.
+    const monthLabel = formatChileDate(`${period}-15T15:00:00.000Z`, {
+      month: 'long',
+      year: 'numeric',
+    });
 
-    const { data: hoursData, error: hoursError } = await this.supabase.client
+    // Sede del instructor = users.branch_id, el mismo criterio de Liquidaciones (fix-410-m).
+    let hoursQuery: any = this.supabase.client
       .from('instructor_monthly_hours')
-      .select('instructor_id')
-      .eq('period', currentPeriod)
+      .select('instructor_id, instructors!inner(users!inner(branch_id))')
+      .eq('period', period)
       .gt('practical_sessions', 0);
+    if (branchId !== null) hoursQuery = hoursQuery.eq('instructors.users.branch_id', branchId);
+
+    const { data: hoursData, error: hoursError } = await queryOk(hoursQuery);
 
     if (hoursError || !hoursData || hoursData.length === 0) return [];
 
-    const { data: paidData, error: paidError } = await this.supabase.client
-      .from('instructor_monthly_payments')
-      .select('instructor_id')
-      .eq('period', currentPeriod);
+    const { data: paidData, error: paidError } = await queryOk(
+      this.supabase.client
+        .from('instructor_monthly_payments')
+        .select('instructor_id')
+        .eq('period', period),
+    );
 
     if (paidError) return [];
 
@@ -639,7 +756,7 @@ export class DashboardAlertsFacade {
       {
         id: 'alert-pending-instructor-payments',
         title: `${pendingCount} instructor${pendingCount > 1 ? 'es' : ''} sin liquidar`,
-        description: `Período ${currentPeriod} — tienen horas registradas sin liquidación`,
+        description: `Tienen horas de ${monthLabel} sin liquidación`,
         severity: 'warning',
         count: pendingCount,
       },
@@ -658,7 +775,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'pending_review');
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -683,7 +800,7 @@ export class DashboardAlertsFacade {
       .is('psych_test_result', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -713,7 +830,7 @@ export class DashboardAlertsFacade {
       .lte('expires_at', sevenDaysFromNow.toISOString());
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -730,17 +847,47 @@ export class DashboardAlertsFacade {
   // ── Queries privadas — Fase 3: Clase Profesional ──────────────────────────
 
   /**
-   * (R-1) Alumnos Profesional con semáforo de asistencia en rojo.
-   * No aplica filtro de sede — la vista v_professional_attendance no expone FK
-   * joinable; RLS restringe acceso por rol.
+   * Cuántas matrículas Profesional tienen el semáforo de asistencia en el color pedido, dentro
+   * de la sede elegida. La vista v_professional_attendance no trae sede: con una sede elegida se
+   * cruzan sus enrollment_id contra enrollments.branch_id (fix-410-m; antes se ignoraba la sede).
    */
-  private async checkRedAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await this.supabase.client
-      .from('v_professional_attendance')
-      .select('enrollment_id', { count: 'exact', head: true })
-      .eq('attendance_flag', 'red');
+  private async countProfessionalAttendance(
+    flag: 'red' | 'yellow',
+    branchId: number | null,
+  ): Promise<number> {
+    if (branchId === null) {
+      const { count } = await queryOk(
+        this.supabase.client
+          .from('v_professional_attendance')
+          .select('enrollment_id', { count: 'exact', head: true })
+          .eq('attendance_flag', flag),
+      );
+      return count ?? 0;
+    }
 
-    if (error || !count || count === 0) return [];
+    const { data } = await queryOk(
+      this.supabase.client
+        .from('v_professional_attendance')
+        .select('enrollment_id')
+        .eq('attendance_flag', flag),
+    );
+    const ids = ((data ?? []) as { enrollment_id: number }[]).map((row) => row.enrollment_id);
+    if (ids.length === 0) return 0;
+
+    const { count } = await queryOk(
+      this.supabase.client
+        .from('enrollments')
+        .select('id', { count: 'exact', head: true })
+        .in('id', ids)
+        .eq('branch_id', branchId),
+    );
+    return count ?? 0;
+  }
+
+  /** (R-1) Alumnos Profesional con semáforo de asistencia en rojo. */
+  private async checkRedAttendance(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countProfessionalAttendance('red', branchId);
+    if (count === 0) return [];
 
     return [
       {
@@ -753,17 +900,10 @@ export class DashboardAlertsFacade {
     ];
   }
 
-  /**
-   * (R-2) Alumnos Profesional con semáforo de asistencia en amarillo.
-   * No aplica filtro de sede — ver checkRedAttendance.
-   */
-  private async checkYellowAttendance(_branchId: number | null): Promise<AlertModel[]> {
-    const { count, error } = await this.supabase.client
-      .from('v_professional_attendance')
-      .select('enrollment_id', { count: 'exact', head: true })
-      .eq('attendance_flag', 'yellow');
-
-    if (error || !count || count === 0) return [];
+  /** (R-2) Alumnos Profesional con semáforo de asistencia en amarillo. */
+  private async checkYellowAttendance(branchId: number | null): Promise<AlertModel[]> {
+    const count = await this.countProfessionalAttendance('yellow', branchId);
+    if (count === 0) return [];
 
     return [
       {
@@ -787,7 +927,7 @@ export class DashboardAlertsFacade {
       .lt('grade', 75);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [
@@ -811,7 +951,7 @@ export class DashboardAlertsFacade {
       .eq('status', 'draft');
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await query;
+    const { count, error } = await queryOk(query);
     if (error || !count || count === 0) return [];
 
     return [

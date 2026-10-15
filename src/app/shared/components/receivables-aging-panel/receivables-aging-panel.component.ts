@@ -50,7 +50,7 @@ interface BucketView extends ReceivableAgingBucket {
         <app-empty-state
           icon="circle-check"
           message="Sin saldos pendientes"
-          subtitle="Ningún alumno Clase B debe dinero en esta sede."
+          subtitle="Ningún alumno Clase B debe dinero."
         />
       </div>
     } @else {

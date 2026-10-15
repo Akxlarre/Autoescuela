@@ -79,7 +79,8 @@ describe.skip('KpiCardComponent', () => {
   it("should display '+X%' in trend text for positive values", () => {
     fixture.componentRef.setInput('trend', 12.4);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[aria-label]')?.textContent).toContain('+12.4%');
+    // Coma decimal (fix-400-m).
+    expect(fixture.nativeElement.querySelector('[aria-label]')?.textContent).toContain('+12,4%');
   });
 
   it("should display '+X%' (no decimal) for whole-number positive trend", () => {
@@ -99,8 +100,8 @@ describe.skip('KpiCardComponent', () => {
     fixture.componentRef.setInput('trend', -3.1);
     fixture.detectChanges();
     const trendContent = fixture.nativeElement.querySelector('[aria-label]')?.textContent;
-    expect(trendContent).toContain('3.1%');
-    expect(trendContent).not.toContain('-3.1%');
+    expect(trendContent).toContain('3,1%');
+    expect(trendContent).not.toContain('-3,1%');
   });
 
   it('should include trendLabel in aria-label when provided', () => {

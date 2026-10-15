@@ -62,7 +62,7 @@ import { TooltipModule } from 'primeng/tooltip';
                 <app-skeleton-block variant="text" width="55px" height="9px" />
               </div>
               <div class="flex items-center gap-3">
-                <div class="flex -space-x-2 shrink-0">
+                <div class="hidden sm:flex -space-x-2 shrink-0">
                   <app-skeleton-block
                     variant="circle"
                     width="32px"
@@ -111,11 +111,17 @@ import { TooltipModule } from 'primeng/tooltip';
         @for (cls of visibleClasses(); track cls.id; let i = $index) {
           <li
             [attr.data-status]="cls.status"
-            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
+            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
             [class.border-l-4]="isFromPrevDay(cls)"
             [class.border-error]="isFromPrevDay(cls)"
             appPressFeedback="press"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="actionLabel(cls)"
+            [attr.data-llm-action]="actionId(cls)"
             (click)="actionClick.emit(cls)"
+            (keydown.enter)="actionClick.emit(cls)"
+            (keydown.space)="$event.preventDefault(); actionClick.emit(cls)"
             [appAnimateIn]="{ delay: 0.1 + i * 0.05 }"
           >
             <!-- Lado Izquierdo: Hora y Avatares -->
@@ -160,8 +166,9 @@ import { TooltipModule } from 'primeng/tooltip';
 
               <!-- Participantes (Avatares solapados) -->
               <div class="flex items-center gap-3 min-w-0">
+                <!-- En móvil sin avatares: el espacio es para el Nº de matrícula (fix-424-m) -->
                 <div
-                  class="flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
+                  class="hidden sm:flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
                   <!-- Alumno Avatar -->
                   <div
@@ -184,12 +191,19 @@ import { TooltipModule } from 'primeng/tooltip';
                 <div
                   class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
+                  <!-- El Nº de matrícula es el dato principal; el nombre va al lado (fix-424-m) -->
                   <span
-                    class="item-title truncate"
+                    class="flex items-baseline gap-1 min-w-0"
                     [pTooltip]="cls.studentName"
                     tooltipPosition="top"
-                    >{{ cls.studentName.split(' ')[0] }}</span
                   >
+                    @if (cls.enrollmentNumber) {
+                      <span class="item-title shrink-0">Nº {{ cls.enrollmentNumber }}</span>
+                      <span class="text-sm text-text-secondary truncate">· {{ cls.studentName }}</span>
+                    } @else {
+                      <span class="item-title truncate">{{ cls.studentName }}</span>
+                    }
+                  </span>
                   <span
                     class="text-2xs text-text-muted truncate uppercase tracking-wider"
                     [pTooltip]="
@@ -377,6 +391,30 @@ export class LiveClassesPanelComponent {
    * concluida (ambas se pintaban en gris); la justificada sigue en gris. */
   isUnexcusedAbsence(cls: LiveClassModel): boolean {
     return cls.status === 'no_show' && !cls.excused;
+  }
+
+  /**
+   * Qué hace el clic (o Enter / Espacio) sobre una clase, como nombre accesible de la fila
+   * (fix-414-m). Sigue la misma regla que resolveLiveClassActionPlan: por iniciar → iniciar,
+   * en curso → finalizar, el resto → detalle.
+   */
+  actionLabel(
+    cls: Pick<LiveClassModel, 'status' | 'studentName' | 'scheduledAt' | 'enrollmentNumber'>,
+  ): string {
+    const verbo =
+      cls.status === 'pending'
+        ? 'Iniciar la clase'
+        : cls.status === 'in_progress'
+          ? 'Finalizar la clase'
+          : 'Ver el detalle de la clase';
+    const numero = cls.enrollmentNumber ? ` (Nº ${cls.enrollmentNumber})` : '';
+    return `${verbo} de ${cls.studentName}${numero}, ${this.formatTime(cls.scheduledAt)}`;
+  }
+
+  /** Identificador de esa acción para agentes (ai-readability.md). */
+  actionId(cls: Pick<LiveClassModel, 'status'>): string {
+    if (cls.status === 'pending') return 'start-live-class';
+    return cls.status === 'in_progress' ? 'finish-live-class' : 'view-live-class';
   }
 
   statusLabel(status: string, overdue = false, fromPrevDay = false, excused = false): string {
