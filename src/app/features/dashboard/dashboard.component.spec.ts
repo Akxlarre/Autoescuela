@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
@@ -21,6 +21,8 @@ function setup(opts: { branchId?: number | null; tier?: 'mobile' | 'tablet' | 'd
     preset: signal('this_month'),
     range: signal({ from: '2026-09-01', to: '2026-09-27' }),
     isLoading: signal(false),
+    isRefreshing: signal(false),
+    dataPreset: signal('this_month'),
     kpis,
     receivables: signal(null),
     series: signal(null),
@@ -147,5 +149,29 @@ describe('DashboardComponent (dashboard ejecutivo)', () => {
     const { component } = setup();
     component.setTab('instructores');
     expect(component.activeTab()).toBe('instructores');
+  });
+
+  describe('fix-418-m: "hoy" sigue al día de Chile con la pantalla abierta', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('al tocar el filtro después de medianoche, hoy pasa al día nuevo', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-15T02:30:00.000Z')); // 23:30 del 14 en Chile
+      const { component } = setup();
+      expect(component.today()).toBe('2026-10-14');
+
+      vi.setSystemTime(new Date('2026-10-15T03:30:00.000Z')); // 00:30 del 15 en Chile
+      component.refreshToday();
+      expect(component.today()).toBe('2026-10-15');
+    });
+
+    it('sin cambio de día conserva el valor', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-14T15:00:00.000Z'));
+      const { component } = setup();
+      vi.setSystemTime(new Date('2026-10-14T18:00:00.000Z'));
+      component.refreshToday();
+      expect(component.today()).toBe('2026-10-14');
+    });
   });
 });

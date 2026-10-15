@@ -119,12 +119,34 @@ describe('AsistenciaClaseBContentComponent — alerta compacta (fix post-QA visu
     expect(tooltip).not.toContain('Última falta');
   });
 
+  it('fix-391-m: alertaTooltip de un par ya penalizado dice que no vuelve a contar', () => {
+    const conHorario = (component as any).alertaTooltip(
+      makeAlerta({ nivel: 'danger', parPenalizado: true, horarioActivo: true }),
+    );
+    expect(conHorario).toContain('no vuelven a contar');
+    expect(conHorario).not.toContain('acción manual');
+
+    const sinHorario = (component as any).alertaTooltip(
+      makeAlerta({ nivel: 'danger', parPenalizado: true, horarioActivo: false }),
+    );
+    expect(sinHorario).toContain('canceladas');
+  });
+
   it('alertaTooltip de nivel warning es el hint, sin política (fix-048)', () => {
     const tooltip = (component as any).alertaTooltip(
       makeAlerta({ nivel: 'warning', faltasConsecutivas: 1 }),
     );
     expect(tooltip).toContain('Próxima inasistencia');
     expect(tooltip).toContain('eliminar el horario');
+    expect(tooltip).not.toContain('Política');
+  });
+
+  it('fix-379-m: 2 faltas no seguidas (amarilla) no dicen "consecutivas" ni "Política"', () => {
+    const tooltip = (component as any).alertaTooltip(
+      makeAlerta({ nivel: 'warning', faltasConsecutivas: 2 }),
+    );
+    expect(tooltip).toContain('no seguidas');
+    expect(tooltip).not.toContain('consecutivas');
     expect(tooltip).not.toContain('Política');
   });
 });

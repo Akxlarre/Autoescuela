@@ -40,6 +40,7 @@ import type {
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
       [showBranchColumn]="showBranchColumn()"
+      [canRemind]="facade.recordatoriosHabilitados"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"
@@ -89,6 +90,9 @@ export class AdminAsistenciaComponent {
   );
 
   constructor() {
+    // fix-386-m: la pantalla siempre abre en hoy, no en el día que quedó elegido la vez anterior.
+    this.facade.enterToday();
+
     let previousBranchId: number | null | undefined = undefined;
     let previousBranchesCount = 0;
 

@@ -261,6 +261,7 @@ export class AdminAlumnosProfesionalFacade {
 
     const [paymentsResult, theoryResult, practiceResult, futureClassesResult] = await Promise.all([
       this.supabase.client
+        // payments-all-statuses: cuenta historial antes de borrar al alumno; un anulado también lo es.
         .from('payments')
         .select('id', { count: 'exact', head: true })
         .in('enrollment_id', enrollmentIds),

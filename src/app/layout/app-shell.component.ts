@@ -17,6 +17,7 @@ import { ConfirmModalService, type ConfirmSeverity } from '@core/services/ui/con
 import { SearchPanelComponent } from '@shared/components/search-panel/search-panel.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ModalFocusDirective } from '@core/directives/modal-focus.directive';
 import { SidebarComponent } from './sidebar.component';
 import { TopbarComponent } from './topbar.component';
 import { LayoutDrawerComponent } from './layout-drawer.component';
@@ -51,6 +52,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ModalFocusDirective,
     RouterOutlet,
     SidebarComponent,
     TopbarComponent,
@@ -73,13 +75,18 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
       />
     }
 
-    <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->
+    <!-- Modal de confirmación global (usado por guards y servicios imperativos).
+         fix-390-m: toma el foco (queda en Cancelar, la opción segura), no lo deja salir y
+         Escape equivale a Cancelar. stopPropagation: si hay un panel lateral debajo, Escape
+         cierra solo la confirmación. -->
     @if (confirmModal.isOpen()) {
       <div
         class="fixed inset-0 z-70 flex items-center justify-center bg-(--overlay-backdrop)"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
+        appModalFocus
+        (keydown.escape)="$event.stopPropagation(); confirmModal.cancel()"
       >
         <div class="surface-glass rounded-2xl p-8 max-w-sm w-full mx-4 space-y-6">
           <div class="flex items-start gap-4">
@@ -127,6 +134,21 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               }
             </div>
           </div>
+          <!-- spec 0010-i: motivo obligatorio (solo con confirmWithReason) -->
+          @if (confirmModal.config()?.reason; as reasonCfg) {
+            <div class="flex flex-col gap-1.5">
+              <label for="confirm-modal-reason" class="field-label">{{ reasonCfg.label }}</label>
+              <textarea
+                id="confirm-modal-reason"
+                rows="3"
+                class="field-input"
+                [placeholder]="reasonCfg.placeholder ?? ''"
+                [value]="confirmModal.reason()"
+                (input)="onConfirmReasonInput($event)"
+                data-llm-description="Motivo obligatorio de la confirmación"
+              ></textarea>
+            </div>
+          }
           <div class="flex items-center gap-3 justify-end">
             @if (confirmModal.config()?.cancelLabel) {
               <button
@@ -146,6 +168,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               type="button"
               [class.btn-danger-solid]="confirmModal.config()?.severity === 'danger'"
               [class.btn-primary]="confirmModal.config()?.severity !== 'danger'"
+              [disabled]="!confirmModal.reasonValid()"
               (click)="confirmModal.accept()"
               data-llm-action="confirm-modal-accept"
             >
@@ -215,6 +238,12 @@ export class AppShellComponent {
   protected readonly globalSearch = inject(GlobalSearchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly confirmModal = inject(ConfirmModalService);
+
+  /** Spec 0010-i: motivo del modal de confirmación (confirmWithReason). */
+  protected onConfirmReasonInput(event: Event): void {
+    this.confirmModal.setReason((event.target as HTMLTextAreaElement).value);
+  }
+
   protected readonly dmsViewer = inject(DmsViewerService);
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly auth = inject(AuthFacade);

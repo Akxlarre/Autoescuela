@@ -12,6 +12,8 @@ import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -37,6 +39,7 @@ export class CertificacionClaseBFacade {
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Estado privado ──
   private readonly _alumnos = signal<CertificacionAlumnoRow[]>([]);
@@ -129,7 +132,9 @@ export class CertificacionClaseBFacade {
    * con la signed URL devuelta directamente por la Edge Function (TTL 1h).
    */
   async generarCertificado(enrollmentId: number, force = false): Promise<void> {
-    const result = await this.invokeGenerateCertificate(enrollmentId, force);
+    // Spec 0010-i (AC8): con deuda, se emite solo si quien genera confirma con motivo. La
+    // habilitación queda registrada (y avisa a los admins) y recién ahí se reintenta.
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
     if (!result) return;
     this.toast.success('Certificado generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
@@ -221,15 +226,88 @@ export class CertificacionClaseBFacade {
    * Botón PDF cuando el certificado ya fue generado.
    */
   async descargarPdf(enrollmentId: number): Promise<void> {
-    const result = await this.invokeGenerateCertificate(enrollmentId);
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
     if (!result) return;
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase B');
   }
 
-  private async invokeGenerateCertificate(
+  /**
+   * Spec 0010-i (AC8): invoca la generación y, si la función rechaza por deuda, pide la
+   * confirmación con motivo, registra la habilitación y reintenta una vez.
+   */
+  private async invokeConAutorizacionDeDeuda(
     enrollmentId: number,
     force = false,
   ): Promise<{ url: string; path: string } | null> {
+    const result = await this.invokeGenerateCertificate(enrollmentId, force);
+    if (!result || !('deuda' in result)) return result;
+
+    const habilitado = await this.autorizarCertificadoConDeuda(enrollmentId, result.deuda);
+    if (!habilitado) return null;
+
+    const retry = await this.invokeGenerateCertificate(enrollmentId, force);
+    if (retry && 'deuda' in retry) {
+      this.toast.error(retry.deuda);
+      return null;
+    }
+    return retry;
+  }
+
+  /**
+   * Spec 0010-i (AC8): pide confirmación con motivo y registra la habilitación `certificado`.
+   * Devuelve true solo si quedó guardada (la Edge Function la exige para emitir con deuda).
+   */
+  private async autorizarCertificadoConDeuda(
+    enrollmentId: number,
+    mensajeDeuda: string,
+  ): Promise<boolean> {
+    const motivo = await this.confirmModal.confirmWithReason({
+      title: 'Certificado con deuda',
+      message: `${mensajeDeuda}\n¿Emitir el certificado igual? Quedará registrado quién lo autorizó y por qué, y se avisará a los administradores.`,
+      severity: 'warn',
+      confirmLabel: 'Emitir igual',
+      reason: {
+        label: 'Motivo',
+        placeholder: 'Ej. Paga el viernes, acordado con el admin',
+        minLength: 5,
+      },
+    });
+    if (motivo === null) return false;
+
+    const createdBy = this.authFacade.currentUser()?.dbId ?? null;
+    if (createdBy === null) {
+      this.toast.error('No se pudo identificar tu usuario. Vuelve a iniciar sesión.');
+      return false;
+    }
+
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('enrollment_payment_overrides')
+          .insert({
+            enrollment_id: enrollmentId,
+            kind: 'certificado',
+            reason: motivo,
+            created_by: createdBy,
+          })
+          .select('id'),
+        { requireRows: true },
+      );
+      return true;
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'No se pudo registrar la autorización'));
+      return false;
+    }
+  }
+
+  /**
+   * Devuelve la URL del PDF, `{ deuda }` si la función rechazó por saldo pendiente (spec 0010-i,
+   * sin toast: el caller pide la confirmación) o null ante cualquier otro error (con toast).
+   */
+  private async invokeGenerateCertificate(
+    enrollmentId: number,
+    force = false,
+  ): Promise<{ url: string; path: string } | { deuda: string } | null> {
     this._generatingId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
@@ -244,6 +322,9 @@ export class CertificacionClaseBFacade {
         // de la respuesta. Solo se muestra si es un rechazo de negocio (4xx): un 5xx puede traer
         // texto técnico.
         const respuesta = error ? await readEdgeFunctionError(error) : null;
+        if (respuesta?.code === 'DEUDA_PENDIENTE') {
+          return { deuda: respuesta.message ?? 'El alumno tiene un saldo pendiente.' };
+        }
         const esRechazo =
           respuesta?.status != null && respuesta.status >= 400 && respuesta.status < 500;
         this.toast.error(
@@ -298,6 +379,9 @@ export class CertificacionClaseBFacade {
     this._generatingPendientes.set(true);
     let generados = 0;
     const errores: string[] = [];
+    // Spec 0010-i (AC-E5): el lote no pide confirmaciones; los alumnos con deuda se emiten uno a
+    // uno (con su motivo) desde la fila.
+    const conDeuda: string[] = [];
 
     for (const alumno of pendientes) {
       this._generatingId.set(alumno.enrollmentId);
@@ -306,7 +390,9 @@ export class CertificacionClaseBFacade {
           'generate-certificate-b-pdf',
           { body: { enrollment_id: alumno.enrollmentId } },
         );
-        if (error || !data?.pdfUrl) {
+        if (error && (await readEdgeFunctionError(error))?.code === 'DEUDA_PENDIENTE') {
+          conDeuda.push(alumno.nombre);
+        } else if (error || !data?.pdfUrl) {
           errores.push(alumno.nombre);
         } else {
           generados++;
@@ -320,14 +406,17 @@ export class CertificacionClaseBFacade {
     this._generatingId.set(null);
     this._generatingPendientes.set(false);
 
-    if (errores.length === 0) {
+    if (errores.length === 0 && conDeuda.length === 0) {
       this.toast.success(
         `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
       );
     } else {
-      this.toast.warning(
-        `${generados} generado${generados !== 1 ? 's' : ''}, ${errores.length} con error`,
-      );
+      const partes = [`${generados} generado${generados !== 1 ? 's' : ''}`];
+      if (conDeuda.length > 0) {
+        partes.push(`${conDeuda.length} con deuda (emítelos uno a uno)`);
+      }
+      if (errores.length > 0) partes.push(`${errores.length} con error`);
+      this.toast.warning(partes.join(', '));
     }
 
     void this.refreshSilently();

@@ -141,7 +141,14 @@ export class AdminReagendarClasesDrawerComponent implements OnInit {
 
   ngOnInit(): void {
     // Todas pre-marcadas por defecto — la secretaria desmarca las que NO quiera.
-    this.rows.set(this.facade.clasesPendientesReagendar().map((c) => ({ ...c, selected: true })));
+    // fix-382-m: "Volver" desde el paso 2 recrea este componente; si ya hay una selección en el
+    // facade (la ficha la limpia al abrir), se respeta en vez de volver a marcar todo.
+    const previa = new Set(this.facade.reagendarSeleccion().map((s) => s.sessionId));
+    this.rows.set(
+      this.facade
+        .clasesPendientesReagendar()
+        .map((c) => ({ ...c, selected: previa.size === 0 || previa.has(c.sessionId) })),
+    );
   }
 
   protected toggleRow(sessionId: number, checked: boolean): void {

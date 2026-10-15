@@ -73,3 +73,19 @@ describe('AlumnoPagosComponent — heroSubtitle (regresión H-036)', () => {
     expect(component['heroSubtitle']()).toBe('Resumen de pagos de tu matrícula profesional');
   });
 });
+
+describe('AlumnoPagosComponent — estado de un pago (spec 0025-m, AC-E5)', () => {
+  it.each([
+    ['paid', 'Pagado', 'success'],
+    ['pending', 'Pendiente', 'warning'],
+    ['anulado', 'Anulado', 'neutral'],
+  ])('%s se muestra como "%s" (%s)', (status, label, variant) => {
+    const component = setup(null);
+    expect(component['estadoLabel'](status)).toBe(label);
+    expect(component['estadoVariant'](status)).toBe(variant);
+  });
+
+  it('un pago anulado no se muestra como "Pendiente"', () => {
+    expect(setup(null)['estadoLabel']('anulado')).not.toBe('Pendiente');
+  });
+});

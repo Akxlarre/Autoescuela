@@ -344,6 +344,16 @@ describe('mapReceivables (AC6)', () => {
     expect(r.alumnos).toBe(3);
     expect(r.buckets[3].label).toBe('Más de 90 días');
   });
+
+  it('fix-428-m: con alumnos_total, cuenta a cada alumno una vez aunque tenga deuda en dos tramos', () => {
+    const r = mapReceivables([
+      { bucket: '0-30', monto: 100, alumnos: 2, alumnos_total: 2 },
+      { bucket: '31-60', monto: 0, alumnos: 0, alumnos_total: 2 },
+      { bucket: '61-90', monto: 0, alumnos: 0, alumnos_total: 2 },
+      { bucket: '90+', monto: 50, alumnos: 1, alumnos_total: 2 },
+    ]);
+    expect(r.alumnos).toBe(2);
+  });
 });
 
 describe('describeRange', () => {
@@ -437,6 +447,68 @@ describe('buildExecKpiCards', () => {
     const cards = buildExecKpiCards(summary, receivables);
     expect(cards[6].subValue).toBe('6 en agenda');
     expect(cards[7].subValue).toBe('Sin clases en el período');
+  });
+
+  it('fix-425-m: sin clases en el período, cancelación se muestra "—" y no "0 %"', () => {
+    const k = toHeroKpi(buildExecKpiCards(summary, receivables)[7]);
+    expect(k.value).toBe('—');
+    expect(k.suffix).toBe('');
+    expect(k.subValue).toBe('Sin clases en el período');
+  });
+
+  describe('"Este año": una sola comparación (fix-426-m)', () => {
+    it('la comparación es contra el año anterior y no hay segunda línea', () => {
+      const gastos = buildExecKpiCards(summary, receivables, 'this_year')[1];
+      expect(gastos.trend).toBe(-5);
+      expect(gastos.trendLabel).toBe('vs año anterior');
+      expect(gastos.secondaryTrend).toBeUndefined();
+      expect(gastos.secondaryTrendLabel).toBe('');
+    });
+
+    it('sin base el año anterior lo dice, en vez de caer al período anterior', () => {
+      const ingresos = buildExecKpiCards(summary, receivables, 'this_year')[0];
+      expect(ingresos.trend).toBeUndefined();
+      expect(ingresos.trendLabel).toBe('Sin base el año anterior');
+      expect(ingresos.secondaryTrendLabel).toBe('');
+    });
+
+    it('en la tira del hero se rotula "vs año ant." y no repite la línea', () => {
+      const k = toHeroKpi(buildExecKpiCards(summary, receivables, 'this_year')[4]);
+      expect(k.trend).toBe(100);
+      expect(k.trendLabel).toBe('vs año ant.');
+      expect(k.subValue).toBe('');
+    });
+
+    it('en el hero, sin base el año anterior lo dice en vez de quedar en blanco', () => {
+      const sinBase = {
+        ...summary,
+        nuevasMatriculas: {
+          ...summary.nuevasMatriculas,
+          deltaYoy: { pct: null, kind: 'none' as const },
+        },
+      };
+      const k = toHeroKpi(buildExecKpiCards(sinBase, receivables, 'this_year')[4]);
+      expect(k.trend).toBeUndefined();
+      expect(k.subValue).toBe('Sin base el año anterior');
+    });
+
+    it('los demás presets mantienen las dos comparaciones', () => {
+      const gastos = buildExecKpiCards(summary, receivables, 'this_month')[1];
+      expect(gastos.trend).toBe(10);
+      expect(gastos.trendLabel).toBe('vs período anterior');
+      expect(gastos.secondaryTrend).toBe(-5);
+      expect(toHeroKpi(buildExecKpiCards(summary, receivables, 'this_month')[4]).trendLabel).toBe(
+        'vs per. ant.',
+      );
+    });
+  });
+
+  it('fix-425-m: con clases, cancelación sigue mostrando el porcentaje', () => {
+    const k = toHeroKpi(
+      buildExecKpiCards({ ...summary, tasaCancelacionPct: 12.5 }, receivables)[7],
+    );
+    expect(k.value).toBe('12,5');
+    expect(k.suffix).toBe('%');
   });
 });
 

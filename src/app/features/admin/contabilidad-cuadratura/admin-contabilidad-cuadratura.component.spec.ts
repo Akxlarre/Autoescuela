@@ -74,3 +74,87 @@ describe('AdminContabilidadCuadraturaComponent — branch-gate (fix-212-m)', () 
     expect(branchFacade.requiresSpecificBranch()).toBe(true);
   });
 });
+
+describe('AdminContabilidadCuadraturaComponent — quitar un ingreso (spec 0025-m)', () => {
+  const pago = {
+    id: 10,
+    source: 'payment' as const,
+    enrollmentId: 77,
+    nBoleta: '123',
+    glosa: 'Matrícula',
+    claseB: 50_000,
+    claseA: 0,
+    sence: 0,
+    otros: 0,
+    total: 50_000,
+  };
+
+  function setup(confirmModal: Record<string, ReturnType<typeof vi.fn>>) {
+    const facade = {
+      initialize: vi.fn(),
+      destroyRealtime: vi.fn(),
+      eliminarIngreso: vi.fn().mockResolvedValue(true),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: CuadraturaFacade, useValue: facade },
+        { provide: PagosFacade, useValue: { seleccionarParaPago: vi.fn(), initialize: vi.fn() } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin', branchId: 1 }) } },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: LayoutDrawerFacadeService, useValue: { isOpen: () => false } },
+        { provide: ConfirmModalService, useValue: confirmModal },
+      ],
+    });
+    const component = TestBed.runInInjectionContext(
+      () => new AdminContabilidadCuadraturaComponent(),
+    );
+    return { component, facade };
+  }
+
+  it('un pago de matrícula pide motivo y se anula con ese motivo', async () => {
+    const confirmModal = {
+      confirm: vi.fn(),
+      confirmWithReason: vi.fn().mockResolvedValue('Pago duplicado'),
+    };
+    const { component, facade } = setup(confirmModal);
+
+    await component['onEliminarIngreso'](pago);
+
+    expect(confirmModal.confirm).not.toHaveBeenCalled();
+    expect(confirmModal.confirmWithReason).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: expect.objectContaining({ minLength: 5 }) }),
+    );
+    expect(facade.eliminarIngreso).toHaveBeenCalledWith(pago, 'Pago duplicado');
+  });
+
+  it('si cancela el modal no se anula nada', async () => {
+    const confirmModal = {
+      confirm: vi.fn(),
+      confirmWithReason: vi.fn().mockResolvedValue(null),
+    };
+    const { component, facade } = setup(confirmModal);
+
+    await component['onEliminarIngreso'](pago);
+
+    expect(facade.eliminarIngreso).not.toHaveBeenCalled();
+  });
+
+  it('un curso singular sigue con la confirmación simple, sin motivo', async () => {
+    const confirmModal = {
+      confirm: vi.fn().mockResolvedValue(true),
+      confirmWithReason: vi.fn(),
+    };
+    const { component, facade } = setup(confirmModal);
+    const singular = { ...pago, source: 'singular' as const, enrollmentId: null };
+
+    await component['onEliminarIngreso'](singular);
+
+    expect(confirmModal.confirmWithReason).not.toHaveBeenCalled();
+    expect(facade.eliminarIngreso).toHaveBeenCalledWith(singular);
+  });
+});

@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toChileDate } from '@core/utils/chile-time.utils';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
@@ -7,8 +6,10 @@ import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade'
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
-import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
-import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
+import {
+  liveClassToAgendaSlot,
+  resolveLiveClassActionPlan,
+} from '@core/utils/live-class-action.utils';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 
 /**
@@ -57,25 +58,7 @@ export class DailyAgendaDrawerComponent {
         await import('../../admin/asistencia/admin-finalizar-clase-drawer.component');
       this.drawer.push(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
     } else {
-      const startTime = to24hTime(cls.scheduledAt);
-      const slot: any = {
-        id: cls.id,
-        date: toChileDate(cls.scheduledAt),
-        startTime,
-        endTime: addMinutesToTime(startTime, 45),
-        status: cls.status,
-        instructorId: 0,
-        instructorName: cls.instructorName,
-        vehicleId: 0,
-        vehiclePlate: cls.vehicle || '',
-        studentName: cls.studentName,
-        classNumber: 0,
-        kmStart: cls.kmStart,
-        kmEnd: cls.kmEnd,
-        notes: cls.notes,
-      };
-
-      this.agendaFacade.setSelectedSlot(slot);
+      this.agendaFacade.setSelectedSlot(liveClassToAgendaSlot(cls) as any);
       const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';
       this.drawer.push(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
     }

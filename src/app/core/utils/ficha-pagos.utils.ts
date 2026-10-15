@@ -27,6 +27,16 @@ export function formatPaymentConcept(type: string | null | undefined, position: 
   return PAYMENT_TYPE_LABELS[concept.toLowerCase()] ?? concept;
 }
 
+/**
+ * Posición (desde 1) de cada pago entre los pagos vigentes de la lista, para numerar los que no
+ * tienen concepto. Un pago anulado no ocupa número: usa el del pago vigente que lo sigue, así
+ * anular un pago no corre la numeración del resto (spec 0025-m).
+ */
+export function paymentPositions(anulados: readonly boolean[]): number[] {
+  let vigentes = 0;
+  return anulados.map((anulado) => (anulado ? vigentes + 1 : ++vigentes));
+}
+
 export function canRegistrarPago(saldoPendiente: number | null | undefined): boolean {
   return (saldoPendiente ?? 0) > 0;
 }

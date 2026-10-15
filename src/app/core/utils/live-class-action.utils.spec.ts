@@ -1,4 +1,4 @@
-import { resolveLiveClassActionPlan } from './live-class-action.utils';
+import { liveClassToAgendaSlot, resolveLiveClassActionPlan } from './live-class-action.utils';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
 
 function buildLiveClass(overrides: Partial<LiveClassModel>): LiveClassModel {
@@ -100,5 +100,64 @@ describe('resolveLiveClassActionPlan propaga vehicleId, vehicleCurrentKm y branc
         row: expect.objectContaining({ vehicleId: 6, vehicleCurrentKm: 6543, branchId: 2 }),
       }),
     );
+  });
+});
+
+// ─── fix-406-m: detalle de una clase finalizada o "no asistió" ────────────────
+describe('liveClassToAgendaSlot (fix-406-m)', () => {
+  // 14:30 hora Chile del 13 de octubre de 2026.
+  const clase = buildLiveClass({
+    id: 'prac-77',
+    originalId: 77,
+    classNumber: 5,
+    status: 'no_show',
+    scheduledAt: '2026-10-13T17:30:00.000Z',
+    durationMin: 90,
+    vehicle: 'Nissan Versa - RTRE29',
+    vehicleId: 6,
+    kmStart: 1200,
+    kmEnd: 1215,
+    notes: 'Sin novedad',
+  });
+
+  it('lleva el número de clase y la sesión (para "Clase N" y para deshacer una falta)', () => {
+    const slot = liveClassToAgendaSlot(clase);
+
+    expect(slot.classNumber).toBe(5);
+    expect(slot.sessionId).toBe(77);
+  });
+
+  it('fecha y horas en hora de Chile; el término usa la duración real de la clase', () => {
+    const slot = liveClassToAgendaSlot(clase);
+
+    expect(slot.date).toBe('2026-10-13');
+    expect(slot.startTime).toBe('14:30');
+    expect(slot.endTime).toBe('16:00');
+  });
+
+  it('sin duración conocida asume 45 minutos', () => {
+    const slot = liveClassToAgendaSlot({ ...clase, durationMin: undefined as unknown as number });
+
+    expect(slot.endTime).toBe('15:15');
+  });
+
+  it('conserva alumno, instructor, vehículo, kilometraje y observaciones', () => {
+    expect(liveClassToAgendaSlot(clase)).toEqual(
+      expect.objectContaining({
+        id: 'prac-77',
+        status: 'no_show',
+        studentName: 'Julio Verstappen',
+        instructorName: 'Robert Smith',
+        vehicleId: 6,
+        vehiclePlate: 'Nissan Versa - RTRE29',
+        kmStart: 1200,
+        kmEnd: 1215,
+        notes: 'Sin novedad',
+      }),
+    );
+  });
+
+  it('una clase teórica no lleva sesión práctica', () => {
+    expect(liveClassToAgendaSlot({ ...clase, type: 'theoretical' }).sessionId).toBeUndefined();
   });
 });

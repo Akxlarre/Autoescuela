@@ -174,6 +174,99 @@ describe('PagosFacade', () => {
     expect(facade.enrollmentSeleccionado()).toBe(123);
   });
 
+  // fix-049-i (B3-1 de fix-048-i): con el Estado de Cuenta de X abierto, "Ver detalle" de Y no
+  // re-crea el drawer. Antes la pantalla seguía con X y "Registrar Pago" guardaba en Y.
+  describe('seleccionarEnrollment (fix-049-i)', () => {
+    let racer: PagosFacade;
+    let retenidos: Record<number, Promise<void>>;
+    let liberar: Record<number, () => void>;
+
+    const resumenDe = (id: number) => ({
+      id,
+      base_price: 180000,
+      discount: 0,
+      total_paid: 0,
+      pending_balance: 180000,
+      payment_status: 'pending',
+      students: { users: { first_names: `Alumno${id}`, paternal_last_name: 'P', rut: `${id}-9` } },
+      courses: { name: 'Clase B' },
+    });
+
+    beforeEach(() => {
+      retenidos = {};
+      liberar = {};
+      for (const id of [1, 2]) retenidos[id] = new Promise<void>((r) => (liberar[id] = r));
+      const builder = (table: string) => {
+        const state: { id?: number } = {};
+        const b: any = {
+          select: () => b,
+          eq: (col: string, val: unknown) => {
+            if (col === 'id' || col === 'enrollment_id') state.id = val as number;
+            return b;
+          },
+          order: () => b,
+          maybeSingle: async () => {
+            await retenidos[state.id!];
+            return { data: resumenDe(state.id!), error: null };
+          },
+          then: async (resolve: (v: unknown) => void) => {
+            await retenidos[state.id!];
+            resolve({
+              data:
+                table === 'payments'
+                  ? [{ id: state.id! * 100, total_amount: 1000, status: 'paid' }]
+                  : [],
+              error: null,
+            });
+          },
+        };
+        return b;
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          PagosFacade,
+          { provide: SupabaseService, useValue: { client: { from: builder } } },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => null } },
+          { provide: NotificationsFacade, useValue: { notifyUsers: vi.fn() } },
+        ],
+      });
+      racer = TestBed.inject(PagosFacade);
+    });
+
+    it('carga el Estado de Cuenta del alumno elegido (AC-F1)', async () => {
+      racer.seleccionarEnrollment(1);
+      liberar[1]();
+      await flushMicrotasks();
+      expect(racer.estadoCuentaResumen()?.enrollmentId).toBe(1);
+
+      racer.seleccionarEnrollment(2);
+      // Al cambiar, los datos de X desaparecen de inmediato: nunca se muestran bajo la selección de Y.
+      expect(racer.estadoCuentaResumen()).toBeNull();
+      expect(racer.estadoCuentaHistorial()).toEqual([]);
+      liberar[2]();
+      await flushMicrotasks();
+      expect(racer.enrollmentSeleccionado()).toBe(2);
+      expect(racer.estadoCuentaResumen()?.enrollmentId).toBe(2);
+      expect(racer.estadoCuentaHistorial().map((p) => p.id)).toEqual([200]);
+    });
+
+    it('una respuesta lenta del alumno anterior no pisa la del nuevo (AC-F2)', async () => {
+      racer.seleccionarEnrollment(1);
+      racer.seleccionarEnrollment(2);
+      liberar[2]();
+      await flushMicrotasks();
+      liberar[1]();
+      await flushMicrotasks();
+
+      expect(racer.estadoCuentaResumen()?.enrollmentId).toBe(2);
+      expect(racer.estadoCuentaHistorial().map((p) => p.id)).toEqual([200]);
+      expect(racer.isLoadingDetalle()).toBe(false);
+    });
+  });
+
   // ── fix-134-m: mapEstado no debe filtrar valores crudos de payments.status ──
   describe('mapEstado (fix-134-m)', () => {
     it('traduce "pending" a "pendiente"', () => {

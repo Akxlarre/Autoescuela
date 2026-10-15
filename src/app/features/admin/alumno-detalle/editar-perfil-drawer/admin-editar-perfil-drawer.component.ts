@@ -24,6 +24,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /** Teléfono obligatorio con la regla mínima de Nueva Matrícula (hotfix-121-m). */
 function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
@@ -185,24 +186,36 @@ function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
                   <app-icon name="alert-triangle" [size]="16" />
                   Este alumno todavía no tiene cuenta activada para ingresar al sistema.
                 </span>
-                <button
-                  type="button"
-                  class="btn-secondary self-start flex items-center gap-2"
-                  [disabled]="isSendingInvite() || form.get('email')!.invalid || emailSinGuardar()"
-                  (click)="onEnviarInvitacion()"
-                  data-llm-action="enviar-invitacion-alumno"
-                >
-                  @if (isSendingInvite()) {
-                    <app-icon name="loader-circle" [size]="14" class="animate-spin" />
-                    Enviando...
-                  } @else {
-                    Enviar invitación
-                  }
-                </button>
-                @if (emailSinGuardar()) {
-                  <span class="text-xs" data-llm-info="invitacion-requiere-guardar">
-                    Guarda los cambios antes de enviar la invitación.
+                <!-- fix-393-m: sin invitaciones mientras el portal del alumno está en piloto. -->
+                @if (invitacionesEnPiloto) {
+                  <span
+                    class="text-xs"
+                    data-llm-description="nota de invitaciones pausadas durante el piloto"
+                  >
+                    Las invitaciones se habilitan cuando termine el piloto del portal de alumnos.
                   </span>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn-secondary self-start flex items-center gap-2"
+                    [disabled]="
+                      isSendingInvite() || form.get('email')!.invalid || emailSinGuardar()
+                    "
+                    (click)="onEnviarInvitacion()"
+                    data-llm-action="enviar-invitacion-alumno"
+                  >
+                    @if (isSendingInvite()) {
+                      <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                      Enviando...
+                    } @else {
+                      Enviar invitación
+                    }
+                  </button>
+                  @if (emailSinGuardar()) {
+                    <span class="text-xs" data-llm-info="invitacion-requiere-guardar">
+                      Guarda los cambios antes de enviar la invitación.
+                    </span>
+                  }
                 }
               </div>
             }
@@ -307,6 +320,8 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
   protected readonly saveError = signal<string | null>(null);
   protected readonly saveSuccess = signal(false);
   protected readonly isSendingInvite = signal(false);
+  /** fix-393-m: con el portal del alumno en piloto no se ofrece invitar. */
+  protected readonly invitacionesEnPiloto = isBlockedInPilot('alumno');
 
   protected readonly form = this.fb.group({
     first_names: ['', Validators.required],
