@@ -21,6 +21,10 @@ import type {
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import {
+  buscarServicioDuplicado,
+  mensajeServicioDuplicado,
+} from '@core/utils/servicios-especiales.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /** Mapea el nombre del servicio a ícono y color de UI. */
@@ -333,15 +337,19 @@ export class ServiciosEspecialesFacade {
   }
 
   async agregarServicio(data: NuevoServicioFormData): Promise<boolean> {
+    // fix-436-m: sin espacios de más y sin nombres repetidos (decisión D05).
+    const nombre = data.nombre.trim();
+    if (!this.nombreDisponible(nombre)) return false;
+
     const { error } = await this.supabase.client.from('service_catalog').insert({
-      name: data.nombre,
-      description: data.descripcion,
+      name: nombre,
+      description: data.descripcion.trim(),
       base_price: data.precio,
       active: true,
     });
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      this._error.set(this.mensajeErrorCatalogo(error));
       return false;
     }
 
@@ -349,23 +357,46 @@ export class ServiciosEspecialesFacade {
     return true;
   }
 
-  /** Edita nombre, precio y estado de un servicio existente (fix-240-m). */
+  /** Edita nombre, descripción (fix-436-m), precio y estado de un servicio (fix-240-m). */
   async editarServicio(
     id: number,
-    data: { nombre: string; precio: number; activo: boolean },
+    data: { nombre: string; descripcion: string; precio: number; activo: boolean },
   ): Promise<boolean> {
+    const nombre = data.nombre.trim();
+    if (!this.nombreDisponible(nombre, id)) return false;
+
     const { error } = await this.supabase.client
       .from('service_catalog')
-      .update({ name: data.nombre, base_price: data.precio, active: data.activo })
+      .update({
+        name: nombre,
+        description: data.descripcion.trim(),
+        base_price: data.precio,
+        active: data.activo,
+      })
       .eq('id', id);
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      this._error.set(this.mensajeErrorCatalogo(error));
       return false;
     }
 
     await this.refreshSilently();
     return true;
+  }
+
+  /** fix-436-m: false (con el motivo en `error`) si otro servicio ya tiene ese nombre. */
+  private nombreDisponible(nombre: string, excludeId?: number): boolean {
+    const duplicado = buscarServicioDuplicado(this._catalogo(), nombre, excludeId);
+    if (!duplicado) return true;
+    this._error.set(mensajeServicioDuplicado(duplicado));
+    return false;
+  }
+
+  /** El índice único de la BD (fix-436-m) cubre lo que el catálogo en memoria no alcanza a ver. */
+  private mensajeErrorCatalogo(error: { code?: string; message: string }): string {
+    return error.code === '23505'
+      ? 'Ya existe un servicio con ese nombre.'
+      : this.sanitizer.sanitize(error).message;
   }
 
   async registrarCobro(id: number): Promise<void> {

@@ -6,6 +6,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { noSoloEspacios } from '@core/utils/servicios-especiales.utils';
 
 /**
  * AgregarServicioDrawerComponent — Formulario para crear un nuevo servicio en side-drawer (RF-037).
@@ -101,8 +102,9 @@ export class AgregarServicioDrawerComponent {
   protected readonly isSaving = signal(false);
 
   protected readonly servicioForm = new FormGroup({
-    nombre: new FormControl('', Validators.required),
-    descripcion: new FormControl('', Validators.required),
+    // fix-436-m: un texto de solo espacios no cuenta como completado.
+    nombre: new FormControl('', [Validators.required, noSoloEspacios]),
+    descripcion: new FormControl('', [Validators.required, noSoloEspacios]),
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
   });
 

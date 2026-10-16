@@ -662,6 +662,7 @@ describe('ServiciosEspecialesFacade', () => {
 
       const result = await facade.editarServicio(1, {
         nombre: 'Psicotécnico Renovado',
+        descripcion: 'Examen para licencia',
         precio: 30000,
         activo: false,
       });
@@ -670,6 +671,7 @@ describe('ServiciosEspecialesFacade', () => {
       const builder = mockSupabase._builders.get('service_catalog');
       expect(builder.update).toHaveBeenCalledWith({
         name: 'Psicotécnico Renovado',
+        description: 'Examen para licencia',
         base_price: 30000,
         active: false,
       });
@@ -684,12 +686,106 @@ describe('ServiciosEspecialesFacade', () => {
 
       const result = await facade.editarServicio(1, {
         nombre: 'X',
+        descripcion: 'Y',
         precio: 1000,
         activo: true,
       });
 
       expect(result).toBe(false);
       expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  describe('catálogo: nombre único y descripción (fix-436-m)', () => {
+    const catalogo = [
+      { id: 1, name: 'Psicotécnico', description: '', base_price: 20000, active: true },
+      { id: 2, name: 'Uso de Simulador', description: '', base_price: 5000, active: false },
+    ];
+
+    it('agregar con el nombre de un servicio inactivo → no inserta y sugiere reactivarlo', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { service_catalog: { data: catalogo, error: null } },
+      });
+      await facade.initialize();
+
+      const ok = await facade.agregarServicio({
+        nombre: '  uso de SIMULADOR ',
+        descripcion: 'x',
+        precio: 1000,
+      });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toContain('Reactívalo');
+      expect(mockSupabase._builders.get('service_catalog').insert).not.toHaveBeenCalled();
+    });
+
+    it('agregar recorta los espacios de nombre y descripción', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { service_catalog: { data: catalogo, error: null } },
+      });
+      await facade.initialize();
+
+      await facade.agregarServicio({
+        nombre: ' Informe ',
+        descripcion: ' Para el SII ',
+        precio: 1000,
+      });
+
+      expect(mockSupabase._builders.get('service_catalog').insert).toHaveBeenCalledWith({
+        name: 'Informe',
+        description: 'Para el SII',
+        base_price: 1000,
+        active: true,
+      });
+    });
+
+    it('la BD rechaza el nombre repetido (23505) → mensaje legible', async () => {
+      const { facade } = setup({
+        tables: {
+          service_catalog: { data: [], error: null },
+          'service_catalog:insert': {
+            data: null,
+            error: { code: '23505', message: 'duplicate key' },
+          },
+        },
+      });
+      await facade.initialize();
+
+      const ok = await facade.agregarServicio({
+        nombre: 'Informe',
+        descripcion: 'x',
+        precio: 1000,
+      });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toBe('Ya existe un servicio con ese nombre.');
+    });
+
+    it('renombrar con el nombre de otro → no actualiza; el propio nombre sí se puede conservar', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          service_catalog: { data: catalogo, error: null },
+          'service_catalog:update': { data: null, error: null },
+        },
+      });
+      await facade.initialize();
+
+      const repetido = await facade.editarServicio(2, {
+        nombre: 'psicotécnico',
+        descripcion: '',
+        precio: 5000,
+        activo: false,
+      });
+      expect(repetido).toBe(false);
+      expect(mockSupabase._builders.get('service_catalog').update).not.toHaveBeenCalled();
+
+      const mismo = await facade.editarServicio(1, {
+        nombre: 'Psicotécnico',
+        descripcion: 'nueva',
+        precio: 20000,
+        activo: true,
+      });
+      expect(mismo).toBe(true);
     });
   });
 

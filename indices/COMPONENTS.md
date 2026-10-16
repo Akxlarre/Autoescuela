@@ -458,7 +458,7 @@
 | `app-section-hero` | `title`, `contextLine`, `subtitle`, `icon`, `chips`, `actions`, `backRoute`, `backLabel`, `animateOnInit`, `backClickable`, `density`, `kpis`, `loading`, `loadingKpiCount` | `actionClick`, `backClicked`, `kpiClick` | `src/app/shared/components/section-hero/section-hero.component.ts` |
 | `app-agregar-servicio-drawer` | — | — | `src/app/shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component.ts` |
 | `app-registrar-venta-drawer` | — | — | `src/app/shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component.ts` |
-| `app-servicios-especiales-content` | `catalogo`, `kpis`, `isLoading` | `requestRegistrarVenta`, `requestNuevoServicio`, `requestVerHistorial`, `requestEditarServicio`, `servicioBorrado`, `servicioReactivado`, `servicioEliminadoDefinitivo` | `src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts` |
+| `app-servicios-especiales-content` | `catalogo`, `kpis`, `isLoading`, `puedeEditarCatalogo`, `loadError` | `requestRegistrarVenta`, `requestNuevoServicio`, `requestVerHistorial`, `requestEditarServicio`, `servicioBorrado`, `servicioReactivado`, `servicioEliminadoDefinitivo`, `retry` | `src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts` |
 | `app-signature-pad` | `label`, `height` | `signatureChange` | `src/app/shared/components/signature-pad/signature-pad.component.ts` |
 | `app-skeleton-block` | `variant`, `width`, `height`, `borderRadius` | — | `src/app/shared/components/skeleton-block/skeleton-block.component.ts` |
 | `app-sort-control` | `options`, `sort`, `llmSubject` | `fieldChange`, `directionToggle` | `src/app/shared/components/sort-control/sort-control.component.ts` |
@@ -472,7 +472,7 @@
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
 | `app-today-ops-strip` | `ops`, `loading` | — | `src/app/shared/components/today-ops-strip/today-ops-strip.component.ts` |
 | `app-user-panel` | `user`, `darkMode` | `action`, `toggleTheme`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
-| `app-vehiculo-card` | `vehiculo`, `loading`, `basePath`, `sedeLabel` | `viewAgenda`, `manageDocuments`, `editVehicle` | `src/app/shared/components/vehiculo-card/vehiculo-card.component.ts` **spec 0051-b:** el botón Editar se muestra solo si `vehiculo().canManage` (lo calcula el facade con `canManageVehicle()`); Agenda, Documentos y Mantenimientos siempre. |
+| `app-vehiculo-card` | `vehiculo`, `loading`, `basePath`, `sedeLabel` | `viewAgenda`, `manageDocuments`, `editVehicle` | `src/app/shared/components/vehiculo-card/vehiculo-card.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->

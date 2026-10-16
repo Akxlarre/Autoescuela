@@ -27,7 +27,7 @@
 | `branch_payroll_config` | M3 - Finanzas | `branch_id` (PK), `amount_per_hour` (INT NOT NULL def 5000, CHECK ≥ 0), `updated_at`, `updated_by` | `branch_id`→branches (PK), `updated_by`→users | Admin: CRUD (sin DELETE), Sec: R, Inst: R | ✅ Definida · `20260907120000` (spec 0014-m): tarifa CLP por hora equivalente de instructor, **global por sede** (no por instructor). Seed = 5000 por sede (= comportamiento previo hardcodeado). La consume `LiquidacionesFacade` y la Edge Function `generate-payroll-report`, resolviendo por `users.branch_id` de cada instructor. Trigger `trg_branch_payroll_config_updated_at` → `set_updated_at()`. Realtime habilitado (`ALTER PUBLICATION supabase_realtime`) — `LiquidacionesFacade` re-calcula la nómina al cambiar una tarifa. **La migración `20260907120000` también agrega `instructor_monthly_payments` e `instructor_advances` a la publicación**: nunca se habían agregado, y el canal `liquidaciones-realtime` (3 bindings) estuvo muerto desde su creación por el mecanismo de fix-227-m (un binding a tabla no publicada mata el canal entero). |
 | `standalone_courses` | M3 - Finanzas | `id`, `type`, `branch_id` (**NOT NULL** desde `20260612000001` — backfill NULL→1), `updated_at` (TIMESTAMPTZ, agregado en `20260615120000`) | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260612000001` (fix-016-m): `branch_id` obligatorio; trigger `trg_standalone_capacity` (BEFORE INSERT en enrollments, `FOR UPDATE` sobre el curso) bloquea sobreventa de cupos con `RAISE EXCEPTION 'CUPOS_AGOTADOS'` (la UI lo traduce vía `db-error.utils`). · `20260615120000`: `updated_at` añadido para soporte del cron `auto_transition_standalone_course_status`. |
 | `standalone_course_enrollments` | M3 - Finanzas | `id`, `course_id`, `payment_method` (TEXT, def 'efectivo'), `registered_by` (FK users), `discount_amount` (INT NOT NULL def 0), `discount_reason` (TEXT), `paid_at` (TIMESTAMPTZ — NULL si pendiente) | `standalone_course_id`, `student_id`, `certificate_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260417000003`: `payment_method` y `registered_by`. · `20260612000001` (fix-016-m): descuentos persistidos (`discount_amount`/`discount_reason` — el cobro es `base_price − discount_amount`) y `paid_at` (fuente de la cuadratura diaria; backfill `enrolled_at` para pagados históricos). |
-| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R (fix-434-m: catálogo común a las dos sedes, solo admin escribe) | ✅ Definida |
+| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R (fix-434-m: catálogo común a las dos sedes, solo admin escribe) | ✅ Definida — índice único `service_catalog_name_unique` sobre el nombre normalizado (fix-436-m) |
 | `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog (nullable, fix-024-i), `service_name` (fix-024-i), `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `document_number` (fix-025-i), `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -342,7 +342,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
+| select_audit_log | SELECT | `(SELECT public.auth_user_role()) = 'admin' OR user_id = (SELECT public.auth_u…` | — |
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
 
@@ -1471,9 +1471,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_maintenance_records | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_maintenance_records | INSERT | — | `auth_user_role() = 'admin'` |
-| update_maintenance_records | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_maintenance_records | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_maintenance_records | INSERT | — | `public.auth_can_manage_vehicle(vehicle_id)` |
+| update_maintenance_records | UPDATE | `public.auth_can_manage_vehicle(vehicle_id)` | `public.auth_can_manage_vehicle(vehicle_id)` |
 
 ### `notification_templates` — 🔒 RLS
 
@@ -1598,7 +1598,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_payments | DELETE | `auth_user_role() = 'admin'` | — |
 | select_payments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_payments | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
-| update_payments | UPDATE | `auth_user_role() = 'admin'` (fix-051-i: la secretaria ya no modifica pagos; la app solo hace UPDATE en la anulación del admin) | — |
+| update_payments | UPDATE | `auth_user_role() = 'admin'` | — |
 
 ### `pricing_seasons` — 🔒 RLS
 
@@ -2070,9 +2070,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_service_catalog | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
-| insert_service_catalog | INSERT | — | `auth_user_role() = 'admin'` (fix-434-m) |
-| update_service_catalog | UPDATE | `auth_user_role() = 'admin'` (fix-434-m) | — |
-| delete_service_catalog | DELETE | `auth_user_role() = 'admin'` (fix-434-m) | — |
+| insert_service_catalog | INSERT | — | `auth_user_role() = 'admin'` |
+| update_service_catalog | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_service_catalog | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `service_catalog_name_unique`
 
 ### `session_machinery` — 🔒 RLS
 
@@ -2173,9 +2175,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_special_service_sales | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 
 **Índices:** `idx_special_service_sales_branch_id`
-
-**Restricciones:** `special_service_sales_branch_required` — `CHECK (branch_id IS NOT NULL) NOT VALID` (fix-433-m): toda venta nueva o modificada tiene sede; la venta histórica #3 sin sede no se revisa.
-**Triggers:** `trg_special_service_sales_caja_cerrada` (fix-432-m, ver `guard_venta_servicio_caja_cerrada()`), `trg_audit_special_service_sales`.
 
 ### `standalone_course_enrollments` — 🔒 RLS
 
@@ -2446,9 +2445,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_vehicle_documents | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| insert_vehicle_documents | INSERT | — | `auth_user_role() = 'admin'` |
-| update_vehicle_documents | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_vehicle_documents | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_vehicle_documents | INSERT | — | `public.auth_can_manage_vehicle(vehicle_id)` |
+| update_vehicle_documents | UPDATE | `public.auth_can_manage_vehicle(vehicle_id)` | `public.auth_can_manage_vehicle(vehicle_id)` |
 
 **Índices:** `idx_vehicle_docs_expiry`
 
@@ -2479,8 +2478,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
 | delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
-| insert_vehicles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
-| update_vehicles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
+| insert_vehicles | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
+| update_vehicles | UPDATE | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
 
 ### `website_config` — 🔒 RLS
 
@@ -2523,6 +2522,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
+| `auth_can_manage_vehicle` | `(p_vehicle_id integer)` |
 | `auth_instructor_can_view_student_user` | `(target_user_id integer)` |
 | `auth_instructor_id` | `()` |
 | `auth_student_id` | `()` |
@@ -2547,7 +2547,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cleanup_public_enrollment_throttle` | `()` |
 | `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL::integer, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL::integer, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
-| `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
 | `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
 | `exec_dashboard_assert_admin` | `()` |
@@ -2586,6 +2585,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `prevent_vehicle_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
+| `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
 | `request_client_ip` | `()` |
 | `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT DEFAULT NULL)` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
@@ -2598,6 +2598,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `set_payment_override_pending` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `stamp_branch_absence_penalty_config` | `()` |
+| `sync_vehicle_from_maintenance` | `()` |
+| `sync_vehicle_km_from_class` | `()` |
 | `tasks_set_updated_at` | `()` |
 | `trg_class_b_sessions_update_monthly_hours` | `()` |
 | `trg_consents_append_only_fn` | `()` |

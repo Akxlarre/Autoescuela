@@ -105,8 +105,8 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `EnrollmentFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `ConsentsFacade`, `EnrollmentDocumentsFacade`, `EnrollmentPaymentFacade`, `ConfirmModalService`, `DmsViewerService`, `NotificationsFacade`, `ToastService`, `AgendaSettingsService` | — | `src/app/core/facades/enrollment.facade.ts` |
 | `EvaluacionesProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `NotificationsFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
 | `ExAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
-| `ExecutiveDashboardFacade` | `SupabaseService`, `BranchFacade` | `preset`, `range`, `isLoading`, `kpis`, `series`, `instructorHours`, `receivables`, `todayOps`, `errors`, `stages`, `hasData` | `src/app/core/facades/executive-dashboard.facade.ts` |
-| `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |
+| `ExecutiveDashboardFacade` | `SupabaseService`, `BranchFacade` | `preset`, `range`, `isLoading`, `isRefreshing`, `dataPreset`, `kpis`, `series`, `instructorHours`, `receivables`, `todayOps`, `errors`, `stages`, `hasData` | `src/app/core/facades/executive-dashboard.facade.ts` |
+| `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade` | — | `src/app/core/facades/flota-detalle.facade.ts` |
 | `FlotaFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |
 | `GlobalSearchFacade` | `AuthFacade`, `AdminAlumnosFacade`, `AdminAlumnosProfesionalFacade`, `InstructorAlumnosFacade`, `InstructoresFacade`, `Router` | — | `src/app/core/facades/global-search.facade.ts` |
 | `HistorialCuadraturasFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService`, `LayoutDrawerFacadeService` | — | `src/app/core/facades/historial-cuadraturas.facade.ts` |
