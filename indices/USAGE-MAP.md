@@ -287,7 +287,7 @@
 | `features/admin/documentos/dms-student-docs-drawer` | ❌ | ✅ | ❌ | ✅ |
 | `features/admin/documentos/dms-upload-drawer` | ✅ | ❌ | ✅ | ✅ |
 | `features/admin/ex-alumnos-profesional` | ✅ | ❌ | ❌ | ❌ |
-| `features/admin/flota` | ✅ | ❌ | ❌ | ❌ |
+| `features/admin/flota` | ✅ | ❌ | ✅ | ❌ |
 | `features/admin/flota/maintenance-form-drawer` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/flota/route-sheet-drawer` | ✅ | ❌ | ❌ | ❌ |
 | `features/admin/flota/vehicle-agenda-drawer` | ❌ | ❌ | ❌ | ✅ |
