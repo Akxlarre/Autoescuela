@@ -272,6 +272,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
+| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | `b` | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 <!-- AUTO-GENERATED:END -->
 

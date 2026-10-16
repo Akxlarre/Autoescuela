@@ -1,6 +1,6 @@
 # Asignación ASG-i-032 — Testing: Flota, documentos de vehículo y mantenimientos
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

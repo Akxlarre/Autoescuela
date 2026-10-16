@@ -397,8 +397,8 @@ test.afterAll(async () => {
   // SQL de limpieza para el owner (este test no borra nada).
   console.log(`
 -- Limpieza de flota-real.spec.ts (vehículo ${PATENTE}, id ${v.id})
-DELETE FROM storage.objects WHERE bucket_id = 'documents' AND name IN (
-  SELECT file_url FROM public.vehicle_documents WHERE vehicle_id = ${v.id} AND file_url IS NOT NULL);
+-- Storage: todos los archivos del vehículo (incluye los reemplazados).
+DELETE FROM storage.objects WHERE bucket_id = 'documents' AND name LIKE 'vehicle-docs/${v.id}/%';
 DELETE FROM public.maintenance_records WHERE vehicle_id = ${v.id};
 DELETE FROM public.vehicle_documents WHERE vehicle_id = ${v.id};
 DELETE FROM public.notifications WHERE reference_type = 'document_expiry' AND reference_id = ${v.id};
