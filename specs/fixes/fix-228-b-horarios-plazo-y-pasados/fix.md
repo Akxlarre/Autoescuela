@@ -3,7 +3,7 @@
 - **Autor:** b
 - **Origen:** ASG-i-026 (testing de la Agenda), sospechas S2 y S3 de `fix-186-b`. Decisiones del
   owner (2026-10-16): no ofrecer bloques que ya empezaron; ampliar los horarios al plazo de la Agenda.
-- **Estado:** abierto
+- **Estado:** cerrado (2026-10-16)
 
 ## Bug
 
@@ -34,6 +34,6 @@ Test: `supabase/tests/agenda/fix-228-b-horarios-plazo-y-pasados.sql`. e2e: se qu
 
 ## Verificación
 
-- [ ] Test en BEGIN…ROLLBACK con la migración (+ fix-224/226/227-b en verde).
-- [ ] Migración aplicada en producción (aprobada por el owner con "dale con tus recomendaciones")
-      + tests en verde + e2e de la Agenda con C06 sin `knownBug`.
+- [x] Test en BEGIN…ROLLBACK con la migración: 4/4 (sin ella, 2 fallas: 34 bloques ya empezados ofrecidos y plazo de 28 días); fix-224/226/227-b en verde.
+- [x] Migración aplicada en producción (aprobada por el owner con "dale con tus recomendaciones")
+      + tests en verde (4/4, 5/5, 13/13, 3/3) + e2e de la Agenda 29/29 con C06 sin `knownBug`.
