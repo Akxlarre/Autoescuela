@@ -2,6 +2,8 @@
  * Centralized date and currency utilities for the project (Target: es-CL).
  */
 
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
+
 import {
   addMonthsIso,
   chileToday,
@@ -14,6 +16,15 @@ import {
 /** Hoy en Chile, 'YYYY-MM-DD'. No depende del reloj ni de la zona del equipo. */
 export function todayIso(): string {
   return chileToday();
+}
+
+/**
+ * Validador: una fecha 'YYYY-MM-DD' no puede ser posterior a hoy en Chile (hotfix-082-b: un
+ * mantenimiento "realizado" no puede tener fecha futura). Vacío = válido (eso lo cubre required).
+ */
+export function notAfterTodayValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as string | null;
+  return value && value > chileToday() ? { afterToday: true } : null;
 }
 
 /** Fecha 'YYYY-MM-DD' que está `months` meses antes de hoy (hoy en Chile). */
