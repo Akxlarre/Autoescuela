@@ -126,6 +126,8 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 <p-inputNumber
                   inputId="mf-km"
                   formControlName="km_at_time"
+                  locale="es-CL"
+                  [maxFractionDigits]="0"
                   placeholder="Ej: 45000"
                   aria-required="true"
                   inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
