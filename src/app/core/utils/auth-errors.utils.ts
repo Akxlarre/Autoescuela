@@ -75,7 +75,13 @@ export function mapAuthError(error: any): string {
     return `La contraseña debe tener al menos ${minLength[1]} caracteres.`;
   }
 
-  if (message.includes('Rate limit exceeded')) {
+  // hotfix-089-b: Supabase responde "Request rate limit reached" (login) o "email rate limit
+  // exceeded" (correos); antes solo se reconocía "Rate limit exceeded" y caían en el genérico.
+  if (
+    error.code === 'over_request_rate_limit' ||
+    error.code === 'over_email_send_rate_limit' ||
+    /rate limit/i.test(message)
+  ) {
     return 'Demasiados intentos. Por favor, intenta de nuevo más tarde.';
   }
 
