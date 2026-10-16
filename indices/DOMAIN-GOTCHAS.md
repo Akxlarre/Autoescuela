@@ -22,10 +22,11 @@
 - **Realidad:** la tabla define `score`. PostgREST rechaza la query completa (400) y el fallback silencioso muestra "Pendiente" aunque la nota ya esté registrada. Bug encontrado 2 veces en auditorías distintas.
 - **Fuente:** `specs/fixes/fix-059-b-nota-examen-final`
 
-### DG-003 — `vehicles.status = 'available'` nunca existe en producción
-- **Trampa:** comparar contra `'available'` como si fuera un valor válido del enum.
-- **Realidad:** el dominio real es `'operational'|'in_use'|'maintenance'|'out_of_service'|'blocked'`. Un KPI comparado contra el valor fantasma daba 0 siempre.
-- **Fuente:** `specs/fixes/fix-063-b-dashboard-kpis-estados`
+### DG-003 — `vehicles.status` no tiene un único valor para "disponible"
+- **Trampa:** contar vehículos disponibles comparando contra un solo valor (`= 'available'`) o contra una lista cerrada (`IN ('operational', 'in_use')`).
+- **Realidad:** la columna no tiene CHECK y conviven dos vocabularios. El formulario de Flota guarda `'available'|'maintenance'|'out_of_service'`; los datos antiguos y los seeds traen `'operational'|'in_use'|'blocked'`. Cualquiera de las dos comparaciones deja fuera a la mitad de la flota.
+- **Aplica cuando:** una query, RPC o KPI necesita saber si un vehículo está disponible. Disponible = **no** está en `'maintenance'`, `'out_of_service'` ni `'blocked'` — la regla de `resolveVehicleStatus()` (`core/utils/vehicle-status.utils.ts`); en SQL, `NOT IN (...)` sobre esos tres.
+- **Fuente:** `specs/fixes/fix-063-b-dashboard-kpis-estados`, `specs/fixes/fix-397-m-ejecutivo-vehiculos-disponibles-estado-available`
 
 ### DG-004 — `enrollments.payment_mode` real es `'partial'`, no `'deposit'`
 - **Trampa:** escribir `WHERE payment_mode = 'deposit'` porque así lo decía la documentación.
@@ -513,7 +514,19 @@
   al editar esta función, verificar contra la migración más reciente que la toca (no contra un
   fix intermedio) — `fix-113-m` casi reintrodujo una referencia a `biometric_records`, tabla
   eliminada por una migración posterior a la que se usó como base.
-- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`
+- **Cuándo aplica (regla general):** cuando una limpieza por lotes borra filas de una tabla con
+  muchas FKs entrantes (`users` tiene unas 50, todas `NO ACTION`), aislar cada fila en su propio
+  subbloque `BEGIN … EXCEPTION WHEN foreign_key_violation` en vez de enumerar las tablas hijas:
+  la lista queda vieja con la próxima FK, y el subbloque convierte "aborta toda la corrida" en
+  "se conserva esa fila y queda un `WARNING`". Si la fila puede seguir siendo necesaria (un
+  `user` cuyo `student` conserva otra matrícula), excluirla antes de intentar el borrado. Y cuando
+  se reescribe una función con `CREATE OR REPLACE`, volver a declarar su `SET search_path`: los
+  permisos se conservan, la configuración no.
+  Así quedó la sección de `users` huérfanos de esta función. La sección de `enrollments` sigue
+  sin esa red: una tabla nueva con FK a `enrollments` sin `ON DELETE` que pueda tener filas de un
+  borrador todavía aborta todo.
+- **Fuente:** `specs/fixes/fix-113-m-cleanup-drafts-notifications-fk-violation`,
+  `specs/fixes/fix-393-m-no-invitar-alumno-durante-piloto`
 
 ### DG-052 — `enrollments.pending_balance`/`total_paid` ya se recalculan atómicamente vía trigger; escribirlos manualmente desde el cliente causa lost-update
 - **Trampa:** después de insertar un `payment`, hacer un segundo `UPDATE` manual sobre
@@ -1793,6 +1806,39 @@
   pago), hay que agregarlo, no asumirlo.
 - **Fuente:** `specs/fixes/fix-047-i-servicios-especiales-como-ingreso` (columnas renombradas en
   fix-230-m; bucket fijo de fix-025-i).
+
+### DG-110 — Un trigger que bloquea un cambio de estado debe vigilar la llegada al estado, no la salida del estado "normal"
+
+- **Trampa:** escribir el `WHEN` del trigger con el camino feliz que uno tiene en la cabeza
+  (`OLD.status = 'scheduled' AND NEW.status = 'in_progress'`) porque "así se inicia una clase".
+- **Realidad:** `class_b_sessions.status` tiene más estados de origen (`no_show`, y los que se agreguen).
+  Un `UPDATE` de `no_show` directo a `in_progress`/`completed` no cumple `OLD.status = 'scheduled'` y
+  el bloqueo no corre: la regla de negocio queda con una puerta lateral sin error ni aviso. Se detectó
+  al escribir el test SQL, antes de aplicar la migración.
+- **Regla de aplicabilidad:** cuando un trigger impide **llegar** a un estado (iniciar, completar,
+  aprobar, emitir), condicionarlo por el destino y por "no estaba ya ahí":
+  `OLD.status NOT IN (<estados bloqueados>) AND NEW.status IN (<estados bloqueados>)`. Solo excluir
+  transiciones dentro del conjunto bloqueado (aquí, `in_progress → completed`) si la regla lo permite
+  explícitamente. El test SQL debe probar al menos un origen distinto del habitual.
+- **Fuente:** `specs/specs/0010-i-clase-7-bloqueada-sin-segundo-pago`
+  (`trg_block_class_b_without_second_payment`, migración `20261013120000`).
+
+### DG-111 — Un "borrar lo anterior y volver a insertar" desde el front duplica filas cuando la RLS no deja borrar
+
+- **Trampa:** hacer idempotente un paso que se puede repetir (volver atrás en un wizard) con
+  `DELETE ... WHERE <clave>` seguido de `INSERT`, revisando el `error` del DELETE.
+- **Realidad:** si el rol no tiene DELETE por RLS, PostgREST responde `error: null` y 0 filas, y
+  el INSERT agrega una fila más en cada reintento. `assertWriteOk({ requireRows: true })` (DG-103)
+  no sirve acá: la primera vez 0 filas borradas es lo correcto, así que "0 filas" no distingue
+  "no había nada" de "no me dejaron". Así se duplicó el pago de matrícula de la secretaria.
+- **Regla de aplicabilidad:** cuando un reemplazo (DELETE + INSERT, o DELETE + INSERT + UPDATE de
+  totales) lo ejecuta un rol que no tiene DELETE sobre esa tabla —y no debe tenerlo—, el reemplazo
+  va en una RPC `SECURITY DEFINER` que valida estado y permiso por sede y lo hace en una
+  transacción. No abrir DELETE al rol para "arreglar" el front. Si la tabla tiene un trigger que
+  recalcula totales con columnas de otra tabla (ej. `enrollments.discount` en
+  `recalculate_enrollment_balance()`), la RPC actualiza esas columnas **antes** de tocar las filas.
+- **Fuente:** `specs/fixes/fix-050-i-pago-matricula-duplicado-al-reintentar`
+  (`record_enrollment_payment()`, migración `20261014180000`).
 
 ## Convención para agregar una entrada nueva
 

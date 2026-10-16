@@ -7,6 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 // Facades
 import { FlotaFacade } from '@core/facades/flota.facade';
@@ -34,7 +35,7 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
   imports: [FlotaListContentComponent],
   template: `
     <app-flota-list-content
-      basePath="/app/admin"
+      [basePath]="basePath"
       [vehicles]="facade.filteredVehicles()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
@@ -45,9 +46,8 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
       (editVehicle)="openVehicleForm($event)"
       (viewAgenda)="openAgenda($event)"
       (manageDocuments)="openDocuments($event)"
-      (typeFilterChange)="facade.setTypeFilter($event)"
       (statusFilterChange)="facade.setStatusFilter($event)"
-      (searchChange)="onLocalSearch($event)"
+      (searchChange)="facade.setSearchTerm($event)"
     />
   `,
 })
@@ -56,24 +56,25 @@ export class AdminFlotaComponent {
   protected readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
+  /** La misma pantalla sirve al admin y a la secretaria (spec 0051-b): la base sale de la ruta. */
+  protected readonly basePath: string =
+    inject(ActivatedRoute).snapshot.data['basePath'] ?? '/app/admin';
 
-  protected readonly localSearchTerm = signal('');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
   protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+    this.destroyRef.onDestroy(() => {
+      this.facade.destroyRealtime();
+      // El facade vive más que la página: sin esto, al volver la lista seguiría filtrada con el
+      // buscador vacío (hotfix-073-b).
+      this.facade.setSearchTerm('');
+    });
 
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();
     });
-  }
-
-  protected onLocalSearch(term: string): void {
-    // Aquí podrías implementar búsqueda client-side si el facade no lo hace,
-    // pero FlotaFacade ya suele filtrar por señales.
-    console.log('Buscando:', term);
   }
 
   protected openVehicleForm(id?: number): void {

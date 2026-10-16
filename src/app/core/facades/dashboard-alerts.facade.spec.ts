@@ -6,6 +6,14 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 
+// El piloto se controla desde el test: por defecto las vistas de Clase Profesional están
+// habilitadas, para que los tests de sus alertas describan el comportamiento sin recorte.
+const pilot = vi.hoisted(() => ({ profesionalBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) =>
+    module === 'clase-profesional-recorte' && pilot.profesionalBloqueado,
+}));
+
 describe('DashboardAlertsFacade', () => {
   let facade: DashboardAlertsFacade;
   let fromSpy: ReturnType<typeof vi.fn>;
@@ -17,7 +25,14 @@ describe('DashboardAlertsFacade', () => {
    * Supports all chainable methods used by the facade.
    */
   const buildChain = (result: { data?: unknown; count?: number | null; error?: unknown }) => {
-    const resolved = Promise.resolve(result);
+    // fix-428-m: las alertas de saldo leen filas (alumnos distintos), no un conteo. Un mock que
+    // solo declara `count: N` entrega N filas de alumnos distintos, para que los tests escritos
+    // con conteos sigan diciendo lo mismo.
+    const filas =
+      result.data === undefined && result.count
+        ? Array.from({ length: result.count }, (_, i) => ({ id: i + 1, student_id: i + 1 }))
+        : result.data;
+    const resolved = Promise.resolve({ ...result, data: filas });
     const chain: any = {};
     const ret = vi.fn().mockReturnValue(chain);
     chain.select = ret;
@@ -32,6 +47,7 @@ describe('DashboardAlertsFacade', () => {
     chain.or = ret;
     chain.in = ret;
     chain.limit = ret;
+    chain.order = ret;
     chain.then = (resolve: any, reject: any) => resolved.then(resolve, reject);
     return chain;
   };
@@ -81,7 +97,9 @@ describe('DashboardAlertsFacade', () => {
   const buildCleanMock = (fromFn: ReturnType<typeof vi.fn>) => {
     fromFn.mockImplementation((table: string) => {
       if (table === 'alert_config') return buildChain({ data: [] });
-      if (table === 'cash_closings') return buildChain({ count: 1 }); // caja cerrada
+      // Una sede, con la caja cerrada (fix-423-m: la alerta revisa sede por sede).
+      if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+      if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
       return buildChain({ data: [], count: 0 });
     });
   };
@@ -123,6 +141,33 @@ describe('DashboardAlertsFacade', () => {
       expect(severities).toContain('warning');
     });
 
+    it('documentos con sede elegida incluyen los vehículos de ambas sedes (hotfix-156-m)', async () => {
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(2);
+      const docChains: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'vehicle_documents') {
+          // buildChain comparte un solo vi.fn entre métodos: espías propios para or/eq.
+          chain.or = vi.fn(() => chain);
+          chain.eq = vi.fn(() => chain);
+          docChains.push(chain);
+        }
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      expect(docChains).toHaveLength(2);
+      for (const chain of docChains) {
+        expect(chain.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true', {
+          referencedTable: 'vehicles',
+        });
+        expect(chain.eq).not.toHaveBeenCalledWith('vehicles.branch_id', 2);
+      }
+    });
+
     it('should produce no alerts when everything is clean', async () => {
       buildCleanMock(fromSpy);
 
@@ -140,6 +185,298 @@ describe('DashboardAlertsFacade', () => {
       await facade.loadAlerts();
 
       expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  // ── fix-416-m: una alerta de una vista bloqueada no se muestra ───────────────
+  describe('alertas de vistas bloqueadas en el piloto (fix-416-m)', () => {
+    afterEach(() => (pilot.profesionalBloqueado = false));
+
+    const TABLAS_PROFESIONAL = [
+      'professional_pre_registrations',
+      'v_professional_attendance',
+      'professional_module_grades',
+    ];
+    /** Todo con datos: cada revisión de Clase Profesional generaría su alerta. */
+    const conDatosEnTodo = () => {
+      const consultadas: string[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        consultadas.push(table);
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (TABLAS_PROFESIONAL.includes(table)) return buildChain({ count: 3 });
+        if (table === 'enrollments') return buildChain({ count: 2 });
+        return buildChain({ data: [], count: 0 });
+      });
+      return consultadas;
+    };
+    const esProfesional = (id: string) =>
+      /pre-registration|psych|professional|failed-modules|draft-grades/.test(id);
+
+    it('con el recorte bloqueado no consulta ni muestra las alertas de Clase Profesional', async () => {
+      pilot.profesionalBloqueado = true;
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      const consultadas = conDatosEnTodo();
+
+      await facade.loadAlerts();
+
+      expect(consultadas.filter((t) => TABLAS_PROFESIONAL.includes(t))).toEqual([]);
+      expect(facade.activeAlerts().filter((a) => esProfesional(a.id))).toEqual([]);
+      // Las demás siguen: pagos pendientes, por ejemplo.
+      expect(facade.activeAlerts().some((a) => a.id === 'alert-pending-payments')).toBe(true);
+      expect(facade.loadProblem()).toBeNull();
+    });
+
+    it('con el recorte habilitado se muestran', async () => {
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+      conDatosEnTodo();
+
+      await facade.loadAlerts();
+
+      expect(facade.activeAlerts().filter((a) => esProfesional(a.id)).length).toBe(7);
+    });
+  });
+
+  // ── fix-410-m: cada alerta cuenta dentro de su curso y de su sede ────────────
+  describe('alcance de las alertas (fix-410-m)', () => {
+    /** Llamadas a los filtros de una cadena (todos los métodos comparten el mismo spy). */
+    const filtros = (chain: any) => chain.eq.mock.calls as unknown[][];
+    const sede = (branchId: number | null) =>
+      (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(branchId);
+    const comoAdmin = () =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+
+    it('"listos para certificar" cuenta solo matrículas Clase B', async () => {
+      const chains: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        const chain = buildChain(table === 'cash_closings' ? { count: 1 } : { data: [], count: 0 });
+        if (table === 'enrollments') chains.push(chain);
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      // Una de las consultas a enrollments es la de certificados: debe acotar el curso.
+      const certificados = chains.find((c) =>
+        filtros(c).some(([column]) => column === 'certificate_enabled'),
+      );
+      expect(filtros(certificados)).toContainEqual(['license_group', 'class_b']);
+    });
+
+    it('asistencia Profesional: con una sede elegida cuenta solo las matrículas de esa sede', async () => {
+      comoAdmin();
+      sede(1);
+      const cruces: any[] = [];
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'v_professional_attendance')
+          return buildChain({ data: [{ enrollment_id: 10 }, { enrollment_id: 11 }] });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'enrollments') cruces.push(chain);
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      // Los ids de la vista se cruzan contra enrollments de la sede; ninguno es de la sede 1.
+      const cruce = cruces.find((c) =>
+        filtros(c).some(([column, value]) => column === 'id' && Array.isArray(value)),
+      );
+      expect(filtros(cruce)).toContainEqual(['id', [10, 11]]);
+      expect(filtros(cruce)).toContainEqual(['branch_id', 1]);
+      expect(
+        facade.activeAlerts().find((a) => a.id === 'alert-professional-attendance-red'),
+      ).toBeUndefined();
+    });
+
+    it('asistencia Profesional: con "Todas" cuenta todas, sin cruce', async () => {
+      comoAdmin();
+      sede(null);
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'v_professional_attendance') return buildChain({ count: 6 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.loadAlerts();
+
+      expect(
+        facade.activeAlerts().find((a) => a.id === 'alert-professional-attendance-red')?.count,
+      ).toBe(6);
+    });
+
+    it('"instructores sin liquidar": con una sede elegida filtra por la sede del instructor', async () => {
+      comoAdmin();
+      sede(2);
+      let horas: any;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        const chain = buildChain({ data: [], count: 0 });
+        if (table === 'instructor_monthly_hours') horas = chain;
+        return chain;
+      });
+
+      await facade.loadAlerts();
+
+      expect(filtros(horas)).toContainEqual(['instructors.users.branch_id', 2]);
+    });
+  });
+
+  // ── fix-409-m: lo guardado es de quien lo cargó ─────────────────────────────
+  describe('cambio de usuario (fix-409-m)', () => {
+    const conPagosPendientes = (count: number) => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'enrollments')
+          return callCounters[table] % 4 === 1 ? buildChain({ count }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const usuario = (id: string) =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ id, dbId: 1 });
+
+    it('otro usuario no ve las alertas del anterior mientras cargan las suyas', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.initialize();
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+
+      usuario('uid-2');
+      const carga = facade.initialize();
+
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await carga;
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('el mismo usuario que vuelve sigue viendo sus alertas al instante', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.initialize();
+
+      void facade.initialize();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  // ── fix-405-m: una consulta fallida no es "0 resultados" ─────────────────────
+  describe('errores de consulta (fix-405-m)', () => {
+    const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+
+    it('si fallan todas las consultas, no hay alertas inventadas y la carga queda en error', async () => {
+      fromSpy.mockImplementation(() => buildChain(fallo));
+
+      await facade.loadAlerts();
+
+      // Antes: "Caja sin cerrar" aparecía porque no se pudo contar el cierre.
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
+    });
+
+    it('si falla solo una revisión, muestra las demás y avisa que la lista está incompleta', async () => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain(fallo);
+        if (table === 'enrollments')
+          return callCounters[table] === 1 ? buildChain({ count: 5 }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.loadAlerts();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+    });
+
+    it('con todas las revisiones respondidas no hay aviso', async () => {
+      buildCleanMock(fromSpy);
+
+      await facade.loadAlerts();
+
+      expect(facade.loadProblem()).toBeNull();
+    });
+  });
+
+  // ── fix-404-m: cambio de sede seguido ───────────────────────────────────────
+  describe('cargas fuera de orden (fix-404-m)', () => {
+    const alerta = (id: string) => ({
+      id,
+      title: id,
+      description: '',
+      severity: 'warning' as const,
+    });
+
+    /**
+     * Deja todas las consultas en vacío salvo "pagos pendientes", que responde cuando el test
+     * lo decide: una promesa por carga, en el orden en que se pidieron.
+     */
+    function controlarCargas() {
+      const cargas: { resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = [];
+      const proto = Object.getPrototypeOf(facade);
+      for (const name of Object.getOwnPropertyNames(proto).filter((n) => n.startsWith('check'))) {
+        vi.spyOn(facade as any, name).mockResolvedValue([]);
+      }
+      vi.spyOn(facade as any, 'checkPendingPayments').mockImplementation(
+        () => new Promise((resolve, reject) => cargas.push({ resolve, reject })),
+      );
+      return cargas;
+    }
+
+    it('quedan las alertas de la última carga pedida aunque la primera responda después', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[1].resolve([alerta('sede-nueva')]);
+      await vigente;
+      cargas[0].resolve([alerta('sede-anterior')]);
+      await vieja;
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['sede-nueva']);
+    });
+
+    it('una carga vieja que termina primero no apaga isLoading ni deja sus alertas', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[0].resolve([alerta('sede-anterior')]);
+      await vieja;
+      expect(facade.isLoading()).toBe(true);
+      expect(facade.activeAlerts()).toEqual([]);
+
+      cargas[1].resolve([alerta('sede-nueva')]);
+      await vigente;
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['sede-nueva']);
+    });
+
+    it('el fallo de la carga vigente se avisa; el de una vieja, no', async () => {
+      const cargas = controlarCargas();
+
+      const vieja = facade.initialize();
+      const vigente = facade.initialize();
+
+      cargas[0].reject(new Error('vieja'));
+      await vieja;
+      expect(facade.loadProblem()).toBeNull();
+
+      // Falla una sola revisión de la carga vigente: lista incompleta (fix-405-m).
+      cargas[1].reject(new Error('vigente'));
+      await vigente;
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
       expect(facade.isLoading()).toBe(false);
     });
   });
@@ -336,6 +673,52 @@ describe('DashboardAlertsFacade', () => {
       ).toBeUndefined();
     });
 
+    it('fix-391-m: "Borrar horarios" deja fuera a los alumnos cuyo par ya fue penalizado', async () => {
+      const penalized = (enrollmentId: number, classNumber: number) => ({
+        recorded_at: '2026-10-07T12:00:00Z',
+        class_b_sessions: {
+          enrollment_id: enrollmentId,
+          class_number: classNumber,
+          status: 'no_show',
+          enrollments: {
+            branch_id: 1,
+            status: 'active',
+            absence_penalty_applied_at: '2026-10-08T00:00:00Z',
+          },
+        },
+      });
+      mockAbsences([penalized(301, 3), penalized(301, 4), absence(302, 7), absence(302, 8)]);
+
+      await facade.loadAlerts();
+
+      const b3 = facade.activeAlerts().find((a) => a.id === 'alert-consecutive-absences');
+      expect(b3?.count).toBe(2);
+      expect(b3?.action?.enrollmentIds).toEqual([302]);
+    });
+
+    it('fix-391-m: si todos los pares ya fueron penalizados, la alerta no ofrece acción', async () => {
+      const penalized = (classNumber: number) => ({
+        recorded_at: '2026-10-07T12:00:00Z',
+        class_b_sessions: {
+          enrollment_id: 301,
+          class_number: classNumber,
+          status: 'no_show',
+          enrollments: {
+            branch_id: 1,
+            status: 'active',
+            absence_penalty_applied_at: '2026-10-08T00:00:00Z',
+          },
+        },
+      });
+      mockAbsences([penalized(3), penalized(4)]);
+
+      await facade.loadAlerts();
+
+      const b3 = facade.activeAlerts().find((a) => a.id === 'alert-consecutive-absences');
+      expect(b3?.count).toBe(1);
+      expect(b3?.action).toBeUndefined();
+    });
+
     it('no alerta con dos faltas que no son seguidas', async () => {
       mockAbsences([absence(401, 2), absence(401, 7), absence(402, 1)]);
 
@@ -358,7 +741,8 @@ describe('DashboardAlertsFacade', () => {
         if (table === 'vehicle_documents') return buildChain({ count: 0 });
         if (table === 'enrollments') return buildChain({ count: 0 });
         if (table === 'class_b_sessions') return buildChain({ data: [] });
-        if (table === 'cash_closings') return buildChain({ count: 0 }); // NOT closed
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [] }); // NOT closed
 
         return buildChain({ data: [], count: 0 });
       });
@@ -377,6 +761,119 @@ describe('DashboardAlertsFacade', () => {
       await facade.loadAlerts();
 
       expect(facade.activeAlerts().find((a) => a.id === 'alert-cash-not-closed')).toBeUndefined();
+    });
+
+    describe('dice qué sede falta por cerrar (fix-423-m)', () => {
+      const SEDES = [
+        { id: 1, name: 'Autoescuela Chillán' },
+        { id: 2, name: 'Conductores Chillán' },
+      ];
+      const conCierres = (cerradas: number[]) =>
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'branches') return buildChain({ data: SEDES });
+          if (table === 'cash_closings')
+            return buildChain({ data: cerradas.map((branch_id) => ({ branch_id })) });
+          if (table === 'alert_config') return buildChain({ data: [] });
+          return buildChain({ data: [], count: 0 });
+        });
+      const alertaCaja = () => facade.activeAlerts().find((a) => a.id === 'alert-cash-not-closed');
+
+      it('con "Todas" y una sede cerrada, nombra la que falta', async () => {
+        conCierres([1]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar: Conductores Chillán');
+      });
+
+      it('con "Todas" y ninguna cerrada, dice que faltan ambas', async () => {
+        conCierres([]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar en ambas sedes');
+      });
+
+      it('con las dos cerradas no hay alerta', async () => {
+        conCierres([1, 2]);
+        await facade.loadAlerts();
+
+        expect(alertaCaja()).toBeUndefined();
+      });
+
+      it('con una sede elegida, nombra esa sede', async () => {
+        (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+        (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(1);
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'branches') return buildChain({ data: [SEDES[0]] });
+          if (table === 'cash_closings') return buildChain({ data: [] });
+          if (table === 'alert_config') return buildChain({ data: [] });
+          return buildChain({ data: [], count: 0 });
+        });
+        await facade.loadAlerts();
+
+        expect(alertaCaja()?.title).toBe('Caja sin cerrar: Autoescuela Chillán');
+      });
+    });
+  });
+
+  // ── fix-428-m: el saldo pendiente con el mismo criterio que la cartera ───────
+  describe('saldo pendiente con el criterio de la cartera (fix-428-m)', () => {
+    /** Chain que anota cada filtro aplicado sobre `enrollments`. */
+    const enrollmentsQueries: Array<Array<[string, unknown[]]>> = [];
+    const chainConFiltros = (data: unknown[]) => {
+      const llamadas: Array<[string, unknown[]]> = [];
+      enrollmentsQueries.push(llamadas);
+      const chain: any = buildChain({ data });
+      for (const m of ['select', 'eq', 'not', 'gt', 'lt', 'in', 'is', 'or']) {
+        chain[m] = vi.fn((...args: unknown[]) => {
+          llamadas.push([m, args]);
+          return chain;
+        });
+      }
+      return chain;
+    };
+
+    const montar = (filasPorLlamada: (n: number) => unknown[]) => {
+      enrollmentsQueries.length = 0;
+      let n = 0;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'enrollments') return chainConFiltros(filasPorLlamada(++n));
+        if (table === 'alert_config') return buildChain({ data: [] });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const consultaCon = (filtro: string) =>
+      enrollmentsQueries.find(
+        (q) =>
+          q.some(([m, a]) => m === 'gt' && a[0] === 'pending_balance') &&
+          q.some(([m]) => m === filtro),
+      );
+
+    it('cuenta alumnos distintos, no matrículas', async () => {
+      // Todas las consultas de matrículas devuelven 3 matrículas de 2 alumnos.
+      montar(() => [{ student_id: 7 }, { student_id: 7 }, { student_id: 9 }]);
+      await facade.loadAlerts();
+
+      const alerta = facade.activeAlerts().find((a) => a.id === 'alert-pending-payments');
+      expect(alerta?.title).toBe('2 alumnos con saldo pendiente');
+      expect(alerta?.count).toBe(2);
+      const vieja = facade.activeAlerts().find((a) => a.id === 'alert-old-debts');
+      expect(vieja?.title).toBe('2 alumnos con saldo de una matrícula de más de 60 días');
+    });
+
+    it('incluye egresados y retirados: excluye solo borradores, canceladas y pagos abandonados', async () => {
+      montar(() => []);
+      await facade.loadAlerts();
+
+      const deudas = enrollmentsQueries.filter((q) =>
+        q.some(([m, a]) => m === 'gt' && a[0] === 'pending_balance'),
+      );
+      expect(deudas).toHaveLength(2);
+      for (const q of deudas) {
+        expect(q).toContainEqual(['not', ['status', 'in', '(draft,cancelled,pending_payment)']]);
+        expect(q).toContainEqual(['eq', ['license_group', 'class_b']]);
+        expect(q.some(([m, a]) => m === 'eq' && a[0] === 'status')).toBe(false);
+      }
+      expect(consultaCon('lt')).toBeDefined(); // la de más de 60 días
     });
   });
 
@@ -448,7 +945,9 @@ describe('DashboardAlertsFacade', () => {
 
   // ── Phase 3 — F-2: Overdue second installment ────────────────────────────────
   describe('F-2: checkOverdueSecondInstallment', () => {
-    it('should generate a warning when deposit-mode students have sessions past class 6 with unpaid balance', async () => {
+    /** Arma el mock y devuelve la cadena de la consulta F-2 (2ª a class_b_sessions). */
+    const mockF2 = (rows: unknown[]) => {
+      const f2Chain = buildChain({ data: rows });
       const callCounters: Record<string, number> = {};
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
@@ -459,29 +958,21 @@ describe('DashboardAlertsFacade', () => {
         if (table === 'cash_closings') return buildChain({ count: 1 });
 
         if (table === 'class_b_sessions') {
-          const n = callCounters[table];
-          if (n === 1) return buildChain({ data: [] }); // B-1
-          // F-2: 2 deposit students with sessions beyond class 6 (501 duplicated)
-          return buildChain({
-            data: [
-              {
-                enrollment_id: 501,
-                enrollments: { payment_mode: 'deposit', pending_balance: 100000, branch_id: 1 },
-              },
-              {
-                enrollment_id: 502,
-                enrollments: { payment_mode: 'deposit', pending_balance: 90000, branch_id: 1 },
-              },
-              {
-                enrollment_id: 502,
-                enrollments: { payment_mode: 'deposit', pending_balance: 90000, branch_id: 1 },
-              },
-            ],
-          });
+          return callCounters[table] === 1 ? buildChain({ data: [] }) /* B-1 */ : f2Chain;
         }
 
         return buildChain({ data: [], count: 0 });
       });
+      return f2Chain;
+    };
+
+    it('avisa de las matrículas con saldo que ya tomaron una clase 7+, una vez cada una (fix-402-m)', async () => {
+      // 501 con modalidad total, 502 con abono y dos clases 7+ tomadas.
+      mockF2([
+        { enrollment_id: 501, enrollments: { pending_balance: 100000, branch_id: 1 } },
+        { enrollment_id: 502, enrollments: { pending_balance: 90000, branch_id: 1 } },
+        { enrollment_id: 502, enrollments: { pending_balance: 90000, branch_id: 1 } },
+      ]);
 
       await facade.loadAlerts();
 
@@ -489,6 +980,21 @@ describe('DashboardAlertsFacade', () => {
       expect(f2).toBeDefined();
       expect(f2?.severity).toBe('warning');
       expect(f2?.count).toBe(2); // deduplicated: 501, 502
+    });
+
+    it('pide solo clases 7+ ya tomadas y no filtra por modalidad de pago (fix-402-m)', async () => {
+      const f2Chain = mockF2([]);
+
+      await facade.loadAlerts();
+
+      // Todos los métodos de la cadena comparten el mismo spy.
+      const filtros = f2Chain.eq.mock.calls as unknown[][];
+      expect(filtros).toContainEqual(['status', ['in_progress', 'completed']]);
+      expect(filtros).toContainEqual(['class_number', 6]);
+      expect(filtros).toContainEqual(['enrollments.pending_balance', 0]);
+      expect(filtros).toContainEqual(['enrollments.status', 'active']);
+      // 'deposit' nunca existió (DG-004) y la segunda cuota ya no depende de la modalidad (0010-i).
+      expect(filtros.some(([column]) => column === 'enrollments.payment_mode')).toBe(false);
     });
 
     it('should not generate F-2 when no overdue second installments exist', async () => {
@@ -502,6 +1008,56 @@ describe('DashboardAlertsFacade', () => {
 
   // ── Phase 3 — F-5: Pending instructor payments ───────────────────────────────
   describe('F-5: checkPendingInstructorPayments', () => {
+    describe('revisa el mes anterior (fix-417-m)', () => {
+      afterEach(() => vi.useRealTimers());
+
+      /** Corre la carga en la fecha dada y devuelve los períodos consultados y la alerta. */
+      const enFecha = async (instante: string) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(instante));
+        const cadenas: Record<string, any> = {};
+        fromSpy.mockImplementation((table: string) => {
+          if (table === 'cash_closings') return buildChain({ count: 1 });
+          if (table === 'instructor_monthly_hours')
+            return (cadenas[table] = buildChain({ data: [{ instructor_id: 10 }] }));
+          if (table === 'instructor_monthly_payments')
+            return (cadenas[table] = buildChain({ data: [] }));
+          return buildChain({ data: [], count: 0 });
+        });
+        await facade.loadAlerts();
+        const periodo = (table: string) =>
+          (cadenas[table].eq.mock.calls as unknown[][]).find(([c]) => c === 'period')?.[1];
+        return {
+          horas: periodo('instructor_monthly_hours'),
+          pagos: periodo('instructor_monthly_payments'),
+          alerta: facade.activeAlerts().find((a) => a.id === 'alert-pending-instructor-payments'),
+        };
+      };
+
+      it('el 14 de octubre revisa septiembre y lo dice en el texto', async () => {
+        // 12:00 hora Chile del 14 de octubre de 2026.
+        const { horas, pagos, alerta } = await enFecha('2026-10-14T15:00:00.000Z');
+
+        expect(horas).toBe('2026-09');
+        expect(pagos).toBe('2026-09');
+        expect(alerta?.description).toBe('Tienen horas de septiembre de 2026 sin liquidación');
+      });
+
+      it('en enero revisa diciembre del año anterior', async () => {
+        const { horas, pagos } = await enFecha('2027-01-05T15:00:00.000Z');
+
+        expect(horas).toBe('2026-12');
+        expect(pagos).toBe('2026-12');
+      });
+
+      it('el día 1 a las 23:30 hora Chile sigue siendo el mes que empieza, no el siguiente', async () => {
+        // 23:30 del 1 de noviembre en Chile = 02:30 UTC del día 2.
+        const { horas } = await enFecha('2026-11-02T02:30:00.000Z');
+
+        expect(horas).toBe('2026-10');
+      });
+    });
+
     it('should generate a warning when instructors have hours but no payment for this period', async () => {
       fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') return buildChain({ data: [] });
@@ -712,6 +1268,8 @@ describe('DashboardAlertsFacade', () => {
   // ── Phase 3 — R-1: Professional attendance red ───────────────────────────────
   describe('R-1: checkRedAttendance', () => {
     it('should generate an error alert for students with critical (red) attendance', async () => {
+      // Admin en "Todas las sedes": se cuenta la vista completa (fix-410-m).
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
       fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') return buildChain({ data: [] });
         if (table === 'vehicle_documents') return buildChain({ count: 0 });
@@ -742,6 +1300,8 @@ describe('DashboardAlertsFacade', () => {
   // ── Phase 3 — R-2: Professional attendance yellow ────────────────────────────
   describe('R-2: checkYellowAttendance', () => {
     it('should generate a warning for students with at-risk (yellow) attendance', async () => {
+      // Admin en "Todas las sedes": se cuenta la vista completa (fix-410-m).
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
       const callCounters: Record<string, number> = {};
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
@@ -915,6 +1475,25 @@ describe('DashboardAlertsFacade', () => {
       expect(toast.success).not.toHaveBeenCalled();
     });
 
+    it('fix-391-m: al cancelar registra la penalización de las matrículas afectadas', async () => {
+      const chains = [
+        buildChain({ data: SESSIONS, error: null }),
+        buildChain({ data: [{ id: 1 }, { id: 2 }, { id: 3 }], error: null }),
+        buildChain({ data: [{ id: 301 }, { id: 302 }], error: null }),
+      ];
+      let call = 0;
+      fromSpy.mockImplementation(() => chains[Math.min(call++, chains.length - 1)]);
+
+      await facade.clearSchedules([301, 302]);
+
+      expect(fromSpy).toHaveBeenNthCalledWith(3, 'enrollments');
+      expect(chains[2].update).toHaveBeenCalledWith({
+        absence_penalty_applied_at: expect.any(String),
+      });
+      expect(chains[2].in).toHaveBeenCalledWith('id', [301, 302]);
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
     it('al confirmar cancela por id, deja cancelled_at y avisa el resultado', async () => {
       const [, update] = mockLookupThenUpdate(
         { data: SESSIONS, error: null },
@@ -984,7 +1563,8 @@ describe('DashboardAlertsFacade', () => {
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
         if (table === 'alert_config') return buildChain({ data: [] });
-        if (table === 'cash_closings') return buildChain({ count: 0 }); // not closed → F-3 alert
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [] }); // not closed → F-3 alert
         return buildChain({ data: [], count: 0 });
       });
 
@@ -993,6 +1573,68 @@ describe('DashboardAlertsFacade', () => {
 
       facade.dismissAlert('alert-cash-not-closed');
       expect(facade.activeAlerts().some((a) => a.id === 'alert-cash-not-closed')).toBe(false);
+    });
+  });
+
+  // ── fix-415-m: descartar recuerda quién descartó y cuántos casos había ──────
+  describe('descartar una alerta (fix-415-m)', () => {
+    beforeEach(() => localStorage.removeItem('ds_snoozed_alerts'));
+    afterEach(() => localStorage.removeItem('ds_snoozed_alerts'));
+
+    const conPagosPendientes = (count: number) => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'cash_closings') return buildChain({ count: 1 });
+        if (table === 'enrollments')
+          return callCounters[table] % 4 === 1 ? buildChain({ count }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+    const usuario = (id: string) =>
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ id, dbId: 1 });
+    const visibles = () => facade.activeAlerts().map((a) => a.id);
+
+    it('sigue oculta al recargar con los mismos casos, y vuelve si hay más', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+      facade.dismissAlert('alert-pending-payments');
+
+      // Una revisita refresca en segundo plano: se espera ese refresco directamente.
+      const refrescar = () => (facade as any).refreshSilently() as Promise<void>;
+
+      conPagosPendientes(5);
+      await refrescar();
+      expect(visibles()).toEqual([]);
+
+      conPagosPendientes(6);
+      await refrescar();
+      expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+
+    it('otro usuario en el mismo navegador la sigue viendo', async () => {
+      usuario('uid-1');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+      facade.dismissAlert('alert-pending-payments');
+
+      usuario('uid-2');
+      conPagosPendientes(5);
+      await facade.loadAlerts();
+
+      expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+
+    it('un descarte guardado con el formato anterior no oculta nada', async () => {
+      localStorage.setItem('ds_snoozed_alerts', '{"alert-pending-payments":' + Date.now() + '}');
+      usuario('uid-1');
+      conPagosPendientes(5);
+
+      await facade.loadAlerts();
+
+      expect(visibles()).toEqual(['alert-pending-payments']);
     });
   });
 });

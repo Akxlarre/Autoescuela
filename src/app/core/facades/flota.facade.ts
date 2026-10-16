@@ -12,10 +12,12 @@ import type {
   VehicleTableRow,
   VehicleDocSummary,
   FlotaKpis,
-  VehicleType,
   VehicleStatus,
   DocStatus,
 } from '@core/models/ui/vehicle-table.model';
+import { matchesVehicleSearch } from '@core/utils/vehicle-search.utils';
+import { buildVehicleAgenda } from '@core/utils/vehicle-agenda.utils';
+import { canManageVehicle } from '@core/utils/vehicle-permissions.utils';
 import type { VehicleAgendaSlot } from '@core/models/ui/vehicle-detail.model';
 
 @Injectable({ providedIn: 'root' })
@@ -29,7 +31,8 @@ export class FlotaFacade {
   private readonly _vehicles = signal<VehicleTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
-  private readonly _typeFilter = signal<VehicleType | null>(null);
+  /** Texto del buscador del listado (hotfix-073-b: antes no filtraba nada). */
+  private readonly _searchTerm = signal('');
   private readonly _statusFilter = signal<VehicleStatus | null>(null);
   private readonly _selectedVehicleId = signal<number | null>(null);
   private readonly _vehicleAgenda = signal<VehicleAgendaSlot[]>([]);
@@ -45,7 +48,7 @@ export class FlotaFacade {
   readonly vehicles = this._vehicles.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  readonly typeFilter = this._typeFilter.asReadonly();
+  readonly searchTerm = this._searchTerm.asReadonly();
   readonly statusFilter = this._statusFilter.asReadonly();
   readonly selectedVehicleId = this._selectedVehicleId.asReadonly();
   readonly vehicleAgenda = this._vehicleAgenda.asReadonly();
@@ -63,9 +66,9 @@ export class FlotaFacade {
 
   readonly filteredVehicles = computed((): VehicleTableRow[] => {
     let result = this._vehicles();
-    const type = this._typeFilter();
+    const term = this._searchTerm();
     const status = this._statusFilter();
-    if (type) result = result.filter((v) => v.type === type);
+    if (term.trim()) result = result.filter((v) => matchesVehicleSearch(v, term));
     if (status) result = result.filter((v) => v.status === status);
     return result;
   });
@@ -218,7 +221,6 @@ export class FlotaFacade {
       model: v.model,
       year: v.year,
       vehicleLabel: `${v.brand} ${v.model}`,
-      type: this.resolveType(v.brand, v.model),
       status: resolveVehicleStatus(v.status),
       currentKm: v.current_km ?? 0,
       nextMaintenanceDate: v.last_maintenance ?? null,
@@ -226,6 +228,10 @@ export class FlotaFacade {
       instructorId,
       branchId: v.branch_id ?? null,
       bothBranches: v.both_branches ?? false,
+      canManage: canManageVehicle(this.auth.currentUser(), {
+        branchId: v.branch_id ?? null,
+        bothBranches: v.both_branches ?? false,
+      }),
       documents: (v.vehicle_documents ?? []).map((d: any) => ({
         type: d.type ?? 'unknown',
         expiryDate: d.expiry_date ?? '',
@@ -236,8 +242,8 @@ export class FlotaFacade {
     };
   }
 
-  setTypeFilter(type: VehicleType | null): void {
-    this._typeFilter.set(type);
+  setSearchTerm(term: string): void {
+    this._searchTerm.set(term);
   }
   setStatusFilter(status: VehicleStatus | null): void {
     this._statusFilter.set(status);
@@ -321,7 +327,7 @@ export class FlotaFacade {
         this.supabase.client
           .from('class_b_sessions')
           .select(
-            'id, scheduled_at, status, class_number, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
+            'id, scheduled_at, status, class_number, duration_min, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
           )
           .eq('vehicle_id', vehicleId)
           .gte('scheduled_at', day.start)
@@ -334,39 +340,29 @@ export class FlotaFacade {
           .eq('scheduled_date', dateStr),
       ]);
 
-      const slots: VehicleAgendaSlot[] = [];
-      const sessionMap = new Map(
-        (sessionsResult.data ?? []).map((s: any) => [chileParts(s.scheduled_at).hour, s]),
+      // fix-221-b: antes una grilla fija de horas en punto de 08 a 17 (pisaba la clase de las
+      // 11:50 con la de las 11:00 y no mostraba las de la tarde ni los mantenimientos).
+      const slots = buildVehicleAgenda(
+        (sessionsResult.data ?? []).map((s: any) => {
+          const at = chileParts(s.scheduled_at);
+          const user = s.enrollments?.students?.users;
+          return {
+            hour: at.hour,
+            minute: at.minute,
+            durationMin: s.duration_min ?? null,
+            status: s.status ?? null,
+            classNumber: s.class_number ?? null,
+            studentName: user ? `${user.first_names} ${user.paternal_last_name}` : null,
+          };
+        }),
+        (maintenancesResult.data ?? []).map((m: any) => ({
+          type: m.type ?? null,
+          description: m.description ?? null,
+        })),
       );
-
-      for (let h = 8; h < 18; h++) {
-        const hour = `${String(h).padStart(2, '0')}:00`;
-        const ses = sessionMap.get(h);
-        if (ses) {
-          const user = ses.enrollments?.students?.users;
-          slots.push({
-            hour,
-            endHour: `${String(h + 1).padStart(2, '0')}:00`,
-            type: 'class',
-            studentName: user ? `${user.first_names} ${user.paternal_last_name}`.trim() : 'Alumno',
-            classNumber: ses.class_number,
-          });
-        } else {
-          slots.push({ hour, endHour: `${String(h + 1).padStart(2, '0')}:00`, type: 'empty' });
-        }
-      }
       this._vehicleAgenda.set(slots);
     } finally {
       this._isLoadingAgenda.set(false);
     }
-  }
-
-  private resolveType(brand: string, model: string): VehicleType {
-    const label = `${brand} ${model}`.toLowerCase();
-    return ['atego', 'actros', 'accelo', 'camion', 'bus', 'volvo', 'iveco'].some((k) =>
-      label.includes(k),
-    )
-      ? 'professional'
-      : 'class_b';
   }
 }

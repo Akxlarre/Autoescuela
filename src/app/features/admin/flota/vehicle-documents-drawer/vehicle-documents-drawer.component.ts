@@ -180,9 +180,14 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
 
                       <div class="flex items-center gap-2">
                         @if (doc.status) {
-                          <app-badge [variant]="doc.status === 'expired' ? 'error' : 'success'">
-                            {{ doc.status === 'expired' ? 'Vencido' : 'Vigente' }}
-                          </app-badge>
+                          <!-- hotfix-074-b (S8): por vencer en ámbar, igual que el listado -->
+                          @if (doc.status === 'expired') {
+                            <app-badge variant="error">Vencido</app-badge>
+                          } @else if (doc.status === 'expiring_soon') {
+                            <app-badge variant="warning">Por vencer</app-badge>
+                          } @else {
+                            <app-badge variant="success">Vigente</app-badge>
+                          }
                         } @else {
                           <app-badge variant="warning">Sin cargar</app-badge>
                         }
@@ -196,14 +201,17 @@ const DOC_TYPES = VEHICLE_DOC_TYPES.map((t) => ({ type: t.value, label: t.label,
                             <app-icon name="external-link" [size]="14" />
                           </button>
                         }
-                        <button
-                          class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
-                          aria-label="Actualizar documento"
-                          data-llm-action="edit-vehicle-document"
-                          (click)="onEditDoc(doc)"
-                        >
-                          <app-icon name="pencil" [size]="14" />
-                        </button>
+                        <!-- spec 0051-b: cargar/renovar solo si puede operar el vehículo -->
+                        @if (canManage()) {
+                          <button
+                            class="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                            aria-label="Actualizar documento"
+                            data-llm-action="edit-vehicle-document"
+                            (click)="onEditDoc(doc)"
+                          >
+                            <app-icon name="pencil" [size]="14" />
+                          </button>
+                        }
                       </div>
                     </div>
 
@@ -288,6 +296,10 @@ export class VehicleDocumentsDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
 
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
+  /** ¿Puede cargar o renovar documentos de este vehículo? (spec 0051-b) */
+  readonly canManage = computed(
+    () => this.flotaFacade.vehicles().find((v) => v.id === this.vehicleId())?.canManage ?? false,
+  );
   readonly documents = signal<
     { type: string; expiryDate: string; status: DocStatus; filePath: string | null }[]
   >([]);

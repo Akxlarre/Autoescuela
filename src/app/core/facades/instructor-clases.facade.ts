@@ -347,19 +347,11 @@ export class InstructorClasesFacade {
 
       if (error) throw error;
 
-      // 4. Propagar km final al vehículo (fix-189)
-      // fix-362-m: la clase ya quedó finalizada; si falla el KM o la asistencia no se lanza
-      // (el instructor vería un error sobre una clase que sí se cerró): se avisa qué faltó.
+      // fix-362-m: la clase ya quedó finalizada; si falla la asistencia no se lanza (el instructor
+      // vería un error sobre una clase que sí se cerró): se avisa qué faltó.
       const pendientes: string[] = [];
-      if (session?.vehicle_id) {
-        // .select() + filas: un vehículo que la RLS filtra no devuelve error, devuelve 0 filas.
-        const km = await this.supabase.client
-          .from('vehicles')
-          .update({ current_km: kmEnd })
-          .eq('id', session.vehicle_id)
-          .select('id');
-        if (km.error || !km.data?.length) pendientes.push('el kilometraje del vehículo');
-      }
+      // fix-222-b: el km del vehículo lo actualiza la BD al guardar km_end (trigger
+      // trg_sync_vehicle_km_from_class); ya no se escribe desde acá y nunca retrocede.
 
       // 5. Register practice attendance
       if (session?.enrollments) {

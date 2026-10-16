@@ -414,6 +414,18 @@ describe('InstructorClasesFacade', () => {
           'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
         );
       });
+
+      it('spec 0010-i (AC6): clase 7 bloqueada por pago → manda al alumno a secretaría', async () => {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ error: { code: 'P0001', message: 'PAGO_PENDIENTE_CLASE_7' } }),
+          );
+
+        await expect(facade.startClass(5, 12000)).rejects.toThrow(
+          'Pago pendiente: el alumno debe pasar por secretaría.',
+        );
+      });
     });
 
     describe('finishClass', () => {
@@ -444,65 +456,33 @@ describe('InstructorClasesFacade', () => {
         );
       });
 
-      it('propaga km_end a vehicles.current_km cuando la sesión tiene vehicle_id (fix-189)', async () => {
+      it('no escribe el km del vehículo: lo actualiza la BD al guardar km_end (fix-222-b)', async () => {
         const selectChain = makeThenableChain({
           data: { enrollment_id: 10, vehicle_id: 3, enrollments: { student_id: 40 } },
           error: null,
         });
         const updateSessionChain = makeThenableChain({ error: null });
-        const updateVehicleChain = makeThenableChain({ error: null });
         const upsertChain = makeThenableChain({ error: null });
         const refreshChain = makeThenableChain({ data: [], error: null });
 
         supabaseMock.client.from = vi
           .fn()
           .mockReturnValueOnce(selectChain) // select session
-          .mockReturnValueOnce(updateSessionChain) // update status=completed
-          .mockReturnValueOnce(updateVehicleChain) // update vehicles.current_km
+          .mockReturnValueOnce(updateSessionChain) // update status=completed (+ km_end)
           .mockReturnValueOnce(upsertChain) // upsert practice attendance
           .mockReturnValueOnce(refreshChain); // refreshSilently
-
-        await facade.finishClass(5, 12500);
-
-        expect(updateVehicleChain.update).toHaveBeenCalledWith({ current_km: 12500 });
-        expect(updateVehicleChain.eq).toHaveBeenCalledWith('id', 3);
-      });
-
-      // fix-362-m: la clase ya quedó finalizada; lo que no se guardó se avisa, no se calla.
-      function finishWithVehicleResult(vehicleResult: { data?: any; error?: any }) {
-        supabaseMock.client.from = vi
-          .fn()
-          .mockReturnValueOnce(
-            makeThenableChain({
-              data: { enrollment_id: 10, vehicle_id: 3, enrollments: { student_id: 40 } },
-              error: null,
-            }),
-          ) // select session
-          .mockReturnValueOnce(makeThenableChain({ error: null })) // update status=completed
-          .mockReturnValueOnce(makeThenableChain(vehicleResult)) // update vehicles.current_km
-          .mockReturnValueOnce(makeThenableChain({ error: null })) // upsert practice attendance
-          .mockReturnValueOnce(makeThenableChain({ data: [], error: null })); // refreshSilently
         const toast = TestBed.inject(ToastService) as any;
         toast.warning = vi.fn();
-        return toast;
-      }
-
-      it('fix-362-m: si la RLS filtra el vehículo (0 filas, sin error), avisa que el KM no se guardó', async () => {
-        const toast = finishWithVehicleResult({ data: [], error: null });
 
         await facade.finishClass(5, 12500);
 
-        expect(toast.warning).toHaveBeenCalledWith(
-          'Clase finalizada, con datos sin guardar',
-          expect.stringContaining('el kilometraje del vehículo'),
+        // Antes (fix-189): UPDATE directo a vehicles.current_km, que podía fallar por permisos
+        // (fix-362-m lo avisaba) o hacer retroceder el odómetro. Ahora lo hace un trigger.
+        const tablas = (supabaseMock.client.from as any).mock.calls.map(([t]: [string]) => t);
+        expect(tablas).not.toContain('vehicles');
+        expect(updateSessionChain.update).toHaveBeenCalledWith(
+          expect.objectContaining({ km_end: 12500 }),
         );
-      });
-
-      it('fix-362-m: con el KM guardado no avisa nada', async () => {
-        const toast = finishWithVehicleResult({ data: [{ id: 3 }], error: null });
-
-        await facade.finishClass(5, 12500);
-
         expect(toast.warning).not.toHaveBeenCalled();
       });
 

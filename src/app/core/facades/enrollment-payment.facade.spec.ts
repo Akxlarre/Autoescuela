@@ -17,6 +17,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     upsert: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    neq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
@@ -33,6 +34,7 @@ function createMockSupabaseService() {
   return {
     client: {
       from: vi.fn().mockReturnValue(mockBuilder),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
     _mockBuilder: mockBuilder,
   };
@@ -90,6 +92,41 @@ describe('EnrollmentPaymentFacade', () => {
 
   it('should initialize with empty available discounts', () => {
     expect(facade.availableDiscounts()).toEqual([]);
+  });
+
+  // ── Rehidratación con un pago anulado (spec 0025-m, AC-E3) ──
+
+  describe('rehydrateFromEnrollment', () => {
+    it('ignora el pago anulado: no lo trae y carga el vigente sin error', async () => {
+      const vigente = {
+        cash_amount: 0,
+        transfer_amount: 50_000,
+        card_amount: 0,
+        status: 'paid',
+        document_number: 'TRF-1',
+      };
+      // Una fila anulada más una vigente serían dos filas: maybeSingle() devolvería error y
+      // data null. El filtro deja solo la vigente.
+      mockSupabase._mockBuilder.maybeSingle.mockResolvedValue({ data: vigente, error: null });
+      mockSupabase._mockBuilder.single.mockResolvedValue({
+        data: {
+          base_price: 180_000,
+          discount: 0,
+          total_paid: 50_000,
+          pending_balance: 130_000,
+          payment_status: 'partial',
+          payment_mode: 'partial',
+          courses: { name: 'Clase B', practical_hours: 12 },
+        },
+        error: null,
+      });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(mockSupabase._mockBuilder.neq).toHaveBeenCalledWith('status', 'anulado');
+      expect(facade.paymentMethod()).toBe('transferencia');
+      expect(facade.error()).toBeNull();
+    });
   });
 
   // ── Pricing Breakdown ──
@@ -317,23 +354,67 @@ describe('EnrollmentPaymentFacade', () => {
         );
       });
 
-      // fix-362-m: la limpieza previa (idempotencia del botón Atrás) no se revisaba; si
-      // fallaba, el insert siguiente dejaba el pago duplicado.
-      it('fix-362-m: si no se puede borrar el pago anterior, corta sin insertar otro', async () => {
+      // fix-050-i: el reemplazo del pago anterior (botón Atrás) lo hace la RPC. Con DELETE
+      // sueltos la RLS dejaba a la secretaria con 0 filas borradas sin error y el pago se duplicaba.
+      it('fix-050-i: guarda el pago con la RPC record_enrollment_payment, sin DELETE/INSERT sueltos', async () => {
+        facade.setDocumentNumber('REC-9');
         const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
-        const failingDelete: any = {
-          eq: vi.fn().mockReturnThis(),
-          then: (resolve: any) => resolve({ data: null, error: { message: 'permission denied' } }),
-        };
-        builder.delete = vi.fn().mockReturnValue(failingDelete);
         mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
         const ok = await facade.recordPayment(10, 1);
         await flushMicrotasks();
 
-        expect(ok).toBe(false);
+        expect(ok).toBe(true);
+        expect(mockSupabase.client.rpc).toHaveBeenCalledWith('record_enrollment_payment', {
+          p_enrollment_id: 10,
+          p_payment_method: 'efectivo',
+          p_total_amount: 300000,
+          p_discount_id: null,
+          p_discount_amount: 0,
+          p_is_deposit: false,
+          p_document_number: 'REC-9',
+        });
+        expect(builder.delete).not.toHaveBeenCalled();
         expect(builder.insert).not.toHaveBeenCalled();
-        expect(facade.error()).toContain('Error al reemplazar el pago anterior');
+        expect(builder.update).not.toHaveBeenCalled();
+      });
+
+      // fix-052-i: "Cobrar después" deja el pago 'pending'; el alumno no pagó nada.
+      it('fix-052-i: con "Cobrar después" no avisa al alumno', async () => {
+        facade.setPaymentMethod('pendiente');
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
+      it('fix-052-i: el aviso muestra el monto con separador de miles', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+          [55],
+          expect.objectContaining({ message: 'Se registró un pago de $300.000 en tu matrícula.' }),
+        );
+      });
+
+      it('fix-050-i: si la RPC falla, devuelve false con el error y no notifica', async () => {
+        mockSupabase.client.rpc = vi
+          .fn()
+          .mockResolvedValue({ data: null, error: { message: 'ya no está en borrador' } });
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(false);
+        expect(facade.error()).toContain('Error al registrar pago');
         expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
       });
 
@@ -385,7 +466,7 @@ describe('EnrollmentPaymentFacade', () => {
         facade.setPaymentMethod('efectivo');
       });
 
-      it('incluye el N° de documento en el INSERT de payments cuando se seteó', async () => {
+      it('manda el N° de documento a la RPC cuando se seteó', async () => {
         facade.setDocumentNumber('REC-01234');
         const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
         mockSupabase.client.from = vi.fn().mockReturnValue(builder);
@@ -393,20 +474,22 @@ describe('EnrollmentPaymentFacade', () => {
         await facade.recordPayment(10, 1);
         await flushMicrotasks();
 
-        expect(builder.insert).toHaveBeenCalledWith(
-          expect.objectContaining({ document_number: 'REC-01234' }),
+        expect(mockSupabase.client.rpc).toHaveBeenCalledWith(
+          'record_enrollment_payment',
+          expect.objectContaining({ p_document_number: 'REC-01234' }),
         );
       });
 
-      it('el INSERT queda con document_number null cuando no se seteó ninguno', async () => {
+      it('manda p_document_number null cuando no se seteó ninguno', async () => {
         const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
         mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
         await facade.recordPayment(10, 1);
         await flushMicrotasks();
 
-        expect(builder.insert).toHaveBeenCalledWith(
-          expect.objectContaining({ document_number: null }),
+        expect(mockSupabase.client.rpc).toHaveBeenCalledWith(
+          'record_enrollment_payment',
+          expect.objectContaining({ p_document_number: null }),
         );
       });
     });

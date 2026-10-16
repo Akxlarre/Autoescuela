@@ -13,8 +13,21 @@ export interface AlumnoDeudor {
   cursoNombre: string;
   /** `enrollments.created_at` (fecha de matrícula) — único campo de fecha disponible en esta tabla. */
   fechaMatricula: string | null;
+  /** `enrollments.number` (fix-053-i): distingue dos matrículas con saldo del mismo alumno. */
+  numeroMatricula: string | null;
+  /** `enrollments.status` (fix-053-i): 'active' | 'pending_payment' | 'completed' | 'cancelled'. */
+  estadoMatricula: string | null;
   sedeId: number;
   sedeNombre: string;
+}
+
+/** Datos de un pago anulado (spec 0025-m): se muestra tachado y no suma en ningún total. */
+export interface AnulacionPago {
+  motivo: string;
+  /** Nombre del admin que anuló; null si quien mira no puede leerlo. */
+  por: string | null;
+  /** Fecha y hora de Chile, lista para mostrar ("13/10/2026 23:30"). */
+  cuando: string;
 }
 
 /** UI model para una fila de la tabla Pagos Recientes. */
@@ -30,6 +43,8 @@ export interface PagoReciente {
   metodoIcono: string;
   nroDocumento: string | null;
   estado: string | null;
+  /** Presente solo si el pago fue anulado (spec 0025-m). */
+  anulacion: AnulacionPago | null;
 }
 
 /** UI model para la distribución de métodos de pago del mes actual. */
@@ -70,4 +85,6 @@ export interface EstadoCuentaHistorialItem {
   nroDocumento: string | null;
   monto: number;
   estado: string | null;
+  /** Presente solo si el pago fue anulado (spec 0025-m). */
+  anulacion: AnulacionPago | null;
 }

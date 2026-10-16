@@ -32,6 +32,9 @@ function makeSupabaseMock() {
       or: vi.fn(() => b),
       order: vi.fn(() => b),
       update: vi.fn(() => b),
+      insert: vi.fn(() => b),
+      limit: vi.fn(() => b),
+      delete: vi.fn(() => b),
       upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
       single: () => Promise.resolve(results.get(`${table}:single`) ?? { data: null, error: null }),
       maybeSingle: () =>
@@ -140,6 +143,82 @@ describe('AsistenciaClaseBFacade', () => {
     expect(kpis).not.toBeNull();
     expect(kpis?.totalClasesHoy).toBe(0);
     expect(kpis?.tasaAsistencia).toBe(100);
+  });
+
+  describe('fix-386-m: datos y fecha de otro alcance', () => {
+    it('con otra sede no reutiliza lo que hay en memoria: vacía y carga con skeleton', async () => {
+      facade.setBranchFilter(null);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, branchId: 2 })]);
+      (facade as any)._alertas.set([makeAlerta({ branchId: 2 })]);
+
+      facade.setBranchFilter(1);
+      const pending = facade.initialize();
+
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await pending;
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('con la misma sede la re-entrada no muestra skeleton (SWR)', async () => {
+      facade.setBranchFilter(1);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      const pending = facade.initialize();
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      await pending;
+    });
+
+    it('enterToday devuelve la fecha a hoy y obliga a cargar de nuevo', async () => {
+      vi.useFakeTimers();
+      // 23:30 hora Chile del 6 de octubre: en UTC ya es el día 7.
+      vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+      await facade.setDate('2026-10-01');
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      facade.enterToday();
+      const pending = facade.initialize();
+      vi.useRealTimers();
+
+      expect(facade.selectedDate()).toBe('2026-10-06');
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+      await pending;
+    });
+
+    it('enterToday no descarta lo cargado si la fecha ya era hoy', async () => {
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+
+      facade.enterToday();
+      const pending = facade.initialize();
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      await pending;
+    });
+
+    it('una respuesta vieja que llega tarde no pisa a la más nueva', async () => {
+      let resolveOld: (rows: ClasePracticaRow[]) => void = () => undefined;
+      const fetchPracticas = vi
+        .spyOn(facade as any, 'fetchPracticas')
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveOld = resolve)))
+        .mockResolvedValueOnce([makeRow({ id: 2, alumnoName: 'Nueva' })]);
+      vi.spyOn(facade as any, 'fetchAlertas').mockResolvedValue([]);
+
+      const old = (facade as any).fetchData();
+      await (facade as any).fetchData();
+      resolveOld([makeRow({ id: 1, alumnoName: 'Vieja' })]);
+      await old;
+
+      expect(fetchPracticas).toHaveBeenCalledTimes(2);
+      expect(facade.clasesPracticas().map((r) => r.alumnoName)).toEqual(['Nueva']);
+    });
   });
 
   it('fix-373-m: la tasa solo considera clases registradas (las pendientes no cuentan)', () => {
@@ -305,6 +384,115 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-379-m: la alerta roja exige faltas seguidas, como el Dashboard y la RPC', () => {
+    const falta = (id: number, classNumber: number, scheduledAt: string, recordedAt: string) => ({
+      id,
+      student_id: 5,
+      status: 'absent',
+      recorded_at: recordedAt,
+      class_b_sessions: {
+        id: 100 + id,
+        enrollment_id: 10,
+        class_number: classNumber,
+        status: 'no_show',
+        scheduled_at: scheduledAt,
+        enrollments: {
+          id: 10,
+          branch_id: 1,
+          status: 'active',
+          students: { id: 5, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+        },
+      },
+    });
+
+    it('faltas 2 y 5 (no seguidas) → amarilla, aunque sean 2', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 5, '2026-10-08T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 2, '2026-10-02T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0]).toMatchObject({ faltasConsecutivas: 2, nivel: 'warning' });
+    });
+
+    it('faltas 3 y 4 (seguidas) → roja', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 4, '2026-10-09T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 3, '2026-10-07T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].nivel).toBe('danger');
+      const selects = mock
+        .builderFor('class_b_practice_attendance')
+        .select.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(selects.some((s: string) => s.includes('class_number'))).toBe(true);
+    });
+
+    it('la última falta es la fecha de la clase, no la del registro', async () => {
+      mock.setResult('class_b_practice_attendance', [
+        falta(1, 3, '2026-10-07T10:00:00.000Z', '2026-10-12T20:00:00.000Z'),
+        falta(2, 4, '2026-10-09T10:00:00.000Z', '2026-10-11T20:00:00.000Z'),
+      ]);
+      mock.setResult('class_b_sessions', []);
+
+      await facade.initialize();
+
+      expect(facade.alertas()[0].ultimaFechaFalta).toBe('2026-10-09T10:00:00.000Z');
+    });
+
+    it('justifyAbsence recalcula las alertas sin recargar', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      const refresh = vi
+        .spyOn(facade as any, 'refreshAlertasSilently')
+        .mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it('justificar una falta que ya canceló clases avisa que siguen canceladas (G05)', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      mock.setResult('class_b_sessions', [], null, 8);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.success).toHaveBeenCalledWith('Justificación registrada');
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Hay clases que siguen canceladas',
+        expect.stringContaining('8 clase(s)'),
+      );
+    });
+
+    it('justificar una falta sin cancelaciones posteriores no avisa nada más', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'ausente' })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [
+        { id: 9, recorded_at: '2026-10-09T13:00:00.000Z' },
+      ]);
+      mock.setResult('class_b_sessions', [], null, 0);
+      vi.spyOn(facade as any, 'refreshAlertasSilently').mockResolvedValue(undefined);
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+  });
+
   it('markAttendance marca ausente y actualiza el estado local + toast', async () => {
     (facade as any)._clasesPracticas.set([makeRow()]);
     mock.setResult('enrollments:single', { student_id: 5 });
@@ -351,7 +539,8 @@ describe('AsistenciaClaseBFacade', () => {
         enrollmentId,
         alumnoName: 'Ana',
         faltasConsecutivas,
-        nivel: 'critico',
+        // fix-379-m: el riesgo lo dice el nivel (faltas seguidas), no el conteo.
+        nivel: faltasConsecutivas >= 2 ? 'danger' : 'warning',
         ultimaFechaFalta: '2026-10-06',
         horarioActivo: true,
         branchId: 1,
@@ -432,6 +621,49 @@ describe('AsistenciaClaseBFacade', () => {
       expect(toast.success).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
       expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+    });
+
+    it('fix-388-m: si la asistencia falla, la sesión vuelve a quedar pendiente', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.markAttendance(1, 'ausente');
+
+      const updates = mock
+        .builderFor('class_b_sessions')
+        .update.mock.calls.map((c: unknown[]) => (c[0] as { status: string }).status);
+      expect(updates).toEqual(['no_show', 'scheduled']);
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it('fix-388-m: si tampoco se pudo devolver a pendiente, lo avisa', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      const b = mock.builderFor('class_b_sessions');
+      // 1ª lectura = el cambio a ausente (1 fila); 2ª = la reversión, que falla.
+      const original = b.then;
+      let reads = 0;
+      b.then = (resolve: any) =>
+        resolve(
+          reads++ === 0 ? { data: [{ id: 1 }], error: null } : { data: null, error: rlsError },
+        );
+      mock
+        .builderFor('class_b_practice_attendance')
+        .upsert.mockResolvedValueOnce({ data: null, error: rlsError });
+
+      await facade.markAttendance(1, 'ausente');
+      b.then = original;
+
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase quedó como ausente sin su registro',
+        expect.stringContaining('avisa al administrador'),
+      );
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('permisos'));
     });
 
     it('markAttendance: si falla la RPC de penalización, avisa que no se pudo revisar', async () => {
@@ -479,25 +711,26 @@ describe('AsistenciaClaseBFacade', () => {
       instructorSignature: null,
     };
 
-    it('finishClass: vehículo de otra sede (RLS filtra el update) → aviso, no éxito', async () => {
+    it('finishClass: no escribe el km del vehículo — lo hace la BD (fix-222-b)', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
-      mock.setResult('vehicles', []);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      const from = vi.spyOn(mock.client, 'from');
 
       await facade.finishClass(finishPayload);
 
-      expect(toast.success).not.toHaveBeenCalled();
-      expect(toast.warning).toHaveBeenCalledWith(
-        'Clase finalizada, con datos sin guardar',
-        expect.stringContaining('el kilometraje del vehículo'),
-      );
-      // La clase sí quedó finalizada: la fila local refleja eso.
+      // Antes: UPDATE directo a vehicles, que la RLS filtraba con un vehículo "Ambas" o de otra
+      // sede (el km se perdía y había que avisarlo). Ahora un trigger lo actualiza al guardar km_end.
+      expect(from.mock.calls.map(([table]) => table)).not.toContain('vehicles');
+      expect(toast.warning).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Clase finalizada', 'Asistencia registrada.');
       expect(facade.clasesPracticas()[0].status).toBe('presente');
     });
 
     it('finishClass: si falla la asistencia, también lo avisa', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       mock.setResult('vehicles', [{ id: 7 }]);
       mock
         .builderFor('class_b_practice_attendance')
@@ -515,6 +748,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('finishClass: con todo guardado mantiene el toast de éxito', async () => {
       (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
       (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       mock.setResult('vehicles', [{ id: 7 }]);
 
       await facade.finishClass(finishPayload);
@@ -605,9 +839,73 @@ describe('AsistenciaClaseBFacade', () => {
       expect(facade.alertas()[0].horarioActivo).toBe(false);
     });
 
+    it('fix-391-m: removeSchedule registra la penalización en la matrícula', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', [{ id: 10 }]);
+
+      await facade.removeSchedule(10);
+
+      const b = mock.builderFor('enrollments');
+      expect(b.update).toHaveBeenCalledWith({ absence_penalty_applied_at: NOW });
+      expect(b.eq).toHaveBeenCalledWith('id', 10);
+      expect(facade.alertas()[0].parPenalizado).toBe(true);
+    });
+
+    it('fix-391-m: si no se pudo registrar la penalización, lo avisa en vez de dar éxito', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', []);
+
+      await facade.removeSchedule(10);
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Horario eliminado, sin registrar la penalización',
+        expect.stringContaining('Avisa al administrador'),
+      );
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+      expect(facade.alertas()[0].parPenalizado).toBeFalsy();
+    });
+
+    it('fix-391-m: fetchAlertas marca parPenalizado cuando las faltas son anteriores a la penalización', async () => {
+      const falta = (enrollmentId: number, n: number, penalizedAt: string | null) => ({
+        student_id: enrollmentId,
+        recorded_at: `2026-10-0${n}T12:00:00Z`,
+        class_b_sessions: {
+          enrollment_id: enrollmentId,
+          class_number: n,
+          status: 'no_show',
+          scheduled_at: `2026-10-0${n}T12:00:00Z`,
+          enrollments: {
+            id: enrollmentId,
+            branch_id: 1,
+            absence_penalty_applied_at: penalizedAt,
+            students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+          },
+        },
+      });
+      mock.setResult('class_b_practice_attendance', [
+        falta(10, 3, '2026-10-05T00:00:00Z'),
+        falta(10, 4, '2026-10-05T00:00:00Z'),
+        falta(11, 3, null),
+        falta(11, 4, null),
+      ]);
+      vi.spyOn(facade as any, 'fetchEnrollmentsWithRemovedSchedule').mockResolvedValue(new Set());
+
+      const alertas = await (facade as any).fetchAlertas(null, new Map());
+
+      const by = (id: number) => alertas.find((a: AlertaFaltaConsecutiva) => a.enrollmentId === id);
+      expect(by(10).nivel).toBe('danger');
+      expect(by(10).parPenalizado).toBe(true);
+      expect(by(11).nivel).toBe('danger');
+      expect(by(11).parPenalizado).toBe(false);
+    });
+
     it('removeSchedule cancela solo clases agendadas futuras', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
       mock.setResult('class_b_sessions', [{ id: 7 }]);
+      mock.setResult('enrollments', [{ id: 10 }]);
 
       await facade.removeSchedule(10);
 
@@ -679,6 +977,25 @@ describe('AsistenciaClaseBFacade', () => {
     expect(recipients).toEqual([77]);
     expect(payload.referenceType).toBe('class_b');
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('fix-380-m: el recordatorio habla de faltas sin justificar y concuerda en número', async () => {
+    (facade as any)._alertas.set([makeAlerta({ faltasConsecutivas: 1 })]);
+    mock.setResult('students:single', { user_id: 77 });
+    await facade.sendReminder(10);
+    expect(notifications.notifyUsers.mock.calls[0][1].message).toContain(
+      'Registramos 1 falta sin justificar',
+    );
+
+    (facade as any)._alertas.set([makeAlerta({ faltasConsecutivas: 2 })]);
+    await facade.sendReminder(10);
+    expect(notifications.notifyUsers.mock.calls[1][1].message).toContain(
+      'Registramos 2 faltas sin justificar',
+    );
+  });
+
+  it('fix-380-m: en el piloto (portal Alumno bloqueado) los recordatorios no se ofrecen', () => {
+    expect(facade.recordatoriosHabilitados).toBe(false);
   });
 
   it('sendReminder NO muestra toast de éxito si el envío falla', async () => {
@@ -759,7 +1076,7 @@ describe('AsistenciaClaseBFacade', () => {
       (facade as any)._clasesPracticas.set([makeRow({ id: 1, status: 'ausente' })]);
     });
 
-    it('archiva la falta y devuelve la clase a scheduled', async () => {
+    it('fix-392-m: borra la falta (no la archiva) y devuelve la clase a scheduled', async () => {
       mock.setResult('class_b_practice_attendance:maybeSingle', {
         id: 900,
         status: 'absent',
@@ -771,7 +1088,9 @@ describe('AsistenciaClaseBFacade', () => {
       expect(await facade.undoAbsence(1)).toBe(true);
 
       const att = mock.builderFor('class_b_practice_attendance');
-      expect(att.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
+      expect(att.delete).toHaveBeenCalled();
+      expect(att.eq).toHaveBeenCalledWith('id', 900);
+      expect(att.update).not.toHaveBeenCalled();
       const ses = mock.builderFor('class_b_sessions');
       expect(ses.update).toHaveBeenCalledWith({ status: 'scheduled' });
       expect(ses.eq).toHaveBeenCalledWith('status', 'no_show');
@@ -779,6 +1098,41 @@ describe('AsistenciaClaseBFacade', () => {
         'Inasistencia deshecha',
         'La clase quedó pendiente.',
       );
+    });
+
+    it('fix-392-m: la confirmación nombra al alumno y no usa jerga interna', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+
+      await facade.undoAbsence(1);
+
+      const { message } = confirmModal.confirm.mock.calls[0][0];
+      expect(message).toContain('Juan Pérez');
+      expect(message).not.toMatch(/historial|penalización/i);
+      // Sin clases canceladas después de la falta (p. ej. cancelación automática apagada),
+      // la confirmación no las menciona.
+      expect(message).not.toMatch(/cancel/i);
+    });
+
+    it('fix-392-m: la confirmación menciona las clases canceladas solo si las hay, con su número', async () => {
+      mock.setResult('class_b_practice_attendance:maybeSingle', {
+        id: 900,
+        status: 'absent',
+        recorded_at: '2026-06-30T15:00:00.000Z',
+      });
+      mock.setResult('class_b_practice_attendance', [{ id: 900 }]);
+      mock.setResult('class_b_sessions', [{ id: 1 }], null, 8);
+
+      await facade.undoAbsence(1);
+
+      const { message } = confirmModal.confirm.mock.calls[0][0];
+      expect(message).toContain('8 clase(s)');
+      expect(message).toContain('seguirán canceladas');
     });
 
     it('si la falta ya canceló clases por penalización, lo avisa (no vuelven solas)', async () => {
@@ -796,7 +1150,7 @@ describe('AsistenciaClaseBFacade', () => {
         '2026-06-30T15:00:00.000Z',
       );
       expect(toast.warning).toHaveBeenCalledWith(
-        'Clases canceladas por la penalización',
+        'Hay clases que siguen canceladas',
         expect.stringContaining('8 clase(s)'),
       );
     });
@@ -808,7 +1162,8 @@ describe('AsistenciaClaseBFacade', () => {
         recorded_at: '2026-06-30T15:00:00.000Z',
       });
       expect(await facade.undoAbsence(1)).toBe(false);
-      expect(mock.builderFor('class_b_practice_attendance').update).not.toHaveBeenCalled();
+      expect(mock.builderFor('class_b_practice_attendance').delete).not.toHaveBeenCalled();
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith(
         'No se puede deshacer',
         'La inasistencia está justificada.',
@@ -847,9 +1202,126 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-388-m: la clase ya no está en el estado que se veía', () => {
+    const finishPayload = {
+      sessionId: 1,
+      studentId: 5,
+      kmEnd: 12050,
+      studentSignature: null,
+      instructorSignature: null,
+    };
+
+    /** El UPDATE condicionado no toca filas y la clase está en `actual`. */
+    function sessionIs(actual: string): void {
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_sessions:maybeSingle', { status: actual });
+    }
+
+    it('startClass filtra por estado pendiente', async () => {
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      await facade.startClass(1, 12000);
+      expect(mock.builderFor('class_b_sessions').eq).toHaveBeenCalledWith('status', 'scheduled');
+    });
+
+    it('startClass sobre una clase que otra persona ya inició: avisa, no dice "iniciada" y recarga', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      sessionIs('in_progress');
+      const refresh = vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow('ya fue iniciada');
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase cambió',
+        expect.stringContaining('ya fue iniciada'),
+      );
+      expect(refresh).toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].status).toBe('pendiente');
+    });
+
+    it('startClass sobre una clase con inasistencia manda a deshacerla', async () => {
+      sessionIs('no_show');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+      await expect(facade.startClass(1, 12000)).rejects.toThrow('deshaz la inasistencia');
+    });
+
+    it('marcar ausente una clase en curso no escribe la asistencia', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      sessionIs('in_progress');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      expect(await facade.markAttendance(1, 'ausente')).toBe(false);
+
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith(
+        'La clase cambió',
+        expect.stringContaining('Cancelar inicio'),
+      );
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+    });
+
+    it('marcar ausente una clase que ya está ausente no es un error', async () => {
+      (facade as any)._clasesPracticas.set([makeRow()]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      sessionIs('no_show');
+      const refresh = vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      expect(await facade.markAttendance(1, 'ausente')).toBe(true);
+
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith('La inasistencia ya estaba registrada');
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it('finishClass filtra por estado en curso', async () => {
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso' }));
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      await facade.finishClass(finishPayload);
+      expect(mock.builderFor('class_b_sessions').eq).toHaveBeenCalledWith('status', 'in_progress');
+    });
+
+    it('finishClass sobre una clase que ya no está en curso no toca vehículo ni asistencia', async () => {
+      (facade as any)._clasesPracticas.set([makeRow({ status: 'en_curso', vehicleId: 7 })]);
+      (facade as any)._selectedPractica.set(makeRow({ status: 'en_curso', vehicleId: 7 }));
+      sessionIs('scheduled');
+      vi.spyOn(facade as any, 'refreshSilently').mockResolvedValue(undefined);
+
+      await expect(facade.finishClass(finishPayload)).rejects.toThrow('volvió a quedar pendiente');
+
+      expect(mock.client.from).not.toHaveBeenCalledWith('vehicles');
+      expect(mock.builderFor('class_b_practice_attendance').upsert).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(facade.clasesPracticas()[0].status).toBe('en_curso');
+    });
+  });
+
+  describe('fix-224-b: loadVehiclesByBranch', () => {
+    it('pide los vehículos de la sede y los "Ambas"', async () => {
+      mock.setResult('vehicles', []);
+      await facade.loadVehiclesByBranch(2);
+      const b = mock.builderFor('vehicles');
+      expect(b.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true');
+      expect(b.eq).not.toHaveBeenCalledWith('branch_id', 2);
+    });
+
+    it('deja fuera los vehículos en Mantenimiento o Fuera de servicio', async () => {
+      mock.setResult('vehicles', [
+        { id: 1, license_plate: 'AA1111', status: 'operational', current_km: 10 },
+        { id: 2, license_plate: 'BB2222', status: 'maintenance', current_km: 20 },
+        { id: 3, license_plate: 'CC3333', status: 'out_of_service', current_km: 30 },
+        { id: 4, license_plate: 'DD4444', status: 'available', current_km: 40 },
+      ]);
+      await facade.loadVehiclesByBranch(1);
+      expect(facade.vehiclesPorSede().map((v) => v.id)).toEqual([1, 4]);
+    });
+  });
+
   describe('startClass', () => {
     it('actualiza la sesión y muestra toast de éxito', async () => {
-      mock.setResult('class_b_sessions', null, null);
+      mock.setResult('class_b_sessions', [{ id: 1 }], null);
 
       await facade.startClass(1, 12000);
 
@@ -860,7 +1332,7 @@ describe('AsistenciaClaseBFacade', () => {
     it('fix-370-m: guarda la hora de Chile y recarga la tabla (vehículo y KPIs desde la BD)', async () => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date('2026-10-11T17:30:44.000Z')); // 14:30:44 en Chile
-      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
       const b = mock.builderFor('class_b_sessions');
       b.select.mockClear();
 
@@ -888,6 +1360,116 @@ describe('AsistenciaClaseBFacade', () => {
         'Error al iniciar la clase',
         'El instructor ya tiene una clase en curso. Debe cerrarla antes de iniciar otra.',
       );
+    });
+
+    it('spec 0010-i: el bloqueo de la clase 7 llega como mensaje claro, no como token', async () => {
+      mock.setResult('class_b_sessions', null, {
+        code: 'P0001',
+        message: 'PAGO_PENDIENTE_CLASE_7',
+      });
+
+      await expect(facade.startClass(1, 12000)).rejects.toThrow(
+        'Pago pendiente: el alumno debe pasar por secretaría.',
+      );
+    });
+  });
+
+  // ── Estado de pago de la clase (spec 0010-i) ─────────────────────────────
+  describe('cargarEstadoPagoClase', () => {
+    it('clase 1–6: libre sin consultar la BD (AC2)', async () => {
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 6 }));
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'libre', saldo: 0 });
+      expect(mock.client.from).not.toHaveBeenCalledWith('enrollments');
+    });
+
+    it('clase 7 con deuda y sin habilitación → bloqueada con el saldo real (AC3)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 180000 });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'bloqueada', saldo: 180000 });
+      expect(mock.builderFor('enrollment_payment_overrides').eq).toHaveBeenCalledWith(
+        'kind',
+        'clases',
+      );
+    });
+
+    it('clase 9 con deuda y habilitada → habilitada_sin_pago (AC10)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 90000 });
+      mock.setResult('enrollment_payment_overrides', [{ id: 1 }]);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 9 }));
+
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'habilitada_sin_pago', saldo: 90000 });
+    });
+
+    it('clase 7 sin deuda (pagó en el mesón) → libre (AC4)', async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 0 });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()?.estado).toBe('libre');
+    });
+
+    it('si falla la lectura queda en null (la BD sigue bloqueando)', async () => {
+      mock.setResult('enrollments:maybeSingle', null, { message: 'boom' });
+      mock.setResult('enrollment_payment_overrides', []);
+
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7 }));
+
+      expect(facade.estadoPagoClase()).toBeNull();
+    });
+  });
+
+  describe('habilitarSinPago', () => {
+    beforeEach(async () => {
+      mock.setResult('enrollments:maybeSingle', { pending_balance: 180000 });
+      mock.setResult('enrollment_payment_overrides', []);
+      await facade.cargarEstadoPagoClase(makeRow({ classNumber: 7, enrollmentId: 10 }));
+    });
+
+    it('inserta la habilitación con motivo y autor, y pasa a habilitada_sin_pago (AC5)', async () => {
+      mock.setResult('enrollment_payment_overrides', [{ id: 7 }]);
+
+      const ok = await facade.habilitarSinPago(10, '  Paga a fin de mes  ');
+
+      expect(ok).toBe(true);
+      expect(mock.builderFor('enrollment_payment_overrides').insert).toHaveBeenCalledWith({
+        enrollment_id: 10,
+        kind: 'clases',
+        reason: 'Paga a fin de mes',
+        created_by: 99,
+      });
+      expect(facade.estadoPagoClase()).toEqual({ estado: 'habilitada_sin_pago', saldo: 180000 });
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('sin motivo suficiente no escribe nada', async () => {
+      const ok = await facade.habilitarSinPago(10, '   ab ');
+
+      expect(ok).toBe(false);
+      expect(mock.builderFor('enrollment_payment_overrides').insert).not.toHaveBeenCalled();
+    });
+
+    it('si falla el INSERT sigue bloqueada y muestra el error (AC-E6)', async () => {
+      mock.setResult('enrollment_payment_overrides', null, { code: '42501', message: 'rls' });
+
+      const ok = await facade.habilitarSinPago(10, 'Paga a fin de mes');
+
+      expect(ok).toBe(false);
+      expect(facade.estadoPagoClase()?.estado).toBe('bloqueada');
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('si RLS filtra el INSERT (0 filas) no se da por habilitada (AC-E4/AC-E6)', async () => {
+      mock.setResult('enrollment_payment_overrides', []);
+
+      const ok = await facade.habilitarSinPago(10, 'Paga a fin de mes');
+
+      expect(ok).toBe(false);
+      expect(facade.estadoPagoClase()?.estado).toBe('bloqueada');
     });
   });
 });

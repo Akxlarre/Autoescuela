@@ -122,6 +122,26 @@ export class AdminContabilidadCuadraturaComponent {
 
   protected async onEliminarIngreso(row: IngresoRow): Promise<void> {
     const ref = row.nBoleta ? `boleta ${row.nBoleta}` : `ingreso #${row.id}`;
+    // Un pago de matrícula no se borra: se anula con un motivo y queda visible, tachado
+    // (spec 0025-m). Cursos singulares y servicios especiales siguen revirtiéndose.
+    if (row.source === 'payment') {
+      const motivo = await this.confirmModal.confirmWithReason({
+        title: `Anular ${ref}`,
+        message:
+          'El pago quedará anulado: seguirá visible, tachado, y dejará de sumar en la caja y en el saldo del alumno. No se puede deshacer.',
+        severity: 'danger',
+        confirmLabel: 'Anular pago',
+        cancelLabel: 'Cancelar',
+        reason: {
+          label: 'Motivo de la anulación',
+          placeholder: 'Ej.: monto mal digitado, pago duplicado',
+          minLength: 5,
+        },
+      });
+      if (motivo === null) return;
+      await this.facade.eliminarIngreso(row, motivo);
+      return;
+    }
     const confirmed = await this.confirmModal.confirm({
       title: `Eliminar ${ref}`,
       message: 'Los saldos del día se recalcularán. Esta acción no se puede deshacer.',

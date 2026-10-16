@@ -62,7 +62,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   class="flex items-start gap-3 py-3 border-b last:border-b-0 border-border-subtle transition-colors"
                   [class.cursor-pointer]="isClickable(item)"
                   [class.hover:bg-surface]="isClickable(item)"
+                  [attr.role]="isClickable(item) ? 'button' : null"
+                  [attr.tabindex]="isClickable(item) ? 0 : null"
+                  [attr.aria-label]="isClickable(item) ? targetLabel(item) : null"
+                  [attr.data-llm-action]="isClickable(item) ? 'open-activity-target' : null"
                   (click)="handleItemClick(item)"
+                  (keydown.enter)="handleItemClick(item)"
+                  (keydown.space)="$event.preventDefault(); handleItemClick(item)"
                 >
                   <div
                     class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full mt-1"
@@ -193,6 +199,14 @@ export class RecentActivityDrawerComponent implements OnInit {
       return !!this.resolvedStudentIds().get(item.id);
     }
     return this.getStaticTargetPath(item) !== null;
+  }
+
+  /** Nombre accesible de un evento clicable: qué es y a dónde lleva (fix-421-m). */
+  targetLabel(item: any): string {
+    const destino = RecentActivityDrawerComponent.STUDENT_LINKED_ENTITIES.includes(item.entity)
+      ? 'abrir la ficha del alumno'
+      : 'abrir Pagos';
+    return `${item.title}: ${destino}`;
   }
 
   handleItemClick(item: any) {

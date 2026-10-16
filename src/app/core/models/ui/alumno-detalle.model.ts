@@ -2,6 +2,7 @@
  * Modelos UI para la Ficha del Alumno (/admin/alumnos/:id).
  * Derivados de: students + users + enrollments + class_b_*_attendance / professional_*
  */
+import type { AnulacionPago } from './pagos.model';
 
 export interface EnrollmentSummary {
   id: number;
@@ -106,6 +107,8 @@ export interface PagoUI {
   metodo: string | null;
   /** Estado legible: "Pagado" | "Pendiente" | etc. (derivado del status de BD) */
   estado: string;
+  /** Presente solo si el pago fue anulado (spec 0025-m). */
+  anulacion: AnulacionPago | null;
 }
 
 export interface InasistenciaUI {

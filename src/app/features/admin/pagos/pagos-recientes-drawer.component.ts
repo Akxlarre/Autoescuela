@@ -8,6 +8,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 
 /**
@@ -157,10 +158,23 @@ import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-bu
                     <span class="truncate"
                       >{{ fechaCorta(pago.fecha) }} · {{ pago.concepto ?? '—' }}</span
                     >
-                    <span class="font-semibold text-text-primary shrink-0">{{
-                      clp(pago.monto)
-                    }}</span>
+                    <span
+                      class="font-semibold shrink-0"
+                      [class.text-text-primary]="!pago.anulacion"
+                      [class.line-through]="!!pago.anulacion"
+                      >{{ clp(pago.monto) }}</span
+                    >
                   </div>
+                  <!-- Pago anulado (spec 0025-m): se lista tachado y no suma en los indicadores. -->
+                  @if (pago.anulacion; as anulacion) {
+                    <p
+                      class="text-xs text-text-muted"
+                      data-llm-description="voided payment: reason, who voided it and when"
+                    >
+                      {{ anulacion.motivo }} · {{ anulacion.por ?? 'Administrador' }} ·
+                      {{ anulacion.cuando }}
+                    </p>
+                  }
                   <div class="flex items-center gap-1.5 text-xs text-text-secondary">
                     <app-icon [name]="pago.metodoIcono" [size]="12" />
                     {{ pago.metodo }}
@@ -203,6 +217,7 @@ export class PagosRecientesDrawerComponent {
     [
       { label: 'Completado', value: 'completado' },
       { label: 'Pendiente', value: 'pendiente' },
+      { label: 'Anulado', value: 'anulado' },
     ],
     'Todos los estados',
   );
@@ -229,15 +244,13 @@ export class PagosRecientesDrawerComponent {
   }
 
   protected readonly pagosFiltrados = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
+    const q = this.searchQuery();
     const estado = this.filtroEstado();
     const metodo = this.filtroMetodo();
 
     return this.facade.pagosRecientes().filter((p) => {
-      const matchSearch =
-        !q ||
-        p.alumno.toLowerCase().includes(q) ||
-        (p.nroDocumento ?? '').toLowerCase().includes(q);
+      // fix-054-i: ignora tildes y ñ ("munoz" encuentra "Muñoz"), como el resto de la app.
+      const matchSearch = matchesSearchTokens([p.alumno, p.nroDocumento], q);
       const matchEstado = !estado || p.estado === estado;
       const matchMetodo = !metodo || p.metodo === metodo;
       return matchSearch && matchEstado && matchMetodo;
@@ -276,6 +289,8 @@ export class PagosRecientesDrawerComponent {
         return 'Completado';
       case 'pendiente':
         return 'Pendiente';
+      case 'anulado':
+        return 'Anulado';
       default:
         return estado ? 'Pendiente' : '—';
     }

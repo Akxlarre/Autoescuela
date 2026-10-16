@@ -256,7 +256,9 @@ export class AuthFacade {
     }
     this._currentUser.set(updated);
     if (wasGranted && !(updated.canAccessBothBranches ?? false)) {
-      this.branchFacade.reset();
+      // A su propia sede, no a "Todas": si ya miraba "Todas", volver a null no cambiaba el
+      // signal y ninguna vista recargaba; seguía mostrando las dos sedes (fix-422-m).
+      this.branchFacade.selectBranch(updated.branchId ?? null);
     }
   }
 

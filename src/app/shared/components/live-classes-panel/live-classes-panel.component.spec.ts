@@ -37,6 +37,58 @@ describe('LiveClassesPanelComponent', () => {
     vi.useRealTimers();
   });
 
+  // ─── fix-414-m: cada fila dice qué hace y se identifica para agentes ───────
+  describe('acción de cada fila (fix-414-m)', () => {
+    // 15:30 UTC = 11:30 hora Chile del 27 de julio de 2026 (invierno, UTC-4).
+    const clase = (status: string) =>
+      ({ status, studentName: 'Julio Verstappen', scheduledAt: '2026-07-27T15:30:00.000Z' }) as any;
+
+    it('por iniciar → "Iniciar la clase de …"', () => {
+      expect(component.actionLabel(clase('pending'))).toBe(
+        'Iniciar la clase de Julio Verstappen, 11:30',
+      );
+      expect(component.actionId(clase('pending'))).toBe('start-live-class');
+    });
+
+    it('en curso → "Finalizar la clase de …"', () => {
+      expect(component.actionLabel(clase('in_progress'))).toBe(
+        'Finalizar la clase de Julio Verstappen, 11:30',
+      );
+      expect(component.actionId(clase('in_progress'))).toBe('finish-live-class');
+    });
+
+    it('finalizada o sin asistir → "Ver el detalle de la clase de …"', () => {
+      for (const status of ['completed', 'no_show']) {
+        expect(component.actionLabel(clase(status))).toBe(
+          'Ver el detalle de la clase de Julio Verstappen, 11:30',
+        );
+        expect(component.actionId(clase(status))).toBe('view-live-class');
+      }
+    });
+  });
+
+  // ─── fix-424-m: el Nº de matrícula identifica la clase ──────────────────────
+  describe('Nº de matrícula (fix-424-m)', () => {
+    const clase = {
+      status: 'pending',
+      studentName: 'Julio Verstappen',
+      enrollmentNumber: '0027',
+      scheduledAt: '2026-07-27T15:30:00.000Z',
+    } as any;
+
+    it('el nombre accesible de la fila lleva el Nº de matrícula', () => {
+      expect(component.actionLabel(clase)).toBe(
+        'Iniciar la clase de Julio Verstappen (Nº 0027), 11:30',
+      );
+    });
+
+    it('sin Nº de matrícula queda solo el nombre', () => {
+      expect(component.actionLabel({ ...clase, enrollmentNumber: null })).toBe(
+        'Iniciar la clase de Julio Verstappen, 11:30',
+      );
+    });
+  });
+
   // ─── fix-073: "Transcurriendo" vs "Atrasada" según status real ─────────────
   describe('getRelativeTime (fix-073)', () => {
     it('clase pending con hora futura → "En X min"', () => {
@@ -89,6 +141,21 @@ describe('LiveClassesPanelComponent', () => {
 
     it('no_show → "No Asistió", distinto de "Finalizada" (fix-193)', () => {
       expect(component.statusLabel('no_show')).toBe('No Asistió');
+    });
+
+    it('fix-392-m: solo la falta sin justificar se marca como error (no se confunde con "Concluida")', () => {
+      expect(component.isUnexcusedAbsence(makeLiveClass({ status: 'no_show' }))).toBe(true);
+      expect(
+        component.isUnexcusedAbsence(makeLiveClass({ status: 'no_show', excused: true })),
+      ).toBe(false);
+      expect(component.isUnexcusedAbsence(makeLiveClass({ status: 'completed' }))).toBe(false);
+    });
+
+    it('fix-381-m: no_show justificada → "Justificada", como en Asistencia', () => {
+      expect(component.statusLabel('no_show', false, false, true)).toBe('Justificada');
+      expect(component.getRelativeTime('2026-10-12T13:00:00.000Z', 'no_show', false, true)).toBe(
+        'Justificada',
+      );
     });
   });
 

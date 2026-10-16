@@ -6,9 +6,11 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  type AbstractControl,
   FormsModule,
   NonNullableFormBuilder,
   ReactiveFormsModule,
@@ -39,6 +41,15 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
 import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
+import {
+  isKmDecrease,
+  isValidLicensePlate,
+  maxVehicleYear,
+  MIN_VEHICLE_YEAR,
+  normalizeLicensePlate,
+} from '@core/utils/vehicle-form.utils';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -117,7 +128,10 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                   id="vf-plate"
                   type="text"
                   formControlName="license_plate"
-                  placeholder="ABC-123"
+                  placeholder="ABCD12"
+                  maxlength="9"
+                  autocapitalize="characters"
+                  (input)="onPlateInput($event)"
                   aria-required="true"
                   class="field-input"
                   [class.field-input--error]="
@@ -130,7 +144,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                   vehicleForm.controls.license_plate.touched &&
                   vehicleForm.controls.license_plate.invalid
                 ) {
-                  <span class="field-error">Formato inválido (Ej: AB1234 o ABCD12)</span>
+                  <span class="field-error">Patente inválida. Ejemplos: ABCD12 o AB1234.</span>
                 }
               </div>
 
@@ -173,8 +187,14 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                     placeholder="2024"
                     aria-required="true"
                     class="field-input"
+                    [class.field-input--error]="
+                      vehicleForm.controls.year.touched && vehicleForm.controls.year.invalid
+                    "
                     data-llm-description="input for the vehicle year"
                   />
+                  @if (vehicleForm.controls.year.touched && vehicleForm.controls.year.invalid) {
+                    <span class="field-error">Año entre {{ minYear }} y {{ maxYear }}.</span>
+                  }
                 </div>
                 <div class="flex flex-col gap-1.5">
                   <label for="vf-km" class="field-label">KM Actual</label>
@@ -203,16 +223,25 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
                 ></p-select>
               </div>
 
-              <!-- Sede + Ambas sedes -->
-              <app-branch-scope-selector
-                [branches]="branchOptions()"
-                [branchId]="vehicleForm.controls.branch_id.value"
-                [bothBranches]="vehicleForm.controls.both_branches.value"
-                [role]="authFacade.currentUser()?.role ?? ''"
-                [mode]="isEdit() ? 'editar' : 'crear'"
-                [disabledReason]="sedeDisabledReason()"
-                (valueChange)="onSedeScopeChange($event)"
-              />
+              <!-- Sede + Ambas sedes: la elige el admin o la secretaria multi-sede; la secretaria
+                   anclada crea y edita en la suya, sin selector (spec 0051-b) -->
+              @if (branchRule().missingOwnBranch) {
+                <span class="field-error" data-llm-description="vehículo sin sede asignada">
+                  Tu usuario no tiene una sede asignada. Pide a un administrador que te asigne una.
+                </span>
+              }
+              @if (branchRule().canPick) {
+                <app-branch-scope-selector
+                  [branches]="branchOptions()"
+                  [branchId]="vehicleForm.controls.branch_id.value"
+                  [bothBranches]="vehicleForm.controls.both_branches.value"
+                  [role]="authFacade.currentUser()?.role ?? ''"
+                  [canAccessBothBranches]="authFacade.currentUser()?.canAccessBothBranches ?? false"
+                  [mode]="isEdit() ? 'editar' : 'crear'"
+                  [disabledReason]="sedeDisabledReason()"
+                  (valueChange)="onSedeScopeChange($event)"
+                />
+              }
 
               <!-- ── Sección: Documentos (solo al crear — recién existe vehicleId al guardar) ── -->
               @if (!isEdit()) {
@@ -346,6 +375,15 @@ export class VehicleFormDrawerComponent {
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
   protected readonly authFacade = inject(AuthFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
+
+  protected readonly minYear = MIN_VEHICLE_YEAR;
+  protected readonly maxYear = maxVehicleYear(chileYear());
+  /** Vehículo ya precargado en el formulario: se precarga UNA vez por vehículo (hotfix-075-b, S18). */
+  private loadedVehicleId: number | null = null;
+  /** Patente y kilometraje guardados del vehículo en edición (null al crear). */
+  private savedPlate: string | null = null;
+  private savedKm: number | null = null;
 
   // ── Estado ────────────────────────────────────────────────────────────────
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
@@ -371,11 +409,24 @@ export class VehicleFormDrawerComponent {
   readonly vehicleForm = this.fb.group({
     license_plate: [
       '',
-      [Validators.required, Validators.pattern(/^[A-Z]{2}[A-Z0-9]{2,}[0-9]{2}$/)],
+      [
+        Validators.required,
+        // hotfix-075-b (S19): AA1234 o ABCD12; una patente ya guardada que no se toca se respeta.
+        (control: AbstractControl<string>) =>
+          isValidLicensePlate(control.value, this.savedPlate) ? null : { licensePlate: true },
+      ],
     ],
     brand: ['', Validators.required],
     model: ['', Validators.required],
-    year: [chileYear(), [Validators.required, Validators.min(1900)]],
+    year: [
+      chileYear(),
+      [
+        Validators.required,
+        Validators.min(MIN_VEHICLE_YEAR),
+        Validators.max(maxVehicleYear(chileYear())),
+        Validators.pattern(/^\d+$/),
+      ],
+    ],
     current_km: [0, [Validators.required, Validators.min(0)]],
     status: ['available', Validators.required],
     branch_id: [null as number | null, Validators.required],
@@ -383,6 +434,17 @@ export class VehicleFormDrawerComponent {
   });
 
   readonly branchOptions = this.branchFacade.branches;
+
+  /** Quién elige la sede y con cuál parte el formulario (misma regla del alta de instructores). */
+  protected readonly branchRule = computed(() => {
+    const user = this.authFacade.currentUser();
+    return resolveInstructorCreateBranch(
+      user?.role,
+      user?.branchId,
+      !!user?.canAccessBothBranches,
+      this.branchFacade.selectedBranchId(),
+    );
+  });
 
   // ── Documentos adjuntos (se suben recién al crear el vehículo, cuando ya hay id — fix-154-m) ──
   readonly stagedDocs = signal<{ type: string; expiryDate: string; file: File | null }[]>([]);
@@ -443,8 +505,14 @@ export class VehicleFormDrawerComponent {
       if (id) {
         // En un caso real el Facade cargaría/seleccionaría el objeto.
         // Aquí buscamos en el pool cargado en el Facade principal.
+        // S18: la lista del facade cambia con cada refresco, cambio de sede o evento en vivo. Si
+        // el formulario se precargara cada vez, pisaría lo que la persona está escribiendo.
+        if (this.loadedVehicleId === id) return;
         const vehicle = this.flotaFacade.vehicles().find((v) => v.id === id);
         if (vehicle) {
+          this.loadedVehicleId = id;
+          this.savedPlate = vehicle.licensePlate;
+          this.savedKm = vehicle.currentKm;
           this.vehicleForm.patchValue({
             license_plate: vehicle.licensePlate,
             brand: vehicle.brand,
@@ -457,10 +525,16 @@ export class VehicleFormDrawerComponent {
           });
         }
       } else {
+        this.loadedVehicleId = null;
+        this.savedPlate = null;
+        this.savedKm = null;
         this.vehicleForm.reset({
           year: chileYear(),
           status: 'available',
           both_branches: false,
+          // spec 0051-b: parte con la sede que corresponde (la propia de la secretaria anclada, o
+          // la del topbar para quien elige). Antes quedaba vacía y la secretaria no podía crear.
+          branch_id: untracked(() => this.branchRule().branchId),
         });
       }
     });
@@ -474,8 +548,30 @@ export class VehicleFormDrawerComponent {
     });
   }
 
+  /** Mayúsculas y sin guiones ni espacios mientras se escribe (hotfix-075-b, S19). */
+  protected onPlateInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const normalized = normalizeLicensePlate(input.value);
+    if (normalized !== input.value) {
+      this.vehicleForm.controls.license_plate.setValue(normalized);
+    }
+  }
+
   async onSubmit(): Promise<void> {
     if (this.vehicleForm.invalid || this.isSaving()) return;
+
+    // Decisión del owner (S3): el kilometraje no baja sin que el admin lo confirme.
+    const nextKm = this.vehicleForm.getRawValue().current_km;
+    if (this.vehicleId() && isKmDecrease(this.savedKm, nextKm)) {
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Bajar el kilometraje',
+        message: `El kilometraje registrado es ${this.savedKm} km y vas a guardar ${nextKm} km. ¿Confirmas la corrección?`,
+        confirmLabel: 'Sí, corregir',
+        cancelLabel: 'Cancelar',
+        severity: 'warn',
+      });
+      if (!confirmed) return;
+    }
 
     this.errorMsg.set(null);
     this.isSaving.set(true);

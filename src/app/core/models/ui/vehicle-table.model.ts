@@ -3,7 +3,6 @@
  * Estas interfaces son el contrato entre FlotaFacade y FlotaListContentComponent.
  */
 
-export type VehicleType = 'class_b' | 'professional';
 export type VehicleStatus = 'available' | 'maintenance' | 'out_of_service';
 export type DocStatus = 'valid' | 'expiring_soon' | 'expired';
 
@@ -23,7 +22,6 @@ export interface VehicleTableRow {
   year: number;
   /** "{brand} {model}" combinado para la columna Vehículo */
   vehicleLabel: string;
-  type: VehicleType;
   status: VehicleStatus;
   currentKm: number;
   nextMaintenanceDate: string | null;
@@ -31,6 +29,11 @@ export interface VehicleTableRow {
   instructorId: number | null;
   branchId: number | null;
   bothBranches: boolean;
+  /**
+   * ¿La persona con sesión puede operar este vehículo (editar la ficha, documentos y
+   * mantenimientos)? Lo calcula el facade con `canManageVehicle()` (spec 0051-b).
+   */
+  canManage: boolean;
   documents: VehicleDocSummary[];
   /** Suma de expenses.amount con category='combustible' del mes en curso (fix-007-i). 0 si no registra gastos. */
   combustibleMes: number;

@@ -504,6 +504,28 @@ export const routes: Routes = [
               ),
           },
           {
+            // spec 0051-b: mismas pantallas de Flota que el admin; el alcance por sede lo ponen
+            // FlotaFacade (resolveBranchScope) y canManageVehicle(). `basePath` arma los enlaces.
+            path: 'flota',
+            data: { basePath: '/app/secretaria' },
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./features/admin/flota/admin-flota.component').then(
+                    (m) => m.AdminFlotaComponent,
+                  ),
+              },
+              {
+                path: ':id/mantenimientos',
+                loadComponent: () =>
+                  import('./features/admin/flota/vehicle-maintenances/vehicle-maintenances.component').then(
+                    (m) => m.VehicleMaintenancesComponent,
+                  ),
+              },
+            ],
+          },
+          {
             path: 'observaciones',
             loadComponent: () =>
               import('./features/secretaria/observaciones/secretaria-observaciones.component').then(

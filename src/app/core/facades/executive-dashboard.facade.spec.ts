@@ -153,6 +153,62 @@ describe('ExecutiveDashboardFacade', () => {
     }
   });
 
+  describe('recarga con datos visibles (fix-427-m)', () => {
+    it('isRefreshing queda en true hasta que llega la respuesta y dataPreset cambia recién ahí', async () => {
+      const { facade, rpc } = setup();
+      await facade.initialize();
+      expect(facade.isRefreshing()).toBe(false);
+      expect(facade.dataPreset()).toBe('this_month');
+
+      // exec_dashboard_kpis va 3 veces por carga (período, anterior y año anterior).
+      const colgadas: Array<() => void> = [];
+      const liberar = () => colgadas.forEach((r) => r());
+      rpc.mockImplementation((name: string) =>
+        name === 'exec_dashboard_kpis'
+          ? new Promise((r) => colgadas.push(() => r({ data: KPIS, error: null })))
+          : Promise.resolve(defaultResponses()[name]),
+      );
+      const p = facade.applyRange({ from: '2026-01-01', to: '2026-10-14' }, 'this_year');
+      await Promise.resolve();
+      expect(facade.isRefreshing()).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.dataPreset()).toBe('this_month');
+
+      liberar();
+      await p;
+      expect(facade.isRefreshing()).toBe(false);
+      expect(facade.dataPreset()).toBe('this_year');
+    });
+
+    it('una respuesta vieja que llega después no apaga el indicador de la vigente', async () => {
+      const { facade, rpc, setBranch } = setup();
+      await facade.initialize();
+
+      const pendientes: Record<number, Array<() => void>> = { 1: [], 2: [] };
+      const liberarSede = (sede: number) => pendientes[sede].forEach((r) => r());
+      rpc.mockImplementation((name: string, params: { p_branch_id: number | null }) =>
+        name === 'exec_dashboard_kpis' && params.p_branch_id !== null
+          ? new Promise((r) =>
+              pendientes[params.p_branch_id!].push(() => r({ data: KPIS, error: null })),
+            )
+          : Promise.resolve(defaultResponses()[name]),
+      );
+      setBranch(1);
+      const vieja = facade.reload();
+      setBranch(2);
+      const vigente = facade.reload();
+      await Promise.resolve();
+
+      liberarSede(1);
+      await vieja;
+      expect(facade.isRefreshing()).toBe(true);
+
+      liberarSede(2);
+      await vigente;
+      expect(facade.isRefreshing()).toBe(false);
+    });
+  });
+
   it('AC-E2: si una RPC falla, solo esa sección queda en error', async () => {
     const { facade } = setup({
       responses: { exec_dashboard_receivables: { data: null, error: { message: 'boom' } } },

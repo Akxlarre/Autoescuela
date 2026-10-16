@@ -15,12 +15,16 @@ import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { StaleSessionError } from '@core/utils/class-b-session.utils';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
-import type { VehicleOption } from '@core/models/ui/asistencia-clase-b.model';
+import type { ClasePracticaRow, VehicleOption } from '@core/models/ui/asistencia-clase-b.model';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { PagosFacade } from '@core/facades/pagos.facade';
+import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
+import { formatCLP } from '@core/utils/date.utils';
 
 @Component({
   selector: 'app-admin-iniciar-clase-drawer',
@@ -88,7 +92,117 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           </app-alert-card>
         }
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit(cls)" class="flex flex-col gap-6">
+        <!-- Spec 0010-i: la clase 7+ exige el segundo pago (o una habilitación sin pago) -->
+        @if (estadoPago(); as pago) {
+          @if (pago.estado === 'bloqueada') {
+            <div
+              class="mb-6 rounded-xl border border-error/30 bg-error/5 p-4 flex flex-col gap-3"
+              role="alert"
+              data-llm-description="Clase bloqueada por pago pendiente de la segunda parte"
+            >
+              <div class="flex items-start gap-3">
+                <app-icon name="lock" [size]="18" class="text-error shrink-0 mt-0.5" />
+                <div class="flex-1 min-w-0">
+                  <p class="item-title m-0">Bloqueada: pago pendiente {{ clp(pago.saldo) }}</p>
+                  <p class="text-xs text-text-secondary mt-1 mb-0">
+                    Desde la clase 7 el alumno debe tener pagada la segunda parte.
+                  </p>
+                </div>
+              </div>
+
+              @if (mostrarMotivo()) {
+                <div class="flex flex-col gap-1.5">
+                  <label for="motivo-sin-pago" class="field-label"
+                    >Motivo para habilitar sin pago</label
+                  >
+                  <textarea
+                    id="motivo-sin-pago"
+                    rows="3"
+                    class="field-input"
+                    placeholder="Ej. Paga el viernes, acordado con el admin"
+                    [value]="motivo()"
+                    (input)="onMotivoInput($event)"
+                    data-llm-description="Motivo obligatorio para habilitar sin pago las clases 7 a 12 del alumno"
+                  ></textarea>
+                  <div class="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="facade.isSaving()"
+                      (click)="cancelarMotivo()"
+                      data-llm-action="volver-sin-habilitar"
+                    >
+                      <!-- T11: "Volver" vuelve a las dos opciones; el "Cancelar" del pie cierra el drawer -->
+                      Volver
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-primary flex items-center gap-2"
+                      [disabled]="!motivoValido() || facade.isSaving()"
+                      (click)="onHabilitarSinPago(cls)"
+                      data-llm-action="confirmar-habilitar-clase-sin-pago"
+                    >
+                      @if (facade.isSaving()) {
+                        <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                      }
+                      Habilitar sin pago
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn-primary flex items-center gap-2"
+                    (click)="onRegistrarPago(cls)"
+                    data-llm-action="registrar-pago-desde-iniciar-clase"
+                  >
+                    <app-icon name="credit-card" [size]="16" />
+                    Registrar pago
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2"
+                    (click)="mostrarMotivo.set(true)"
+                    data-llm-action="habilitar-clase-sin-pago"
+                  >
+                    <app-icon name="unlock" [size]="16" />
+                    Habilitar sin pago
+                  </button>
+                </div>
+              }
+            </div>
+          } @else if (pago.estado === 'habilitada_sin_pago') {
+            <div
+              class="mb-6 rounded-xl border border-warning/30 bg-warning/5 p-4 flex flex-wrap items-center justify-between gap-3"
+              role="status"
+              data-llm-description="Clase habilitada sin pago: el alumno sigue con deuda"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <app-icon name="triangle-alert" [size]="16" class="text-warning shrink-0" />
+                <p class="text-sm text-text-primary m-0">
+                  Habilitada sin pago — debe {{ clp(pago.saldo) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2"
+                (click)="onRegistrarPago(cls)"
+                data-llm-action="registrar-pago-desde-iniciar-clase"
+              >
+                <app-icon name="credit-card" [size]="16" />
+                Registrar pago
+              </button>
+            </div>
+          }
+        }
+
+        <form
+          [formGroup]="form"
+          (ngSubmit)="onSubmit(cls)"
+          class="flex flex-col gap-6"
+          [class.hidden]="bloqueada()"
+        >
           <!-- Selector de vehículo -->
           @if (facade.vehiclesPorSede().length > 0) {
             <div class="flex flex-col gap-2">
@@ -106,6 +220,11 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 data-llm-description="Selector de vehículo para la clase práctica"
               />
             </div>
+          }
+          @if (classVehicleUnavailable()) {
+            <p class="text-sm text-warning" data-testid="vehiculo-no-disponible">
+              El vehículo de esta clase está en Mantenimiento o Fuera de servicio. Elige otro.
+            </p>
           }
 
           <!-- Formulario odómetro -->
@@ -202,21 +321,23 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           >
             Cancelar
           </button>
-          <button
-            type="button"
-            class="btn-primary flex-1 flex items-center justify-center gap-2"
-            [disabled]="form.invalid || isSubmitting()"
-            (click)="onSubmit(cls)"
-            data-llm-action="admin-start-class"
-          >
-            @if (isSubmitting()) {
-              <app-icon name="loader-2" [size]="16" class="animate-spin" />
-              <span>Iniciando...</span>
-            } @else {
-              <app-icon name="play" [size]="16" />
-              <span>Comenzar Clase</span>
-            }
-          </button>
+          @if (!bloqueada()) {
+            <button
+              type="button"
+              class="btn-primary flex-1 flex items-center justify-center gap-2"
+              [disabled]="form.invalid || isSubmitting()"
+              (click)="onSubmit(cls)"
+              data-llm-action="admin-start-class"
+            >
+              @if (isSubmitting()) {
+                <app-icon name="loader-2" [size]="16" class="animate-spin" />
+                <span>Iniciando...</span>
+              } @else {
+                <app-icon name="play" [size]="16" />
+                <span>Comenzar Clase</span>
+              }
+            </button>
+          }
         </ng-container>
       </app-drawer-form>
     }
@@ -229,6 +350,42 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly pagosFacade = inject(PagosFacade);
+
+  protected readonly clp = formatCLP;
+
+  // ── Spec 0010-i: segundo pago ───────────────────────────────────────────────
+  protected readonly estadoPago = this.facade.estadoPagoClase;
+  /** Clase 7+ con deuda y sin habilitación: no se muestra "Comenzar Clase" (la BD igual lo rechaza). */
+  protected readonly bloqueada = computed(() => this.estadoPago()?.estado === 'bloqueada');
+  protected readonly mostrarMotivo = signal(false);
+  protected readonly motivo = signal('');
+  protected readonly motivoValido = computed(() => this.motivo().trim().length >= 5);
+
+  protected onMotivoInput(event: Event): void {
+    this.motivo.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected cancelarMotivo(): void {
+    this.mostrarMotivo.set(false);
+    this.motivo.set('');
+  }
+
+  /**
+   * Abre el drawer de pago existente con la matrícula precargada. Al guardar, ese drawer vuelve
+   * (back) a este, que se re-crea y relee el saldo en ngOnInit: la clase queda lista para iniciar.
+   */
+  protected onRegistrarPago(cls: ClasePracticaRow): void {
+    if (cls.enrollmentId === null) return;
+    this.pagosFacade.seleccionarParaPago(cls.enrollmentId);
+    this.layoutDrawer.push(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
+  }
+
+  protected async onHabilitarSinPago(cls: ClasePracticaRow): Promise<void> {
+    if (cls.enrollmentId === null || !this.motivoValido()) return;
+    const ok = await this.facade.habilitarSinPago(cls.enrollmentId, this.motivo());
+    if (ok) this.cancelarMotivo();
+  }
 
   protected readonly isSubmitting = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -241,6 +398,18 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
 
   /** ID del vehículo seleccionado en el dropdown (null = usa el de la sesión). */
   protected readonly selectedVehicleId = signal<number | null>(null);
+  private readonly vehiclesLoaded = signal(false);
+
+  /** fix-224-b: el vehículo de la clase está en Mantenimiento o Fuera de servicio. */
+  protected readonly classVehicleUnavailable = computed(() => {
+    const vehicleId = this.facade.selectedPractica()?.vehicleId;
+    return (
+      !!vehicleId &&
+      this.vehiclesLoaded() &&
+      this.selectedVehicleId() === null &&
+      !this.facade.vehiclesPorSede().some((v) => v.id === vehicleId)
+    );
+  });
 
   /** Objeto completo del vehículo seleccionado (para el ticket resumen). */
   protected readonly selectedVehicle = computed<VehicleOption | null>(() => {
@@ -298,6 +467,8 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
 
   ngOnInit(): void {
     const cls = this.facade.selectedPractica();
+    // Spec 0010-i: también corre al volver del drawer de pago (el drawer se re-crea).
+    if (cls) void this.facade.cargarEstadoPagoClase(cls);
     const currentKm = cls?.vehicleCurrentKm ?? null;
     this.form = this.fb.group({
       kmStart: [currentKm, [Validators.required, Validators.min(0), Validators.max(999999)]],
@@ -313,7 +484,12 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     if (cls?.branchId) {
       this.facade.loadVehiclesByBranch(cls.branchId).then(() => {
         // Pre-selecciona el vehículo actual de la sesión
-        if (cls.vehicleId) this.selectedVehicleId.set(cls.vehicleId);
+        // fix-224-b: solo si sigue operativo; si está en Mantenimiento o Fuera de servicio
+        // no está en la lista y hay que elegir otro.
+        if (cls.vehicleId && this.facade.vehiclesPorSede().some((v) => v.id === cls.vehicleId)) {
+          this.selectedVehicleId.set(cls.vehicleId);
+        }
+        this.vehiclesLoaded.set(true);
       });
     }
   }
@@ -328,6 +504,10 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
 
   async onSubmit(cls: NonNullable<ReturnType<typeof this.facade.selectedPractica>>): Promise<void> {
     if (this.form.invalid) return;
+    if (this.classVehicleUnavailable()) {
+      this.error.set('Elige un vehículo disponible antes de iniciar la clase.');
+      return;
+    }
     this.isSubmitting.set(true);
     this.error.set(null);
     try {
@@ -336,6 +516,8 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
       void this.dashboardFacade.refreshLiveClassesOnly();
       this.layoutDrawer.close();
     } catch (err) {
+      // fix-388-m: si otra persona ya cambió la clase, "Clases Actuales" también quedó vieja.
+      if (err instanceof StaleSessionError) void this.dashboardFacade.refreshLiveClassesOnly();
       this.error.set(
         err instanceof Error ? err.message : 'No se pudo iniciar la clase. Intenta de nuevo.',
       );

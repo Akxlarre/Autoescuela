@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupCyclesByStatus } from './ciclo-select-groups.util';
+import { cycleMoveTargets, groupCyclesByStatus } from './ciclo-select-groups.util';
 import type { CicloOption } from '@core/models/ui/ciclos-teoricos.model';
 
 function makeCycle(overrides: Partial<CicloOption>): CicloOption {
@@ -14,6 +14,25 @@ function makeCycle(overrides: Partial<CicloOption>): CicloOption {
     ...overrides,
   };
 }
+
+describe('cycleMoveTargets() — fix-387-m', () => {
+  const cycles = [
+    makeCycle({ id: 1, branchId: 1, label: 'A1' }),
+    makeCycle({ id: 2, branchId: 2, label: 'B1' }),
+    makeCycle({ id: 3, branchId: 1, label: 'A2', status: 'finished' }),
+    makeCycle({ id: 4, branchId: 2, label: 'B2' }),
+  ];
+
+  it('ofrece solo los otros ciclos de la sede del ciclo elegido', () => {
+    expect(cycleMoveTargets(cycles, 1)).toEqual([{ label: 'A2', value: 3 }]);
+    expect(cycleMoveTargets(cycles, 2)).toEqual([{ label: 'B2', value: 4 }]);
+  });
+
+  it('sin ciclo elegido, o con uno que no está en la lista, no ofrece destinos', () => {
+    expect(cycleMoveTargets(cycles, null)).toEqual([]);
+    expect(cycleMoveTargets(cycles, 99)).toEqual([]);
+  });
+});
 
 describe('groupCyclesByStatus()', () => {
   it('separa ciclos activos y finalizados en grupos distintos', () => {

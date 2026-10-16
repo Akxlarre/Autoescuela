@@ -27,6 +27,7 @@ import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -43,6 +44,7 @@ import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component'
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { PagosRecientesDrawerComponent } from './pagos-recientes-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { describeMatriculaDeudor } from '@core/utils/deudor-label.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -60,6 +62,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClearFiltersButtonComponent,
+    EmptyStateComponent,
     FormsModule,
     ChileDatePipe,
     DatePickerModule,
@@ -188,6 +191,18 @@ function toCompact(amount: number): { value: number; suffix: string } {
               <p class="text-sm font-medium text-text-primary">¡Sin saldos pendientes!</p>
               <p class="text-xs text-text-muted">Todos los alumnos están al día con sus pagos.</p>
             </div>
+          } @else if (sinResultadosPorFiltro()) {
+            <!-- fix-055-i: antes quedaban los encabezados sin filas y sin mensaje -->
+            <div class="flex-1 flex items-center justify-center px-6 py-10">
+              <app-empty-state
+                icon="filter-x"
+                message="Ningún alumno coincide con los filtros"
+                subtitle="Cambia las fechas, el curso o la sede, o limpia los filtros para ver todos los deudores."
+                actionLabel="Limpiar filtros"
+                actionIcon="x"
+                (action)="limpiarFiltros()"
+              />
+            </div>
           } @else {
             <div
               class="micro-label hidden lg:grid px-6 py-2 gap-4 border-b bg-surface border-border-muted"
@@ -216,6 +231,10 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   <div class="flex flex-col min-w-0">
                     <span class="item-title truncate" [title]="alumno.alumno">
                       {{ alumno.alumno }}
+                    </span>
+                    <!-- fix-053-i: distingue dos matrículas con deuda del mismo alumno -->
+                    <span class="text-xs mt-0.5 text-text-muted truncate">
+                      {{ describirMatricula(alumno) }}
                     </span>
                     <!-- RUT Mobile only -->
                     <span class="text-xs lg:hidden mt-0.5 text-text-secondary">
@@ -560,6 +579,7 @@ export class AdminPagosComponent implements AfterViewInit {
 
   // Funciones puras expuestas al template
   protected readonly clp = formatCLP;
+  protected readonly describirMatricula = describeMatriculaDeudor;
 
   protected fechaCorta(fecha: string | null): string {
     if (!fecha) return '—';
@@ -650,6 +670,11 @@ export class AdminPagosComponent implements AfterViewInit {
   // topbar está en "Todas las sedes" ayuda a distinguir a qué sede pertenece cada fila.
   protected readonly mostrarColumnaSede = computed(
     () => this.branchFacade.selectedBranchId() === null,
+  );
+
+  /** fix-055-i: hay deudores, pero los filtros no dejan ninguno (≠ "sin saldos pendientes"). */
+  protected readonly sinResultadosPorFiltro = computed(
+    () => this.facade.alumnosConDeuda().length > 0 && this.deudoresFiltrados().length === 0,
   );
 
   protected readonly deudoresFiltrados = computed<AlumnoDeudor[]>(() => {

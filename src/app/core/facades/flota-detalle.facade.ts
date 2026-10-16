@@ -1,5 +1,8 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { chileToday, diffDaysIso, toChileDate } from '@core/utils/chile-time.utils';
+import { toChileDate } from '@core/utils/chile-time.utils';
+import { resolveDocStatus } from '@core/utils/vehicle-document-status.utils';
+import { canManageVehicle, canViewVehicle } from '@core/utils/vehicle-permissions.utils';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type {
   MaintenanceRow,
@@ -52,9 +55,6 @@ interface RawVehicleForDetail {
 
 // ─── Facade ───────────────────────────────────────────────────────────────────
 
-/** Days until a maintenance is considered "soon" */
-const SOON_DAYS = 14;
-
 /**
  * FlotaDetalleFacade — gestiona el estado de detalle de un vehículo:
  * historial de mantenimientos, KPIs y mantenimientos programados.
@@ -65,6 +65,7 @@ const SOON_DAYS = 14;
 export class FlotaDetalleFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
   private readonly _vehicle = signal<VehicleTableRow | null>(null);
@@ -89,8 +90,9 @@ export class FlotaDetalleFacade {
     return {
       totalCount: rows.length,
       totalSpent: spent,
-      avgMonthly: rows.length > 0 ? Math.round(spent / Math.max(rows.length, 1)) : 0,
-      kmTraveled: v?.currentKm ?? 0,
+      // hotfix-074-b (S15): antes se llamaban avgMonthly / kmTraveled y no medían eso.
+      avgPerService: rows.length > 0 ? Math.round(spent / rows.length) : 0,
+      currentKm: v?.currentKm ?? 0,
     };
   });
 
@@ -133,8 +135,18 @@ export class FlotaDetalleFacade {
       ]);
 
       if (vehicleResult.error) throw vehicleResult.error;
+      // hotfix-074-b (S14): sin esto un historial que no cargó se veía como "historial vacío".
+      if (maintenancesResult.error) throw maintenancesResult.error;
 
       const v = vehicleResult.data as unknown as RawVehicleForDetail;
+
+      // spec 0051-b (AC2): una secretaria no abre por URL un vehículo exclusivo de la otra sede.
+      const scope = { branchId: v.branch_id ?? null, bothBranches: v.both_branches ?? false };
+      const user = this.auth.currentUser();
+      if (!canViewVehicle(user, scope)) {
+        this._error.set('Vehículo no encontrado.');
+        return;
+      }
 
       // Asignación activa (end_date IS NULL)
       const activeAssignment = v.vehicle_assignments.find((a) => a.end_date === null) ?? null;
@@ -158,14 +170,14 @@ export class FlotaDetalleFacade {
         model: v.model,
         year: v.year,
         vehicleLabel: `${v.brand} ${v.model}`,
-        type: 'class_b',
         status: this.resolveStatus(v.status),
         currentKm: v.current_km ?? 0,
         nextMaintenanceDate: v.last_maintenance ?? null,
         instructorName,
         instructorId,
-        branchId: v.branch_id ?? null,
-        bothBranches: v.both_branches ?? false,
+        branchId: scope.branchId,
+        bothBranches: scope.bothBranches,
+        canManage: canManageVehicle(user, scope),
         documents: v.vehicle_documents.map((d) => ({
           type: d.type ?? 'unknown',
           expiryDate: d.expiry_date ?? '',
@@ -225,7 +237,9 @@ export class FlotaDetalleFacade {
       const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
       return new Blob([rawBuffer], { type: 'application/pdf' });
     } catch (e) {
-      this._error.set(this.sanitizer.sanitize(e).message ?? 'Error al generar la Hoja de Ruta');
+      // hotfix-074-b (S14): no toca el error de la página; el drawer de la Hoja de Ruta ya
+      // muestra su propio mensaje cuando recibe null.
+      console.error('Error al generar la Hoja de Ruta:', this.sanitizer.sanitize(e).message);
       return null;
     }
   }
@@ -293,11 +307,9 @@ export class FlotaDetalleFacade {
   }
 
   private resolveScheduledStatus(expiryDate: string | null): 'ok' | 'soon' | 'overdue' {
-    if (!expiryDate) return 'ok';
-    const diff = diffDaysIso(chileToday(), toChileDate(expiryDate));
-    if (diff < 0) return 'overdue';
-    if (diff <= SOON_DAYS) return 'soon';
-    return 'ok';
+    // hotfix-074-b (S9): un solo umbral de "por vencer" en toda la app, el de resolveDocStatus.
+    const status = resolveDocStatus(expiryDate, null);
+    return status === 'expired' ? 'overdue' : status === 'expiring_soon' ? 'soon' : 'ok';
   }
 
   private docTypeLabel(type: string | null): string {

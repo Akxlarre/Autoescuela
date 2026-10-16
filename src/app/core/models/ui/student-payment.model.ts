@@ -24,7 +24,8 @@ export interface StudentPaymentHistoryItem {
   date: string;
   amount: number;
   type: 'online' | 'cash' | 'transfer' | 'card';
-  status: 'paid' | 'pending';
+  /** 'anulado': el pago se quitó; se muestra tachado y no cuenta (spec 0025-m). */
+  status: 'paid' | 'pending' | 'anulado';
 }
 
 /** Respuesta de load-enrollment-status */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveVehicleStatus } from './vehicle-status.utils';
+import { isVehicleOperational, resolveVehicleStatus } from './vehicle-status.utils';
 
 describe('resolveVehicleStatus', () => {
   it('mapea "operational" (valor real de BD y seed) a "available"', () => {
@@ -34,4 +34,20 @@ describe('resolveVehicleStatus', () => {
     expect(resolveVehicleStatus(null)).toBe('available');
     expect(resolveVehicleStatus(undefined)).toBe('available');
   });
+});
+
+describe('isVehicleOperational (fix-224-b)', () => {
+  it.each(['operational', 'available', 'disponible', 'in_use', null, undefined, 'algo-raro'])(
+    '"%s" está operativo',
+    (raw) => {
+      expect(isVehicleOperational(raw)).toBe(true);
+    },
+  );
+
+  it.each(['maintenance', 'mantenimiento', 'out_of_service', 'blocked', 'MAINTENANCE'])(
+    '"%s" no está operativo',
+    (raw) => {
+      expect(isVehicleOperational(raw)).toBe(false);
+    },
+  );
 });
