@@ -2,7 +2,7 @@
 
 - **Autor:** b
 - **Origen:** ASG-i-032 (testing Flota), sospechas S5 y S12 + decisión 1 del owner (2026-10-12).
-- **Estado:** abierto
+- **Estado:** cerrado (2026-10-15)
 
 ## Bug
 
@@ -43,6 +43,6 @@ Cambiar el estado de un vehículo a Mantenimiento o Fuera de servicio no tiene e
 
 ## Verificación
 
-- [ ] vitest: util + facades.
-- [ ] Test SQL `supabase/tests/flota/fix-224-b-vehiculo-no-operativo.sql` en BEGIN…ROLLBACK.
-- [ ] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
+- [x] vitest: util + facades.
+- [x] Test SQL `supabase/tests/flota/fix-224-b-vehiculo-no-operativo.sql` en BEGIN…ROLLBACK.
+- [x] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
