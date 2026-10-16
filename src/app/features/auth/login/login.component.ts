@@ -156,6 +156,9 @@ export class LoginComponent {
   }
 
   async onSubmit(data: LoginFormData): Promise<void> {
+    // hotfix-090-b: el botón se deshabilita recién en el siguiente render; el segundo clic de un
+    // doble clic ya llegó. Sin esto salían dos logins (o dos correos de recuperación).
+    if (this.loading()) return;
     this.errorMsg.set('');
     this.successMsg.set('');
     this.loading.set(true);
