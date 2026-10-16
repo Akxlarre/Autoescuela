@@ -428,8 +428,13 @@ export class ServiciosEspecialesFacade {
       .eq('id', id);
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
-      return { success: false };
+      const message = this.sanitizer.sanitize(error).message;
+      this._error.set(message);
+      // fix-432-m: la BD también tiene el candado (trigger). Si la caja se cerró entre el
+      // chequeo de arriba y el DELETE, su mensaje (P0001) explica el motivo.
+      return error.code === 'P0001'
+        ? { success: false, blockedReason: message }
+        : { success: false };
     }
 
     await this.refreshSilently();

@@ -525,6 +525,26 @@ describe('ServiciosEspecialesFacade', () => {
       expect(deleteMock).not.toHaveBeenCalled();
     });
 
+    it('fix-432-m: la BD rechaza el DELETE (caja cerrada entre medio) → muestra su mensaje', async () => {
+      const mensaje =
+        'La caja del 27-08-2026 ya está cerrada: no se puede borrar una venta de ese día.';
+      const { facade } = setup({
+        tables: {
+          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-27' })], error: null },
+          'special_service_sales:delete': {
+            data: null,
+            error: { code: 'P0001', message: mensaje },
+          },
+          cash_closings: { data: [], error: null },
+        },
+      });
+      await facade.initialize();
+
+      const result = await facade.borrarVenta(7);
+
+      expect(result).toEqual({ success: false, blockedReason: mensaje });
+    });
+
     it('venta inexistente en el estado local → falla sin consultar cash_closings', async () => {
       const { facade, mockSupabase } = setup({
         tables: { special_service_sales: { data: [], error: null } },
