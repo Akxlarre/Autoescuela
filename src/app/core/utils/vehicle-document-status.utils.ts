@@ -5,8 +5,8 @@ import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
 const EXPIRY_SOON_DAYS = 30;
 
 export function resolveDocStatus(expiryDate: string | null, rawStatus: string | null): DocStatus {
-  if (rawStatus === 'expired') return 'expired';
-  if (!expiryDate) return 'valid';
+  // hotfix-081-b (I07): manda la fecha. El estado guardado solo cuenta si no hay fecha.
+  if (!expiryDate) return rawStatus === 'expired' ? 'expired' : 'valid';
   // Días de calendario hasta el vencimiento, contados desde el hoy de Chile.
   const diffDays = diffDaysIso(chileToday(), toChileDate(expiryDate));
   return diffDays < 0 ? 'expired' : diffDays <= EXPIRY_SOON_DAYS ? 'expiring_soon' : 'valid';
