@@ -39,6 +39,7 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
       [vehicles]="facade.filteredVehicles()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
       [showSedeColumn]="showSedeColumn()"
       [branches]="branchFacade.branches()"
       (refreshRequested)="facade.init()"
