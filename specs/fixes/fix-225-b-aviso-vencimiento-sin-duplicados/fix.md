@@ -2,7 +2,7 @@
 
 - **Autor:** b
 - **Origen:** ASG-i-032 (checklist 032, J08) + decisión del owner (2026-10-16): evitar el duplicado.
-- **Estado:** abierto
+- **Estado:** cerrado (2026-10-16)
 
 ## Bug
 
@@ -29,5 +29,5 @@ Test: `supabase/tests/flota/fix-225-b-aviso-sin-duplicados.sql` (sub-bloque que 
 
 ## Verificación
 
-- [ ] Test en BEGIN…ROLLBACK con la migración, y el de fix-223-b sigue en verde.
-- [ ] Migración aplicada en producción (requiere aprobación del owner) + tests en verde.
+- [x] Test en BEGIN…ROLLBACK con la migración, y el de fix-223-b sigue en verde.
+- [x] Migración aplicada en producción (requiere aprobación del owner) + tests en verde.
