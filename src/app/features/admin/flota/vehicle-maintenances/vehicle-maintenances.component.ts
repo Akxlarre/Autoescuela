@@ -1,3 +1,6 @@
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
+import { formatCLP } from '@core/utils/date.utils';
+import { formatKm, servicesLabel } from '@core/utils/maintenance-format.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
@@ -56,6 +59,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ChileDatePipe,
     TooltipModule,
     CommonModule,
     RouterModule,
@@ -119,7 +123,9 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                   styleClass="text-2xs font-bold px-1.5"
                 />
               </div>
-              <p class="text-lg font-bold text-text-primary mt-1">{{ s.dueDate ?? 'Sin fecha' }}</p>
+              <p class="text-lg font-bold text-text-primary mt-1">
+                {{ (s.dueDate | chileDate: 'dd MMM yyyy') ?? 'Sin fecha' }}
+              </p>
               <div class="flex items-center gap-1.5 mt-auto">
                 <app-icon name="calendar-clock" [size]="12" class="text-text-muted" />
                 <span class="text-xs text-text-muted font-medium">Control preventivo</span>
@@ -186,7 +192,9 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
 
               <ng-template pTemplate="body" let-m>
                 <tr class="list-item-hover transition-colors border-b border-border-subtle">
-                  <td class="pl-6 py-4 text-sm font-medium text-text-secondary">{{ m.date }}</td>
+                  <td class="pl-6 py-4 text-sm font-medium text-text-secondary">
+                    {{ (m.date | chileDate: 'dd MMM yyyy') ?? '—' }}
+                  </td>
                   <td>
                     <span class="item-title">{{ m.type }}</span>
                     @if (m.description) {
@@ -200,10 +208,10 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                     }
                   </td>
                   <td class="font-mono text-xs text-text-secondary">
-                    {{ m.km !== null ? (m.km | number) + ' km' : '—' }}
+                    {{ formatKm(m.km) }}
                   </td>
                   <td class="item-title">
-                    {{ m.cost !== null ? '$' + (m.cost | number) : '—' }}
+                    {{ m.cost !== null ? formatCLP(m.cost) : '—' }}
                   </td>
                   <td class="text-xs text-text-muted italic">{{ m.workshop ?? '—' }}</td>
                   <td>
@@ -262,7 +270,9 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="item-title truncate">{{ m.type }}</p>
-                      <p class="text-xs mt-0.5 text-text-muted">{{ m.date }}</p>
+                      <p class="text-xs mt-0.5 text-text-muted">
+                        {{ (m.date | chileDate: 'dd MMM yyyy') ?? '—' }}
+                      </p>
                     </div>
                     <app-badge [variant]="m.status === 'completed' ? 'success' : 'warning'">
                       {{ m.status === 'completed' ? 'Completado' : 'Programado' }}
@@ -369,19 +379,22 @@ export class VehicleMaintenancesComponent implements OnInit {
   readonly heroSubtitle = computed(() => {
     const v = this.facade.vehicle();
     return v
-      ? `${v.vehicleLabel} · ${v.year} · ${v.currentKm?.toLocaleString() ?? '—'} km actuales`
+      ? `${v.vehicleLabel} · ${v.year} · ${formatKm(v.currentKm)} actuales`
       : 'Historial de mantenimiento del vehículo';
   });
 
   readonly heroChips = computed((): SectionHeroChip[] => {
     const k = this.facade.maintenanceKpis();
     return [
-      { label: `${k.totalCount} servicios`, icon: 'wrench', style: 'default' },
-      { label: `$${k.totalSpent.toLocaleString()} invertidos`, icon: 'banknote', style: 'default' },
+      { label: servicesLabel(k.totalCount), icon: 'wrench', style: 'default' },
+      { label: `${formatCLP(k.totalSpent)} invertidos`, icon: 'banknote', style: 'default' },
     ];
   });
 
   /** spec 0051-b: registrar y editar mantenimientos solo si puede operar el vehículo. */
+  protected readonly formatKm = formatKm;
+  protected readonly formatCLP = formatCLP;
+
   protected readonly canManage = computed(() => this.facade.vehicle()?.canManage ?? false);
   /** La misma pantalla sirve al admin y a la secretaria: la base sale de la ruta. */
   protected readonly backRoute = `${this.route.snapshot.data['basePath'] ?? '/app/admin'}/flota`;
@@ -401,25 +414,22 @@ export class VehicleMaintenancesComponent implements OnInit {
       {
         id: 'gasto',
         label: 'Inversión Total',
-        value: k.totalSpent,
+        value: formatCLP(k.totalSpent),
         icon: 'banknote',
         color: 'warning' as const,
-        prefix: '$',
       },
       {
         id: 'promedio',
         label: 'Costo prom. por servicio',
-        value: k.avgPerService,
+        value: formatCLP(k.avgPerService),
         icon: 'trending-up',
-        prefix: '$',
       },
       {
         id: 'km',
         label: 'Kilometraje actual',
-        value: k.currentKm,
+        value: formatKm(k.currentKm),
         icon: 'gauge',
         color: 'success' as const,
-        suffix: ' km',
       },
     ];
   });
