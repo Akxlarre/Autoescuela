@@ -73,8 +73,38 @@ el testing de Asistencia B (ASG-i-027), que resolvieron o cambiaron varias.
 
 Quedan para cuando se llegue a esos casos: C04, F07, G09, I07, J10, J11, K07, M08, M14, O03, P03, R03, B11.
 
-## Casos A–S — resultado
-Pendiente de ejecutar.
+## Casos A–S — resultado (2026-10-16)
+
+Automatizados en `e2e/flota-{checklist,listado,documentos,formulario,agenda,secretaria}.spec.ts`
+(**39/39 en verde** contra `main` del 2026-10-16, incluye las 4 sesiones del setup). Lo que escribe
+toca solo ZZ4103 y se deshace; altas, mantenimientos y documentos se interceptan antes del servidor.
+SQL: `supabase/tests/flota/fix-222-b-*.sql`, `fix-223-b-*.sql`, `fix-224-b-*.sql`,
+`supabase/tests/rls/0051-b-flota-secretaria.sql` (todos en verde en producción).
+
+| Sección | ✅ | ❌ → track | Sin ejecutar / queda como decisión |
+|---|---|---|---|
+| A. Carga y acceso | A01, A03, A07, A10 (e2e); A02/A04/A05 reemplazados por spec 0051-b (la secretaria **sí** tiene Flota: AC1/AC7) | — | A06, A08, A09 (manuales) |
+| B. Filas | B01, B02, B03, B04, B06, B09, B12, B13 (e2e) | — | B05, B07, B08, B10 (sin datos legacy en la BD); **B11** decisión |
+| C. KPIs | C01, C02, C03 (e2e); C06 ya resuelto (S1) | — | C05 manual; **C04** decisión |
+| D. Filtros | D01–D03 (S4), D06, D09 (e2e); D04/D05/D07 sin objeto (filtro Tipo quitado, decisión 8) | — | D08, D10, D11 manuales |
+| E. Alta | E01, E03, E04, E05, E07, E08, E10, E17 (e2e) | **E06** → `hotfix-078-b` (PR #278) | E02, E11–E16, E18, E19 (crean datos reales) |
+| F. Edición | F01, F03, F05 (S3), F06 (S18), F08/F09 (S5) | **F10** → `hotfix-078-b` | F02, F04, F11 manuales; **F07** decisión |
+| G. Sede y "Ambas" | G02, G03, G04, G08 (e2e); G12 ya resuelto (S12) | — | G01, G05–G07, G10, G11; **G09** decisión |
+| H. Documentos | H01, H03, H04 (S8), H08, H09 (e2e) | — | H02, H05–H07, H10–H19 (suben archivos reales) |
+| I. Estado por fecha | I01–I06, I10 (e2e, fechas en la respuesta); I08/I09/I12 resueltos (S10, S9) | — | I11; **I07** decisión |
+| J. Cruces | J02 (S12), J04/J05 (S9/S11), J06, J07, J09, J10 (SQL `fix-223-b`, 9/9) | — | J01, J03, J12–J16 manuales; **J08** (correr 2 veces duplica) y **J11** decisiones |
+| K. Agenda del vehículo | K01–K06, K09, K10 (`flota-agenda.spec.ts`, fix-221-b); K08 resuelto (S10) | — | **K07** decisión |
+| L. Mantenimientos | L01, L03, L08 (S15), L11 (e2e) | **L12/L15** → `hotfix-079-b` (PR #279) | L02, L04–L07, L09, L10, L13 (S14 ya corregido), L14, L16 |
+| M. Registrar servicio | M01, M02 (interceptado), M04, M15 (e2e); M03 (SQL `fix-222-b`) | — | M05–M07, M09–M13, M16, M17; **M08** y **M14** decisiones |
+| N. Kilometraje | N01–N05, N07 (SQL `fix-222-b`, 14/14); N08, N09 (fix-224-b) | — | N06, N10, N11 manuales |
+| O. Combustible | — | — | O01–O05 manuales (crean egresos); **O03** decisión |
+| P. Hoja de Ruta | P01 (e2e: genera y previsualiza) | — | P02, P04–P08 manuales; **P03** decisión |
+| Q. Tiempo real | Q01/Q02: tablas en `supabase_realtime` (S7) | — | Q01–Q04 en navegador (2 sesiones) |
+| R. Seguridad | R01, R02, R04 (`0051-b-flota-secretaria.sql`, 66/66) | — | R05; **R03** decisión |
+| S. Visual | S02 (e2e, 375 px sin scroll horizontal) | — | S01, S03–S06 (revisión visual) |
+
+Decisiones abiertas para el owner: B11, C04, F07, G09, I07, J08, J11, K07, M08, M14, O03, P03, R03
+(la lista que ya estaba arriba, más J08).
 
 ## Datos de prueba
 - Vehículo `ZZ4103` (id 36, sede A), sembrado el 2026-10-12 para C03 de ASG-i-034: sigue en la BD
