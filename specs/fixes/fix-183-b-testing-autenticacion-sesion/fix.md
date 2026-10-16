@@ -77,3 +77,42 @@ secretariaB (sede 2, con Profesional) = D3, secretariaMultisede = D4.
 | S1 — recuperar contraseña no pide clave nueva | Confirmada → `fix-181-b` (PR #183, pendiente de release) |
 | S2 — usuario desactivado sigue entrando | Confirmada en vivo → `fix-180-b`, en producción; bloqueo verificado por el owner |
 | S5 — clave inicial = RUT | Confirmada → `fix-182-b`, en producción; prueba de punta a punta OK |
+
+## Segunda tanda (2026-10-16)
+
+`e2e/auth-sesion.spec.ts` + `e2e/auth-sesion-2.spec.ts` contra `ng serve`: **101/102** — la única
+falla es A03, que exige el build de producción (en `ng serve` el panel de credenciales aparece a
+propósito). Ya no quedan `knownBug`: F07 y J06 los cerró `fix-184-b`. I02 se actualizó: desde la
+spec `0051-b` la secretaria **sí** ve Flota (decisión 9 de ASG-i-032).
+
+| Casos | Resultado |
+|---|---|
+| A10 | ✅ correo en mayúsculas y con espacios entra |
+| A11 | ✅ Enter envía |
+| **A12** | ❌ → `hotfix-090-b` (#300): un doble clic mandaba dos logins |
+| A13 | ✅ sin red: mensaje de conexión y el botón vuelve |
+| A14 | ✅ ojo de la contraseña con su `aria-label` |
+| **A15 / S13** | ❌ → `hotfix-089-b` (#299): "Request rate limit reached" y "email rate limit exceeded" caían en el genérico |
+| B08 | ✅ borrar el almacenamiento → `/login` |
+| E05, E07 | ✅ la sede del admin no la hereda la secretaria; el admin vuelve a ver su selector |
+| G19 | ✅ por diseño: Pre-inscritos se muestra dentro de Base Alumnos Prof., sin navegar al módulo bloqueado |
+| H10 | ✅ F5 en Base Alumnos Prof. (secretaria con Profesional) se queda ahí |
+| I05 | ✅ solo el ítem actual resaltado |
+| I08 | ✅ en 375 px el menú se abre y se cierra al navegar |
+| K09 | ✅ nombre del panel = BD |
+| L01 | ✅ cerrar sesión en una pestaña saca a la otra sin recargar |
+| N03 / S19 | ✅ el registro público está cerrado (`disable_signup = true`; antes era decisión H3) |
+| O03 | ✅ orden de Tab en el login y foco visible |
+
+**Decisiones ya resueltas por otros tracks:** E11 (logout local) y S9 (aviso "No tienes acceso a esa
+sección") en `fix-184-b`; H1 (rebote a /login con red lenta) en `fix-185-b`; H3 cerrado
+(`disable_signup = true`).
+
+**Bloqueados:** D03–D08, D10 (correo de recuperación) → `fix-181-b`, esperando el dominio
+definitivo para la Site URL de Auth. G20–G30, H06/H07, J05 → necesitan cuentas de instructor,
+alumno o secretaria sin sede (portal del instructor/alumno bloqueado en el piloto).
+
+**Pendientes manuales:** A16, A18, A19, B03–B07, C02–C13 (primer login: desde `fix-182-b` las
+secretarias activan por correo, revisar cuáles siguen aplicando), E06, E08–E10, F09, F10, G34,
+H04, H05, H08, H09, I01, I06, I07, J02, J04, J09–J12, K05–K08, K10, L02–L05, M01–M08, N01, N02, N04,
+O01, O04–O06.
