@@ -103,8 +103,23 @@ SQL: `supabase/tests/flota/fix-222-b-*.sql`, `fix-223-b-*.sql`, `fix-224-b-*.sql
 | R. Seguridad | R01, R02, R04 (`0051-b-flota-secretaria.sql`, 66/66) | — | R05; **R03** decisión |
 | S. Visual | S02 (e2e, 375 px sin scroll horizontal) | — | S01, S03–S06 (revisión visual) |
 
-Decisiones abiertas para el owner: B11, C04, F07, G09, I07, J08, J11, K07, M08, M14, O03, P03, R03
-(la lista que ya estaba arriba, más J08).
+### Decisiones del owner sobre los casos (2026-10-16, "ok todas")
+
+| Caso | Decisión | Track |
+|---|---|---|
+| B11 | Listado ordenado por patente | `hotfix-080-b` (#281) |
+| C04 | KPI "De Baja" | `hotfix-080-b` (#281) |
+| F07 | Sin "Eliminar": la baja es "Fuera de servicio" | — (queda así) |
+| G09 | Quitar "Ambas" con instructor asignado pide confirmación | `hotfix-083-b` (#284) |
+| I07 | Manda la fecha, no el estado guardado | `hotfix-081-b` (#282) |
+| J08 | El aviso diario no se duplica | `fix-225-b` (#286, migración) |
+| J11 | El instructor recibe el aviso aunque su portal esté bloqueado | — (queda así) |
+| K07 | La agenda del vehículo solo muestra hoy | — (queda así por ahora) |
+| M08 | Un servicio realizado no puede tener fecha futura | `hotfix-082-b` (#283) |
+| M14 | Sin eliminar mantenimientos (se corrige editando) | — (queda así) |
+| O03 | Combustible de un "Ambas" en la caja de quien registra | `hotfix-084-b` (#285) |
+| P03 | Hoja de Ruta con el nombre de la sede del vehículo | `hotfix-085-b` (#287, deploy) |
+| R03 | La secretaria puede leer por API los vehículos de la otra sede | — (queda así: no son datos sensibles) |
 
 ## Datos de prueba
 - Vehículo `ZZ4103` (id 36, sede A), sembrado el 2026-10-12 para C03 de ASG-i-034: sigue en la BD
