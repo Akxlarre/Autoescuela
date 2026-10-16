@@ -414,13 +414,17 @@ test.describe('H/I. Menú lateral', () => {
     });
   }
 
-  test('I02: secretaria no ve Anticipos, Secretarias, Auditoría ni Flota', async ({ pageAs }) => {
+  test('I02: secretaria no ve Anticipos, Secretarias ni Auditoría (Flota sí, spec 0051-b)', async ({
+    pageAs,
+  }) => {
     const page = await pageAs('secretariaB');
     await page.goto(DASH.secretariaB);
     const text = await sidebarText(page);
-    for (const label of ['Anticipos', 'Secretarias', 'Auditoría', 'Flota']) {
+    for (const label of ['Anticipos', 'Secretarias', 'Auditoría']) {
       expect(text, label).not.toContain(label);
     }
+    // Decisión 9 del owner (ASG-i-032): la secretaria tiene Flota, limitada a su sede.
+    expect(text).toContain('Flota');
   });
 
   for (const role of ['admin', 'secretariaB'] as const) {
