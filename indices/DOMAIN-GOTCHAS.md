@@ -1859,6 +1859,22 @@
 - **Fuente:** `specs/fixes/fix-430-m-edge-functions-respetan-sede` y
   `specs/fixes/fix-431-m-edge-functions-por-matricula-respetan-sede`.
 
+### DG-113 — Una venta de servicio especial anulada sigue en la tabla: "es ingreso" es `paid = true`, no "existe la fila"
+
+- **Trampa:** sumar o contar ventas de `special_service_sales` (KPI, reporte, cierre, export) filtrando
+  solo por fecha y sede, asumiendo que una venta que no vale se borró.
+- **Realidad:** desde `20261016130000` una venta no se borra: se anula (`status = 'anulado'`, motivo,
+  quién y cuándo) y sigue en la tabla para mostrarse tachada. El trigger
+  `guard_anulacion_venta_servicio` la deja con `paid = false`, así que las sumas que ya filtraban
+  `paid = true` (Dashboard, Reportes Contables, `generate-financial-report`, Caja) la excluyen solas;
+  una consulta nueva sin ese filtro la contaría como ingreso.
+- **Regla de aplicabilidad:** toda lectura de `special_service_sales` que sume dinero o cuente ventas
+  filtra `paid = true` (o `status <> 'anulado'` si no es de dinero, como el conteo de
+  `servicios_especiales_kpis()`). Si la pantalla debe mostrar las anuladas, las trae aparte
+  (`or(paid.eq.true,status.eq.anulado)`) y las excluye del total con `anulacion`, igual que los pagos
+  anulados de spec 0025-m.
+- **Fuente:** `specs/fixes/fix-443-m-anular-venta-servicio-en-vez-de-borrar`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

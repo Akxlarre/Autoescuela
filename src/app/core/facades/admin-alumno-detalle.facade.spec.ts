@@ -1717,6 +1717,31 @@ describe('AdminAlumnoDetalleFacade', () => {
           expect(facade.alumno()?.totalPagado).toBe(0);
         });
 
+        it('fix-443-m: una venta anulada sale como "Anulado", con su motivo', async () => {
+          await initWithEnrollments([makeEnrollmentRow(308, 'active', '2026-03-15')], (mock) => {
+            mock.setResult('payments', []);
+            mock.setResult('special_service_sales', [
+              {
+                id: 2,
+                sale_date: '2026-04-02',
+                price: 20000,
+                service_name: 'Psicotécnico',
+                payment_method: 'efectivo',
+                status: 'anulado',
+                void_reason: 'Venta duplicada',
+                voided_at: '2026-04-02T15:00:00.000Z',
+                anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+              },
+            ]);
+          });
+
+          const [venta] = facade.historialPagos();
+          expect(venta.estado).toBe('Anulado');
+          expect(venta.anulacion).toEqual(
+            expect.objectContaining({ motivo: 'Venta duplicada', por: 'Ana Rojas' }),
+          );
+        });
+
         it('si la consulta de ventas falla, el historial de pagos se muestra igual', async () => {
           await initWithEnrollments([makeEnrollmentRow(307, 'active', '2026-03-15')], (mock) => {
             mock.setResult('payments', [

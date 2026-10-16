@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
@@ -12,6 +13,8 @@ import type { VentaServicio } from '@core/models/ui/servicios-especiales.model';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { filterBySearchTokens } from '@core/utils/search-filter.utils';
 import { formatDayMonthYear } from '@core/utils/date.utils';
+import { formatAnulacionDetalle } from '@core/utils/anulacion-pago.utils';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
   DEFAULT_PERIOD_WINDOW,
@@ -45,6 +48,8 @@ import {
     StableWidthDirective,
     PeriodSelectorComponent,
     ClearFiltersButtonComponent,
+    BadgeComponent,
+    TooltipModule,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -140,22 +145,34 @@ import {
               @for (venta of ventasFiltradas(); track venta.id) {
                 <div class="p-3 flex flex-col gap-1.5">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="item-title truncate" [title]="venta.cliente">{{
-                      venta.cliente
-                    }}</span>
+                    <span
+                      class="item-title truncate"
+                      [class.line-through]="!!venta.anulacion"
+                      [title]="venta.cliente"
+                      >{{ venta.cliente }}</span
+                    >
                     <div class="flex items-center gap-2 shrink-0">
-                      <span class="font-semibold text-text-primary"
+                      <span
+                        class="font-semibold"
+                        [class.text-text-primary]="!venta.anulacion"
+                        [class.text-text-muted]="!!venta.anulacion"
+                        [class.line-through]="!!venta.anulacion"
                         >\${{ venta.precio.toLocaleString('es-CL') }}</span
                       >
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1 rounded-lg hover:bg-error/10"
-                        [attr.data-llm-action]="'borrar-venta-' + venta.id"
-                        [attr.aria-label]="'Borrar venta de ' + venta.cliente"
-                        (click)="onBorrar(venta)"
-                      >
-                        <app-icon name="trash-2" [size]="14" />
-                      </button>
+                      <!-- fix-443-m: se anula (solo admin), ya no se borra -->
+                      @if (facade.puedeAnular() && !venta.anulacion) {
+                        <button
+                          type="button"
+                          class="cursor-pointer text-text-muted hover:text-error transition-colors p-1 rounded-lg hover:bg-error/10"
+                          [attr.data-llm-action]="'anular-venta-' + venta.id"
+                          [attr.aria-label]="'Anular venta de ' + venta.cliente"
+                          pTooltip="Anular venta"
+                          tooltipPosition="top"
+                          (click)="onAnular(venta)"
+                        >
+                          <app-icon name="ban" [size]="14" />
+                        </button>
+                      }
                     </div>
                   </div>
                   <div class="flex items-center justify-between gap-2 text-xs text-text-muted">
@@ -181,6 +198,16 @@ import {
                       </span>
                     }
                   </div>
+                  @if (venta.anulacion) {
+                    <span
+                      class="flex items-center gap-1.5 min-w-0 text-2xs text-text-muted"
+                      [attr.title]="detalleAnulacion(venta)"
+                      data-llm-description="voided sale: reason, who voided it and when"
+                    >
+                      <app-badge variant="neutral" class="shrink-0">Anulada</app-badge>
+                      <span class="truncate">{{ detalleAnulacion(venta) }}</span>
+                    </span>
+                  }
                 </div>
               }
             </div>
@@ -320,24 +347,39 @@ export class HistorialVentasDrawerComponent {
     }
   }
 
-  protected async onBorrar(venta: VentaServicio): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
-      title: 'Borrar venta',
-      message: `¿Borrar la venta de "${venta.servicio}" a ${venta.cliente}? Esta acción no se puede deshacer.`,
-      confirmLabel: 'Sí, borrar',
-      cancelLabel: 'Cancelar',
+  /** fix-443-m: "Motivo · quién · cuándo" de una venta anulada. */
+  protected detalleAnulacion(venta: VentaServicio): string {
+    return formatAnulacionDetalle(venta.anulacion);
+  }
+
+  /**
+   * fix-443-m: la venta se anula con motivo (solo admin), como un pago de matrícula (spec 0025-m).
+   * Antes se borraba y desaparecía de todas las pantallas.
+   */
+  protected async onAnular(venta: VentaServicio): Promise<void> {
+    if (!this.facade.puedeAnular()) return;
+
+    const motivo = await this.confirmModal.confirmWithReason({
+      title: 'Anular venta',
+      message: `La venta de "${venta.servicio}" a ${venta.cliente} quedará anulada: seguirá visible, tachada, y dejará de sumar en la caja y los reportes. No se puede deshacer.`,
       severity: 'danger',
+      confirmLabel: 'Anular venta',
+      cancelLabel: 'Cancelar',
+      reason: {
+        label: 'Motivo de la anulación',
+        placeholder: 'Ej.: cliente desistió, monto mal digitado',
+        minLength: 5,
+      },
     });
+    if (motivo === null) return;
 
-    if (!confirmed) return;
-
-    const { success, blockedReason } = await this.facade.borrarVenta(venta.id);
+    const { success, blockedReason } = await this.facade.anularVenta(venta.id, motivo);
     if (success) {
-      this.toast.success('Venta borrada');
+      this.toast.success('Venta anulada');
     } else if (blockedReason) {
-      this.toast.warning('No se pudo borrar', blockedReason);
+      this.toast.warning('No se pudo anular', blockedReason);
     } else {
-      this.toast.error('No se pudo borrar la venta');
+      this.toast.error('No se pudo anular la venta', this.facade.error() ?? undefined);
     }
   }
 }

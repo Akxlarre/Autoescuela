@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       let query = supabase
         .from('special_service_sales')
         .select(
-          'sale_date, created_at, client_name, client_rut, service_name, document_number, payment_method, price, service_catalog(name), branches(name)',
+          'sale_date, created_at, client_name, client_rut, service_name, document_number, payment_method, price, status, void_reason, service_catalog(name), branches(name)',
         )
         .in('id', saleIds)
         .order('sale_date', { ascending: false })
@@ -66,10 +66,10 @@ Deno.serve(async (req) => {
       sales = data ?? [];
     }
 
-    const { rows, total } = exportRows(sales);
+    const { rows, total, vigentes } = exportRows(sales);
 
     if (format === 'excel') {
-      const totalRow = ['Total', '', '', '', '', '', total, ''];
+      const totalRow = ['Total', '', '', '', '', '', total, '', ''];
       return jsonResponse({ headers: [...EXPORT_HEADERS], rows: [...rows, totalRow] });
     }
 
@@ -122,17 +122,25 @@ Deno.serve(async (req) => {
       newPage();
       const formatCLP = (n: number) => `$${n.toLocaleString('es-CL')}`;
 
-      for (const [fecha, cliente, rut, servicio, boleta, medio, monto, sede] of rows) {
+      for (const [fecha, cliente, rut, servicio, boleta, medio, monto, sede, anulacion] of rows) {
         if (y < MB + 40) newPage();
         T(colX[0], y, String(fecha), 'F1', 8);
         T(colX[1], y, String(cliente).slice(0, 30), 'F1', 8);
         T(colX[2], y, String(servicio).slice(0, 26), 'F1', 8);
         T(colX[3], y, String(boleta) || '—', 'F1', 8);
         T(colX[4], y, String(medio) || '—', 'F1', 8);
-        TR(RIGHT, y, formatCLP(Number(monto)), 'F1', 8);
+        // fix-443-m: una anulada muestra su monto entre paréntesis (no suma) y el motivo abajo.
+        TR(
+          RIGHT,
+          y,
+          anulacion ? `(${formatCLP(Number(monto))})` : formatCLP(Number(monto)),
+          'F1',
+          8,
+        );
         y -= 10;
         T(colX[1], y, String(rut), 'F1', 7);
         T(colX[2], y, String(sede).slice(0, 30), 'F1', 7);
+        if (anulacion) T(colX[3], y, String(anulacion).slice(0, 40), 'F2', 7);
         y -= 8;
         HLINE(y, 0.1);
         y -= 12;
@@ -140,7 +148,7 @@ Deno.serve(async (req) => {
 
       if (y < MB + 30) newPage();
       HLINE(y + 6);
-      T(colX[0], y - 6, `Total (${rows.length} ${rows.length === 1 ? 'venta' : 'ventas'})`, 'F2', 9);
+      T(colX[0], y - 6, `Total (${vigentes} ${vigentes === 1 ? 'venta' : 'ventas'})`, 'F2', 9);
       TR(RIGHT, y - 6, formatCLP(total), 'F2', 9);
 
       pages.push(ops);

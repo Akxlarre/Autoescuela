@@ -18,6 +18,7 @@ import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pa
 import { RegistrarEgresoDrawerComponent } from './registrar-egreso-drawer.component';
 import { ArqueoCierreDrawerComponent } from './arqueo-cierre-drawer.component';
 import type { IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
+import { etiquetaAnularIngreso, ingresoSeAnula } from '@core/utils/anulacion-pago.utils';
 
 @Component({
   selector: 'app-admin-contabilidad-cuadratura',
@@ -121,20 +122,26 @@ export class AdminContabilidadCuadraturaComponent {
   }
 
   protected async onEliminarIngreso(row: IngresoRow): Promise<void> {
-    const ref = row.nBoleta ? `boleta ${row.nBoleta}` : `ingreso #${row.id}`;
-    // Un pago de matrícula no se borra: se anula con un motivo y queda visible, tachado
-    // (spec 0025-m). Cursos singulares y servicios especiales siguen revirtiéndose.
-    if (row.source === 'payment') {
+    const ref = row.nBoleta
+      ? `boleta ${row.nBoleta}`
+      : `${row.source === 'special_service' ? 'venta' : 'ingreso'} #${row.id}`;
+    // Un pago de matrícula (spec 0025-m) o una venta de servicio especial (fix-443-m) no se
+    // borra: se anula con un motivo y queda visible, tachado. Un curso singular se revierte.
+    if (ingresoSeAnula(row.source)) {
+      const esPago = row.source === 'payment';
       const motivo = await this.confirmModal.confirmWithReason({
         title: `Anular ${ref}`,
-        message:
-          'El pago quedará anulado: seguirá visible, tachado, y dejará de sumar en la caja y en el saldo del alumno. No se puede deshacer.',
+        message: esPago
+          ? 'El pago quedará anulado: seguirá visible, tachado, y dejará de sumar en la caja y en el saldo del alumno. No se puede deshacer.'
+          : 'La venta quedará anulada: seguirá visible, tachada, y dejará de sumar en la caja y en los reportes. No se puede deshacer.',
         severity: 'danger',
-        confirmLabel: 'Anular pago',
+        confirmLabel: etiquetaAnularIngreso(row.source),
         cancelLabel: 'Cancelar',
         reason: {
           label: 'Motivo de la anulación',
-          placeholder: 'Ej.: monto mal digitado, pago duplicado',
+          placeholder: esPago
+            ? 'Ej.: monto mal digitado, pago duplicado'
+            : 'Ej.: venta duplicada, el cliente desistió',
           minLength: 5,
         },
       });
