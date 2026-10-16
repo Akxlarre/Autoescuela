@@ -46,7 +46,7 @@ describe('VehicleMaintenancesComponent — hasScheduledMaintenances (fix-133-b)'
         { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: new Map([['id', '1']]) } },
+          useValue: { snapshot: { paramMap: new Map([['id', '1']]), data: {} } },
         },
       ],
     });
