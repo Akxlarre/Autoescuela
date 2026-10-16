@@ -2594,6 +2594,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `run_class_b_absences_cutoff` | `()` |
 | `secretary_extra_visible_user_ids` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
+| `servicios_especiales_kpis` | `(p_branch_id INT DEFAULT NULL)` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `set_payment_override_pending` | `()` |
