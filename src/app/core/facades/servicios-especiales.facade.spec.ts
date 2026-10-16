@@ -8,6 +8,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 
+// Sin este mock, XLSX.writeFile escribe Historial_Ventas_<fecha>.xlsx en la raíz del repo.
+vi.mock('@core/utils/excel.utils', () => ({ downloadExcel: vi.fn() }));
+
 type TableResponse = { data: unknown; error: unknown };
 
 /**
@@ -46,7 +49,8 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: (resolve: any, reject: any) => {
-          const res = tables[`${table}:${lastOps.get(table)}`] ?? tables[table] ?? { data: [], error: null };
+          const res = tables[`${table}:${lastOps.get(table)}`] ??
+            tables[table] ?? { data: [], error: null };
           return Promise.resolve(res).then(resolve, reject);
         },
       };
@@ -695,7 +699,9 @@ describe('ServiciosEspecialesFacade', () => {
       const result = await facade.anularVenta(7, 'Error de digitación');
 
       expect(result.success).toBe(false);
-      expect(result.blockedReason).toBe('No se puede anular: la caja del 01-08-2026 ya está cerrada.');
+      expect(result.blockedReason).toBe(
+        'No se puede anular: la caja del 01-08-2026 ya está cerrada.',
+      );
       expect(mockSupabase._builders.get('special_service_sales').update).not.toHaveBeenCalled();
     });
 
@@ -704,7 +710,10 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade } = setup({
         tables: {
           special_service_sales: { data: [fila()], error: null },
-          'special_service_sales:update': { data: null, error: { code: 'P0001', message: mensaje } },
+          'special_service_sales:update': {
+            data: null,
+            error: { code: 'P0001', message: mensaje },
+          },
           cash_closings: { data: [], error: null },
         },
       });
