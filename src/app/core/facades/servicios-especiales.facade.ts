@@ -630,15 +630,22 @@ export class ServiciosEspecialesFacade {
     return { success: true };
   }
 
-  /** Devuelve si se descargó el archivo (fix-435-m: la pantalla avisa si falló). */
-  async exportarHistorial(format: 'excel' | 'pdf'): Promise<boolean> {
+  /**
+   * Exporta las ventas que muestra el Historial (fix-440-m, decisión K04: el archivo coincide con
+   * la pantalla — reemplaza a fix-147-b). Devuelve si se descargó (fix-435-m).
+   */
+  async exportarHistorial(format: 'excel' | 'pdf', ventaIds: number[]): Promise<boolean> {
+    if (ventaIds.length === 0) {
+      this._error.set('No hay ventas para exportar.');
+      return false;
+    }
     this._isExporting.set(true);
     try {
       const branchId = this.getActiveBranchId();
       const { data, error } = await this.supabase.client.functions.invoke(
         'export-special-services',
         {
-          body: { format, branch_id: branchId },
+          body: { format, branch_id: branchId, sale_ids: ventaIds },
         },
       );
 

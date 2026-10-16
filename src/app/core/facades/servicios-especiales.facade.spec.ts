@@ -969,7 +969,7 @@ describe('ServiciosEspecialesFacade', () => {
         .mockResolvedValue({ data: null, error: new Error('500') });
       vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-      await expect(facade.exportarHistorial('excel')).resolves.toBe(false);
+      await expect(facade.exportarHistorial('excel', [1])).resolves.toBe(false);
       expect(facade.error()).toBe('No se pudo exportar el historial.');
     });
 
@@ -979,28 +979,32 @@ describe('ServiciosEspecialesFacade', () => {
         .fn()
         .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
 
-      await expect(facade.exportarHistorial('excel')).resolves.toBe(true);
+      await expect(facade.exportarHistorial('excel', [1])).resolves.toBe(true);
     });
   });
 
-  // ── fix-147-b: el export no puede quedar truncado por la ventana de período ──
-  describe('exportarHistorial — inmune a los filtros de UI (fix-147-b)', () => {
-    it('invoca la Edge Function solo con format y branch_id, sin ningún filtro de la vista', async () => {
+  // ── fix-440-m: el export es lo que muestra la pantalla (reemplaza a fix-147-b) ──
+  describe('exportarHistorial — exporta lo que muestra la pantalla (fix-440-m)', () => {
+    it('manda a la función los ids visibles, el formato y la sede', async () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: 3 });
-      // Respuesta con la forma que espera el branch 'excel' — sin esto la facade loguea un
-      // error real al destructurar `headers`, y el test ensuciaría stderr sin motivo.
       mockSupabase.client.functions.invoke = vi
         .fn()
         .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
 
-      await facade.exportarHistorial('excel');
+      await facade.exportarHistorial('excel', [7, 8]);
 
-      // La ventana de período (fix-147-b) es un filtro de RENDERIZADO. El export corre
-      // server-side y no recibe nada de la vista, así que un Excel nunca puede salir
-      // truncado en silencio por lo que el usuario tenga seleccionado en pantalla.
       expect(mockSupabase.client.functions.invoke).toHaveBeenCalledWith('export-special-services', {
-        body: { format: 'excel', branch_id: 3 },
+        body: { format: 'excel', branch_id: 3, sale_ids: [7, 8] },
       });
+    });
+
+    it('sin ventas visibles no llama a la función y avisa', async () => {
+      const { facade, mockSupabase } = setup();
+
+      await expect(facade.exportarHistorial('pdf', [])).resolves.toBe(false);
+
+      expect(mockSupabase.client.functions.invoke).not.toHaveBeenCalled();
+      expect(facade.error()).toBe('No hay ventas para exportar.');
     });
   });
 });

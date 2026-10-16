@@ -298,8 +298,17 @@ export class HistorialVentasDrawerComponent {
   protected async onExport(format: 'excel' | 'pdf'): Promise<void> {
     this.exportMenuOpen.set(false);
     // fix-435-m: antes la falla solo quedaba en la consola.
-    const ok = await this.facade.exportarHistorial(format);
-    if (!ok) this.toast.error('No se pudo exportar el historial');
+    // fix-440-m: el archivo trae lo mismo que la lista (servicio, período y búsqueda).
+    const ok = await this.facade.exportarHistorial(
+      format,
+      this.ventasFiltradas().map((v) => v.id),
+    );
+    if (!ok) {
+      this.toast.error(
+        'No se pudo exportar el historial',
+        this.ventasFiltradas().length === 0 ? 'No hay ventas para exportar.' : undefined,
+      );
+    }
   }
 
   protected async onBorrar(venta: VentaServicio): Promise<void> {

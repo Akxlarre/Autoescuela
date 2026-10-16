@@ -1,7 +1,8 @@
 # Hotfix: Los filtros del Historial de ventas se salen de su card
 > id: hotfix-157-m-historial-ventas-filtros-hacen-wrap
 > refs: fix-429-m-testing-servicios-especiales (casos I13 / O02)
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Problema
