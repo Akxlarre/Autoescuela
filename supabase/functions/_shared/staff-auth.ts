@@ -135,6 +135,47 @@ export async function requireStaff(
   );
 }
 
+/**
+ * ¿Quien llama puede ver una fila de esta sede? (fix-431-m). Misma regla que la RLS por sede
+ * (spec 0047-b): admin y grant multi-sede ven todo; la secretaria, su sede y las filas sin sede.
+ * Núcleo funcional: sin I/O.
+ */
+export function canAccessBranch(
+  access: { role: StaffRole; branchId: number | null; canAccessBothBranches: boolean },
+  rowBranchId: number | null,
+): boolean {
+  if (access.role === 'admin' || access.canAccessBothBranches) return true;
+  return rowBranchId === null || rowBranchId === access.branchId;
+}
+
+/**
+ * Rechazo si la matrícula es de una sede que quien llama no puede ver; null si puede (o si la
+ * matrícula no existe: el 404 lo da la función). Para funciones que reciben un `enrollment_id` y
+ * leen con la clave de servicio.
+ */
+export async function denyIfEnrollmentOutOfScope(
+  access: { role: StaffRole; branchId: number | null; canAccessBothBranches: boolean },
+  enrollmentId: number,
+): Promise<{ status: 403 | 500; error: string } | null> {
+  if (access.role === 'admin' || access.canAccessBothBranches) return null;
+
+  const serviceClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+  const { data, error } = await serviceClient
+    .from('enrollments')
+    .select('branch_id')
+    .eq('id', enrollmentId)
+    .maybeSingle();
+  if (error) return { status: 500, error: 'No se pudo verificar los permisos' };
+  if (!data) return null;
+
+  return canAccessBranch(access, (data as { branch_id: number | null }).branch_id)
+    ? null
+    : { status: 403, error: FORBIDDEN };
+}
+
 /** Respuesta de rechazo con el formato `{ "error": "..." }` que lee el cliente (DG-085). */
 export function authErrorResponse(
   access: { status: number; error: string },

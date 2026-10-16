@@ -6,7 +6,7 @@
 //   npx deno test supabase/functions/_shared/staff-auth.test.ts
 
 import { assertEquals } from 'jsr:@std/assert';
-import { decideStaffAccess, resolveBranchScope } from './staff-auth.ts';
+import { canAccessBranch, decideStaffAccess, resolveBranchScope } from './staff-auth.ts';
 
 const STAFF = ['admin', 'secretary'] as const;
 const ADMIN_ONLY = ['admin'] as const;
@@ -135,4 +135,22 @@ Deno.test('secretaria sin grant y sin sede asignada → 403 (nunca todas las sed
 Deno.test('una sede que no es un entero se trata como "sin sede pedida"', () => {
   assertEquals(resolveBranchScope(SEC_A, '2'), { ok: true, branchId: 1 });
   assertEquals(resolveBranchScope(ADMIN, 'x'), { ok: true, branchId: null });
+});
+
+// ── Alcance por matrícula (fix-431-m) ───────────────────────────────────────────────────────
+// Las funciones que reciben un enrollment_id leen con la clave de servicio: la matrícula tiene
+// que ser de una sede que quien llama puede ver (misma regla que la RLS de enrollments).
+
+Deno.test('canAccessBranch: admin y secretaria con grant ven cualquier sede', () => {
+  assertEquals(canAccessBranch(ADMIN, 2), true);
+  assertEquals(canAccessBranch(SEC_MULTI, 2), true);
+});
+
+Deno.test('canAccessBranch: secretaria sin grant ve su sede y las filas sin sede', () => {
+  assertEquals(canAccessBranch(SEC_A, 1), true);
+  assertEquals(canAccessBranch(SEC_A, null), true);
+});
+
+Deno.test('canAccessBranch: secretaria sin grant no ve la otra sede', () => {
+  assertEquals(canAccessBranch(SEC_A, 2), false);
 });
