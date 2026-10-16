@@ -448,6 +448,8 @@ export class VehicleMaintenancesComponent implements OnInit {
     if (!isNaN(this.vehicleId) && this.vehicleId > 0) {
       void this.facade.loadVehicleDetail(this.vehicleId);
       this.flotaFacade.selectVehicle(this.vehicleId);
+    } else {
+      this.facade.showVehicleNotFound();
     }
   }
 
