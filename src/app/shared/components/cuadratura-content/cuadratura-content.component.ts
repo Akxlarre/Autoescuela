@@ -14,7 +14,13 @@ import {
 import { formatCLP } from '@core/utils/date.utils';
 import { buildCuadraturaHeroKpis } from '@core/utils/cuadratura-hero-kpis.utils';
 import { medioDePagoLabel } from '@core/utils/cuadratura-medio-pago.utils';
-import { formatAnulacionDetalle, resumenConAnulados } from '@core/utils/anulacion-pago.utils';
+import {
+  etiquetaAnularIngreso,
+  formatAnulacionDetalle,
+  ingresoSeAnula,
+  resumenConAnulados,
+} from '@core/utils/anulacion-pago.utils';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -40,6 +46,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
     CardHoverDirective,
     EmptyStateComponent,
     AlertCardComponent,
+    TooltipModule,
   ],
   template: `
     <!-- fix-044-i: con el aviso de carga fallida hay una fila fija más entre el hero y las listas.
@@ -309,23 +316,16 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               @if (puedeEliminarIngreso(fila)) {
                                 <button
                                   class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto cursor-pointer"
-                                  [attr.data-llm-action]="
-                                    fila.source === 'payment'
-                                      ? 'anular-pago-cuadratura'
-                                      : 'eliminar-ingreso-cuadratura'
-                                  "
+                                  [attr.data-llm-action]="accionIngreso(fila).llmAction"
                                   [disabled]="cajaYaCerrada()"
                                   [attr.aria-label]="
-                                    (fila.source === 'payment'
-                                      ? 'Anular pago '
-                                      : 'Eliminar ingreso ') + (fila.nBoleta ?? fila.id)
+                                    accionIngreso(fila).etiqueta + ' ' + (fila.nBoleta ?? fila.id)
                                   "
+                                  [pTooltip]="accionIngreso(fila).etiqueta"
+                                  tooltipPosition="top"
                                   (click)="onEliminarIngreso(fila, $event)"
                                 >
-                                  <app-icon
-                                    [name]="fila.source === 'payment' ? 'ban' : 'trash-2'"
-                                    [size]="15"
-                                  />
+                                  <app-icon [name]="accionIngreso(fila).icono" [size]="15" />
                                 </button>
                               } @else {
                                 <span></span>
@@ -378,21 +378,14 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               @if (puedeEliminarIngreso(fila)) {
                                 <button
                                   class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer"
-                                  [attr.data-llm-action]="
-                                    fila.source === 'payment'
-                                      ? 'anular-pago-cuadratura'
-                                      : 'eliminar-ingreso-cuadratura'
-                                  "
+                                  [attr.data-llm-action]="accionIngreso(fila).llmAction"
                                   [disabled]="cajaYaCerrada()"
-                                  [attr.aria-label]="
-                                    fila.source === 'payment' ? 'Anular pago' : 'Eliminar ingreso'
-                                  "
+                                  [attr.aria-label]="accionIngreso(fila).etiqueta"
+                                  [pTooltip]="accionIngreso(fila).etiqueta"
+                                  tooltipPosition="top"
                                   (click)="onEliminarIngreso(fila, $event)"
                                 >
-                                  <app-icon
-                                    [name]="fila.source === 'payment' ? 'ban' : 'trash-2'"
-                                    [size]="14"
-                                  />
+                                  <app-icon [name]="accionIngreso(fila).icono" [size]="14" />
                                 </button>
                               } @else if (fila.anulacion) {
                                 <app-badge variant="neutral">Anulado</app-badge>
@@ -1087,12 +1080,32 @@ export class CuadraturaContentComponent implements AfterViewInit {
   }
 
   /**
-   * Un pago de matrícula solo lo anula el admin (fix-044-i, spec 0025-m) y uno ya anulado no
-   * tiene acción; el resto de ingresos, ambos roles.
+   * Un pago de matrícula (fix-044-i, spec 0025-m) y una venta de servicio especial (fix-443-m)
+   * solo los anula el admin, y uno ya anulado no tiene acción; un curso singular, ambos roles.
    */
   protected puedeEliminarIngreso(fila: IngresoRow): boolean {
     if (fila.anulacion) return false;
-    return fila.source !== 'payment' || this.puedeEliminarRestringidos();
+    return !ingresoSeAnula(fila.source) || this.puedeEliminarRestringidos();
+  }
+
+  /** Botón de la fila: "Anular pago"/"Anular venta" o, para un curso singular, "Eliminar ingreso". */
+  protected accionIngreso(fila: IngresoRow): {
+    etiqueta: string;
+    llmAction: string;
+    icono: string;
+  } {
+    if (!ingresoSeAnula(fila.source)) {
+      return {
+        etiqueta: 'Eliminar ingreso',
+        llmAction: 'eliminar-ingreso-cuadratura',
+        icono: 'trash-2',
+      };
+    }
+    return {
+      etiqueta: etiquetaAnularIngreso(fila.source),
+      llmAction: fila.source === 'payment' ? 'anular-pago-cuadratura' : 'anular-venta-cuadratura',
+      icono: 'ban',
+    };
   }
 
   /** "Motivo · quién · cuándo" de un pago anulado. */

@@ -18,24 +18,26 @@ type TableResponse = { data: unknown; error: unknown };
  */
 function createMockSupabase(tables: Record<string, TableResponse>) {
   const builders = new Map<string, any>();
+  const lastOps = new Map<string, string>();
   const from = vi.fn().mockImplementation((table: string) => {
+    // Cada from() arranca como lectura; un .select() después de una escritura (update().select())
+    // no la convierte en lectura (fix-443-m).
+    lastOps.set(table, 'select');
     if (!builders.has(table)) {
-      let lastOp = 'select';
       const builder: any = {
         select: vi.fn(function (this: any) {
-          lastOp = 'select';
           return this;
         }),
         insert: vi.fn(function (this: any) {
-          lastOp = 'insert';
+          lastOps.set(table, 'insert');
           return this;
         }),
         update: vi.fn(function (this: any) {
-          lastOp = 'update';
+          lastOps.set(table, 'update');
           return this;
         }),
         delete: vi.fn(function (this: any) {
-          lastOp = 'delete';
+          lastOps.set(table, 'delete');
           return this;
         }),
         eq: vi.fn().mockReturnThis(),
@@ -44,7 +46,7 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: (resolve: any, reject: any) => {
-          const res = tables[`${table}:${lastOp}`] ?? tables[table] ?? { data: [], error: null };
+          const res = tables[`${table}:${lastOps.get(table)}`] ?? tables[table] ?? { data: [], error: null };
           return Promise.resolve(res).then(resolve, reject);
         },
       };
@@ -643,70 +645,115 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
-  describe('borrarVenta — candado de cuadratura cerrada (fix-022-i, ASG-b-050)', () => {
-    it('golden path: sin cash_closings para la fecha → borra y refresca', async () => {
+  describe('anularVenta (fix-443-m)', () => {
+    const fila = (over: Record<string, unknown> = {}) =>
+      venta({ id: 7, sale_date: '2026-08-10', paid: true, status: 'completed', ...over });
+
+    it('el admin anula con motivo: UPDATE a anulado (nunca DELETE) y refresca', async () => {
       const { facade, mockSupabase } = setup({
         tables: {
-          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-10' })], error: null },
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': { data: [{ id: 7 }], error: null },
           cash_closings: { data: [], error: null },
         },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(7);
+      const result = await facade.anularVenta(7, '  Cliente desistió  ');
 
       expect(result).toEqual({ success: true });
-      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
-      expect(deleteMock).toHaveBeenCalled();
+      const builder = mockSupabase._builders.get('special_service_sales');
+      expect(builder.update).toHaveBeenCalledWith({
+        status: 'anulado',
+        void_reason: 'Cliente desistió',
+      });
+      expect(builder.delete).not.toHaveBeenCalled();
     });
 
-    it('AC-E1: la fecha ya tiene cash_closings → bloquea, no ejecuta DELETE', async () => {
+    it('sin motivo no escribe', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { special_service_sales: { data: [fila()], error: null } },
+      });
+      await facade.initialize();
+
+      const result = await facade.anularVenta(7, '   ');
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('Indica el motivo de la anulación.');
+      expect(mockSupabase._builders.get('special_service_sales').update).not.toHaveBeenCalled();
+    });
+
+    it('caja del día cerrada → aviso con la fecha en DD-MM-AAAA, sin UPDATE', async () => {
       const { facade, mockSupabase } = setup({
         tables: {
-          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-01' })], error: null },
+          special_service_sales: { data: [fila({ sale_date: '2026-08-01' })], error: null },
           cash_closings: { data: [{ id: 99 }], error: null },
         },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(7);
+      const result = await facade.anularVenta(7, 'Error de digitación');
 
       expect(result.success).toBe(false);
-      expect(result.blockedReason).toContain('01-08-2026');
-      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
-      expect(deleteMock).not.toHaveBeenCalled();
+      expect(result.blockedReason).toBe('No se puede anular: la caja del 01-08-2026 ya está cerrada.');
+      expect(mockSupabase._builders.get('special_service_sales').update).not.toHaveBeenCalled();
     });
 
-    it('fix-432-m: la BD rechaza el DELETE (caja cerrada entre medio) → muestra su mensaje', async () => {
-      const mensaje =
-        'La caja del 27-08-2026 ya está cerrada: no se puede borrar una venta de ese día.';
+    it('la BD la rechaza (P0001) → su mensaje como blockedReason', async () => {
+      const mensaje = 'Solo un administrador puede anular una venta.';
       const { facade } = setup({
         tables: {
-          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-27' })], error: null },
-          'special_service_sales:delete': {
-            data: null,
-            error: { code: 'P0001', message: mensaje },
-          },
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': { data: null, error: { code: 'P0001', message: mensaje } },
           cash_closings: { data: [], error: null },
         },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(7);
-
-      expect(result).toEqual({ success: false, blockedReason: mensaje });
+      expect(await facade.anularVenta(7, 'x')).toEqual({ success: false, blockedReason: mensaje });
     });
 
-    it('venta inexistente en el estado local → falla sin consultar cash_closings', async () => {
-      const { facade, mockSupabase } = setup({
-        tables: { special_service_sales: { data: [], error: null } },
+    it('0 filas (la RLS no la dejó tocar) no es éxito', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': { data: [], error: null },
+          cash_closings: { data: [], error: null },
+        },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(999);
+      expect((await facade.anularVenta(7, 'x')).success).toBe(false);
+    });
 
-      expect(result.success).toBe(false);
-      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('cash_closings');
+    it('una venta anulada se mapea con su anulación', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: {
+            data: [
+              fila({
+                status: 'anulado',
+                paid: false,
+                void_reason: 'Cliente desistió',
+                voided_at: '2026-10-16T13:00:00.000Z',
+                anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+              }),
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+
+      expect(facade.ventas()[0].anulacion).toEqual(
+        expect.objectContaining({ motivo: 'Cliente desistió', por: 'Ana Rojas' }),
+      );
+    });
+
+    it('puedeAnular: solo el admin', () => {
+      expect(setup().facade.puedeAnular()).toBe(true);
+      TestBed.resetTestingModule();
+      expect(setup({ user: { role: 'secretary', branchId: 1 } }).facade.puedeAnular()).toBe(false);
     });
   });
 

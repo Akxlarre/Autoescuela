@@ -27,6 +27,7 @@ Deno.test('columnas: sin Estado ni Pagado; con boleta, medio de pago y sede (fix
     'Medio de pago',
     'Monto',
     'Sede',
+    'Anulación',
   ]);
 });
 
@@ -41,7 +42,18 @@ Deno.test('una fila usa el nombre guardado en la venta, no el actual del catálo
     'Transferencia',
     20000,
     'Autoescuela Chillán',
+    '',
   ]);
+});
+
+Deno.test('anulada: sale marcada con su motivo y fuera del total (fix-443-m)', () => {
+  const anulada = { ...venta, price: 5000, status: 'anulado', void_reason: ' Venta duplicada ' };
+  const { rows, total, vigentes } = exportRows([venta, anulada]);
+  assertEquals(rows[1][8], 'Anulada: Venta duplicada');
+  assertEquals(rows[1][6], 5000);
+  assertEquals(total, 20000);
+  assertEquals(vigentes, 1);
+  assertEquals(exportRows([{ ...anulada, void_reason: null }]).rows[0][8], 'Anulada');
 });
 
 Deno.test('sin nombre guardado cae al del catálogo; sin boleta queda vacío', () => {

@@ -8,6 +8,7 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { mapConcepto } from '@core/utils/payment-concept.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { ingresoSeAnula } from '@core/utils/anulacion-pago.utils';
 import {
   mapAnulacionPago,
   PAYMENT_ANULACION_SELECT,
@@ -103,6 +104,8 @@ export interface SpecialServiceSaleIngresoDto {
   documentNumber: string | null;
   /** Medio de pago de la venta (fix-047-i). Sin dato → efectivo. */
   paymentMethod?: 'efectivo' | 'transferencia' | 'tarjeta' | null;
+  /** fix-443-m: presente si la venta fue anulada; se muestra tachada y no suma. */
+  anulacion?: IngresoRow['anulacion'];
 }
 
 /**
@@ -126,6 +129,7 @@ export function mapSpecialServiceSaleToIngreso(s: SpecialServiceSaleIngresoDto):
     sence: 0,
     otros: method === 'tarjeta' ? monto : 0,
     total: monto,
+    anulacion: s.anulacion ?? null,
   };
 }
 
@@ -433,6 +437,7 @@ export class CuadraturaFacade {
   /**
    * Ventas de Servicios Especiales cobradas hoy (fix-024-i). `special_service_sales` nunca se
    * sumaba a los ingresos de Caja Diaria — mismo patrón que `fetchSingularSales()`.
+   * fix-443-m: también las anuladas (quedan con `paid = false`), para mostrarlas tachadas.
    */
   private async fetchSpecialServiceSales(
     today: string,
@@ -440,9 +445,11 @@ export class CuadraturaFacade {
   ): Promise<IngresoRow[]> {
     let query: any = this.supabase.client
       .from('special_service_sales')
-      .select('id, price, service_name, client_name, document_number, payment_method')
+      .select(
+        `id, price, service_name, client_name, document_number, payment_method, status, ${PAYMENT_ANULACION_SELECT}`,
+      )
       .eq('sale_date', today)
-      .eq('paid', true);
+      .or(`paid.eq.true,status.eq.${PAYMENT_STATUS_ANULADO}`);
 
     if (branchId) {
       query = query.eq('branch_id', branchId);
@@ -459,6 +466,7 @@ export class CuadraturaFacade {
         clientName: row.client_name ?? '—',
         documentNumber: row.document_number ?? null,
         paymentMethod: row.payment_method ?? null,
+        anulacion: mapAnulacionPago(row as PaymentAnulacionRow),
       }),
     );
   }
@@ -572,17 +580,20 @@ export class CuadraturaFacade {
    * UPDATE/DELETE que la RLS filtra no devuelve error, devuelve 0 filas (fix-044-i). Si el día ya
    * tiene caja cerrada, un trigger rechaza la escritura con `CAJA_CERRADA`.
    *
-   * Un pago de matrícula no se borra: se anula con un motivo y sigue visible, tachado (spec
-   * 0025-m). `motivo` solo aplica a `source === 'payment'`.
+   * Un pago de matrícula (spec 0025-m) y una venta de servicio especial (fix-443-m) no se
+   * borran: se anulan con un motivo y siguen visibles, tachados. `motivo` solo aplica a ellos.
    */
   async eliminarIngreso(row: IngresoRow, motivo = ''): Promise<boolean> {
-    if (row.source === 'payment') {
+    if (ingresoSeAnula(row.source)) {
+      const que = row.source === 'payment' ? 'un pago de matrícula' : 'una venta';
       if (!this.puedeEliminarRestringidos()) {
-        this.toast.error('Solo un administrador puede anular un pago de matrícula.');
+        this.toast.error(`Solo un administrador puede anular ${que}.`);
         return false;
       }
       if (row.anulacion) {
-        this.toast.error('Este pago ya está anulado.');
+        this.toast.error(
+          row.source === 'payment' ? 'Este pago ya está anulado.' : 'Esta venta ya está anulada.',
+        );
         return false;
       }
       if (!motivo.trim()) {
@@ -603,18 +614,18 @@ export class CuadraturaFacade {
         });
         this.toast.success('Cobro revertido: la inscripción quedó pendiente de pago.');
       } else if (row.source === 'special_service') {
-        // fix-437-m (decisión L08): la venta se borra. Revertirla a 'pending' (fix-024-i) la
-        // dejaba huérfana: desde fix-025-i el módulo no tiene ventas pendientes ni forma de
-        // cobrarlas. Si el día está cerrado, el trigger de fix-432-m rechaza el DELETE.
+        // fix-443-m: la venta se anula, no se borra (fix-437-m la borraba y desaparecía de todas
+        // las pantallas). El trigger `guard_anulacion_venta_servicio` valida rol y motivo, fija
+        // quién y cuándo y deja `paid = false`; el de fix-432-m rechaza un día cerrado.
         assertWriteOk(
           await this.supabase.client
             .from('special_service_sales')
-            .delete()
+            .update({ status: PAYMENT_STATUS_ANULADO, void_reason: motivo.trim() })
             .eq('id', row.id)
             .select('id'),
           { requireRows: true },
         );
-        this.toast.success('Venta de servicio especial eliminada.');
+        this.toast.success('Venta anulada.');
       } else {
         // Pago de matrícula: un solo UPDATE a 'anulado'. El trigger `guard_anulacion_pago` valida
         // rol, motivo y día cerrado y fija quién y cuándo; `trg_update_balance` recalcula el saldo
@@ -639,7 +650,9 @@ export class CuadraturaFacade {
           err,
           row.source === 'payment'
             ? 'No se pudo anular el pago.'
-            : 'No se pudo eliminar el ingreso.',
+            : row.source === 'special_service'
+              ? 'No se pudo anular la venta.'
+              : 'No se pudo eliminar el ingreso.',
         ),
       );
       return false;

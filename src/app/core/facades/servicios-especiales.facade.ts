@@ -24,6 +24,11 @@ import type {
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import {
+  mapAnulacionPago,
+  PAYMENT_ANULACION_SELECT,
+  type PaymentAnulacionRow,
+} from '@core/utils/payment-status.utils';
 import { cleanRut, normalizeRutForStorage } from '@core/utils/rut.utils';
 import {
   buscarServicioDuplicado,
@@ -96,8 +101,13 @@ function mapVentaDto(
     studentUserId: student?.user_id ?? null,
     branchId: dto.branch_id,
     documentNumber: dto.document_number,
+    // fix-443-m: mismo estado y columnas que un pago anulado (spec 0025-m).
+    anulacion: mapAnulacionPago(dto as unknown as PaymentAnulacionRow),
   };
 }
+
+/** Estado de una venta anulada (fix-443-m): el mismo token que un pago anulado. */
+const VENTA_ANULADA = 'anulado';
 
 /**
  * Tope de la lista del Historial (fix-442-m): el máximo de filas que PostgREST entrega por consulta.
@@ -182,6 +192,9 @@ export class ServiciosEspecialesFacade {
     return user?.role === 'admin' || !!user?.canAccessBothBranches;
   });
 
+  /** fix-443-m: solo el admin anula ventas (la BD también lo exige). */
+  public readonly puedeAnular = computed(() => this.auth.currentUser()?.role === 'admin');
+
   /** Sede con la que se precarga el campo: la del topbar, o la propia del usuario. */
   public readonly sedePorDefecto = computed(() => this.getActiveBranchId(true));
 
@@ -260,7 +273,8 @@ export class ServiciosEspecialesFacade {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let ventasQuery: any = this.supabase.client
       .from('special_service_sales')
-      .select('*, service_catalog(name), students(user_id)')
+      // fix-443-m: con la anulación (motivo, quién y cuándo) para mostrarla tachada.
+      .select(`*, service_catalog(name), students(user_id), ${PAYMENT_ANULACION_SELECT}`)
       .order('sale_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(LIMITE_HISTORIAL);
@@ -530,16 +544,26 @@ export class ServiciosEspecialesFacade {
   }
 
   /**
-   * Borra una venta de Servicio Especial (fix-022-i, ASG-b-050).
+   * Anula una venta de Servicio Especial (fix-443-m). Antes (fix-022-i) era un DELETE: la venta
+   * desaparecía de todas las pantallas. Ahora queda tachada con motivo, quién y cuándo, como los
+   * pagos de matrícula (spec 0025-m). Solo el admin anula; la BD lo exige
+   * (`guard_anulacion_venta_servicio`) y fija quién y cuándo.
    *
-   * Borrado duro (DELETE real, sin estado "anulada") — pero bloqueado si el día de la
-   * venta (`sale_date`) ya tiene una fila en `cash_closings` para su sede. La cuadratura
-   * guarda `total_income` como snapshot congelado al cerrar; borrar hacia atrás una venta
-   * de un día ya cerrado descuadraría ese número en silencio (mismo criterio que ASG-b-037).
+   * Bloqueada si el día de la venta ya tiene la caja cerrada para su sede: el cierre guarda
+   * totales congelados (DG-065). La BD también tiene ese candado (fix-432-m/fix-444-m).
    */
-  async borrarVenta(id: number): Promise<{ success: boolean; blockedReason?: string }> {
+  async anularVenta(
+    id: number,
+    motivo: string,
+  ): Promise<{ success: boolean; blockedReason?: string }> {
     const venta = this._ventas().find((v) => v.id === id);
     if (!venta) return { success: false };
+
+    const motivoLimpio = motivo.trim();
+    if (!motivoLimpio) {
+      this._error.set('Indica el motivo de la anulación.');
+      return { success: false };
+    }
 
     let closedQuery = this.supabase.client
       .from('cash_closings')
@@ -557,23 +581,28 @@ export class ServiciosEspecialesFacade {
     if (closedData && closedData.length > 0) {
       return {
         success: false,
-        blockedReason: `No se puede borrar: la caja del ${formatDayMonthYear(venta.fecha)} ya está cerrada.`,
+        blockedReason: `No se puede anular: la caja del ${formatDayMonthYear(venta.fecha)} ya está cerrada.`,
       };
     }
 
-    const { error } = await this.supabase.client
+    const { data, error } = await this.supabase.client
       .from('special_service_sales')
-      .delete()
-      .eq('id', id);
+      .update({ status: VENTA_ANULADA, void_reason: motivoLimpio })
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       const message = this.sanitizer.sanitize(error).message;
       this._error.set(message);
-      // fix-432-m: la BD también tiene el candado (trigger). Si la caja se cerró entre el
-      // chequeo de arriba y el DELETE, su mensaje (P0001) explica el motivo.
+      // Rechazo de negocio de la BD (P0001): caja cerrada, solo admin, ya anulada.
       return error.code === 'P0001'
         ? { success: false, blockedReason: message }
         : { success: false };
+    }
+    // 0 filas: la RLS no dejó tocarla (DG-103). No es un éxito.
+    if (!data || (data as unknown[]).length === 0) {
+      this._error.set('No se pudo anular la venta.');
+      return { success: false };
     }
 
     await this.refreshSilently();

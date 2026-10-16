@@ -12,6 +12,7 @@ export const EXPORT_HEADERS = [
   'Medio de pago',
   'Monto',
   'Sede',
+  'Anulación',
 ] as const;
 
 export interface VentaExport {
@@ -25,6 +26,19 @@ export interface VentaExport {
   payment_method: string | null;
   price: number;
   branches?: { name: string | null } | null;
+  /** fix-443-m: 'anulado' si la venta se anuló; sale en el export, fuera del total. */
+  status?: string | null;
+  void_reason?: string | null;
+}
+
+/** fix-443-m: mismo token que un pago anulado. */
+const ANULADO = 'anulado';
+
+/** Texto de la columna Anulación: vacío si la venta está vigente. */
+function textoAnulacion(v: VentaExport): string {
+  if (v.status !== ANULADO) return '';
+  const motivo = v.void_reason?.trim();
+  return motivo ? `Anulada: ${motivo}` : 'Anulada';
 }
 
 const MEDIOS: Record<string, string> = {
@@ -39,9 +53,14 @@ function fechaCorta(iso: string | null): string {
   return `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
 }
 
+/**
+ * Filas y total del export. Una venta anulada (fix-443-m) se lista con su motivo en la columna
+ * Anulación, pero no suma en el total ni cuenta en `vigentes`.
+ */
 export function exportRows(ventas: readonly VentaExport[]): {
   rows: (string | number)[][];
   total: number;
+  vigentes: number;
 } {
   const rows = ventas.map((v) => [
     fechaCorta(v.sale_date),
@@ -52,9 +71,11 @@ export function exportRows(ventas: readonly VentaExport[]): {
     MEDIOS[v.payment_method ?? ''] ?? '',
     v.price,
     v.branches?.name ?? '',
+    textoAnulacion(v),
   ]);
-  const total = ventas.reduce((sum, v) => sum + v.price, 0);
-  return { rows, total };
+  const cuentan = ventas.filter((v) => v.status !== ANULADO);
+  const total = cuentan.reduce((sum, v) => sum + v.price, 0);
+  return { rows, total, vigentes: cuentan.length };
 }
 
 /**

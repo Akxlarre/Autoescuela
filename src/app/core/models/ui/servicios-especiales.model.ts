@@ -1,3 +1,5 @@
+import type { AnulacionPago } from './pagos.model';
+
 /**
  * Modelos para el módulo de Servicios Especiales (RF-037).
  * Punto de venta de servicios complementarios (Psicotécnico, Maquinaria, Informes).
@@ -36,6 +38,8 @@ export interface VentaServicio {
   branchId: number | null;
   /** N° de boleta emitida (opcional), migración 20260813070000 (fix-025-i). */
   documentNumber: string | null;
+  /** fix-443-m: presente solo si la venta fue anulada. */
+  anulacion: AnulacionPago | null;
 }
 
 export interface VentaFormData {

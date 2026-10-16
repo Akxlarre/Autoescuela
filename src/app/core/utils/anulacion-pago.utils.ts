@@ -1,4 +1,19 @@
+import type { IngresoRow } from '@core/models/ui/cuadratura.model';
 import type { AnulacionPago } from '@core/models/ui/pagos.model';
+
+/**
+ * Cómo se quita un ingreso de la Caja. Un pago de matrícula (spec 0025-m) y una venta de servicio
+ * especial (fix-443-m) no se borran: se anulan con motivo, solo el admin, y quedan tachados. Un
+ * cobro de curso singular se revierte a pendiente (la inscripción sigue vigente).
+ */
+export function ingresoSeAnula(source: IngresoRow['source']): boolean {
+  return source === 'payment' || source === 'special_service';
+}
+
+/** Texto del botón y del modal que anula un ingreso: "Anular pago" o "Anular venta". */
+export function etiquetaAnularIngreso(source: IngresoRow['source']): string {
+  return source === 'special_service' ? 'Anular venta' : 'Anular pago';
+}
 
 /**
  * Texto de una línea con el detalle de un pago anulado: "motivo · quién · cuándo" (spec 0025-m).

@@ -23,7 +23,11 @@ import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/da
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { formatPaymentConcept, paymentPositions } from '@core/utils/ficha-pagos.utils';
-import { mapAnulacionPago, PAYMENT_ANULACION_SELECT } from '@core/utils/payment-status.utils';
+import {
+  mapAnulacionPago,
+  PAYMENT_ANULACION_SELECT,
+  type PaymentAnulacionRow,
+} from '@core/utils/payment-status.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
@@ -1289,7 +1293,10 @@ export class AdminAlumnoDetalleFacade {
   private async fetchVentasServicios(studentId: number): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('special_service_sales')
-      .select('id, sale_date, price, service_name, payment_method')
+      // fix-443-m: con la anulación, para mostrar tachada una venta anulada.
+      .select(
+        `id, sale_date, price, service_name, payment_method, status, ${PAYMENT_ANULACION_SELECT}`,
+      )
       .eq('student_id', studentId)
       .order('sale_date', { ascending: true });
     if (error) {
@@ -1303,21 +1310,23 @@ export class AdminAlumnoDetalleFacade {
     };
     this._ventasServicios.set(
       (
-        (data ?? []) as Array<{
-          id: number;
-          sale_date: string;
-          price: number;
-          service_name: string | null;
-          payment_method: string | null;
-        }>
+        (data ?? []) as Array<
+          {
+            id: number;
+            sale_date: string;
+            price: number;
+            service_name: string | null;
+            payment_method: string | null;
+          } & PaymentAnulacionRow
+        >
       ).map((v) => ({
         id: v.id,
         fecha: this.formatDate(v.sale_date),
         concepto: `Servicio especial: ${v.service_name ?? 'servicio'}`,
         monto: v.price,
         metodo: metodos[v.payment_method ?? ''] ?? null,
-        estado: 'Pagado',
-        anulacion: null,
+        estado: this.formatPaymentStatus(v.status === 'anulado' ? 'anulado' : 'paid'),
+        anulacion: mapAnulacionPago(v),
         servicioEspecial: true,
       })),
     );

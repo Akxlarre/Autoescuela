@@ -51,6 +51,13 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN r := r || '4 registrar en caja cerrada: ok | ';
   END;
 
+  -- fix-444-m: desvincular el servicio no mueve dinero → se permite aunque el día esté cerrado.
+  BEGIN
+    UPDATE public.special_service_sales SET service_id = NULL WHERE id = v_venta;
+    r := r || '7 desvincular servicio en caja cerrada: ok | ';
+  EXCEPTION WHEN raise_exception THEN r := r || '7 desvincular servicio en caja cerrada: FALLA | ';
+  END;
+
   -- La otra sede, el mismo día, sigue abierta.
   INSERT INTO public.special_service_sales (sale_date, price, branch_id, service_name, status, paid)
   VALUES ('2099-03-01', 1000, 2, 'Prueba fix-432', 'completed', true);

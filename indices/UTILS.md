@@ -27,7 +27,7 @@
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
-| `src/app/core/utils/anulacion-pago.utils.ts` | `formatAnulacionDetalle`, `resumenConAnulados` |
+| `src/app/core/utils/anulacion-pago.utils.ts` | `formatAnulacionDetalle`, `resumenConAnulados`, `ingresoSeAnula` (pago y venta de servicio se anulan; curso singular se revierte, fix-443-m), `etiquetaAnularIngreso` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |

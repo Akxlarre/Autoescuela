@@ -32,6 +32,7 @@ function makeVenta(over: Partial<VentaServicio> = {}): VentaServicio {
     studentUserId: null,
     branchId: 1,
     documentNumber: 'B-1',
+    anulacion: null,
     ...over,
   };
 }
@@ -55,9 +56,15 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
   let catalogoSig: ReturnType<typeof signal<ServicioEspecial[]>>;
 
   let exportarSpy: ReturnType<typeof vi.fn>;
+  let anularSpy: ReturnType<typeof vi.fn>;
+  let confirmWithReasonSpy: ReturnType<typeof vi.fn>;
+  let puedeAnularSig: ReturnType<typeof signal<boolean>>;
 
   beforeEach(() => {
     exportarSpy = vi.fn().mockResolvedValue(true);
+    anularSpy = vi.fn().mockResolvedValue({ success: true });
+    confirmWithReasonSpy = vi.fn().mockResolvedValue('Cliente desistió');
+    puedeAnularSig = signal(true);
     ventasSig = signal<VentaServicio[]>([]);
     catalogoSig = signal<ServicioEspecial[]>([]);
 
@@ -71,10 +78,17 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
             catalogo: catalogoSig,
             isExporting: signal(false),
             exportarHistorial: exportarSpy,
-            borrarVenta: () => Promise.resolve({ success: true }),
+            anularVenta: anularSpy,
+            puedeAnular: puedeAnularSig,
           },
         },
-        { provide: ConfirmModalService, useValue: { confirm: () => Promise.resolve(true) } },
+        {
+          provide: ConfirmModalService,
+          useValue: {
+            confirm: () => Promise.resolve(true),
+            confirmWithReason: (...args: unknown[]) => confirmWithReasonSpy(...args),
+          },
+        },
         {
           provide: ToastService,
           useValue: { success: () => undefined, warning: () => undefined, error: () => undefined },
@@ -255,5 +269,29 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
     );
 
     expect(exportarSpy).toHaveBeenCalledWith('pdf', [2]);
+  });
+
+  describe('anular una venta (fix-443-m)', () => {
+    const onAnular = (v: VentaServicio) =>
+      (component as unknown as { onAnular: (x: VentaServicio) => Promise<void> }).onAnular(v);
+
+    it('pide el motivo y anula con él', async () => {
+      await onAnular(makeVenta({ id: 7 }));
+      expect(confirmWithReasonSpy).toHaveBeenCalled();
+      expect(anularSpy).toHaveBeenCalledWith(7, 'Cliente desistió');
+    });
+
+    it('si cancela el motivo no anula', async () => {
+      confirmWithReasonSpy.mockResolvedValue(null);
+      await onAnular(makeVenta({ id: 7 }));
+      expect(anularSpy).not.toHaveBeenCalled();
+    });
+
+    it('sin permiso (secretaria) no hace nada', async () => {
+      puedeAnularSig.set(false);
+      await onAnular(makeVenta({ id: 7 }));
+      expect(confirmWithReasonSpy).not.toHaveBeenCalled();
+      expect(anularSpy).not.toHaveBeenCalled();
+    });
   });
 });
