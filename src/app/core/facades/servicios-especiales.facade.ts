@@ -13,6 +13,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
 import type { SpecialServiceSale } from '@core/models/dto/special-service-sale.model';
 import type {
+  AlumnoVinculado,
   NuevoServicioFormData,
   ServicioEspecial,
   ServiciosEspecialesKpis,
@@ -21,6 +22,7 @@ import type {
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { cleanRut, normalizeRutForStorage } from '@core/utils/rut.utils';
 import {
   buscarServicioDuplicado,
   mensajeServicioDuplicado,
@@ -305,12 +307,14 @@ export class ServiciosEspecialesFacade {
     // fix-024-i: snapshot del nombre — el Historial lo sigue mostrando aunque el servicio
     // se borre definitivamente del catálogo más tarde (service_id queda en null).
     const servicioNombre = this._catalogo().find((s) => s.id === data.servicioId)?.nombre ?? null;
+    // fix-438-m (decisión H02): si el RUT es de un alumno, la venta queda en su ficha.
+    const alumno = await this.buscarAlumnoPorRut(data.rut);
 
     const { error } = await this.supabase.client.from('special_service_sales').insert({
       service_id: data.servicioId,
       service_name: servicioNombre,
-      student_id: null,
-      is_student: data.esAlumno,
+      student_id: alumno?.studentId ?? null,
+      is_student: alumno !== null,
       client_name: data.nombre,
       client_rut: data.rut,
       sale_date: data.fecha,
@@ -332,8 +336,56 @@ export class ServiciosEspecialesFacade {
       return false;
     }
 
+    if (alumno) this.notificarVentaAlAlumno(alumno.userId, servicioNombre);
     await this.refreshSilently();
     return true;
+  }
+
+  /**
+   * Alumno con ese RUT, o null (fix-438-m). `users.rut` está guardado con y sin puntos (fix-042),
+   * así que busca las dos variantes. Un usuario sin ficha de alumno (staff) no cuenta. La RLS
+   * acota a lo que quien vende puede ver: un alumno de otra sede queda como cliente externo.
+   */
+  async buscarAlumnoPorRut(rut: string): Promise<AlumnoVinculado | null> {
+    const cleaned = cleanRut(rut).toUpperCase();
+    if (cleaned.length < 2) return null;
+    const dotted = normalizeRutForStorage(rut);
+    const plain = `${cleaned.slice(0, -1)}-${cleaned.slice(-1)}`;
+
+    const { data, error } = await this.supabase.client
+      .from('users')
+      .select('id, first_names, paternal_last_name, students(id)')
+      .or(`rut.eq.${dotted},rut.eq.${plain}`)
+      .maybeSingle();
+    if (error || !data) return null;
+
+    const row = data as {
+      id: number;
+      first_names: string | null;
+      paternal_last_name: string | null;
+      students: { id: number } | { id: number }[] | null;
+    };
+    const student = Array.isArray(row.students) ? row.students[0] : row.students;
+    if (!student) return null;
+
+    return {
+      studentId: student.id,
+      userId: row.id,
+      nombre: [row.first_names, row.paternal_last_name].filter(Boolean).join(' '),
+    };
+  }
+
+  /** Notificación "Pago registrado" de la spec 0025, ahora que la venta tiene alumno (fix-438-m). */
+  private notificarVentaAlAlumno(userId: number, servicio: string | null): void {
+    this.notifications
+      .notifyUsers([userId], {
+        subject: 'Pago registrado',
+        message: `Se registró el pago de tu servicio (${servicio ?? 'servicio especial'}).`,
+        referenceType: 'payment',
+      })
+      .catch(() => {
+        // Una notificación fallida no deshace la venta (spec 0025, AC-E1).
+      });
   }
 
   async agregarServicio(data: NuevoServicioFormData): Promise<boolean> {

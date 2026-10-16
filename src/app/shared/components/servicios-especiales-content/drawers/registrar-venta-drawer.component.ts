@@ -10,6 +10,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
+import type { AlumnoVinculado } from '@core/models/ui/servicios-especiales.model';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -86,24 +87,17 @@ import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
               maxlength="12"
               placeholder="12.345.678-9"
               class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
+              data-llm-description="RUT del cliente; si es de un alumno, la venta se vincula a su ficha"
             />
+            <!-- fix-438-m: la venta a un alumno se vincula sola por su RUT -->
+            @if (alumnoVinculado(); as alumno) {
+              <span class="flex items-center gap-1.5 text-xs text-text-secondary">
+                <app-icon name="user-check" [size]="14" />
+                Se vinculará a la ficha de {{ alumno.nombre }}
+              </span>
+            }
           </div>
         </div>
-
-        <!-- Tipo de cliente (condicional para psicotécnico/informe) -->
-        @if (showTipoCliente()) {
-          <div class="flex flex-col gap-1.5">
-            <label class="micro-label" for="v-tipo"> Tipo de cliente </label>
-            <p-select
-              id="v-tipo"
-              formControlName="esAlumno"
-              [options]="esAlumnoOptions"
-              optionLabel="label"
-              optionValue="value"
-              styleClass="w-full"
-            />
-          </div>
-        }
 
         <!-- Fecha (fija a hoy, fix-023-i) + Monto -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -192,11 +186,6 @@ export class RegistrarVentaDrawerComponent {
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly toast = inject(ToastService);
 
-  readonly esAlumnoOptions = [
-    { label: 'Cliente externo', value: false },
-    { label: 'Alumno de la escuela', value: true },
-  ];
-
   /** Mismas opciones que el egreso de Caja (registrar-egreso-drawer), fix-047-i. */
   readonly medioPagoOptions = [
     { label: 'Efectivo', value: 'efectivo' },
@@ -217,7 +206,8 @@ export class RegistrarVentaDrawerComponent {
   );
 
   protected readonly isSaving = signal(false);
-  protected readonly showTipoCliente = signal(false);
+  /** fix-438-m: alumno con el RUT escrito (null = cliente externo). */
+  protected readonly alumnoVinculado = signal<AlumnoVinculado | null>(null);
 
   // fix-023-i: la fecha ya no es un campo del formulario — se fija a hoy al enviar.
   protected readonly hoyLabel = formatDayMonthYear(todayIso());
@@ -226,7 +216,6 @@ export class RegistrarVentaDrawerComponent {
     servicioId: new FormControl('', Validators.required),
     nombre: new FormControl('', Validators.required),
     rut: new FormControl('', Validators.required),
-    esAlumno: new FormControl<boolean>(false),
     precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
     documentNumber: new FormControl<string>(''),
     branchId: new FormControl<number | null>(null),
@@ -256,7 +245,6 @@ export class RegistrarVentaDrawerComponent {
         const servicio = this.facade.catalogo().find((s) => s.id === Number(id));
         if (servicio) {
           this.ventaForm.patchValue({ precio: servicio.precio }, { emitEvent: false });
-          this.showTipoCliente.set(this.esPsicotecnicoOInforme(servicio.nombre));
         }
       });
 
@@ -272,12 +260,8 @@ export class RegistrarVentaDrawerComponent {
     }
   }
 
-  private esPsicotecnicoOInforme(nombre: string): boolean {
-    const n = nombre.toLowerCase();
-    return n.includes('psicot') || n.includes('informe');
-  }
-
   protected onRutInput(event: Event): void {
+    this.alumnoVinculado.set(null);
     const input = event.target as HTMLInputElement;
     const formatted = formatRutTyping(input.value);
     this.ventaForm.get('rut')!.setValue(formatted, { emitEvent: false });
@@ -285,9 +269,13 @@ export class RegistrarVentaDrawerComponent {
   }
 
   /** Al perder el foco: completa el DV solo si falta (ASG-047, fix-213-b). */
-  protected onRutBlur(): void {
+  protected async onRutBlur(): Promise<void> {
     const control = this.ventaForm.get('rut')!;
     control.setValue(completeRutDv(control.value ?? ''));
+    const rut = control.value ?? '';
+    const alumno = await this.facade.buscarAlumnoPorRut(rut);
+    // Si se siguió escribiendo mientras se buscaba, el aviso ya no corresponde.
+    if (control.value === rut) this.alumnoVinculado.set(alumno);
   }
 
   protected async submitVenta(): Promise<void> {
@@ -300,7 +288,6 @@ export class RegistrarVentaDrawerComponent {
       servicioId: Number(val.servicioId),
       nombre: val.nombre!,
       rut: val.rut!,
-      esAlumno: !!val.esAlumno,
       fecha: todayIso(),
       precio: val.precio!,
       documentNumber: val.documentNumber?.trim() || null,

@@ -39,6 +39,8 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
           return this;
         }),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: (resolve: any, reject: any) => {
@@ -249,7 +251,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       const ok = await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -268,7 +269,6 @@ describe('ServiciosEspecialesFacade', () => {
       });
       const ok = await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'x',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -286,7 +286,6 @@ describe('ServiciosEspecialesFacade', () => {
     const secretaria = { role: 'secretaria', dbId: 7, branchId: 1, canAccessBothBranches: false };
     const datos = {
       servicioId: 5,
-      esAlumno: false,
       nombre: 'Juan',
       rut: '1-9',
       fecha: '2026-07-01',
@@ -345,7 +344,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -361,7 +359,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -378,7 +375,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -395,7 +391,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -411,7 +406,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -419,6 +413,85 @@ describe('ServiciosEspecialesFacade', () => {
       });
       const insertMock = mockSupabase._builders.get('special_service_sales').insert;
       expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ document_number: null }));
+    });
+  });
+
+  describe('registrarVenta — venta a un alumno por su RUT (fix-438-m)', () => {
+    const alumnoRow = {
+      id: 55,
+      first_names: 'Ana',
+      paternal_last_name: 'Rojas',
+      students: [{ id: 9 }],
+    };
+
+    it('buscarAlumnoPorRut busca las dos variantes del RUT (con y sin puntos)', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { users: { data: alumnoRow, error: null } },
+      });
+
+      const alumno = await facade.buscarAlumnoPorRut('12.345.678-5');
+
+      expect(alumno).toEqual({ studentId: 9, userId: 55, nombre: 'Ana Rojas' });
+      expect(mockSupabase._builders.get('users').or).toHaveBeenCalledWith(
+        'rut.eq.12.345.678-5,rut.eq.12345678-5',
+      );
+    });
+
+    it('un usuario sin ficha de alumno no se vincula', async () => {
+      const { facade } = setup({
+        tables: { users: { data: { ...alumnoRow, students: [] }, error: null } },
+      });
+      expect(await facade.buscarAlumnoPorRut('12.345.678-5')).toBeNull();
+    });
+
+    it('RUT incompleto → no consulta', async () => {
+      const { facade, mockSupabase } = setup();
+      expect(await facade.buscarAlumnoPorRut('1')).toBeNull();
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('users');
+    });
+
+    it('si el RUT es de un alumno: inserta student_id + is_student y le notifica', async () => {
+      const { facade, mockSupabase, notificationsSpy } = setup({
+        selectedBranchId: null,
+        tables: { users: { data: alumnoRow, error: null } },
+      });
+
+      const ok = await facade.registrarVenta({
+        servicioId: 5,
+        nombre: 'Ana Rojas',
+        rut: '12.345.678-5',
+        fecha: '2026-10-15',
+        precio: 20000,
+      });
+
+      expect(ok).toBe(true);
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ student_id: 9, is_student: true }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [55],
+        expect.objectContaining({ subject: 'Pago registrado' }),
+      );
+    });
+
+    it('cliente externo: student_id null, is_student false, sin notificación', async () => {
+      const { facade, mockSupabase, notificationsSpy } = setup({
+        selectedBranchId: null,
+        tables: { users: { data: null, error: null } },
+      });
+
+      await facade.registrarVenta({
+        servicioId: 5,
+        nombre: 'Juan',
+        rut: '11.111.111-1',
+        fecha: '2026-10-15',
+        precio: 20000,
+      });
+
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ student_id: null, is_student: false }),
+      );
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
     });
   });
 
