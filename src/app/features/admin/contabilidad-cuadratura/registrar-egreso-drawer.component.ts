@@ -13,6 +13,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { resolveFuelExpenseBranch } from '@core/utils/fuel-expense-branch.utils';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
@@ -561,7 +562,11 @@ export class RegistrarEgresoDrawerComponent {
       } else {
         const branchId =
           tipo === 'combustible'
-            ? (this.selectedVehicle()?.branchId ?? raw.branchId ?? this.forcedBranchId())
+            ? resolveFuelExpenseBranch(
+                this.selectedVehicle(),
+                raw.branchId ?? null,
+                this.forcedBranchId(),
+              )
             : (raw.branchId ?? this.forcedBranchId());
 
         const datos: EgresoFormData = {
