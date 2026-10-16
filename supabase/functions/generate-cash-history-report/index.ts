@@ -15,7 +15,7 @@ import { chileParts, chileYear, formatChilePattern, monthDays } from '../_shared
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,7 +58,10 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const month: number = body.month ?? chileParts().month;
     const year: number = body.year ?? chileYear();
-    const branchId: number | null = body.branch_id ?? null;
+    // fix-430-m: la sede la valida el servidor; una secretaria sin grant solo ve la suya.
+    const scope = resolveBranchScope(access, body.branch_id);
+    if (!scope.ok) return authErrorResponse(scope, corsHeaders);
+    const branchId: number | null = scope.branchId;
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 

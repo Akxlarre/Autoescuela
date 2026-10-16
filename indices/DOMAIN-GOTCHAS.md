@@ -1840,6 +1840,25 @@
 - **Fuente:** `specs/fixes/fix-050-i-pago-matricula-duplicado-al-reintentar`
   (`record_enrollment_payment()`, migración `20261014180000`).
 
+### DG-112 — Una edge function con clave de servicio no hereda la RLS por sede: "es staff" no basta
+
+- **Trampa:** proteger una edge function que lee con `SUPABASE_SERVICE_ROLE_KEY` solo con
+  `requireStaff(['admin','secretary'])` y filtrar por el `branch_id` (o el `enrollment_id`) que manda
+  el navegador, confiando en que la pantalla siempre manda la sede correcta.
+- **Realidad:** la clave de servicio se salta la RLS por sede (spec 0047-b). Con su propio token, la
+  secretaria de la sede 1 pedía `branch_id: 2` (o `null` = todas) y recibía ventas con RUT, reportes
+  contables, cuadraturas, el ZIP de certificados y fichas de matrícula de la otra sede. Pasaba en 13
+  funciones a la vez porque todas copiaban el mismo arranque.
+- **Regla de aplicabilidad:** toda edge function que lee o escribe con la clave de servicio datos que
+  tienen sede valida el alcance en el servidor con los helpers de `_shared/staff-auth.ts`:
+  `resolveBranchScope(access, body.branch_id)` cuando recibe una sede (la secretaria sin grant queda
+  acotada a la suya; `null` nunca significa "todas" para ella) y `denyIfEnrollmentOutOfScope(access,
+  id)` cuando recibe una matrícula. Al crear una función nueva con `requireStaff`, pensar qué id o
+  sede trae el body y validarlo antes de la primera consulta. Probar con el token de la secretaria
+  pidiendo la otra sede, no solo con el admin.
+- **Fuente:** `specs/fixes/fix-430-m-edge-functions-respetan-sede` y
+  `specs/fixes/fix-431-m-edge-functions-por-matricula-respetan-sede`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

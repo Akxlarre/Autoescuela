@@ -18,6 +18,8 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
       [catalogo]="facade.catalogo()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
+      [loadError]="facade.loadError()"
+      (retry)="facade.reintentar()"
       (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
       (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
       (requestVerHistorial)="facade.openHistorialVentasDrawer()"

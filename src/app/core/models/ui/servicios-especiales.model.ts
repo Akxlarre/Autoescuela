@@ -43,7 +43,6 @@ export interface VentaFormData {
   servicioId: number;
   nombre: string;
   rut: string;
-  esAlumno: boolean;
   fecha: string;
   precio: number;
   /** N° de boleta emitida (opcional) — se propaga a Caja Diaria (fix-025-i). */
@@ -52,6 +51,17 @@ export interface VentaFormData {
   branchId?: number | null;
   /** Medio de pago (fix-047-i). Sin informar → efectivo. Decide la columna en la Caja Diaria. */
   paymentMethod?: 'efectivo' | 'transferencia' | 'tarjeta';
+}
+
+/**
+ * Alumno al que se vincula una venta por su RUT (fix-438-m): `student_id` de la venta, destinatario
+ * de la notificación y nombre para el aviso del drawer.
+ */
+export interface AlumnoVinculado {
+  studentId: number;
+  /** `users.id` del alumno. */
+  userId: number;
+  nombre: string;
 }
 
 export interface NuevoServicioFormData {

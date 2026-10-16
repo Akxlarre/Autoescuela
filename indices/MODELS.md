@@ -207,7 +207,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
 | `SecretariaTableRow`, `UltimoAccesoEstado` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroMenuItem`, `SectionHeroKpi`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
-| `ServicioEspecial`, `VentaServicio`, `VentaFormData`, `NuevoServicioFormData`, `ServiciosEspecialesKpis` | `ui` | `src/app/core/models/ui/servicios-especiales.model.ts` |
+| `ServicioEspecial`, `VentaServicio`, `VentaFormData`, `AlumnoVinculado`, `NuevoServicioFormData`, `ServiciosEspecialesKpis` | `ui` | `src/app/core/models/ui/servicios-especiales.model.ts` |
 | `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay`, `AlumnoFirmaSemana` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
 | `StudentSessionStatus`, `StudentPracticeSessionRow`, `StudentTheorySessionRow`, `StudentProfSessionRow`, `StudentClasesKpis`, `StudentClasesData` | `ui` | `src/app/core/models/ui/student-clases.model.ts` |
 | `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `EnrollmentTab`, `StudentHomeHero`, `StudentHomePractice`, `StudentHomeProgress`, `StudentHomeSession`, `StudentHomeAttendance`, `StudentHomeModule`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeNextClass`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |

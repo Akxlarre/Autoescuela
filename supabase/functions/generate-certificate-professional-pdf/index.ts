@@ -22,7 +22,11 @@ import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-tim
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 import {
   escapePdfWinAnsi,
   textWidth,
@@ -103,6 +107,10 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
+
+    // fix-431-m: la matrícula tiene que ser de una sede que quien llama puede ver.
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     // 0. user_id interno del caller (para auditoría) — ya resuelto por requireStaff().
     const callerUserId: number = access.userId;

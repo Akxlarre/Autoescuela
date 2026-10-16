@@ -15,7 +15,11 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 // fix-293-m: el escape propio de este archivo quitaba tildes y ñ. La fuente está declarada con
 // WinAnsiEncoding, que sí las tiene; se usa el mismo escape que el resto de los PDF.
 import { escapePdfWinAnsi as pdfStr } from '../_shared/pdf-utils.ts';
@@ -49,6 +53,10 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonErr('enrollment_id (number) is required', 400);
     }
+
+    // fix-431-m: la matrícula tiene que ser de una sede que quien llama puede ver.
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,

@@ -23,7 +23,11 @@ import { chileYear } from '../_shared/chile-time.ts';
 // Setup type definitions for built-in Supabase Runtime APIs
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 import {
   type EnrollmentData,
   buildStructuredPdf,
@@ -78,6 +82,10 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // fix-431-m: la matrícula tiene que ser de una sede que quien llama puede ver.
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     // 3. Fetch enrollment with related data
     const { data: enrollment, error: fetchError } = await supabase

@@ -603,14 +603,18 @@ export class CuadraturaFacade {
         });
         this.toast.success('Cobro revertido: la inscripción quedó pendiente de pago.');
       } else if (row.source === 'special_service') {
-        // fix-024-i: venta de Servicio Especial — no se borra, se revierte el cobro
-        // (misma filosofía que 'singular': la venta sigue existiendo, solo deja de
-        // contar como ingreso cobrado hoy).
-        await this.revertirCobro('special_service_sales', row.id, {
-          paid: false,
-          status: 'pending',
-        });
-        this.toast.success('Cobro revertido: la venta quedó pendiente de pago.');
+        // fix-437-m (decisión L08): la venta se borra. Revertirla a 'pending' (fix-024-i) la
+        // dejaba huérfana: desde fix-025-i el módulo no tiene ventas pendientes ni forma de
+        // cobrarlas. Si el día está cerrado, el trigger de fix-432-m rechaza el DELETE.
+        assertWriteOk(
+          await this.supabase.client
+            .from('special_service_sales')
+            .delete()
+            .eq('id', row.id)
+            .select('id'),
+          { requireRows: true },
+        );
+        this.toast.success('Venta de servicio especial eliminada.');
       } else {
         // Pago de matrícula: un solo UPDATE a 'anulado'. El trigger `guard_anulacion_pago` valida
         // rol, motivo y día cerrado y fija quién y cuándo; `trg_update_balance` recalcula el saldo
@@ -646,7 +650,7 @@ export class CuadraturaFacade {
 
   /** Revierte un cobro a pendiente; lanza si falla o si la RLS no dejó tocar la fila. */
   private async revertirCobro(
-    tabla: 'standalone_course_enrollments' | 'special_service_sales',
+    tabla: 'standalone_course_enrollments',
     id: number,
     cambios: Record<string, unknown>,
   ): Promise<void> {

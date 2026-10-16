@@ -12,11 +12,9 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AdminPreInscritosFacade } from './admin-pre-inscritos.facade';
 import { AsistenciaProfesionalFacade } from './asistencia-profesional.facade';
@@ -27,7 +25,6 @@ import { EnrollmentPaymentFacade } from './enrollment-payment.facade';
 import { EnrollmentFacade } from './enrollment.facade';
 import { RelatoresFacade } from './relatores.facade';
 import { ReportesContablesFacade } from './reportes-contables.facade';
-import { ServiciosEspecialesFacade } from './servicios-especiales.facade';
 import { StudentHomeFacade } from './student-home.facade';
 
 interface Call {
@@ -263,32 +260,8 @@ describe('Hoy en Chile en los facades — 23:30 hora Chile (spec 0024-m)', () =>
       expect(days[1]).toMatchObject({ label: '6 Oct', dayLabel: 'Mar' });
     });
 
-    it('ServiciosEspecialesFacade.kpis cuenta "ventas del mes" con el mes de Chile', () => {
-      // 23:30 hora Chile del 31 de octubre: en UTC ya es noviembre.
-      vi.setSystemTime(new Date('2026-11-01T02:30:00.000Z'));
-      TestBed.configureTestingModule({
-        providers: [
-          ServiciosEspecialesFacade,
-          { provide: SupabaseService, ...anyStub() },
-          { provide: AuthFacade, ...anyStub() },
-          { provide: BranchFacade, ...anyStub() },
-          { provide: NotificationsFacade, ...anyStub() },
-          { provide: LayoutDrawerFacadeService, ...anyStub() },
-          { provide: ErrorSanitizerService, ...anyStub() },
-        ],
-      });
-      const facade = TestBed.inject(ServiciosEspecialesFacade);
-      (facade as unknown as { _ventas: { set(v: unknown[]): void } })._ventas.set([
-        { fecha: '2026-10-31', cobrado: true, precio: 1000 },
-        { fecha: '2026-10-15', cobrado: false, precio: 500 },
-        { fecha: '2026-11-01', cobrado: true, precio: 700 },
-      ]);
-
-      const kpis = facade.kpis();
-
-      expect(kpis.ventasMes).toBe(2);
-      expect(kpis.recaudacionMes).toBe(1000);
-    });
+    // ServiciosEspecialesFacade.kpis ya no se calcula en el navegador: desde fix-442-m sale de la
+    // función SQL servicios_especiales_kpis(), que toma el mes de public.chile_today().
   });
 });
 

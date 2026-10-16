@@ -109,6 +109,11 @@ export interface PagoUI {
   estado: string;
   /** Presente solo si el pago fue anulado (spec 0025-m). */
   anulacion: AnulacionPago | null;
+  /**
+   * fix-438-m: venta de servicio especial del alumno (no es un pago de la matrícula: no suma al
+   * total pagado ni al saldo). Su `id` es el de `special_service_sales`.
+   */
+  servicioEspecial?: boolean;
 }
 
 export interface InasistenciaUI {
