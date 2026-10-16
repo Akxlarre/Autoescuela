@@ -6,7 +6,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
 import { escapePdfWinAnsi, textWidth, assemblePdf, wrapLines } from '../_shared/pdf-utils.ts';
 
 const corsHeaders = {
@@ -27,14 +27,19 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { format, branch_id } = await req.json();
+    const { format, branch_id: requestedBranch } = await req.json();
+
+    // fix-430-m: la sede la valida el servidor; una secretaria sin grant solo ve la suya.
+    const scope = resolveBranchScope(access, requestedBranch);
+    if (!scope.ok) return authErrorResponse(scope, corsHeaders);
+    const branch_id = scope.branchId;
 
     let query = supabase
       .from('special_service_sales')
       .select('*, service_catalog(name), branches(name)')
       .order('sale_date', { ascending: false });
 
-    if (branch_id) query = query.eq('branch_id', branch_id);
+    if (branch_id !== null) query = query.eq('branch_id', branch_id);
 
     const { data: sales, error } = await query;
     if (error) throw error;

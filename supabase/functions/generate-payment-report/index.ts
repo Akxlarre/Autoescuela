@@ -13,7 +13,7 @@ import { formatChilePattern } from '../_shared/chile-time.ts';
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
@@ -49,7 +49,10 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const { start_date, end_date } = body;
-    const branch_id: number | null = body.branch_id ?? null;
+    // fix-430-m: la sede la valida el servidor; una secretaria sin grant solo ve la suya.
+    const scope = resolveBranchScope(access, body.branch_id);
+    if (!scope.ok) return authErrorResponse(scope, corsHeaders);
+    const branch_id: number | null = scope.branchId;
 
     if (!start_date || !end_date) return jsonErr('start_date y end_date son requeridos', 400);
 
