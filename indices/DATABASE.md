@@ -2174,6 +2174,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 **Índices:** `idx_special_service_sales_branch_id`
 
+**Restricciones:** `special_service_sales_branch_required` — `CHECK (branch_id IS NOT NULL) NOT VALID` (fix-433-m): toda venta nueva o modificada tiene sede; la venta histórica #3 sin sede no se revisa.
+**Triggers:** `trg_special_service_sales_caja_cerrada` (fix-432-m, ver `guard_venta_servicio_caja_cerrada()`), `trg_audit_special_service_sales`.
+
 ### `standalone_course_enrollments` — 🔒 RLS
 
 > Inscripción individual a cursos singulares grupales (RF-035)
