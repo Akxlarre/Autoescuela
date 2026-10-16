@@ -2,7 +2,7 @@
 
 - **Autor:** b
 - **Origen:** ASG-i-032 (testing Flota), sospecha S9 + decisión 4 del owner (2026-10-12).
-- **Estado:** abierto
+- **Estado:** cerrado (2026-10-15)
 
 ## Bug
 
@@ -40,5 +40,5 @@ efectos).
 
 ## Verificación
 
-- [ ] Test en BEGIN…ROLLBACK con la migración antes de aplicar.
-- [ ] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
+- [x] Test en BEGIN…ROLLBACK con la migración antes de aplicar.
+- [x] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
