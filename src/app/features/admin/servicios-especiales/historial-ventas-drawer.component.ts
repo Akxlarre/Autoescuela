@@ -10,6 +10,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
 import type { VentaServicio } from '@core/models/ui/servicios-especiales.model';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { filterBySearchTokens } from '@core/utils/search-filter.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
   DEFAULT_PERIOD_WINDOW,
@@ -82,6 +83,21 @@ import {
                 </div>
               }
             </div>
+          </div>
+          <!-- fix-439-m (decisión I10): buscar por cliente, RUT o boleta -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <app-icon name="search" [size]="16" color="var(--text-muted)" />
+            </div>
+            <input
+              type="search"
+              placeholder="Buscar por cliente, RUT o N° boleta..."
+              class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
+              [value]="busqueda()"
+              (input)="busqueda.set($any($event.target).value)"
+              aria-label="Buscar ventas por cliente, RUT o N° de boleta"
+              data-llm-description="search sales history by client name, RUT or receipt number"
+            />
           </div>
           <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <p-select
@@ -223,6 +239,8 @@ export class HistorialVentasDrawerComponent {
   protected readonly isExporting = this.facade.isExporting;
 
   protected readonly filtroServicio = signal<string | null>(null);
+  /** fix-439-m: texto del buscador (cliente, RUT o N° de boleta). */
+  protected readonly busqueda = signal('');
   protected readonly exportMenuOpen = signal(false);
   protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
 
@@ -236,22 +254,33 @@ export class HistorialVentasDrawerComponent {
 
   /** Muestra "Limpiar filtros": un servicio elegido o un período distinto del inicial. */
   protected readonly hasActiveFilters = computed(
-    () => this.filtroServicio() !== null || this.periodWindow() !== DEFAULT_PERIOD_WINDOW,
+    () =>
+      this.filtroServicio() !== null ||
+      this.periodWindow() !== DEFAULT_PERIOD_WINDOW ||
+      this.busqueda().trim() !== '',
   );
 
   protected clearFilters(): void {
     this.filtroServicio.set(null);
     this.periodWindow.set(DEFAULT_PERIOD_WINDOW);
+    this.busqueda.set('');
   }
 
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.facade.ventas();
     const porServicio = !filtro ? all : all.filter((v) => String(v.servicioId) === filtro);
+    const busqueda = this.busqueda();
+    const encontradas = filterBySearchTokens(porServicio, busqueda, (v) => [
+      v.cliente,
+      v.rut,
+      v.documentNumber,
+    ]);
 
-    return applyPeriodWindow(porServicio, {
+    // Con una búsqueda escrita se recorre todo el historial cargado (fix-439-m).
+    return applyPeriodWindow(encontradas, {
       window: this.periodWindow(),
-      hasActiveSearch: false,
+      hasActiveSearch: busqueda.trim() !== '',
       dateOf: (v) => v.fecha,
     });
   });

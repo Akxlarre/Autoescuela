@@ -171,4 +171,54 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
         .map((v) => v.id),
     ).toEqual([1]);
   });
+
+  describe('buscador por cliente o RUT (fix-439-m)', () => {
+    const b = () =>
+      component as unknown as {
+        busqueda: ReturnType<typeof signal<string>>;
+        ventasFiltradas: () => VentaServicio[];
+        hasActiveFilters: () => boolean;
+        clearFilters: () => void;
+        onPeriodWindowChange: (v: unknown) => void;
+      };
+
+    beforeEach(() => {
+      ventasSig.set([
+        makeVenta({ id: 1, cliente: 'José Núñez', rut: '12.345.678-5', documentNumber: '4582' }),
+        makeVenta({ id: 2, cliente: 'Ana Rojas', rut: '9876543-2', documentNumber: null }),
+      ]);
+    });
+
+    it('busca por nombre sin distinguir mayúsculas ni tildes', () => {
+      b().busqueda.set('jose nunez');
+      expect(b().ventasFiltradas().map((v) => v.id)).toEqual([1]);
+    });
+
+    it('busca por RUT con o sin puntos y guion', () => {
+      b().busqueda.set('12345678');
+      expect(b().ventasFiltradas().map((v) => v.id)).toEqual([1]);
+      b().busqueda.set('9.876.543-2');
+      expect(b().ventasFiltradas().map((v) => v.id)).toEqual([2]);
+    });
+
+    it('busca por N° de boleta', () => {
+      b().busqueda.set('4582');
+      expect(b().ventasFiltradas().map((v) => v.id)).toEqual([1]);
+    });
+
+    it('una búsqueda recorre todo el historial, no solo el período elegido', () => {
+      ventasSig.set([makeVenta({ id: 3, cliente: 'Antigua', fecha: '2019-01-01' })]);
+      b().onPeriodWindowChange(DEFAULT_PERIOD_WINDOW);
+      expect(b().ventasFiltradas()).toEqual([]);
+      b().busqueda.set('antigua');
+      expect(b().ventasFiltradas().map((v) => v.id)).toEqual([3]);
+    });
+
+    it('la búsqueda cuenta como filtro activo y "Limpiar" la borra', () => {
+      b().busqueda.set('ana');
+      expect(b().hasActiveFilters()).toBe(true);
+      b().clearFilters();
+      expect(b().busqueda()).toBe('');
+    });
+  });
 });
