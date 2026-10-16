@@ -7,6 +7,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import type {
   AjusteFormData,
@@ -306,34 +307,10 @@ export class HistorialCuadraturasFacade {
   }
 
   /**
-   * Inserta el gasto real de un ajuste "gasto_olvidado" en `expenses`, con la
-   * fecha del CIERRE corregido (AC2) — nunca la de hoy. Retorna el `id` insertado.
-   */
-  private async insertGastoOlvidado(
-    cierre: HistorialCierre,
-    datos: AjusteFormData,
-    registeredBy: number,
-  ): Promise<number> {
-    const { data, error } = await this.supabase.client
-      .from('expenses')
-      .insert({
-        date: cierre.fecha,
-        amount: Math.abs(datos.monto),
-        description: datos.motivo,
-        category: datos.categoria ?? null,
-        vehicle_id: datos.vehiculoId ?? null,
-        branch_id: cierre.branchId,
-        registered_by: registeredBy,
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    return data.id;
-  }
-
-  /**
    * Registra un ajuste sobre el cierre actualmente seleccionado (AC1-AC3, AC-E1).
-   * `tipo === 'gasto_olvidado'` también inserta en `expenses` (AC2).
+   * `tipo === 'gasto_olvidado'` también crea el gasto en `expenses` con la fecha y la sede del
+   * CIERRE (AC2). fix-446-m: lo hace la RPC `registrar_ajuste_cuadratura` en una sola transacción;
+   * es el único camino por el que un gasto entra a un día con caja cerrada (fix-445-m).
    */
   async registrarAjuste(datos: AjusteFormData): Promise<boolean> {
     const cierre = this._cierreSeleccionado();
@@ -346,26 +323,22 @@ export class HistorialCuadraturasFacade {
     if (!user?.dbId) return false;
 
     try {
-      const expenseId =
-        datos.tipo === 'gasto_olvidado'
-          ? await this.insertGastoOlvidado(cierre, datos, user.dbId)
-          : null;
-
-      const { error } = await this.supabase.client.from('cuadratura_adjustments').insert({
-        cuadratura_id: cierre.id,
-        tipo: datos.tipo,
-        monto: datos.monto,
-        motivo: datos.motivo,
-        expense_id: expenseId,
-        registered_by: user.dbId,
+      const esGasto = datos.tipo === 'gasto_olvidado';
+      const { error } = await this.supabase.client.rpc('registrar_ajuste_cuadratura', {
+        p_cuadratura_id: cierre.id,
+        p_tipo: datos.tipo,
+        p_monto: datos.monto,
+        p_motivo: datos.motivo,
+        p_categoria: esGasto ? (datos.categoria ?? null) : null,
+        p_vehiculo_id: esGasto ? (datos.vehiculoId ?? null) : null,
       });
       if (error) throw error;
 
       this.toast.success('Ajuste registrado correctamente.');
       await this.fetchAjustes(cierre.id);
       return true;
-    } catch {
-      this.toast.error('Error al registrar el ajuste.');
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al registrar el ajuste.'));
       return false;
     }
   }

@@ -1875,6 +1875,31 @@
   anulados de spec 0025-m.
 - **Fuente:** `specs/fixes/fix-443-m-anular-venta-servicio-en-vez-de-borrar`.
 
+### DG-114 — Un candado de "caja cerrada" cubre registrar, cambiar y borrar, pero solo lo que mueve dinero
+
+- **Trampa:** proteger un día cerrado poniendo el trigger solo en la operación que se estaba
+  arreglando (solo `DELETE`, solo `INSERT`), o en cualquier `UPDATE` de la tabla.
+- **Realidad:** pasaron las dos cosas. `fix-044-i` cubrió solo el borrado de gastos y anticipos, y
+  `fix-051-i` el registro solo de pagos: un anticipo se podía registrar con la fecha de un día cerrado
+  (fix-445-m). Al revés, `fix-432-m` bloqueó todo UPDATE de una venta y rompió "eliminar servicio",
+  que solo desvincula `service_id` (fix-444-m); el mismo error en anticipos habría roto
+  Liquidaciones, que cambia el `status` de todos los anticipos del mes, casi todos de días cerrados.
+- **Regla de aplicabilidad:** toda tabla cuyas filas alimentan los totales de un cierre lleva el
+  candado en `INSERT`, `UPDATE` y `DELETE`. En `UPDATE` se revisa solo si cambia una columna que mueve
+  la caja (fecha, monto, sede, medio de pago, estado de cobro), mirando el día de antes y el de
+  después; los cambios administrativos pasan. Antes de escribirlo, listar **y leer una por una**
+  todas las escrituras —INSERT, UPDATE y DELETE— que hacen la app, las RPC y los cron sobre esa
+  tabla, preguntando de cada una "¿esto es legítimo en un día cerrado?". `SECURITY DEFINER`, porque
+  la secretaria solo lee 2 días de cierres por RLS.
+- **Cuando la tabla protegida tiene un canal oficial de corrección, el candado lo tiene que dejar
+  pasar a él y solo a él.** Aquí ese canal es el ajuste "gasto olvidado" del Historial de Cuadraturas,
+  que corrige un día cerrado creando un gasto con la fecha de ese día; un candado de INSERT escrito
+  sin leerlo lo bloquea. No se resuelve aflojando el candado por rol (el admin también registra
+  anticipos con fecha libre): el canal pasa por una RPC `SECURITY DEFINER` que valida el caso y marca
+  la transacción con `set_config('app.<marca>', 'on', true)`, y el trigger deja pasar solo con esa
+  marca. El cliente no puede fijarla: PostgREST no expone `set_config` (comprobado: 404).
+- **Fuente:** `specs/fixes/fix-445-m-egreso-en-dia-con-caja-cerrada`, `fix-444-m`, `fix-051-i`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

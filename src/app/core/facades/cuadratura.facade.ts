@@ -742,8 +742,9 @@ export class CuadraturaFacade {
       this.toast.success('Egreso registrado correctamente.');
       void this.refreshSilently();
       return true;
-    } catch {
-      this.toast.error('Error al registrar el egreso.');
+    } catch (err) {
+      // fix-445-m: si la caja del día ya está cerrada, el trigger lo rechaza y hay que decirlo.
+      this.toast.error(toFriendlyDbMessage(err, 'Error al registrar el egreso.'));
       return false;
     } finally {
       this._isSaving.set(false);

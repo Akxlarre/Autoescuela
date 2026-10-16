@@ -354,6 +354,24 @@ describe('CuadraturaFacade.registrarEgreso — gasto/combustible (fix-006-i, fix
     );
   });
 
+  it('fix-445-m: si la caja del día ya está cerrada, muestra ese motivo y no "error genérico"', async () => {
+    insertSpy.mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'CAJA_CERRADA', details: null, hint: null },
+    });
+
+    const ok = await facade.registrarEgreso({
+      tipo: 'gasto',
+      monto: 10_000,
+      descripcion: 'Insumos',
+      branchId: 1,
+      metodoPago: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(errorToast).toHaveBeenCalledWith(expect.stringContaining('ya está cerrada'));
+  });
+
   // ─── AC-1: nunca un egreso huérfano (branch_id null) ──────────────────────
   it('rechaza el guardado y NO inserta cuando branchId es null (admin en "Todas las sedes")', async () => {
     const ok = await facade.registrarEgreso({
