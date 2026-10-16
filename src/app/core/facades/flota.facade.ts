@@ -61,6 +61,8 @@ export class FlotaFacade {
       total: vs.length,
       available: statuses.filter((s) => s === 'available').length,
       maintenance: statuses.filter((s) => s === 'maintenance').length,
+      // hotfix-080-b (C04): los "Fuera de servicio" no aparecían en ningún KPI.
+      outOfService: statuses.filter((s) => s === 'out_of_service').length,
     };
   });
 
@@ -70,7 +72,8 @@ export class FlotaFacade {
     const status = this._statusFilter();
     if (term.trim()) result = result.filter((v) => matchesVehicleSearch(v, term));
     if (status) result = result.filter((v) => v.status === status);
-    return result;
+    // hotfix-080-b (B11): por patente, no por id (orden de creación).
+    return [...result].sort((a, b) => a.licensePlate.localeCompare(b.licensePlate));
   });
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────

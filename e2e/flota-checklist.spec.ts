@@ -156,8 +156,12 @@ test('B + C01–C03 + G04: filas, KPIs y paginador coinciden con la BD (todas la
   expect(await kpi(page, 'En Taller')).toBe(
     todos.filter((v) => ['maintenance', 'mantenimiento'].includes(`${v.status}`)).length,
   );
+  // C04 (hotfix-080-b): KPI "De Baja".
+  expect(await kpi(page, 'De Baja')).toBe(
+    todos.filter((v) => ['out_of_service', 'blocked'].includes(`${v.status}`)).length,
+  );
 
-  // B12: 10 por página, ordenadas por id.
+  // B12: 10 por página. B11 (hotfix-080-b): ordenadas por patente.
   const filas = page.locator('p-table tbody tr');
   await expect(filas).toHaveCount(Math.min(10, todos.length));
   await expect(page.getByText(`Mostrando 1 a ${Math.min(10, todos.length)} de`)).toBeVisible();
@@ -166,7 +170,7 @@ test('B + C01–C03 + G04: filas, KPIs y paginador coinciden con la BD (todas la
   await expect(page.locator('p-table thead th', { hasText: 'Sede' })).toHaveCount(1);
 
   // B01, B02, B06, B09, B13 sobre la primera fila.
-  const v = todos[0];
+  const v = [...todos].sort((a, b) => a.license_plate.localeCompare(b.license_plate))[0];
   const f = filas.first();
   await expect(f).toContainText(v.license_plate);
   await expect(f).toContainText(`${v.brand} ${v.model}`);
@@ -399,18 +403,20 @@ test('I01–I06 + I10: el triángulo del listado sigue las fechas (vence hoy = p
     const response = await route.fetch();
     const body = await response.json();
     if (Array.isArray(body)) {
+      // Los primeros por patente: los de la primera página del listado (hotfix-080-b).
+      const orden = [...body].sort((a, b) => a.license_plate.localeCompare(b.license_plate));
       casos.forEach((c, i) => {
-        if (!body[i]) return;
-        patentes[i] = body[i].license_plate;
-        body[i].vehicle_documents =
+        if (!orden[i]) return;
+        patentes[i] = orden[i].license_plate;
+        orden[i].vehicle_documents =
           c.dias === null
             ? []
             : [{ type: 'soap', expiry_date: enDias(c.dias), status: null, file_url: null }];
       });
       // I10: el séptimo con uno vencido y otro por vencer.
-      if (body[6]) {
-        patentes[6] = body[6].license_plate;
-        body[6].vehicle_documents = [
+      if (orden[6]) {
+        patentes[6] = orden[6].license_plate;
+        orden[6].vehicle_documents = [
           { type: 'soap', expiry_date: enDias(-3), status: null, file_url: null },
           { type: 'insurance', expiry_date: enDias(5), status: null, file_url: null },
         ];

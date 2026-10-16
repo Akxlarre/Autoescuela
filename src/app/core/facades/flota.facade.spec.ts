@@ -81,6 +81,33 @@ describe('FlotaFacade', () => {
     });
   });
 
+  describe('orden y KPIs del listado (hotfix-080-b, B11 + C04)', () => {
+    const fila = (licensePlate: string, status: string) =>
+      ({ id: licensePlate, licensePlate, brand: 'X', model: 'Y', status }) as any;
+
+    beforeEach(() => {
+      (service as any)._vehicles.set([
+        fila('XXYZ34', 'available'),
+        fila('ABCD43', 'out_of_service'),
+        fila('ERDF21', 'maintenance'),
+        fila('BBCL12', 'blocked'),
+      ]);
+    });
+
+    it('B11: el listado sale ordenado por patente', () => {
+      expect(service.filteredVehicles().map((v) => v.licensePlate)).toEqual([
+        'ABCD43',
+        'BBCL12',
+        'ERDF21',
+        'XXYZ34',
+      ]);
+    });
+
+    it('C04: los vehículos dados de baja tienen su propio KPI', () => {
+      expect(service.kpis()).toEqual({ total: 4, available: 1, maintenance: 1, outOfService: 2 });
+    });
+  });
+
   it('loadVehicleAgenda consulta el día de Chile como rango semiabierto y ubica la clase en su hora de Chile (spec 0024-m)', async () => {
     const sessions: any = {};
     for (const m of ['select', 'eq', 'gte', 'lt']) sessions[m] = vi.fn().mockReturnValue(sessions);
