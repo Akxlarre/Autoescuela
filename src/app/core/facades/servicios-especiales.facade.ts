@@ -4,7 +4,7 @@
  * Patrón SWR: primera visita con skeleton, re-visitas refrescan en background.
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { chileMonth, chileToday } from '@core/utils/chile-time.utils';
+import { chileToday } from '@core/utils/chile-time.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -98,6 +98,45 @@ function mapVentaDto(
   };
 }
 
+/**
+ * Tope de la lista del Historial (fix-442-m): el máximo de filas que PostgREST entrega por consulta.
+ * Los KPIs no dependen de él.
+ */
+const LIMITE_HISTORIAL = 1000;
+
+const KPIS_VACIOS: ServiciosEspecialesKpis = {
+  ventasMes: 0,
+  totalCobrado: 0,
+  recaudacionMes: 0,
+  pendientesCobro: 0,
+  totalRegistros: 0,
+  ventasCobradas: 0,
+  ventasSinCobrar: 0,
+};
+
+/** Fila de `servicios_especiales_kpis()` (migración 20261015170000). */
+interface KpisRow {
+  ventas_mes: number;
+  ventas_totales: number;
+  recaudacion_mes: number;
+  recaudacion_total: number;
+  ventas_cobradas: number;
+  pendiente_cobro: number;
+}
+
+function mapKpis(row: KpisRow | undefined): ServiciosEspecialesKpis {
+  if (!row) return KPIS_VACIOS;
+  return {
+    ventasMes: row.ventas_mes,
+    totalCobrado: Number(row.recaudacion_total),
+    recaudacionMes: Number(row.recaudacion_mes),
+    pendientesCobro: Number(row.pendiente_cobro),
+    totalRegistros: row.ventas_totales,
+    ventasCobradas: row.ventas_cobradas,
+    ventasSinCobrar: row.ventas_totales - row.ventas_cobradas,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ServiciosEspecialesFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
@@ -149,23 +188,15 @@ export class ServiciosEspecialesFacade {
     this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
   );
 
-  public readonly kpis = computed<ServiciosEspecialesKpis>(() => {
-    const ventas = this._ventas();
-    const mesActual = chileMonth();
-    const cobradas = ventas.filter((v) => v.cobrado);
-    const sinCobrar = ventas.filter((v) => !v.cobrado);
-    return {
-      ventasMes: ventas.filter((v) => v.fecha.startsWith(mesActual)).length,
-      totalCobrado: cobradas.reduce((s, v) => s + v.precio, 0),
-      recaudacionMes: cobradas
-        .filter((v) => v.fecha.startsWith(mesActual))
-        .reduce((s, v) => s + v.precio, 0),
-      pendientesCobro: sinCobrar.reduce((s, v) => s + v.precio, 0),
-      totalRegistros: ventas.length,
-      ventasCobradas: cobradas.length,
-      ventasSinCobrar: sinCobrar.length,
-    };
-  });
+  /**
+   * fix-442-m: los KPIs se calculan en la BD (`servicios_especiales_kpis`) sobre todas las ventas
+   * de la sede. Antes se sumaban sobre la lista, que tiene tope, y se congelaban pasada la venta 200.
+   */
+  private readonly _kpis = signal<ServiciosEspecialesKpis>(KPIS_VACIOS);
+  public readonly kpis = this._kpis.asReadonly();
+
+  /** fix-442-m: la lista del Historial llegó al tope y no trae las ventas más viejas. */
+  public readonly historialTruncado = computed(() => this._ventas().length >= LIMITE_HISTORIAL);
 
   // ── SWR ─────────────────────────────────────────────────────────────────────
   async initialize(): Promise<void> {
@@ -231,11 +262,11 @@ export class ServiciosEspecialesFacade {
       .select('*, service_catalog(name), students(user_id)')
       .order('sale_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(LIMITE_HISTORIAL);
 
     if (branchId !== null) ventasQuery = ventasQuery.eq('branch_id', branchId);
 
-    const [catalogoResult, ventasResult] = await Promise.all([
+    const [catalogoResult, ventasResult, kpisResult] = await Promise.all([
       // fix-023-i: trae TODO el catálogo (activos e inactivos) — el toggle "Mostrar
       // inactivos" filtra client-side; el dropdown de venta filtra .activo aparte.
       this.supabase.client
@@ -244,13 +275,16 @@ export class ServiciosEspecialesFacade {
         .order('created_at', { ascending: true }),
 
       ventasQuery,
+      this.supabase.client.rpc('servicios_especiales_kpis', { p_branch_id: branchId }),
     ]);
 
     if (catalogoResult.error) throw catalogoResult.error;
     if (ventasResult.error) throw ventasResult.error;
+    if (kpisResult.error) throw kpisResult.error;
     if (!this.fetchGuard.isCurrent(requestToken)) return;
 
     this._catalogo.set((catalogoResult.data as ServiceCatalog[]).map(mapCatalogDto));
+    this._kpis.set(mapKpis((kpisResult.data as KpisRow[] | null)?.[0]));
     this._ventas.set(
       (
         ventasResult.data as (SpecialServiceSale & {

@@ -187,6 +187,12 @@ import {
               <span class="text-xs text-text-muted"
                 >{{ ventasFiltradas().length }} de {{ facade.ventas().length }} ventas</span
               >
+              <!-- fix-442-m: la lista tiene tope; los KPIs del hero no. -->
+              @if (facade.historialTruncado()) {
+                <span class="text-xs text-text-muted"
+                  >Se muestran las 1.000 ventas más recientes</span
+                >
+              }
             </div>
           }
         </div>

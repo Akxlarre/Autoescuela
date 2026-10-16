@@ -56,6 +56,20 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
     client: {
       from,
       functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
+      // fix-442-m: KPIs calculados en la BD.
+      rpc: vi.fn().mockResolvedValue({
+        data: [
+          {
+            ventas_mes: 0,
+            ventas_totales: 0,
+            recaudacion_mes: 0,
+            recaudacion_total: 0,
+            ventas_cobradas: 0,
+            pendiente_cobro: 0,
+          },
+        ],
+        error: null,
+      }),
     },
     _builders: builders,
   };
@@ -218,31 +232,58 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
-  describe('KPIs', () => {
-    it('separa cobrado vs pendiente y cuenta solo las ventas del mes actual', async () => {
-      const esteMes = new Date().toISOString().slice(0, 7);
-      const { facade } = setup({
-        tables: {
-          special_service_sales: {
-            data: [
-              venta({ id: 1, paid: true, price: 10000, sale_date: `${esteMes}-05` }),
-              venta({ id: 2, paid: false, price: 4000, sale_date: '2020-01-05' }),
-              venta({ id: 3, paid: false, price: 6000, sale_date: `${esteMes}-10` }),
-            ],
-            error: null,
+  describe('KPIs — calculados en la BD, sin el tope de la lista (fix-442-m)', () => {
+    it('los KPIs vienen de servicios_especiales_kpis para la sede activa, no de la lista cargada', async () => {
+      const { facade, mockSupabase } = setup({
+        selectedBranchId: 2,
+        tables: { special_service_sales: { data: [venta({ id: 1 })], error: null } },
+      });
+      mockSupabase.client.rpc.mockResolvedValue({
+        data: [
+          {
+            ventas_mes: 4,
+            ventas_totales: 250,
+            recaudacion_mes: 80000,
+            recaudacion_total: 5000000,
+            ventas_cobradas: 249,
+            pendiente_cobro: 20000,
           },
-        },
+        ],
+        error: null,
+      });
+
+      await facade.initialize();
+
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('servicios_especiales_kpis', {
+        p_branch_id: 2,
+      });
+      expect(facade.kpis()).toEqual({
+        ventasMes: 4,
+        totalCobrado: 5000000,
+        recaudacionMes: 80000,
+        pendientesCobro: 20000,
+        totalRegistros: 250,
+        ventasCobradas: 249,
+        ventasSinCobrar: 1,
+      });
+    });
+
+    it('si la consulta de KPIs falla, la carga falla (no muestra ceros como si fueran reales)', async () => {
+      const { facade, mockSupabase } = setup();
+      mockSupabase.client.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      await facade.initialize();
+
+      expect(facade.loadError()).not.toBeNull();
+    });
+
+    it('historialTruncado avisa cuando la lista llegó al tope de 1000', async () => {
+      const muchas = Array.from({ length: 1000 }, (_, k) => venta({ id: k + 1 }));
+      const { facade } = setup({
+        tables: { special_service_sales: { data: muchas, error: null } },
       });
       await facade.initialize();
-      expect(facade.kpis()).toEqual({
-        ventasMes: 2,
-        totalCobrado: 10000,
-        recaudacionMes: 10000,
-        pendientesCobro: 10000,
-        totalRegistros: 3,
-        ventasCobradas: 1,
-        ventasSinCobrar: 2,
-      });
+      expect(facade.historialTruncado()).toBe(true);
     });
   });
 
