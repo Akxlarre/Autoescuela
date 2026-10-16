@@ -571,3 +571,146 @@ test('P03 (hotfix-085-b): el encabezado de la Hoja de Ruta es la sede del vehíc
     }
   }
 });
+
+// ── Casos de error, reintento y doble clic (sin escrituras: se corta la respuesta) ─────────────
+
+test('A08: si falla la carga de la flota se avisa, no "No se encontraron vehículos"', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.route('**/rest/v1/vehicles?*vehicle_documents*', (r) => r.abort());
+  await page.setViewportSize(DESKTOP);
+  await page.goto('/app/admin/flota');
+  await expect(page.getByText(/Error al cargar|No se pudo cargar/i).first()).toBeVisible(CARGA);
+  await expect(page.getByText('No se encontraron vehículos')).toHaveCount(0);
+});
+
+test('A06 + A09: volver a Flota muestra los datos al instante; "Actualizar" vuelve a pedirlos', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await abrirFlota(page, null);
+  await page.locator('a[href="/app/admin/dashboard"]').first().click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await page.locator('a[href="/app/admin/flota"]').first().click();
+  // A06: sin skeleton, las filas están de inmediato.
+  await expect(page.locator('p-table tbody tr').first()).toBeVisible({ timeout: 2_000 });
+
+  const pedido = page.waitForRequest((r) => r.url().includes('/rest/v1/vehicles?'));
+  await page.locator('[data-llm-action="actualizar-lista-flota"]').click();
+  await pedido;
+});
+
+test('D10: sin resultados en la vista de tarjetas también ofrece "Limpiar filtros"', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.setViewportSize({ width: 800, height: 900 });
+  await page.goto('/app/admin/flota');
+  await expect(
+    page.locator('[data-llm-description="Ficha resumen de un vehículo"]').first(),
+  ).toBeVisible(CARGA);
+  await page.locator(BUSCADOR).fill('zzzz-no-existe');
+  await expect(page.getByText(/Sin resultados|No se encontraron vehículos/).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Limpiar filtros' }).filter({ visible: true }).first()).toBeVisible();
+});
+
+test('H14 + H15 + H17: documentos — cambiar de fila, cancelar y error al guardar', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.route('**/rest/v1/vehicle_documents*', (r) =>
+    r.request().method() === 'GET'
+      ? r.continue()
+      : r.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"x"}' }),
+  );
+  await abrirFlota(page, null);
+  await page.locator(BUSCADOR).fill(PATENTE_PRUEBA);
+  await fila(page, PATENTE_PRUEBA).getByRole('button', { name: 'Documentos' }).click();
+  const drawer = page.locator('app-vehicle-documents-drawer');
+  const lapices = drawer.locator('[data-llm-action="edit-vehicle-document"]');
+  await expect(lapices.first()).toBeVisible(CARGA);
+
+  // H14: abrir otra fila cierra la primera.
+  await lapices.nth(0).click();
+  await lapices.nth(1).click();
+  await expect(drawer.locator('[data-llm-action="save-vehicle-document"]')).toHaveCount(1);
+
+  // H15: cancelar cierra sin guardar.
+  await drawer.locator('[data-llm-action="cancel-edit-vehicle-document"]').click();
+  await expect(drawer.locator('[data-llm-action="save-vehicle-document"]')).toHaveCount(0);
+
+  // H17: error del servidor → mensaje en la fila y sin toast de éxito.
+  await lapices.nth(0).click();
+  const fecha = drawer.locator('input#date');
+  await fecha.click();
+  await fecha.pressSequentially('01012030');
+  await page.keyboard.press('Escape');
+  await drawer.locator('[data-llm-action="save-vehicle-document"]').click();
+  await expect(drawer.locator('p.text-error')).toBeVisible(CARGA);
+  await expect(page.getByText('Documento actualizado')).toHaveCount(0);
+});
+
+test('L13 + L14 + P07: errores en Mantenimientos — historial, reintento y Hoja de Ruta', async ({
+  pageAs,
+}) => {
+  const v = (await vehiculos()).find((x) => x.license_plate === PATENTE_PRUEBA)!;
+  const page = await pageAs('admin');
+  let cortar = true;
+  await page.route('**/rest/v1/maintenance_records*', (r) => (cortar ? r.abort() : r.continue()));
+  await page.setViewportSize(DESKTOP);
+  await page.goto(`/app/admin/flota/${v.id}/mantenimientos`);
+  // L13: falla el historial → error, no "Historial vacío".
+  await expect(page.getByText('Hubo un problema al cargar los datos del vehículo.')).toBeVisible(
+    CARGA,
+  );
+  // L14: Reintentar recarga.
+  cortar = false;
+  await page.getByRole('button', { name: 'Reintentar' }).first().click();
+  await expect(page.getByRole('heading', { name: PATENTE_PRUEBA })).toBeVisible(CARGA);
+
+  // P07: falla la Hoja de Ruta → aviso en el drawer, la página sigue bien.
+  await page.route('**/functions/v1/generate-route-sheet-pdf', (r) => r.abort());
+  await page
+    .getByRole('button', { name: /Hoja de Ruta/ })
+    .first()
+    .click();
+  await expect(page.getByText('No se pudo generar la Hoja de Ruta')).toBeVisible(CARGA);
+  await expect(page.getByText('Hubo un problema al cargar los datos del vehículo.')).toHaveCount(0);
+});
+
+test('E13 + M16: doble clic en guardar envía una sola vez', async ({ pageAs }) => {
+  const page = await pageAs('admin');
+  const posts: Record<string, number> = { vehicles: 0, maintenance_records: 0 };
+  for (const tabla of Object.keys(posts)) {
+    await page.route(`**/rest/v1/${tabla}*`, async (r) => {
+      if (r.request().method() !== 'POST') return r.continue();
+      posts[tabla]++;
+      await new Promise((res) => setTimeout(res, 800));
+      return r.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    });
+  }
+  await abrirFlota(page, { id: 1, name: 'Autoescuela Chillán' });
+  await page
+    .getByRole('button', { name: /Nuevo Vehículo/i })
+    .first()
+    .click();
+  await page.locator('#vf-plate').fill('ZZZZ97');
+  await page.locator('#vf-brand').fill('Prueba');
+  await page.locator('#vf-model').fill('Doble');
+  await page.locator('[data-llm-action="save-vehicle"]').dblclick();
+  await page.waitForTimeout(2_000);
+  expect(posts['vehicles']).toBe(1);
+
+  const v = (await vehiculos()).find((x) => x.license_plate === PATENTE_PRUEBA)!;
+  await page.goto(`/app/admin/flota/${v.id}/mantenimientos`);
+  await page
+    .getByRole('button', { name: /Registrar Servicio/ })
+    .first()
+    .click();
+  await page.locator('#mf-type').click();
+  await page.getByRole('option', { name: 'Frenos' }).click();
+  await page.getByRole('button', { name: 'Registrar Mantenimiento' }).last().dblclick();
+  await page.waitForTimeout(2_000);
+  expect(posts['maintenance_records']).toBe(1);
+});
