@@ -19,8 +19,11 @@ y anticipos nada impide:
 - cambiar el monto, la fecha o el medio de pago de un egreso de un día cerrado.
 
 En todos los casos los egresos del día cambian después del cierre y el cierre congelado deja de
-cuadrar. En dev hay un caso (gasto 7, agosto, de prueba). Encontrado en la auditoría de triggers y
-policies de octubre, no es una regresión de un fix.
+cuadrar. Encontrado en la auditoría de triggers y policies de octubre, no es una regresión de un fix.
+
+> **Corrección (fix-446-m):** aquí se citaba "el gasto 7 de agosto" como caso del hueco; era el gasto
+> de un ajuste "gasto olvidado" legítimo. No hay casos reales del hueco en dev. Y este fix **rompió**
+> ese ajuste (que inserta un gasto con la fecha del día cerrado): lo corrige `fix-446-m`.
 
 ## ACs Afectados
 
