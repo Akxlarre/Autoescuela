@@ -20,6 +20,7 @@ import {
   resolverEstadoPagoClase,
 } from '@core/utils/estado-pago-clase.utils';
 import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
+import { isVehicleOperational } from '@core/utils/vehicle-status.utils';
 import {
   type ClassBAbsence,
   type ClassBSessionAction,
@@ -756,24 +757,29 @@ export class AsistenciaClaseBFacade {
     }
   }
 
-  /** Carga los vehículos disponibles de una sede para el selector del drawer. */
+  /**
+   * Carga los vehículos disponibles de una sede para el selector del drawer: los de la sede y
+   * los "Ambas", sin los que están en Mantenimiento o Fuera de servicio (fix-224-b).
+   */
   async loadVehiclesByBranch(branchId: number): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('vehicles')
-      .select('id, license_plate, brand, model, current_km')
-      .eq('branch_id', branchId)
+      .select('id, license_plate, brand, model, current_km, status')
+      .or(`branch_id.eq.${branchId},both_branches.eq.true`)
       .order('license_plate', { ascending: true });
 
     if (error) return;
 
     this._vehiclesPorSede.set(
-      (data ?? []).map((v: any) => ({
-        id: v.id,
-        plate: v.license_plate,
-        brand: v.brand ?? null,
-        model: v.model ?? null,
-        currentKm: v.current_km ?? null,
-      })),
+      (data ?? [])
+        .filter((v: any) => isVehicleOperational(v.status))
+        .map((v: any) => ({
+          id: v.id,
+          plate: v.license_plate,
+          brand: v.brand ?? null,
+          model: v.model ?? null,
+          currentKm: v.current_km ?? null,
+        })),
     );
   }
 

@@ -16,3 +16,11 @@ const STATUS_MAP: Record<string, VehicleStatus> = {
 export function resolveVehicleStatus(raw: string | null | undefined): VehicleStatus {
   return STATUS_MAP[raw?.toLowerCase() ?? ''] ?? 'available';
 }
+
+/**
+ * fix-224-b: un vehículo en Mantenimiento o Fuera de servicio no ofrece horarios ni aparece en
+ * los selectores. Espejo SQL: `public.vehicle_is_operational(text)`.
+ */
+export function isVehicleOperational(raw: string | null | undefined): boolean {
+  return resolveVehicleStatus(raw) === 'available';
+}

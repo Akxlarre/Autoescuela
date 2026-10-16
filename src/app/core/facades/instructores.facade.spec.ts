@@ -460,6 +460,57 @@ describe('InstructoresFacade', () => {
       expect(options[0].bothBranches).toBe(true);
     });
 
+    it('fix-224-b: loadVehicles() marca como no disponible todo vehículo no operativo', async () => {
+      const raw = [
+        'operational',
+        'maintenance',
+        'mantenimiento',
+        'out_of_service',
+        'blocked',
+        'operational',
+      ];
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
+                data: raw.map((status, i) => ({
+                  id: i + 1,
+                  license_plate: `AA11${i}0`,
+                  brand: null,
+                  model: null,
+                  year: null,
+                  status,
+                  branch_id: 1,
+                  both_branches: false,
+                })),
+                error: null,
+              }),
+            }),
+          };
+        }
+        if (table === 'vehicle_assignments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockResolvedValue({ data: [{ vehicle_id: 6 }], error: null }),
+            }),
+          };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await facade.loadVehicles();
+
+      expect(facade.vehicles().map((v) => v.status)).toEqual([
+        'available',
+        'maintenance',
+        'maintenance',
+        'maintenance',
+        'maintenance',
+        'assigned',
+      ]);
+    });
+
     it('crearInstructor() propaga bothBranches en el body de la edge function', async () => {
       await facade.crearInstructor({
         firstNames: 'Juan',
