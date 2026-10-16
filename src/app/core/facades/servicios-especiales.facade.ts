@@ -9,6 +9,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
 import type { SpecialServiceSale } from '@core/models/dto/special-service-sale.model';
@@ -118,6 +119,8 @@ export class ServiciosEspecialesFacade {
   private readonly _loadError = signal<string | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** fix-441-m: una respuesta de la sede anterior que llega tarde no pisa la actual. */
+  private readonly fetchGuard = createRequestGuard();
 
   // ── Estado expuesto ─────────────────────────────────────────────────────────
   public readonly catalogo = this._catalogo.asReadonly();
@@ -219,6 +222,7 @@ export class ServiciosEspecialesFacade {
   }
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.fetchGuard.next();
     const branchId = this.getActiveBranchId();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,6 +248,7 @@ export class ServiciosEspecialesFacade {
 
     if (catalogoResult.error) throw catalogoResult.error;
     if (ventasResult.error) throw ventasResult.error;
+    if (!this.fetchGuard.isCurrent(requestToken)) return;
 
     this._catalogo.set((catalogoResult.data as ServiceCatalog[]).map(mapCatalogDto));
     this._ventas.set(

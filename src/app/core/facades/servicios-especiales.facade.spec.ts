@@ -246,6 +246,44 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
+  describe('cambio de sede — respuestas fuera de orden (fix-441-m)', () => {
+    it('una respuesta vieja (sede anterior) no pisa a la más nueva', async () => {
+      const { facade, mockSupabase } = setup({ user: { role: 'admin', dbId: 9, branchId: null } });
+      const branch = TestBed.inject(BranchFacade) as unknown as {
+        selectedBranchId: ReturnType<typeof vi.fn>;
+      };
+
+      // special_service_sales queda pendiente hasta que el test la resuelva, en el orden que elija.
+      const pendientes: Array<(v: { data: unknown; error: null }) => void> = [];
+      const original = mockSupabase.client.from.getMockImplementation()!;
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table !== 'special_service_sales') return original(table);
+        const q: any = {
+          select: () => q,
+          order: () => q,
+          limit: () => q,
+          eq: () => q,
+          then: (res: any, rej: any) =>
+            new Promise((r) => pendientes.push(r as never)).then(res, rej),
+        };
+        return q;
+      });
+
+      branch.selectedBranchId.mockReturnValue(1);
+      const primera = facade.initialize();
+      branch.selectedBranchId.mockReturnValue(2);
+      const segunda = facade.initialize();
+      await Promise.resolve();
+
+      pendientes[1]({ data: [venta({ id: 2, branch_id: 2 })], error: null });
+      await segunda;
+      pendientes[0]({ data: [venta({ id: 1, branch_id: 1 })], error: null });
+      await primera;
+
+      expect(facade.ventas().map((v) => v.id)).toEqual([2]);
+    });
+  });
+
   describe('registrarVenta — anclaje de sede en INSERT', () => {
     it('con scope "todas las sedes" (null) ancla el INSERT a la sede propia del usuario', async () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
