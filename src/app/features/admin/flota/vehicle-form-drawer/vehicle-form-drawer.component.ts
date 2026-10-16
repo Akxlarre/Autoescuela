@@ -49,6 +49,7 @@ import {
   maxVehicleYear,
   MIN_VEHICLE_YEAR,
   normalizeLicensePlate,
+  vehicleSaveErrorMessage,
 } from '@core/utils/vehicle-form.utils';
 
 /**
@@ -590,10 +591,10 @@ export class VehicleFormDrawerComponent {
       }
       this.layoutDrawer.close();
     } catch (error) {
+      // hotfix-078-b: el error de Supabase no es un Error; antes caía siempre en el genérico.
       this.errorMsg.set(
-        error instanceof Error
-          ? this.sanitizer.sanitize(error).message
-          : 'Error al guardar el vehículo',
+        vehicleSaveErrorMessage(error, this.vehicleForm.getRawValue().license_plate ?? '') ??
+          this.sanitizer.sanitize(error).message,
       );
     } finally {
       this.isSaving.set(false);
