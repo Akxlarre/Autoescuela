@@ -1,7 +1,8 @@
 # Fix: Eliminar desde la Caja una venta de servicio especial la deja huérfana
 > id: fix-437-m-revertir-venta-servicio-desde-caja-la-borra
 > refs: fix-429-m-testing-servicios-especiales (S9, casos L08, B06, I12) · fix-024-i · fix-025-i
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause

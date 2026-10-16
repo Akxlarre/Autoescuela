@@ -1,7 +1,8 @@
 # Fix: Servicios especiales se queda con datos de otra sede al cambiarla
 > id: fix-441-m-servicios-especiales-cambio-de-sede
 > refs: fix-429-m-testing-servicios-especiales (S13, casos M03, M05)
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause

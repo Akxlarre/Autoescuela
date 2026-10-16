@@ -1,7 +1,8 @@
 # Fix: Los KPIs de Servicios especiales se congelan pasada la venta 200
 > id: fix-442-m-kpis-servicios-sin-tope-de-200
 > refs: fix-429-m-testing-servicios-especiales (S7, casos B07, I09)
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -33,4 +34,4 @@ Ninguno — fix autónomo. ACs propios:
 
 - `servicios-especiales.facade.spec.ts > KPIs — calculados en la BD, sin el tope de la lista (fix-442-m)`.
 - `supabase/tests/servicios/fix-442-m-servicios-especiales-kpis.sql` (transacción revertida).
-- Migración pendiente de aplicar (la aplica Matías).
+- Migración aplicada por Matías el 2026-10-15; test SQL re-ejecutado contra la BD real ✅.

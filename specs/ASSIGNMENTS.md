@@ -273,7 +273,6 @@
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
-| ASG-i-031 | Testing: Servicios especiales | `m` | [fix-429-m-testing-servicios-especiales](fixes/fix-429-m-testing-servicios-especiales/fix.md) | 2026-10-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -440,6 +439,7 @@
 | ASG-m-010 | El correo al alumno menciona el portal, que está deshabilitado en el piloto | [fix-393-m-no-invitar-alumno-durante-piloto](fixes/fix-393-m-no-invitar-alumno-durante-piloto/fix.md) | 2026-10-13 |
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | [fix-048-i-testing-pagos-y-descuentos](fixes/fix-048-i-testing-pagos-y-descuentos/fix.md) | 2026-10-14 |
 | ASG-i-030 | Testing: Dashboards (admin, ejecutivo y secretaria) | [fix-395-m-testing-dashboards](fixes/fix-395-m-testing-dashboards/fix.md) | 2026-10-14 |
+| ASG-i-031 | Testing: Servicios especiales | [fix-429-m-testing-servicios-especiales](fixes/fix-429-m-testing-servicios-especiales/fix.md) | 2026-10-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---

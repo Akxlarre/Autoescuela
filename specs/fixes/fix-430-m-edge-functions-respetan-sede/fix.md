@@ -1,7 +1,8 @@
 # Fix: Las funciones de exportación entregan datos de otra sede a la secretaria
 > id: fix-430-m-edge-functions-respetan-sede
 > refs: fix-429-m-testing-servicios-especiales (caso K09) · fix-043-i · spec 0047-b
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -40,5 +41,5 @@ certificados) — es alcance por id, no por sede pedida; va en su propio fix si 
   `ok` con sede (19/19 ✓, `npx deno test --node-modules-dir=none` desde `supabase/functions`).
 - `deno check` de las 7 funciones: sin errores nuevos (los `TS2345`/`TS2339` de `new Response` y
   `err?.message` son anteriores).
-- Verificación en vivo tras el deploy (pendiente: el deploy lo hace Matías): secretaria A con
+- Verificación en vivo tras el deploy (2026-10-15, ✅): secretaria A con
   `branch_id: 2` → 403; con `null` → solo sede 1; admin `null` → todas.

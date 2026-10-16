@@ -1,7 +1,8 @@
 # Fix: Testing — Servicios especiales
 > id: fix-429-m-testing-servicios-especiales
 > refs: ASG-i-031
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -96,6 +97,69 @@ cada cuenta (`sec.cjs`, `sec2.cjs` en el scratchpad).
 | K09 — secretaria A exporta la sede B | ❌ | 200 con las 4 ventas de la sede 2 (nombre y RUT); con `branch_id: null` trae las 6 de todas las sedes. La función usa la clave de servicio y confía en el `branch_id` del navegador |
 | — mismo patrón en otras funciones | ❌ | Con el token de la secretaria A y `branch_id: 2`: `generate-financial-report` (reporte contable de la sede 2), `generate-cash-closing-report` (cuadratura de la sede 2) y `export-certificates-zip` (ZIP con certificados de la sede 2) responden 200 |
 | A03 / A04 — acceso por rol | ✅ (código) | `hasRoleGuard(['admin'])` / secretaria en `app.routes.ts`; se confirma en navegador |
+
+### Verificación tras el deploy (2026-10-15)
+
+Matías aplicó las 5 migraciones y desplegó las 13 edge functions. Re-ejecutado con los tokens reales:
+secretaria A pidiendo la sede 2 → 403 en `export-special-services`, `generate-financial-report`,
+`generate-cash-closing-report`, `export-certificates-zip` y `generate-enrollment-sheet` (matrícula
+6985); con su sede o `null` → solo la suya; admin → todas. Sin `sale_ids` → 400. Los tests SQL de
+`fix-432/433/434/442` pasan contra la BD real e `service_catalog_name_unique` existe.
+
+### Bloque 2 — Navegador (2026-10-15, Playwright MCP, `ng serve`)
+
+| Caso | Res. | Evidencia |
+|---|---|---|
+| A01 / A02 | ✅ | Admin y secretaria cargan; secretaria A ve solo su sede (2 ventas). Consola y red limpias |
+| A03 | ✅ | Secretaria en `/app/admin/servicios-especiales` → redirige a su dashboard |
+| A07 | ✅ | Con `service_catalog` cortado: "No se pudieron cargar los servicios especiales." + Reintentar (`fix-435-m`) |
+| A08 | ✅ | 1440 px: el documento no scrollea |
+| B02 / B03 | ✅ | Venta de $18.000 → del mes 1→2, totales 2→3, recaudación +$18.000 sin recargar; al borrarla desde Caja vuelven a los valores previos |
+| D01 / D06 | ✅ | "  Prueba E2E Simulador " → se guarda sin espacios, una sola fila con doble clic |
+| D03 / D05 | ✅ | Solo espacios → botón deshabilitado; " PSICOTECNICO " → "Ya existe un servicio llamado…" (`fix-436-m`) |
+| D04 / G17 | ✅ | `1500.5` → aviso "sin decimales" y botón deshabilitado (`hotfix-158-m`; antes: error genérico de la BD) |
+| E07 | ✅ | El drawer de editar muestra y guarda la descripción |
+| F02 / F04 / F05 / F06 | ✅ | Borrar con ventas → "Servicio desactivado…"; Reactivar; "eliminar" deshabilita, "ELIMINAR " acepta; "Servicio eliminado definitivamente" |
+| F10 | ✅ | La venta del servicio eliminado conserva "Prueba E2E Simulador" en el Historial |
+| G02 / G05 | ✅ | "Vender" precarga "$5.000 — Prueba E2E Simulador" y el monto |
+| G09 / H02 | ✅ | Sin "Tipo de cliente"; RUT 11.111.111-1 → "Se vinculará a la ficha de Carlos Eduardo Muñoz"; venta con `student_id` 2950, notificación "Pago registrado" y fila "Servicio especial: Psicotecnico" en su ficha sin tocar el total pagado (`fix-438-m`) |
+| G11 / G12 / S11 | ✅ | `76543210` → `76.543.210-3` |
+| G15 | ✅ | Sin servicio → "Registrar Venta" deshabilitado |
+| G16 / G18 | ✅ | Monto $18.000 (base $20.000) y boleta "  777  " → guardados como 18000 y "777" |
+| H01 / H03 / H05 | ✅ | Toast "Venta registrada", una sola venta con doble clic |
+| H04 | ✅ | POST simulado con 500 → toast "No se pudo registrar la venta" y el drawer sigue abierto con los datos |
+| H06 / S3 | ✅ | Venta a las 22:57 del 15-10 (01:57 UTC del 16) → `sale_date` 2026-10-15 |
+| H09 | ✅ | `audit_log` INSERT "Registrado: Servicio Especial ($18000)", user 8 |
+| H10 | ✅ | "Cliente Externo Ñandú E2E" se guarda y muestra bien |
+| I03 | ✅ | Fechas en `DD-MM-AAAA` (`hotfix-158-m`) |
+| I10 | ✅ | Buscador: "11111111" → 2 de 7 (`fix-439-m`) |
+| I13 / O02 | ✅ | 375 px sin scroll horizontal; filtros del drawer hacen wrap (`hotfix-157-m`) |
+| J01 | ✅ | "Venta borrada" |
+| J02 | ✅ | Venta del 27-08 (caja cerrada, sede 2) → "No se puede borrar: la caja del 27-08-2026 ya está cerrada." y sigue |
+| J09 | ✅ | Trigger de `fix-432-m` en la BD real |
+| K02 / K03 / K04 / K06 / K07 | ✅ | Con búsqueda "fix-438" (1 de 2): Excel y PDF traen esa sola venta, con Fecha, Cliente, RUT, Servicio, N° boleta, Medio de pago, Monto, Sede y total; sin Estado/Pagado (`fix-440-m`). "1 ventas" → "1 venta" (`hotfix-158-m`, requiere deploy) |
+| L01 / L02 | ✅ | Caja Diaria: "777 · Servicio especial: Psicotecnico — Cliente Externo Ñandú E2E · Transf. · $18.000"; el efectivo solo suma la venta en efectivo |
+| L04 | ✅ | Reportes Contables (mes): "Psicotécnico / Servicios $20.000 · 1 operación" |
+| L06 | ✅ | Dashboard secretaria "Ingresos mes $20.000" |
+| L08 / B06 / I12 | ✅ | "Eliminar ingreso" en Caja → "Venta de servicio especial eliminada." y desaparece de Caja, KPIs e Historial (`fix-437-m`) |
+| M05 | ✅ | Secretaria multi-sede: "Todas" 7 → Conductores 4 → Autoescuela 2, sin salir de la pantalla (`fix-441-m`) |
+| M08 | ✅ | La secretaria ve solo Vender / Registrar Venta / Ver Historial (`fix-434-m`) |
+| O01 | ✅ | Modo oscuro legible (catálogo, Historial, badges) |
+
+### Observaciones (sin track)
+
+- **N01 — sin tiempo real en el módulo.** Otra sesión no ve una venta nueva hasta volver a entrar
+  (SWR). La Caja sí escucha `special_service_sales`. No se pidió tiempo real; queda como está.
+- **S12 — "Eliminando…".** El modal de eliminar definitivamente se cierra al confirmar y no muestra
+  estado de carga; el desvincular ventas + DELETE siguen siendo 2 pasos. No se pudo provocar un
+  doble borrado desde la UI (el modal se cierra).
+- **Consola:** "Borrar" un servicio con ventas registra un 409 en la consola (el DELETE que la FK
+  rechaza antes de desactivar, diseño de `fix-022-i`). No es visible para el usuario.
+- **Venta #3 sin sede** (2026-08-06, "Prueba AC-E1", `paid=false`): dato de prueba heredado. Cuenta
+  en "Todas las sedes" del admin y la ve la secretaria (filas sin sede). La restricción de
+  `fix-433-m` no la revisa (`NOT VALID`).
+- **Datos de prueba dejados:** venta "Alumno Prueba fix-438" ($20.000, sede 1, alumno 2950) y su
+  notificación. Lo demás creado en la sesión se borró desde la UI.
 
 ### Sospechas revisadas en código (2026-10-15)
 

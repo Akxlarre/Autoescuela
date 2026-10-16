@@ -1,7 +1,8 @@
 # Fix: El export del Historial de ventas no coincide con la pantalla
 > id: fix-440-m-export-ventas-igual-a-pantalla
 > refs: fix-429-m-testing-servicios-especiales (S10, casos K02, K04–K07) · fix-147-b · fix-025-i
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -46,4 +47,4 @@ ACs propios:
 - `supabase/functions/export-special-services/rows.test.ts`.
 - `servicios-especiales.facade.spec.ts > exportarHistorial — exporta lo que muestra la pantalla (fix-440-m)`.
 - `historial-ventas-drawer.component.spec.ts > exporta los ids de la lista filtrada`.
-- Requiere deploy de `export-special-services` (lo hace Matías).
+- Desplegada por Matías el 2026-10-15; Excel y PDF verificados en navegador ✅.

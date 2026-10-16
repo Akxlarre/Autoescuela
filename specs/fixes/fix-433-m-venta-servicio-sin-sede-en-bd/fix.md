@@ -1,7 +1,8 @@
 # Fix: La BD acepta una venta de servicio especial sin sede
 > id: fix-433-m-venta-servicio-sin-sede-en-bd
 > refs: fix-429-m-testing-servicios-especiales (caso H07) · fix-194-b · DG-082
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -31,4 +32,4 @@ Ninguno — fix autónomo. ACs propios:
 
 - `supabase/tests/caja/fix-433-m-venta-servicio-exige-sede.sql` — sin la migración: "FALLA"; con
   ella: "ok" (ensayado en transacción revertida).
-- Migración pendiente de aplicar (la aplica Matías).
+- Migración aplicada por Matías el 2026-10-15; test SQL re-ejecutado contra la BD real ✅.

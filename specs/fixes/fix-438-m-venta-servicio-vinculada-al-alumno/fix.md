@@ -1,7 +1,8 @@
 # Fix: Una venta de servicio a un alumno no queda vinculada a él
 > id: fix-438-m-venta-servicio-vinculada-al-alumno
 > refs: fix-429-m-testing-servicios-especiales (S8, casos H02, G07–G09) · spec 0025
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause

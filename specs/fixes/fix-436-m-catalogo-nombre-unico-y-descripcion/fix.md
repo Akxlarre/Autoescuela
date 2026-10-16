@@ -1,7 +1,8 @@
 # Fix: El catálogo acepta nombres repetidos o de solo espacios, y no deja editar la descripción
 > id: fix-436-m-catalogo-nombre-unico-y-descripcion
 > refs: fix-429-m-testing-servicios-especiales (D03, D05, E07, S16) · fix-240-m
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause

@@ -1,7 +1,8 @@
 # Fix: Servicios especiales no muestra ningún error (ni confirma la venta)
 > id: fix-435-m-servicios-especiales-errores-visibles
 > refs: fix-429-m-testing-servicios-especiales (S6, casos A07, D08, H04, H05, K12)
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause

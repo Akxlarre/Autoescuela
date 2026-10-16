@@ -1,7 +1,8 @@
 # Fix: Las funciones que reciben una matrícula la entregan aunque sea de otra sede
 > id: fix-431-m-edge-functions-por-matricula-respetan-sede
 > refs: fix-429-m-testing-servicios-especiales · fix-430-m · spec 0047-b
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -38,5 +39,5 @@ datos personales).
 
 - `supabase/functions/_shared/staff-auth.test.ts` — 3 casos de `canAccessBranch` (22/22 ✓).
 - `deno check` de las 6 funciones: sin errores nuevos.
-- Verificación en vivo tras el deploy (pendiente: el deploy lo hace Matías): secretaria A con la
+- Verificación en vivo tras el deploy (2026-10-15, ✅): secretaria A con la
   matrícula 6985 (sede 2) → 403; con una matrícula de la sede 1 → 200.

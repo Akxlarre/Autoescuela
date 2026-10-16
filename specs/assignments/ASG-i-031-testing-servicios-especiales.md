@@ -1,6 +1,6 @@
 # Asignación ASG-i-031 — Testing: Servicios especiales
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

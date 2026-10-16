@@ -1,7 +1,8 @@
 # Fix: Una venta de servicio especial se puede borrar en un día con caja cerrada
 > id: fix-432-m-ventas-servicios-caja-cerrada
 > refs: fix-429-m-testing-servicios-especiales (caso J09) · fix-044-i · fix-051-i
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -35,4 +36,4 @@ Ninguno — fix autónomo. ACs propios:
 - `supabase/tests/caja/fix-432-m-ventas-servicios-caja-cerrada.sql` — 6 casos; todos "FALLA" en
   los 4 bloqueos sin la migración, todos "ok" con ella (ensayado en transacción revertida).
 - `servicios-especiales.facade.spec.ts > fix-432-m: la BD rechaza el DELETE … muestra su mensaje`.
-- Migración pendiente de aplicar (la aplica Matías).
+- Migración aplicada por Matías el 2026-10-15; test SQL re-ejecutado contra la BD real ✅.

@@ -1,7 +1,8 @@
 # Fix: La secretaria puede cambiar el catálogo de servicios, que es común a las dos sedes
 > id: fix-434-m-catalogo-servicios-solo-admin
 > refs: fix-429-m-testing-servicios-especiales (decisión M08 / D09 / E10)
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
@@ -39,4 +40,4 @@ Ninguno — fix autónomo. ACs propios:
 
 - `servicios-especiales-content.component.spec.ts > sin permiso de catálogo nunca muestra inactivos`.
 - `supabase/tests/rls/fix-434-m-catalogo-servicios-solo-admin.sql` (transacción revertida).
-- Migración pendiente de aplicar (la aplica Matías).
+- Migración aplicada por Matías el 2026-10-15; test SQL re-ejecutado contra la BD real ✅.

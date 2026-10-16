@@ -1,7 +1,8 @@
 # Fix: El Historial de ventas no tiene buscador
 > id: fix-439-m-historial-ventas-buscador
 > refs: fix-429-m-testing-servicios-especiales (caso I10) · fix-239-m
-> status: in_progress
+> status: done
+> closed: 2026-10-15
 > created: 2026-10-15
 
 ## Root Cause
