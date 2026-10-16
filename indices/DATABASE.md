@@ -27,7 +27,7 @@
 | `branch_payroll_config` | M3 - Finanzas | `branch_id` (PK), `amount_per_hour` (INT NOT NULL def 5000, CHECK ≥ 0), `updated_at`, `updated_by` | `branch_id`→branches (PK), `updated_by`→users | Admin: CRUD (sin DELETE), Sec: R, Inst: R | ✅ Definida · `20260907120000` (spec 0014-m): tarifa CLP por hora equivalente de instructor, **global por sede** (no por instructor). Seed = 5000 por sede (= comportamiento previo hardcodeado). La consume `LiquidacionesFacade` y la Edge Function `generate-payroll-report`, resolviendo por `users.branch_id` de cada instructor. Trigger `trg_branch_payroll_config_updated_at` → `set_updated_at()`. Realtime habilitado (`ALTER PUBLICATION supabase_realtime`) — `LiquidacionesFacade` re-calcula la nómina al cambiar una tarifa. **La migración `20260907120000` también agrega `instructor_monthly_payments` e `instructor_advances` a la publicación**: nunca se habían agregado, y el canal `liquidaciones-realtime` (3 bindings) estuvo muerto desde su creación por el mecanismo de fix-227-m (un binding a tabla no publicada mata el canal entero). |
 | `standalone_courses` | M3 - Finanzas | `id`, `type`, `branch_id` (**NOT NULL** desde `20260612000001` — backfill NULL→1), `updated_at` (TIMESTAMPTZ, agregado en `20260615120000`) | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260612000001` (fix-016-m): `branch_id` obligatorio; trigger `trg_standalone_capacity` (BEFORE INSERT en enrollments, `FOR UPDATE` sobre el curso) bloquea sobreventa de cupos con `RAISE EXCEPTION 'CUPOS_AGOTADOS'` (la UI lo traduce vía `db-error.utils`). · `20260615120000`: `updated_at` añadido para soporte del cron `auto_transition_standalone_course_status`. |
 | `standalone_course_enrollments` | M3 - Finanzas | `id`, `course_id`, `payment_method` (TEXT, def 'efectivo'), `registered_by` (FK users), `discount_amount` (INT NOT NULL def 0), `discount_reason` (TEXT), `paid_at` (TIMESTAMPTZ — NULL si pendiente) | `standalone_course_id`, `student_id`, `certificate_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260417000003`: `payment_method` y `registered_by`. · `20260612000001` (fix-016-m): descuentos persistidos (`discount_amount`/`discount_reason` — el cobro es `base_price − discount_amount`) y `paid_at` (fuente de la cuadratura diaria; backfill `enrolled_at` para pagados históricos). |
-| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
+| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R (fix-434-m: catálogo común a las dos sedes, solo admin escribe) | ✅ Definida |
 | `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog (nullable, fix-024-i), `service_name` (fix-024-i), `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `document_number` (fix-025-i), `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -2070,9 +2070,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_service_catalog | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
-| insert_service_catalog | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_service_catalog | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_service_catalog | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_service_catalog | INSERT | — | `auth_user_role() = 'admin'` (fix-434-m) |
+| update_service_catalog | UPDATE | `auth_user_role() = 'admin'` (fix-434-m) | — |
+| delete_service_catalog | DELETE | `auth_user_role() = 'admin'` (fix-434-m) | — |
 
 ### `session_machinery` — 🔒 RLS
 

@@ -76,27 +76,29 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <h2 class="text-lg font-semibold text-text-primary m-0 mr-auto">Catálogo de Servicios</h2>
-          <label
-            class="flex items-center gap-2 text-xs font-medium text-text-secondary cursor-pointer select-none"
-          >
-            <input
-              type="checkbox"
-              class="w-4 h-4 rounded text-brand focus:ring-brand cursor-pointer"
-              [checked]="mostrarInactivos()"
-              (change)="mostrarInactivos.set($any($event.target).checked)"
-              data-llm-action="toggle-mostrar-inactivos"
-            />
-            Mostrar inactivos
-          </label>
-          <button
-            type="button"
-            class="btn-secondary btn-sm flex items-center gap-1.5"
-            data-llm-action="open-nuevo-servicio-drawer"
-            (click)="requestNuevoServicio.emit()"
-          >
-            <app-icon name="plus" [size]="14" />
-            Agregar servicio
-          </button>
+          @if (puedeEditarCatalogo()) {
+            <label
+              class="flex items-center gap-2 text-xs font-medium text-text-secondary cursor-pointer select-none"
+            >
+              <input
+                type="checkbox"
+                class="w-4 h-4 rounded text-brand focus:ring-brand cursor-pointer"
+                [checked]="mostrarInactivos()"
+                (change)="mostrarInactivos.set($any($event.target).checked)"
+                data-llm-action="toggle-mostrar-inactivos"
+              />
+              Mostrar inactivos
+            </label>
+            <button
+              type="button"
+              class="btn-secondary btn-sm flex items-center gap-1.5"
+              data-llm-action="open-nuevo-servicio-drawer"
+              (click)="requestNuevoServicio.emit()"
+            >
+              <app-icon name="plus" [size]="14" />
+              Agregar servicio
+            </button>
+          }
         </div>
 
         <!-- VISTA Desktop: Tabla con paginación (mismo patrón que
@@ -151,15 +153,17 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 </td>
                 <td class="pr-6 text-right">
                   <div class="inline-flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
-                      [attr.data-llm-action]="'editar-servicio-' + servicio.id"
-                      [attr.aria-label]="'Editar servicio ' + servicio.nombre"
-                      (click)="requestEditarServicio.emit(servicio)"
-                    >
-                      <app-icon name="edit" [size]="15" />
-                    </button>
+                    @if (puedeEditarCatalogo()) {
+                      <button
+                        type="button"
+                        class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
+                        [attr.data-llm-action]="'editar-servicio-' + servicio.id"
+                        [attr.aria-label]="'Editar servicio ' + servicio.nombre"
+                        (click)="requestEditarServicio.emit(servicio)"
+                      >
+                        <app-icon name="edit" [size]="15" />
+                      </button>
+                    }
                     @if (servicio.activo) {
                       <button
                         type="button"
@@ -169,15 +173,17 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       >
                         Vender
                       </button>
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
-                        [attr.data-llm-action]="'borrar-servicio-' + servicio.id"
-                        [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
-                        (click)="onBorrarServicio(servicio)"
-                      >
-                        <app-icon name="trash-2" [size]="15" />
-                      </button>
+                      @if (puedeEditarCatalogo()) {
+                        <button
+                          type="button"
+                          class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                          [attr.data-llm-action]="'borrar-servicio-' + servicio.id"
+                          [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
+                          (click)="onBorrarServicio(servicio)"
+                        >
+                          <app-icon name="trash-2" [size]="15" />
+                        </button>
+                      }
                     } @else {
                       <button
                         type="button"
@@ -203,14 +209,22 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <ng-template pTemplate="emptymessage">
               <tr>
                 <td colspan="4" class="p-0">
-                  <app-empty-state
-                    icon="receipt"
-                    message="Todavía no hay servicios en el catálogo"
-                    subtitle="Agrega un servicio para empezar a vender."
-                    actionLabel="Agregar servicio"
-                    actionIcon="plus"
-                    (action)="requestNuevoServicio.emit()"
-                  />
+                  @if (puedeEditarCatalogo()) {
+                    <app-empty-state
+                      icon="receipt"
+                      message="Todavía no hay servicios en el catálogo"
+                      subtitle="Agrega un servicio para empezar a vender."
+                      actionLabel="Agregar servicio"
+                      actionIcon="plus"
+                      (action)="requestNuevoServicio.emit()"
+                    />
+                  } @else {
+                    <app-empty-state
+                      icon="receipt"
+                      message="Todavía no hay servicios en el catálogo"
+                      subtitle="El administrador agrega los servicios que se pueden vender."
+                    />
+                  }
                 </td>
               </tr>
             </ng-template>
@@ -251,24 +265,26 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 >
                 @if (servicio.activo) {
                   <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
-                      [attr.data-llm-action]="'editar-servicio-mobile-' + servicio.id"
-                      [attr.aria-label]="'Editar servicio ' + servicio.nombre"
-                      (click)="requestEditarServicio.emit(servicio)"
-                    >
-                      <app-icon name="edit" [size]="15" />
-                    </button>
-                    <button
-                      type="button"
-                      class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
-                      [attr.data-llm-action]="'borrar-servicio-mobile-' + servicio.id"
-                      [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
-                      (click)="onBorrarServicio(servicio)"
-                    >
-                      <app-icon name="trash-2" [size]="15" />
-                    </button>
+                    @if (puedeEditarCatalogo()) {
+                      <button
+                        type="button"
+                        class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
+                        [attr.data-llm-action]="'editar-servicio-mobile-' + servicio.id"
+                        [attr.aria-label]="'Editar servicio ' + servicio.nombre"
+                        (click)="requestEditarServicio.emit(servicio)"
+                      >
+                        <app-icon name="edit" [size]="15" />
+                      </button>
+                      <button
+                        type="button"
+                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                        [attr.data-llm-action]="'borrar-servicio-mobile-' + servicio.id"
+                        [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
+                        (click)="onBorrarServicio(servicio)"
+                      >
+                        <app-icon name="trash-2" [size]="15" />
+                      </button>
+                    }
                     <button
                       type="button"
                       class="btn-secondary btn-sm"
@@ -301,14 +317,22 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               </div>
             </div>
           } @empty {
-            <app-empty-state
-              icon="receipt"
-              message="Todavía no hay servicios en el catálogo"
-              subtitle="Agrega un servicio para empezar a vender."
-              actionLabel="Agregar servicio"
-              actionIcon="plus"
-              (action)="requestNuevoServicio.emit()"
-            />
+            @if (puedeEditarCatalogo()) {
+              <app-empty-state
+                icon="receipt"
+                message="Todavía no hay servicios en el catálogo"
+                subtitle="Agrega un servicio para empezar a vender."
+                actionLabel="Agregar servicio"
+                actionIcon="plus"
+                (action)="requestNuevoServicio.emit()"
+              />
+            } @else {
+              <app-empty-state
+                icon="receipt"
+                message="Todavía no hay servicios en el catálogo"
+                subtitle="El administrador agrega los servicios que se pueden vender."
+              />
+            }
           }
         </div>
       </div>
@@ -353,6 +377,12 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly catalogo = input.required<ServicioEspecial[]>();
   readonly kpis = input.required<ServiciosEspecialesKpis>();
   readonly isLoading = input<boolean>(false);
+  /**
+   * fix-434-m — el catálogo es común a las dos sedes y solo el admin lo administra (decisión
+   * M08). En false (secretaria) se ocultan agregar, editar, borrar, reactivar, eliminar y los
+   * servicios inactivos; queda solo vender.
+   */
+  readonly puedeEditarCatalogo = input<boolean>(true);
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -375,7 +405,9 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
 
   // ── Computed ────────────────────────────────────────────────────────────────
   protected readonly serviciosVisibles = computed(() =>
-    this.mostrarInactivos() ? this.catalogo() : this.catalogo().filter((s) => s.activo),
+    this.puedeEditarCatalogo() && this.mostrarInactivos()
+      ? this.catalogo()
+      : this.catalogo().filter((s) => s.activo),
   );
 
   protected readonly mesActualLabel = computed(() => {
