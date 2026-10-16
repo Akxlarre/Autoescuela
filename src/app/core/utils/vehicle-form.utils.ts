@@ -33,3 +33,13 @@ export function isKmDecrease(savedKm: number | null, nextKm: number | null): boo
   if (savedKm === null || nextKm === null) return false;
   return nextKm < savedKm;
 }
+
+/**
+ * hotfix-078-b: mensaje para un error al guardar un vehículo que la persona puede corregir. Hoy
+ * solo la patente duplicada (`UNIQUE (license_plate)` → 23505); el resto devuelve null y lo
+ * resuelve el sanitizador.
+ */
+export function vehicleSaveErrorMessage(error: unknown, plate: string): string | null {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === '23505' ? `Ya existe un vehículo con la patente ${plate}.` : null;
+}

@@ -116,6 +116,19 @@ describe('FlotaDetalleFacade — detalle, vencimientos y KPIs (hotfix-074-b)', (
     ]);
   });
 
+  it('L12 (hotfix-079-b): un id inválido deja "Vehículo no encontrado", sin datos de otro vehículo', async () => {
+    await service.loadVehicleDetail(7);
+    expect(service.vehicle()).not.toBeNull();
+
+    service.showVehicleNotFound();
+
+    expect(service.vehicle()).toBeNull();
+    expect(service.maintenances()).toEqual([]);
+    expect(service.scheduledMaintenances()).toEqual([]);
+    expect(service.error()).toBe('Vehículo no encontrado.');
+    expect(service.isLoading()).toBe(false);
+  });
+
   it('S14: si falla el historial se informa el error, no un historial vacío', async () => {
     maintenancesResult = { data: null, error: new Error('permission denied') };
 
