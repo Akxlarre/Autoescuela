@@ -1,4 +1,5 @@
 import {
+  bothBranchesRemovalWarning,
   isKmDecrease,
   isValidLicensePlate,
   maxVehicleYear,
@@ -78,5 +79,19 @@ describe('vehicleSaveErrorMessage (hotfix-078-b)', () => {
     expect(vehicleSaveErrorMessage({ code: '42501', message: 'rls' }, 'ABCD43')).toBeNull();
     expect(vehicleSaveErrorMessage(new Error('x'), 'ABCD43')).toBeNull();
     expect(vehicleSaveErrorMessage(null, 'ABCD43')).toBeNull();
+  });
+});
+
+describe('bothBranchesRemovalWarning (hotfix-083-b, G09)', () => {
+  it('apagar "Ambas" con instructor asignado → advertencia con su nombre', () => {
+    expect(bothBranchesRemovalWarning(true, false, 'Ana Soto')).toBe(
+      'Ana Soto usa este vehículo. Si deja de ser de ambas sedes, sus horarios en la otra sede dejan de ofrecerse. ¿Confirmas el cambio?',
+    );
+  });
+
+  it('sin instructor, sin cambio o al encender "Ambas" → null', () => {
+    expect(bothBranchesRemovalWarning(true, false, null)).toBeNull();
+    expect(bothBranchesRemovalWarning(true, true, 'Ana Soto')).toBeNull();
+    expect(bothBranchesRemovalWarning(false, true, 'Ana Soto')).toBeNull();
   });
 });

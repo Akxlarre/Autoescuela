@@ -124,3 +124,41 @@ test('F05/S3: bajar el kilometraje pide confirmación; al cancelar no se guarda'
   await expect(page.getByText('Bajar el kilometraje')).toHaveCount(0);
   expect(escrituras()).toBe(0);
 });
+
+test('G09 (hotfix-083-b): quitar "Ambas" a un vehículo con instructor pide confirmación', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  const escrituras = await bloquearEscrituras(page);
+  // El primer vehículo con instructor asignado pasa a ser "Ambas" en la respuesta (sin tocar la BD).
+  let patente = '';
+  await page.route('**/rest/v1/vehicles?*vehicle_assignments*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    const conInstructor = Array.isArray(body)
+      ? body.find((v: any) => v.vehicle_assignments?.some((a: any) => a.end_date === null))
+      : null;
+    if (conInstructor) {
+      conInstructor.both_branches = true;
+      patente = conInstructor.license_plate;
+    }
+    await route.fulfill({ response, json: body });
+  });
+  await abrirFlota(page);
+  test.skip(!patente, 'Ningún vehículo tiene instructor asignado');
+
+  await page
+    .locator('[data-llm-description="input for searching vehicles by plate, brand or model"]')
+    .fill(patente);
+  await page.locator('[data-llm-action="editar-vehiculo"]').first().click();
+  await expect(page.locator('#vf-plate')).toHaveValue(patente, CARGA);
+
+  await page.locator('label[for="branch-scope-both"]').click();
+  await page.locator('[data-llm-action="save-vehicle"]').click();
+
+  const modal = page.locator('[aria-labelledby="confirm-modal-title"]');
+  await expect(modal.getByText('Quitar "Ambas sedes"')).toBeVisible();
+  await expect(modal.getByText(/sus horarios en la otra sede dejan de ofrecerse/)).toBeVisible();
+  await modal.getByRole('button', { name: 'Cancelar' }).click();
+  expect(escrituras()).toBe(0);
+});

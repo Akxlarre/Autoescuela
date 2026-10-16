@@ -44,6 +44,7 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import {
+  bothBranchesRemovalWarning,
   isKmDecrease,
   isValidLicensePlate,
   maxVehicleYear,
@@ -385,6 +386,8 @@ export class VehicleFormDrawerComponent {
   /** Patente y kilometraje guardados del vehículo en edición (null al crear). */
   private savedPlate: string | null = null;
   private savedKm: number | null = null;
+  private savedBothBranches = false;
+  private savedInstructorName: string | null = null;
 
   // ── Estado ────────────────────────────────────────────────────────────────
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
@@ -514,6 +517,10 @@ export class VehicleFormDrawerComponent {
           this.loadedVehicleId = id;
           this.savedPlate = vehicle.licensePlate;
           this.savedKm = vehicle.currentKm;
+          this.savedBothBranches = vehicle.bothBranches;
+          this.savedInstructorName = vehicle.instructorId
+            ? (vehicle.instructorName ?? 'El instructor asignado')
+            : null;
           this.vehicleForm.patchValue({
             license_plate: vehicle.licensePlate,
             brand: vehicle.brand,
@@ -529,6 +536,8 @@ export class VehicleFormDrawerComponent {
         this.loadedVehicleId = null;
         this.savedPlate = null;
         this.savedKm = null;
+        this.savedBothBranches = false;
+        this.savedInstructorName = null;
         this.vehicleForm.reset({
           year: chileYear(),
           status: 'available',
@@ -568,6 +577,25 @@ export class VehicleFormDrawerComponent {
         title: 'Bajar el kilometraje',
         message: `El kilometraje registrado es ${this.savedKm} km y vas a guardar ${nextKm} km. ¿Confirmas la corrección?`,
         confirmLabel: 'Sí, corregir',
+        cancelLabel: 'Cancelar',
+        severity: 'warn',
+      });
+      if (!confirmed) return;
+    }
+
+    // Decisión del owner (G09): apagar "Ambas" con instructor asignado se confirma.
+    const bothWarning = this.vehicleId()
+      ? bothBranchesRemovalWarning(
+          this.savedBothBranches,
+          !!this.vehicleForm.getRawValue().both_branches,
+          this.savedInstructorName,
+        )
+      : null;
+    if (bothWarning) {
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Quitar "Ambas sedes"',
+        message: bothWarning,
+        confirmLabel: 'Sí, quitar',
         cancelLabel: 'Cancelar',
         severity: 'warn',
       });

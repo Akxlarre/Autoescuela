@@ -43,3 +43,17 @@ export function vehicleSaveErrorMessage(error: unknown, plate: string): string |
   const code = (error as { code?: unknown } | null)?.code;
   return code === '23505' ? `Ya existe un vehículo con la patente ${plate}.` : null;
 }
+
+/**
+ * hotfix-083-b (G09): apagar "Ambas sedes" en un vehículo con instructor asignado le quita los
+ * horarios en la otra sede (la vista de disponibilidad exige que el vehículo cubra la sede del
+ * turno). Devuelve el texto de la confirmación, o null si no hace falta pedirla.
+ */
+export function bothBranchesRemovalWarning(
+  savedBothBranches: boolean,
+  nextBothBranches: boolean,
+  instructorName: string | null,
+): string | null {
+  if (!savedBothBranches || nextBothBranches || !instructorName) return null;
+  return `${instructorName} usa este vehículo. Si deja de ser de ambas sedes, sus horarios en la otra sede dejan de ofrecerse. ¿Confirmas el cambio?`;
+}
