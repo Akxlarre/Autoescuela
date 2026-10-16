@@ -151,6 +151,28 @@ describe('RegistrarEgresoDrawerComponent', () => {
     );
   });
 
+  it('O03 (hotfix-084-b): combustible de un vehículo "Ambas" queda en la caja de quien registra', async () => {
+    const { component, registrarEgreso } = createComponent({
+      preset: 'combustible',
+      user: { role: 'secretary', branchId: 2, canAccessBothBranches: false },
+      vehicles: [
+        {
+          id: 5,
+          brand: 'Kia',
+          model: 'Rio',
+          licensePlate: 'AA-11',
+          branchId: 1,
+          bothBranches: true,
+        },
+      ],
+    });
+    component['form'].patchValue({ monto: 20_000, descripcion: 'Carga bencina', vehiculoId: 5 });
+    await component['onSubmit']();
+    expect(registrarEgreso).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: 'combustible', vehiculoId: 5, branchId: 2 }),
+    );
+  });
+
   // ─── AC-4: Gastos Varios exige sede ───────────────────────────────────────
   it('gasto con admin en "Todas las sedes": el form es inválido hasta elegir sede', () => {
     const { component } = createComponent({ selectedBranchId: null });
