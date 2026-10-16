@@ -549,3 +549,25 @@ test('S02: en 375 px se ven tarjetas y no hay scroll horizontal', async ({ pageA
   );
   expect(desborde).toBeLessThanOrEqual(0);
 });
+
+test('P03 (hotfix-085-b): el encabezado de la Hoja de Ruta es la sede del vehículo', async () => {
+  const sb = await getAdminClient();
+  const { data: sedes } = await sb.from('branches').select('id, name').order('id');
+  const todos = await vehiculos();
+  for (const sede of sedes ?? []) {
+    const v = todos.find((x) => x.branch_id === sede.id && !x.both_branches);
+    if (!v) continue;
+    const { data, error } = await sb.functions.invoke('generate-route-sheet-pdf', {
+      body: { vehicle_id: v.id },
+    });
+    expect(error, `sede ${sede.name}`).toBeNull();
+    const pdf = Buffer.from(await (data as Blob).arrayBuffer()).toString('latin1');
+    // Hasta antes de la tilde: el PDF escapa los caracteres fuera de ASCII.
+    const encabezado = sede.name.toLocaleUpperCase('es-CL').split(/[ÁÉÍÓÚÑ]/)[0];
+    expect(pdf, `sede ${sede.name}`).toContain(`(${encabezado}`);
+    for (const otra of (sedes ?? []).filter((s) => s.id !== sede.id)) {
+      const ajeno = otra.name.toLocaleUpperCase('es-CL').split(/[ÁÉÍÓÚÑ]/)[0];
+      expect(pdf, `sede ${sede.name}`).not.toContain(`(${ajeno}`);
+    }
+  }
+});

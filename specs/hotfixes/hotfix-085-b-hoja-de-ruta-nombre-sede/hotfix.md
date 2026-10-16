@@ -1,7 +1,7 @@
 # Hotfix: la Hoja de Ruta lleva el nombre de la sede del vehículo
 > id: hotfix-085-b-hoja-de-ruta-nombre-sede
 > refs: ASG-i-032 (checklist 032, P03; decisión del owner 2026-10-16)
-> status: open
+> status: closed
 > created: 2026-10-16
 
 ## Problema
@@ -15,4 +15,4 @@ nombre de la sede del vehículo.
   "AUTOESCUELA"). El campo "Sede:" no cambia ("Ambas" para los de ambas sedes).
 
 ## Verificación
-- [ ] Deploy (requiere aprobación del owner) y PDF generado para un vehículo de cada sede.
+- [x] Deploy v4 (aprobado por el owner, verify_jwt sin cambios) y PDF generado para un vehículo de cada sede (e2e P03 en `flota-checklist.spec.ts`).
