@@ -94,7 +94,7 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 
 ## Estado al 2026-10-16 (revisión contra `main` y producción)
 
-`e2e/agenda.spec.ts`: **29/29 en verde** (el único `knownBug` que queda es S3).
+`e2e/agenda.spec.ts`: **29/29 en verde, sin ningún `knownBug`** (tras fix-227-b y fix-228-b).
 
 | # | Estado hoy | Cómo se resolvió |
 |---|---|---|
@@ -105,7 +105,11 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 | S20 | ✅ Corregido | `fix-224-b` + `fix-226-b`: un vehículo en Mantenimiento o Fuera de servicio no ofrece horarios |
 | Otro (tope por día) | ✅ Resuelto | la app lee `courses.max_classes_per_day` (= 1 en los 6 cursos B); ya no aplica un tope 2 propio |
 | S6 | ✅ Resuelto | `fix-196-b`: el choque se calcula en `class_b_slot_occupied()` SECURITY DEFINER, sin la RLS de quien lee |
-| **H4 / S19** | ❌ **Vigente (latente)** | simulado en una transacción: un instructor + vehículo "Ambas" genera **65 horarios duplicados en 7 días** (una fila por sede con el mismo bloque). Hoy no hay ningún instructor ni vehículo "Ambas" → no se ve en el piloto |
-| **S2** | ❓ Decisión | la vista no filtra los bloques de hoy que ya pasaron (no se pudo ver a las 07:53: el primero es 08:30) |
-| **S3** | ❓ Decisión | la vista genera 28 días (hoy: hasta el 13-nov) y la Agenda deja navegar 3 meses (`AgendaSettingsService`); desde la semana 5 no hay "Disponible" |
+| H4 / S19 | ✅ Corregido (`fix-227-b`, #295) | simulado en una transacción: un instructor + vehículo "Ambas" genera **65 horarios duplicados en 7 días** (una fila por sede con el mismo bloque). Hoy no hay ningún instructor ni vehículo "Ambas" → no se ve en el piloto |
+| S2 | ✅ Corregido (`fix-228-b`, #296) — decisión: no ofrecer bloques ya empezados (había 34 al aplicarlo) | la vista no filtra los bloques de hoy que ya pasaron (no se pudo ver a las 07:53: el primero es 08:30) |
+| S3 | ✅ Corregido (`fix-228-b`, #296) — decisión: la vista cubre hoy + 4 meses (C06 ya no es `knownBug`) | la vista genera 28 días (hoy: hasta el 13-nov) y la Agenda deja navegar 3 meses (`AgendaSettingsService`); desde la semana 5 no hay "Disponible" |
 | S16, S17 | backlog | sin cambios (sin efecto de cara al usuario en el piloto) |
+
+**Regresión encontrada y corregida el mismo día:** `fix-226-b` (#293) — la función nueva de
+`fix-224-b` no tenía `GRANT EXECUTE` para `authenticated` y la vista (security_invoker) fallaba con
+sesión de admin/secretaria desde el 15-oct: Agenda y elección de horarios caídas ~1 día.
