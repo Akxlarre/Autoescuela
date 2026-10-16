@@ -21,7 +21,8 @@
       "args": [
         "-y",
         "@playwright/mcp@latest",
-        "--isolated"
+        "--isolated",
+        "--output-dir=.playwright-mcp"
       ]
     }
   }
