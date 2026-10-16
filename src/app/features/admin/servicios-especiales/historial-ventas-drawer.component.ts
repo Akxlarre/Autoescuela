@@ -99,7 +99,8 @@ import {
               data-llm-description="search sales history by client name, RUT or receipt number"
             />
           </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <!-- hotfix-157-m: con wrap, "Limpiar filtros" no sale de la card en un drawer angosto -->
+          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
             <p-select
               [ngModel]="filtroServicio()"
               (ngModelChange)="onFiltroServicioChange($event)"
@@ -107,6 +108,7 @@ import {
               optionLabel="label"
               optionValue="value"
               placeholder="Todos los servicios"
+              class="sm:flex-1 sm:min-w-48"
               styleClass="w-full"
               data-llm-description="filter ventas by service"
             />
