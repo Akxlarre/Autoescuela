@@ -9,7 +9,7 @@
  * La Agenda es de solo lectura: estos tests no agendan nada desde la UI. Los que necesitan clases
  * (E02, E03, E04) siembran un alumno E2E- con 2 clases la semana siguiente y las borran al final.
  */
-import { expect, knownBug, test, watchErrors, type Cleanup } from './support/fixtures';
+import { expect, test, watchErrors, type Cleanup } from './support/fixtures';
 import { createE2eAlumno } from './support/alumnos-seed';
 import { getAdminClient } from './support/supabase-admin';
 import type { Page } from '@playwright/test';
@@ -286,7 +286,6 @@ test.describe('C. Navegación de semanas', () => {
   test('C06: dentro del límite, la semana 6 todavía ofrece horarios "Disponible" (S3)', async ({
     pageAs,
   }) => {
-    knownBug('S3 (fix-186-b) — la vista solo genera 28 días');
     const page = await pageAs('admin');
     await openAgenda(page, 'admin');
     await selectInstructor(page, SEDE1_INSTRUCTOR);
