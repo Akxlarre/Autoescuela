@@ -50,7 +50,7 @@
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
-| `src/app/core/utils/date.utils.ts` | `todayIso`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
+| `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
 | `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/deudor-label.utils.ts` | `describeMatriculaDeudor` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
@@ -74,6 +74,7 @@
 | `src/app/core/utils/file-download.utils.ts` | `downloadBlob` |
 | `src/app/core/utils/filter-options.utils.ts` | `withAllOption` |
 | `src/app/core/utils/focus-trap.utils.ts` | `focusableWithin`, `initialFocusTarget`, `trapTabTarget` |
+| `src/app/core/utils/fuel-expense-branch.utils.ts` | `resolveFuelExpenseBranch` |
 | `src/app/core/utils/gradebook-stats.ts` | `GradebookStats`, `countModulosCompletos`, `isFilaCompleta`, `computeGradebookStats` |
 | `src/app/core/utils/hourly-rate.utils.ts` | `isValidHourlyRate` |
 | `src/app/core/utils/html.utils.ts` | `escapeHtml` |
@@ -96,6 +97,7 @@
 | `src/app/core/utils/line-chart.utils.ts` | `niceMax`, `niceTickCount`, `yTicks`, `pointY`, `pointX`, `buildLinePath`, `formatCompactNumber` |
 | `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassAgendaSlot`, `liveClassToAgendaSlot`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
+| `src/app/core/utils/maintenance-format.utils.ts` | `formatKm`, `servicesLabel` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier`, `KM_SUSPICIOUS_DELTA`, `kmWarning` |
@@ -123,7 +125,7 @@
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch`, `matchesSearchTokens`, `filterBySearchTokens` |
 | `src/app/core/utils/search-intents.ts` | `INTENT_ENTRIES`, `getActionResults` |
 | `src/app/core/utils/sede-theme.utils.ts` | `SedeTheme`, `DEFAULT_SEDE_THEME`, `branchIdToTheme` |
-| `src/app/core/utils/servicios-especiales.utils.ts` | `buscarServicioDuplicado`, `mensajeServicioDuplicado`, `noSoloEspacios` |
+| `src/app/core/utils/servicios-especiales.utils.ts` | `buscarServicioDuplicado`, `mensajeServicioDuplicado`, `noSoloEspacios`, `montoEntero` |
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
 | `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
@@ -134,9 +136,9 @@
 | `src/app/core/utils/vehicle-agenda.utils.ts` | `AgendaClassInput`, `AgendaMaintenanceInput`, `buildVehicleAgenda` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
 | `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
-| `src/app/core/utils/vehicle-form.utils.ts` | `MIN_VEHICLE_YEAR`, `normalizeLicensePlate`, `isValidLicensePlate`, `maxVehicleYear`, `isKmDecrease` |
+| `src/app/core/utils/vehicle-form.utils.ts` | `MIN_VEHICLE_YEAR`, `normalizeLicensePlate`, `isValidLicensePlate`, `maxVehicleYear`, `isKmDecrease`, `vehicleSaveErrorMessage`, `bothBranchesRemovalWarning` |
 | `src/app/core/utils/vehicle-permissions.utils.ts` | `VehicleActor`, `VehicleScope`, `canManageVehicle`, `canViewVehicle` |
 | `src/app/core/utils/vehicle-search.utils.ts` | `VehicleSearchable`, `matchesVehicleSearch` |
-| `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
+| `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus`, `isVehicleOperational` |
 
 <!-- AUTO-GENERATED:END -->

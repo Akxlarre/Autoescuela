@@ -2509,7 +2509,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261009121000_time_fix_business_day_objects.sql` |
+| `v_class_b_schedule_availability` | `20261015120000_fix224_vehiculo_no_operativo_sin_turnos.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2617,6 +2617,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `user_complete_first_login` | `()` |
 | `users_guard_secretary_write` | `()` |
 | `validate_website_config_courses_fk` | `()` |
+| `vehicle_document_type_label` | `(p_type text)` |
+| `vehicle_is_operational` | `(p_status text)` |
 | `verify_class_b_certificate_enablement` | `()` |
 | `verify_professional_certificate_enablement` | `()` |
 
