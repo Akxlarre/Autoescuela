@@ -1,3 +1,4 @@
+import { FormControl } from '@angular/forms';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildDayLabel,
@@ -5,6 +6,7 @@ import {
   formatDayMonthYear,
   isoToDate,
   monthsAgoIso,
+  notAfterTodayValidator,
   to24hTime,
   todayIso,
 } from './date.utils';
@@ -94,5 +96,23 @@ describe('isoToDate', () => {
     const d = isoToDate('1920-01-01');
     expect(d).not.toBeNull();
     expect(d!.getFullYear()).toBe(1920);
+  });
+});
+
+describe('notAfterTodayValidator (hotfix-082-b)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('rechaza mañana y acepta hoy y ayer, con el hoy de Chile', () => {
+    // 2026-10-07 02:30 UTC = 23:30 del 6 en Chile.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-07T02:30:00.000Z'));
+    expect(notAfterTodayValidator(new FormControl('2026-10-07'))).toEqual({ afterToday: true });
+    expect(notAfterTodayValidator(new FormControl('2026-10-06'))).toBeNull();
+    expect(notAfterTodayValidator(new FormControl('2026-10-05'))).toBeNull();
+  });
+
+  it('vacío es válido (lo cubre required)', () => {
+    expect(notAfterTodayValidator(new FormControl(''))).toBeNull();
+    expect(notAfterTodayValidator(new FormControl(null))).toBeNull();
   });
 });
