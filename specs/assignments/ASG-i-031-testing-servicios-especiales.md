@@ -1,14 +1,14 @@
 # Asignación ASG-i-031 — Testing: Servicios especiales
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-15
+> **resulting_track:** fix-429-m-testing-servicios-especiales
 
 ---
 

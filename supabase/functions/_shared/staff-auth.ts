@@ -11,7 +11,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 export type StaffRole = 'admin' | 'secretary';
 
 export type StaffAccess =
-  | { ok: true; userId: number; role: StaffRole }
+  | {
+      ok: true;
+      userId: number;
+      role: StaffRole;
+      /** `users.branch_id`: sede propia (null en el admin). */
+      branchId: number | null;
+      /** `users.can_access_both_branches`: grant multi-sede de la secretaria. */
+      canAccessBothBranches: boolean;
+    }
   | { ok: false; status: 401 | 403 | 500; error: string };
 
 export interface StaffAccessInput {
@@ -21,6 +29,10 @@ export interface StaffAccessInput {
   dbUserId: number | null;
   /** `roles.name` del usuario, o null si no tiene. */
   roleName: string | null;
+  /** `users.branch_id`. */
+  branchId?: number | null;
+  /** `users.can_access_both_branches`. */
+  canAccessBothBranches?: boolean;
 }
 
 const NOT_AUTHENTICATED = 'No autorizado';
@@ -37,7 +49,38 @@ export function decideStaffAccess(
   if (input.dbUserId === null || !role || !(allowed as readonly string[]).includes(role)) {
     return { ok: false, status: 403, error: FORBIDDEN };
   }
-  return { ok: true, userId: input.dbUserId, role: role as StaffRole };
+  return {
+    ok: true,
+    userId: input.dbUserId,
+    role: role as StaffRole,
+    branchId: input.branchId ?? null,
+    canAccessBothBranches: input.canAccessBothBranches ?? false,
+  };
+}
+
+export type BranchScope =
+  | { ok: true; branchId: number | null }
+  | { ok: false; status: 403; error: string };
+
+/**
+ * Sede que puede consultar quien llama (fix-430-m). Las funciones que exportan listados usan la
+ * clave de servicio (saltan RLS), así que la sede pedida en el body se valida aquí, con la misma
+ * regla que la RLS por sede (spec 0047-b):
+ *   - admin o secretaria con grant multi-sede → la sede pedida; null = todas.
+ *   - secretaria sin grant → solo la suya; sin sede pedida se acota a la suya (nunca todas).
+ * Núcleo funcional: sin I/O.
+ */
+export function resolveBranchScope(
+  access: { role: StaffRole; branchId: number | null; canAccessBothBranches: boolean },
+  requested: unknown,
+): BranchScope {
+  const pedida = typeof requested === 'number' && Number.isInteger(requested) ? requested : null;
+  if (access.role === 'admin' || access.canAccessBothBranches) return { ok: true, branchId: pedida };
+
+  if (access.branchId === null || (pedida !== null && pedida !== access.branchId)) {
+    return { ok: false, status: 403, error: FORBIDDEN };
+  }
+  return { ok: true, branchId: access.branchId };
 }
 
 /**
@@ -64,7 +107,7 @@ export async function requireStaff(
   const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const { data: row, error: rowError } = await serviceClient
     .from('users')
-    .select('id, roles ( name )')
+    .select('id, branch_id, can_access_both_branches, roles ( name )')
     .eq('supabase_uid', authData.user.id)
     .maybeSingle();
   if (rowError) return { ok: false, status: 500, error: 'No se pudo verificar los permisos' };
@@ -75,10 +118,62 @@ export async function requireStaff(
     (Array.isArray(roles) ? (roles[0] as { name?: string } | undefined)?.name : (roles as { name?: string } | null)?.name) ??
     null;
 
+  const user = row as {
+    id?: number;
+    branch_id?: number | null;
+    can_access_both_branches?: boolean | null;
+  } | null;
   return decideStaffAccess(
-    { authUserId: authData.user.id, dbUserId: (row as { id?: number } | null)?.id ?? null, roleName },
+    {
+      authUserId: authData.user.id,
+      dbUserId: user?.id ?? null,
+      roleName,
+      branchId: user?.branch_id ?? null,
+      canAccessBothBranches: user?.can_access_both_branches === true,
+    },
     allowed,
   );
+}
+
+/**
+ * ¿Quien llama puede ver una fila de esta sede? (fix-431-m). Misma regla que la RLS por sede
+ * (spec 0047-b): admin y grant multi-sede ven todo; la secretaria, su sede y las filas sin sede.
+ * Núcleo funcional: sin I/O.
+ */
+export function canAccessBranch(
+  access: { role: StaffRole; branchId: number | null; canAccessBothBranches: boolean },
+  rowBranchId: number | null,
+): boolean {
+  if (access.role === 'admin' || access.canAccessBothBranches) return true;
+  return rowBranchId === null || rowBranchId === access.branchId;
+}
+
+/**
+ * Rechazo si la matrícula es de una sede que quien llama no puede ver; null si puede (o si la
+ * matrícula no existe: el 404 lo da la función). Para funciones que reciben un `enrollment_id` y
+ * leen con la clave de servicio.
+ */
+export async function denyIfEnrollmentOutOfScope(
+  access: { role: StaffRole; branchId: number | null; canAccessBothBranches: boolean },
+  enrollmentId: number,
+): Promise<{ status: 403 | 500; error: string } | null> {
+  if (access.role === 'admin' || access.canAccessBothBranches) return null;
+
+  const serviceClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+  const { data, error } = await serviceClient
+    .from('enrollments')
+    .select('branch_id')
+    .eq('id', enrollmentId)
+    .maybeSingle();
+  if (error) return { status: 500, error: 'No se pudo verificar los permisos' };
+  if (!data) return null;
+
+  return canAccessBranch(access, (data as { branch_id: number | null }).branch_id)
+    ? null
+    : { status: 403, error: FORBIDDEN };
 }
 
 /** Respuesta de rechazo con el formato `{ "error": "..." }` que lee el cliente (DG-085). */

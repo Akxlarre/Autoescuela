@@ -326,7 +326,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 445 | `#38bdf8` |
-| `--text-muted` | 381 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 383 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--state-error` | 247 | `#f87171` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
@@ -356,7 +356,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
 | `.micro-label` | 195 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 192 | `src/styles/tokens/_variables.scss` |
+| `.item-title` | 194 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |

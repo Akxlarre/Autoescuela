@@ -66,7 +66,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
             </div>
           }
 
-          @for (pago of pagos(); track pago.id) {
+          @for (pago of pagos(); track (pago.servicioEspecial ? 's' : 'p') + pago.id) {
             <div
               class="flex flex-col gap-1.5 p-3 rounded-xl bg-elevated/50 border border-border-subtle shadow-sm transition-all hover:bg-elevated"
             >

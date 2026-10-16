@@ -4,11 +4,13 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { montoEntero, noSoloEspacios } from '@core/utils/servicios-especiales.utils';
 
 /**
- * EditarServicioDrawerComponent — Editar nombre/precio/estado de un servicio existente
+ * EditarServicioDrawerComponent — Editar nombre/descripción/precio/estado de un servicio existente
  * (fix-240-m). Antes solo existían altas (`app-agregar-servicio-drawer`) y bajas
  * (`borrarServicio`/`reactivarServicio`) — no había forma de corregir un servicio ya creado.
  * Self-sufficient (mismo espíritu que `HistorialVentasDrawerComponent`): inyecta
@@ -42,6 +44,21 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           />
         </div>
 
+        <!-- fix-436-m (decisión E07): la descripción también se edita -->
+        <div class="flex flex-col gap-1.5">
+          <label class="micro-label" for="es-descripcion">
+            Descripción <span class="text-error">*</span>
+          </label>
+          <textarea
+            id="es-descripcion"
+            formControlName="descripcion"
+            rows="4"
+            placeholder="Describe brevemente en qué consiste el servicio..."
+            class="w-full px-3 py-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all resize-none"
+            data-llm-description="input for the special service description"
+          ></textarea>
+        </div>
+
         <div class="flex flex-col gap-1.5">
           <label class="micro-label" for="es-precio">
             Precio Base ($) <span class="text-error">*</span>
@@ -57,6 +74,10 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               data-llm-description="input for the special service base price"
             />
           </div>
+          <!-- hotfix-158-m: las columnas de monto son enteras -->
+          @if (servicioForm.controls.precio.hasError('montoEntero')) {
+            <span class="text-xs text-error">Ingresa el monto en pesos, sin decimales.</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -106,6 +127,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 export class EditarServicioDrawerComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly toast = inject(ToastService);
 
   protected readonly isSaving = signal(false);
 
@@ -117,10 +139,15 @@ export class EditarServicioDrawerComponent {
   private readonly servicio = this.facade.servicioAEditar();
 
   protected readonly servicioForm = new FormGroup({
-    nombre: new FormControl(this.servicio?.nombre ?? '', Validators.required),
+    nombre: new FormControl(this.servicio?.nombre ?? '', [Validators.required, noSoloEspacios]),
+    descripcion: new FormControl(this.servicio?.descripcion ?? '', [
+      Validators.required,
+      noSoloEspacios,
+    ]),
     precio: new FormControl<number>(this.servicio?.precio ?? 0, [
       Validators.required,
       Validators.min(1),
+      montoEntero,
     ]),
     activo: new FormControl<boolean>(this.servicio?.activo ?? true, { nonNullable: true }),
   });
@@ -133,13 +160,18 @@ export class EditarServicioDrawerComponent {
 
     const success = await this.facade.editarServicio(this.servicio.id, {
       nombre: val.nombre!,
+      descripcion: val.descripcion!,
       precio: val.precio!,
       activo: val.activo!,
     });
 
     this.isSaving.set(false);
+    // fix-435-m: nunca fallar en silencio.
     if (success) {
+      this.toast.success('Servicio actualizado');
       this.drawer.close();
+    } else {
+      this.toast.error('No se pudo guardar el servicio', this.facade.error() ?? undefined);
     }
   }
 }

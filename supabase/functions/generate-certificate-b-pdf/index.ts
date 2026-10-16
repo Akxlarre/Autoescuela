@@ -30,7 +30,11 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -92,6 +96,10 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
+
+    // fix-431-m: la matrícula tiene que ser de una sede que quien llama puede ver.
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     // 0. Obtener user_id interno del caller (para auditoría) + su rol (para el bypass admin del gate H-025)
     let callerUserId: number | null = null;

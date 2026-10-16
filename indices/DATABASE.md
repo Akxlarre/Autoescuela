@@ -27,7 +27,7 @@
 | `branch_payroll_config` | M3 - Finanzas | `branch_id` (PK), `amount_per_hour` (INT NOT NULL def 5000, CHECK ≥ 0), `updated_at`, `updated_by` | `branch_id`→branches (PK), `updated_by`→users | Admin: CRUD (sin DELETE), Sec: R, Inst: R | ✅ Definida · `20260907120000` (spec 0014-m): tarifa CLP por hora equivalente de instructor, **global por sede** (no por instructor). Seed = 5000 por sede (= comportamiento previo hardcodeado). La consume `LiquidacionesFacade` y la Edge Function `generate-payroll-report`, resolviendo por `users.branch_id` de cada instructor. Trigger `trg_branch_payroll_config_updated_at` → `set_updated_at()`. Realtime habilitado (`ALTER PUBLICATION supabase_realtime`) — `LiquidacionesFacade` re-calcula la nómina al cambiar una tarifa. **La migración `20260907120000` también agrega `instructor_monthly_payments` e `instructor_advances` a la publicación**: nunca se habían agregado, y el canal `liquidaciones-realtime` (3 bindings) estuvo muerto desde su creación por el mecanismo de fix-227-m (un binding a tabla no publicada mata el canal entero). |
 | `standalone_courses` | M3 - Finanzas | `id`, `type`, `branch_id` (**NOT NULL** desde `20260612000001` — backfill NULL→1), `updated_at` (TIMESTAMPTZ, agregado en `20260615120000`) | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260612000001` (fix-016-m): `branch_id` obligatorio; trigger `trg_standalone_capacity` (BEFORE INSERT en enrollments, `FOR UPDATE` sobre el curso) bloquea sobreventa de cupos con `RAISE EXCEPTION 'CUPOS_AGOTADOS'` (la UI lo traduce vía `db-error.utils`). · `20260615120000`: `updated_at` añadido para soporte del cron `auto_transition_standalone_course_status`. |
 | `standalone_course_enrollments` | M3 - Finanzas | `id`, `course_id`, `payment_method` (TEXT, def 'efectivo'), `registered_by` (FK users), `discount_amount` (INT NOT NULL def 0), `discount_reason` (TEXT), `paid_at` (TIMESTAMPTZ — NULL si pendiente) | `standalone_course_id`, `student_id`, `certificate_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida · `20260417000003`: `payment_method` y `registered_by`. · `20260612000001` (fix-016-m): descuentos persistidos (`discount_amount`/`discount_reason` — el cobro es `base_price − discount_amount`) y `paid_at` (fuente de la cuadratura diaria; backfill `enrolled_at` para pagados históricos). |
-| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
+| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R (fix-434-m: catálogo común a las dos sedes, solo admin escribe) | ✅ Definida — índice único `service_catalog_name_unique` sobre el nombre normalizado (fix-436-m) |
 | `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog (nullable, fix-024-i), `service_name` (fix-024-i), `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `document_number` (fix-025-i), `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -149,6 +149,8 @@
 | `guard_movimiento_caja_cerrada()` | `20261010121000` (fix-044-i) | Trigger `BEFORE DELETE` en `payments`, `expenses`, `instructor_advances` | Rechaza con `CAJA_CERRADA` el borrado de un movimiento cuya fecha tiene un `cash_closings` `closed` en su sede (pago → `enrollments.branch_id`; anticipo → sede del usuario del instructor). Excepción: pagos de matrículas `draft` (los borra `cleanup_expired_drafts`). `SECURITY DEFINER` porque la secretaria solo ve 2 días de cierres por RLS. Corrección de un día cerrado: `cuadratura_adjustments`. |
 | `guard_pago_en_caja_cerrada()` | `20261015120000` (fix-051-i) | Trigger `BEFORE INSERT` en `payments` (`trg_payments_insert_caja_cerrada`) | Rechaza (P0001, mensaje en español que `ErrorSanitizerService` muestra tal cual) un pago con `payment_date` de un día cuyo `cash_closings` de la sede (vía `enrollments.branch_id`) está `closed` — **también hoy** si ya se cerró (decisión de negocio 2026-10-15). No aplica a pagos sin fecha (`pending`) ni a INSERT sin usuario de sesión (`auth.uid()` NULL: pago online por edge function con `service_role`). `SECURITY DEFINER`. |
 | `guard_cierre_definitivo()` | `20261010121000` (fix-044-i) | Trigger `BEFORE UPDATE OR DELETE` en `cash_closings` | Un cierre `status = 'closed'` no se modifica ni se borra (`CIERRE_DEFINITIVO`), tampoco por admin; cubre el `upsert` de una pestaña vieja. Un `draft` sí pasa a `closed`. Corregir datos a mano exige desactivar el trigger en la migración que lo haga. |
+| `servicios_especiales_kpis(p_branch_id INT DEFAULT NULL)` | `20261015170000` (fix-442-m) | RPC llamada por `ServiciosEspecialesFacade.fetchData()` | Devuelve una fila con `ventas_mes`, `ventas_totales`, `recaudacion_mes`, `recaudacion_total`, `ventas_cobradas`, `pendiente_cobro` sobre todas las ventas de `special_service_sales` (sin el tope de la lista). Mes = mes de `chile_today()`. `SECURITY INVOKER`: la RLS acota a lo que ve quien llama. Test: `supabase/tests/servicios/fix-442-m-servicios-especiales-kpis.sql`. |
+| `guard_venta_servicio_caja_cerrada()` | `20261015130000` (fix-432-m) | Trigger `BEFORE INSERT/UPDATE/DELETE` en `special_service_sales` (`trg_special_service_sales_caja_cerrada`) | Rechaza (P0001, mensaje en español) registrar, modificar o borrar una venta de servicio especial cuya `sale_date` tiene un `cash_closings` `closed` en su `branch_id` (en UPDATE revisa el día de antes y el de después). Antes el candado de "Borrar venta" vivía solo en el navegador. `SECURITY DEFINER`. Test: `supabase/tests/caja/fix-432-m-ventas-servicios-caja-cerrada.sql`. |
 | `log_change()` | `20260301000008` → `20260323100000` → `20260323120000` → `20260323130000` → `20260614201000` → `20260801120000` → `20260801140000` → `20260802120000` → `20260802130000` → `20260802150000` → `20260802160000` → `20260805090000` → `20260809100000` → **`20261007150000`** | Trigger AFTER INSERT/UPDATE/DELETE en 23 tablas (16 de `20260323110000` + 3 de `20260614160000` + `instructors`/`vehicle_assignments`/`branch_payroll_config` de `20261007150000`) | Registra operaciones en `audit_log`. **Evolución:** (1) Original: `user_id=NULL`, detalle genérico. (2) `20260323100000`: captura `user_id` via `auth.uid()`. (3) `20260323120000`: resuelve `user_id` desde header HTTP `x-audit-user-id` con fallback a `auth.uid()`. (4) `20260323130000`: diff legible en español (`[Nombre Entidad] Etiqueta: antes → después`), etiquetas en español con fallback `initcap(snake_case)`, resolución de `user_id` con skip de admins. (5) `20260614201000`: reimplementación con `entity_label` por tabla (`enrollments`, `payments`, `standalone_course_enrollments`, `special_service_sales`, `class_b_sessions`, `users`, `students`, `professional_pre_registrations`) + `branch_id` en `audit_log` — **regresión no intencional**: perdió el skip de admins y la resolución por header `x-audit-user-id` de `20260323130000`, y además declaró la variable de trabajo `v_src` como `record` en vez de `jsonb`, usando `v_src->>'columna'` — el operador `->>` no existe para `record` en Postgres, así que **la función rompía en la primera línea para cualquier tabla/operación** y el `EXCEPTION WHEN OTHERS` la dejaba fallar en silencio (solo `RAISE WARNING`, sin insertar). Desde el 2026-06-14 hasta el fix de abajo, `audit_log` **no registró ninguna acción nueva**. (6) `20260801120000` (**fix-097-m**): agrega `entity_label` legible para las tablas que quedaban en el fallback `id=X` — `student_documents`, `certificates`, `vehicles`, `vehicle_documents`, `maintenance_records`, `class_b_theory_sessions`, `promotion_courses`, `class_book`, `professional_theory_sessions`, `professional_practice_sessions`, `professional_module_grades`. (7) `20260801140000` (**fix-099-m**): restaura la lectura del header `x-audit-user-id` (prioridad 1, antes de `registered_by`) y corrige `v_src` de `record` a `jsonb` (`to_jsonb(OLD)`/`to_jsonb(NEW)`) — la función vuelve a insertar en `audit_log`. Verificado con Supabase local + Docker (`docker exec supabase_db_Autoescuela psql`). (8) `20260802120000` (**fix-102-m**): el diff de UPDATE reemplaza el `CASE` hardcodeado de 8 columnas por `audit_humanize_column()` (diccionario ~90 columnas + fallback genérico) y agrega `audit_resolve_display_value()` para resolver IDs de FK (`promotion_course_id`, `course_id`, `instructor_id`, etc.) y enums (`current_step`) a texto legible en vez de mostrar el ID crudo de Supabase. (9) `20260802130000` (**fix-103-m**): corrige el Fallback 3 de resolución de `v_user_id` — casteaba `request.jwt.claim.sub` (UUID de `auth.uid()`) directo a `INT`, lo que siempre fallaba silenciosamente; ahora resuelve por `supabase_uid` igual que `auth_user_id()`. Antes de este fix, cualquier acción de una sesión autenticada normal sobre una tabla sin `registered_by` (`users`, `students`, `vehicles`, `vehicle_documents`, `promotion_courses`, `website_config`) quedaba atribuida a `user_id=NULL` ("Sistema / Online" en el frontend) en vez del usuario real. (10) `20260802150000` (**fix-106-m**): las ramas de `entity_label` de `student_documents`/`vehicle_documents`/`maintenance_records` (usadas por INSERT/DELETE) ahora traducen la columna `type` vía `audit_humanize_enum_value()` en vez de mostrarla cruda (ej. `"cedula_identidad"` → `"Cédula de Identidad"`) — antes de este fix, `audit_humanize_enum_value()` solo se invocaba desde el diff de UPDATE, nunca desde la construcción de `entity_label`. **⚠️ No verificado contra Supabase local en el entorno donde se escribió originalmente (8)/(9) (Docker Desktop no estaba corriendo) — (10) sí se verificó localmente tras levantar Docker.** (11) `20260802160000` (**fix-108-m**): el Fallback 3 de `v_user_id` en (9) seguía roto en peticiones reales — leía `current_setting('request.jwt.claim.sub')`, un GUC que **PostgREST nunca setea** en este stack (solo expone el JSON agregado `request.jwt.claims`); la "verificación" de (9) fue un fixture SQL que simulaba el GUC con `SET LOCAL`, nunca una petición HTTP real. Confirmado empíricamente contra Supabase local (JWT firmado a mano + `PATCH /rest/v1/users` real): `current_setting('request.jwt.claim.sub', true)` devuelve `NULL` siempre; `auth.uid()` sí resuelve correctamente en el mismo contexto. Ahora el Fallback 3 usa `auth.uid()` directo (mismo mecanismo que `auth_user_id()` en RLS). Ver `indices/DOMAIN-GOTCHAS.md` DG-049. Tablas sin rama explícita de `entity_label` siguen usando `id=X`. (12) `20260805090000` (fix-112-m): formatea timestamps/horas/fechas ISO crudos (`audit_format_timestamp_value()`) y resume `evaluation_checklist` ("N de M ítems marcados") en vez de mostrar el JSON crudo. (13) `20260809100000` (**fix-145-m**, QA de spec 0006-m): 4 causas raíz reproducidas y verificadas contra Supabase local antes del fix — a) agrega `SET search_path = public, pg_temp` (faltaba desde la regresión de (6)/fix-097-m, que dejó de calificar tablas; `recalculate_enrollment_balance()` (`trg_update_balance` en `payments`) SÍ tiene `SET search_path=''`, y cuando dispara `UPDATE enrollments` anida un `log_change()` que heredaba ese search_path vacío → `relation "students" does not exist`, la auditoría del recálculo de saldo se perdía en silencio); b) rama `payments`: usaba columnas `amount`/`method` que **nunca existieron** en la tabla (es `total_amount` + `cash_amount`/`transfer_amount`/`card_amount`/`voucher_amount`, sin columna de método unificada) → siempre mostraba "$0 (Desconocido)" para CUALQUIER pago; además `confirm_enrollment_with_payment()` inserta el pago (paso 5) antes de asignar `enrollments.number` (paso 7, por diseño — ver fila de `confirm_enrollment_with_payment` y fix-057-m/H-024) → `COALESCE(e.number, c.name)` (nombre del curso) reemplaza el `'?'` desnudo — se descartó usar `e.id` (el PK interno de Supabase) por no ser legible para quien lee el feed; c) `class_b_theory_sessions`: `ensure_theory_cycle()` (Spec 0001) autogenera las 6 clases de un ciclo seteando solo `cycle_id`/`class_number`/`class_date`, nunca `topic`/`scheduled_at` (modelo pre-Spec-0001) → entity_label caía en fallback `class_number`/`class_date` en vez de "Sesión teórica -" vacío; d) agrega `theory_cycle_id` al diccionario de `audit_humanize_column()`/`audit_resolve_display_value()` y silencia `supabase_uid` + las `*_url` de storage de `enrollments` (`license_initial_url`, `license_full_url`, `license_pdf_url`, `certificate_b_pdf_url`, `certificate_professional_pdf_url`) en `v_skip_fields`. (14) `20261007150000` (**fix-206-b**, S18 de ASG-i-034): engancha `instructors`, `vehicle_assignments` y `branch_payroll_config` (antes desactivar un instructor, cambiarle licencia/vehículo o el valor hora de una sede no dejaba rastro) con ramas propias de sede + `entity_label` ("Instructor Nombre", "Vehículo PATENTE - Instructor", "Valor hora instructores - Sede"); `branch_payroll_config` no tiene `id` → `entity_id = branch_id`. Agrega `updated_by` a `v_skip_fields` (ninguna tabla auditada antes lo tenía). La función de la migración es copia de la vigente en producción + esos cambios (verificado por diff). Test: `supabase/tests/audit/fix-206-b-auditoria-instructores.sql` (sub-bloque que aborta, sin efectos). ⚠️ La vista Auditoría (`AuditoriaFacade`) solo lista acciones de **secretarias** (`users!inner … roles.name='secretary'`); lo que haga un admin se ve en la actividad reciente del dashboard. `SECURITY DEFINER`. |
 | `audit_humanize_column(p_key TEXT)` | `20260802120000_audit_log_humanize_columns_and_values.sql` (fix-102-m) → **`20260809100000`** (fix-145-m) | Llamada por `log_change()` en el diff de UPDATE | Traduce un nombre de columna de `audit_log.detail` a español (`current_step` → "Paso actual", `promotion_course_id` → "Curso de promoción", etc.). Diccionario de ~90 columnas conocidas de las tablas auditadas + fallback genérico `initcap(replace(col,'_',' '))` para columnas futuras no listadas (nunca vuelve a mostrar snake_case crudo). fix-145-m agrega `theory_cycle_id` → "Ciclo teórico"; fix-206-b (`20261007150000`) agrega `both_branches` → "Ambas sedes" y `amount_per_hour` → "Valor por hora". Editar esta función (no `log_change()` completa) es la forma recomendada de agregar una columna nueva al diccionario. `IMMUTABLE`. → **`20261013163000`** (fix-413-m): etiquetas de `absence_penalty_applied_at`, `voided_at`, `voided_by`, `void_reason`, `kind`, `pending_at_override`. |
 | `audit_resolve_display_value(p_column TEXT, p_value TEXT)` | `20260802120000_audit_log_humanize_columns_and_values.sql` (fix-102-m) → `20260802140000_audit_log_translate_boolean_enum_values.sql` (fix-104-m) → **`20260809100000`** (fix-145-m) | Llamada por `log_change()` en el diff de UPDATE | Resuelve el VALOR de una columna FK/enum a texto legible (ej. `promotion_course_id=29` → `"PC-A2-01 (Clase Profesional A2)"`, `current_step=3` → `"Documentos"`). Cubre FKs conocidas (`course_id`, `branch_id`, `instructor_id`, `lecturer_id`, `vehicle_id`, `student_id`, `enrollment_id`, `certificate_id`, `receipt_id`, `discount_id`, `service_id`, `sence_code_id`, `template_id`, `batch_id`, `role_id`, `theory_cycle_id` (fix-145-m: `class_b_theory_cycles` → `"Ciclo DD-MM-YYYY al DD-MM-YYYY"`, la tabla no tiene nombre/código propio), cualquier columna `*_by` vía `users`) y el enum `current_step` (1-6, pasos del wizard de matrícula). **fix-104-m:** cuando la columna no tiene regla propia, agrega dos fallbacks antes de rendirse — booleano (`true`/`false` → `"Sí"`/`"No"`) y `audit_humanize_enum_value()` (diccionario de ~110 valores de enum del esquema: `status`, `type`, `category`, etc.). **fix-145-m:** agrega `SET search_path = public, pg_temp` — sin esto, invocada anidada dentro de un caller con `search_path=''` (ver `log_change()` (13)), las tablas sin calificar (`courses`, `branches`, `instructors`, etc.) no resolvían, degradando silenciosamente al ID crudo. Devuelve `NULL` solo si nada aplica — el caller conserva el valor crudo. `STABLE`. |
@@ -343,7 +345,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_audit_log | SELECT | `auth_user_role() = 'admin' OR user_id = auth_user_id()` | — |
+| select_audit_log | SELECT | `(SELECT public.auth_user_role()) = 'admin' OR user_id = (SELECT public.auth_u…` | — |
 
 **Índices:** `idx_audit_log_time`, `idx_audit_log_user`
 
@@ -1472,9 +1474,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_maintenance_records | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
-| insert_maintenance_records | INSERT | — | `auth_user_role() = 'admin'` |
-| update_maintenance_records | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_maintenance_records | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_maintenance_records | INSERT | — | `public.auth_can_manage_vehicle(vehicle_id)` |
+| update_maintenance_records | UPDATE | `public.auth_can_manage_vehicle(vehicle_id)` | `public.auth_can_manage_vehicle(vehicle_id)` |
 
 ### `notification_templates` — 🔒 RLS
 
@@ -1599,7 +1601,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_payments | DELETE | `auth_user_role() = 'admin'` | — |
 | select_payments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_payments | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
-| update_payments | UPDATE | `auth_user_role() = 'admin'` (fix-051-i: la secretaria ya no modifica pagos; la app solo hace UPDATE en la anulación del admin) | — |
+| update_payments | UPDATE | `auth_user_role() = 'admin'` | — |
 
 ### `pricing_seasons` — 🔒 RLS
 
@@ -2071,9 +2073,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_service_catalog | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
-| insert_service_catalog | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
-| update_service_catalog | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
-| delete_service_catalog | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_service_catalog | INSERT | — | `auth_user_role() = 'admin'` |
+| update_service_catalog | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_service_catalog | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `service_catalog_name_unique`
 
 ### `session_machinery` — 🔒 RLS
 
@@ -2444,9 +2448,9 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_vehicle_documents | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| insert_vehicle_documents | INSERT | — | `auth_user_role() = 'admin'` |
-| update_vehicle_documents | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_vehicle_documents | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_vehicle_documents | INSERT | — | `public.auth_can_manage_vehicle(vehicle_id)` |
+| update_vehicle_documents | UPDATE | `public.auth_can_manage_vehicle(vehicle_id)` | `public.auth_can_manage_vehicle(vehicle_id)` |
 
 **Índices:** `idx_vehicle_docs_expiry`
 
@@ -2477,8 +2481,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
 | delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
-| insert_vehicles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
-| update_vehicles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_id =…` |
+| insert_vehicles | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
+| update_vehicles | UPDATE | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
 
 ### `website_config` — 🔒 RLS
 
@@ -2521,6 +2525,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `audit_resolve_display_value` | `(p_column TEXT, p_value TEXT)` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
+| `auth_can_manage_vehicle` | `(p_vehicle_id integer)` |
 | `auth_instructor_can_view_student_user` | `(target_user_id integer)` |
 | `auth_instructor_id` | `()` |
 | `auth_student_id` | `()` |
@@ -2545,7 +2550,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cleanup_public_enrollment_throttle` | `()` |
 | `confirm_enrollment_with_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL::integer, p_discount_amount integer DEFAULT 0, p_registered_by integer DEFAULT NULL::integer, p_is_deposit boolean DEFAULT false)` |
 | `decrement_batch_folio` | `()` |
-| `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
 | `delete_promotion_without_students` | `(p_promotion_id INT)` |
 | `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
 | `exec_dashboard_assert_admin` | `()` |
@@ -2563,6 +2567,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `guard_cierre_definitivo` | `()` |
 | `guard_movimiento_caja_cerrada` | `()` |
 | `guard_pago_en_caja_cerrada` | `()` |
+| `guard_venta_servicio_caja_cerrada` | `()` |
 | `instructor_enrollment_ids` | `()` |
 | `log_change` | `()` |
 | `mark_end_of_day_class_b_absences` | `()` |
@@ -2583,6 +2588,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `prevent_vehicle_double_booking_class_b_sessions` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
+| `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
 | `request_client_ip` | `()` |
 | `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT DEFAULT NULL)` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
@@ -2590,11 +2596,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `run_class_b_absences_cutoff` | `()` |
 | `secretary_extra_visible_user_ids` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
+| `servicios_especiales_kpis` | `(p_branch_id INT DEFAULT NULL)` |
 | `set_enrollment_completed_at` | `()` |
 | `set_enrollment_license_group` | `()` |
 | `set_payment_override_pending` | `()` |
 | `soft_delete_task` | `(p_task_id UUID)` |
 | `stamp_branch_absence_penalty_config` | `()` |
+| `sync_vehicle_from_maintenance` | `()` |
+| `sync_vehicle_km_from_class` | `()` |
 | `tasks_set_updated_at` | `()` |
 | `trg_class_b_sessions_update_monthly_hours` | `()` |
 | `trg_consents_append_only_fn` | `()` |

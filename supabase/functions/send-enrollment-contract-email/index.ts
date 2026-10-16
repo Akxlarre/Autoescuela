@@ -25,7 +25,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 import {
   buildContractEmailHtml,
   contractAttachment,
@@ -63,6 +67,10 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonResponse({ error: 'enrollment_id (number) es requerido' }, 400);
     }
+
+    // fix-431-m: la matrícula tiene que ser de una sede que quien llama puede ver.
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     // Clave de servicio: la función ya comprobó que quien llama es admin o secretaria.
     const supabase = createClient(

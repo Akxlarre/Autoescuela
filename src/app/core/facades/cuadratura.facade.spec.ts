@@ -1202,9 +1202,26 @@ describe('CuadraturaFacade — revertir cobros y quitar egresos (fix-044-i AC-2)
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it('revertir un servicio especial que no toca filas no muestra éxito', async () => {
+  it('fix-437-m: eliminar el ingreso de un servicio especial BORRA la venta (no la deja pendiente)', async () => {
+    const { facade, db, toast } = setupFix044({
+      'special_service_sales:delete': { data: [{ id: 10 }], error: null },
+    });
+
+    const ok = await facade.eliminarIngreso({
+      ...ingresoPago,
+      source: 'special_service',
+      enrollmentId: null,
+    });
+
+    expect(ok).toBe(true);
+    const writes = writesTo(db.calls, 'special_service_sales');
+    expect(writes.map((w) => w.op)).toEqual(['delete']);
+    expect(toast.success).toHaveBeenCalledWith('Venta de servicio especial eliminada.');
+  });
+
+  it('eliminar un servicio especial que no toca filas no muestra éxito', async () => {
     const { facade, toast } = setupFix044({
-      'special_service_sales:update': { data: [], error: null },
+      'special_service_sales:delete': { data: [], error: null },
     });
 
     const ok = await facade.eliminarIngreso({

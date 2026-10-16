@@ -4,15 +4,18 @@
  * Patrón SWR: primera visita con skeleton, re-visitas refrescan en background.
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { chileMonth, chileToday } from '@core/utils/chile-time.utils';
+import { chileToday } from '@core/utils/chile-time.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
 import type { SpecialServiceSale } from '@core/models/dto/special-service-sale.model';
 import type {
+  AlumnoVinculado,
   NuevoServicioFormData,
   ServicioEspecial,
   ServiciosEspecialesKpis,
@@ -21,6 +24,11 @@ import type {
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { cleanRut, normalizeRutForStorage } from '@core/utils/rut.utils';
+import {
+  buscarServicioDuplicado,
+  mensajeServicioDuplicado,
+} from '@core/utils/servicios-especiales.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /** Mapea el nombre del servicio a ícono y color de UI. */
@@ -91,6 +99,45 @@ function mapVentaDto(
   };
 }
 
+/**
+ * Tope de la lista del Historial (fix-442-m): el máximo de filas que PostgREST entrega por consulta.
+ * Los KPIs no dependen de él.
+ */
+const LIMITE_HISTORIAL = 1000;
+
+const KPIS_VACIOS: ServiciosEspecialesKpis = {
+  ventasMes: 0,
+  totalCobrado: 0,
+  recaudacionMes: 0,
+  pendientesCobro: 0,
+  totalRegistros: 0,
+  ventasCobradas: 0,
+  ventasSinCobrar: 0,
+};
+
+/** Fila de `servicios_especiales_kpis()` (migración 20261015170000). */
+interface KpisRow {
+  ventas_mes: number;
+  ventas_totales: number;
+  recaudacion_mes: number;
+  recaudacion_total: number;
+  ventas_cobradas: number;
+  pendiente_cobro: number;
+}
+
+function mapKpis(row: KpisRow | undefined): ServiciosEspecialesKpis {
+  if (!row) return KPIS_VACIOS;
+  return {
+    ventasMes: row.ventas_mes,
+    totalCobrado: Number(row.recaudacion_total),
+    recaudacionMes: Number(row.recaudacion_mes),
+    pendientesCobro: Number(row.pendiente_cobro),
+    totalRegistros: row.ventas_totales,
+    ventasCobradas: row.ventas_cobradas,
+    ventasSinCobrar: row.ventas_totales - row.ventas_cobradas,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ServiciosEspecialesFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
@@ -108,8 +155,12 @@ export class ServiciosEspecialesFacade {
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
   private readonly _error = signal<string | null>(null);
+  /** fix-435-m: falla de la carga inicial (sin datos que mostrar). Distinto de `error`. */
+  private readonly _loadError = signal<string | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** fix-441-m: una respuesta de la sede anterior que llega tarde no pisa la actual. */
+  private readonly fetchGuard = createRequestGuard();
 
   // ── Estado expuesto ─────────────────────────────────────────────────────────
   public readonly catalogo = this._catalogo.asReadonly();
@@ -119,6 +170,7 @@ export class ServiciosEspecialesFacade {
   public readonly isLoading = this._isLoading.asReadonly();
   public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
+  public readonly loadError = this._loadError.asReadonly();
 
   /**
    * fix-194-b — admin (o secretaria con ambas sedes) elige la sede de la venta en el formulario:
@@ -137,23 +189,15 @@ export class ServiciosEspecialesFacade {
     this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
   );
 
-  public readonly kpis = computed<ServiciosEspecialesKpis>(() => {
-    const ventas = this._ventas();
-    const mesActual = chileMonth();
-    const cobradas = ventas.filter((v) => v.cobrado);
-    const sinCobrar = ventas.filter((v) => !v.cobrado);
-    return {
-      ventasMes: ventas.filter((v) => v.fecha.startsWith(mesActual)).length,
-      totalCobrado: cobradas.reduce((s, v) => s + v.precio, 0),
-      recaudacionMes: cobradas
-        .filter((v) => v.fecha.startsWith(mesActual))
-        .reduce((s, v) => s + v.precio, 0),
-      pendientesCobro: sinCobrar.reduce((s, v) => s + v.precio, 0),
-      totalRegistros: ventas.length,
-      ventasCobradas: cobradas.length,
-      ventasSinCobrar: sinCobrar.length,
-    };
-  });
+  /**
+   * fix-442-m: los KPIs se calculan en la BD (`servicios_especiales_kpis`) sobre todas las ventas
+   * de la sede. Antes se sumaban sobre la lista, que tiene tope, y se congelaban pasada la venta 200.
+   */
+  private readonly _kpis = signal<ServiciosEspecialesKpis>(KPIS_VACIOS);
+  public readonly kpis = this._kpis.asReadonly();
+
+  /** fix-442-m: la lista del Historial llegó al tope y no trae las ventas más viejas. */
+  public readonly historialTruncado = computed(() => this._ventas().length >= LIMITE_HISTORIAL);
 
   // ── SWR ─────────────────────────────────────────────────────────────────────
   async initialize(): Promise<void> {
@@ -166,9 +210,22 @@ export class ServiciosEspecialesFacade {
 
     this._initialized = true;
     this._lastBranchId = branchId;
+    await this.loadWithSkeleton();
+  }
+
+  /** fix-435-m: vuelve a intentar la carga después de una falla (botón "Reintentar"). */
+  async reintentar(): Promise<void> {
+    await this.loadWithSkeleton();
+  }
+
+  private async loadWithSkeleton(): Promise<void> {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+      this._loadError.set(null);
+    } catch {
+      // fix-435-m: sin esto la página mostraba "Todavía no hay servicios en el catálogo".
+      this._loadError.set('No se pudieron cargar los servicios especiales.');
     } finally {
       this._isLoading.set(false);
     }
@@ -197,6 +254,7 @@ export class ServiciosEspecialesFacade {
   }
 
   private async fetchData(): Promise<void> {
+    const requestToken = this.fetchGuard.next();
     const branchId = this.getActiveBranchId();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,11 +263,11 @@ export class ServiciosEspecialesFacade {
       .select('*, service_catalog(name), students(user_id)')
       .order('sale_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(LIMITE_HISTORIAL);
 
     if (branchId !== null) ventasQuery = ventasQuery.eq('branch_id', branchId);
 
-    const [catalogoResult, ventasResult] = await Promise.all([
+    const [catalogoResult, ventasResult, kpisResult] = await Promise.all([
       // fix-023-i: trae TODO el catálogo (activos e inactivos) — el toggle "Mostrar
       // inactivos" filtra client-side; el dropdown de venta filtra .activo aparte.
       this.supabase.client
@@ -218,12 +276,16 @@ export class ServiciosEspecialesFacade {
         .order('created_at', { ascending: true }),
 
       ventasQuery,
+      this.supabase.client.rpc('servicios_especiales_kpis', { p_branch_id: branchId }),
     ]);
 
     if (catalogoResult.error) throw catalogoResult.error;
     if (ventasResult.error) throw ventasResult.error;
+    if (kpisResult.error) throw kpisResult.error;
+    if (!this.fetchGuard.isCurrent(requestToken)) return;
 
     this._catalogo.set((catalogoResult.data as ServiceCatalog[]).map(mapCatalogDto));
+    this._kpis.set(mapKpis((kpisResult.data as KpisRow[] | null)?.[0]));
     this._ventas.set(
       (
         ventasResult.data as (SpecialServiceSale & {
@@ -285,12 +347,14 @@ export class ServiciosEspecialesFacade {
     // fix-024-i: snapshot del nombre — el Historial lo sigue mostrando aunque el servicio
     // se borre definitivamente del catálogo más tarde (service_id queda en null).
     const servicioNombre = this._catalogo().find((s) => s.id === data.servicioId)?.nombre ?? null;
+    // fix-438-m (decisión H02): si el RUT es de un alumno, la venta queda en su ficha.
+    const alumno = await this.buscarAlumnoPorRut(data.rut);
 
     const { error } = await this.supabase.client.from('special_service_sales').insert({
       service_id: data.servicioId,
       service_name: servicioNombre,
-      student_id: null,
-      is_student: data.esAlumno,
+      student_id: alumno?.studentId ?? null,
+      is_student: alumno !== null,
       client_name: data.nombre,
       client_rut: data.rut,
       sale_date: data.fecha,
@@ -312,20 +376,72 @@ export class ServiciosEspecialesFacade {
       return false;
     }
 
+    if (alumno) this.notificarVentaAlAlumno(alumno.userId, servicioNombre);
     await this.refreshSilently();
     return true;
   }
 
+  /**
+   * Alumno con ese RUT, o null (fix-438-m). `users.rut` está guardado con y sin puntos (fix-042),
+   * así que busca las dos variantes. Un usuario sin ficha de alumno (staff) no cuenta. La RLS
+   * acota a lo que quien vende puede ver: un alumno de otra sede queda como cliente externo.
+   */
+  async buscarAlumnoPorRut(rut: string): Promise<AlumnoVinculado | null> {
+    const cleaned = cleanRut(rut).toUpperCase();
+    if (cleaned.length < 2) return null;
+    const dotted = normalizeRutForStorage(rut);
+    const plain = `${cleaned.slice(0, -1)}-${cleaned.slice(-1)}`;
+
+    const { data, error } = await this.supabase.client
+      .from('users')
+      .select('id, first_names, paternal_last_name, students(id)')
+      .or(`rut.eq.${dotted},rut.eq.${plain}`)
+      .maybeSingle();
+    if (error || !data) return null;
+
+    const row = data as {
+      id: number;
+      first_names: string | null;
+      paternal_last_name: string | null;
+      students: { id: number } | { id: number }[] | null;
+    };
+    const student = Array.isArray(row.students) ? row.students[0] : row.students;
+    if (!student) return null;
+
+    return {
+      studentId: student.id,
+      userId: row.id,
+      nombre: [row.first_names, row.paternal_last_name].filter(Boolean).join(' '),
+    };
+  }
+
+  /** Notificación "Pago registrado" de la spec 0025, ahora que la venta tiene alumno (fix-438-m). */
+  private notificarVentaAlAlumno(userId: number, servicio: string | null): void {
+    this.notifications
+      .notifyUsers([userId], {
+        subject: 'Pago registrado',
+        message: `Se registró el pago de tu servicio (${servicio ?? 'servicio especial'}).`,
+        referenceType: 'payment',
+      })
+      .catch(() => {
+        // Una notificación fallida no deshace la venta (spec 0025, AC-E1).
+      });
+  }
+
   async agregarServicio(data: NuevoServicioFormData): Promise<boolean> {
+    // fix-436-m: sin espacios de más y sin nombres repetidos (decisión D05).
+    const nombre = data.nombre.trim();
+    if (!this.nombreDisponible(nombre)) return false;
+
     const { error } = await this.supabase.client.from('service_catalog').insert({
-      name: data.nombre,
-      description: data.descripcion,
+      name: nombre,
+      description: data.descripcion.trim(),
       base_price: data.precio,
       active: true,
     });
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      this._error.set(this.mensajeErrorCatalogo(error));
       return false;
     }
 
@@ -333,23 +449,46 @@ export class ServiciosEspecialesFacade {
     return true;
   }
 
-  /** Edita nombre, precio y estado de un servicio existente (fix-240-m). */
+  /** Edita nombre, descripción (fix-436-m), precio y estado de un servicio (fix-240-m). */
   async editarServicio(
     id: number,
-    data: { nombre: string; precio: number; activo: boolean },
+    data: { nombre: string; descripcion: string; precio: number; activo: boolean },
   ): Promise<boolean> {
+    const nombre = data.nombre.trim();
+    if (!this.nombreDisponible(nombre, id)) return false;
+
     const { error } = await this.supabase.client
       .from('service_catalog')
-      .update({ name: data.nombre, base_price: data.precio, active: data.activo })
+      .update({
+        name: nombre,
+        description: data.descripcion.trim(),
+        base_price: data.precio,
+        active: data.activo,
+      })
       .eq('id', id);
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
+      this._error.set(this.mensajeErrorCatalogo(error));
       return false;
     }
 
     await this.refreshSilently();
     return true;
+  }
+
+  /** fix-436-m: false (con el motivo en `error`) si otro servicio ya tiene ese nombre. */
+  private nombreDisponible(nombre: string, excludeId?: number): boolean {
+    const duplicado = buscarServicioDuplicado(this._catalogo(), nombre, excludeId);
+    if (!duplicado) return true;
+    this._error.set(mensajeServicioDuplicado(duplicado));
+    return false;
+  }
+
+  /** El índice único de la BD (fix-436-m) cubre lo que el catálogo en memoria no alcanza a ver. */
+  private mensajeErrorCatalogo(error: { code?: string; message: string }): string {
+    return error.code === '23505'
+      ? 'Ya existe un servicio con ese nombre.'
+      : this.sanitizer.sanitize(error).message;
   }
 
   async registrarCobro(id: number): Promise<void> {
@@ -418,7 +557,7 @@ export class ServiciosEspecialesFacade {
     if (closedData && closedData.length > 0) {
       return {
         success: false,
-        blockedReason: `No se puede borrar: la caja del ${venta.fecha} ya está cerrada.`,
+        blockedReason: `No se puede borrar: la caja del ${formatDayMonthYear(venta.fecha)} ya está cerrada.`,
       };
     }
 
@@ -428,8 +567,13 @@ export class ServiciosEspecialesFacade {
       .eq('id', id);
 
     if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
-      return { success: false };
+      const message = this.sanitizer.sanitize(error).message;
+      this._error.set(message);
+      // fix-432-m: la BD también tiene el candado (trigger). Si la caja se cerró entre el
+      // chequeo de arriba y el DELETE, su mensaje (P0001) explica el motivo.
+      return error.code === 'P0001'
+        ? { success: false, blockedReason: message }
+        : { success: false };
     }
 
     await this.refreshSilently();
@@ -526,14 +670,22 @@ export class ServiciosEspecialesFacade {
     return { success: true };
   }
 
-  async exportarHistorial(format: 'excel' | 'pdf'): Promise<void> {
+  /**
+   * Exporta las ventas que muestra el Historial (fix-440-m, decisión K04: el archivo coincide con
+   * la pantalla — reemplaza a fix-147-b). Devuelve si se descargó (fix-435-m).
+   */
+  async exportarHistorial(format: 'excel' | 'pdf', ventaIds: number[]): Promise<boolean> {
+    if (ventaIds.length === 0) {
+      this._error.set('No hay ventas para exportar.');
+      return false;
+    }
     this._isExporting.set(true);
     try {
       const branchId = this.getActiveBranchId();
       const { data, error } = await this.supabase.client.functions.invoke(
         'export-special-services',
         {
-          body: { format, branch_id: branchId },
+          body: { format, branch_id: branchId, sale_ids: ventaIds },
         },
       );
 
@@ -556,9 +708,11 @@ export class ServiciosEspecialesFacade {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }
+      return true;
     } catch (err) {
       console.error('Error exportando historial:', err);
       this._error.set('No se pudo exportar el historial.');
+      return false;
     } finally {
       this._isExporting.set(false);
     }
