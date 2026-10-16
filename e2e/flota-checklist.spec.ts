@@ -611,8 +611,10 @@ test('D10: sin resultados en la vista de tarjetas también ofrece "Limpiar filtr
     page.locator('[data-llm-description="Ficha resumen de un vehículo"]').first(),
   ).toBeVisible(CARGA);
   await page.locator(BUSCADOR).fill('zzzz-no-existe');
-  await expect(page.getByText(/Sin resultados|No se encontraron vehículos/).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Limpiar filtros' }).filter({ visible: true }).first()).toBeVisible();
+  await expect(
+    page.locator('.mobile-view').getByText('No se encontraron vehículos', { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.mobile-view').getByText('Limpiar filtros')).toBeVisible();
 });
 
 test('H14 + H15 + H17: documentos — cambiar de fila, cancelar y error al guardar', async ({

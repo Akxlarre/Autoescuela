@@ -1,7 +1,7 @@
 # Fix: Testing — Flota, documentos de vehículo y mantenimientos
 > id: fix-220-b-testing-flota-mantenimientos
 > refs: ASG-i-032
-> status: in_progress
+> status: closed
 > created: 2026-10-12
 
 ## Root Cause
@@ -124,3 +124,49 @@ SQL: `supabase/tests/flota/fix-222-b-*.sql`, `fix-223-b-*.sql`, `fix-224-b-*.sql
 ## Datos de prueba
 - Vehículo `ZZ4103` (id 36, sede A), sembrado el 2026-10-12 para C03 de ASG-i-034: sigue en la BD
   (16/16 vehículos del seed estaban asignados). Sirve como vehículo de prueba de este track.
+
+## Casos manuales (2026-10-16)
+
+Ejecutados por el agente a pedido del owner. `e2e/flota-real.spec.ts` (solo con
+`E2E_FLOTA_REAL=1`) **escribe de verdad** sobre el vehículo de prueba **ZZ4199 (id 87)** y no
+borra nada; el resto (`flota-checklist.spec.ts`) corta las respuestas y no escribe. Suite de Flota
+sin escrituras: **47/47 en verde** contra `main` del 2026-10-16.
+
+| Casos | Resultado |
+|---|---|
+| E02, E14, G01, Q01 | ✅ Alta real "Ambas" con SOAP (PDF) + Revisión Técnica (sin archivo); una segunda sesión la ve sin recargar |
+| E18 | Anotado: al crear con 2 documentos salen los toasts de "Vehículo creado" y uno por documento |
+| H05, H06, H07, H12, H16, Q02 | ✅ Documento real: vencido → triángulo en el listado y en otra sesión sin recargar; cambiar solo la fecha conserva el archivo; reemplazarlo deja el nuevo; "Ver documento" abre el visor |
+| H18 | Anotado: el toast dice "La fecha de vencimiento se guardó correctamente" aunque también se suba archivo (queda así) |
+| H14, H15, H17 | ✅ (respuesta cortada) cambiar de fila cierra la anterior; Cancelar no guarda; un error queda en la fila sin toast de éxito |
+| M02, M03, M11, M17, L04, L06 | ✅ Servicio real de $1.500.000 a 1.200 km sin descripción ni taller; el km del vehículo sube a 1.200 y queda la última mantención (trigger fix-222-b); editar agrega el taller |
+| **M10 / L08 / L09** | ❌ → `hotfix-086-b` (#289): "$1,500,000 invertidos", KPIs "$1500000" y "1200 km", "1 servicios", fechas AAAA-MM-DD |
+| **M01 / M06** | ❌ → `hotfix-088-b` (#291): el km del formulario se veía "1,200" |
+| F02, F04, G10, G05 | ✅ Editar modelo no toca el estado; quitar "Ambas" y pasar a la sede B lo saca de la sede A |
+| P02, P04, P06 | ✅ Hoja de Ruta de un vehículo sin instructor: patente, modelo, bloques 08:30–20:45, sin "undefined"/"null" |
+| O01, O02 | ✅ (interceptado, no llega a la caja) la opción dice "Marca Modelo - PATENTE (…)"; con la sede B elegida el egreso de un vehículo "Ambas" va a la sede B (hotfix-084-b) |
+| S01, S03, S05 | ✅ Modo oscuro legible (capturas); con un drawer abierto el listado pasa a tarjetas; el botón Documentos se alcanza con Tab |
+| **A08** | ❌ → `hotfix-087-b` (#290): un error de carga se veía como "No se encontraron vehículos" |
+| D10 | ✅ tras `hotfix-087-b` (tarjetas sin resultados con "Limpiar filtros") |
+| A06, A09 | ✅ volver a Flota muestra los datos al instante; "Actualizar" vuelve a pedirlos |
+| L13, L14, P07 | ✅ falla del historial → error (no "Historial vacío"); Reintentar recarga; falla de la Hoja de Ruta → aviso en el drawer sin ensuciar la página |
+| E13, M16 | ✅ doble clic en guardar envía una sola vez |
+| R05 | ✅ por código: la URL firmada dura 3.600 s (`flota.facade.ts` `createSignedUrl(path, 3600)`) |
+| S04 | ✅ el triángulo tiene `aria-label` con el texto de la advertencia (casos I) |
+
+**No ejecutados (bajo riesgo o de otra asignación):** J12–J16 (advertencia al agendar: ASG 026),
+N06/N10/N11 (Asistencia B: ASG 027), E11, E12, E15, E16, E19, F11, G06, G07, G11, H02, H10, H13,
+H19, I11, J01, J03, L02, L05, L07, L10, L16, M05–M07, M09, M12, M13, O03–O05, P05, P08, Q03, Q04,
+S06.
+
+### Limpieza de datos de prueba (para el owner)
+
+```sql
+-- Vehículo de prueba ZZ4199 (id 87) creado por e2e/flota-real.spec.ts el 2026-10-16.
+-- Los archivos reemplazados en H07 quedaron huérfanos en Storage: se borran por carpeta.
+DELETE FROM storage.objects WHERE bucket_id = 'documents' AND name LIKE 'vehicle-docs/87/%';
+DELETE FROM public.maintenance_records WHERE vehicle_id = 87;
+DELETE FROM public.vehicle_documents WHERE vehicle_id = 87;
+DELETE FROM public.notifications WHERE reference_type = 'document_expiry' AND reference_id = 87;
+DELETE FROM public.vehicles WHERE id = 87;
+```
