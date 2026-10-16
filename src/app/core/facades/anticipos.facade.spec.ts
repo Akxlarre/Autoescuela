@@ -245,6 +245,20 @@ describe('AnticiposFacade.registrarAnticipo() — notifica al instructor (spec 0
     expect(ok).toBe(true);
   });
 
+  it('fix-445-m: un anticipo con fecha de un día con caja cerrada muestra ese motivo', async () => {
+    advancesChain.insert.mockResolvedValue({
+      error: { code: 'P0001', message: 'CAJA_CERRADA', details: null, hint: null },
+    });
+
+    const ok = await facade.registrarAnticipo(payload);
+
+    expect(ok).toBe(false);
+    expect(toastSpy.error).toHaveBeenCalledWith(expect.stringContaining('ya está cerrada'));
+    expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    // No es un error de carga: la página no muestra "Error al cargar anticipos".
+    expect(facade.error()).toBeNull();
+  });
+
   // ─── fix-243-m: método de pago persiste (afecta el arqueo de caja) ─────────
   it('persiste el paymentMethod recibido en el insert', async () => {
     await facade.registrarAnticipo({ ...payload, paymentMethod: 'transferencia' });

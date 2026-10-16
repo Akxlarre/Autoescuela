@@ -4,8 +4,8 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type {
   AnticipoCuentaCorriente,
   AnticipoHistorial,
@@ -38,7 +38,6 @@ export function mapStatus(raw: string | null): AdvanceStatus {
 
 @Injectable({ providedIn: 'root' })
 export class AnticiposFacade {
-  private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
@@ -271,12 +270,10 @@ export class AnticiposFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al registrar el anticipo.';
-      this._error.set(msg);
-      this.toast.error(msg);
+      // fix-445-m: el error de supabase-js no es `instanceof Error`; antes un rechazo de la BD
+      // (p. ej. caja del día ya cerrada) salía siempre como el mensaje genérico.
+      // Solo toast: `error` es el de la carga y la página lo muestra como "Error al cargar anticipos".
+      this.toast.error(toFriendlyDbMessage(err, 'Error al registrar el anticipo.'));
       return false;
     } finally {
       this._isSaving.set(false);
