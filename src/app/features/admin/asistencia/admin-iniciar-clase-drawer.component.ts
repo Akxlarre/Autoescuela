@@ -221,6 +221,11 @@ import { formatCLP } from '@core/utils/date.utils';
               />
             </div>
           }
+          @if (classVehicleUnavailable()) {
+            <p class="text-sm text-warning" data-testid="vehiculo-no-disponible">
+              El vehículo de esta clase está en Mantenimiento o Fuera de servicio. Elige otro.
+            </p>
+          }
 
           <!-- Formulario odómetro -->
           <div
@@ -393,6 +398,18 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
 
   /** ID del vehículo seleccionado en el dropdown (null = usa el de la sesión). */
   protected readonly selectedVehicleId = signal<number | null>(null);
+  private readonly vehiclesLoaded = signal(false);
+
+  /** fix-224-b: el vehículo de la clase está en Mantenimiento o Fuera de servicio. */
+  protected readonly classVehicleUnavailable = computed(() => {
+    const vehicleId = this.facade.selectedPractica()?.vehicleId;
+    return (
+      !!vehicleId &&
+      this.vehiclesLoaded() &&
+      this.selectedVehicleId() === null &&
+      !this.facade.vehiclesPorSede().some((v) => v.id === vehicleId)
+    );
+  });
 
   /** Objeto completo del vehículo seleccionado (para el ticket resumen). */
   protected readonly selectedVehicle = computed<VehicleOption | null>(() => {
@@ -467,7 +484,12 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     if (cls?.branchId) {
       this.facade.loadVehiclesByBranch(cls.branchId).then(() => {
         // Pre-selecciona el vehículo actual de la sesión
-        if (cls.vehicleId) this.selectedVehicleId.set(cls.vehicleId);
+        // fix-224-b: solo si sigue operativo; si está en Mantenimiento o Fuera de servicio
+        // no está en la lista y hay que elegir otro.
+        if (cls.vehicleId && this.facade.vehiclesPorSede().some((v) => v.id === cls.vehicleId)) {
+          this.selectedVehicleId.set(cls.vehicleId);
+        }
+        this.vehiclesLoaded.set(true);
       });
     }
   }
@@ -482,6 +504,10 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
 
   async onSubmit(cls: NonNullable<ReturnType<typeof this.facade.selectedPractica>>): Promise<void> {
     if (this.form.invalid) return;
+    if (this.classVehicleUnavailable()) {
+      this.error.set('Elige un vehículo disponible antes de iniciar la clase.');
+      return;
+    }
     this.isSubmitting.set(true);
     this.error.set(null);
     try {

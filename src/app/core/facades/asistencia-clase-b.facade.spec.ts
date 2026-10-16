@@ -1298,6 +1298,27 @@ describe('AsistenciaClaseBFacade', () => {
     });
   });
 
+  describe('fix-224-b: loadVehiclesByBranch', () => {
+    it('pide los vehículos de la sede y los "Ambas"', async () => {
+      mock.setResult('vehicles', []);
+      await facade.loadVehiclesByBranch(2);
+      const b = mock.builderFor('vehicles');
+      expect(b.or).toHaveBeenCalledWith('branch_id.eq.2,both_branches.eq.true');
+      expect(b.eq).not.toHaveBeenCalledWith('branch_id', 2);
+    });
+
+    it('deja fuera los vehículos en Mantenimiento o Fuera de servicio', async () => {
+      mock.setResult('vehicles', [
+        { id: 1, license_plate: 'AA1111', status: 'operational', current_km: 10 },
+        { id: 2, license_plate: 'BB2222', status: 'maintenance', current_km: 20 },
+        { id: 3, license_plate: 'CC3333', status: 'out_of_service', current_km: 30 },
+        { id: 4, license_plate: 'DD4444', status: 'available', current_km: 40 },
+      ]);
+      await facade.loadVehiclesByBranch(1);
+      expect(facade.vehiclesPorSede().map((v) => v.id)).toEqual([1, 4]);
+    });
+  });
+
   describe('startClass', () => {
     it('actualiza la sesión y muestra toast de éxito', async () => {
       mock.setResult('class_b_sessions', [{ id: 1 }], null);
