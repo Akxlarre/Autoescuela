@@ -3,7 +3,7 @@
 - **Autor:** b
 - **Origen:** regresión de `fix-224-b` (migración `20261015120000`, aplicada el 2026-10-15),
   encontrada el 2026-10-16 al retomar ASG-i-026.
-- **Estado:** abierto
+- **Estado:** cerrado (2026-10-16)
 
 ## Bug
 
@@ -36,5 +36,5 @@ migración, y su test tiene que leer la vista como `authenticated`, no como `pos
 
 ## Verificación
 
-- [ ] Test en BEGIN…ROLLBACK con la migración.
-- [ ] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
+- [x] Test en BEGIN…ROLLBACK con la migración.
+- [x] Migración aplicada en producción (requiere aprobación del owner) + test en verde.
