@@ -108,6 +108,8 @@ export class ServiciosEspecialesFacade {
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
   private readonly _error = signal<string | null>(null);
+  /** fix-435-m: falla de la carga inicial (sin datos que mostrar). Distinto de `error`. */
+  private readonly _loadError = signal<string | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -119,6 +121,7 @@ export class ServiciosEspecialesFacade {
   public readonly isLoading = this._isLoading.asReadonly();
   public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
+  public readonly loadError = this._loadError.asReadonly();
 
   /**
    * fix-194-b — admin (o secretaria con ambas sedes) elige la sede de la venta en el formulario:
@@ -166,9 +169,22 @@ export class ServiciosEspecialesFacade {
 
     this._initialized = true;
     this._lastBranchId = branchId;
+    await this.loadWithSkeleton();
+  }
+
+  /** fix-435-m: vuelve a intentar la carga después de una falla (botón "Reintentar"). */
+  async reintentar(): Promise<void> {
+    await this.loadWithSkeleton();
+  }
+
+  private async loadWithSkeleton(): Promise<void> {
     this._isLoading.set(true);
     try {
       await this.fetchData();
+      this._loadError.set(null);
+    } catch {
+      // fix-435-m: sin esto la página mostraba "Todavía no hay servicios en el catálogo".
+      this._loadError.set('No se pudieron cargar los servicios especiales.');
     } finally {
       this._isLoading.set(false);
     }
@@ -531,7 +547,8 @@ export class ServiciosEspecialesFacade {
     return { success: true };
   }
 
-  async exportarHistorial(format: 'excel' | 'pdf'): Promise<void> {
+  /** Devuelve si se descargó el archivo (fix-435-m: la pantalla avisa si falló). */
+  async exportarHistorial(format: 'excel' | 'pdf'): Promise<boolean> {
     this._isExporting.set(true);
     try {
       const branchId = this.getActiveBranchId();
@@ -561,9 +578,11 @@ export class ServiciosEspecialesFacade {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }
+      return true;
     } catch (err) {
       console.error('Error exportando historial:', err);
       this._error.set('No se pudo exportar el historial.');
+      return false;
     } finally {
       this._isExporting.set(false);
     }

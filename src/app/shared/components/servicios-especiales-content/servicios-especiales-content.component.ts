@@ -101,94 +101,220 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
           }
         </div>
 
-        <!-- VISTA Desktop: Tabla con paginación (mismo patrón que
+        @if (loadError()) {
+          <!-- fix-435-m: la carga falló; no es un catálogo vacío. -->
+          <div class="flex-1 flex items-center justify-center" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="loadError() ?? ''"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="retry.emit()"
+            />
+          </div>
+        } @else {
+          <!-- VISTA Desktop: Tabla con paginación (mismo patrón que
              app-admin-profesional-promociones / app-alumnos-list-content) -->
-        <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
-          <p-table
-            [value]="serviciosVisibles()"
-            [rows]="10"
-            [paginator]="true"
-            [scrollable]="true"
-            scrollHeight="flex"
-            styleClass="p-datatable-sm h-full flex flex-col"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} servicios"
-          >
-            <ng-template pTemplate="header">
-              <tr class="micro-label text-left">
-                <th class="pl-6 py-4">Servicio</th>
-                <th class="text-right">Precio</th>
-                <th class="text-center">Estado</th>
-                <th class="pr-6 text-right">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-servicio>
-              <tr
-                class="list-item-hover transition-colors border-b border-border-subtle"
-                [class.opacity-60]="!servicio.activo"
-              >
-                <td class="pl-6 py-3">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                      [style]="getServiceIconStyle(servicio.color)"
-                    >
-                      <app-icon [name]="servicio.icono" [size]="16" />
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                      <span class="item-title truncate">{{ servicio.nombre }}</span>
-                      <span class="text-xs text-text-muted truncate">{{
-                        servicio.descripcion
-                      }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="text-right font-bold text-text-primary">
-                  \${{ servicio.precio.toLocaleString('es-CL') }}
-                </td>
-                <td class="text-center">
-                  <app-badge [variant]="servicio.activo ? 'success' : 'neutral'">
-                    {{ servicio.activo ? 'Activo' : 'Inactivo' }}
-                  </app-badge>
-                </td>
-                <td class="pr-6 text-right">
-                  <div class="inline-flex items-center justify-end gap-2">
-                    @if (puedeEditarCatalogo()) {
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
-                        [attr.data-llm-action]="'editar-servicio-' + servicio.id"
-                        [attr.aria-label]="'Editar servicio ' + servicio.nombre"
-                        (click)="requestEditarServicio.emit(servicio)"
+          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <p-table
+              [value]="serviciosVisibles()"
+              [rows]="10"
+              [paginator]="true"
+              [scrollable]="true"
+              scrollHeight="flex"
+              styleClass="p-datatable-sm h-full flex flex-col"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} servicios"
+            >
+              <ng-template pTemplate="header">
+                <tr class="micro-label text-left">
+                  <th class="pl-6 py-4">Servicio</th>
+                  <th class="text-right">Precio</th>
+                  <th class="text-center">Estado</th>
+                  <th class="pr-6 text-right">Acciones</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-servicio>
+                <tr
+                  class="list-item-hover transition-colors border-b border-border-subtle"
+                  [class.opacity-60]="!servicio.activo"
+                >
+                  <td class="pl-6 py-3">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                        [style]="getServiceIconStyle(servicio.color)"
                       >
-                        <app-icon name="edit" [size]="15" />
-                      </button>
-                    }
-                    @if (servicio.activo) {
-                      <button
-                        type="button"
-                        class="btn-secondary btn-sm"
-                        [attr.data-llm-action]="'vender-' + servicio.id"
-                        (click)="requestRegistrarVenta.emit(servicio)"
-                      >
-                        Vender
-                      </button>
+                        <app-icon [name]="servicio.icono" [size]="16" />
+                      </div>
+                      <div class="flex flex-col min-w-0">
+                        <span class="item-title truncate">{{ servicio.nombre }}</span>
+                        <span class="text-xs text-text-muted truncate">{{
+                          servicio.descripcion
+                        }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-right font-bold text-text-primary">
+                    \${{ servicio.precio.toLocaleString('es-CL') }}
+                  </td>
+                  <td class="text-center">
+                    <app-badge [variant]="servicio.activo ? 'success' : 'neutral'">
+                      {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+                    </app-badge>
+                  </td>
+                  <td class="pr-6 text-right">
+                    <div class="inline-flex items-center justify-end gap-2">
                       @if (puedeEditarCatalogo()) {
                         <button
                           type="button"
+                          class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
+                          [attr.data-llm-action]="'editar-servicio-' + servicio.id"
+                          [attr.aria-label]="'Editar servicio ' + servicio.nombre"
+                          (click)="requestEditarServicio.emit(servicio)"
+                        >
+                          <app-icon name="edit" [size]="15" />
+                        </button>
+                      }
+                      @if (servicio.activo) {
+                        <button
+                          type="button"
+                          class="btn-secondary btn-sm"
+                          [attr.data-llm-action]="'vender-' + servicio.id"
+                          (click)="requestRegistrarVenta.emit(servicio)"
+                        >
+                          Vender
+                        </button>
+                        @if (puedeEditarCatalogo()) {
+                          <button
+                            type="button"
+                            class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
+                            [attr.data-llm-action]="'borrar-servicio-' + servicio.id"
+                            [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
+                            (click)="onBorrarServicio(servicio)"
+                          >
+                            <app-icon name="trash-2" [size]="15" />
+                          </button>
+                        }
+                      } @else {
+                        <button
+                          type="button"
+                          class="cursor-pointer text-xs font-medium px-2 py-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"
+                          [attr.data-llm-action]="'eliminar-definitivo-servicio-' + servicio.id"
+                          (click)="onEliminarDefinitivo(servicio)"
+                        >
+                          Eliminar definitivamente
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-secondary btn-sm"
+                          [attr.data-llm-action]="'reactivar-servicio-' + servicio.id"
+                          (click)="onReactivarServicio(servicio)"
+                        >
+                          Reactivar
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="4" class="p-0">
+                    @if (puedeEditarCatalogo()) {
+                      <app-empty-state
+                        icon="receipt"
+                        message="Todavía no hay servicios en el catálogo"
+                        subtitle="Agrega un servicio para empezar a vender."
+                        actionLabel="Agregar servicio"
+                        actionIcon="plus"
+                        (action)="requestNuevoServicio.emit()"
+                      />
+                    } @else {
+                      <app-empty-state
+                        icon="receipt"
+                        message="Todavía no hay servicios en el catálogo"
+                        subtitle="El administrador agrega los servicios que se pueden vender."
+                      />
+                    }
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+
+          <!-- VISTA Mobile: Tarjetas apiladas (visible cuando el CONTENEDOR se comprime) -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
+            @for (servicio of serviciosVisibles(); track servicio.id) {
+              <div
+                class="card flex flex-col gap-3"
+                appCardHover
+                [class.opacity-60]="!servicio.activo"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                      [style]="getServiceIconStyle(servicio.color)"
+                    >
+                      <app-icon [name]="servicio.icono" [size]="18" />
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <h3 class="item-title m-0 truncate">{{ servicio.nombre }}</h3>
+                      <p class="text-xs text-text-muted m-0 truncate">{{ servicio.descripcion }}</p>
+                    </div>
+                  </div>
+                  <app-badge [variant]="servicio.activo ? 'success' : 'neutral'" class="shrink-0">
+                    {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+                  </app-badge>
+                </div>
+                <div
+                  class="flex items-center justify-between pt-3"
+                  style="border-top:1px solid var(--border-subtle)"
+                >
+                  <span class="font-bold text-text-primary"
+                    >\${{ servicio.precio.toLocaleString('es-CL') }}</span
+                  >
+                  @if (servicio.activo) {
+                    <div class="flex items-center gap-2">
+                      @if (puedeEditarCatalogo()) {
+                        <button
+                          type="button"
+                          class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
+                          [attr.data-llm-action]="'editar-servicio-mobile-' + servicio.id"
+                          [attr.aria-label]="'Editar servicio ' + servicio.nombre"
+                          (click)="requestEditarServicio.emit(servicio)"
+                        >
+                          <app-icon name="edit" [size]="15" />
+                        </button>
+                        <button
+                          type="button"
                           class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
-                          [attr.data-llm-action]="'borrar-servicio-' + servicio.id"
+                          [attr.data-llm-action]="'borrar-servicio-mobile-' + servicio.id"
                           [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
                           (click)="onBorrarServicio(servicio)"
                         >
                           <app-icon name="trash-2" [size]="15" />
                         </button>
                       }
-                    } @else {
+                      <button
+                        type="button"
+                        class="btn-secondary btn-sm"
+                        [attr.data-llm-action]="'vender-mobile-' + servicio.id"
+                        (click)="requestRegistrarVenta.emit(servicio)"
+                      >
+                        Vender
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="flex items-center gap-2">
                       <button
                         type="button"
                         class="cursor-pointer text-xs font-medium px-2 py-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"
-                        [attr.data-llm-action]="'eliminar-definitivo-servicio-' + servicio.id"
+                        [attr.data-llm-action]="
+                          'eliminar-definitivo-servicio-mobile-' + servicio.id
+                        "
                         (click)="onEliminarDefinitivo(servicio)"
                       >
                         Eliminar definitivamente
@@ -196,145 +322,35 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       <button
                         type="button"
                         class="btn-secondary btn-sm"
-                        [attr.data-llm-action]="'reactivar-servicio-' + servicio.id"
+                        [attr.data-llm-action]="'reactivar-servicio-mobile-' + servicio.id"
                         (click)="onReactivarServicio(servicio)"
                       >
                         Reactivar
                       </button>
-                    }
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="4" class="p-0">
-                  @if (puedeEditarCatalogo()) {
-                    <app-empty-state
-                      icon="receipt"
-                      message="Todavía no hay servicios en el catálogo"
-                      subtitle="Agrega un servicio para empezar a vender."
-                      actionLabel="Agregar servicio"
-                      actionIcon="plus"
-                      (action)="requestNuevoServicio.emit()"
-                    />
-                  } @else {
-                    <app-empty-state
-                      icon="receipt"
-                      message="Todavía no hay servicios en el catálogo"
-                      subtitle="El administrador agrega los servicios que se pueden vender."
-                    />
+                    </div>
                   }
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
-
-        <!-- VISTA Mobile: Tarjetas apiladas (visible cuando el CONTENEDOR se comprime) -->
-        <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
-          @for (servicio of serviciosVisibles(); track servicio.id) {
-            <div
-              class="card flex flex-col gap-3"
-              appCardHover
-              [class.opacity-60]="!servicio.activo"
-            >
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    [style]="getServiceIconStyle(servicio.color)"
-                  >
-                    <app-icon [name]="servicio.icono" [size]="18" />
-                  </div>
-                  <div class="flex flex-col min-w-0">
-                    <h3 class="item-title m-0 truncate">{{ servicio.nombre }}</h3>
-                    <p class="text-xs text-text-muted m-0 truncate">{{ servicio.descripcion }}</p>
-                  </div>
                 </div>
-                <app-badge [variant]="servicio.activo ? 'success' : 'neutral'" class="shrink-0">
-                  {{ servicio.activo ? 'Activo' : 'Inactivo' }}
-                </app-badge>
               </div>
-              <div
-                class="flex items-center justify-between pt-3"
-                style="border-top:1px solid var(--border-subtle)"
-              >
-                <span class="font-bold text-text-primary"
-                  >\${{ servicio.precio.toLocaleString('es-CL') }}</span
-                >
-                @if (servicio.activo) {
-                  <div class="flex items-center gap-2">
-                    @if (puedeEditarCatalogo()) {
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
-                        [attr.data-llm-action]="'editar-servicio-mobile-' + servicio.id"
-                        [attr.aria-label]="'Editar servicio ' + servicio.nombre"
-                        (click)="requestEditarServicio.emit(servicio)"
-                      >
-                        <app-icon name="edit" [size]="15" />
-                      </button>
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/10"
-                        [attr.data-llm-action]="'borrar-servicio-mobile-' + servicio.id"
-                        [attr.aria-label]="'Borrar servicio ' + servicio.nombre"
-                        (click)="onBorrarServicio(servicio)"
-                      >
-                        <app-icon name="trash-2" [size]="15" />
-                      </button>
-                    }
-                    <button
-                      type="button"
-                      class="btn-secondary btn-sm"
-                      [attr.data-llm-action]="'vender-mobile-' + servicio.id"
-                      (click)="requestRegistrarVenta.emit(servicio)"
-                    >
-                      Vender
-                    </button>
-                  </div>
-                } @else {
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="cursor-pointer text-xs font-medium px-2 py-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"
-                      [attr.data-llm-action]="'eliminar-definitivo-servicio-mobile-' + servicio.id"
-                      (click)="onEliminarDefinitivo(servicio)"
-                    >
-                      Eliminar definitivamente
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-secondary btn-sm"
-                      [attr.data-llm-action]="'reactivar-servicio-mobile-' + servicio.id"
-                      (click)="onReactivarServicio(servicio)"
-                    >
-                      Reactivar
-                    </button>
-                  </div>
-                }
-              </div>
-            </div>
-          } @empty {
-            @if (puedeEditarCatalogo()) {
-              <app-empty-state
-                icon="receipt"
-                message="Todavía no hay servicios en el catálogo"
-                subtitle="Agrega un servicio para empezar a vender."
-                actionLabel="Agregar servicio"
-                actionIcon="plus"
-                (action)="requestNuevoServicio.emit()"
-              />
-            } @else {
-              <app-empty-state
-                icon="receipt"
-                message="Todavía no hay servicios en el catálogo"
-                subtitle="El administrador agrega los servicios que se pueden vender."
-              />
+            } @empty {
+              @if (puedeEditarCatalogo()) {
+                <app-empty-state
+                  icon="receipt"
+                  message="Todavía no hay servicios en el catálogo"
+                  subtitle="Agrega un servicio para empezar a vender."
+                  actionLabel="Agregar servicio"
+                  actionIcon="plus"
+                  (action)="requestNuevoServicio.emit()"
+                />
+              } @else {
+                <app-empty-state
+                  icon="receipt"
+                  message="Todavía no hay servicios en el catálogo"
+                  subtitle="El administrador agrega los servicios que se pueden vender."
+                />
+              }
             }
-          }
-        </div>
+          </div>
+        }
       </div>
     </div>
 
@@ -383,6 +399,8 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
    * servicios inactivos; queda solo vender.
    */
   readonly puedeEditarCatalogo = input<boolean>(true);
+  /** fix-435-m: motivo si la carga inicial falló (reemplaza la lista por un aviso con reintento). */
+  readonly loadError = input<string | null>(null);
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -396,6 +414,7 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly servicioBorrado = output<number>();
   readonly servicioReactivado = output<number>();
   readonly servicioEliminadoDefinitivo = output<number>();
+  readonly retry = output<void>();
 
   // ── Estado interno ──────────────────────────────────────────────────────────
   protected readonly mostrarInactivos = signal(false);

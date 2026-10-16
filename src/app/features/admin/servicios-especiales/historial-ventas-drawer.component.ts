@@ -264,9 +264,11 @@ export class HistorialVentasDrawerComponent {
     this.periodWindow.set(value);
   }
 
-  protected onExport(format: 'excel' | 'pdf'): void {
+  protected async onExport(format: 'excel' | 'pdf'): Promise<void> {
     this.exportMenuOpen.set(false);
-    void this.facade.exportarHistorial(format);
+    // fix-435-m: antes la falla solo quedaba en la consola.
+    const ok = await this.facade.exportarHistorial(format);
+    if (!ok) this.toast.error('No se pudo exportar el historial');
   }
 
   protected async onBorrar(venta: VentaServicio): Promise<void> {

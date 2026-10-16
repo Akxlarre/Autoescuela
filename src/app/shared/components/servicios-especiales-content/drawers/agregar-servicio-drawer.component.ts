@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angula
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
@@ -95,6 +96,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 export class AgregarServicioDrawerComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly toast = inject(ToastService);
 
   protected readonly isSaving = signal(false);
 
@@ -117,8 +119,12 @@ export class AgregarServicioDrawerComponent {
     });
 
     this.isSaving.set(false);
+    // fix-435-m: nunca fallar en silencio.
     if (success) {
+      this.toast.success('Servicio agregado');
       this.drawer.close();
+    } else {
+      this.toast.error('No se pudo agregar el servicio', this.facade.error() ?? undefined);
     }
   }
 }

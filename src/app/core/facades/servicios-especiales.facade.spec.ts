@@ -760,6 +760,60 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
+  // ── fix-435-m: los errores se pueden mostrar ──
+  describe('errores visibles (fix-435-m)', () => {
+    it('si la carga inicial falla, expone loadError y no deja el catálogo como "vacío"', async () => {
+      const { facade } = setup({
+        tables: { service_catalog: { data: null, error: new Error('sin red') } },
+      });
+
+      await facade.initialize();
+
+      expect(facade.loadError()).toBe('No se pudieron cargar los servicios especiales.');
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('reintentar() vuelve a cargar y limpia loadError si ahora responde', async () => {
+      const tables: Record<string, { data: unknown; error: unknown }> = {
+        service_catalog: { data: null, error: new Error('sin red') },
+      };
+      const { facade } = setup({ tables });
+      await facade.initialize();
+      expect(facade.loadError()).not.toBeNull();
+
+      tables['service_catalog'] = { data: [], error: null };
+      await facade.reintentar();
+
+      expect(facade.loadError()).toBeNull();
+    });
+
+    it('una carga exitosa deja loadError en null', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      expect(facade.loadError()).toBeNull();
+    });
+
+    it('exportarHistorial devuelve false si la función falla', async () => {
+      const { facade, mockSupabase } = setup();
+      mockSupabase.client.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('500') });
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      await expect(facade.exportarHistorial('excel')).resolves.toBe(false);
+      expect(facade.error()).toBe('No se pudo exportar el historial.');
+    });
+
+    it('exportarHistorial devuelve true si descarga', async () => {
+      const { facade, mockSupabase } = setup();
+      mockSupabase.client.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
+
+      await expect(facade.exportarHistorial('excel')).resolves.toBe(true);
+    });
+  });
+
   // ── fix-147-b: el export no puede quedar truncado por la ventana de período ──
   describe('exportarHistorial — inmune a los filtros de UI (fix-147-b)', () => {
     it('invoca la Edge Function solo con format y branch_id, sin ningún filtro de la vista', async () => {

@@ -19,6 +19,8 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
       [catalogo]="facade.catalogo()"
       [kpis]="facade.kpis()"
       [isLoading]="facade.isLoading()"
+      [loadError]="facade.loadError()"
+      (retry)="facade.reintentar()"
       [puedeEditarCatalogo]="false"
       (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
       (requestVerHistorial)="facade.openHistorialVentasDrawer()"

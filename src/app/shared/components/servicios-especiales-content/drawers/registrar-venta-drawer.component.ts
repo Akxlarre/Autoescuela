@@ -6,6 +6,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
@@ -189,6 +190,7 @@ import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
 export class RegistrarVentaDrawerComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly toast = inject(ToastService);
 
   readonly esAlumnoOptions = [
     { label: 'Cliente externo', value: false },
@@ -307,8 +309,12 @@ export class RegistrarVentaDrawerComponent {
     });
 
     this.isSaving.set(false);
+    // fix-435-m: confirmar la venta (decisión H05) y nunca fallar en silencio.
     if (success) {
+      this.toast.success('Venta registrada');
       this.drawer.close();
+    } else {
+      this.toast.error('No se pudo registrar la venta', this.facade.error() ?? undefined);
     }
   }
 }
