@@ -2,7 +2,7 @@
 
 - **Autor:** b
 - **Origen:** ASG-i-026 (testing de la Agenda), hallazgo H4 / sospecha S19 de `fix-186-b`.
-- **Estado:** abierto — esperando aprobación del owner para aplicar la migración
+- **Estado:** cerrado (2026-10-16)
 
 ## Bug
 
@@ -33,5 +33,5 @@ lee como `postgres` y como secretaria).
 ## Verificación
 
 - [x] Test en BEGIN…ROLLBACK con la migración: 5/5 (2 fallas sin ella); fix-224-b 13/13 y fix-226-b 3/3; tiempo de la vista sin regresión (semana 92 ms, por instructor 23 ms).
-- [ ] Migración aplicada en producción (requiere aprobación del owner) + tests en verde
-      (este, fix-224-b, fix-226-b) + e2e de la Agenda.
+- [x] Migración aplicada en producción (aprobada por el owner) + tests en verde
+      (este 5/5, fix-224-b 13/13, fix-226-b 3/3) + e2e de la Agenda 29/29.
