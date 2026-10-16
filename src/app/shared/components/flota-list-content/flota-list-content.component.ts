@@ -469,7 +469,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
 })
 export class FlotaListContentComponent {
   readonly vehicles = input<VehicleTableRow[]>([]);
-  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0 });
+  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0, outOfService: 0 });
   readonly isLoading = input(false);
   readonly basePath = input<string>('/app/admin');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
@@ -529,6 +529,13 @@ export class FlotaListContentComponent {
       value: this.kpis().maintenance,
       icon: 'wrench',
       color: 'warning',
+    },
+    {
+      id: 'de-baja',
+      label: 'De Baja',
+      value: this.kpis().outOfService,
+      icon: 'circle-x',
+      color: 'error',
     },
   ]);
 

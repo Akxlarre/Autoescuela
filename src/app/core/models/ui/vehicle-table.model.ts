@@ -43,4 +43,6 @@ export interface FlotaKpis {
   total: number;
   available: number;
   maintenance: number;
+  /** Fuera de servicio (hotfix-080-b). */
+  outOfService: number;
 }
