@@ -7,7 +7,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { noSoloEspacios } from '@core/utils/servicios-especiales.utils';
+import { montoEntero, noSoloEspacios } from '@core/utils/servicios-especiales.utils';
 
 /**
  * EditarServicioDrawerComponent — Editar nombre/descripción/precio/estado de un servicio existente
@@ -74,6 +74,10 @@ import { noSoloEspacios } from '@core/utils/servicios-especiales.utils';
               data-llm-description="input for the special service base price"
             />
           </div>
+          <!-- hotfix-158-m: las columnas de monto son enteras -->
+          @if (servicioForm.controls.precio.hasError('montoEntero')) {
+            <span class="text-xs text-error">Ingresa el monto en pesos, sin decimales.</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -143,6 +147,7 @@ export class EditarServicioDrawerComponent {
     precio: new FormControl<number>(this.servicio?.precio ?? 0, [
       Validators.required,
       Validators.min(1),
+      montoEntero,
     ]),
     activo: new FormControl<boolean>(this.servicio?.activo ?? true, { nonNullable: true }),
   });

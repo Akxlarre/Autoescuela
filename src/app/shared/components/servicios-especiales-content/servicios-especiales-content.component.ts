@@ -309,6 +309,16 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                     </div>
                   } @else {
                     <div class="flex items-center gap-2">
+                      <!-- hotfix-158-m: la tarjeta de un inactivo también se edita (en la tabla ya se podía) -->
+                      <button
+                        type="button"
+                        class="cursor-pointer text-text-muted hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-brand/10"
+                        [attr.data-llm-action]="'editar-servicio-mobile-' + servicio.id"
+                        [attr.aria-label]="'Editar servicio ' + servicio.nombre"
+                        (click)="requestEditarServicio.emit(servicio)"
+                      >
+                        <app-icon name="edit" [size]="15" />
+                      </button>
                       <button
                         type="button"
                         class="cursor-pointer text-xs font-medium px-2 py-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"

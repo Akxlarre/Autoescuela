@@ -11,6 +11,7 @@ import { PeriodSelectorComponent } from '@shared/components/period-selector/peri
 import type { VentaServicio } from '@core/models/ui/servicios-especiales.model';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { filterBySearchTokens } from '@core/utils/search-filter.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
   DEFAULT_PERIOD_WINDOW,
@@ -171,7 +172,7 @@ import {
                     }
                   </div>
                   <div class="flex items-center gap-1.5 text-xs text-text-secondary">
-                    {{ venta.servicio }} · {{ venta.fecha }}
+                    {{ venta.servicio }} · {{ formatFecha(venta.fecha) }}
                     @if (venta.documentNumber) {
                       <span
                         class="font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
@@ -245,6 +246,8 @@ export class HistorialVentasDrawerComponent {
   private readonly toast = inject(ToastService);
 
   protected readonly isExporting = this.facade.isExporting;
+  /** hotfix-158-m: DD-MM-AAAA, como el resto de la app. */
+  protected readonly formatFecha = formatDayMonthYear;
 
   protected readonly filtroServicio = signal<string | null>(null);
   /** fix-439-m: texto del buscador (cliente, RUT o N° de boleta). */

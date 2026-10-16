@@ -6,7 +6,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { noSoloEspacios } from '@core/utils/servicios-especiales.utils';
+import { montoEntero, noSoloEspacios } from '@core/utils/servicios-especiales.utils';
 
 /**
  * AgregarServicioDrawerComponent — Formulario para crear un nuevo servicio en side-drawer (RF-037).
@@ -62,6 +62,10 @@ import { noSoloEspacios } from '@core/utils/servicios-especiales.utils';
               data-llm-description="input for the special service base price"
             />
           </div>
+          <!-- hotfix-158-m: las columnas de monto son enteras -->
+          @if (servicioForm.controls.precio.hasError('montoEntero')) {
+            <span class="text-xs text-error">Ingresa el monto en pesos, sin decimales.</span>
+          }
         </div>
       </form>
 
@@ -105,7 +109,7 @@ export class AgregarServicioDrawerComponent {
     // fix-436-m: un texto de solo espacios no cuenta como completado.
     nombre: new FormControl('', [Validators.required, noSoloEspacios]),
     descripcion: new FormControl('', [Validators.required, noSoloEspacios]),
-    precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
+    precio: new FormControl<number>(0, [Validators.required, Validators.min(1), montoEntero]),
   });
 
   protected async submitServicio(): Promise<void> {

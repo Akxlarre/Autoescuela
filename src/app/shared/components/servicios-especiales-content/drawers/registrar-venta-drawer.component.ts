@@ -11,6 +11,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { formatRutTyping, completeRutDv } from '@core/utils/rut.utils';
 import type { AlumnoVinculado } from '@core/models/ui/servicios-especiales.model';
+import { montoEntero } from '@core/utils/servicios-especiales.utils';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -126,6 +127,10 @@ import type { AlumnoVinculado } from '@core/models/ui/servicios-especiales.model
                 class="w-full h-11 pl-7 pr-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
               />
             </div>
+            <!-- hotfix-158-m: las columnas de monto son enteras -->
+            @if (ventaForm.controls.precio.hasError('montoEntero')) {
+              <span class="text-xs text-error">Ingresa el monto en pesos, sin decimales.</span>
+            }
           </div>
         </div>
 
@@ -216,7 +221,7 @@ export class RegistrarVentaDrawerComponent {
     servicioId: new FormControl('', Validators.required),
     nombre: new FormControl('', Validators.required),
     rut: new FormControl('', Validators.required),
-    precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
+    precio: new FormControl<number>(0, [Validators.required, Validators.min(1), montoEntero]),
     documentNumber: new FormControl<string>(''),
     branchId: new FormControl<number | null>(null),
     paymentMethod: new FormControl<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo', {

@@ -5,6 +5,7 @@
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { chileToday } from '@core/utils/chile-time.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -556,7 +557,7 @@ export class ServiciosEspecialesFacade {
     if (closedData && closedData.length > 0) {
       return {
         success: false,
-        blockedReason: `No se puede borrar: la caja del ${venta.fecha} ya está cerrada.`,
+        blockedReason: `No se puede borrar: la caja del ${formatDayMonthYear(venta.fecha)} ya está cerrada.`,
       };
     }
 

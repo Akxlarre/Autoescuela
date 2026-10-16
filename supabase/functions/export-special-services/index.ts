@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
       if (y < MB + 30) newPage();
       HLINE(y + 6);
-      T(colX[0], y - 6, `Total (${rows.length} ventas)`, 'F2', 9);
+      T(colX[0], y - 6, `Total (${rows.length} ${rows.length === 1 ? 'venta' : 'ventas'})`, 'F2', 9);
       TR(RIGHT, y - 6, formatCLP(total), 'F2', 9);
 
       pages.push(ops);

@@ -3,6 +3,7 @@ import type { ServicioEspecial } from '@core/models/ui/servicios-especiales.mode
 import {
   buscarServicioDuplicado,
   mensajeServicioDuplicado,
+  montoEntero,
   noSoloEspacios,
 } from './servicios-especiales.utils';
 
@@ -51,6 +52,17 @@ describe('mensajeServicioDuplicado (fix-436-m)', () => {
     expect(mensajeServicioDuplicado(servicio({ nombre: 'Psicotécnico' }))).toBe(
       'Ya existe un servicio llamado "Psicotécnico".',
     );
+  });
+});
+
+describe('montoEntero (hotfix-158-m)', () => {
+  it('rechaza decimales: las columnas de monto son enteras', () => {
+    expect(montoEntero(new FormControl(1500.5))).toEqual({ montoEntero: true });
+  });
+
+  it('acepta enteros y deja el vacío a Validators.required', () => {
+    expect(montoEntero(new FormControl(1500))).toBeNull();
+    expect(montoEntero(new FormControl(null))).toBeNull();
   });
 });
 

@@ -35,3 +35,13 @@ export function noSoloEspacios(control: AbstractControl): ValidationErrors | nul
   if (typeof value !== 'string' || value.length === 0) return null;
   return value.trim().length === 0 ? { soloEspacios: true } : null;
 }
+
+/**
+ * Validador: el monto es un entero (hotfix-158-m). Las columnas de precio son INTEGER: con
+ * decimales la BD rechazaba la venta con un error genérico. El vacío lo resuelve Validators.required.
+ */
+export function montoEntero(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (value === null || value === undefined || value === '') return null;
+  return Number.isInteger(Number(value)) ? null : { montoEntero: true };
+}

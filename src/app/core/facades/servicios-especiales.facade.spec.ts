@@ -672,7 +672,7 @@ describe('ServiciosEspecialesFacade', () => {
       const result = await facade.borrarVenta(7);
 
       expect(result.success).toBe(false);
-      expect(result.blockedReason).toContain('2026-08-01');
+      expect(result.blockedReason).toContain('01-08-2026');
       const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
       expect(deleteMock).not.toHaveBeenCalled();
     });
