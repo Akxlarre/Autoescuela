@@ -190,47 +190,63 @@
         }
       </div>
 
-      <!-- Seleccionar Método de Pago -->
-      <div class="space-y-4">
-        <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
-          >Selecciona el Método de Pago</label
+      <!-- fix-057-i: con total $0 (beca que cubre todo) no hay medio de pago que elegir -->
+      @if (data().totalToPay === 0) {
+        <div
+          class="card flex items-center gap-3 p-4"
+          data-llm-description="El descuento cubre el total: la matrícula no registra pago"
         >
-        <div class="grid sm:grid-cols-2 gap-3">
-          @for (option of paymentMethodOptions; track option.value) {
-            <button
-              type="button"
-              (click)="setPaymentMethod(option.value)"
-              [disabled]="option.value === 'pendiente' && data().isSingularCourse"
-              class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              [class.border-brand]="data().paymentMethod === option.value"
-              [class.bg-brand-muted]="data().paymentMethod === option.value"
-              [class.border-border-default]="data().paymentMethod !== option.value"
-            >
-              <div
-                class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm"
-                [class.bg-brand]="data().paymentMethod === option.value"
-                [class.text-surface]="data().paymentMethod === option.value"
-                [class.bg-surface]="data().paymentMethod !== option.value"
-                [class.text-text-muted]="data().paymentMethod !== option.value"
-              >
-                <app-icon [name]="option.icon" [size]="20" />
-              </div>
-              <div>
-                <p
-                  class="text-sm font-bold transition-colors"
-                  [class.text-brand]="data().paymentMethod === option.value"
-                  [class.text-text-primary]="data().paymentMethod !== option.value"
-                >
-                  {{ option.label }}
-                </p>
-                <p class="text-xs text-text-muted uppercase tracking-tight">
-                  {{ option.description }}
-                </p>
-              </div>
-            </button>
-          }
+          <app-icon name="graduation-cap" [size]="20" />
+          <div>
+            <p class="item-title">Beca 100 %</p>
+            <p class="text-xs text-text-secondary">
+              El descuento cubre el total: no hay monto a cobrar. Puedes continuar al contrato.
+            </p>
+          </div>
         </div>
-      </div>
+      } @else {
+        <!-- Seleccionar Método de Pago -->
+        <div class="space-y-4">
+          <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
+            >Selecciona el Método de Pago</label
+          >
+          <div class="grid sm:grid-cols-2 gap-3">
+            @for (option of paymentMethodOptions; track option.value) {
+              <button
+                type="button"
+                (click)="setPaymentMethod(option.value)"
+                [disabled]="option.value === 'pendiente' && data().isSingularCourse"
+                class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                [class.border-brand]="data().paymentMethod === option.value"
+                [class.bg-brand-muted]="data().paymentMethod === option.value"
+                [class.border-border-default]="data().paymentMethod !== option.value"
+              >
+                <div
+                  class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm"
+                  [class.bg-brand]="data().paymentMethod === option.value"
+                  [class.text-surface]="data().paymentMethod === option.value"
+                  [class.bg-surface]="data().paymentMethod !== option.value"
+                  [class.text-text-muted]="data().paymentMethod !== option.value"
+                >
+                  <app-icon [name]="option.icon" [size]="20" />
+                </div>
+                <div>
+                  <p
+                    class="text-sm font-bold transition-colors"
+                    [class.text-brand]="data().paymentMethod === option.value"
+                    [class.text-text-primary]="data().paymentMethod !== option.value"
+                  >
+                    {{ option.label }}
+                  </p>
+                  <p class="text-xs text-text-muted uppercase tracking-tight">
+                    {{ option.description }}
+                  </p>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
 
       <!-- N° de Documento (opcional) — fix-036-i -->
       @if (data().paymentMethod && data().paymentMethod !== 'pendiente') {

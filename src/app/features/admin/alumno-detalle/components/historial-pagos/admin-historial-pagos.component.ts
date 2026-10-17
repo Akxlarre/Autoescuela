@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { canRegistrarPago } from '@core/utils/ficha-pagos.utils';
+import { esBecaCompleta } from '@core/utils/beca.utils';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
@@ -59,7 +60,16 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- History List -->
         <div class="flex flex-col gap-3 ficha-pagos-grow ficha-pagos-scroll custom-scrollbar pr-1">
-          @if (pagos().length === 0) {
+          @if (becaCompleta()) {
+            <!-- fix-057-i: la beca no registra un pago de $0; se explica aquí -->
+            <div class="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <app-icon name="graduation-cap" [size]="32" color="var(--text-muted)" />
+              <p class="item-title">Becado 100 %</p>
+              <p class="text-xs text-text-secondary">
+                El descuento cubre el total del curso: no hay pagos que registrar.
+              </p>
+            </div>
+          } @else if (pagos().length === 0) {
             <div class="flex flex-col items-center justify-center gap-3 py-8 opacity-40">
               <app-icon name="receipt" [size]="32" />
               <p class="text-xs font-medium text-center">No hay pagos registrados</p>
@@ -212,4 +222,9 @@ export class AdminHistorialPagosComponent {
   readonly registrarPago = output<void>();
 
   protected readonly puedeRegistrarPago = computed(() => canRegistrarPago(this.saldoPendiente()));
+
+  /** fix-057-i: sin pagos y sin saldo = el descuento cubre todo el curso. */
+  protected readonly becaCompleta = computed(() =>
+    esBecaCompleta(this.totalPagado(), this.saldoPendiente(), this.pagos().length),
+  );
 }

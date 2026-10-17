@@ -90,8 +90,10 @@ export class EnrollmentPaymentFacade {
   });
 
   // ── Computed: can confirm payment ──
+  // fix-057-i: con total $0 (beca que cubre todo) no hay nada que cobrar: no se pide medio de pago.
   readonly canConfirmPayment = computed<boolean>(() => {
-    return this._pricing() !== null && this._paymentMethod() !== null;
+    if (this._pricing() === null) return false;
+    return this.totalToPay() === 0 || this._paymentMethod() !== null;
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -226,7 +228,7 @@ export class EnrollmentPaymentFacade {
 
     const pricing = this._pricing();
     const method = this._paymentMethod();
-    if (!pricing || !method) return false;
+    if (!pricing || !this.canConfirmPayment()) return false;
 
     this._isProcessing.set(true);
     this._error.set(null);
@@ -236,9 +238,10 @@ export class EnrollmentPaymentFacade {
       const disc = this._discount();
       const discountAmount = disc.enabled && disc.amount ? disc.amount : 0;
 
+      // fix-057-i: con total $0 la RPC no registra pago (la beca queda como descuento aplicado).
       const { error } = await this.supabase.client.rpc('record_enrollment_payment', {
         p_enrollment_id: enrollmentId,
-        p_payment_method: method,
+        p_payment_method: total === 0 ? null : method,
         p_total_amount: total,
         p_discount_id: discountAmount > 0 ? this._selectedDiscountId() : null,
         p_discount_amount: discountAmount,

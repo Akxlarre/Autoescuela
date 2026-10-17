@@ -327,6 +327,43 @@ describe('EnrollmentPaymentFacade', () => {
       expect(result).toBe(false);
     });
 
+    // fix-057-i: con beca del 100 % el paso Pago exigía medio de pago y la BD rechazaba el pago de $0.
+    it('fix-057-i: con total $0 confirma sin medio de pago y manda el monto 0 a la RPC', async () => {
+      facade.computePricing({
+        courseLabel: 'Clase B',
+        basePrice: 300000,
+        practicalClassesIncluded: 12,
+        isDeposit: false,
+      });
+      facade.setDiscount({ enabled: true, amount: 300000, reason: 'Beca 100%' });
+      expect(facade.totalToPay()).toBe(0);
+      expect(facade.canConfirmPayment()).toBe(true);
+
+      const ok = await facade.recordPayment(10, 1);
+      await flushMicrotasks();
+
+      expect(ok).toBe(true);
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith(
+        'record_enrollment_payment',
+        expect.objectContaining({
+          p_total_amount: 0,
+          p_payment_method: null,
+          p_discount_amount: 300000,
+        }),
+      );
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('fix-057-i: con total > 0 sigue exigiendo medio de pago', () => {
+      facade.computePricing({
+        courseLabel: 'Clase B',
+        basePrice: 300000,
+        practicalClassesIncluded: 12,
+        isDeposit: false,
+      });
+      expect(facade.canConfirmPayment()).toBe(false);
+    });
+
     // ── spec 0025 (T2.1): notificación al alumno tras registrar el pago ──
     describe('notificación al alumno (spec 0025, AC1, AC7, AC-E1)', () => {
       beforeEach(() => {

@@ -11,6 +11,7 @@ import {
   enrollmentPaymentStatusVariant,
 } from '@core/utils/payment-status.utils';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { esBecaCompleta } from '@core/utils/beca.utils';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 /**
@@ -190,7 +191,22 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <h3 class="item-title">Historial de Pagos</h3>
             </div>
 
-            @if (facade.estadoCuentaHistorial().length === 0) {
+            @if (
+              esBecaCompleta(
+                resumen.totalPagado,
+                resumen.saldoPendiente,
+                facade.estadoCuentaHistorial().length
+              )
+            ) {
+              <!-- fix-057-i: la beca no registra un pago de $0; se explica aquí -->
+              <div class="px-4 py-8 flex flex-col items-center gap-2 text-center">
+                <app-icon name="graduation-cap" [size]="28" color="var(--text-muted)" />
+                <p class="item-title">Becado 100 %</p>
+                <p class="text-xs text-text-secondary">
+                  El descuento cubre el total del curso: no hay pagos que registrar.
+                </p>
+              </div>
+            } @else if (facade.estadoCuentaHistorial().length === 0) {
               <div class="px-4 py-8 flex flex-col items-center gap-2 text-center">
                 <app-icon name="inbox" [size]="28" color="var(--text-muted)" />
                 <p class="text-xs text-text-muted">Sin pagos registrados aún.</p>
@@ -357,6 +373,7 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   // mostraba el valor crudo.
   protected readonly paymentStatusLabel = enrollmentPaymentStatusLabel;
   protected readonly paymentStatusVariant = enrollmentPaymentStatusVariant;
+  protected readonly esBecaCompleta = esBecaCompleta;
 
   protected estadoBg(estado: string | null): string {
     switch (estado) {
