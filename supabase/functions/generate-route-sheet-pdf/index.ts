@@ -70,17 +70,19 @@ Deno.serve(async (req: Request) => {
       return jsonErr(`Vehicle ${vehicle_id} not found`, 404);
     }
 
-    let branchLabel: string | null = null;
-    if (vehicle.both_branches) {
-      branchLabel = 'Ambas';
-    } else if (vehicle.branch_id) {
+    // hotfix-085-b: el encabezado lleva el nombre de la sede del vehículo (antes decía siempre
+    // "AUTOESCUELA CHILLÁN"). Para un "Ambas", su sede principal.
+    let branchName: string | null = null;
+    if (vehicle.branch_id) {
       const { data: branch } = await supabase
         .from('branches')
         .select('name')
         .eq('id', vehicle.branch_id)
         .maybeSingle();
-      branchLabel = branch?.name ?? null;
+      branchName = branch?.name ?? null;
     }
+    const branchLabel: string | null = vehicle.both_branches ? 'Ambas' : branchName;
+    const schoolName = (branchName ?? 'Autoescuela').toLocaleUpperCase('es-CL');
 
     const activeAssignment = (vehicle.vehicle_assignments ?? []).find(
       (a: any) => a.end_date === null,
@@ -115,6 +117,7 @@ Deno.serve(async (req: Request) => {
       vehicleLabel: `${vehicle.brand ?? ''} ${vehicle.model ?? ''}`.trim() || null,
       instructorName,
       branchLabel,
+      schoolName,
       scheduleBlocks,
     });
 
@@ -147,6 +150,8 @@ interface RouteSheetData {
   vehicleLabel: string | null;
   instructorName: string | null;
   branchLabel: string | null;
+  /** Encabezado del PDF: nombre de la sede del vehículo, en mayúsculas (hotfix-085-b). */
+  schoolName: string;
   scheduleBlocks: ScheduleBlock[];
 }
 
@@ -189,7 +194,7 @@ function buildRouteSheetPdf(data: RouteSheetData): Uint8Array {
   const resetColor = () => ops.push('0 g 0 G');
 
   // ── Header ───────────────────────────────────────────────────────────────
-  text(M, y, 'AUTOESCUELA CHILLÁN', 14, true);
+  text(M, y, data.schoolName, 14, true);
   text(W - M - 150, y, `Sede: ${data.branchLabel ?? '_____________'}`, 9);
   y -= 14;
   text(W - M - 150, y, 'Fecha: ____/____/______', 9);

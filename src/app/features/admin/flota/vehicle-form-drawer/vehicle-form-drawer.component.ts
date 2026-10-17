@@ -44,11 +44,13 @@ import { validateDocumentFile } from '@core/utils/document-file-validation.util'
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import {
+  bothBranchesRemovalWarning,
   isKmDecrease,
   isValidLicensePlate,
   maxVehicleYear,
   MIN_VEHICLE_YEAR,
   normalizeLicensePlate,
+  vehicleSaveErrorMessage,
 } from '@core/utils/vehicle-form.utils';
 
 /**
@@ -384,6 +386,8 @@ export class VehicleFormDrawerComponent {
   /** Patente y kilometraje guardados del vehículo en edición (null al crear). */
   private savedPlate: string | null = null;
   private savedKm: number | null = null;
+  private savedBothBranches = false;
+  private savedInstructorName: string | null = null;
 
   // ── Estado ────────────────────────────────────────────────────────────────
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
@@ -513,6 +517,10 @@ export class VehicleFormDrawerComponent {
           this.loadedVehicleId = id;
           this.savedPlate = vehicle.licensePlate;
           this.savedKm = vehicle.currentKm;
+          this.savedBothBranches = vehicle.bothBranches;
+          this.savedInstructorName = vehicle.instructorId
+            ? (vehicle.instructorName ?? 'El instructor asignado')
+            : null;
           this.vehicleForm.patchValue({
             license_plate: vehicle.licensePlate,
             brand: vehicle.brand,
@@ -528,6 +536,8 @@ export class VehicleFormDrawerComponent {
         this.loadedVehicleId = null;
         this.savedPlate = null;
         this.savedKm = null;
+        this.savedBothBranches = false;
+        this.savedInstructorName = null;
         this.vehicleForm.reset({
           year: chileYear(),
           status: 'available',
@@ -573,6 +583,25 @@ export class VehicleFormDrawerComponent {
       if (!confirmed) return;
     }
 
+    // Decisión del owner (G09): apagar "Ambas" con instructor asignado se confirma.
+    const bothWarning = this.vehicleId()
+      ? bothBranchesRemovalWarning(
+          this.savedBothBranches,
+          !!this.vehicleForm.getRawValue().both_branches,
+          this.savedInstructorName,
+        )
+      : null;
+    if (bothWarning) {
+      const confirmed = await this.confirmModal.confirm({
+        title: 'Quitar "Ambas sedes"',
+        message: bothWarning,
+        confirmLabel: 'Sí, quitar',
+        cancelLabel: 'Cancelar',
+        severity: 'warn',
+      });
+      if (!confirmed) return;
+    }
+
     this.errorMsg.set(null);
     this.isSaving.set(true);
 
@@ -590,10 +619,10 @@ export class VehicleFormDrawerComponent {
       }
       this.layoutDrawer.close();
     } catch (error) {
+      // hotfix-078-b: el error de Supabase no es un Error; antes caía siempre en el genérico.
       this.errorMsg.set(
-        error instanceof Error
-          ? this.sanitizer.sanitize(error).message
-          : 'Error al guardar el vehículo',
+        vehicleSaveErrorMessage(error, this.vehicleForm.getRawValue().license_plate ?? '') ??
+          this.sanitizer.sanitize(error).message,
       );
     } finally {
       this.isSaving.set(false);

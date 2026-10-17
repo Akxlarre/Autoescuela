@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { formatAnulacionDetalle, resumenConAnulados } from './anulacion-pago.utils';
+import {
+  etiquetaAnularIngreso,
+  formatAnulacionDetalle,
+  ingresoSeAnula,
+  resumenConAnulados,
+} from './anulacion-pago.utils';
+
+describe('ingresoSeAnula — fix-443-m', () => {
+  it('un pago y una venta de servicio especial se anulan; un curso singular se revierte', () => {
+    expect(ingresoSeAnula('payment')).toBe(true);
+    expect(ingresoSeAnula('special_service')).toBe(true);
+    expect(ingresoSeAnula('singular')).toBe(false);
+  });
+
+  it('la etiqueta nombra lo que se anula', () => {
+    expect(etiquetaAnularIngreso('payment')).toBe('Anular pago');
+    expect(etiquetaAnularIngreso('special_service')).toBe('Anular venta');
+  });
+});
 
 const anulacion = { motivo: 'Pago duplicado', por: 'Ana Rojas', cuando: '13-10-2026 23:30' };
 

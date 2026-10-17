@@ -91,3 +91,25 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 |---|---|
 | G01–G07, H*, I*, J*, K02/K03/K05–K08/K11–K18, L (matriz por flujo), M*, N* | Pendientes — necesitan 2 navegadores, hora real (cron de las 22:00) o decisiones de §5 del checklist |
 | A05, A07, A09, B03–B16, C07–C13, D04/D05/D07/D08, E05–E08/E10/E11, F02/F03/F05–F08, P01/P03/P05–P08 | Pendientes (visuales/manuales) |
+
+## Estado al 2026-10-16 (revisión contra `main` y producción)
+
+`e2e/agenda.spec.ts`: **29/29 en verde, sin ningún `knownBug`** (tras fix-227-b y fix-228-b).
+
+| # | Estado hoy | Cómo se resolvió |
+|---|---|---|
+| H1 / S1 | ✅ Resuelto por decisión | spec `0048-b`: la cancelación automática es configurable por sede y está **apagada en las dos** (`branch_absence_penalty_config.auto_cancel_enabled = false`). El cron sigue marcando "Ausente" a las 21:00 las clases no iniciadas, pero ya no cancela la agenda; además `fix-371-m` impide marcar ausente antes de la hora |
+| H2 / S4 | ✅ Corregido | `fix-187-b` (trigger que impide el mismo vehículo en dos clases a la misma hora) |
+| H3 / S11 | ✅ Corregido | `fix-189-b`: la Agenda muestra los errores de carga (A08 ya no es `knownBug`) |
+| H5 / S18 | ✅ Corregido | `hotfix-060-b` (pastilla con color, sin "Clic para agendar") |
+| S20 | ✅ Corregido | `fix-224-b` + `fix-226-b`: un vehículo en Mantenimiento o Fuera de servicio no ofrece horarios |
+| Otro (tope por día) | ✅ Resuelto | la app lee `courses.max_classes_per_day` (= 1 en los 6 cursos B); ya no aplica un tope 2 propio |
+| S6 | ✅ Resuelto | `fix-196-b`: el choque se calcula en `class_b_slot_occupied()` SECURITY DEFINER, sin la RLS de quien lee |
+| H4 / S19 | ✅ Corregido (`fix-227-b`, #295) | simulado en una transacción: un instructor + vehículo "Ambas" genera **65 horarios duplicados en 7 días** (una fila por sede con el mismo bloque). Hoy no hay ningún instructor ni vehículo "Ambas" → no se ve en el piloto |
+| S2 | ✅ Corregido (`fix-228-b`, #296) — decisión: no ofrecer bloques ya empezados (había 34 al aplicarlo) | la vista no filtra los bloques de hoy que ya pasaron (no se pudo ver a las 07:53: el primero es 08:30) |
+| S3 | ✅ Corregido (`fix-228-b`, #296) — decisión: la vista cubre hoy + 4 meses (C06 ya no es `knownBug`) | la vista genera 28 días (hoy: hasta el 13-nov) y la Agenda deja navegar 3 meses (`AgendaSettingsService`); desde la semana 5 no hay "Disponible" |
+| S16, S17 | backlog | sin cambios (sin efecto de cara al usuario en el piloto) |
+
+**Regresión encontrada y corregida el mismo día:** `fix-226-b` (#293) — la función nueva de
+`fix-224-b` no tenía `GRANT EXECUTE` para `authenticated` y la vista (security_invoker) fallaba con
+sesión de admin/secretaria desde el 15-oct: Agenda y elección de horarios caídas ~1 día.

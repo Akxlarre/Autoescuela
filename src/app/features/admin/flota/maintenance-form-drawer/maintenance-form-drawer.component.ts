@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { todayIso } from '@core/utils/date.utils';
+import { notAfterTodayValidator, todayIso } from '@core/utils/date.utils';
 import {
   FormsModule,
   NonNullableFormBuilder,
@@ -126,6 +126,8 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 <p-inputNumber
                   inputId="mf-km"
                   formControlName="km_at_time"
+                  locale="es-CL"
+                  [maxFractionDigits]="0"
                   placeholder="Ej: 45000"
                   aria-required="true"
                   inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
@@ -153,8 +155,12 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                       form.get('completed_date')?.setValue($event);
                       form.get('completed_date')?.markAsTouched()
                     "
+                    [max]="today"
                     data-llm-description="Fecha en que se realizó el mantenimiento"
                   />
+                  @if (form.get('completed_date')?.hasError('afterToday')) {
+                    <p class="text-xs text-error">La fecha no puede ser posterior a hoy.</p>
+                  }
                 </div>
               </div>
 
@@ -223,6 +229,8 @@ export class MaintenanceFormDrawerComponent {
   readonly vehicleId = this.flotaFacade.selectedVehicleId;
   readonly maintenanceId = this.detalleFacade.selectedMaintenanceId;
   readonly isEdit = computed(() => this.maintenanceId() !== null);
+  /** hotfix-082-b: tope del selector de fecha (un servicio realizado no es futuro). */
+  protected readonly today = todayIso();
   readonly isSaving = signal(false);
   readonly errorMsg = signal<string | null>(null);
 
@@ -240,7 +248,7 @@ export class MaintenanceFormDrawerComponent {
     type: ['', Validators.required],
     km_at_time: [0, [Validators.required, Validators.min(0)]],
     workshop: [''],
-    completed_date: [todayIso(), Validators.required],
+    completed_date: [todayIso(), [Validators.required, notAfterTodayValidator]],
     cost: [0, [Validators.required, Validators.min(0)]],
     description: [''],
   });

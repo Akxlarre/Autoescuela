@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { HistorialVentasDrawerComponent } from './historial-ventas-drawer.component';
@@ -31,6 +32,7 @@ function makeVenta(over: Partial<VentaServicio> = {}): VentaServicio {
     studentUserId: null,
     branchId: 1,
     documentNumber: 'B-1',
+    anulacion: null,
     ...over,
   };
 }
@@ -53,7 +55,16 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
   let ventasSig: ReturnType<typeof signal<VentaServicio[]>>;
   let catalogoSig: ReturnType<typeof signal<ServicioEspecial[]>>;
 
+  let exportarSpy: ReturnType<typeof vi.fn>;
+  let anularSpy: ReturnType<typeof vi.fn>;
+  let confirmWithReasonSpy: ReturnType<typeof vi.fn>;
+  let puedeAnularSig: ReturnType<typeof signal<boolean>>;
+
   beforeEach(() => {
+    exportarSpy = vi.fn().mockResolvedValue(true);
+    anularSpy = vi.fn().mockResolvedValue({ success: true });
+    confirmWithReasonSpy = vi.fn().mockResolvedValue('Cliente desistió');
+    puedeAnularSig = signal(true);
     ventasSig = signal<VentaServicio[]>([]);
     catalogoSig = signal<ServicioEspecial[]>([]);
 
@@ -66,11 +77,18 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
             ventas: ventasSig,
             catalogo: catalogoSig,
             isExporting: signal(false),
-            exportarHistorial: () => Promise.resolve(),
-            borrarVenta: () => Promise.resolve({ success: true }),
+            exportarHistorial: exportarSpy,
+            anularVenta: anularSpy,
+            puedeAnular: puedeAnularSig,
           },
         },
-        { provide: ConfirmModalService, useValue: { confirm: () => Promise.resolve(true) } },
+        {
+          provide: ConfirmModalService,
+          useValue: {
+            confirm: () => Promise.resolve(true),
+            confirmWithReason: (...args: unknown[]) => confirmWithReasonSpy(...args),
+          },
+        },
         {
           provide: ToastService,
           useValue: { success: () => undefined, warning: () => undefined, error: () => undefined },
@@ -170,5 +188,110 @@ describe('HistorialVentasDrawerComponent — filtrado del historial', () => {
         .ventasFiltradas()
         .map((v) => v.id),
     ).toEqual([1]);
+  });
+
+  describe('buscador por cliente o RUT (fix-439-m)', () => {
+    const b = () =>
+      component as unknown as {
+        busqueda: ReturnType<typeof signal<string>>;
+        ventasFiltradas: () => VentaServicio[];
+        hasActiveFilters: () => boolean;
+        clearFilters: () => void;
+        onPeriodWindowChange: (v: unknown) => void;
+      };
+
+    beforeEach(() => {
+      ventasSig.set([
+        makeVenta({ id: 1, cliente: 'José Núñez', rut: '12.345.678-5', documentNumber: '4582' }),
+        makeVenta({ id: 2, cliente: 'Ana Rojas', rut: '9876543-2', documentNumber: null }),
+      ]);
+    });
+
+    it('busca por nombre sin distinguir mayúsculas ni tildes', () => {
+      b().busqueda.set('jose nunez');
+      expect(
+        b()
+          .ventasFiltradas()
+          .map((v) => v.id),
+      ).toEqual([1]);
+    });
+
+    it('busca por RUT con o sin puntos y guion', () => {
+      b().busqueda.set('12345678');
+      expect(
+        b()
+          .ventasFiltradas()
+          .map((v) => v.id),
+      ).toEqual([1]);
+      b().busqueda.set('9.876.543-2');
+      expect(
+        b()
+          .ventasFiltradas()
+          .map((v) => v.id),
+      ).toEqual([2]);
+    });
+
+    it('busca por N° de boleta', () => {
+      b().busqueda.set('4582');
+      expect(
+        b()
+          .ventasFiltradas()
+          .map((v) => v.id),
+      ).toEqual([1]);
+    });
+
+    it('una búsqueda recorre todo el historial, no solo el período elegido', () => {
+      ventasSig.set([makeVenta({ id: 3, cliente: 'Antigua', fecha: '2019-01-01' })]);
+      b().onPeriodWindowChange(DEFAULT_PERIOD_WINDOW);
+      expect(b().ventasFiltradas()).toEqual([]);
+      b().busqueda.set('antigua');
+      expect(
+        b()
+          .ventasFiltradas()
+          .map((v) => v.id),
+      ).toEqual([3]);
+    });
+
+    it('la búsqueda cuenta como filtro activo y "Limpiar" la borra', () => {
+      b().busqueda.set('ana');
+      expect(b().hasActiveFilters()).toBe(true);
+      b().clearFilters();
+      expect(b().busqueda()).toBe('');
+    });
+  });
+
+  it('fix-440-m: exporta los ids de la lista filtrada (lo que se ve)', async () => {
+    ventasSig.set([makeVenta({ id: 1, servicioId: 1 }), makeVenta({ id: 2, servicioId: 2 })]);
+    c().onFiltroServicioChange('2');
+
+    await (component as unknown as { onExport: (f: 'excel' | 'pdf') => Promise<void> }).onExport(
+      'pdf',
+    );
+
+    expect(exportarSpy).toHaveBeenCalledWith('pdf', [2]);
+  });
+
+  describe('anular una venta (fix-443-m)', () => {
+    const onAnular = (v: VentaServicio) =>
+      (component as unknown as { onAnular: (x: VentaServicio) => Promise<void> }).onAnular(v);
+
+    it('pide el motivo y anula con él', async () => {
+      await onAnular(makeVenta({ id: 7 }));
+      expect(confirmWithReasonSpy).toHaveBeenCalled();
+      expect(anularSpy).toHaveBeenCalledWith(7, 'Cliente desistió');
+    });
+
+    it('si cancela el motivo no anula', async () => {
+      confirmWithReasonSpy.mockResolvedValue(null);
+      await onAnular(makeVenta({ id: 7 }));
+      expect(anularSpy).not.toHaveBeenCalled();
+    });
+
+    it('sin permiso (secretaria) no hace nada', async () => {
+      puedeAnularSig.set(false);
+      await onAnular(makeVenta({ id: 7 }));
+      expect(confirmWithReasonSpy).not.toHaveBeenCalled();
+      expect(anularSpy).not.toHaveBeenCalled();
+    });
   });
 });

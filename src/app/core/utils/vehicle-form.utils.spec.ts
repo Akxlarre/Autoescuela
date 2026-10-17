@@ -1,8 +1,10 @@
 import {
+  bothBranchesRemovalWarning,
   isKmDecrease,
   isValidLicensePlate,
   maxVehicleYear,
   normalizeLicensePlate,
+  vehicleSaveErrorMessage,
 } from './vehicle-form.utils';
 
 describe('vehicle-form.utils (hotfix-075-b)', () => {
@@ -59,5 +61,37 @@ describe('vehicle-form.utils (hotfix-075-b)', () => {
         expect(isKmDecrease(anterior, nuevo)).toBe(esperado);
       },
     );
+  });
+});
+
+describe('vehicleSaveErrorMessage (hotfix-078-b)', () => {
+  it('patente duplicada (23505) → mensaje con la patente', () => {
+    const error = {
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "vehicles_license_plate_key"',
+    };
+    expect(vehicleSaveErrorMessage(error, 'ABCD43')).toBe(
+      'Ya existe un vehículo con la patente ABCD43.',
+    );
+  });
+
+  it('cualquier otro error → null (lo resuelve el sanitizador)', () => {
+    expect(vehicleSaveErrorMessage({ code: '42501', message: 'rls' }, 'ABCD43')).toBeNull();
+    expect(vehicleSaveErrorMessage(new Error('x'), 'ABCD43')).toBeNull();
+    expect(vehicleSaveErrorMessage(null, 'ABCD43')).toBeNull();
+  });
+});
+
+describe('bothBranchesRemovalWarning (hotfix-083-b, G09)', () => {
+  it('apagar "Ambas" con instructor asignado → advertencia con su nombre', () => {
+    expect(bothBranchesRemovalWarning(true, false, 'Ana Soto')).toBe(
+      'Ana Soto usa este vehículo. Si deja de ser de ambas sedes, sus horarios en la otra sede dejan de ofrecerse. ¿Confirmas el cambio?',
+    );
+  });
+
+  it('sin instructor, sin cambio o al encender "Ambas" → null', () => {
+    expect(bothBranchesRemovalWarning(true, false, null)).toBeNull();
+    expect(bothBranchesRemovalWarning(true, true, 'Ana Soto')).toBeNull();
+    expect(bothBranchesRemovalWarning(false, true, 'Ana Soto')).toBeNull();
   });
 });

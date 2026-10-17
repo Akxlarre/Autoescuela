@@ -1361,8 +1361,12 @@ describe('AdminAlumnoDetalleFacade', () => {
       }
 
       /** students.status siempre 'active' (ningún flujo lo escribe): el estado sale de la matrícula. */
-      async function initWithEnrollments(enrollments: any[]): Promise<any> {
+      async function initWithEnrollments(
+        enrollments: any[],
+        prepare?: (mock: ReturnType<typeof makeFlexibleSupabaseMock>) => void,
+      ): Promise<any> {
         const mock = makeFlexibleSupabaseMock();
+        prepare?.(mock);
         mock.setSingleResult('students', {
           id: 42,
           status: 'active',
@@ -1670,6 +1674,91 @@ describe('AdminAlumnoDetalleFacade', () => {
           await facade.initialize(43);
 
           expect(facade.alumno()?.enrollmentId).toBe(401);
+        });
+      });
+
+      describe('ventas de servicios especiales en el historial de pagos — fix-438-m', () => {
+        it('se suman al historial como "Servicio especial: <servicio>", después de los pagos', async () => {
+          await initWithEnrollments([makeEnrollmentRow(306, 'active', '2026-03-15')], (mock) => {
+            mock.setResult('payments', [
+              {
+                id: 1,
+                payment_date: '2026-03-15',
+                type: 'enrollment',
+                total_amount: 50000,
+                cash_amount: 50000,
+                status: 'paid',
+              },
+            ]);
+            mock.setResult('special_service_sales', [
+              {
+                id: 1,
+                sale_date: '2026-04-02',
+                price: 20000,
+                service_name: 'Psicotécnico',
+                payment_method: 'transferencia',
+              },
+            ]);
+          });
+
+          const pagos = facade.historialPagos();
+          expect(pagos).toHaveLength(2);
+          expect(pagos[1]).toEqual({
+            id: 1,
+            fecha: '02 abr 2026',
+            concepto: 'Servicio especial: Psicotécnico',
+            monto: 20000,
+            metodo: 'Transferencia',
+            estado: 'Pagado',
+            anulacion: null,
+            servicioEspecial: true,
+          });
+          // No toca el total pagado ni el saldo de la matrícula.
+          expect(facade.alumno()?.totalPagado).toBe(0);
+        });
+
+        it('fix-443-m: una venta anulada sale como "Anulado", con su motivo', async () => {
+          await initWithEnrollments([makeEnrollmentRow(308, 'active', '2026-03-15')], (mock) => {
+            mock.setResult('payments', []);
+            mock.setResult('special_service_sales', [
+              {
+                id: 2,
+                sale_date: '2026-04-02',
+                price: 20000,
+                service_name: 'Psicotécnico',
+                payment_method: 'efectivo',
+                status: 'anulado',
+                void_reason: 'Venta duplicada',
+                voided_at: '2026-04-02T15:00:00.000Z',
+                anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+              },
+            ]);
+          });
+
+          const [venta] = facade.historialPagos();
+          expect(venta.estado).toBe('Anulado');
+          expect(venta.anulacion).toEqual(
+            expect.objectContaining({ motivo: 'Venta duplicada', por: 'Ana Rojas' }),
+          );
+        });
+
+        it('si la consulta de ventas falla, el historial de pagos se muestra igual', async () => {
+          await initWithEnrollments([makeEnrollmentRow(307, 'active', '2026-03-15')], (mock) => {
+            mock.setResult('payments', [
+              {
+                id: 1,
+                payment_date: '2026-03-15',
+                type: 'enrollment',
+                total_amount: 50000,
+                cash_amount: 50000,
+                status: 'paid',
+              },
+            ]);
+            mock.setResult('special_service_sales', null, { message: 'boom' });
+          });
+
+          expect(facade.historialPagos()).toHaveLength(1);
+          expect(facade.error()).toBeNull();
         });
       });
 

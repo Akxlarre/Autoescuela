@@ -37,6 +37,7 @@ describe('ServiciosEspecialesContentComponent — filtro de catálogo', () => {
   };
 
   let catalogoSig: ReturnType<typeof stubInput<ServicioEspecial[]>>;
+  let puedeEditarSig: ReturnType<typeof stubInput<boolean>>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -48,6 +49,7 @@ describe('ServiciosEspecialesContentComponent — filtro de catálogo', () => {
     });
     component = TestBed.inject(ServiciosEspecialesContentComponent);
     catalogoSig = stubInput<ServicioEspecial[]>('catalogo', []);
+    puedeEditarSig = stubInput<boolean>('puedeEditarCatalogo', true);
     stubInput('kpis', {
       ventasMes: 0,
       totalCobrado: 0,
@@ -88,5 +90,19 @@ describe('ServiciosEspecialesContentComponent — filtro de catálogo', () => {
         .serviciosVisibles()
         .map((s) => s.id),
     ).toEqual([1, 2]);
+  });
+
+  it('fix-434-m: sin permiso de catálogo nunca muestra inactivos (no hay toggle)', () => {
+    catalogoSig.set([
+      makeServicio({ id: 1, activo: true }),
+      makeServicio({ id: 2, activo: false }),
+    ]);
+    puedeEditarSig.set(false);
+    c().mostrarInactivos.set(true);
+    expect(
+      c()
+        .serviciosVisibles()
+        .map((s) => s.id),
+    ).toEqual([1]);
   });
 });

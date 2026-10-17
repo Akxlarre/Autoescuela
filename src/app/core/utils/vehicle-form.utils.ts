@@ -33,3 +33,27 @@ export function isKmDecrease(savedKm: number | null, nextKm: number | null): boo
   if (savedKm === null || nextKm === null) return false;
   return nextKm < savedKm;
 }
+
+/**
+ * hotfix-078-b: mensaje para un error al guardar un vehículo que la persona puede corregir. Hoy
+ * solo la patente duplicada (`UNIQUE (license_plate)` → 23505); el resto devuelve null y lo
+ * resuelve el sanitizador.
+ */
+export function vehicleSaveErrorMessage(error: unknown, plate: string): string | null {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === '23505' ? `Ya existe un vehículo con la patente ${plate}.` : null;
+}
+
+/**
+ * hotfix-083-b (G09): apagar "Ambas sedes" en un vehículo con instructor asignado le quita los
+ * horarios en la otra sede (la vista de disponibilidad exige que el vehículo cubra la sede del
+ * turno). Devuelve el texto de la confirmación, o null si no hace falta pedirla.
+ */
+export function bothBranchesRemovalWarning(
+  savedBothBranches: boolean,
+  nextBothBranches: boolean,
+  instructorName: string | null,
+): string | null {
+  if (!savedBothBranches || nextBothBranches || !instructorName) return null;
+  return `${instructorName} usa este vehículo. Si deja de ser de ambas sedes, sus horarios en la otra sede dejan de ofrecerse. ¿Confirmas el cambio?`;
+}

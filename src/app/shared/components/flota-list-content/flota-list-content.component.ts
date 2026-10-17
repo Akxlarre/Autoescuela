@@ -199,6 +199,18 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
               }
             </div>
           </div>
+        } @else if (error() && vehicles().length === 0) {
+          <!-- hotfix-087-b: un error de carga no es "no hay vehículos" -->
+          <div class="flex-1 flex items-center justify-center p-6">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="error()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="refreshRequested.emit()"
+            />
+          </div>
         } @else {
           <!-- ─────────────── CONTENIDO REAL ─────────────── -->
           <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
@@ -368,7 +380,14 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
                   (editVehicle)="editVehicle.emit($event)"
                 />
               } @empty {
-                <app-empty-state icon="car" message="Sin resultados" (action)="resetFilters()" />
+                <!-- hotfix-087-b (D10): mismo estado vacío que la tabla -->
+                <app-empty-state
+                  icon="car"
+                  message="No se encontraron vehículos"
+                  subtitle="Intenta ajustar la búsqueda o los filtros."
+                  actionLabel="Limpiar filtros"
+                  (action)="resetFilters()"
+                />
               }
             </div>
           </div>
@@ -469,8 +488,10 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
 })
 export class FlotaListContentComponent {
   readonly vehicles = input<VehicleTableRow[]>([]);
-  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0 });
+  readonly kpis = input<FlotaKpis>({ total: 0, available: 0, maintenance: 0, outOfService: 0 });
   readonly isLoading = input(false);
+  /** hotfix-087-b: error de carga del facade (sin datos que mostrar). */
+  readonly error = input<string | null>(null);
   readonly basePath = input<string>('/app/admin');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
   readonly showSedeColumn = input(false);
@@ -529,6 +550,13 @@ export class FlotaListContentComponent {
       value: this.kpis().maintenance,
       icon: 'wrench',
       color: 'warning',
+    },
+    {
+      id: 'de-baja',
+      label: 'De Baja',
+      value: this.kpis().outOfService,
+      icon: 'circle-x',
+      color: 'error',
     },
   ]);
 

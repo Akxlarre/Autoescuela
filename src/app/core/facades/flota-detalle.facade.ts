@@ -104,6 +104,18 @@ export class FlotaDetalleFacade {
   }
 
   /**
+   * hotfix-079-b: la URL trae un id que no es un número positivo (`/flota/abc/mantenimientos`).
+   * Sin esto la página quedaba como un vehículo vacío, o con los datos del vehículo anterior.
+   */
+  showVehicleNotFound(): void {
+    this._vehicle.set(null);
+    this._maintenances.set([]);
+    this._scheduledMaintenances.set([]);
+    this._isLoading.set(false);
+    this._error.set('Vehículo no encontrado.');
+  }
+
+  /**
    * Carga el detalle completo del vehículo + historial de mantenimientos en paralelo.
    */
   async loadVehicleDetail(vehicleId: number): Promise<void> {

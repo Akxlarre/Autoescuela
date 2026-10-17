@@ -12,8 +12,12 @@ describe('resolveDocStatus', () => {
     vi.useRealTimers();
   });
 
-  it('retorna expired si rawStatus ya viene marcado como expired', () => {
-    expect(resolveDocStatus('2099-01-01', 'expired')).toBe('expired');
+  it('I07 (hotfix-081-b): con fecha, manda la fecha aunque el estado guardado diga expired', () => {
+    expect(resolveDocStatus('2099-01-01', 'expired')).toBe('valid');
+  });
+
+  it('sin fecha, un estado guardado expired se respeta', () => {
+    expect(resolveDocStatus(null, 'expired')).toBe('expired');
   });
 
   it('retorna valid si no hay expiryDate', () => {

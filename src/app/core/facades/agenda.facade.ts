@@ -450,10 +450,10 @@ export class AgendaFacade {
   }
 
   private async loadLookupMaps(): Promise<void> {
-    const branchId = this.getActiveBranchId();
-
-    let vehicleQuery: any = this.supabase.client.from('vehicles').select('id, license_plate');
-    if (branchId !== null) vehicleQuery = vehicleQuery.eq('branch_id', branchId);
+    // hotfix-077-b: el mapa id → patente es solo para mostrar, sin filtro de sede. Una clase de
+    // la sede puede usar un vehículo "Ambas" (o uno que cambió de sede) registrado en la otra; con
+    // el filtro salía como "V36". Qué clases se ven ya lo decide la consulta de sesiones.
+    const vehicleQuery = this.supabase.client.from('vehicles').select('id, license_plate');
 
     const [instrResult, vehResult, docsResult] = await Promise.all([
       this.supabase.client

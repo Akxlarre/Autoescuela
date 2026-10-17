@@ -8,6 +8,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 
+// Sin este mock, XLSX.writeFile escribe Historial_Ventas_<fecha>.xlsx en la raíz del repo.
+vi.mock('@core/utils/excel.utils', () => ({ downloadExcel: vi.fn() }));
+
 type TableResponse = { data: unknown; error: unknown };
 
 /**
@@ -18,31 +21,36 @@ type TableResponse = { data: unknown; error: unknown };
  */
 function createMockSupabase(tables: Record<string, TableResponse>) {
   const builders = new Map<string, any>();
+  const lastOps = new Map<string, string>();
   const from = vi.fn().mockImplementation((table: string) => {
+    // Cada from() arranca como lectura; un .select() después de una escritura (update().select())
+    // no la convierte en lectura (fix-443-m).
+    lastOps.set(table, 'select');
     if (!builders.has(table)) {
-      let lastOp = 'select';
       const builder: any = {
         select: vi.fn(function (this: any) {
-          lastOp = 'select';
           return this;
         }),
         insert: vi.fn(function (this: any) {
-          lastOp = 'insert';
+          lastOps.set(table, 'insert');
           return this;
         }),
         update: vi.fn(function (this: any) {
-          lastOp = 'update';
+          lastOps.set(table, 'update');
           return this;
         }),
         delete: vi.fn(function (this: any) {
-          lastOp = 'delete';
+          lastOps.set(table, 'delete');
           return this;
         }),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         then: (resolve: any, reject: any) => {
-          const res = tables[`${table}:${lastOp}`] ?? tables[table] ?? { data: [], error: null };
+          const res = tables[`${table}:${lastOps.get(table)}`] ??
+            tables[table] ?? { data: [], error: null };
           return Promise.resolve(res).then(resolve, reject);
         },
       };
@@ -54,6 +62,20 @@ function createMockSupabase(tables: Record<string, TableResponse>) {
     client: {
       from,
       functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
+      // fix-442-m: KPIs calculados en la BD.
+      rpc: vi.fn().mockResolvedValue({
+        data: [
+          {
+            ventas_mes: 0,
+            ventas_totales: 0,
+            recaudacion_mes: 0,
+            recaudacion_total: 0,
+            ventas_cobradas: 0,
+            pendiente_cobro: 0,
+          },
+        ],
+        error: null,
+      }),
     },
     _builders: builders,
   };
@@ -216,31 +238,96 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
-  describe('KPIs', () => {
-    it('separa cobrado vs pendiente y cuenta solo las ventas del mes actual', async () => {
-      const esteMes = new Date().toISOString().slice(0, 7);
-      const { facade } = setup({
-        tables: {
-          special_service_sales: {
-            data: [
-              venta({ id: 1, paid: true, price: 10000, sale_date: `${esteMes}-05` }),
-              venta({ id: 2, paid: false, price: 4000, sale_date: '2020-01-05' }),
-              venta({ id: 3, paid: false, price: 6000, sale_date: `${esteMes}-10` }),
-            ],
-            error: null,
+  describe('KPIs — calculados en la BD, sin el tope de la lista (fix-442-m)', () => {
+    it('los KPIs vienen de servicios_especiales_kpis para la sede activa, no de la lista cargada', async () => {
+      const { facade, mockSupabase } = setup({
+        selectedBranchId: 2,
+        tables: { special_service_sales: { data: [venta({ id: 1 })], error: null } },
+      });
+      mockSupabase.client.rpc.mockResolvedValue({
+        data: [
+          {
+            ventas_mes: 4,
+            ventas_totales: 250,
+            recaudacion_mes: 80000,
+            recaudacion_total: 5000000,
+            ventas_cobradas: 249,
+            pendiente_cobro: 20000,
           },
-        },
+        ],
+        error: null,
+      });
+
+      await facade.initialize();
+
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('servicios_especiales_kpis', {
+        p_branch_id: 2,
+      });
+      expect(facade.kpis()).toEqual({
+        ventasMes: 4,
+        totalCobrado: 5000000,
+        recaudacionMes: 80000,
+        pendientesCobro: 20000,
+        totalRegistros: 250,
+        ventasCobradas: 249,
+        ventasSinCobrar: 1,
+      });
+    });
+
+    it('si la consulta de KPIs falla, la carga falla (no muestra ceros como si fueran reales)', async () => {
+      const { facade, mockSupabase } = setup();
+      mockSupabase.client.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      await facade.initialize();
+
+      expect(facade.loadError()).not.toBeNull();
+    });
+
+    it('historialTruncado avisa cuando la lista llegó al tope de 1000', async () => {
+      const muchas = Array.from({ length: 1000 }, (_, k) => venta({ id: k + 1 }));
+      const { facade } = setup({
+        tables: { special_service_sales: { data: muchas, error: null } },
       });
       await facade.initialize();
-      expect(facade.kpis()).toEqual({
-        ventasMes: 2,
-        totalCobrado: 10000,
-        recaudacionMes: 10000,
-        pendientesCobro: 10000,
-        totalRegistros: 3,
-        ventasCobradas: 1,
-        ventasSinCobrar: 2,
+      expect(facade.historialTruncado()).toBe(true);
+    });
+  });
+
+  describe('cambio de sede — respuestas fuera de orden (fix-441-m)', () => {
+    it('una respuesta vieja (sede anterior) no pisa a la más nueva', async () => {
+      const { facade, mockSupabase } = setup({ user: { role: 'admin', dbId: 9, branchId: null } });
+      const branch = TestBed.inject(BranchFacade) as unknown as {
+        selectedBranchId: ReturnType<typeof vi.fn>;
+      };
+
+      // special_service_sales queda pendiente hasta que el test la resuelva, en el orden que elija.
+      const pendientes: Array<(v: { data: unknown; error: null }) => void> = [];
+      const original = mockSupabase.client.from.getMockImplementation()!;
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table !== 'special_service_sales') return original(table);
+        const q: any = {
+          select: () => q,
+          order: () => q,
+          limit: () => q,
+          eq: () => q,
+          then: (res: any, rej: any) =>
+            new Promise((r) => pendientes.push(r as never)).then(res, rej),
+        };
+        return q;
       });
+
+      branch.selectedBranchId.mockReturnValue(1);
+      const primera = facade.initialize();
+      branch.selectedBranchId.mockReturnValue(2);
+      const segunda = facade.initialize();
+      await Promise.resolve();
+
+      pendientes[1]({ data: [venta({ id: 2, branch_id: 2 })], error: null });
+      await segunda;
+      pendientes[0]({ data: [venta({ id: 1, branch_id: 1 })], error: null });
+      await primera;
+
+      expect(facade.ventas().map((v) => v.id)).toEqual([2]);
     });
   });
 
@@ -249,7 +336,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       const ok = await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -268,7 +354,6 @@ describe('ServiciosEspecialesFacade', () => {
       });
       const ok = await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'x',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -286,7 +371,6 @@ describe('ServiciosEspecialesFacade', () => {
     const secretaria = { role: 'secretaria', dbId: 7, branchId: 1, canAccessBothBranches: false };
     const datos = {
       servicioId: 5,
-      esAlumno: false,
       nombre: 'Juan',
       rut: '1-9',
       fecha: '2026-07-01',
@@ -345,7 +429,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -361,7 +444,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -378,7 +460,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -395,7 +476,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -411,7 +491,6 @@ describe('ServiciosEspecialesFacade', () => {
       const { facade, mockSupabase } = setup({ selectedBranchId: null });
       await facade.registrarVenta({
         servicioId: 5,
-        esAlumno: false,
         nombre: 'Juan',
         rut: '1-9',
         fecha: '2026-07-01',
@@ -419,6 +498,85 @@ describe('ServiciosEspecialesFacade', () => {
       });
       const insertMock = mockSupabase._builders.get('special_service_sales').insert;
       expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ document_number: null }));
+    });
+  });
+
+  describe('registrarVenta — venta a un alumno por su RUT (fix-438-m)', () => {
+    const alumnoRow = {
+      id: 55,
+      first_names: 'Ana',
+      paternal_last_name: 'Rojas',
+      students: [{ id: 9 }],
+    };
+
+    it('buscarAlumnoPorRut busca las dos variantes del RUT (con y sin puntos)', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { users: { data: alumnoRow, error: null } },
+      });
+
+      const alumno = await facade.buscarAlumnoPorRut('12.345.678-5');
+
+      expect(alumno).toEqual({ studentId: 9, userId: 55, nombre: 'Ana Rojas' });
+      expect(mockSupabase._builders.get('users').or).toHaveBeenCalledWith(
+        'rut.eq.12.345.678-5,rut.eq.12345678-5',
+      );
+    });
+
+    it('un usuario sin ficha de alumno no se vincula', async () => {
+      const { facade } = setup({
+        tables: { users: { data: { ...alumnoRow, students: [] }, error: null } },
+      });
+      expect(await facade.buscarAlumnoPorRut('12.345.678-5')).toBeNull();
+    });
+
+    it('RUT incompleto → no consulta', async () => {
+      const { facade, mockSupabase } = setup();
+      expect(await facade.buscarAlumnoPorRut('1')).toBeNull();
+      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('users');
+    });
+
+    it('si el RUT es de un alumno: inserta student_id + is_student y le notifica', async () => {
+      const { facade, mockSupabase, notificationsSpy } = setup({
+        selectedBranchId: null,
+        tables: { users: { data: alumnoRow, error: null } },
+      });
+
+      const ok = await facade.registrarVenta({
+        servicioId: 5,
+        nombre: 'Ana Rojas',
+        rut: '12.345.678-5',
+        fecha: '2026-10-15',
+        precio: 20000,
+      });
+
+      expect(ok).toBe(true);
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ student_id: 9, is_student: true }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [55],
+        expect.objectContaining({ subject: 'Pago registrado' }),
+      );
+    });
+
+    it('cliente externo: student_id null, is_student false, sin notificación', async () => {
+      const { facade, mockSupabase, notificationsSpy } = setup({
+        selectedBranchId: null,
+        tables: { users: { data: null, error: null } },
+      });
+
+      await facade.registrarVenta({
+        servicioId: 5,
+        nombre: 'Juan',
+        rut: '11.111.111-1',
+        fecha: '2026-10-15',
+        precio: 20000,
+      });
+
+      expect(mockSupabase._builders.get('special_service_sales').insert).toHaveBeenCalledWith(
+        expect.objectContaining({ student_id: null, is_student: false }),
+      );
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
     });
   });
 
@@ -491,50 +649,120 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
-  describe('borrarVenta — candado de cuadratura cerrada (fix-022-i, ASG-b-050)', () => {
-    it('golden path: sin cash_closings para la fecha → borra y refresca', async () => {
+  describe('anularVenta (fix-443-m)', () => {
+    const fila = (over: Record<string, unknown> = {}) =>
+      venta({ id: 7, sale_date: '2026-08-10', paid: true, status: 'completed', ...over });
+
+    it('el admin anula con motivo: UPDATE a anulado (nunca DELETE) y refresca', async () => {
       const { facade, mockSupabase } = setup({
         tables: {
-          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-10' })], error: null },
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': { data: [{ id: 7 }], error: null },
           cash_closings: { data: [], error: null },
         },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(7);
+      const result = await facade.anularVenta(7, '  Cliente desistió  ');
 
       expect(result).toEqual({ success: true });
-      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
-      expect(deleteMock).toHaveBeenCalled();
+      const builder = mockSupabase._builders.get('special_service_sales');
+      expect(builder.update).toHaveBeenCalledWith({
+        status: 'anulado',
+        void_reason: 'Cliente desistió',
+      });
+      expect(builder.delete).not.toHaveBeenCalled();
     });
 
-    it('AC-E1: la fecha ya tiene cash_closings → bloquea, no ejecuta DELETE', async () => {
+    it('sin motivo no escribe', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { special_service_sales: { data: [fila()], error: null } },
+      });
+      await facade.initialize();
+
+      const result = await facade.anularVenta(7, '   ');
+
+      expect(result.success).toBe(false);
+      expect(facade.error()).toBe('Indica el motivo de la anulación.');
+      expect(mockSupabase._builders.get('special_service_sales').update).not.toHaveBeenCalled();
+    });
+
+    it('caja del día cerrada → aviso con la fecha en DD-MM-AAAA, sin UPDATE', async () => {
       const { facade, mockSupabase } = setup({
         tables: {
-          special_service_sales: { data: [venta({ id: 7, sale_date: '2026-08-01' })], error: null },
+          special_service_sales: { data: [fila({ sale_date: '2026-08-01' })], error: null },
           cash_closings: { data: [{ id: 99 }], error: null },
         },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(7);
+      const result = await facade.anularVenta(7, 'Error de digitación');
 
       expect(result.success).toBe(false);
-      expect(result.blockedReason).toContain('2026-08-01');
-      const deleteMock = mockSupabase._builders.get('special_service_sales').delete;
-      expect(deleteMock).not.toHaveBeenCalled();
+      expect(result.blockedReason).toBe(
+        'No se puede anular: la caja del 01-08-2026 ya está cerrada.',
+      );
+      expect(mockSupabase._builders.get('special_service_sales').update).not.toHaveBeenCalled();
     });
 
-    it('venta inexistente en el estado local → falla sin consultar cash_closings', async () => {
-      const { facade, mockSupabase } = setup({
-        tables: { special_service_sales: { data: [], error: null } },
+    it('la BD la rechaza (P0001) → su mensaje como blockedReason', async () => {
+      const mensaje = 'Solo un administrador puede anular una venta.';
+      const { facade } = setup({
+        tables: {
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': {
+            data: null,
+            error: { code: 'P0001', message: mensaje },
+          },
+          cash_closings: { data: [], error: null },
+        },
       });
       await facade.initialize();
 
-      const result = await facade.borrarVenta(999);
+      expect(await facade.anularVenta(7, 'x')).toEqual({ success: false, blockedReason: mensaje });
+    });
 
-      expect(result.success).toBe(false);
-      expect(mockSupabase.client.from).not.toHaveBeenCalledWith('cash_closings');
+    it('0 filas (la RLS no la dejó tocar) no es éxito', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: { data: [fila()], error: null },
+          'special_service_sales:update': { data: [], error: null },
+          cash_closings: { data: [], error: null },
+        },
+      });
+      await facade.initialize();
+
+      expect((await facade.anularVenta(7, 'x')).success).toBe(false);
+    });
+
+    it('una venta anulada se mapea con su anulación', async () => {
+      const { facade } = setup({
+        tables: {
+          special_service_sales: {
+            data: [
+              fila({
+                status: 'anulado',
+                paid: false,
+                void_reason: 'Cliente desistió',
+                voided_at: '2026-10-16T13:00:00.000Z',
+                anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+              }),
+            ],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+
+      expect(facade.ventas()[0].anulacion).toEqual(
+        expect.objectContaining({ motivo: 'Cliente desistió', por: 'Ana Rojas' }),
+      );
+    });
+
+    it('puedeAnular: solo el admin', () => {
+      expect(setup().facade.puedeAnular()).toBe(true);
+      TestBed.resetTestingModule();
+      expect(setup({ user: { role: 'secretary', branchId: 1 } }).facade.puedeAnular()).toBe(false);
     });
   });
 
@@ -642,6 +870,7 @@ describe('ServiciosEspecialesFacade', () => {
 
       const result = await facade.editarServicio(1, {
         nombre: 'Psicotécnico Renovado',
+        descripcion: 'Examen para licencia',
         precio: 30000,
         activo: false,
       });
@@ -650,6 +879,7 @@ describe('ServiciosEspecialesFacade', () => {
       const builder = mockSupabase._builders.get('service_catalog');
       expect(builder.update).toHaveBeenCalledWith({
         name: 'Psicotécnico Renovado',
+        description: 'Examen para licencia',
         base_price: 30000,
         active: false,
       });
@@ -664,12 +894,106 @@ describe('ServiciosEspecialesFacade', () => {
 
       const result = await facade.editarServicio(1, {
         nombre: 'X',
+        descripcion: 'Y',
         precio: 1000,
         activo: true,
       });
 
       expect(result).toBe(false);
       expect(facade.error()).toBe('RLS deny');
+    });
+  });
+
+  describe('catálogo: nombre único y descripción (fix-436-m)', () => {
+    const catalogo = [
+      { id: 1, name: 'Psicotécnico', description: '', base_price: 20000, active: true },
+      { id: 2, name: 'Uso de Simulador', description: '', base_price: 5000, active: false },
+    ];
+
+    it('agregar con el nombre de un servicio inactivo → no inserta y sugiere reactivarlo', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { service_catalog: { data: catalogo, error: null } },
+      });
+      await facade.initialize();
+
+      const ok = await facade.agregarServicio({
+        nombre: '  uso de SIMULADOR ',
+        descripcion: 'x',
+        precio: 1000,
+      });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toContain('Reactívalo');
+      expect(mockSupabase._builders.get('service_catalog').insert).not.toHaveBeenCalled();
+    });
+
+    it('agregar recorta los espacios de nombre y descripción', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: { service_catalog: { data: catalogo, error: null } },
+      });
+      await facade.initialize();
+
+      await facade.agregarServicio({
+        nombre: ' Informe ',
+        descripcion: ' Para el SII ',
+        precio: 1000,
+      });
+
+      expect(mockSupabase._builders.get('service_catalog').insert).toHaveBeenCalledWith({
+        name: 'Informe',
+        description: 'Para el SII',
+        base_price: 1000,
+        active: true,
+      });
+    });
+
+    it('la BD rechaza el nombre repetido (23505) → mensaje legible', async () => {
+      const { facade } = setup({
+        tables: {
+          service_catalog: { data: [], error: null },
+          'service_catalog:insert': {
+            data: null,
+            error: { code: '23505', message: 'duplicate key' },
+          },
+        },
+      });
+      await facade.initialize();
+
+      const ok = await facade.agregarServicio({
+        nombre: 'Informe',
+        descripcion: 'x',
+        precio: 1000,
+      });
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toBe('Ya existe un servicio con ese nombre.');
+    });
+
+    it('renombrar con el nombre de otro → no actualiza; el propio nombre sí se puede conservar', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          service_catalog: { data: catalogo, error: null },
+          'service_catalog:update': { data: null, error: null },
+        },
+      });
+      await facade.initialize();
+
+      const repetido = await facade.editarServicio(2, {
+        nombre: 'psicotécnico',
+        descripcion: '',
+        precio: 5000,
+        activo: false,
+      });
+      expect(repetido).toBe(false);
+      expect(mockSupabase._builders.get('service_catalog').update).not.toHaveBeenCalled();
+
+      const mismo = await facade.editarServicio(1, {
+        nombre: 'Psicotécnico',
+        descripcion: 'nueva',
+        precio: 20000,
+        activo: true,
+      });
+      expect(mismo).toBe(true);
     });
   });
 
@@ -740,24 +1064,82 @@ describe('ServiciosEspecialesFacade', () => {
     });
   });
 
-  // ── fix-147-b: el export no puede quedar truncado por la ventana de período ──
-  describe('exportarHistorial — inmune a los filtros de UI (fix-147-b)', () => {
-    it('invoca la Edge Function solo con format y branch_id, sin ningún filtro de la vista', async () => {
-      const { facade, mockSupabase } = setup({ selectedBranchId: 3 });
-      // Respuesta con la forma que espera el branch 'excel' — sin esto la facade loguea un
-      // error real al destructurar `headers`, y el test ensuciaría stderr sin motivo.
+  // ── fix-435-m: los errores se pueden mostrar ──
+  describe('errores visibles (fix-435-m)', () => {
+    it('si la carga inicial falla, expone loadError y no deja el catálogo como "vacío"', async () => {
+      const { facade } = setup({
+        tables: { service_catalog: { data: null, error: new Error('sin red') } },
+      });
+
+      await facade.initialize();
+
+      expect(facade.loadError()).toBe('No se pudieron cargar los servicios especiales.');
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('reintentar() vuelve a cargar y limpia loadError si ahora responde', async () => {
+      const tables: Record<string, { data: unknown; error: unknown }> = {
+        service_catalog: { data: null, error: new Error('sin red') },
+      };
+      const { facade } = setup({ tables });
+      await facade.initialize();
+      expect(facade.loadError()).not.toBeNull();
+
+      tables['service_catalog'] = { data: [], error: null };
+      await facade.reintentar();
+
+      expect(facade.loadError()).toBeNull();
+    });
+
+    it('una carga exitosa deja loadError en null', async () => {
+      const { facade } = setup();
+      await facade.initialize();
+      expect(facade.loadError()).toBeNull();
+    });
+
+    it('exportarHistorial devuelve false si la función falla', async () => {
+      const { facade, mockSupabase } = setup();
+      mockSupabase.client.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: new Error('500') });
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      await expect(facade.exportarHistorial('excel', [1])).resolves.toBe(false);
+      expect(facade.error()).toBe('No se pudo exportar el historial.');
+    });
+
+    it('exportarHistorial devuelve true si descarga', async () => {
+      const { facade, mockSupabase } = setup();
       mockSupabase.client.functions.invoke = vi
         .fn()
         .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
 
-      await facade.exportarHistorial('excel');
+      await expect(facade.exportarHistorial('excel', [1])).resolves.toBe(true);
+    });
+  });
 
-      // La ventana de período (fix-147-b) es un filtro de RENDERIZADO. El export corre
-      // server-side y no recibe nada de la vista, así que un Excel nunca puede salir
-      // truncado en silencio por lo que el usuario tenga seleccionado en pantalla.
+  // ── fix-440-m: el export es lo que muestra la pantalla (reemplaza a fix-147-b) ──
+  describe('exportarHistorial — exporta lo que muestra la pantalla (fix-440-m)', () => {
+    it('manda a la función los ids visibles, el formato y la sede', async () => {
+      const { facade, mockSupabase } = setup({ selectedBranchId: 3 });
+      mockSupabase.client.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { headers: [], rows: [] }, error: null });
+
+      await facade.exportarHistorial('excel', [7, 8]);
+
       expect(mockSupabase.client.functions.invoke).toHaveBeenCalledWith('export-special-services', {
-        body: { format: 'excel', branch_id: 3 },
+        body: { format: 'excel', branch_id: 3, sale_ids: [7, 8] },
       });
+    });
+
+    it('sin ventas visibles no llama a la función y avisa', async () => {
+      const { facade, mockSupabase } = setup();
+
+      await expect(facade.exportarHistorial('pdf', [])).resolves.toBe(false);
+
+      expect(mockSupabase.client.functions.invoke).not.toHaveBeenCalled();
+      expect(facade.error()).toBe('No hay ventas para exportar.');
     });
   });
 });

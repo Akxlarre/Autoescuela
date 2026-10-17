@@ -1840,6 +1840,66 @@
 - **Fuente:** `specs/fixes/fix-050-i-pago-matricula-duplicado-al-reintentar`
   (`record_enrollment_payment()`, migración `20261014180000`).
 
+### DG-112 — Una edge function con clave de servicio no hereda la RLS por sede: "es staff" no basta
+
+- **Trampa:** proteger una edge function que lee con `SUPABASE_SERVICE_ROLE_KEY` solo con
+  `requireStaff(['admin','secretary'])` y filtrar por el `branch_id` (o el `enrollment_id`) que manda
+  el navegador, confiando en que la pantalla siempre manda la sede correcta.
+- **Realidad:** la clave de servicio se salta la RLS por sede (spec 0047-b). Con su propio token, la
+  secretaria de la sede 1 pedía `branch_id: 2` (o `null` = todas) y recibía ventas con RUT, reportes
+  contables, cuadraturas, el ZIP de certificados y fichas de matrícula de la otra sede. Pasaba en 13
+  funciones a la vez porque todas copiaban el mismo arranque.
+- **Regla de aplicabilidad:** toda edge function que lee o escribe con la clave de servicio datos que
+  tienen sede valida el alcance en el servidor con los helpers de `_shared/staff-auth.ts`:
+  `resolveBranchScope(access, body.branch_id)` cuando recibe una sede (la secretaria sin grant queda
+  acotada a la suya; `null` nunca significa "todas" para ella) y `denyIfEnrollmentOutOfScope(access,
+  id)` cuando recibe una matrícula. Al crear una función nueva con `requireStaff`, pensar qué id o
+  sede trae el body y validarlo antes de la primera consulta. Probar con el token de la secretaria
+  pidiendo la otra sede, no solo con el admin.
+- **Fuente:** `specs/fixes/fix-430-m-edge-functions-respetan-sede` y
+  `specs/fixes/fix-431-m-edge-functions-por-matricula-respetan-sede`.
+
+### DG-113 — Una venta de servicio especial anulada sigue en la tabla: "es ingreso" es `paid = true`, no "existe la fila"
+
+- **Trampa:** sumar o contar ventas de `special_service_sales` (KPI, reporte, cierre, export) filtrando
+  solo por fecha y sede, asumiendo que una venta que no vale se borró.
+- **Realidad:** desde `20261016130000` una venta no se borra: se anula (`status = 'anulado'`, motivo,
+  quién y cuándo) y sigue en la tabla para mostrarse tachada. El trigger
+  `guard_anulacion_venta_servicio` la deja con `paid = false`, así que las sumas que ya filtraban
+  `paid = true` (Dashboard, Reportes Contables, `generate-financial-report`, Caja) la excluyen solas;
+  una consulta nueva sin ese filtro la contaría como ingreso.
+- **Regla de aplicabilidad:** toda lectura de `special_service_sales` que sume dinero o cuente ventas
+  filtra `paid = true` (o `status <> 'anulado'` si no es de dinero, como el conteo de
+  `servicios_especiales_kpis()`). Si la pantalla debe mostrar las anuladas, las trae aparte
+  (`or(paid.eq.true,status.eq.anulado)`) y las excluye del total con `anulacion`, igual que los pagos
+  anulados de spec 0025-m.
+- **Fuente:** `specs/fixes/fix-443-m-anular-venta-servicio-en-vez-de-borrar`.
+
+### DG-114 — Un candado de "caja cerrada" cubre registrar, cambiar y borrar, pero solo lo que mueve dinero
+
+- **Trampa:** proteger un día cerrado poniendo el trigger solo en la operación que se estaba
+  arreglando (solo `DELETE`, solo `INSERT`), o en cualquier `UPDATE` de la tabla.
+- **Realidad:** pasaron las dos cosas. `fix-044-i` cubrió solo el borrado de gastos y anticipos, y
+  `fix-051-i` el registro solo de pagos: un anticipo se podía registrar con la fecha de un día cerrado
+  (fix-445-m). Al revés, `fix-432-m` bloqueó todo UPDATE de una venta y rompió "eliminar servicio",
+  que solo desvincula `service_id` (fix-444-m); el mismo error en anticipos habría roto
+  Liquidaciones, que cambia el `status` de todos los anticipos del mes, casi todos de días cerrados.
+- **Regla de aplicabilidad:** toda tabla cuyas filas alimentan los totales de un cierre lleva el
+  candado en `INSERT`, `UPDATE` y `DELETE`. En `UPDATE` se revisa solo si cambia una columna que mueve
+  la caja (fecha, monto, sede, medio de pago, estado de cobro), mirando el día de antes y el de
+  después; los cambios administrativos pasan. Antes de escribirlo, listar **y leer una por una**
+  todas las escrituras —INSERT, UPDATE y DELETE— que hacen la app, las RPC y los cron sobre esa
+  tabla, preguntando de cada una "¿esto es legítimo en un día cerrado?". `SECURITY DEFINER`, porque
+  la secretaria solo lee 2 días de cierres por RLS.
+- **Cuando la tabla protegida tiene un canal oficial de corrección, el candado lo tiene que dejar
+  pasar a él y solo a él.** Aquí ese canal es el ajuste "gasto olvidado" del Historial de Cuadraturas,
+  que corrige un día cerrado creando un gasto con la fecha de ese día; un candado de INSERT escrito
+  sin leerlo lo bloquea. No se resuelve aflojando el candado por rol (el admin también registra
+  anticipos con fecha libre): el canal pasa por una RPC `SECURITY DEFINER` que valida el caso y marca
+  la transacción con `set_config('app.<marca>', 'on', true)`, y el trigger deja pasar solo con esa
+  marca. El cliente no puede fijarla: PostgREST no expone `set_config` (comprobado: 404).
+- **Fuente:** `specs/fixes/fix-445-m-egreso-en-dia-con-caja-cerrada`, `fix-444-m`, `fix-051-i`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

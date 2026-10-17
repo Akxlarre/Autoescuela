@@ -64,3 +64,11 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
       definitivo cuando exista) a Supabase → Auth → URL Configuration → Redirect URLs
 - [ ] Prueba manual en producción tras el release: pedir "recuperar contraseña" con una cuenta de
       prueba con correo real → abrir el link → fijar clave → entrar con la clave nueva
+
+## Bloqueo (2026-10-16)
+Revisado: el código salió en los releases (producción en `v0.2.1`, `/recuperar-contrasena` responde)
+y `disable_signup = true`. Pero Supabase Auth sigue con **Site URL = `http://localhost:4200`** y
+redirects solo a localhost → en producción el link del correo abre localhost. **Decisión del owner:
+no cambiarlo hasta tener el dominio definitivo** (`app.autoescuelachillan.cl` es provisional).
+Al tenerlo: Site URL = `https://<dominio>`, redirects `https://<dominio>/**` (manteniendo
+`http://localhost:4200/**` para los tests), y la prueba manual de punta a punta de arriba.

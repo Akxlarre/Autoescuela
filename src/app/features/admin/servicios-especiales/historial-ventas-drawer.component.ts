@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
@@ -10,6 +11,10 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
 import type { VentaServicio } from '@core/models/ui/servicios-especiales.model';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { filterBySearchTokens } from '@core/utils/search-filter.utils';
+import { formatDayMonthYear } from '@core/utils/date.utils';
+import { formatAnulacionDetalle } from '@core/utils/anulacion-pago.utils';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
   DEFAULT_PERIOD_WINDOW,
@@ -43,6 +48,8 @@ import {
     StableWidthDirective,
     PeriodSelectorComponent,
     ClearFiltersButtonComponent,
+    BadgeComponent,
+    TooltipModule,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -83,7 +90,23 @@ import {
               }
             </div>
           </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <!-- fix-439-m (decisión I10): buscar por cliente, RUT o boleta -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <app-icon name="search" [size]="16" color="var(--text-muted)" />
+            </div>
+            <input
+              type="search"
+              placeholder="Buscar por cliente, RUT o N° boleta..."
+              class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
+              [value]="busqueda()"
+              (input)="busqueda.set($any($event.target).value)"
+              aria-label="Buscar ventas por cliente, RUT o N° de boleta"
+              data-llm-description="search sales history by client name, RUT or receipt number"
+            />
+          </div>
+          <!-- hotfix-157-m: con wrap, "Limpiar filtros" no sale de la card en un drawer angosto -->
+          <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
             <p-select
               [ngModel]="filtroServicio()"
               (ngModelChange)="onFiltroServicioChange($event)"
@@ -91,6 +114,7 @@ import {
               optionLabel="label"
               optionValue="value"
               placeholder="Todos los servicios"
+              class="sm:flex-1 sm:min-w-48"
               styleClass="w-full"
               data-llm-description="filter ventas by service"
             />
@@ -121,22 +145,34 @@ import {
               @for (venta of ventasFiltradas(); track venta.id) {
                 <div class="p-3 flex flex-col gap-1.5">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="item-title truncate" [title]="venta.cliente">{{
-                      venta.cliente
-                    }}</span>
+                    <span
+                      class="item-title truncate"
+                      [class.line-through]="!!venta.anulacion"
+                      [title]="venta.cliente"
+                      >{{ venta.cliente }}</span
+                    >
                     <div class="flex items-center gap-2 shrink-0">
-                      <span class="font-semibold text-text-primary"
+                      <span
+                        class="font-semibold"
+                        [class.text-text-primary]="!venta.anulacion"
+                        [class.text-text-muted]="!!venta.anulacion"
+                        [class.line-through]="!!venta.anulacion"
                         >\${{ venta.precio.toLocaleString('es-CL') }}</span
                       >
-                      <button
-                        type="button"
-                        class="cursor-pointer text-text-muted hover:text-error transition-colors p-1 rounded-lg hover:bg-error/10"
-                        [attr.data-llm-action]="'borrar-venta-' + venta.id"
-                        [attr.aria-label]="'Borrar venta de ' + venta.cliente"
-                        (click)="onBorrar(venta)"
-                      >
-                        <app-icon name="trash-2" [size]="14" />
-                      </button>
+                      <!-- fix-443-m: se anula (solo admin), ya no se borra -->
+                      @if (facade.puedeAnular() && !venta.anulacion) {
+                        <button
+                          type="button"
+                          class="cursor-pointer text-text-muted hover:text-error transition-colors p-1 rounded-lg hover:bg-error/10"
+                          [attr.data-llm-action]="'anular-venta-' + venta.id"
+                          [attr.aria-label]="'Anular venta de ' + venta.cliente"
+                          pTooltip="Anular venta"
+                          tooltipPosition="top"
+                          (click)="onAnular(venta)"
+                        >
+                          <app-icon name="ban" [size]="14" />
+                        </button>
+                      }
                     </div>
                   </div>
                   <div class="flex items-center justify-between gap-2 text-xs text-text-muted">
@@ -153,7 +189,7 @@ import {
                     }
                   </div>
                   <div class="flex items-center gap-1.5 text-xs text-text-secondary">
-                    {{ venta.servicio }} · {{ venta.fecha }}
+                    {{ venta.servicio }} · {{ formatFecha(venta.fecha) }}
                     @if (venta.documentNumber) {
                       <span
                         class="font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
@@ -162,6 +198,16 @@ import {
                       </span>
                     }
                   </div>
+                  @if (venta.anulacion) {
+                    <span
+                      class="flex items-center gap-1.5 min-w-0 text-2xs text-text-muted"
+                      [attr.title]="detalleAnulacion(venta)"
+                      data-llm-description="voided sale: reason, who voided it and when"
+                    >
+                      <app-badge variant="neutral" class="shrink-0">Anulada</app-badge>
+                      <span class="truncate">{{ detalleAnulacion(venta) }}</span>
+                    </span>
+                  }
                 </div>
               }
             </div>
@@ -169,6 +215,12 @@ import {
               <span class="text-xs text-text-muted"
                 >{{ ventasFiltradas().length }} de {{ facade.ventas().length }} ventas</span
               >
+              <!-- fix-442-m: la lista tiene tope; los KPIs del hero no. -->
+              @if (facade.historialTruncado()) {
+                <span class="text-xs text-text-muted"
+                  >Se muestran las 1.000 ventas más recientes</span
+                >
+              }
             </div>
           }
         </div>
@@ -221,8 +273,12 @@ export class HistorialVentasDrawerComponent {
   private readonly toast = inject(ToastService);
 
   protected readonly isExporting = this.facade.isExporting;
+  /** hotfix-158-m: DD-MM-AAAA, como el resto de la app. */
+  protected readonly formatFecha = formatDayMonthYear;
 
   protected readonly filtroServicio = signal<string | null>(null);
+  /** fix-439-m: texto del buscador (cliente, RUT o N° de boleta). */
+  protected readonly busqueda = signal('');
   protected readonly exportMenuOpen = signal(false);
   protected readonly periodWindow = signal<PeriodWindow>(DEFAULT_PERIOD_WINDOW);
 
@@ -236,22 +292,33 @@ export class HistorialVentasDrawerComponent {
 
   /** Muestra "Limpiar filtros": un servicio elegido o un período distinto del inicial. */
   protected readonly hasActiveFilters = computed(
-    () => this.filtroServicio() !== null || this.periodWindow() !== DEFAULT_PERIOD_WINDOW,
+    () =>
+      this.filtroServicio() !== null ||
+      this.periodWindow() !== DEFAULT_PERIOD_WINDOW ||
+      this.busqueda().trim() !== '',
   );
 
   protected clearFilters(): void {
     this.filtroServicio.set(null);
     this.periodWindow.set(DEFAULT_PERIOD_WINDOW);
+    this.busqueda.set('');
   }
 
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.facade.ventas();
     const porServicio = !filtro ? all : all.filter((v) => String(v.servicioId) === filtro);
+    const busqueda = this.busqueda();
+    const encontradas = filterBySearchTokens(porServicio, busqueda, (v) => [
+      v.cliente,
+      v.rut,
+      v.documentNumber,
+    ]);
 
-    return applyPeriodWindow(porServicio, {
+    // Con una búsqueda escrita se recorre todo el historial cargado (fix-439-m).
+    return applyPeriodWindow(encontradas, {
       window: this.periodWindow(),
-      hasActiveSearch: false,
+      hasActiveSearch: busqueda.trim() !== '',
       dateOf: (v) => v.fecha,
     });
   });
@@ -264,29 +331,55 @@ export class HistorialVentasDrawerComponent {
     this.periodWindow.set(value);
   }
 
-  protected onExport(format: 'excel' | 'pdf'): void {
+  protected async onExport(format: 'excel' | 'pdf'): Promise<void> {
     this.exportMenuOpen.set(false);
-    void this.facade.exportarHistorial(format);
+    // fix-435-m: antes la falla solo quedaba en la consola.
+    // fix-440-m: el archivo trae lo mismo que la lista (servicio, período y búsqueda).
+    const ok = await this.facade.exportarHistorial(
+      format,
+      this.ventasFiltradas().map((v) => v.id),
+    );
+    if (!ok) {
+      this.toast.error(
+        'No se pudo exportar el historial',
+        this.ventasFiltradas().length === 0 ? 'No hay ventas para exportar.' : undefined,
+      );
+    }
   }
 
-  protected async onBorrar(venta: VentaServicio): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
-      title: 'Borrar venta',
-      message: `¿Borrar la venta de "${venta.servicio}" a ${venta.cliente}? Esta acción no se puede deshacer.`,
-      confirmLabel: 'Sí, borrar',
-      cancelLabel: 'Cancelar',
+  /** fix-443-m: "Motivo · quién · cuándo" de una venta anulada. */
+  protected detalleAnulacion(venta: VentaServicio): string {
+    return formatAnulacionDetalle(venta.anulacion);
+  }
+
+  /**
+   * fix-443-m: la venta se anula con motivo (solo admin), como un pago de matrícula (spec 0025-m).
+   * Antes se borraba y desaparecía de todas las pantallas.
+   */
+  protected async onAnular(venta: VentaServicio): Promise<void> {
+    if (!this.facade.puedeAnular()) return;
+
+    const motivo = await this.confirmModal.confirmWithReason({
+      title: 'Anular venta',
+      message: `La venta de "${venta.servicio}" a ${venta.cliente} quedará anulada: seguirá visible, tachada, y dejará de sumar en la caja y los reportes. No se puede deshacer.`,
       severity: 'danger',
+      confirmLabel: 'Anular venta',
+      cancelLabel: 'Cancelar',
+      reason: {
+        label: 'Motivo de la anulación',
+        placeholder: 'Ej.: cliente desistió, monto mal digitado',
+        minLength: 5,
+      },
     });
+    if (motivo === null) return;
 
-    if (!confirmed) return;
-
-    const { success, blockedReason } = await this.facade.borrarVenta(venta.id);
+    const { success, blockedReason } = await this.facade.anularVenta(venta.id, motivo);
     if (success) {
-      this.toast.success('Venta borrada');
+      this.toast.success('Venta anulada');
     } else if (blockedReason) {
-      this.toast.warning('No se pudo borrar', blockedReason);
+      this.toast.warning('No se pudo anular', blockedReason);
     } else {
-      this.toast.error('No se pudo borrar la venta');
+      this.toast.error('No se pudo anular la venta', this.facade.error() ?? undefined);
     }
   }
 }

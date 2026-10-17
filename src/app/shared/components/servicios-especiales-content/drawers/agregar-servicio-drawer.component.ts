@@ -3,8 +3,10 @@ import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angula
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { montoEntero, noSoloEspacios } from '@core/utils/servicios-especiales.utils';
 
 /**
  * AgregarServicioDrawerComponent — Formulario para crear un nuevo servicio en side-drawer (RF-037).
@@ -60,6 +62,10 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               data-llm-description="input for the special service base price"
             />
           </div>
+          <!-- hotfix-158-m: las columnas de monto son enteras -->
+          @if (servicioForm.controls.precio.hasError('montoEntero')) {
+            <span class="text-xs text-error">Ingresa el monto en pesos, sin decimales.</span>
+          }
         </div>
       </form>
 
@@ -95,13 +101,15 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 export class AgregarServicioDrawerComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly toast = inject(ToastService);
 
   protected readonly isSaving = signal(false);
 
   protected readonly servicioForm = new FormGroup({
-    nombre: new FormControl('', Validators.required),
-    descripcion: new FormControl('', Validators.required),
-    precio: new FormControl<number>(0, [Validators.required, Validators.min(1)]),
+    // fix-436-m: un texto de solo espacios no cuenta como completado.
+    nombre: new FormControl('', [Validators.required, noSoloEspacios]),
+    descripcion: new FormControl('', [Validators.required, noSoloEspacios]),
+    precio: new FormControl<number>(0, [Validators.required, Validators.min(1), montoEntero]),
   });
 
   protected async submitServicio(): Promise<void> {
@@ -117,8 +125,12 @@ export class AgregarServicioDrawerComponent {
     });
 
     this.isSaving.set(false);
+    // fix-435-m: nunca fallar en silencio.
     if (success) {
+      this.toast.success('Servicio agregado');
       this.drawer.close();
+    } else {
+      this.toast.error('No se pudo agregar el servicio', this.facade.error() ?? undefined);
     }
   }
 }

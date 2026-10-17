@@ -23,7 +23,11 @@ import { formatChileanDate, formatDayMonthYear, to24hTime } from '@core/utils/da
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { pickFichaEnrollment } from '@core/utils/ficha-enrollment.utils';
 import { formatPaymentConcept, paymentPositions } from '@core/utils/ficha-pagos.utils';
-import { mapAnulacionPago, PAYMENT_ANULACION_SELECT } from '@core/utils/payment-status.utils';
+import {
+  mapAnulacionPago,
+  PAYMENT_ANULACION_SELECT,
+  type PaymentAnulacionRow,
+} from '@core/utils/payment-status.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
 import {
@@ -146,6 +150,8 @@ export class AdminAlumnoDetalleFacade {
   private readonly _reagendarSeleccion = signal<ClaseSeleccionadaReagendar[]>([]);
   private readonly _historialReagendamientos = signal<ReagendamientoHistorialUI[]>([]);
   private readonly _historialPagos = signal<PagoUI[]>([]);
+  /** fix-438-m: ventas de servicios especiales del alumno (por alumno, no por matrícula). */
+  private readonly _ventasServicios = signal<PagoUI[]>([]);
   private readonly _progresoPractico = signal<ProgresoUI>({
     completadas: 0,
     requeridas: PRACTICAS_REQUERIDAS_B,
@@ -223,7 +229,8 @@ export class AdminAlumnoDetalleFacade {
   readonly puedeReagendarPenalizacion = computed(
     () => this._clasesPendientesReagendar().length > 0,
   );
-  readonly historialPagos = this._historialPagos.asReadonly();
+  /** Pagos de la matrícula mostrada + ventas de servicios especiales del alumno (fix-438-m). */
+  readonly historialPagos = computed(() => [...this._historialPagos(), ...this._ventasServicios()]);
   readonly historialReagendamientos = this._historialReagendamientos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly certPdfPath = this._certPdfPath.asReadonly();
@@ -364,6 +371,7 @@ export class AdminAlumnoDetalleFacade {
     this._clasesPracticas.set([]);
     this._clasesPendientesReagendar.set([]);
     this._historialPagos.set([]);
+    this._ventasServicios.set([]);
     // fix-298-m: sin esto, el panel de reagendamientos podía mostrar el del alumno anterior.
     this._historialReagendamientos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
@@ -621,14 +629,19 @@ export class AdminAlumnoDetalleFacade {
       // La entrada ya se aplicó: de acá en adelante, las cargas son refrescos.
       this._entryEnrollmentId = undefined;
 
+      // fix-438-m: en paralelo con el paso 2; nunca falla (ver fetchVentasServicios).
+      const ventasServicios = this.fetchVentasServicios(studentId);
+
       // ── Step 2: Queries según tipo de licencia ──
       if (licenseGroup === 'professional') {
         await this.fetchProfessionalProgress(enrollmentId, promotionCourseId);
+        await ventasServicios;
         return;
       }
 
       // ── Clase B: delegar al método reutilizable ──
       await this.fetchClassBProgress(enrollmentId, studentId, coursePracticalHours);
+      await ventasServicios;
     } catch (err) {
       this._error.set(
         isRowNotFound(err)
@@ -1270,6 +1283,53 @@ export class AdminAlumnoDetalleFacade {
       estado: this.formatPaymentStatus(p.status),
       anulacion: anulaciones[idx],
     }));
+  }
+
+  /**
+   * fix-438-m: ventas de servicios especiales vinculadas al alumno (`student_id`). Son del alumno,
+   * no de una matrícula, así que se muestran con cualquier matrícula elegida. Un error acá no tumba
+   * la ficha: el historial de pagos se muestra igual, sin las ventas.
+   */
+  private async fetchVentasServicios(studentId: number): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('special_service_sales')
+      // fix-443-m: con la anulación, para mostrar tachada una venta anulada.
+      .select(
+        `id, sale_date, price, service_name, payment_method, status, ${PAYMENT_ANULACION_SELECT}`,
+      )
+      .eq('student_id', studentId)
+      .order('sale_date', { ascending: true });
+    if (error) {
+      this._ventasServicios.set([]);
+      return;
+    }
+    const metodos: Record<string, string> = {
+      efectivo: 'Efectivo',
+      transferencia: 'Transferencia',
+      tarjeta: 'Tarjeta',
+    };
+    this._ventasServicios.set(
+      (
+        (data ?? []) as Array<
+          {
+            id: number;
+            sale_date: string;
+            price: number;
+            service_name: string | null;
+            payment_method: string | null;
+          } & PaymentAnulacionRow
+        >
+      ).map((v) => ({
+        id: v.id,
+        fecha: this.formatDate(v.sale_date),
+        concepto: `Servicio especial: ${v.service_name ?? 'servicio'}`,
+        monto: v.price,
+        metodo: metodos[v.payment_method ?? ''] ?? null,
+        estado: this.formatPaymentStatus(v.status === 'anulado' ? 'anulado' : 'paid'),
+        anulacion: mapAnulacionPago(v),
+        servicioEspecial: true,
+      })),
+    );
   }
 
   private formatPaymentStatus(status: string | null | undefined): string {

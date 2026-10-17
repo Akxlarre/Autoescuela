@@ -1,18 +1,30 @@
 // supabase/functions/export-special-services/index.ts
 //
 // Edge Function: export-special-services
-// Genera reporte de ventas en Excel o PDF.
+// Exporta en Excel o PDF las ventas que muestra el Historial de ventas (fix-440-m).
+//
+// Body: { format: 'excel' | 'pdf', branch_id: number | null, sale_ids: number[] }
+//   sale_ids — las ventas visibles en pantalla (filtro de servicio, período y búsqueda). Sin una
+//              lista válida responde 400: ya no se exporta "todo" a ciegas (antes, fix-147-b).
+//   branch_id — se valida con resolveBranchScope (fix-430-m): un id de otra sede no sale.
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
-import { escapePdfWinAnsi, textWidth, assemblePdf, wrapLines } from '../_shared/pdf-utils.ts';
+import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
+import { escapePdfWinAnsi, textWidth, assemblePdf } from '../_shared/pdf-utils.ts';
+import { EXPORT_HEADERS, exportRows, parseSaleIds } from './rows.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -27,33 +39,38 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { format, branch_id } = await req.json();
+    const { format, branch_id: requestedBranch, sale_ids: rawIds } = await req.json();
 
-    let query = supabase
-      .from('special_service_sales')
-      .select('*, service_catalog(name), branches(name)')
-      .order('sale_date', { ascending: false });
+    // fix-430-m: la sede la valida el servidor; una secretaria sin grant solo ve la suya.
+    const scope = resolveBranchScope(access, requestedBranch);
+    if (!scope.ok) return authErrorResponse(scope, corsHeaders);
+    const branch_id = scope.branchId;
 
-    if (branch_id) query = query.eq('branch_id', branch_id);
+    const saleIds = parseSaleIds(rawIds);
+    if (saleIds === null) return jsonResponse({ error: 'sale_ids (number[]) es requerido' }, 400);
 
-    const { data: sales, error } = await query;
-    if (error) throw error;
+    let sales = [];
+    if (saleIds.length > 0) {
+      let query = supabase
+        .from('special_service_sales')
+        .select(
+          'sale_date, created_at, client_name, client_rut, service_name, document_number, payment_method, price, status, void_reason, service_catalog(name), branches(name)',
+        )
+        .in('id', saleIds)
+        .order('sale_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (branch_id !== null) query = query.eq('branch_id', branch_id);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      sales = data ?? [];
+    }
+
+    const { rows, total, vigentes } = exportRows(sales);
 
     if (format === 'excel') {
-      const headers = ['Cliente', 'RUT', 'Servicio', 'Monto', 'Estado', 'Pagado', 'Fecha', 'Sede'];
-      const rows = sales.map((s) => [
-        s.client_name ?? '',
-        s.client_rut ?? '',
-        s.service_catalog?.name ?? '',
-        s.price,
-        s.status === 'completed' ? 'Completado' : 'Pendiente',
-        s.paid ? 'Sí' : 'No',
-        s.sale_date ?? '',
-        s.branches?.name ?? '',
-      ]);
-      return new Response(JSON.stringify({ headers, rows }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const totalRow = ['Total', '', '', '', '', '', total, '', ''];
+      return jsonResponse({ headers: [...EXPORT_HEADERS], rows: [...rows, totalRow] });
     }
 
     if (format === 'pdf') {
@@ -63,6 +80,7 @@ Deno.serve(async (req) => {
         MR = 40,
         MT = 50,
         MB = 50;
+      const RIGHT = W - MR;
 
       let ops = '';
       const pages: string[] = [];
@@ -71,59 +89,67 @@ Deno.serve(async (req) => {
       const T = (x: number, yp: number, text: string, f: 'F1' | 'F2', size: number) => {
         ops += `BT /${f} ${size} Tf ${x} ${Math.round(yp)} Td (${escapePdfWinAnsi(text)}) Tj ET\n`;
       };
-
-      const HLINE = (yp: number, lw = 0.5, x1 = ML, x2 = W - MR) => {
+      /** Texto alineado a la derecha en `xRight`. */
+      const TR = (xRight: number, yp: number, text: string, f: 'F1' | 'F2', size: number) => {
+        T(xRight - textWidth(text, size, f === 'F2'), yp, text, f, size);
+      };
+      const HLINE = (yp: number, lw = 0.5, x1 = ML, x2 = RIGHT) => {
         ops += `${lw} w ${x1} ${Math.round(yp)} m ${x2} ${Math.round(yp)} l S\n`;
       };
 
-      const NP = () => {
+      // Fecha | Cliente (RUT abajo) | Servicio (sede abajo) | N° boleta | Medio de pago | Monto
+      const colX = [ML, 100, 255, 385, 445];
+      const header = () => {
+        T(colX[0], y, 'Fecha', 'F2', 8);
+        T(colX[1], y, 'Cliente / RUT', 'F2', 8);
+        T(colX[2], y, 'Servicio / Sede', 'F2', 8);
+        T(colX[3], y, 'N° boleta', 'F2', 8);
+        T(colX[4], y, 'Medio de pago', 'F2', 8);
+        TR(RIGHT, y, 'Monto', 'F2', 8);
+        y -= 5;
+        HLINE(y);
+        y -= 13;
+      };
+      const newPage = () => {
         if (ops) pages.push(ops);
         ops = '';
         y = H - MT;
-        T(ML, y, 'Reporte de Ventas - Servicios Especiales', 'F2', 14);
+        T(ML, y, 'Historial de Ventas - Servicios Especiales', 'F2', 14);
         y -= 25;
+        header();
       };
 
-      NP(); // Start first page without pushing empty string
+      newPage();
+      const formatCLP = (n: number) => `$${n.toLocaleString('es-CL')}`;
 
-      // Table Header
-      const colX = [ML, 200, 320, 380, 440, 500];
-      const headers = ['Cliente/RUT', 'Servicio', 'Monto', 'Estado', 'Cobro', 'Fecha'];
-
-      T(colX[0], y, headers[0], 'F2', 9);
-      T(colX[1], y, headers[1], 'F2', 9);
-      T(colX[2], y, headers[2], 'F2', 9);
-      T(colX[3], y, headers[3], 'F2', 9);
-      T(colX[4], y, headers[4], 'F2', 9);
-      T(colX[5], y, headers[5], 'F2', 9);
-      y -= 5;
-      HLINE(y);
-      y -= 15;
-
-      for (const s of sales) {
-        if (y < MB + 30) NP();
-
-        const name = s.client_name || '—';
-        const rut = s.client_rut || '—';
-        const service = s.service_catalog?.name || '—';
-        const price = `$${s.price.toLocaleString('es-CL')}`;
-        const status = s.status === 'completed' ? 'Compl.' : 'Pend.';
-        const paid = s.paid ? 'Cobrado' : '—';
-        const date = s.sale_date;
-
-        T(colX[0], y, name.slice(0, 25), 'F1', 8);
-        T(colX[1], y, service.slice(0, 20), 'F1', 8);
-        T(colX[2], y, price, 'F1', 8);
-        T(colX[3], y, status, 'F1', 8);
-        T(colX[4], y, paid, 'F1', 8);
-        T(colX[5], y, date, 'F1', 8);
-
+      for (const [fecha, cliente, rut, servicio, boleta, medio, monto, sede, anulacion] of rows) {
+        if (y < MB + 40) newPage();
+        T(colX[0], y, String(fecha), 'F1', 8);
+        T(colX[1], y, String(cliente).slice(0, 30), 'F1', 8);
+        T(colX[2], y, String(servicio).slice(0, 26), 'F1', 8);
+        T(colX[3], y, String(boleta) || '—', 'F1', 8);
+        T(colX[4], y, String(medio) || '—', 'F1', 8);
+        // fix-443-m: una anulada muestra su monto entre paréntesis (no suma) y el motivo abajo.
+        TR(
+          RIGHT,
+          y,
+          anulacion ? `(${formatCLP(Number(monto))})` : formatCLP(Number(monto)),
+          'F1',
+          8,
+        );
         y -= 10;
-        T(colX[0], y, rut, 'F1', 7);
-        y -= 15;
+        T(colX[1], y, String(rut), 'F1', 7);
+        T(colX[2], y, String(sede).slice(0, 30), 'F1', 7);
+        if (anulacion) T(colX[3], y, String(anulacion).slice(0, 40), 'F2', 7);
+        y -= 8;
         HLINE(y, 0.1);
-        y -= 10;
+        y -= 12;
       }
+
+      if (y < MB + 30) newPage();
+      HLINE(y + 6);
+      T(colX[0], y - 6, `Total (${vigentes} ${vigentes === 1 ? 'venta' : 'ventas'})`, 'F2', 9);
+      TR(RIGHT, y - 6, formatCLP(total), 'F2', 9);
 
       pages.push(ops);
       const pdfBytes = assemblePdf(pages, W, H);
@@ -134,9 +160,6 @@ Deno.serve(async (req) => {
 
     return new Response('Invalid format', { status: 400 });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: err.message }, 500);
   }
 });

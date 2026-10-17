@@ -58,3 +58,29 @@ describe('LoginComponent — credenciales de prueba (hotfix-007-i)', () => {
     }
   });
 });
+
+// ─── hotfix-090-b (A12 de ASG-i-022): un doble clic en "Iniciar Sesión" no manda dos logins. ───
+describe('LoginComponent — doble envío (hotfix-090-b)', () => {
+  it('un segundo envío mientras el primero está en curso se ignora', async () => {
+    const pendientes: ((v: { error: null }) => void)[] = [];
+    const login = vi.fn(() => new Promise<{ error: null }>((r) => pendientes.push(r)));
+    TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        { provide: AuthFacade, useValue: { login, resetPassword: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: GsapAnimationsService, useValue: { animateHero: vi.fn() } },
+        { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
+      ],
+    });
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    const datos = { email: 'a@b.cl', password: 'x', rememberMe: false };
+
+    const primero = component.onSubmit(datos);
+    const segundo = component.onSubmit(datos);
+    pendientes.forEach((r) => r({ error: null }));
+    await Promise.all([primero, segundo]);
+
+    expect(login).toHaveBeenCalledTimes(1);
+  });
+});

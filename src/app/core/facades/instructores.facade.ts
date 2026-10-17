@@ -22,6 +22,7 @@ import type {
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
+import { isVehicleOperational } from '@core/utils/vehicle-status.utils';
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 
@@ -420,7 +421,8 @@ export class InstructoresFacade {
         }) => {
           const modelLabel = [v.brand, v.model, v.year].filter(Boolean).join(' ');
           let status: 'available' | 'assigned' | 'maintenance' = 'available';
-          if (v.status === 'maintenance' || v.status === 'blocked') {
+          // fix-224-b: los 4 estados no operativos (antes solo maintenance/blocked).
+          if (!isVehicleOperational(v.status)) {
             status = 'maintenance';
           } else if (assignedIds.has(v.id)) {
             status = 'assigned';

@@ -21,7 +21,7 @@ import { chileToday, chileYear } from '../_shared/chile-time.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import JSZip from 'npm:jszip@3';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,6 +84,11 @@ Deno.serve(async (req: Request) => {
     } catch {
       // Sin body — usar defaults
     }
+
+    // fix-430-m: la sede la valida el servidor; una secretaria sin grant solo ve la suya.
+    const scope = resolveBranchScope(access, branchId);
+    if (!scope.ok) return authErrorResponse(scope, corsHeaders);
+    branchId = scope.branchId;
 
     const licenseGroup = tipo === 'professional' ? 'professional' : 'class_b';
     const pdfField =

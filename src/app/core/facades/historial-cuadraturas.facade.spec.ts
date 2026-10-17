@@ -214,76 +214,82 @@ describe('HistorialCuadraturasFacade', () => {
       );
     });
 
-    it('tipo="gasto_olvidado" inserta en expenses (con la fecha del cierre) y en cuadratura_adjustments', async () => {
+    /**
+     * fix-446-m: el gasto y el ajuste los crea la RPC `registrar_ajuste_cuadratura` en una sola
+     * transacción (la fecha y la sede del gasto las toma del cierre en la BD). Antes eran dos
+     * INSERT desde el navegador, y el candado de fix-445-m rechazaba el del gasto.
+     */
+    function mockRpc(result: { data: unknown; error: unknown }) {
+      const rpc = vi.fn().mockResolvedValue(result);
+      const tableWrite = vi.fn();
+      supabaseSpy.client.rpc = rpc;
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'cuadratura_adjustments') {
+          return {
+            insert: tableWrite,
+            select: () => ({
+              eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }),
+            }),
+          };
+        }
+        return { insert: tableWrite };
+      });
+      return { rpc, tableWrite };
+    }
+
+    it('fix-446-m: tipo="gasto_olvidado" va por la RPC, sin INSERT directo a expenses', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ dbId: 1, role: 'admin' });
       (facade as any)._cierreSeleccionado.set(
         mkCierre({ id: 1, fecha: '2026-07-15', branchId: 2 }),
       );
-
-      const expensesInsert = vi.fn().mockReturnValue({
-        select: () => ({
-          single: () => Promise.resolve({ data: { id: 99 }, error: null }),
-        }),
-      });
-      const adjustmentsInsert = vi.fn().mockResolvedValue({ error: null });
-
-      supabaseSpy.client.from = vi.fn((table: string) => {
-        if (table === 'expenses') return { insert: expensesInsert };
-        if (table === 'cuadratura_adjustments') {
-          return {
-            insert: adjustmentsInsert,
-            select: () => ({
-              eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }),
-            }),
-          };
-        }
-        throw new Error(`unexpected table: ${table}`);
-      });
+      const { rpc, tableWrite } = mockRpc({ data: 55, error: null });
 
       const ok = await facade.registrarAjuste(datosGasto);
 
       expect(ok).toBe(true);
-      expect(expensesInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          date: '2026-07-15', // fecha del CIERRE, nunca la de hoy
-          amount: 5000,
-          category: 'combustible',
-          vehicle_id: 7,
-          branch_id: 2,
-        }),
-      );
-      expect(adjustmentsInsert).toHaveBeenCalledWith(
-        expect.objectContaining({ cuadratura_id: 1, tipo: 'gasto_olvidado', expense_id: 99 }),
-      );
+      expect(rpc).toHaveBeenCalledWith('registrar_ajuste_cuadratura', {
+        p_cuadratura_id: 1,
+        p_tipo: 'gasto_olvidado',
+        p_monto: -5000,
+        p_motivo: 'Combustible olvidado',
+        p_categoria: 'combustible',
+        p_vehiculo_id: 7,
+      });
+      expect(tableWrite).not.toHaveBeenCalled();
+      expect(toastSpy.success).toHaveBeenCalled();
     });
 
-    it('tipo="correccion_manual" NO inserta en expenses', async () => {
+    it('fix-446-m: tipo="correccion_manual" va por la RPC sin categoría ni vehículo', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ dbId: 1, role: 'admin' });
       (facade as any)._cierreSeleccionado.set(mkCierre({ id: 1 }));
-
-      const expensesInsert = vi.fn();
-      const adjustmentsInsert = vi.fn().mockResolvedValue({ error: null });
-
-      supabaseSpy.client.from = vi.fn((table: string) => {
-        if (table === 'expenses') return { insert: expensesInsert };
-        if (table === 'cuadratura_adjustments') {
-          return {
-            insert: adjustmentsInsert,
-            select: () => ({
-              eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }),
-            }),
-          };
-        }
-        throw new Error(`unexpected table: ${table}`);
-      });
+      const { rpc } = mockRpc({ data: 56, error: null });
 
       const ok = await facade.registrarAjuste(datosCorreccion);
 
       expect(ok).toBe(true);
-      expect(expensesInsert).not.toHaveBeenCalled();
-      expect(adjustmentsInsert).toHaveBeenCalledWith(
-        expect.objectContaining({ tipo: 'correccion_manual', expense_id: null }),
-      );
+      expect(rpc).toHaveBeenCalledWith('registrar_ajuste_cuadratura', {
+        p_cuadratura_id: 1,
+        p_tipo: 'correccion_manual',
+        p_monto: 2000,
+        p_motivo: 'Conteo mal hecho',
+        p_categoria: null,
+        p_vehiculo_id: null,
+      });
+    });
+
+    it('fix-446-m: si la BD rechaza, muestra su mensaje y no dice "registrado"', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ dbId: 1, role: 'admin' });
+      (facade as any)._cierreSeleccionado.set(mkCierre({ id: 1 }));
+      mockRpc({
+        data: null,
+        error: { code: 'P0001', message: 'CAJA_CERRADA', details: null, hint: null },
+      });
+
+      const ok = await facade.registrarAjuste(datosGasto);
+
+      expect(ok).toBe(false);
+      expect(toastSpy.success).not.toHaveBeenCalled();
+      expect(toastSpy.error).toHaveBeenCalledWith(expect.stringContaining('ya está cerrada'));
     });
   });
 

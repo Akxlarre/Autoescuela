@@ -25,6 +25,14 @@ describe('mapAuthError', () => {
     expect(mapAuthError(error)).toBe('Tu cuenta está desactivada. Contacta al administrador.');
   });
 
+  it.each([
+    [{ code: 'over_request_rate_limit', message: 'Request rate limit reached' }],
+    [{ code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' }],
+    [{ message: 'Rate limit exceeded' }],
+  ])('A15 (hotfix-089-b): demasiados intentos → mensaje claro (%o)', (error) => {
+    expect(mapAuthError(error)).toBe('Demasiados intentos. Por favor, intenta de nuevo más tarde.');
+  });
+
   it('devuelve el fallback genérico para errores no reconocidos', () => {
     const error = { message: 'Something totally unexpected' };
     expect(mapAuthError(error)).toBe(

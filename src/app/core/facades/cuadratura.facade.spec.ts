@@ -354,6 +354,24 @@ describe('CuadraturaFacade.registrarEgreso — gasto/combustible (fix-006-i, fix
     );
   });
 
+  it('fix-445-m: si la caja del día ya está cerrada, muestra ese motivo y no "error genérico"', async () => {
+    insertSpy.mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'CAJA_CERRADA', details: null, hint: null },
+    });
+
+    const ok = await facade.registrarEgreso({
+      tipo: 'gasto',
+      monto: 10_000,
+      descripcion: 'Insumos',
+      branchId: 1,
+      metodoPago: 'efectivo',
+    });
+
+    expect(ok).toBe(false);
+    expect(errorToast).toHaveBeenCalledWith(expect.stringContaining('ya está cerrada'));
+  });
+
   // ─── AC-1: nunca un egreso huérfano (branch_id null) ──────────────────────
   it('rechaza el guardado y NO inserta cuando branchId es null (admin en "Todas las sedes")', async () => {
     const ok = await facade.registrarEgreso({
@@ -967,6 +985,7 @@ function buildChainableSupabase(responses: Record<string, DbResult> = {}) {
     'upsert',
     'eq',
     'in',
+    'or',
     'gte',
     'lt',
     'lte',
@@ -1201,22 +1220,109 @@ describe('CuadraturaFacade — revertir cobros y quitar egresos (fix-044-i AC-2)
     expect(ok).toBe(false);
     expect(toast.success).not.toHaveBeenCalled();
   });
+});
 
-  it('revertir un servicio especial que no toca filas no muestra éxito', async () => {
+describe('CuadraturaFacade — anular una venta de servicio especial (fix-443-m)', () => {
+  const ingresoVenta: IngresoRowFixture = {
+    ...ingresoPago,
+    source: 'special_service',
+    enrollmentId: null,
+  };
+
+  it('el admin ANULA la venta con motivo: un UPDATE, nunca un DELETE', async () => {
+    const { facade, db, toast } = setupFix044({
+      'special_service_sales:update': { data: [{ id: 10 }], error: null },
+    });
+
+    const ok = await facade.eliminarIngreso(ingresoVenta, '  Venta duplicada  ');
+
+    expect(ok).toBe(true);
+    expect(writesTo(db.calls, 'special_service_sales')).toEqual([
+      {
+        table: 'special_service_sales',
+        op: 'update',
+        args: [{ status: 'anulado', void_reason: 'Venta duplicada' }],
+      },
+    ]);
+    expect(toast.success).toHaveBeenCalledWith('Venta anulada.');
+  });
+
+  it('la secretaria no anula una venta: ni siquiera intenta escribir', async () => {
+    const { facade, db, toast } = setupFix044({}, 'secretary');
+
+    const ok = await facade.eliminarIngreso(ingresoVenta, 'Venta duplicada');
+
+    expect(ok).toBe(false);
+    expect(db.calls).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith('Solo un administrador puede anular una venta.');
+  });
+
+  it('sin motivo, o ya anulada, no escribe nada', async () => {
+    const { facade, db } = setupFix044();
+
+    expect(await facade.eliminarIngreso(ingresoVenta, '  ')).toBe(false);
+    const yaAnulada = { ...ingresoVenta, anulacion: { motivo: 'x', por: null, cuando: '—' } };
+    expect(await facade.eliminarIngreso(yaAnulada, 'Otra vez')).toBe(false);
+    expect(db.calls).toEqual([]);
+  });
+
+  it('una anulación que no toca filas (RLS) no muestra éxito', async () => {
     const { facade, toast } = setupFix044({
       'special_service_sales:update': { data: [], error: null },
     });
 
-    const ok = await facade.eliminarIngreso({
-      ...ingresoPago,
-      source: 'special_service',
-      enrollmentId: null,
-    });
+    const ok = await facade.eliminarIngreso(ingresoVenta, 'Venta duplicada');
 
     expect(ok).toBe(false);
     expect(toast.success).not.toHaveBeenCalled();
   });
 
+  it('las ventas anuladas se listan tachadas pero no suman en totales ni en el cierre', async () => {
+    const venta = {
+      id: 30,
+      price: 20_000,
+      service_name: 'Psicotécnico',
+      client_name: 'José',
+      document_number: null,
+      payment_method: 'efectivo',
+      status: 'completed',
+    };
+    const { facade, db } = setupFix044({
+      'payments:select': { data: [], error: null },
+      'special_service_sales:select': {
+        data: [
+          venta,
+          {
+            ...venta,
+            id: 31,
+            price: 7_000,
+            status: 'anulado',
+            void_reason: 'Venta duplicada',
+            voided_at: '2026-10-13T16:00:00.000Z',
+            anulado_por: { first_names: 'Ana', paternal_last_name: 'Rojas' },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    await facade.initialize();
+
+    const ventas = facade.pagosHoy().filter((p) => p.source === 'special_service');
+    expect(ventas).toHaveLength(2);
+    expect(ventas[1].anulacion).toEqual(
+      expect.objectContaining({ motivo: 'Venta duplicada', por: 'Ana Rojas' }),
+    );
+    expect(facade.totalIngresosHoy()).toBe(20_000);
+    expect(facade.ingresosEfectivoHoy()).toBe(20_000);
+
+    await facade.cerrarCaja();
+    const cierre = writesTo(db.calls, 'cash_closings').at(-1)?.args[0] as Record<string, unknown>;
+    expect(cierre['total_income']).toBe(20_000);
+  });
+});
+
+describe('CuadraturaFacade — quitar egresos (fix-044-i AC-2)', () => {
   it('la secretaria no puede quitar un anticipo: ni siquiera intenta escribir', async () => {
     const { facade, db, toast } = setupFix044({}, 'secretary');
 
