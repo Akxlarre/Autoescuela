@@ -282,6 +282,11 @@ const APPLICABLE_TO_LABEL: Record<DiscountApplicableTo, string> = {
                 />
               </div>
             </div>
+            @if (vigenciaInvalida()) {
+              <p class="text-xs text-error mt-1">
+                La fecha "hasta" no puede ser anterior a "desde".
+              </p>
+            }
           </div>
         }
 
@@ -337,11 +342,21 @@ export class DescuentosDrawerComponent {
     () => this.formDiscountType() === 'percentage' && (this.formValue() ?? 0) > 100,
   );
 
+  /**
+   * fix-056-i: "hasta" anterior a "desde" dejaba un descuento que nunca aparece en el paso de pago.
+   * Fechas `YYYY-MM-DD`: se comparan como texto. Sin "hasta" = sin vencimiento.
+   */
+  protected readonly vigenciaInvalida = computed(() => {
+    const hasta = this.formValidUntil();
+    return !!hasta && hasta < this.formValidFrom();
+  });
+
   protected readonly canSave = computed(
     () =>
       this.formName().trim().length > 0 &&
       (this.formValue() ?? 0) > 0 &&
       !this.percentageOutOfRange() &&
+      !this.vigenciaInvalida() &&
       !this.facade.isSaving(),
   );
 
