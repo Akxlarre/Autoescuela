@@ -1,14 +1,17 @@
 # Asignación ASG-i-064 — Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** hotfix
 > **priority:** P1
 > **created:** 2026-10-16
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-15
+> **resulting_track:** hotfix-076-b-test-mantenimientos-basepath
+
+> Resuelta antes de crearse: Benjamín ya lo había corregido en `hotfix-076-b` (2026-10-15, commit
+> `e51d656f`). Se vio al traer main a `fixes_final_boss` el 2026-10-16: los 4342 tests en verde.
 
 ---
 
