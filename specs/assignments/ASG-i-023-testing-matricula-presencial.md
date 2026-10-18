@@ -1,14 +1,14 @@
 # Asignación ASG-i-023 — Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-10-18
+> **resulting_track:** fix-058-i-testing-matricula-presencial
 
 ---
 
