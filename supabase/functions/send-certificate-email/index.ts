@@ -15,6 +15,7 @@ import { chileYear } from '../_shared/chile-time.ts';
 //   200  { success: true; recipientEmail: string }
 //   400  { error: '...' }
 //   401  { error: 'No autorizado' }
+//   403  { error: '...' }  — no es staff, o la matrícula es de otra sede (fix-448-m)
 //   404  { error: '...' }
 //   500  { error: '...' }
 //
@@ -26,6 +27,11 @@ import { chileYear } from '../_shared/chile-time.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,32 +120,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ── Validar autenticación ────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return jsonResponse({ error: 'No autorizado' }, 401);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-
-    // Validar que el solicitante está autenticado como admin/secretaria
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user },
-    } = await supabaseUser.auth.getUser();
-    if (!user) return jsonResponse({ error: 'No autorizado' }, 401);
+    // fix-448-m: solo staff (spec 0009-i). Antes bastaba cualquier sesión, incluida la de un alumno.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
 
     // Service role para operaciones de BD (bypass RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Obtener user_id del admin/secretaria para el log
-    const { data: adminUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('supabase_uid', user.id)
-      .maybeSingle();
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
 
     // ── Validar body ─────────────────────────────────────────────────────────
     const body = await req.json();
@@ -152,6 +141,10 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonResponse({ error: 'enrollment_id (number) es requerido' }, 400);
     }
+
+    // fix-448-m: la matrícula tiene que ser de una sede que quien llama puede ver (DG-112).
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
 
     // ── 1. Obtener datos del enrollment + alumno ─────────────────────────────
     const { data: enrollment, error: enrollmentError } = await supabase
@@ -197,9 +190,7 @@ Deno.serve(async (req: Request) => {
     const nombre = `${firstName} ${lastName}`.trim();
     const email = studentUser.email as string;
 
-    const certYear = cert.created_at
-      ? chileYear(new Date(cert.created_at))
-      : chileYear();
+    const certYear = cert.created_at ? chileYear(new Date(cert.created_at)) : chileYear();
     const folioPrefix = tipo === 'professional' ? 'CERT-PROF' : 'CERT';
     const folio = `${folioPrefix}-${certYear}-${String(cert.folio).padStart(4, '0')}`;
 
@@ -253,7 +244,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from('certificate_issuance_log').insert({
       certificate_id: cert.id,
       action: 'email_sent',
-      user_id: adminUser?.id ?? null,
+      user_id: access.userId,
     });
 
     return jsonResponse({ success: true, recipientEmail: email });
