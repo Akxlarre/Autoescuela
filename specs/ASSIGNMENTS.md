@@ -87,7 +87,6 @@
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
-| ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
 | ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
 
@@ -276,6 +275,7 @@
 | ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | `b` | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | `b` | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
+| ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | `m` | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-18 |
 <!-- AUTO-GENERATED:END -->
 
 ---
