@@ -1,7 +1,8 @@
 # Fix: El envío del certificado por correo acepta cualquier sesión y cualquier sede
 > id: fix-448-m-email-certificado-solo-staff
 > refs: fix-447-m-testing-documentos-certificacion (S26) · spec 0009-i · fix-431-m
-> status: open
+> status: done
+> closed: 2026-10-18
 > created: 2026-10-18
 
 ## Root Cause
@@ -28,7 +29,25 @@ Ninguno — fix autónomo. ACs propios:
   `requireStaff(req, ['admin','secretary'])` + `denyIfEnrollmentOutOfScope(access, enrollment_id)`
   antes de la primera consulta; `user_id` del log sale de `access.userId`.
 
+## Progreso
+
+- [x] Cambio en la función (commit `def67977`)
+- [x] Deploy de `send-certificate-email` (Matías, 2026-10-18)
+- [x] Test de regresión con tokens reales tras el deploy
+
 ## Test de regresión
 
-Llamada real a la función con los tokens de admin, secretaria sede 1 (matrícula propia y de la
-sede 2) y alumno, tras el deploy de Matías. Los helpers ya tienen tests (`staff-auth.test.ts`).
+Llamada real a la función desplegada (2026-10-18). Los casos permitidos usan matrículas **sin**
+certificado generado: pasan los chequeos de permiso y responden 400 sin mandar correo.
+
+| AC | Llamada | Resultado |
+|---|---|---|
+| AC-1 | anon key, matrícula 2801 (sede 2, con certificado) | ✅ 401 |
+| AC-1 | token inválido | ✅ 401 |
+| AC-2 | secretaria sede 1 → 2801 (sede 2, con certificado) | ✅ 403, sin correo |
+| AC-2 | secretaria sede 1 → 2803 (sede 2) | ✅ 403 |
+| AC-3 | secretaria sede 1 → 2875 (sede 1) | ✅ 400 "El certificado aún no ha sido generado" |
+| AC-3 | secretaria multisede → 2803 (sede 2) | ✅ 400 (pasa el permiso) |
+| AC-3 | admin → 2803 (sede 2) | ✅ 400 (pasa el permiso) |
+
+Rol alumno/instructor → 403: lo decide `decideStaffAccess`, cubierto por `staff-auth.test.ts`.

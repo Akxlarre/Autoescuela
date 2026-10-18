@@ -57,7 +57,7 @@ consultan a medida que aparecen.
 | S1 / S2 — Storage sin sede (leer / sobrescribir) | Cerrada por `fix-178-b` → regresión | `20261001200000_storage_aislamiento_por_sede.sql`; rutas de la app (`students/<enrollment>`, `instructor-docs/<id>`, `school-docs/`) calzan con la lista blanca |
 | S3 — certificado sin rol ni sede | Cerrada (`requireStaff`, `fix-431-m`) → regresión | `generate-certificate-b-pdf/index.ts:79,101` |
 | S4 — ZIP de todas las sedes | Sede cerrada (`fix-430-m`); **abierta**: `type: 'professional'` sigue aceptándose en el piloto | `export-certificates-zip/index.ts:83,89` |
-| S26 — `send-certificate-email` con cualquier sesión | **Abierta**: sin `requireStaff` ni `denyIfEnrollmentOutOfScope`; un alumno o instructor logueado dispara correos de cualquier matrícula | `send-certificate-email/index.ts:117-131` |
+| S26 — `send-certificate-email` con cualquier sesión | ❌ → corregida en `fix-448-m` (staff + sede), verificada tras el deploy | `send-certificate-email/index.ts` |
 | S26 — `preview`/`sample` a cualquiera | Cerrada (`requireStaff` cubre los 3 modos) | `generate-certificate-b-pdf/index.ts:79` |
 | S5 — documento institucional NULL no aparece con sede | **Abierta** | `dms.facade.ts:809` (`.eq` excluye NULL) |
 | S6 — "Subido por Sistema" (`auth_id`) | **Abierta** | `dms.facade.ts:765` |
@@ -75,7 +75,14 @@ consultan a medida que aparecen.
 
 ## Fixes derivados
 
-_Pendiente._
+| Track | Hallazgo | Estado |
+|---|---|---|
+| `fix-448-m-email-certificado-solo-staff` | S26 — el correo del certificado aceptaba cualquier sesión y cualquier sede | Cerrado 2026-10-18 |
+
+### Observaciones (sin track)
+
+- S4 — `export-certificates-zip` acepta `type: 'professional'`. Profesional solo está bloqueado en
+  las rutas del front; el ZIP respeta la sede, así que no expone datos de otra sede.
 
 ## Test de regresión
 
