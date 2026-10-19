@@ -1,4 +1,4 @@
-import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
+import { chileParts, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-certificate-professional-pdf/index.ts
 //
 // Edge Function: generate-certificate-professional-pdf
@@ -189,52 +189,30 @@ Deno.serve(async (req: Request) => {
       .update({ certificate_professional_pdf_url: storagePath })
       .eq('id', enrollment_id);
 
-    // 7. Upsert registro en `certificates` y registrar en `certificate_issuance_log`
+    // 7. Registro en `certificates` (fix-461-m): emisión atómica vía RPC (mismo folio global que
+    //    Clase B; antes "max(folio)+1" fuera de transacción chocaba y el error se ignoraba).
     const studentId: number = enrollment.students.id;
-    let certId: number | null = null;
+    const { data: issued, error: issueErr } = await supabase
+      .rpc('issue_certificate', {
+        p_enrollment_id: enrollment_id,
+        p_student_id: studentId,
+        p_type: 'professional',
+        p_issued_by: callerUserId,
+      })
+      .single();
 
-    const { data: existingCert } = await supabase
-      .from('certificates')
-      .select('id')
-      .eq('enrollment_id', enrollment_id)
-      .eq('type', 'professional')
-      .maybeSingle();
-
-    if (existingCert) {
-      certId = existingCert.id;
-    } else {
-      const { data: maxFolioRes } = await supabase
-        .from('certificates')
-        .select('folio')
-        .order('folio', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextFolio = (maxFolioRes?.folio ?? 0) + 1;
-
-      const { data: newCert, error: certErr } = await supabase
-        .from('certificates')
-        .insert({
-          folio: nextFolio,
-          enrollment_id,
-          student_id: studentId,
-          type: 'professional',
-          status: 'issued',
-          issued_date: chileToday(),
-          issued_by: callerUserId,
-        })
-        .select('id')
-        .single();
-
-      if (!certErr && newCert) certId = newCert.id;
+    if (issueErr || !issued) {
+      return jsonRes(
+        { error: `No se pudo registrar el certificado: ${issueErr?.message ?? 'sin respuesta'}` },
+        500,
+      );
     }
 
-    if (certId !== null) {
-      await supabase.from('certificate_issuance_log').insert({
-        certificate_id: certId,
-        action: 'generated',
-        user_id: callerUserId,
-      });
-    }
+    await supabase.from('certificate_issuance_log').insert({
+      certificate_id: issued.id,
+      action: 'generated',
+      user_id: callerUserId,
+    });
 
     // 8. Signed URL de corta vida (1 hora)
     const { data: signedData, error: signErr } = await supabase.storage
@@ -336,7 +314,6 @@ function sanitize(name: string): string {
 function fmtDateShort(ts: string): string {
   return formatChilePattern(ts, 'dd-MM-yyyy') ?? '';
 }
-
 
 function todayInSpanish(): string {
   const meses = [

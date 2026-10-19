@@ -1,4 +1,4 @@
-import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
+import { chileParts, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-certificate-b-pdf/index.ts
 //
 // Edge Function: generate-certificate-b-pdf
@@ -264,52 +264,31 @@ Deno.serve(async (req: Request) => {
       .update({ certificate_b_pdf_url: storagePath })
       .eq('id', enrollment_id);
 
-    // 7. Upsert registro en `certificates` y registrar en `certificate_issuance_log`
+    // 7. Registro en `certificates` (fix-461-m): la RPC lo emite de forma atómica — devuelve el
+    //    existente o inserta con el siguiente folio bajo un lock. Antes "max(folio)+1" fuera de
+    //    transacción chocaba con dos generaciones a la vez y el error se ignoraba.
     const studentId: number = enrollment.students.id;
-    let certId: number | null = null;
+    const { data: issued, error: issueErr } = await supabase
+      .rpc('issue_certificate', {
+        p_enrollment_id: enrollment_id,
+        p_student_id: studentId,
+        p_type: 'class_b',
+        p_issued_by: callerUserId,
+      })
+      .single();
 
-    const { data: existingCert } = await supabase
-      .from('certificates')
-      .select('id')
-      .eq('enrollment_id', enrollment_id)
-      .eq('type', 'class_b')
-      .maybeSingle();
-
-    if (existingCert) {
-      certId = existingCert.id;
-    } else {
-      const { data: maxFolioRes } = await supabase
-        .from('certificates')
-        .select('folio')
-        .order('folio', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextFolio = (maxFolioRes?.folio ?? 0) + 1;
-
-      const { data: newCert, error: certErr } = await supabase
-        .from('certificates')
-        .insert({
-          folio: nextFolio,
-          enrollment_id,
-          student_id: studentId,
-          type: 'class_b',
-          status: 'issued',
-          issued_date: chileToday(),
-          issued_by: callerUserId,
-        })
-        .select('id')
-        .single();
-
-      if (!certErr && newCert) certId = newCert.id;
+    if (issueErr || !issued) {
+      return jsonRes(
+        { error: `No se pudo registrar el certificado: ${issueErr?.message ?? 'sin respuesta'}` },
+        500,
+      );
     }
 
-    if (certId !== null) {
-      await supabase.from('certificate_issuance_log').insert({
-        certificate_id: certId,
-        action: 'generated',
-        user_id: callerUserId,
-      });
-    }
+    await supabase.from('certificate_issuance_log').insert({
+      certificate_id: issued.id,
+      action: 'generated',
+      user_id: callerUserId,
+    });
 
     // 8. Generar signed URL de corta vida (1 hora) para visualización inmediata.
     //    La Edge Function usa service_role y puede firmar objetos de cualquier bucket.
