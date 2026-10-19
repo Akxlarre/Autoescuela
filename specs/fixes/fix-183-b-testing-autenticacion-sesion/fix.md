@@ -147,3 +147,23 @@ J10, J11, K05–K08, K10, L03–L05, M01–M08 (borrador de matrícula), N02, N0
 |---|---|---|
 | A18 | Después del login se vuelve a la pantalla pedida (solo rutas internas `/app/...`) | `hotfix-096-b` (#315) |
 | A19 | "Mantener sesión iniciada" se implementa: desmarcada, la sesión dura mientras el navegador esté abierto | `fix-229-b` (#317) |
+
+## Cuarta tanda (2026-10-19)
+
+`e2e/auth-sesion-4.spec.ts`: **12/12 en verde** (sin escrituras).
+
+| Casos | Resultado |
+|---|---|
+| H04, H05 | ✅ secretaria con grant en "Todas": la página profesional salta a Conductores y deshabilita "Todas"; al salir, el selector vuelve a quedar libre |
+| **H08, H09** | ❌ → `hotfix-098-b` (#320): "Conmutar Sede" a veces decía "No se encontró una sede profesional disponible" (3 de 6 intentos; la lista de sedes aún no cargaba). Tras el fix: 6/6 |
+| J10, J11 | ✅ la política se ve igual con sesión (sin menú) y en vista de impresión |
+| K10 | ✅ Ajustes muestra la cuenta "Activo" |
+| L03 | ✅ cambiar la sede en una pestaña no cambia la otra hasta recargar; al recargar toma la última |
+| M04 | ✅ salir del wizard recién abierto (sin borrador) no pide confirmación |
+| O01 | ✅ login, Módulo no disponible y 404 legibles en modo oscuro |
+
+**Quedan (manuales o bloqueados):** A16 (sin cuenta sin perfil), B04–B06 (tiempo real), C02–C13
+(primer login, desde `fix-182-b` las secretarias activan por correo), D03–D08/D10 (dominio),
+E09/M01–M03/M06–M08 (crean un borrador de matrícula real), G20–G30, H06/H07, I06, J02, J05
+(cuentas de instructor/alumno/sin sede), G34, K05–K08 (cambios del admin en caliente), L04, L05,
+N02, N04, O05.
