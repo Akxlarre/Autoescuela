@@ -49,6 +49,7 @@ export const DATE_KINDS = {
   'local-date-parts':
     'chileParts(instante) para leer, chileTimeOfDay() para una hora HH:MM:SS, addDaysIso()/addMonthsIso()/mondayOfIso() para calcular, calendarDateToIso() para un selector de fechas',
   'angular-date-pipe': 'el pipe chileDate',
+  'slice-pipe': "el pipe chileDate: 'yyyy-MM-dd' (cortar el ISO da el día en UTC)",
   'ms-day-diff':
     'diffDaysIso(desde, hasta) sobre días de Chile (chileToday(), toChileDate(instante)); si de verdad es una duración entre dos instantes, decláralo en el allowlist',
   'deprecated-date-api':
@@ -107,6 +108,8 @@ const SIMPLE_PATTERNS = [
 
 const FORMAT_CALL = /(\.toLocaleDateString|\.toLocaleTimeString|\.toLocaleString|Intl\.DateTimeFormat)\(/g;
 const DATE_PIPE = /\|\s*date\b(?!\s*=)/g;
+// fix-453-m: `{{ instante | slice: 0 : 10 }}` es el `.slice(0, 10)` de un ISO escrito como pipe.
+const SLICE_DATE_PIPE = /\|\s*slice\s*:\s*0\s*:\s*10\b/g;
 
 /**
  * Violaciones ARCH-27 de un archivo. `relPath` relativo a la raíz del repo.
@@ -150,6 +153,8 @@ export function findDateViolations(content, relPath) {
   if (p.endsWith('.html') || p.endsWith('.component.ts')) {
     DATE_PIPE.lastIndex = 0;
     while ((m = DATE_PIPE.exec(src)) !== null) push('angular-date-pipe', m.index, m[0].length);
+    SLICE_DATE_PIPE.lastIndex = 0;
+    while ((m = SLICE_DATE_PIPE.exec(src)) !== null) push('slice-pipe', m.index, m[0].length);
   }
 
   return hits.sort((a, b) => a.line - b.line);

@@ -11,7 +11,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
@@ -68,7 +68,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
   imports: [
     BadgeComponent,
     TooltipModule,
-    SlicePipe,
+    ChileDatePipe,
     TableModule,
     TagModule,
     SelectModule,
@@ -306,7 +306,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 </p>
                                 <p class="text-xs m-0 text-text-secondary">
                                   {{ doc.studentName }} · {{ doc.typeLabel }} ·
-                                  {{ doc.documentAt | slice: 0 : 10 }}
+                                  {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                                 </p>
                               </div>
                             </div>
@@ -511,7 +511,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 }}{{ doc.description ? ' · ' + doc.description : '' }}
                               </p>
                               <p class="text-xs mt-0.5 m-0 text-text-muted">
-                                Subido el {{ doc.createdAt | slice: 0 : 10 }} por
+                                Subido el {{ doc.createdAt | chileDate: 'yyyy-MM-dd' }} por
                                 {{ doc.uploaderName }}
                               </p>
                             </div>

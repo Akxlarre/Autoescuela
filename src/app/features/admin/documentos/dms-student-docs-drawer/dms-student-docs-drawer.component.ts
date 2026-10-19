@@ -1,6 +1,6 @@
 import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -20,7 +20,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TooltipModule,
-    SlicePipe,
+    ChileDatePipe,
     IconComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
@@ -66,7 +66,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     {{ doc.fileName }}
                   </p>
                   <p class="text-xs m-0 mt-0.5 text-text-secondary">
-                    {{ doc.typeLabel }} · {{ doc.documentAt | slice: 0 : 10 }}
+                    {{ doc.typeLabel }} · {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                   </p>
                 </div>
                 @if (isAdmin() && doc.source !== 'enrollment_license') {
