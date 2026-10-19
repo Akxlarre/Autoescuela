@@ -39,6 +39,7 @@ describe('AuthFacade', () => {
       signUp: vi.fn(),
       signOut: vi.fn(),
       resetPasswordForEmail: vi.fn(),
+      setRememberSession: vi.fn(),
     };
     supabaseSpy.getUser.mockResolvedValue({ data: { user: null } } as any);
     supabaseSpy.signIn.mockResolvedValue({ error: null } as any);
@@ -183,6 +184,27 @@ describe('AuthFacade', () => {
     supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
     await service.login('user@example.com', 'password123');
     expect(supabaseSpy.signIn).toHaveBeenCalledWith('user@example.com', 'password123');
+  });
+
+  // fix-229-b (A19): la preferencia se guarda ANTES de crear la sesión.
+  it('login() guarda "Mantener sesión iniciada" antes de iniciar sesión', async () => {
+    supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
+    await service.login('user@example.com', 'password123', false);
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(false);
+    expect(supabaseSpy.setRememberSession.mock.invocationCallOrder[0]).toBeLessThan(
+      supabaseSpy.signIn.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('login() sin indicar la casilla la da por marcada', async () => {
+    supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
+    await service.login('user@example.com', 'password123');
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(true);
+  });
+
+  it('logout() limpia la preferencia', async () => {
+    await service.logout({ redirect: false });
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(true);
   });
 
   describe('sesión lenta (fix-185-b, S17)', () => {
@@ -508,6 +530,7 @@ describe('AuthFacade — cuenta desactivada con la sesión abierta (fix-219-b)',
     };
     supabaseSpy = {
       signOut: vi.fn().mockResolvedValue({ error: null }),
+      setRememberSession: vi.fn(),
       client: {
         auth: {
           onAuthStateChange: vi

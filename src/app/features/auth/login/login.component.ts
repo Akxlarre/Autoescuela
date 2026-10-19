@@ -170,7 +170,11 @@ export class LoginComponent {
         case 'login': {
           // data.password es opcional en la interfaz porque no se usa en 'reset',
           // pero siempre estará presente al hacer login.
-          const { error } = await this.auth.login(data.email, data.password ?? '');
+          const { error } = await this.auth.login(
+            data.email,
+            data.password ?? '',
+            data.rememberMe ?? true,
+          );
           if (error) {
             this.errorMsg.set(this.sanitizer.sanitize(error).message);
           } else {

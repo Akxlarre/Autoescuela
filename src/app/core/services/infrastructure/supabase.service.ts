@@ -1,6 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../../environments/environment';
+import {
+  ALIVE_COOKIE,
+  REMEMBER_KEY,
+  shouldDiscardStoredSession,
+  supabaseStorageKey,
+} from '@core/utils/remember-session.utils';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +17,10 @@ export class SupabaseService {
   public readonly session = this._session.asReadonly();
 
   constructor() {
+    // fix-229-b (A19): "Mantener sesión iniciada" desmarcada y el navegador se cerró → la sesión
+    // guardada se descarta ANTES de que el cliente la restaure.
+    this.discardSessionIfBrowserWasClosed();
+
     this.supabase = createClient(environment.supabase.url, environment.supabase.anonKey, {
       auth: {
         autoRefreshToken: true,
@@ -48,6 +58,31 @@ export class SupabaseService {
    * en el mostrador sacaba a la persona también de su celular. Para sacar a alguien de todos los
    * equipos se desactiva el usuario (fix-180-b).
    */
+  /**
+   * Guarda "Mantener sesión iniciada" (fix-229-b). Desmarcada: preferencia en `localStorage` +
+   * cookie de sesión (sin vencimiento: el navegador la borra al cerrarse y la comparte entre
+   * pestañas). Marcada: se borran las dos y la sesión dura como siempre.
+   */
+  setRememberSession(remember: boolean): void {
+    if (typeof localStorage === 'undefined' || typeof document === 'undefined') return;
+    if (remember) {
+      localStorage.removeItem(REMEMBER_KEY);
+      document.cookie = `${ALIVE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    } else {
+      localStorage.setItem(REMEMBER_KEY, '0');
+      document.cookie = `${ALIVE_COOKIE}=1; path=/; SameSite=Lax`;
+    }
+  }
+
+  private discardSessionIfBrowserWasClosed(): void {
+    if (typeof localStorage === 'undefined' || typeof document === 'undefined') return;
+    if (!shouldDiscardStoredSession(localStorage.getItem(REMEMBER_KEY), document.cookie)) return;
+    const key = supabaseStorageKey(environment.supabase.url);
+    localStorage.removeItem(key);
+    localStorage.removeItem(`${key}-code-verifier`);
+    localStorage.removeItem(REMEMBER_KEY);
+  }
+
   async signOut() {
     const result = await this.supabase.auth.signOut({ scope: 'local' });
     if (result.error) {
