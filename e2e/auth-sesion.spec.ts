@@ -128,7 +128,12 @@ test.describe('B. Sesión', () => {
   });
 
   test('B09: sin sesión, /app/admin/dashboard redirige a /login', async ({ page }) => {
-    await expectLandsOn(page, '/app/admin/dashboard', '/login');
+    // hotfix-096-b (A18): /login lleva la pantalla pedida para volver a ella.
+    await expectLandsOn(
+      page,
+      '/app/admin/dashboard',
+      '/login?returnUrl=%2Fapp%2Fadmin%2Fdashboard',
+    );
   });
 
   test('B10: sin sesión, /app redirige a /login', async ({ page }) => {
@@ -199,8 +204,9 @@ test.describe('E. Cerrar sesión', () => {
     await page.locator('[data-llm-action="confirm-modal-accept"]').click();
     await expect(page).toHaveURL(/\/login$/);
 
+    // Atrás no vuelve a la pantalla: termina en /login (con returnUrl desde hotfix-096-b).
     await page.goBack();
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login(\?returnUrl=[^&]+)?$/);
   });
 });
 
@@ -286,11 +292,11 @@ test.describe('F. Rutas de otro rol', () => {
 // ── G. Fase piloto — matriz de rutas bloqueadas ───────────────────────────────
 
 test.describe('G. Fase piloto', () => {
+  // Certificados Profesional ya no está bloqueado (fix-465-m).
   const ADMIN_BLOCKED = [
     '/app/admin/clase-profesional/pre-inscritos',
     '/app/admin/clase-profesional/relatores',
     '/app/admin/clase-profesional/asistencia',
-    '/app/admin/clase-profesional/certificados',
     '/app/admin/clase-profesional/evaluaciones',
     '/app/admin/ex-alumnos-profesional',
   ];
@@ -306,7 +312,6 @@ test.describe('G. Fase piloto', () => {
     '/app/secretaria/profesional/relatores',
     '/app/secretaria/profesional/asistencia',
     '/app/secretaria/profesional/evaluaciones',
-    '/app/secretaria/profesional/certificados',
     '/app/secretaria/ex-alumnos-profesional',
   ];
   const SEC_EXPECTED: Record<'secretariaA' | 'secretariaB' | 'secretariaMultisede', string> = {
@@ -383,11 +388,11 @@ test.describe('G. Fase piloto', () => {
 
 // ── H / I. Menú lateral por rol ───────────────────────────────────────────────
 
+// Certificados Prof. salió de esta lista: fix-465-m lo habilitó en el piloto.
 const BLOCKED_MENU_LABELS = [
   'Relatores',
   'Asistencia Prof',
   'Evaluaciones',
-  'Certificados Prof',
   'Ex-Alumnos Prof',
   'Pre-inscritos',
 ];

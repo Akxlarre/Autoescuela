@@ -113,6 +113,27 @@ for (const [caso, cuerpo] of [
   });
 }
 
+test('A18 (hotfix-096-b): sin sesión, abrir una pantalla y entrar lleva a esa pantalla', async ({
+  page,
+}) => {
+  await page.goto('/app/admin/pagos');
+  await expect(page).toHaveURL(/\/login\?returnUrl=%2Fapp%2Fadmin%2Fpagos$/, CARGA);
+  await page.locator(EMAIL).fill(ACCOUNTS.admin.email);
+  await page.locator(PASSWORD).fill(ACCOUNTS.admin.password);
+  await page.locator(SUBMIT).click();
+  await expect(page).toHaveURL(/\/app\/admin\/pagos$/, CARGA);
+});
+
+test('A18 (hotfix-096-b): un returnUrl a otro sitio se ignora y entra al dashboard', async ({
+  page,
+}) => {
+  await page.goto('/login?returnUrl=https%3A%2F%2Fotro-sitio.cl%2Fapp%2Fadmin');
+  await page.locator(EMAIL).fill(ACCOUNTS.admin.email);
+  await page.locator(PASSWORD).fill(ACCOUNTS.admin.password);
+  await page.locator(SUBMIT).click();
+  await expect(page).toHaveURL(/localhost:4200\/app\/admin\/dashboard$/, CARGA);
+});
+
 // ── B. Sesión ────────────────────────────────────────────────────────────────────────────────
 
 test('B08: borrar el almacenamiento y navegar vuelve a /login', async ({ pageAs }) => {
@@ -121,7 +142,8 @@ test('B08: borrar el almacenamiento y navegar vuelve a /login', async ({ pageAs 
   await expect(page.locator('[data-llm-nav]').first()).toBeVisible(CARGA);
   await page.evaluate(() => localStorage.clear());
   await page.goto('/app/admin/pagos');
-  await expect(page).toHaveURL(/\/login$/, CARGA);
+  // Con returnUrl desde hotfix-096-b.
+  await expect(page).toHaveURL(/\/login(\?returnUrl=[^&]+)?$/, CARGA);
 });
 
 // ── E. Cambio de usuario en el mismo navegador ──────────────────────────────────────────────

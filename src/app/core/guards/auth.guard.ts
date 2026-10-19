@@ -1,8 +1,9 @@
 import { inject, isDevMode } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { loginQueryParams } from '@core/utils/return-url.utils';
 
-export const authGuard: CanActivateFn = async () => {
+export const authGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthFacade);
   const router = inject(Router);
   await auth.whenReady;
@@ -25,5 +26,6 @@ export const authGuard: CanActivateFn = async () => {
   if (isDevMode()) return true;
 
   if (auth.isAuthenticated()) return true;
-  return router.createUrlTree(['/login']);
+  // hotfix-096-b (A18): después del login se vuelve a la pantalla pedida.
+  return router.createUrlTree(['/login'], { queryParams: loginQueryParams(state?.url) });
 };
