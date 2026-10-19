@@ -190,6 +190,19 @@ test('E08: con teclado, Tab + Enter sobre un horario abre el detalle', async ({ 
 
 // ── P. Visual ───────────────────────────────────────────────────────────────────────────────
 
+test('P03 (hotfix-094-b): en el celular la Agenda abre en el día de hoy', async ({ pageAs }) => {
+  const page = await pageAs('admin');
+  // Miércoles 21-oct-2026, 12:00 en Chile.
+  await page.clock.setFixedTime(new Date('2026-10-21T15:00:00.000Z'));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/app/admin/agenda');
+  await expect(grid(page)).toBeVisible(CARGA);
+  const activa = page.locator('.agenda-mobile-tab--active');
+  await expect(activa).toHaveCount(1);
+  await expect(activa).toHaveClass(/agenda-mobile-tab--today/);
+  await expect(activa).toContainText('Mié');
+});
+
 test('P05: en una pantalla angosta los controles de la barra no se superponen', async ({
   pageAs,
 }) => {
