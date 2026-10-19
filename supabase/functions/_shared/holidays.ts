@@ -86,7 +86,7 @@ export function holidaysOfYear(dates: readonly string[], year: number): string[]
 // Consulta las fuentes en orden y se queda con la primera que entregue fechas DEL AÑO PEDIDO.
 // El filtro no es defensivo: `api.boostr.cl` ignora el parámetro `year` y devuelve siempre el
 // año en curso, así que para el año siguiente respondía 200 sin un solo feriado útil (fix-343-m).
-async function fetchHolidaysForYear(year: number): Promise<string[] | null> {
+export async function fetchHolidaysForYear(year: number): Promise<string[] | null> {
   const sources: (() => Promise<string[]>)[] = [
     async () => {
       const resp = await fetch(`https://apis.digital.gob.cl/fl/feriados/${year}`);
