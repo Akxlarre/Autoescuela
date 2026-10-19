@@ -167,6 +167,7 @@ describe('DmsFacade', () => {
         branchId?: number | null;
         canAccessBothBranches?: boolean;
         selectedBranchId?: number | null;
+        dbId?: number;
       } = {},
     ) {
       TestBed.resetTestingModule();
@@ -207,6 +208,7 @@ describe('DmsFacade', () => {
                 opts.role
                   ? {
                       role: opts.role,
+                      dbId: opts.dbId,
                       branchId: opts.branchId ?? null,
                       canAccessBothBranches: opts.canAccessBothBranches ?? false,
                     }
@@ -341,6 +343,24 @@ describe('DmsFacade', () => {
       await localFacade.initialize();
 
       expect(instructorsBuilder.eq).toHaveBeenCalledWith('users.branch_id', 2);
+    });
+
+    it('uploadSchoolDocument() (fix-452-m): guarda uploaded_by con el usuario de la sesión', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade({ role: 'secretary', dbId: 8 });
+      const schoolBuilder = makeBuilder({ data: null, error: null });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'school_documents' ? schoolBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.uploadSchoolDocument({
+        file: new File(['x'], 'decreto.pdf', { type: 'application/pdf' }),
+        type: 'decreto',
+      });
+
+      expect(schoolBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ uploaded_by: 8, file_name: 'decreto.pdf' }),
+      );
+      expect(localSupabaseSpy.client.from).not.toHaveBeenCalledWith('users');
     });
 
     it('fetchAllData() (fix-451-m): documentos de la escuela con sede incluyen los de ambas sedes (NULL)', async () => {

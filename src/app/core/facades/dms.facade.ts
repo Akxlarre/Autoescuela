@@ -759,26 +759,13 @@ export class DmsFacade {
       .upload(path, payload.file, { upsert: true });
     if (uploadError) throw uploadError;
 
-    const sessionRes = await this.supabase.client.auth.getUser();
-    const userId = sessionRes.data.user?.id;
-
-    // Obtener numeric user id
-    let numericUserId: number | null = null;
-    if (userId) {
-      const { data: userData } = await this.supabase.client
-        .from('users')
-        .select('id')
-        .eq('auth_id', userId)
-        .single();
-      numericUserId = (userData as { id: number } | null)?.id ?? null;
-    }
-
     const { error: insertError } = await this.supabase.client.from('school_documents').insert({
       type: payload.type,
       file_name: payload.file.name,
       storage_url: path,
       description: payload.description ?? null,
-      uploaded_by: numericUserId,
+      // fix-452-m: antes se buscaba por `users.auth_id` (no existe) y siempre quedaba NULL.
+      uploaded_by: this.auth.currentUser()?.dbId ?? null,
     });
     if (insertError) throw insertError;
 
