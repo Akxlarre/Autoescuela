@@ -865,14 +865,17 @@ export class DmsFacade {
         schoolDocsQuery = schoolDocsQuery.or(`branch_id.is.null,branch_id.eq.${branchId}`);
       }
 
+      // fix-456-m: con sede, se filtra por la sede de la MATRÍCULA (spec 0007-m: puede diferir de la
+      // del alumno). `!inner` deja solo alumnos con matrícula en esa sede y solo esas matrículas.
+      const enrollmentsEmbed = branchId !== null ? 'enrollments!inner' : 'enrollments';
       let studentsQuery: any = this.supabase.client.from('students').select(
         `
           id,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
-          enrollments(id, number, created_at, branch_id, branches(name))
+          ${enrollmentsEmbed}(id, number, created_at, branch_id, branches(name))
         `,
       );
-      if (branchId !== null) studentsQuery = studentsQuery.eq('users.branch_id', branchId);
+      if (branchId !== null) studentsQuery = studentsQuery.eq('enrollments.branch_id', branchId);
 
       let instructorsQuery: any = this.supabase.client
         .from('instructors')
@@ -938,7 +941,7 @@ export class DmsFacade {
       const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
       const allVDocs =
         branchId !== null
-          ? allVDocsRaw.filter((d) => studentUserMap.has(d.student_id))
+          ? allVDocsRaw.filter((d) => enrollmentInfoMap.has(d.enrollment_id))
           : allVDocsRaw;
 
       const recentDocs = allVDocs.slice(0, 5).map((d) => {

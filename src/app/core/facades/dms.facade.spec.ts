@@ -488,6 +488,68 @@ describe('DmsFacade', () => {
       expect(localSupabaseSpy.client.from).not.toHaveBeenCalledWith('users');
     });
 
+    it('fetchAllData() (fix-456-m): con sede, filtra alumnos y documentos por la sede de la matrícula', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade({ role: 'secretary', branchId: 1 });
+      // La query ya viene filtrada por enrollments.branch_id = 1: el alumno es de la sede 2 pero
+      // su matrícula 801 es de la sede 1.
+      const studentsBuilder = makeBuilder({
+        data: [
+          {
+            id: 84,
+            users: {
+              id: 9,
+              rut: '9-9',
+              first_names: 'Samuel',
+              paternal_last_name: 'Merino',
+              maternal_last_name: null,
+              branch_id: 2,
+              branches: { name: 'Sede 2' },
+            },
+            enrollments: [
+              {
+                id: 801,
+                number: '0008',
+                created_at: '2026-01-01T00:00:00Z',
+                branch_id: 1,
+                branches: { name: 'Sede 1' },
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+      const doc = (id: string, enrollment_id: number) => ({
+        id,
+        source: 'student_document',
+        student_id: 84,
+        enrollment_id,
+        type: 'cedula',
+        file_name: `${id}.pdf`,
+        file_url: `students/${enrollment_id}/${id}.pdf`,
+        status: 'approved',
+        document_at: '2026-01-01T00:00:00Z',
+        managed_by: null,
+      });
+      const vDocsBuilder = makeBuilder({ data: [doc('a', 801), doc('b', 999)], error: null });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'students'
+          ? studentsBuilder
+          : table === 'v_dms_student_documents'
+            ? vDocsBuilder
+            : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      expect(studentsBuilder.eq).toHaveBeenCalledWith('enrollments.branch_id', 1);
+      expect(studentsBuilder.eq).not.toHaveBeenCalledWith('users.branch_id', 1);
+      expect(studentsBuilder.select.mock.calls[0][0]).toContain('enrollments!inner(');
+      expect(localFacade.studentsWithDocs()).toEqual([
+        expect.objectContaining({ studentId: 84, enrollmentId: 801, docCount: 1 }),
+      ]);
+      expect(localFacade.recentDocs().map((d) => d.fileName)).toEqual(['a.pdf']);
+    });
+
     it('fetchAllData() (fix-451-m): documentos de la escuela con sede incluyen los de ambas sedes (NULL)', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade({
         role: 'admin',
