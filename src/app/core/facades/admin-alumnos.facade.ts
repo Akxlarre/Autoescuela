@@ -4,7 +4,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
-import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { resolveBranchScope, scopeStudentsToBranch } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { isAlumnoCursando } from '@core/utils/alumno-status.utils';
 import { formatDayMonthYear, todayIso } from '@core/utils/date.utils';
@@ -47,6 +47,8 @@ interface RawEnrollment {
   docs_complete: boolean;
   created_at: string;
   license_group: string | null;
+  branch_id: number | null;
+  branches: { name: string } | null;
   courses: RawCourse | null;
   student_documents: RawDocument[];
 }
@@ -445,6 +447,7 @@ export class AdminAlumnosFacade {
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id, branches(name)),
           enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, license_group,
+            branch_id, branches(name),
             courses(id, name),
             student_documents(type, status)
           ),
@@ -453,16 +456,14 @@ export class AdminAlumnosFacade {
         )
         [this._trashView() ? 'eq' : 'neq']('status', 'archived');
 
-      if (branchId !== null) {
-        query = query.eq('users.branch_id', branchId);
-      }
-
       const { data, error } = await query.order('id', { ascending: false });
       if (error) throw error;
       // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
       if (!this.alumnosGuard.isCurrent(requestToken)) return;
 
-      const rawData = (data ?? []) as unknown as RawStudent[];
+      // fix-458-m (DG-115): la sede se decide por las matrículas, no por `users.branch_id` — un
+      // alumno de la otra sede matriculado en esta también es alumno de esta sede.
+      const rawData = scopeStudentsToBranch((data ?? []) as unknown as RawStudent[], branchId);
 
       // Filtrar alumnos: la Base B solo muestra alumnos con matrícula Clase B.
       // (profesional-only y singular-only quedan fuera — tienen sus propias vistas)
@@ -561,7 +562,8 @@ export class AdminAlumnosFacade {
       rut: u.rut,
       email: u.email,
       celular: u.phone ?? '',
-      sucursal: u.branches?.name ?? '—',
+      // fix-458-m: la sede de la matrícula de la fila; la del usuario solo si no tiene matrícula.
+      sucursal: enrollment?.branches?.name ?? u.branches?.name ?? '—',
       comuna: s.address ?? '',
       nroExpedientes: nroExpedientes.length > 0 ? nroExpedientes : ['—'],
       // hotfix-123-m: mismo formato que la ficha (dd-mm-aaaa, día en hora local).

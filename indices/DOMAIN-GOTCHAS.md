@@ -1915,7 +1915,7 @@
   **matrícula** (`enrollments!inner` + `.eq('enrollments.branch_id', X)`; documentos por
   `enrollment_id`). `select_students` deja ver a la secretaria los alumnos de su sede **o** con
   alguna matrícula en ella (`20261018120000`).
-- **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`.
+- **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`, `specs/fixes/fix-458-m-base-alumnos-sede-de-la-matricula` (Base Alumnos: `scopeStudentsToBranch()` en `core/utils/branch-scope.utils.ts`).
 
 ## Convención para agregar una entrada nueva
 
