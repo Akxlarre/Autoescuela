@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   effect,
+  untracked,
   ElementRef,
   inject,
   input,
@@ -27,7 +28,11 @@ import { ScrollContainerDirective } from '@core/directives/scroll-container.dire
 import { todayIso } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
-import { isDateBeyondLimit, isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
+import {
+  initialMobileDayIndex,
+  isDateBeyondLimit,
+  isNextWeekBeyondLimit,
+} from '@core/utils/agenda-week.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -1208,7 +1213,20 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── GSAP: animar grilla al cargar ─────────────────────────────────────────────
 
+  /** Primer día de la semana a la que ya se le eligió el día móvil inicial (hotfix-094-b). */
+  private _mobileWeekKey: string | null = null;
+
   constructor() {
+    // hotfix-094-b (P03): en el celular, al abrir una semana se muestra el día de hoy. Solo al
+    // cambiar de semana: una recarga de datos no pisa el día que eligió la persona.
+    effect(() => {
+      const days = this.filteredDays();
+      const key = days[0]?.date ?? null;
+      if (!key || key === this._mobileWeekKey) return;
+      this._mobileWeekKey = key;
+      untracked(() => this.mobileDayIndex.set(initialMobileDayIndex(days)));
+    });
+
     effect(() => {
       if (this.isLoading()) {
         this._gridAnimated = false;

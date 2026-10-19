@@ -35,3 +35,12 @@ export function isNextWeekBeyondLimit(
   if (!maxVisibleDateIso || !weekStart) return false;
   return addDaysToIso(weekStart, 7) > maxVisibleDateIso;
 }
+
+/**
+ * Día que muestra la Agenda al abrir una semana en el celular (hotfix-094-b): el de hoy si está en
+ * la semana; si no (otra semana, fin de semana), el lunes.
+ */
+export function initialMobileDayIndex(days: readonly { isToday: boolean }[]): number {
+  const i = days.findIndex((d) => d.isToday);
+  return i >= 0 ? i : 0;
+}
