@@ -52,3 +52,9 @@ Los feriados regionales dependen de la **comuna** de cada sede, y las APIs nacio
 Chillán y Chillán Viejo, porque las dos sedes están ahí. **Si se abre una sede en otra comuna**, hay
 que revisar sus feriados locales y pasar `holidays` a tener alcance por sede (`branch_id`), en vez
 de valer para todas.
+
+## Progreso
+
+- [x] AC1, AC4, AC5 — test `supabase/tests/agenda/0052-b-feriados.sql` 6/6 en BEGIN…ROLLBACK.
+- [ ] AC2, AC3, AC-E1 — esperan la aprobación del owner para aplicar la migración, desplegar
+      `sync-holidays` y ejecutarla una vez (PR #318).
