@@ -138,7 +138,10 @@ type UploadMode = 'student' | 'school' | 'instructor';
                  expresa y ESPECÍFICA para ese dato: no puede ir implícita en ninguna
                  aceptación previa, ni condicionar la subida de otros documentos. -->
             @if (isMedicalCertificate()) {
-              <app-alert-card severity="warning" title="Dato sensible de salud — requiere autorización">
+              <app-alert-card
+                severity="warning"
+                title="Dato sensible de salud — requiere autorización"
+              >
                 <p class="m-0">
                   El certificado médico es un dato de salud. Solo puede digitalizarse con la
                   autorización expresa del alumno (Ley 21.719, Art. 16).
@@ -153,8 +156,8 @@ type UploadMode = 'student' | 'school' | 'instructor';
                   />
                   <span class="text-sm text-text-secondary leading-relaxed">
                     El alumno <strong class="text-text-primary">autoriza expresamente</strong> el
-                    tratamiento de su certificado médico con el único fin de acreditar su aptitud,
-                    y entiende que no se usará para ninguna otra finalidad.
+                    tratamiento de su certificado médico con el único fin de acreditar su aptitud, y
+                    entiende que no se usará para ninguna otra finalidad.
                   </span>
                 </label>
                 <p class="text-xs text-text-muted m-0 mt-2">
@@ -283,17 +286,8 @@ export class DmsUploadDrawerComponent {
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
-  /** Dropdown de alumnos deduplicado por studentId (studentsWithDocs() ahora es 1 fila por matrícula, AC-E2). */
-  readonly studentOptions = computed(() => {
-    const seen = new Set<number>();
-    const unique: { studentId: number; name: string }[] = [];
-    for (const row of this.facade.studentsWithDocs()) {
-      if (seen.has(row.studentId)) continue;
-      seen.add(row.studentId);
-      unique.push({ studentId: row.studentId, name: row.name });
-    }
-    return unique;
-  });
+  /** Todo alumno con matrícula, tenga o no documentos (fix-449-m: antes solo los que ya tenían). */
+  readonly studentOptions = this.facade.uploadableStudents;
 
   readonly instructorOptions = computed(() => this.facade.instructorsWithDocs());
 
@@ -360,7 +354,8 @@ export class DmsUploadDrawerComponent {
    * llega cuando un alumno justifica inasistencias (confirmado por el dueño, 17-08-2026).
    */
   readonly isMedicalCertificate = computed(
-    () => this.facade.currentUploadMode() === 'student' && this.selectedType() === 'certificado_medico',
+    () =>
+      this.facade.currentUploadMode() === 'student' && this.selectedType() === 'certificado_medico',
   );
 
   /** Casilla del Art. 16. No premarcada: el consentimiento exige un acto afirmativo. */

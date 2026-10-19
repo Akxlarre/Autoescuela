@@ -236,6 +236,8 @@ export class DmsFacade {
   // ── Estado Privado ───────────────────────────────────────────────────────────
 
   private readonly _studentsWithDocs = signal<StudentWithDocsRow[]>([]);
+  /** Alumnos del scope con ≥1 matrícula, tengan o no documentos (fix-449-m). */
+  private readonly _uploadableStudents = signal<{ studentId: number; name: string }[]>([]);
   private readonly _recentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _schoolDocs = signal<SchoolDocRow[]>([]);
   private readonly _isLoading = signal(false);
@@ -287,6 +289,8 @@ export class DmsFacade {
   // ── Estado Público ───────────────────────────────────────────────────────────
 
   readonly studentsWithDocs = this._studentsWithDocs.asReadonly();
+  /** Opciones del selector "Alumno" de "Subir documento": incluye a quien aún no tiene documentos. */
+  readonly uploadableStudents = this._uploadableStudents.asReadonly();
   readonly recentDocs = this._recentDocs.asReadonly();
   readonly schoolDocs = this._schoolDocs.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
@@ -310,11 +314,13 @@ export class DmsFacade {
   readonly previewDoc = this._previewDoc.asReadonly();
   readonly previewDocLoading = this._previewDocLoading.asReadonly();
 
-  readonly kpis = computed((): DmsKpis => ({
-    totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
-    totalSchoolDocs: this._schoolDocs().length,
-    recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
-  }));
+  readonly kpis = computed(
+    (): DmsKpis => ({
+      totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
+      totalSchoolDocs: this._schoolDocs().length,
+      recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
+    }),
+  );
 
   // ── Métodos de Acción ────────────────────────────────────────────────────────
 
@@ -919,6 +925,15 @@ export class DmsFacade {
       // Orden paterno - materno - nombre, igual que Base de Alumnos.
       const studentsWithDocs = sortByPaternalLastNameAsc(studentsWithDocsUnsorted, (s) => s.name);
 
+      // fix-449-m: el primer documento de un alumno se sube desde acá, así que el selector no
+      // puede depender de que ya tenga documentos. Sin matrícula no hay a qué asociarlo.
+      const uploadableStudents = sortByPaternalLastNameAsc(
+        rawStudents
+          .filter((s) => (s.enrollments ?? []).length > 0 && studentUserMap.has(s.id))
+          .map((s) => ({ studentId: s.id, name: studentUserMap.get(s.id)!.name })),
+        (s) => s.name,
+      );
+
       // Construir mapa instructorId → info
       const instructorMap = new Map<
         number,
@@ -991,6 +1006,7 @@ export class DmsFacade {
 
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);
+      this._uploadableStudents.set(uploadableStudents);
       this._instructorsWithDocs.set(instructorsWithDocs);
       this._schoolDocs.set(schoolDocs);
     } catch (err) {

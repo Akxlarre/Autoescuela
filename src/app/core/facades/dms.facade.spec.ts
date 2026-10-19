@@ -425,6 +425,49 @@ describe('DmsFacade', () => {
       ]);
     });
 
+    it('fetchAllData() (fix-449-m): uploadableStudents incluye al alumno con matrícula y sin documentos, y excluye al que no tiene matrícula', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const user = (id: number, first: string, paternal: string) => ({
+        id,
+        rut: `${id}-0`,
+        first_names: first,
+        paternal_last_name: paternal,
+        maternal_last_name: null,
+        branch_id: 1,
+        branches: { name: 'Sede' },
+      });
+      const enrollment = (id: number) => ({
+        id,
+        number: String(id),
+        created_at: '2026-06-01T00:00:00Z',
+        branch_id: 1,
+        branches: { name: 'Sede' },
+      });
+      const studentsBuilder = makeBuilder({
+        data: [
+          { id: 1, users: user(10, 'Ana', 'Soto'), enrollments: [enrollment(100)] },
+          {
+            id: 2,
+            users: user(20, 'Beto', 'Araya'),
+            enrollments: [enrollment(200), enrollment(201)],
+          },
+          { id: 3, users: user(30, 'Caro', 'Bravo'), enrollments: [] },
+        ],
+        error: null,
+      });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'students' ? studentsBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      expect(localFacade.studentsWithDocs()).toEqual([]);
+      expect(localFacade.uploadableStudents()).toEqual([
+        { studentId: 2, name: 'Araya Beto' },
+        { studentId: 1, name: 'Soto Ana' },
+      ]);
+    });
+
     it('fetchAllData() (spec 0007-m, AC1): alumno con 2 matrículas produce 2 filas, cada una con su propia sede/N° y docCount solo de su enrollment', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const studentsBuilder = makeBuilder({
