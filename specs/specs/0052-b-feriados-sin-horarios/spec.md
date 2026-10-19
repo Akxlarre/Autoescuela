@@ -1,6 +1,6 @@
 # Spec 0052-b — Los feriados no ofrecen horarios de clase
 
-> **Status:** in_progress
+> **Status:** done (2026-10-19; ver acceptance.md)
 > **Created:** 2026-10-19
 > **Owner:** Benjamín
 > **Priority:** P2
@@ -56,5 +56,5 @@ de valer para todas.
 ## Progreso
 
 - [x] AC1, AC4, AC5 — test `supabase/tests/agenda/0052-b-feriados.sql` 6/6 en BEGIN…ROLLBACK.
-- [ ] AC2, AC3, AC-E1 — esperan la aprobación del owner para aplicar la migración, desplegar
-      `sync-holidays` y ejecutarla una vez (PR #318).
+- [x] AC2, AC3, AC-E1 — migración aplicada, `sync-holidays` desplegada y ejecutada (34 feriados
+      2026–2027), cron activo. Ver acceptance.md.
