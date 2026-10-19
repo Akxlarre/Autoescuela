@@ -458,10 +458,12 @@ export class AgendaFacade {
     const vehicleQuery = this.supabase.client.from('vehicles').select('id, license_plate');
 
     const [instrResult, vehResult, docsResult] = await Promise.all([
+      // hotfix-097-b (B11): sin filtro de activos — las clases de un instructor desactivado
+      // (las que quedan por reasignar y las ya dictadas) salían como "#237". El picker de
+      // instructores (loadInstructors) sigue mostrando solo los activos.
       this.supabase.client
         .from('instructors')
-        .select('id, users!inner ( first_names, paternal_last_name )')
-        .eq('active', true),
+        .select('id, users!inner ( first_names, paternal_last_name )'),
       vehicleQuery,
       this.supabase.client
         .from('vehicle_documents')
