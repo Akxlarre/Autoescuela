@@ -165,5 +165,20 @@ J10, J11, K05–K08, K10, L03–L05, M01–M08 (borrador de matrícula), N02, N0
 **Quedan (manuales o bloqueados):** A16 (sin cuenta sin perfil), B04–B06 (tiempo real), C02–C13
 (primer login, desde `fix-182-b` las secretarias activan por correo), D03–D08/D10 (dominio),
 E09/M01–M03/M06–M08 (crean un borrador de matrícula real), G20–G30, H06/H07, I06, J02, J05
-(cuentas de instructor/alumno/sin sede), G34, K05–K08 (cambios del admin en caliente), L04, L05,
+(cuentas de instructor/alumno/sin sede), G34, K08, L04, L05,
 N02, N04, O05.
+
+## Quinta tanda (2026-10-19)
+
+`e2e/auth-sesion-5.spec.ts`: **2/2 en verde, 3 corridas seguidas**. Escribe en las cuentas de
+prueba `secretaria@test.com` / `secretaria2@test.com` y deja los valores originales en `finally`
+(verificado en la BD después de cada corrida).
+
+| Casos | Resultado |
+|---|---|
+| K05 | ✅ el admin da el grant multisede → el selector de sede aparece sin recargar (canal Realtime `user-self`) |
+| K06 | ✅ el admin lo quita → el selector desaparece y la marca queda en la sede propia |
+| K07 | ✅ el admin cambia la sede → la marca del menú cambia sin recargar y se mantiene al recargar |
+
+Nota: el cambio llega por Realtime cuando el canal ya está unido; el test espera 5 s después de
+cargar para representar al admin actuando sobre una sesión asentada.
