@@ -116,3 +116,27 @@ alumno o secretaria sin sede (portal del instructor/alumno bloqueado en el pilot
 secretarias activan por correo, revisar cuáles siguen aplicando), E06, E08–E10, F09, F10, G34,
 H04, H05, H08, H09, I01, I06, I07, J02, J04, J09–J12, K05–K08, K10, L02–L05, M01–M08, N01, N02, N04,
 O01, O04–O06.
+
+## Tercera tanda (2026-10-19)
+
+`e2e/auth-sesion-3.spec.ts`: **16/16 en verde** (sin escrituras: red lenta, 401 y errores simulados).
+
+| Casos | Resultado |
+|---|---|
+| B03 / S17 | ✅ recargar con 3 s de demora en cada consulta termina en la pantalla correcta, sin rebotar a /login |
+| **B07** | ❌ → `hotfix-093-b` (#309): sesión expirada al guardar decía "…procesando la solicitud (PGRST303)" |
+| E06, E08 | ✅ al cambiar de usuario no queda la búsqueda del anterior; la API solo entrega notificaciones propias |
+| **E10** | ❌ → `hotfix-091-b` (#307): "Sí, salir" sin red dejaba la sesión abierta en el equipo |
+| F09 | ✅ la ficha de un alumno de la otra sede muestra un mensaje claro, no una ficha rota |
+| F10 | ✅ Configuración web y Contabilidad › Cursos abren para la secretaria (son rutas suyas) |
+| I01, I07 | ✅ grupos del menú del admin; `/app/admin/notificaciones` existe sin ítem de menú (anotado) |
+| **J04 / S16** | ❌ → `hotfix-092-b` (#308): al recargar, "Volver al inicio de sesión" aparecía a un admin |
+| J09, J12 | ✅ política en 375 px sin scroll horizontal; 404 legible en modo oscuro |
+| L02 / S8 | ✅ la pestaña del admin no queda con la sesión de la secretaria que entró en otra |
+| N01 | ✅ con sesión de la secretaria de la sede 1, la API no entrega matrículas de la sede 2 |
+| O04, O06 | ✅ el error de login tiene `role="alert"` + `aria-live="assertive"`; un mensaje largo no ensancha la card |
+
+**Siguen pendientes (manuales o bloqueados):** A16, A18, A19 (decisiones), B04–B06 (tiempo real:
+token de 1 h, suspensión, sesión invalidada desde otro equipo), C02–C13 (primer login, revisar
+vigencia tras `fix-182-b`), D03–D08, D10 (dominio), E09, G20–G30, G34, H04–H09, I06, J02, J05,
+J10, J11, K05–K08, K10, L03–L05, M01–M08 (borrador de matrícula), N02, N04, O01, O05.
