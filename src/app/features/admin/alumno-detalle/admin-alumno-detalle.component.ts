@@ -17,6 +17,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { chileToday, formatChilePattern } from '@core/utils/chile-time.utils';
+import { promotionAllowsCertificate } from '@core/utils/professional-certificate.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
@@ -1421,6 +1423,12 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
    */
   protected readonly academicoProfVisible = !isBlockedInPilot('clase-profesional-recorte');
 
+  /** fix-467-m: fecha de término de la promoción de la matrícula mostrada (null en Clase B). */
+  protected readonly promotionEndDate = computed(() => {
+    const alumno = this.facade.alumno();
+    return alumno?.enrollments.find((e) => e.id === alumno.enrollmentId)?.promotionEndDate ?? null;
+  });
+
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
     const alumno = this.facade.alumno();
@@ -1441,6 +1449,16 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           primary: false,
           loading: isViewingCert,
           disabled: isViewingCert,
+        };
+      } else if (!promotionAllowsCertificate(this.promotionEndDate(), chileToday())) {
+        // fix-467-m: nunca antes del último día de la promoción (admin y secretaria). Mismo patrón
+        // que Clase B con las clases incompletas: deshabilitado y el motivo en el label.
+        certAction = {
+          id: 'generar-certificado',
+          label: `Certificado (desde ${formatChilePattern(this.promotionEndDate(), 'dd-MM-yyyy') ?? '—'})`,
+          icon: 'file-text',
+          primary: false,
+          disabled: true,
         };
       } else {
         // fix-466-m: ningún criterio académico bloquea (ni en el piloto); el modal del facade
@@ -1854,6 +1872,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       }
       // fix-466-m: el facade confirma con un modal (avisos de asistencia, deuda con motivo).
       // Sin módulos académicos (piloto) no hay porcentajes que avisar.
+      if (!promotionAllowsCertificate(this.promotionEndDate(), chileToday())) return;
       await this.certProfFacade.generarCertificado(alumno.enrollmentId, {
         nombre: alumno.nombre,
         pctTeoria: this.academicoProfVisible ? this.facade.progresoTeoriaProf().pct : null,

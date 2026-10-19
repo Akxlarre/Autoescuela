@@ -1932,6 +1932,10 @@
   en Profesional solo significa "pago al día" y filtra "Generar pendientes"; el lote nunca pide
   motivos y salta a los que tienen deuda. En Clase B, las prácticas incompletas sí bloquean a la
   secretaria (el admin sigue con `force`).
+  En Profesional, el equivalente es la promoción terminada: nunca se emite antes del último día
+  (`end_date ≤ hoy en Chile`), para ningún rol (fix-467-m). Se compara la fecha, no el estado:
+  la promoción pasa a `finished` recién el día siguiente (cron `auto_transition_promotion_status`).
+  App: `promotionAllowsCertificate()`; edge: `_shared/promotion-certificate.ts`.
 - **Regla de aplicabilidad:** cualquier botón o flujo nuevo que genere o regenere un certificado
   llama a `generarCertificado()` / `regenerarCertificado()` del facade de su licencia (que ya
   confirman y manejan `DEUDA_PENDIENTE`), nunca a la edge function directo. Un gate de saldo nuevo en otra edge function reusa
