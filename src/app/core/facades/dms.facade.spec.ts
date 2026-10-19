@@ -172,6 +172,7 @@ describe('DmsFacade', () => {
     ) {
       TestBed.resetTestingModule();
 
+      const localToast = { success: vi.fn(), error: vi.fn() };
       const localSupabaseSpy: any = {
         client: {
           from: vi.fn(() => makeBuilder({ data: [], error: null })),
@@ -200,7 +201,7 @@ describe('DmsFacade', () => {
           { provide: SupabaseService, useValue: localSupabaseSpy },
           { provide: LayoutDrawerService, useValue: { open: vi.fn(), close: vi.fn() } },
           { provide: ConfirmModalService, useValue: { confirm: vi.fn() } },
-          { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+          { provide: ToastService, useValue: localToast },
           { provide: DmsViewerService, useValue: { openByUrl: vi.fn() } },
           {
             provide: AuthFacade,
@@ -227,6 +228,7 @@ describe('DmsFacade', () => {
       return {
         localFacade: TestBed.inject(DmsFacade),
         localSupabaseSpy,
+        localToast,
       };
     }
 
@@ -371,6 +373,72 @@ describe('DmsFacade', () => {
       expect(builder.delete).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    // ── fix-455-m: errores visibles ────────────────────────────────────────────
+    it('borrar bien muestra "Documento eliminado" (fix-455-m)', async () => {
+      const { localFacade, localSupabaseSpy, localToast } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: [{ storage_url: 'school-docs/x.pdf' }], error: null }),
+      );
+
+      await localFacade.deleteSchoolDocument(3);
+
+      expect(localToast.success).toHaveBeenCalledWith('Documento eliminado');
+    });
+
+    it('borrar falla → toast de error con el motivo y relanza (fix-455-m)', async () => {
+      const { localFacade, localSupabaseSpy, localToast } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('permiso denegado') }),
+      );
+
+      await expect(localFacade.deleteInstructorDocument(3)).rejects.toThrow();
+      expect(localToast.error).toHaveBeenCalledWith(
+        'No se pudo eliminar el documento',
+        expect.any(String),
+      );
+      expect(localToast.success).not.toHaveBeenCalled();
+    });
+
+    it('borrar un carnet desde el DMS muestra el motivo en un toast (fix-455-m)', async () => {
+      const { localFacade, localToast } = setupFacade();
+
+      await expect(
+        localFacade.deleteStudentDocument('lic-1', 'enrollment_license'),
+      ).rejects.toThrow();
+      expect(localToast.error).toHaveBeenCalledWith(
+        'No se pudo eliminar el documento',
+        expect.stringContaining('Carnet'),
+      );
+    });
+
+    it('primera carga con una consulta fallida → error() y toast (fix-455-m)', async () => {
+      const { localFacade, localSupabaseSpy, localToast } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'v_dms_student_documents'
+          ? makeBuilder({ data: null, error: new Error('timeout') })
+          : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      expect(localFacade.error()).not.toBeNull();
+      expect(localToast.error).toHaveBeenCalledWith(
+        'Error al cargar documentos',
+        expect.any(String),
+      );
+    });
+
+    it('refreshSilently() con una consulta fallida no muestra toast (SWR, fix-455-m)', async () => {
+      const { localFacade, localSupabaseSpy, localToast } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('timeout') }),
+      );
+
+      await localFacade.refreshSilently();
+
+      expect(localToast.error).not.toHaveBeenCalled();
     });
 
     it('si el insert falla después de subir, borra el archivo recién subido (fix-454-m)', async () => {

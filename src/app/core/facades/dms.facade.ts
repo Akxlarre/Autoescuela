@@ -342,6 +342,9 @@ export class DmsFacade {
     this._error.set(null);
     await this.fetchAllData();
     this._isLoading.set(false);
+    // fix-455-m: solo la primera carga avisa; el refresco silencioso (SWR) deja los datos stale.
+    const loadError = this._error();
+    if (loadError) this.toast.error('Error al cargar documentos', loadError);
   }
 
   private getActiveBranchId(): number | null {
@@ -640,23 +643,41 @@ export class DmsFacade {
     docId: string,
     source: 'student_document' | 'digital_contract' | 'enrollment_license',
   ): Promise<void> {
-    if (source === 'enrollment_license') {
-      // Fila sintética derivada de enrollments.license_*_url — no existe como registro
-      // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
-      throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
-    }
-    const numericId = parseInt(docId, 10);
-    if (source === 'student_document') {
-      await this.deleteRowAndFile('student_documents', numericId);
-    } else {
-      // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
-      const { error } = await this.supabase.client
-        .from('digital_contracts')
-        .delete()
-        .eq('id', numericId);
-      if (error) throw error;
-    }
+    await this.withDeleteFeedback(async () => {
+      if (source === 'enrollment_license') {
+        // Fila sintética derivada de enrollments.license_*_url — no existe como registro
+        // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
+        throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
+      }
+      const numericId = parseInt(docId, 10);
+      if (source === 'student_document') {
+        await this.deleteRowAndFile('student_documents', numericId);
+      } else {
+        // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
+        const { error } = await this.supabase.client
+          .from('digital_contracts')
+          .delete()
+          .eq('id', numericId);
+        if (error) throw error;
+      }
+    });
     await this.refreshSilently();
+  }
+
+  /**
+   * fix-455-m: los handlers de la UI solo hacían `console.error`, así que un borrado fallido (o
+   * correcto) no se le mostraba a nadie. El error se relanza para que el llamador no siga como
+   * si hubiera funcionado.
+   */
+  private async withDeleteFeedback(run: () => Promise<void>): Promise<void> {
+    try {
+      await run();
+    } catch (err) {
+      const message = this.sanitizer.sanitize(err).message || 'Error desconocido';
+      this.toast.error('No se pudo eliminar el documento', message);
+      throw err;
+    }
+    this.toast.success('Documento eliminado');
   }
 
   // ── Tab 4 — Documentos del Instructor ───────────────────────────────────────
@@ -753,7 +774,7 @@ export class DmsFacade {
   }
 
   async deleteInstructorDocument(docId: number): Promise<void> {
-    await this.deleteRowAndFile('instructor_documents', docId);
+    await this.withDeleteFeedback(() => this.deleteRowAndFile('instructor_documents', docId));
     await this.refreshSilently();
   }
 
@@ -785,7 +806,7 @@ export class DmsFacade {
   }
 
   async deleteSchoolDocument(docId: number): Promise<void> {
-    await this.deleteRowAndFile('school_documents', docId);
+    await this.withDeleteFeedback(() => this.deleteRowAndFile('school_documents', docId));
     await this.refreshSilently();
   }
 
@@ -877,6 +898,12 @@ export class DmsFacade {
             .from('instructor_documents')
             .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
         ]);
+
+      // fix-455-m: antes una consulta fallida se veía como "Sin documentos aún".
+      const failed = [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes].find(
+        (res) => res.error,
+      );
+      if (failed) throw failed.error;
 
       // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
       // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
@@ -1040,9 +1067,8 @@ export class DmsFacade {
       this._instructorsWithDocs.set(instructorsWithDocs);
       this._schoolDocs.set(schoolDocs);
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos',
-      );
+      // El error de PostgREST es un objeto plano, no un Error: el sanitizer acepta ambos.
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar documentos');
     }
   }
 
