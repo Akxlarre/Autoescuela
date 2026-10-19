@@ -1,9 +1,9 @@
-import { Injectable, signal } from "@angular/core";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { environment } from "../../../../environments/environment";
+import { Injectable, signal } from '@angular/core';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class SupabaseService {
   private supabase: SupabaseClient;
@@ -11,17 +11,13 @@ export class SupabaseService {
   public readonly session = this._session.asReadonly();
 
   constructor() {
-    this.supabase = createClient(
-      environment.supabase.url,
-      environment.supabase.anonKey,
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
+    this.supabase = createClient(environment.supabase.url, environment.supabase.anonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
 
     // Escuchar cambios de sesión de forma centralizada
     this.supabase.auth.onAuthStateChange((event, session) => {
@@ -39,11 +35,7 @@ export class SupabaseService {
   }
 
   // Auth
-  async signUp(
-    email: string,
-    password: string,
-    options?: { data?: Record<string, unknown> },
-  ) {
+  async signUp(email: string, password: string, options?: { data?: Record<string, unknown> }) {
     return await this.supabase.auth.signUp({ email, password, options });
   }
 
@@ -57,7 +49,16 @@ export class SupabaseService {
    * equipos se desactiva el usuario (fix-180-b).
    */
   async signOut() {
-    return await this.supabase.auth.signOut({ scope: 'local' });
+    const result = await this.supabase.auth.signOut({ scope: 'local' });
+    if (result.error) {
+      // hotfix-091-b (E10): si el servidor no responde (sin red), supabase-js NO borra la sesión
+      // guardada y la próxima persona en el mostrador la encuentra abierta. Se borra igual: el
+      // cliente lee la sesión de este almacenamiento en cada consulta.
+      const storageKey = (this.supabase.auth as unknown as { storageKey: string }).storageKey;
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(`${storageKey}-code-verifier`);
+    }
+    return result;
   }
 
   async getUser() {
@@ -76,6 +77,9 @@ export class SupabaseService {
 
   /** `redirectTo`: pantalla a la que vuelve el link del correo (fix-181-b). */
   async resetPasswordForEmail(email: string, redirectTo?: string) {
-    return await this.supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+    return await this.supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo ? { redirectTo } : undefined,
+    );
   }
 }

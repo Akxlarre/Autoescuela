@@ -141,9 +141,25 @@ describe('AuthFacade', () => {
     expect(branchFacade.selectedBranchId()).toBeNull();
   });
 
-  it("logout() should navigate to '/'", () => {
+  it("logout() should navigate to '/'", async () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
-    service.logout();
+    await service.logout();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+  });
+
+  // hotfix-091-b (E10): navegar antes de cerrar la sesión dejaba que el guard la volviera a leer
+  // y la persona seguía adentro (sobre todo sin red).
+  it('logout() navega recién cuando terminó de cerrar la sesión', async () => {
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    let terminar: (v: { error: null }) => void = () => undefined;
+    supabaseSpy.signOut.mockReturnValue(new Promise((r) => (terminar = r)) as any);
+
+    const salida = service.logout();
+    expect(service.currentUser()).toBeNull();
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    terminar({ error: null });
+    await salida;
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
