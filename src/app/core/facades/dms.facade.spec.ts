@@ -178,6 +178,7 @@ describe('DmsFacade', () => {
           storage: {
             from: vi.fn().mockReturnValue({
               upload: vi.fn().mockResolvedValue({ error: null }),
+              remove: vi.fn().mockResolvedValue({ data: [], error: null }),
               createSignedUrl: vi.fn().mockResolvedValue({
                 data: { signedUrl: 'https://example.com/signed' },
                 error: null,
@@ -331,6 +332,62 @@ describe('DmsFacade', () => {
 
       expect(docsBuilder.delete).toHaveBeenCalled();
       expect(docsBuilder.eq).toHaveBeenCalledWith('id', 9);
+    });
+
+    // ── fix-454-m: borrar un documento borra también su archivo ──────────────
+    const storageOf = (spy: any) => spy.client.storage.from.mock.results[0]?.value;
+
+    it.each([
+      ['instructor_documents', (f: DmsFacade) => f.deleteInstructorDocument(9)],
+      ['school_documents', (f: DmsFacade) => f.deleteSchoolDocument(9)],
+      ['student_documents', (f: DmsFacade) => f.deleteStudentDocument('9', 'student_document')],
+    ])('borrar en %s borra la fila y su archivo de Storage (fix-454-m)', async (table, run) => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const builder = makeBuilder({ data: [{ storage_url: 'carpeta/9/doc.pdf' }], error: null });
+      builder.select = vi.fn(() => builder);
+      localSupabaseSpy.client.from = vi.fn((t: string) =>
+        t === table ? builder : makeBuilder({ data: [], error: null }),
+      );
+
+      await run(localFacade);
+
+      expect(builder.delete).toHaveBeenCalled();
+      expect(builder.eq).toHaveBeenCalledWith('id', 9);
+      expect(localSupabaseSpy.client.storage.from).toHaveBeenCalledWith('documents');
+      expect(storageOf(localSupabaseSpy).remove).toHaveBeenCalledWith(['carpeta/9/doc.pdf']);
+    });
+
+    it('si Storage falla al borrar el archivo, la fila igual queda borrada y no lanza (fix-454-m)', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const builder = makeBuilder({ data: [{ storage_url: 'school-docs/x.pdf' }], error: null });
+      localSupabaseSpy.client.from = vi.fn(() => builder);
+      localSupabaseSpy.client.storage.from().remove.mockResolvedValue({
+        data: null,
+        error: new Error('storage down'),
+      });
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(localFacade.deleteSchoolDocument(3)).resolves.toBeUndefined();
+      expect(builder.delete).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('si el insert falla después de subir, borra el archivo recién subido (fix-454-m)', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade({ role: 'admin', dbId: 1 });
+      const schoolBuilder = makeBuilder({ data: null, error: new Error('insert failed') });
+      localSupabaseSpy.client.from = vi.fn(() => schoolBuilder);
+
+      await expect(
+        localFacade.uploadSchoolDocument({
+          file: new File(['x'], 'a.pdf', { type: 'application/pdf' }),
+          type: 'decreto',
+        }),
+      ).rejects.toThrow('insert failed');
+
+      const storage = storageOf(localSupabaseSpy);
+      const uploadedPath = storage.upload.mock.calls[0][0];
+      expect(storage.remove).toHaveBeenCalledWith([uploadedPath]);
     });
 
     it('fetchAllData(): secretaria con branchId numérico filtra instructores por users.branch_id', async () => {

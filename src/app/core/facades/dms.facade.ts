@@ -628,7 +628,10 @@ export class DmsFacade {
       storage_url: path,
       status: 'pending',
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
@@ -642,10 +645,17 @@ export class DmsFacade {
       // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
       throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
     }
-    const table = source === 'student_document' ? 'student_documents' : 'digital_contracts';
     const numericId = parseInt(docId, 10);
-    const { error } = await this.supabase.client.from(table).delete().eq('id', numericId);
-    if (error) throw error;
+    if (source === 'student_document') {
+      await this.deleteRowAndFile('student_documents', numericId);
+    } else {
+      // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
+      const { error } = await this.supabase.client
+        .from('digital_contracts')
+        .delete()
+        .eq('id', numericId);
+      if (error) throw error;
+    }
     await this.refreshSilently();
   }
 
@@ -734,17 +744,16 @@ export class DmsFacade {
       status: 'pending',
       uploaded_by: numericUserId,
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
 
   async deleteInstructorDocument(docId: number): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('instructor_documents')
-      .delete()
-      .eq('id', docId);
-    if (error) throw error;
+    await this.deleteRowAndFile('instructor_documents', docId);
     await this.refreshSilently();
   }
 
@@ -767,15 +776,46 @@ export class DmsFacade {
       // fix-452-m: antes se buscaba por `users.auth_id` (no existe) y siempre quedaba NULL.
       uploaded_by: this.auth.currentUser()?.dbId ?? null,
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
 
   async deleteSchoolDocument(docId: number): Promise<void> {
-    const { error } = await this.supabase.client.from('school_documents').delete().eq('id', docId);
-    if (error) throw error;
+    await this.deleteRowAndFile('school_documents', docId);
     await this.refreshSilently();
+  }
+
+  /**
+   * fix-454-m: borra la fila y después su archivo del bucket `documents` (antes el archivo quedaba
+   * huérfano para siempre — datos personales que la escuela creía eliminados, Ley 21.719).
+   * La fila va primero: si Storage falla, el documento igual desaparece de la lista y el
+   * error solo se registra.
+   */
+  private async deleteRowAndFile(
+    table: 'student_documents' | 'instructor_documents' | 'school_documents',
+    id: number,
+  ): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from(table)
+      .delete()
+      .eq('id', id)
+      .select('storage_url');
+    if (error) throw error;
+
+    const paths = ((data ?? []) as { storage_url: string | null }[])
+      .map((row) => row.storage_url)
+      .filter((p): p is string => !!p);
+    for (const path of paths) await this.removeStoredFile(path);
+  }
+
+  /** Borra un archivo del bucket `documents`; un fallo se registra y no interrumpe al llamador. */
+  private async removeStoredFile(path: string): Promise<void> {
+    const { error } = await this.supabase.client.storage.from('documents').remove([path]);
+    if (error) console.error('[DmsFacade] No se pudo borrar el archivo de Storage:', path, error);
   }
 
   clearError(): void {
