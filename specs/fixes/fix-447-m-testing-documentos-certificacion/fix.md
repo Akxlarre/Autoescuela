@@ -61,9 +61,9 @@ consultan a medida que aparecen.
 | S26 — `preview`/`sample` a cualquiera | Cerrada (`requireStaff` cubre los 3 modos) | `generate-certificate-b-pdf/index.ts:79` |
 | S5 — documento institucional NULL no aparece con sede | **Abierta** | `dms.facade.ts:809` (`.eq` excluye NULL) |
 | S6 — "Subido por Sistema" (`auth_id`) | **Abierta** | `dms.facade.ts:765` |
-| S7 — primer documento de un alumno | **Abierta** (el selector sale de `studentsWithDocs()`) | `dms-upload-drawer.component.ts:287-296` |
+| S7 — primer documento de un alumno | ❌ confirmada en navegador (73/74; faltaba la matrícula #0081 sin documentos) → corregida en `fix-449-m` | `dms-upload-drawer.component.ts:287-296` |
 | S9 — borrar no borra el archivo | **Abierta** (ni al borrar ni si falla el insert) | `dms.facade.ts:629-643,736-742,782-785` |
-| S10 — sección vacía publicada → PDF en blanco | **Abierta** (`publish()` guarda `''`; la edge usa `??`) | `document-content-templates.facade.ts:79,105-120`; `generate-certificate-b-pdf/index.ts:529-588` |
+| S10 — sección vacía publicada → PDF en blanco | ❌ (`publish()` guardaba `''`; la edge usa `??`) → corregida en `fix-450-m`: no se publica con secciones vacías. Las 6 filas actuales están completas | `document-content-templates.facade.ts:79,105-120`; `generate-certificate-b-pdf/index.ts:529-588` |
 | S11 — fechas UTC | Cerrada (`0024-m`, `chile-time.ts`) → regresión. Fechas en blanco con bypass y clases no completadas: verificar en navegador | `generate-certificate-b-pdf/index.ts:1,221,413,431` |
 | S12 — tope de 1.000 filas | **Abierta** | `dms.facade.ts:811-843` |
 | S14 — criterios de elegibilidad / pago | Pago cerrado (`0010-i`, habilitación con motivo); botón y edge usan `completed` (`fix-262-m`). **Abierta**: la lista de la secretaria sigue filtrando `certificate_enabled` (trigger clase #12) | `certificacion-clase-b.facade.ts:576` |
@@ -78,6 +78,8 @@ consultan a medida que aparecen.
 | Track | Hallazgo | Estado |
 |---|---|---|
 | `fix-448-m-email-certificado-solo-staff` | S26 — el correo del certificado aceptaba cualquier sesión y cualquier sede | Cerrado 2026-10-18 |
+| `fix-449-m-subir-primer-documento-alumno` | S7 / D03 — "Subir documento" no ofrecía a alumnos sin documentos | Cerrado 2026-10-18 |
+| `fix-450-m-plantilla-sin-secciones-vacias` | S10 / J12 — publicar con una sección vacía la dejaba en blanco en el PDF | Cerrado 2026-10-18 |
 
 ### Observaciones (sin track)
 
